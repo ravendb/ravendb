@@ -40,7 +40,10 @@
                 <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
                 <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
                 <td data-bind="html: formatSize(false)"></td>
-                <td data-bind="visible: $root.showOnDiskColumn, text: $root.onDiskSizeFormatted($data)"></td>
+                <td data-bind="visible: $root.showOnDiskColumn">
+                    <span data-bind="text: $root.onDiskSizeFormatted($data)"></span>
+                    <span data-bind="visible: physicalSizeHint"><small data-toggle="tooltip" data-bind="attr: { title: physicalSizeHint }"><i class="icon-info text-info"></i></small></span>
+                </td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
             </tr>
         </tbody>

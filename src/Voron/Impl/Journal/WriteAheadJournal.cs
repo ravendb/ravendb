@@ -407,7 +407,10 @@ namespace Voron.Impl.Journal
                             ? _env.Options.CreateReadOnlyJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize)
                             : _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
 
-                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet());
+                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet())
+                        {
+                            IsHardLinked = isHardLinked
+                        };
                         jrnlFile.DoneWriting = new SingleUseFlag();
 
                         if (isHardLinked)
@@ -2109,7 +2112,10 @@ namespace Voron.Impl.Journal
             JournalFile AddJournal(long index)
             {
                 var journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(index, existingJournalFileName, journalFile);
-                var journal = new JournalFile(_env, journalWriter, index, FrozenSet<Guid>.Empty);
+                var journal = new JournalFile(_env, journalWriter, index, FrozenSet<Guid>.Empty)
+                {
+                    IsHardLinked = true
+                };
                 journal.NewlyCreatedFile = true;
                 journal.DoneWriting = journalFile.DoneWriting;
                 journal.AddRef();

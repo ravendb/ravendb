@@ -158,8 +158,10 @@ class storageReport extends shardViewModelBase {
             dataFile.size + journals.size + tempFiles.size,
             [dataFile, journals, tempFiles]);
 
-        if (dataFile.physicalSize != null) {
-            item.physicalSize = dataFile.physicalSize + journals.size + tempFiles.size;
+        if (dataFile.physicalSize != null || journals.physicalSize != null) {
+            item.physicalSize = (dataFile.physicalSize ?? dataFile.size)
+                + (journals.physicalSize ?? journals.size)
+                + tempFiles.size;
         }
 
         return item;
@@ -175,6 +177,9 @@ class storageReport extends shardViewModelBase {
         const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
         storageItem.lazyLoadChildren = true;
         storageItem.physicalSize = dataFile.PhysicalSpaceInBytes;
+        if (dataFile.PhysicalSpaceInBytes < dataFile.AllocatedSpaceInBytes) {
+            storageItem.physicalSizeHint = "Unused pages returned to OS via sparse regions.";
+        }
 
         return storageItem;
     }
@@ -324,16 +329,33 @@ class storageReport extends shardViewModelBase {
     private mapJournals(report: Voron.Debugging.StorageReport): storageReportItem {
         const journals = report.Journals;
 
-        const mappedJournals = journals.map(journal => 
-            new storageReportItem(
+        const mappedJournals = journals.map(journal => {
+            const item = new storageReportItem(
                 "Journal #" + journal.Number,
                 "journal",
                 false,
                 journal.AllocatedSpaceInBytes,
                 []
-            ));
+            );
+            item.hardLinkedJournal = journal.IsHardLink;
+            if (journal.IsHardLink === false) {
+                item.physicalSize = journal.AllocatedSpaceInBytes;
+            } else {
+                item.physicalSize = 0;
+                item.physicalSizeHint = "Hard link to a journal owned by @SharedJournals env.";
+            }
+            return item;
+        });
 
-        return new storageReportItem("Journals", "journals", false, mappedJournals.reduce((p, c) => p + c.size, 0), mappedJournals);
+        const allocatedSum = mappedJournals.reduce((p, c) => p + c.size, 0);
+        const onDiskSum = mappedJournals.reduce((p, c) => p + (c.physicalSize ?? c.size), 0);
+
+        const journalsItem = new storageReportItem("Journals", "journals", false, allocatedSum, mappedJournals);
+        journalsItem.physicalSize = onDiskSum;
+        if (mappedJournals.some(j => j.hardLinkedJournal)) {
+            journalsItem.physicalSizeHint = "Hard-linked journals are counted once at @SharedJournals root.";
+        }
+        return journalsItem;
     }
     
     private mapTempFiles(report: Voron.Debugging.StorageReport): storageReportItem {

@@ -1999,8 +1999,9 @@ namespace Raven.Server.Documents
                     continue;
 
                 var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers: true);
-                physicalInBytes += sizeOnDisk.DataFilePhysicalSizeInBytes + sizeOnDisk.JournalsInBytes;
-                allocatedInBytes += sizeOnDisk.DataFileAllocatedSizeInBytes + sizeOnDisk.JournalsInBytes;
+                var uniqueJournalsInBytes = sizeOnDisk.JournalsInBytes - sizeOnDisk.HardLinkedJournalsInBytes;
+                physicalInBytes += sizeOnDisk.DataFilePhysicalSizeInBytes + uniqueJournalsInBytes;
+                allocatedInBytes += sizeOnDisk.DataFileAllocatedSizeInBytes + uniqueJournalsInBytes;
                 tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes;
             }
 

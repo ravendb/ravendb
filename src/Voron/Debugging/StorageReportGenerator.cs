@@ -305,6 +305,7 @@ namespace Voron.Debugging
                     AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
                     Available4Kbs = journal.GetAvailable4Kbs(_tx.CurrentStateRecord),
                     LastTransaction = journal.LastTransactionId,
+                    IsHardLink = journal.IsHardLinked,
                 };
             });
             var flushedJournalReports = flushedJournals.Select(journal =>
@@ -321,6 +322,7 @@ namespace Voron.Debugging
                     AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
                     Available4Kbs = journal.GetAvailable4Kbs(_tx.CurrentStateRecord),
                     LastTransaction = journal.LastTransactionId,
+                    IsHardLink = journal.IsHardLinked,
                 };
             });
             return journalReports.Concat(flushedJournalReports).Where(x => x != null).ToList();

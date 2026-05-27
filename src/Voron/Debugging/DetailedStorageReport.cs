@@ -14,6 +14,7 @@ namespace Voron.Debugging
         public long DataFilePhysicalSizeInBytes { get; set; }
         public long DataFileAllocatedSizeInBytes { get; set; }
         public long JournalsInBytes { get; set; }
+        public long HardLinkedJournalsInBytes { get; set; }
         public long TempBuffersInBytes { get; set; }
     }
 
@@ -86,6 +87,7 @@ namespace Voron.Debugging
         public long Available4Kbs { get; set; }
         public long LastTransaction { get; set; }
         public bool Flushed { get; set; }
+        public bool IsHardLink { get; set; }
     }
 
     public sealed class TempBufferReport

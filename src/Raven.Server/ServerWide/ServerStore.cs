@@ -3877,7 +3877,7 @@ namespace Raven.Server.ServerWide
 
             if (diskSpaceResult.DriveName == driveInfo?.JournalPath.DriveName)
             {
-                usage.UsedSpace += sizeOnDisk.JournalsInBytes;
+                usage.UsedSpace += sizeOnDisk.JournalsInBytes - sizeOnDisk.HardLinkedJournalsInBytes;
             }
             else
             {
