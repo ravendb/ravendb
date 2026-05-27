@@ -12,7 +12,7 @@ namespace Raven.AiAppliance.Wizard;
 /// CORS / CSP gating.</param>
 /// <param name="DisplayName">Optional operator-friendly label. Defaults to
 /// <see cref="Type"/> when omitted.</param>
-internal sealed record ProvisionChannelRequest(
+public sealed record ProvisionChannelRequest(
     string Type,
     string AgentId,
     string[] AllowedOrigins,

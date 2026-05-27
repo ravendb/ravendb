@@ -7,7 +7,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import { api } from "@/api/api";
-import type { BootstrapPhase } from "@/api/bootstrap-service";
+import type { BootstrapPhase } from "@/api/generated/server-api";
 import { FormInput } from "@/components/form/form-input";
 import { Button } from "@/components/shadcn/ui/button";
 import { useAuth } from "@/components/auth/auth-context";
@@ -52,7 +52,7 @@ export function Login() {
     async function handleLogin(values: LoginFormValues) {
         try {
             const status = await login(values);
-            if (status.state === "ready") {
+            if (status.state === "Ready") {
                 navigate("/", {
                     replace: true,
                 });
@@ -64,7 +64,7 @@ export function Login() {
                 return;
             }
 
-            if (status.state === "needs-activation") {
+            if (status.state === "NeedsActivation") {
                 toast.error("Activation could not be started. Check the license key and try again.");
                 return;
             }
@@ -121,7 +121,7 @@ const ACTIVATION_POLL_INTERVAL_MS = 5_000;
 const ACTIVATION_TIMEOUT_MS = 120_000;
 
 function isActivationPending(state: BootstrapPhase | undefined) {
-    return state === "redeeming" || state === "restarting";
+    return state === "Redeeming" || state === "Restarting";
 }
 
 function ActivationWaiting({ timedOut, onRetry }: { timedOut: boolean; onRetry: () => void }) {

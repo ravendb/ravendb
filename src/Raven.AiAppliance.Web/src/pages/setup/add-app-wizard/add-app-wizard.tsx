@@ -6,10 +6,10 @@ import { z } from "zod";
 import { api } from "@/api/api";
 import type {
     CdcSinkConfiguration,
-    CdcSinkSourceSchema,
-    ProvisionResult,
-    TestMappingResult,
-} from "@/api/setup-service";
+    DiscoverResponse,
+    ProvisionResponse,
+    TestMappingResponse,
+} from "@/api/generated/server-api";
 import { WizardLayout } from "@/pages/setup/add-app-wizard/wizard-layout";
 import {
     buildAutoConfiguration,
@@ -53,10 +53,10 @@ const setupWizardSchema = z.object({
 export function AddAppWizard() {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState<SetupWizardStepId>("choose-source");
-    const [schema, setSchema] = useState<CdcSinkSourceSchema | null>(null);
+    const [schema, setSchema] = useState<DiscoverResponse | null>(null);
     const [mappedConfiguration, setMappedConfiguration] = useState<CdcSinkConfiguration | null>(null);
-    const [testResult, setTestResult] = useState<TestMappingResult | null>(null);
-    const [provisionResult, setProvisionResult] = useState<ProvisionResult | null>(null);
+    const [testResult, setTestResult] = useState<TestMappingResponse | null>(null);
+    const [provisionResult, setProvisionResult] = useState<ProvisionResponse | null>(null);
     const [stepMessages, setStepMessages] = useState<Partial<Record<SetupWizardStepId, SetupWizardMessage>>>({});
     const [isWorking, setIsWorking] = useState(false);
     const form = useForm<SetupWizardFormValues>({
@@ -227,7 +227,7 @@ export function AddAppWizard() {
         setMappedConfiguration(null);
         setTestResult(null);
 
-        if (discoveredSchema.errors.length > 0) {
+        if (discoveredSchema.errors?.length) {
             setStepMessage(messageStepId, {
                 title: "Schema discovery failed.",
                 description: firstMessage(discoveredSchema.errors),
@@ -236,7 +236,7 @@ export function AddAppWizard() {
             return null;
         }
 
-        if (discoveredSchema.tables.length === 0) {
+        if (discoveredSchema.tables?.length === 0) {
             setStepMessage(messageStepId, {
                 title: "No tables were discovered.",
                 description: "Check the source database permissions and selected table filters.",
@@ -247,7 +247,7 @@ export function AddAppWizard() {
 
         setStepMessage(messageStepId, {
             title: "Schema discovered.",
-            description: `${discoveredSchema.tables.length} tables found.`,
+            description: `${discoveredSchema.tables?.length ?? 0} tables found.`,
             type: "success",
         });
         return discoveredSchema;
@@ -266,7 +266,7 @@ export function AddAppWizard() {
 
         const configuration = buildAutoConfiguration(sourceSchema, parseTableNames(values.tableNames));
 
-        if (configuration.tables.length === 0) {
+        if (!configuration.tables?.length) {
             setStepMessage(messageStepId, {
                 title: "No CDC-ready tables were discovered.",
                 description: "Auto mapping needs tables with primary keys and capturable CDC columns.",
@@ -280,19 +280,28 @@ export function AddAppWizard() {
         setTestResult(null);
         setStepMessage(messageStepId, {
             title: "Mapping prepared.",
-            description: `${mapped.tables.length} tables are ready for preview.`,
+            description: `${mapped.tables?.length ?? 0} tables are ready for preview.`,
             type: "success",
         });
         return mapped;
     }
 
     async function requestPreview(configuration: CdcSinkConfiguration, values: SetupWizardFormValues) {
-        const table = configuration.tables[0];
+        const table = configuration.tables?.[0];
 
         if (!table) {
             setStepMessage("preview", {
                 title: "No mapped table available.",
                 description: "Map at least one table before running preview.",
+                type: "error",
+            });
+            return false;
+        }
+
+        if (!table.sourceTableName) {
+            setStepMessage("preview", {
+                title: "Mapped table is incomplete.",
+                description: "Select a source table before running preview.",
                 type: "error",
             });
             return false;
@@ -305,7 +314,7 @@ export function AddAppWizard() {
         });
         setTestResult(result);
 
-        if (result.errors.length > 0) {
+        if (result.errors?.length) {
             setStepMessage("preview", {
                 title: "Mapping preview failed.",
                 description: firstMessage(result.errors),
@@ -316,7 +325,7 @@ export function AddAppWizard() {
 
         setStepMessage("preview", {
             title: "Preview completed.",
-            description: `${result.results.length} rows returned.`,
+            description: `${result.results?.length ?? 0} rows returned.`,
             type: "success",
         });
         return true;
@@ -455,6 +464,6 @@ function getNextLabel(currentStep: SetupWizardStepId) {
     }
 }
 
-function isDiscoveredSchemaReady(value: CdcSinkSourceSchema | null): value is CdcSinkSourceSchema {
-    return Boolean(value && value.errors.length === 0 && value.tables.length > 0);
+function isDiscoveredSchemaReady(value: DiscoverResponse | null): value is DiscoverResponse {
+    return Boolean(value && !value.errors?.length && value.tables?.length);
 }

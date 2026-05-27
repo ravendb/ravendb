@@ -1,7 +1,5 @@
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Raven;
 using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
@@ -17,11 +15,26 @@ public static class AppsEndpoints
 {
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/apps");
-        group.MapGet("/", ListAsync);
-        group.MapGet("/{slug}", GetAsync);
-        group.MapPost("/{slug}/setup/agent", ProvisionAgentAsync);
-        group.MapPost("/{slug}/setup/channel", ProvisionChannelAsync);
+        var group = app.MapGroup("/api/apps").WithTags("apps");
+        group.MapGet("/", ListAsync)
+            .WithName("apps.list")
+            .Produces<AppResponse[]>();
+        group.MapGet("/{slug}", GetAsync)
+            .WithName("apps.detail")
+            .Produces<AppResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapPost("/{slug}/setup/agent", ProvisionAgentAsync)
+            .WithName("apps.provisionAgent")
+            .Accepts<ProvisionAgentRequest>("application/json")
+            .Produces<ProvisionAgentResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapPost("/{slug}/setup/channel", ProvisionChannelAsync)
+            .WithName("apps.provisionChannel")
+            .Accepts<ProvisionChannelRequest>("application/json")
+            .Produces<ProvisionChannelResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> ListAsync(
@@ -33,7 +46,7 @@ public static class AppsEndpoints
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(ct);
 
-        return Results.Ok(apps.Select(AppDto.From));
+        return Results.Ok(apps.Select(AppResponse.From).ToArray());
     }
 
     private static async Task<IResult> GetAsync(
@@ -44,7 +57,9 @@ public static class AppsEndpoints
         using var session = store.OpenAsyncSession();
         var app = await session.LoadAsync<App>($"apps/{slug}", ct);
 
-        return app is null ? Results.NotFound() : Results.Ok(AppDto.From(app));
+        return app is null
+            ? Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"))
+            : Results.Ok(AppResponse.From(app));
     }
 
     private static async Task<IResult> ProvisionAgentAsync(
@@ -65,10 +80,10 @@ public static class AppsEndpoints
         }
 
         if (app is null)
-            return Results.NotFound(new { error = $"no app with slug '{slug}'" });
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         if (body is null || string.IsNullOrWhiteSpace(body.ConnectionStringName))
-            return Results.BadRequest(new { error = "connectionStringName is required" });
+            return Results.BadRequest(new ApiErrorResponse("connectionStringName is required"));
 
         // Look up the operator's AI connection string on the per-app DB. The
         // CS was POSTed via /api/apps/{slug}/ai/connection-strings (the
@@ -82,19 +97,19 @@ public static class AppsEndpoints
         if (cs.AiConnectionStrings is null ||
             cs.AiConnectionStrings.TryGetValue(body.ConnectionStringName, out var aiCs) == false)
         {
-            return Results.BadRequest(new
-            {
-                error = $"connection string '{body.ConnectionStringName}' not found; create it via " +
-                        $"POST /api/apps/{slug}/ai/connection-strings first"
-            });
+            return Results.BadRequest(new ApiErrorResponse(
+                $"connection string '{body.ConnectionStringName}' not found; create it via " +
+                $"POST /api/apps/{slug}/ai/connection-strings first"));
         }
 
         if (aiCs.ModelType != AiModelType.Chat)
-            return Results.BadRequest(new { error = $"connection string '{aiCs.Name}' has ModelType={aiCs.ModelType}; agent provisioning requires Chat" });
+            return Results.BadRequest(new ApiErrorResponse(
+                $"connection string '{aiCs.Name}' has ModelType={aiCs.ModelType}; agent provisioning requires Chat"));
 
         var provider = aiCs.GetActiveProvider();
         if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
-            return Results.BadRequest(new { error = $"connection string '{aiCs.Name}' uses unsupported provider '{provider}' in demo; supported: OpenAi, Ollama" });
+            return Results.BadRequest(new ApiErrorResponse(
+                $"connection string '{aiCs.Name}' uses unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));
 
         // Framing is recorded for now but not yet wired to schema selection
         // (design §1.3 step 9 — AI-suggest paths are a follow-up). The 8-week
@@ -110,7 +125,7 @@ public static class AppsEndpoints
             targetDatabase: app.Database,
             ct: ct);
 
-        return Results.Ok(new { agentId = result.AgentIdentifier });
+        return Results.Ok(new ProvisionAgentResponse(result.AgentIdentifier));
     }
 
     // Channel-instance constants. M2/M4 caps prevent unbounded doc growth +
@@ -134,13 +149,13 @@ public static class AppsEndpoints
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.Type) || string.IsNullOrWhiteSpace(body.AgentId))
-            return Results.BadRequest(new { error = "type and agentId are required" });
+            return Results.BadRequest(new ApiErrorResponse("type and agentId are required"));
 
         // 8-week demo: iFrame only. Telegram + WhatsApp are deferred per
         // design §3.6 / §3.7. Case-insensitive — the design spells it "IFrame"
         // but tests / curl will commonly send "iframe".
         if (!string.Equals(body.Type, "iframe", StringComparison.OrdinalIgnoreCase))
-            return Results.BadRequest(new { error = $"unsupported channel type '{body.Type}'. Supported: iframe." });
+            return Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'. Supported: iframe."));
 
         // L1: load App first so unknown-slug always returns 404 regardless of
         // whether agentId is valid. Previously the schemas.TryGet ran first,
@@ -156,14 +171,14 @@ public static class AppsEndpoints
         }
 
         if (app is null)
-            return Results.NotFound(new { error = $"no app with slug '{slug}'" });
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         // L3: validate against the registry AND adopt the registry's canonical
         // casing for storage. schemas.TryGet is case-insensitive but the
         // caller's original casing was being persisted, which would trip up
         // any later case-sensitive groupBy / query on AgentId.
         if (!schemas.TryGet(body.AgentId, out var schema))
-            return Results.BadRequest(new { error = $"unknown agentId '{body.AgentId}'" });
+            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
         // M2: validate AllowedOrigins at intake so the future /embed/{widgetId}
         // page reads from a trustworthy list. Reject "*" (silently widens trust
@@ -172,16 +187,16 @@ public static class AppsEndpoints
         // length to keep the doc bounded under repeated edits.
         var origins = body.AllowedOrigins ?? [];
         if (origins.Length > MaxAllowedOrigins)
-            return Results.BadRequest(new { error = $"allowedOrigins exceeds limit of {MaxAllowedOrigins} entries" });
+            return Results.BadRequest(new ApiErrorResponse($"allowedOrigins exceeds limit of {MaxAllowedOrigins} entries"));
 
         for (var i = 0; i < origins.Length; i++)
         {
             var origin = origins[i];
             if (string.IsNullOrWhiteSpace(origin) || origin.Length > MaxOriginLength)
-                return Results.BadRequest(new { error = $"allowedOrigins entry is empty or exceeds {MaxOriginLength} chars" });
+                return Results.BadRequest(new ApiErrorResponse($"allowedOrigins entry is empty or exceeds {MaxOriginLength} chars"));
 
             if (origin == "*")
-                return Results.BadRequest(new { error = "wildcard '*' is not an allowed origin; list explicit http(s) origins" });
+                return Results.BadRequest(new ApiErrorResponse("wildcard '*' is not an allowed origin; list explicit http(s) origins"));
 
             // C3 (Copilot review #4362803113): the browser Origin header is
             // scheme+host[:port] only — paths, queries, and fragments don't
@@ -195,7 +210,7 @@ public static class AppsEndpoints
                 (uri.AbsolutePath != "" && uri.AbsolutePath != "/") ||
                 string.IsNullOrEmpty(uri.Query) == false ||
                 string.IsNullOrEmpty(uri.Fragment) == false)
-                return Results.BadRequest(new { error = $"allowedOrigins entry '{origin}' is not an origin (scheme+host[:port] only)" });
+                return Results.BadRequest(new ApiErrorResponse($"allowedOrigins entry '{origin}' is not an origin (scheme+host[:port] only)"));
 
             // C2 (Copilot review #4365219160): normalize on persist. `https://example.com/`
             // passes the path gate above (AbsolutePath is `/`) but its raw form
@@ -215,10 +230,10 @@ public static class AppsEndpoints
         if (body.DisplayName is not null)
         {
             if (body.DisplayName.Length > MaxDisplayNameLength)
-                return Results.BadRequest(new { error = $"displayName exceeds {MaxDisplayNameLength} chars" });
+                return Results.BadRequest(new ApiErrorResponse($"displayName exceeds {MaxDisplayNameLength} chars"));
 
             if (body.DisplayName.Any(char.IsControl))
-                return Results.BadRequest(new { error = "displayName contains control characters" });
+                return Results.BadRequest(new ApiErrorResponse("displayName contains control characters"));
         }
 
         // C2 (Copilot review #4362803113): idempotency on (slug, type, agentId)
@@ -245,7 +260,7 @@ public static class AppsEndpoints
                 logger.LogInformation(
                     "Channel binding already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
                     app.Slug, schema.Identifier, existing.WidgetId);
-                return Results.Ok(new { widgetId = existing.WidgetId });
+                return Results.Ok(new ProvisionChannelResponse(existing.WidgetId));
             }
         }
 
@@ -294,7 +309,7 @@ public static class AppsEndpoints
                 "Provisioned channel slug={Slug} widgetId={WidgetId} agentId={AgentId} type={Type}",
                 app.Slug, widgetId, schema.Identifier, IFrameType);
 
-            return Results.Ok(new { widgetId });
+            return Results.Ok(new ProvisionChannelResponse(widgetId));
         }
         catch (ClusterTransactionConcurrencyException)
         {
@@ -313,25 +328,10 @@ public static class AppsEndpoints
             logger.LogInformation(
                 "Lost race for binding slug={Slug} agentId={AgentId}; returning winner's widgetId={WidgetId}",
                 app.Slug, schema.Identifier, winner.WidgetId);
-            return Results.Ok(new { widgetId = winner.WidgetId });
+            return Results.Ok(new ProvisionChannelResponse(winner.WidgetId));
         }
     }
 
     /// Logger category marker — keeps the ILogger generic-arg out of the public surface.
     internal sealed class AppsLogger;
-
-    private sealed record AppDto(
-        string Id,
-        string Name,
-        string Database,
-        string CdcTaskName,
-        string CreatedAt)
-    {
-        public static AppDto From(App app) => new(
-            app.Slug,
-            app.AppName,
-            app.Database,
-            app.CdcTaskName,
-            app.CreatedAt.ToString("O"));
-    }
 }

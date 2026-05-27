@@ -13,11 +13,11 @@ export type ApiClientOptions = {
     transport?: ApiTransport;
 };
 
-export class ApiError extends Error {
+export class ApiError<TDetails = unknown> extends Error {
     readonly status: number;
-    readonly details: unknown;
+    readonly details: TDetails | undefined;
 
-    constructor(message: string, status: number, details: unknown) {
+    constructor(message: string, status: number, details: TDetails | undefined) {
         super(message);
         this.name = "ApiError";
         this.status = status;
@@ -25,10 +25,14 @@ export class ApiError extends Error {
     }
 }
 
+export function isApiError<TDetails = unknown>(error: unknown): error is ApiError<TDetails> {
+    return error instanceof ApiError;
+}
+
 export function createApiClient({ baseUrl = "/api", transport = fetch }: ApiClientOptions = {}) {
     const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
 
-    async function request<TResponse>(
+    async function request<TResponse, TError = unknown>(
         path: string,
         { body, headers, responseType = "auto", searchParams, ...init }: ApiRequestOptions = {},
     ): Promise<TResponse> {
@@ -48,33 +52,33 @@ export function createApiClient({ baseUrl = "/api", transport = fetch }: ApiClie
         });
 
         if (!response.ok) {
-            throw await createApiError(response);
+            throw await createApiError<TError>(response);
         }
 
         return await parseResponse<TResponse>(response, responseType, init.method);
     }
 
     return {
-        delete: <TResponse>(path: string, options?: ApiRequestOptions) =>
-            request<TResponse>(path, { ...options, method: "DELETE" }),
-        get: <TResponse>(path: string, options?: ApiRequestOptions) =>
-            request<TResponse>(path, { ...options, method: "GET" }),
-        patch: <TResponse>(path: string, body?: unknown, options?: ApiRequestOptions) =>
-            request<TResponse>(path, { ...options, body, method: "PATCH" }),
-        post: <TResponse>(path: string, body?: unknown, options?: ApiRequestOptions) =>
-            request<TResponse>(path, { ...options, body, method: "POST" }),
-        put: <TResponse>(path: string, body?: unknown, options?: ApiRequestOptions) =>
-            request<TResponse>(path, { ...options, body, method: "PUT" }),
+        delete: <TResponse, TError = unknown>(path: string, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, method: "DELETE" }),
+        get: <TResponse, TError = unknown>(path: string, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, method: "GET" }),
+        patch: <TResponse, TError = unknown>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, body, method: "PATCH" }),
+        post: <TResponse, TError = unknown>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, body, method: "POST" }),
+        put: <TResponse, TError = unknown>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+            request<TResponse, TError>(path, { ...options, body, method: "PUT" }),
     };
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
-async function createApiError(response: Response) {
-    const details = await readErrorDetails(response);
+async function createApiError<TDetails>(response: Response) {
+    const details = await readErrorDetails<TDetails>(response);
     const message = getErrorMessage(details) ?? `Request failed with ${response.status}`;
 
-    return new ApiError(message, response.status, details);
+    return new ApiError<TDetails>(message, response.status, details);
 }
 
 function getErrorMessage(details: unknown) {
@@ -97,7 +101,7 @@ function getErrorMessage(details: unknown) {
     return undefined;
 }
 
-async function readErrorDetails(response: Response) {
+async function readErrorDetails<TDetails>(response: Response): Promise<TDetails | undefined> {
     if (isEmptyResponse(response)) {
         return undefined;
     }
@@ -110,16 +114,16 @@ async function readErrorDetails(response: Response) {
     }
 
     if (!contentType.includes("application/json")) {
-        return rawBody;
+        return rawBody as TDetails;
     }
 
     try {
-        return JSON.parse(rawBody) as unknown;
+        return JSON.parse(rawBody) as TDetails;
     } catch (parseError) {
         return {
             parseError,
             rawBody,
-        };
+        } as TDetails;
     }
 }
 

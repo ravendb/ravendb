@@ -1,3 +1,8 @@
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -11,11 +16,44 @@ using Raven.AiAppliance.Schema.Demo;
 using Raven.Client.Documents;
 
 var builder = WebApplication.CreateBuilder(args);
+var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 
 // Kestrel listen URL is needed before IOptions<ApplianceOptions> is resolved;
 // read the env directly. The full options object owns the remaining knobs.
 var listenUrl = Environment.GetEnvironmentVariable("RAVEN_AI_WEB_LISTEN_URL") ?? "http://0.0.0.0:5000";
 builder.WebHost.UseUrls(listenUrl);
+
+builder.Services.ConfigureHttpJsonOptions(static options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        if (schema.Properties is null || schema.Properties.Count == 0)
+            return Task.CompletedTask;
+
+        var writableProperties = context.JsonTypeInfo.Type
+            .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(static property => property.GetMethod is { IsPublic: true } && property.SetMethod is { IsPublic: true })
+            .Select(GetJsonPropertyName)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var getterOnlyProperties = schema.Properties.Keys
+            .Where(propertyName => writableProperties.Contains(propertyName) == false)
+            .ToArray();
+
+        foreach (var propertyName in getterOnlyProperties)
+        {
+            schema.Properties.Remove(propertyName);
+            schema.Required?.Remove(propertyName);
+        }
+
+        return Task.CompletedTask;
+    });
+});
 
 // Silence Polly's framework-level retry telemetry. During RavenDB startup the
 // readiness probe retries 3-5x while the server boots; without this filter,
@@ -45,7 +83,8 @@ builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentSchemaRegistry, AgentSchemaRegistry>();
 builder.Services.AddSingleton<IAgentSchema, DemoAgentSchema>();
-builder.Services.AddHostedService<RavenReadinessService>();
+if (!isOpenApiDocumentGeneration)
+    builder.Services.AddHostedService<RavenReadinessService>();
 builder.Services.AddHttpClient();
 
 // Wire-shape: enums travel as their string names (e.g. AiModelType "Chat" not 1,
@@ -85,6 +124,9 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+    app.MapOpenApi();
+
 // Dev-mode safeguard: a forgetful local run with no RAVEN_AI_LICENSE_API_URL
 // override will hit the real api.ravendb.net on first /api/bootstrap/redeem-license
 // and hang (no test license to redeem). Warn loudly at startup so the operator
@@ -119,6 +161,15 @@ static void ReadEnv(string name, Action<string> apply)
 {
     var v = Environment.GetEnvironmentVariable(name);
     if (!string.IsNullOrEmpty(v)) apply(v);
+}
+
+static string GetJsonPropertyName(System.Reflection.PropertyInfo property)
+{
+    var attribute = property.GetCustomAttribute<JsonPropertyNameAttribute>();
+    if (attribute is not null)
+        return attribute.Name;
+
+    return JsonNamingPolicy.CamelCase.ConvertName(property.Name);
 }
 
 // Make Program reachable for WebApplicationFactory<Program> in the test project.

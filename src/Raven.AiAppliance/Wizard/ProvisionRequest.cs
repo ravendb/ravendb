@@ -5,4 +5,4 @@ namespace Raven.AiAppliance.Wizard;
 /// connection (Connect/Discover) and the CDC mapping (Map) stashed on
 /// wizard-state; Provision only needs to know what to call the new app.
 /// </summary>
-internal sealed record ProvisionRequest(string AppName);
+public sealed record ProvisionRequest(string AppName);

@@ -16,10 +16,10 @@ import type { ReactNode } from "react";
 import { useWatch, type Control } from "react-hook-form";
 import type {
     CdcSinkConfiguration,
-    CdcSinkSourceSchema,
-    ProvisionResult,
-    TestMappingResult,
-} from "@/api/setup-service";
+    DiscoverResponse,
+    ProvisionResponse,
+    TestMappingResponse,
+} from "@/api/generated/server-api";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect } from "@/components/form/form-select";
 import { FormStringList } from "@/components/form/form-string-list";
@@ -54,26 +54,26 @@ type ConnectionStepProps = StepProps & {
 type VerifySchemaStepProps = StepProps & {
     onDiscoverSchema: () => void;
     onVerifyConnection: () => void;
-    schema: CdcSinkSourceSchema | null;
+    schema: DiscoverResponse | null;
 };
 
 type MapSchemaStepProps = StepProps & {
     mappedConfiguration: CdcSinkConfiguration | null;
     onPrepareMapping: () => void;
-    schema: CdcSinkSourceSchema | null;
+    schema: DiscoverResponse | null;
 };
 
 type PreviewStepProps = StepProps & {
     mappedConfiguration: CdcSinkConfiguration | null;
     onRunPreview: () => void;
-    schema: CdcSinkSourceSchema | null;
-    testResult: TestMappingResult | null;
+    schema: DiscoverResponse | null;
+    testResult: TestMappingResponse | null;
 };
 
 type LoadProgressStepProps = {
     mappedConfiguration: CdcSinkConfiguration | null;
     message?: SetupWizardMessage;
-    provisionResult: ProvisionResult | null;
+    provisionResult: ProvisionResponse | null;
 };
 
 export function ChooseDataSourceStep({ message }: { message?: SetupWizardMessage }) {
@@ -308,7 +308,7 @@ export function PreviewStep({
                 <div className="grid gap-3 md:grid-cols-3">
                     <SummaryPanel label="Application" value={appName || "Untitled"} />
                     <SummaryPanel label="Source" value={providerLabel} />
-                    <SummaryPanel label="Mapped tables" value={String(mappedConfiguration?.tables.length ?? 0)} />
+                    <SummaryPanel label="Mapped tables" value={String(mappedConfiguration?.tables?.length ?? 0)} />
                 </div>
 
                 {description && (
@@ -436,7 +436,7 @@ function StepMessageAlert({ message }: { message?: SetupWizardMessage }) {
     );
 }
 
-function SchemaTable({ compact = false, schema }: { compact?: boolean; schema: CdcSinkSourceSchema | null }) {
+function SchemaTable({ compact = false, schema }: { compact?: boolean; schema: DiscoverResponse | null }) {
     if (!schema) {
         return (
             <div className="rounded-lg border bg-background px-3 py-8 text-center text-sm text-muted-foreground">
@@ -500,11 +500,11 @@ function MappingTable({ configuration }: { configuration: CdcSinkConfiguration |
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {configuration.tables.map((table) => (
+                    {(configuration.tables ?? []).map((table) => (
                         <TableRow key={getMappedTableKey(table)}>
-                            <TableCell>{table.collectionName}</TableCell>
+                            <TableCell>{table.collectionName ?? ""}</TableCell>
                             <TableCell className="text-muted-foreground">{getMappedTableKey(table)}</TableCell>
-                            <TableCell className="text-muted-foreground">{table.columns.length}</TableCell>
+                            <TableCell className="text-muted-foreground">{table.columns?.length ?? 0}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -513,7 +513,7 @@ function MappingTable({ configuration }: { configuration: CdcSinkConfiguration |
     );
 }
 
-function MappingPreviewResult({ result }: { result: TestMappingResult | null }) {
+function MappingPreviewResult({ result }: { result: TestMappingResponse | null }) {
     if (!result) {
         return (
             <div className="rounded-lg border bg-background px-3 py-8 text-center text-sm text-muted-foreground">
