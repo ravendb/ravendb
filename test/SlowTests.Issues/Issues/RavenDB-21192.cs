@@ -1246,7 +1246,7 @@ public class RavenDB_21192 : RavenTestBase
     }
     
     [RavenFact(RavenTestCategory.Etl)]
-    public void TestScriptErrorsShouldNotBePersisted()
+    public void RavenEtlTestScriptErrorsShouldNotBePersisted()
     {
         using (var store = GetDocumentStore())
         {
@@ -1289,6 +1289,9 @@ public class RavenDB_21192 : RavenTestBase
 
                 var itemErrors = database.TaskErrorsStorage.ReadAllItemErrors(TaskCategory.Etl);
                 Assert.Empty(itemErrors);
+
+                var processErrors = database.TaskErrorsStorage.ReadAllProcessErrors(TaskCategory.Etl);
+                Assert.Empty(processErrors);
             }
         }
     }
@@ -1413,6 +1416,11 @@ public class RavenDB_21192 : RavenTestBase
                 
                 var testResult = (RelationalDatabaseEtlTestScriptResult)SqlEtl.TestScript(testScript, database, database.ServerStore, context);
                 Assert.NotNull(testResult);
+
+                Assert.NotNull(testResult.ProcessError);
+                Assert.False(string.IsNullOrEmpty(testResult.ProcessError.Error),
+                    $"Expected {nameof(testResult.ProcessError)}.{nameof(testResult.ProcessError.Error)} to contain the underlying exception text.");
+                Assert.Empty(testResult.ItemLoadErrors);
 
                 var itemErrors = database.TaskErrorsStorage.ReadAllItemErrors(TaskCategory.Etl);
                 Assert.Empty(itemErrors);

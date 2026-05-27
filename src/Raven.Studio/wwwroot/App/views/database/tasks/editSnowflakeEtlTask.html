@@ -437,6 +437,10 @@ Option unchecked: <Br />No execution will take place, only generate the SQL stat
                         <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: Error"></pre>
                     </div>
                 </div>
+                <div class="process-error" data-bind="if: processError()">
+                    <h3>Process Error:</h3>
+                    <pre class="margin-left margin-bottom margin-bottom-sm" data-bind="text: processError().Error"></pre>
+                </div>
                 <div class="load-errors" data-bind="visible: loadErrors().length">
                     <h3>Load Errors:</h3>
                     <div data-bind="foreach: loadErrors">
