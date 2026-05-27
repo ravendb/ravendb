@@ -86,6 +86,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("ETL.ProcessHealthStatusImpairedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public float ProcessHealthStatusImpairedThreshold { get; set; }
 
+        [Description("Max ratio of inserts in a batch that can be excluded due to transaction-aborting errors. Beyond this threshold the batch fails. A small minimum number of retries is always allowed regardless of this ratio to handle tiny and medium batches.")]
+        [DefaultValue(0.05f)]
+        [ConfigurationEntry("ETL.SQL.MaxTransactionRetryRatio", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public float MaxTransactionRetryRatio { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
@@ -107,6 +112,12 @@ namespace Raven.Server.Config.Categories
                 throw new InvalidOperationException(
                     $"The value of '{RavenConfiguration.GetKey(x => x.Etl.ProcessHealthStatusFailedThreshold)}' ({ProcessHealthStatusFailedThreshold}) must be greater than " +
                     $"the value of '{RavenConfiguration.GetKey(x => x.Etl.ProcessHealthStatusImpairedThreshold)}' ({ProcessHealthStatusImpairedThreshold}).");
+            }
+
+            if (MaxTransactionRetryRatio is < 0f or > 1f)
+            {
+                throw new InvalidOperationException(
+                    $"The value of '{RavenConfiguration.GetKey(x => x.Etl.MaxTransactionRetryRatio)}' ({MaxTransactionRetryRatio}) must be between 0 and 1.");
             }
         }
     }

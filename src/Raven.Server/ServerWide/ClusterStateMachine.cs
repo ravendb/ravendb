@@ -816,8 +816,8 @@ namespace Raven.Server.ServerWide
                             $"Cannot set typed value of type {type} for database {database}, because it does not exist");
                     }
 
-                    var id = updateCommand.FindFreeId(context, index);
-                    updateCommand.Execute(context, items, id, record: null, _parent.CurrentStateIn(context), out _);
+                    updateCommand.SubscriptionId = updateCommand.FindFreeId(context, index);
+                    updateCommand.Execute(context, items, index, record: null, _parent.CurrentStateIn(context), out _);
 
                     if (databases.Add(database))
                     {

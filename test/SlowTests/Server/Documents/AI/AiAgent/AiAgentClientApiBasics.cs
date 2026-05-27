@@ -246,7 +246,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         Assert.Equal(AiConversationResult.Done, r.Status);
     }
 
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ThrowConcurrencyException(Options options, GenAiConfiguration config)
     {

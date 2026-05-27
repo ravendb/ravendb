@@ -409,12 +409,18 @@ public class LoadVectorFromExternalDocumentTests(ITestOutputHelper output) : Emb
         }
 
         Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
+
+        // etlStatus.WaitAsync is signaled on the first batch with LoadSuccesses > 0, so it only guarantees that ONE of
+        // the two ETL tasks (localaitask, querydtotask) has produced an embedding. Wait until both new embeddings exist.
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifierForDto, aiConnectionStringIdentifierForDto, "Name", ["sdklfjklsadjkl;assdjaskll"], dtoId);
+        AssertEmbeddingsForPath(store, aiIntegrationIdentifierForQueriesDto, aiConnectionStringIdentifierForQueriesDto, "Name", ["dsafadfae"], queryDtoId);
+
         await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<QueryDto, TIndex>().Count(x => x.Vector == null);
             Assert.Equal(0, nullElements);
-            
+
             nullElements = session.Query<QueryDto, TIndex>().Count(x => x.Vector2 == null);
             Assert.Equal(0, nullElements);
 
@@ -424,7 +430,7 @@ public class LoadVectorFromExternalDocumentTests(ITestOutputHelper output) : Emb
                 .ToList();
 
             Assert.Empty(byVector);
-            
+
             byVector = session.Query<QueryDto, TIndex>()
                 .VectorSearch(f => f.WithField(s => s.Vector2),
                     v => v.ByText("car"), minimumSimilarity: 0.75f)
@@ -432,10 +438,6 @@ public class LoadVectorFromExternalDocumentTests(ITestOutputHelper output) : Emb
 
             Assert.Empty(byVector);
         }
-
-        AssertEmbeddingsForPath(store, aiIntegrationIdentifierForDto, aiConnectionStringIdentifierForDto, "Name", ["sdklfjklsadjkl;assdjaskll"], dtoId);
-        
-        AssertEmbeddingsForPath(store, aiIntegrationIdentifierForQueriesDto, aiConnectionStringIdentifierForQueriesDto, "Name", ["dsafadfae"], queryDtoId);
     }
 
     private class IndexByName : AbstractIndexCreationTask<QueryDto>
