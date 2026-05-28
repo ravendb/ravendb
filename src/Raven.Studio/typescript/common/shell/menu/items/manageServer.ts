@@ -12,7 +12,7 @@ import ServerWideCustomSorters = require("components/pages/resources/manageServe
 import ServerSettings = require("components/pages/resources/manageServer/serverSettings/ServerSettings");
 import AdminLogs = require("components/pages/resources/manageServer/adminLogs/AdminLogs");
 import Certificates = require("components/pages/resources/manageServer/certificates/Certificates");
-import ServerwideConnectionStrings = require("components/pages/resources/manageServer/serverwideConnectionStrings/ServerWideConnectionStrings");
+import ServerWideConnectionStrings = require("components/pages/resources/manageServer/serverWideConnectionStrings/ServerWideConnectionStrings");
 
 export = getManageServerMenuItem;
 
@@ -188,12 +188,12 @@ function getManageServerMenuItem() {
             },
         }),
         new leafMenuItem({
-            route: 'admin/settings/serverwideConnectionStrings',
-            moduleId: reactUtils.bridgeToReact(ServerwideConnectionStrings.default, "nonShardedView"),
+            route: 'admin/settings/serverWideConnectionStrings',
+            moduleId: reactUtils.bridgeToReact(ServerWideConnectionStrings.default, "nonShardedView"),
             title: "Server-Wide Connection Strings",
             nav: true,
             css: 'icon-manage-connection-strings',
-            dynamicHash: appUrl.forServerwideConnectionStrings,
+            dynamicHash: appUrl.forServerWideConnectionStrings,
             requiredAccess: "Operator",
             search: {
                 innerActions: [

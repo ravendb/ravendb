@@ -15,7 +15,7 @@ import { getIcon, getTypeLabel } from "components/pages/database/settings/connec
 import { EmptySet } from "components/common/EmptySet";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
-import ServerWideConnectionStringsInfoHub from "components/pages/resources/manageServer/serverwideConnectionStrings/ServerWideConnectionStringsInfoHub";
+import ServerWideConnectionStringsInfoHub from "components/pages/resources/manageServer/serverWideConnectionStrings/ServerWideConnectionStringsInfoHub";
 import { exhaustiveStringTuple } from "components/utils/common";
 import {
     connectionStringsActions,

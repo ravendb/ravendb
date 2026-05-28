@@ -93,7 +93,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                     message: (
                                         <>
                                             This connection string is managed server-wide. To edit or delete it, go to{" "}
-                                            <a href={appUrl.forServerwideConnectionStrings()}>
+                                            <a href={appUrl.forServerWideConnectionStrings()}>
                                                 Server-Wide Connection Strings
                                             </a>
                                             .
@@ -126,7 +126,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                     message: (
                                         <>
                                             This connection string is managed server-wide. To edit or delete it, go to{" "}
-                                            <a href={appUrl.forServerwideConnectionStrings()}>
+                                            <a href={appUrl.forServerWideConnectionStrings()}>
                                                 Server-Wide Connection Strings
                                             </a>
                                             .

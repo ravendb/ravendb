@@ -82,7 +82,7 @@ export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps
                             <Button
                                 size="xs"
                                 variant="link"
-                                href={appUrl.forServerwideConnectionStrings()}
+                                href={appUrl.forServerWideConnectionStrings()}
                                 title="Navigate to the Server-Wide Connection Strings View"
                             >
                                 <Icon icon="link" />

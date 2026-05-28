@@ -35,7 +35,7 @@ export function ConnectionStringsInfoHub() {
                         </li>
                         <li className="margin-top-xxs">
                             Connection strings can also be defined at the cluster level in the{" "}
-                            <a href={appUrl.forServerwideConnectionStrings()} target="_blank">
+                            <a href={appUrl.forServerWideConnectionStrings()} target="_blank">
                                 Server-Wide Connection Strings view
                             </a>
                             . Those connection strings are propagated to all databases in the cluster, unless specific
