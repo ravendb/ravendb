@@ -56,7 +56,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 LastMessageAt = conversation.LastMessageAt,
                 HasMoreMessages = collector.HasMoreMessages,
                 SubConversationIds = conversation.SubConversationIds.ToList(),
-                Messages = collector.GetResults()
+                Messages = collector.GetResults(),
+                Attachments = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(
+                    RequestHandler.Database, context, conversationId)
             };
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))

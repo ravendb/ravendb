@@ -59,6 +59,12 @@ public class AiConversationMessagesResult : IDynamicJson
     public List<string> SubConversationIds { get; set; }
 
     /// <summary>
+    /// All attachment file names referenced across the returned messages, deduplicated.
+    /// Aggregated from per-message <see cref="AiConversationMessage.Attachments"/>.
+    /// </summary>
+    public List<string> Attachments { get; set; }
+
+    /// <summary>
     /// Serializes this result to a JSON structure.
     /// </summary>
     public DynamicJsonValue ToJson()
@@ -80,6 +86,7 @@ public class AiConversationMessagesResult : IDynamicJson
             [nameof(LastMessageAt)] = LastMessageAt,
             [nameof(HasMoreMessages)] = HasMoreMessages,
             [nameof(SubConversationIds)] = SubConversationIds != null ? new DynamicJsonArray(SubConversationIds) : null,
+            [nameof(Attachments)] = Attachments != null ? new DynamicJsonArray(Attachments) : null,
             [nameof(Messages)] = Messages != null ? new DynamicJsonArray(Messages) : null
         };
     }
