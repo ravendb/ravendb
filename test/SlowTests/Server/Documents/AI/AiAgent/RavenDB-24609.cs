@@ -310,6 +310,9 @@ public class RavenDB_24609(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Null(attachmentsMsg.Content);
         Assert.Equal(new[] { "banana.png", "star.png", "heart.png" }, attachmentsMsg.Attachments);
 
+        Assert.NotNull(result.Attachments);
+        Assert.Equal(new[] { "banana.png", "heart.png", "star.png" }, result.Attachments);
+
         // At least one assistant message with content (the model's answer) must come back.
         Assert.Contains(result.Messages, m =>
             m.Role == AiMessageRole.Assistant && string.IsNullOrEmpty(m.Content) == false);
