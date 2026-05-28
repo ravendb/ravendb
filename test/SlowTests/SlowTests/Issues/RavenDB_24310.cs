@@ -188,6 +188,24 @@ public class RavenDB_24310 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Configuration)]
+    public async Task DeletingNonExistentServerWideConnectionStringIsNoOp()
+    {
+        using (var store = GetDocumentStore())
+        {
+            // deleting a server-wide connection string that was never created should be a no-op and must not throw
+            var deleteResult = await store.Maintenance.Server.SendAsync(
+                new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "DoesNotExist" }));
+
+            Assert.True(deleteResult.RaftCommandIndex > 0);
+
+            // nothing should have been created or left behind
+            var getResult = await store.Maintenance.Server.SendAsync(
+                new GetServerWideConnectionStringsOperation("DoesNotExist", ConnectionStringType.Raven));
+            Assert.Equal(0, getResult.Results.Count);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration)]
     public async Task ExcludedDatabasesRespected()
     {
         using (var store = GetDocumentStore())
