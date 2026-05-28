@@ -228,6 +228,50 @@ public class RavenDB_24310 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Configuration)]
+    public async Task AddingDatabaseToExcludedListRemovesPropagatedConnectionString()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var db2Name = store.Database + "_excluded";
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(db2Name)));
+
+            // create a server-wide connection string with no exclusions - propagated everywhere
+            var ravenCS = new ServerWideConnectionString
+            {
+                ConnectionString = new RavenConnectionString
+                {
+                    Name = "MyRavenCS",
+                    Database = "TargetDb",
+                    TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
+                }
+            };
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS));
+
+            var expectedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName("MyRavenCS");
+
+            // both databases should have it
+            var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.True(record1.RavenConnectionStrings.ContainsKey(expectedName));
+
+            var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db2Name));
+            Assert.True(record2.RavenConnectionStrings.ContainsKey(expectedName));
+
+            // now add db2 to the excluded list and verify the connection string is removed from it
+            ravenCS.ExcludedDatabases = new[] { db2Name };
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS));
+
+            record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db2Name));
+            Assert.False(record2.RavenConnectionStrings.ContainsKey(expectedName),
+                "Connection string should have been removed from the newly-excluded database");
+
+            // the non-excluded database should still have it
+            record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.True(record1.RavenConnectionStrings.ContainsKey(expectedName));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration)]
     public async Task CannotModifyServerWideConnectionStringViaDatabaseApi()
     {
         using (var store = GetDocumentStore())
