@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -360,6 +361,40 @@ public class RavenDB_24310 : RavenTestBase
             };
 
             await store.Maintenance.SendAsync(new Raven.Client.Documents.Operations.ETL.AddEtlOperation<RavenConnectionString>(etlConfig));
+
+            // attempt to delete server-wide connection string should fail
+            var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" })));
+            Assert.Contains("It is used by", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Replication)]
+    public async Task CannotDeleteServerWideConnectionStringInUseBySinkPullReplication()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var ravenCS = new ServerWideConnectionString
+            {
+                ConnectionString = new RavenConnectionString
+                {
+                    Name = "MyRavenCS",
+                    Database = "TargetDb",
+                    TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
+                }
+            };
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS));
+
+            var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName("MyRavenCS");
+
+            // create a sink pull replication task that uses the propagated connection string
+            await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                Name = "TestSink",
+                ConnectionStringName = prefixedName,
+                HubName = "TestHub"
+            }));
 
             // attempt to delete server-wide connection string should fail
             var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>

@@ -221,6 +221,7 @@ public sealed partial class ClusterStateMachine
             case ConnectionStringType.Raven:
                 CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.RavenEtls), connectionStringName, databaseName);
                 CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.ExternalReplications), connectionStringName, databaseName);
+                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.SinkPullReplications), connectionStringName, databaseName);
                 break;
             case ConnectionStringType.Sql:
                 CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.SqlEtls), connectionStringName, databaseName);
