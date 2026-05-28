@@ -920,11 +920,14 @@ namespace Voron
         {
             long journalsSize = 0;
             long hardLinkedJournalsSize = 0;
+            // A root's own journals may show IsHardLinked=true (branches link to them) -
+            // those bytes belong here, not to a branch, so don't subtract on the root side.
+            bool envHostsBranches = Journal.BranchJournalMerger != null;
             foreach (var journal in Journal.Files)
             {
                 var size = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte;
                 journalsSize += size;
-                if (journal.IsHardLinked)
+                if (journal.IsHardLinked && envHostsBranches == false)
                     hardLinkedJournalsSize += size;
             }
 
