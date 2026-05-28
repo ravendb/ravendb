@@ -196,6 +196,128 @@ public class RavenDB_26653 : RavenTestBase
             $"de-duped journals total ({dedupedJournalsSum}) should be smaller than the naive sum ({naiveJournalsSum})");
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void Root_env_must_not_subtract_its_own_journal_bytes_after_reopen_with_stale_branch_link()
+    {
+        // After a root env that hosts branches is disposed and reopened, branch dirs still
+        // hold hard links to its journal inodes - so the root's own journals show
+        // IsHardLinked=true. GenerateSizeReport must not subtract those bytes on the root
+        // side, or the root under-reports disk usage on every reopen.
+        string rootPath = NewDataPath(suffix: "root");
+        Raven.Server.Utils.IOExtensions.DeleteDirectory(rootPath);
+        string branchPath = NewDataPath(suffix: "branch");
+        Raven.Server.Utils.IOExtensions.DeleteDirectory(branchPath);
+
+        // Phase 1: open root + one branch, commit through branch to materialize the hard link.
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var _scope = root.Journal.SharedJournalsScope();
+
+            var mre = new System.Threading.ManualResetEventSlim(false);
+            root.Journal.BranchJournalMerger = new FastTests.Voron.SharedJournal.SharedJournalTests.MyJournalMerger(mre);
+
+            var task = System.Threading.Tasks.Task.Run(() =>
+            {
+                using var branch = FastTests.Voron.SharedJournal.SharedJournalTests.CreateBranchEnv(branchPath, root);
+                using var btx = branch.WriteTransaction();
+                btx.CreateTree("branchTree").Add("k", "v");
+                btx.Commit();
+            });
+            task.ContinueWith(_ => mre.Set());
+            FastTests.Voron.SharedJournal.SharedJournalTests.WaitForTaskAndExecuteBranchTransactions(task, mre, root);
+
+            // ManualFlushing means the journal stays on disk - do NOT flush to data file here.
+        }
+
+        // Phase 2: branch dir still holds its hard link; reopen root alone and inspect.
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            using var root = new StorageEnvironment(rootOptions);
+            // Re-enter shared-journals mode (server-side orchestrator does this via SharedIndexJournals).
+            // Dedup reads BranchJournalMerger to know this env is the canonical owner.
+            using var _scope = root.Journal.SharedJournalsScope();
+            var mre = new System.Threading.ManualResetEventSlim(false);
+            root.Journal.BranchJournalMerger = new FastTests.Voron.SharedJournal.SharedJournalTests.MyJournalMerger(mre);
+
+            Assert.NotEmpty(root.Journal.Files);
+
+            // Branch dir still holds its link, so IsHardLinked honestly reports true.
+            Assert.All(root.Journal.Files, j => Assert.True(j.IsHardLinked,
+                $"Root's journal #{j.Number} should reflect OS-level nlinks > 1 (the branch link survives)"));
+
+            // But these bytes belong to the root - dedup must not subtract.
+            var sizeReport = root.GenerateSizeReport(includeTempBuffers: false);
+            Assert.True(sizeReport.JournalsInBytes > 0, "root must report non-empty journals after reopen");
+            Assert.Equal(0, sizeReport.HardLinkedJournalsInBytes);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void FallenBack_branch_must_still_subtract_its_old_hard_linked_journals()
+    {
+        // When a branch can no longer create hard links (e.g. OS hard-link limit reached)
+        // it clears its RootJournal and switches to unshared mode. Its existing JournalFile
+        // entries remain IsHardLinked=true (the root still holds those bytes); only new
+        // local journals are IsHardLinked=false.
+        //
+        // The dedup math must still subtract those old hard-linked entries even though
+        // the env's RootJournal is now null and the env no longer hosts branches.
+        string rootPath = NewDataPath(suffix: "root");
+        Raven.Server.Utils.IOExtensions.DeleteDirectory(rootPath);
+        string branchPath = NewDataPath(suffix: "branch");
+        Raven.Server.Utils.IOExtensions.DeleteDirectory(branchPath);
+
+        using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+        rootOptions.ManualFlushing = true;
+        rootOptions.ManualSyncing = true;
+
+        using var root = new StorageEnvironment(rootOptions);
+        using var _scope = root.Journal.SharedJournalsScope();
+
+        var mre = new System.Threading.ManualResetEventSlim(false);
+        root.Journal.BranchJournalMerger = new FastTests.Voron.SharedJournal.SharedJournalTests.MyJournalMerger(mre);
+
+        StorageEnvironment branch = null;
+        try
+        {
+            var task = System.Threading.Tasks.Task.Run(() =>
+            {
+                branch = FastTests.Voron.SharedJournal.SharedJournalTests.CreateBranchEnv(branchPath, root);
+                using var btx = branch.WriteTransaction();
+                btx.CreateTree("branchTree").Add("k", "v");
+                btx.Commit();
+            });
+            task.ContinueWith(_ => mre.Set());
+            FastTests.Voron.SharedJournal.SharedJournalTests.WaitForTaskAndExecuteBranchTransactions(task, mre, root);
+
+            Assert.NotNull(branch);
+            // Simulate the fallback: branch loses its RootJournal but the existing journal
+            // entries (created via the branch-link path) keep IsHardLinked=true.
+            branch.Options.RootJournal = null;
+
+            Assert.NotEmpty(branch.Journal.Files);
+            Assert.All(branch.Journal.Files, j => Assert.True(j.IsHardLinked,
+                $"Pre-fallback branch journal #{j.Number} must remain IsHardLinked - root still owns the inode"));
+
+            var sizeReport = branch.GenerateSizeReport(includeTempBuffers: false);
+            Assert.True(sizeReport.JournalsInBytes > 0);
+            // Root still owns these bytes; the fallen-back branch's size report must
+            // subtract them so the cluster-wide sum doesn't double-count.
+            Assert.Equal(sizeReport.JournalsInBytes, sizeReport.HardLinkedJournalsInBytes);
+        }
+        finally
+        {
+            branch?.Dispose();
+        }
+    }
+
     private class Users_ByName : AbstractIndexCreationTask<User>
     {
         public Users_ByName()
