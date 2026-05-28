@@ -160,16 +160,21 @@ public sealed partial class ClusterStateMachine
 
     private void RemoveServerWideConnectionStringFromAllDatabases(RemoveServerWideConnectionStringCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
     {
+        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+        var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
+
+        // deleteConfiguration is null when the connection string didn't exist (UpdateValue was a no-op).
+        // There's nothing to remove from databases, but we still call ApplyDatabaseRecordUpdates so the raft index is notified.
         if (deleteConfiguration == null)
-            throw new RachisInvalidOperationException($"No configuration was supplied to {type}: raftIndex {index}");
+        {
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(deleteConfiguration.ConnectionStringName))
             throw new RachisInvalidOperationException($"Connection string name to delete cannot be null or white space for command type {type}: raftIndex {index}");
 
-        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-
         var dbKey = Constants.Documents.Prefix;
-        var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
         var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(deleteConfiguration.ConnectionStringName);
         var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(deleteConfiguration.Type);
 
