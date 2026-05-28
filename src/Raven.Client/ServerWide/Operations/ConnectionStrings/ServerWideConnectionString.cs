@@ -49,7 +49,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         /// </summary>
         /// <param name="databaseName">The name of the database to check.</param>
         /// <returns><c>true</c> if the database is in the <see cref="ExcludedDatabases"/> list; otherwise, <c>false</c>.</returns>
-        public bool IsExcluded(string databaseName)
+        internal bool IsExcluded(string databaseName)
         {
             if (ExcludedDatabases == null)
                 return false;
