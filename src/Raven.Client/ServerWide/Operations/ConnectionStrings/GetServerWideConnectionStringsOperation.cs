@@ -63,7 +63,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 
                 var queryParams = new List<string>();
                 if (_connectionStringName != null)
-                    queryParams.Add($"connectionStringName={Uri.EscapeDataString(_connectionStringName)}");
+                    queryParams.Add($"name={Uri.EscapeDataString(_connectionStringName)}");
                 if (_type != ConnectionStringType.None)
                     queryParams.Add($"type={_type}");
 

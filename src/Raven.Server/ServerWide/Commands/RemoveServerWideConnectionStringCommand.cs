@@ -39,11 +39,6 @@ namespace Raven.Server.ServerWide.Commands
             return context.ReadObject(previousValue, Name);
         }
 
-        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
-        {
-            AssertClusterAdmin(isClusterAdmin);
-        }
-
         public sealed class DeleteConfiguration : IDynamicJson
         {
             public ConnectionStringType Type { get; set; }

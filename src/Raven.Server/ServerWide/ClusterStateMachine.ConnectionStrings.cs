@@ -122,6 +122,9 @@ public sealed partial class ClusterStateMachine
                     var csPropertyIndex = connectionStrings.GetPropertyIndex(databaseRecordCSName);
                     if (csPropertyIndex != -1)
                     {
+                        // excluding a database must not orphan a task that uses the propagated connection string
+                        AssertServerWideConnectionStringNotInUse(oldDatabaseRecord, databaseRecordCSName, serverWideConnectionString.Type, databaseName);
+
                         connectionStrings.Modifications ??= new DynamicJsonValue();
                         connectionStrings.Modifications.Removals = new HashSet<int> { csPropertyIndex };
                         connectionStrings = context.ReadObject(connectionStrings, propertyName);

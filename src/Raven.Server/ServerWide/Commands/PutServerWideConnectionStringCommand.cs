@@ -50,11 +50,6 @@ namespace Raven.Server.ServerWide.Commands
             return context.ReadObject(djv, Name);
         }
 
-        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
-        {
-            AssertClusterAdmin(isClusterAdmin);
-        }
-
         internal static string GetConnectionStringDictionaryPropertyName(ConnectionStringType type)
         {
             switch (type)

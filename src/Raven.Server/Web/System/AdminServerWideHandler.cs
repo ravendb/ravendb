@@ -235,7 +235,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/server-wide/connection-strings", "GET", AuthorizationStatus.Operator)]
         public async Task GetServerWideConnectionStrings()
         {
-            var name = GetStringQueryString("connectionStringName", required: false);
+            var name = GetStringQueryString("name", required: false);
             var typeAsString = GetStringQueryString("type", required: false);
 
             ConnectionStringType? type = null;
@@ -262,14 +262,21 @@ namespace Raven.Server.Web.System
                         result.Results.Add(connectionString);
                 }
 
-                var allDatabases = ServerStore.Cluster.GetAllDatabases(context);
-                var usageMap = BuildUsageMap(allDatabases);
-
-                foreach (var cs in result.Results)
+                if (result.Results.Count > 0)
                 {
-                    var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name);
-                    if (usageMap.TryGetValue(prefixedName, out var usages))
-                        cs.UsedByTasks = usages;
+                    var relevantNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var cs in result.Results)
+                        relevantNames.Add(ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name));
+
+                    var allDatabases = ServerStore.Cluster.GetAllDatabases(context);
+                    var usageMap = BuildUsageMap(allDatabases, relevantNames);
+
+                    foreach (var cs in result.Results)
+                    {
+                        var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name);
+                        if (usageMap.TryGetValue(prefixedName, out var usages))
+                            cs.UsedByTasks = usages;
+                    }
                 }
 
                 context.Write(writer, result.ToJson());
@@ -277,7 +284,7 @@ namespace Raven.Server.Web.System
         }
 
         private static Dictionary<string, List<ConnectionStringTaskUsage>> BuildUsageMap(
-            List<DatabaseRecord> databases)
+            List<DatabaseRecord> databases, HashSet<string> relevantNames)
         {
             var map = new Dictionary<string, List<ConnectionStringTaskUsage>>(StringComparer.OrdinalIgnoreCase);
 
@@ -285,7 +292,7 @@ namespace Raven.Server.Web.System
             {
                 if (connectionStringName == null)
                     return;
-                if (connectionStringName.StartsWith(ServerWideConnectionString.NamePrefix, StringComparison.OrdinalIgnoreCase) == false)
+                if (relevantNames.Contains(connectionStringName) == false)
                     return;
                 if (map.TryGetValue(connectionStringName, out var list) == false)
                     map[connectionStringName] = list = new List<ConnectionStringTaskUsage>();
@@ -310,6 +317,8 @@ namespace Raven.Server.Web.System
                     Add(t.ConnectionStringName, t.TaskId, t.Name);
                 foreach (var t in db.EmbeddingsGenerations)
                     Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.GenAis)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
                 foreach (var t in db.ExternalReplications)
                     Add(t.ConnectionStringName, t.TaskId, t.Name);
                 foreach (var t in db.SinkPullReplications)
@@ -322,7 +331,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/server-wide/connection-strings", "DELETE", AuthorizationStatus.Operator)]
         public async Task RemoveServerWideConnectionString()
         {
-            var name = GetStringQueryString("connectionString", required: true);
+            var name = GetStringQueryString("name", required: true);
             var typeAsString = GetStringQueryString("type", required: true);
 
             var type = ParseConnectionStringType(typeAsString);

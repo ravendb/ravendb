@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -659,6 +660,100 @@ public class RavenDB_24310 : RavenTestBase
         finally
         {
             IOExtensions.DeleteFile(file);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task CannotExcludeDatabaseWhileServerWideConnectionStringInUse()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var ravenCS = new ServerWideConnectionString
+            {
+                ConnectionString = new RavenConnectionString
+                {
+                    Name = "MyRavenCS",
+                    Database = "TargetDb",
+                    TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
+                }
+            };
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS));
+
+            var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName("MyRavenCS");
+
+            // create an ETL task in this database that uses the propagated connection string
+            var etlConfig = new RavenEtlConfiguration
+            {
+                Name = "TestEtl",
+                ConnectionStringName = prefixedName,
+                Transforms =
+                {
+                    new Transformation
+                    {
+                        Name = "TestTransform",
+                        Collections = { "Users" },
+                        Script = "loadToUsers(this);"
+                    }
+                }
+            };
+
+            await store.Maintenance.SendAsync(new Raven.Client.Documents.Operations.ETL.AddEtlOperation<RavenConnectionString>(etlConfig));
+
+            // excluding this database would remove the in-use connection string - this must be blocked (just like a delete)
+            ravenCS.ExcludedDatabases = new[] { store.Database };
+            var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS)));
+            Assert.Contains("It is used by", ex.Message, StringComparison.OrdinalIgnoreCase);
+
+            // the failed operation must have rolled back: the connection string is still present in the database record
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.True(record.RavenConnectionStrings.ContainsKey(prefixedName));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task GetServerWideConnectionStrings_ReturnsUsedByTasks_GenAi()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var csName = "MyServerWideAiCS";
+            var aiConnectionString = new AiConnectionString
+            {
+                Name = csName,
+                ModelType = AiModelType.Chat,
+                OpenAiSettings = new OpenAiSettings { ApiKey = "fake-key", Model = "test" }
+            };
+            aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString { ConnectionString = aiConnectionString }));
+
+            var prefixedCsName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(csName);
+
+            // a GenAI task that uses the propagated AI connection string should be reported in UsedByTasks
+            var genAiConfig = new GenAiConfiguration
+            {
+                Name = "MyGenAiTask",
+                ConnectionStringName = prefixedCsName,
+                Collection = "Users",
+                Prompt = "Process users",
+                SampleObject = "{\"Result\":\"test\"}",
+                UpdateScript = "this.Result = $output.Result",
+                GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Name: this.Name });" }
+            };
+            var addResult = await store.Maintenance.SendAsync(new AddGenAiOperation(genAiConfig));
+            Assert.True(addResult.TaskId > 0);
+
+            var getResult = await store.Maintenance.Server.SendAsync(
+                new GetServerWideConnectionStringsOperation(csName, ConnectionStringType.Ai));
+
+            Assert.Equal(1, getResult.Results.Count);
+            var cs = getResult.Results[0];
+            Assert.Equal(csName, cs.Name);
+            Assert.NotNull(cs.UsedByTasks);
+            Assert.Equal(1, cs.UsedByTasks.Count);
+            Assert.Equal(addResult.TaskId, cs.UsedByTasks[0].TaskId);
+            Assert.Equal("MyGenAiTask", cs.UsedByTasks[0].TaskName);
         }
     }
 }

@@ -12,7 +12,7 @@ class deleteServerWideConnectionStringCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const args = {
             type: this.type,
-            connectionString: this.connectionStringName,
+            name: this.connectionStringName,
         };
 
         const url =
