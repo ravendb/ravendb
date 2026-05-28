@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.AI;
-using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
@@ -95,7 +94,7 @@ internal static class AiIntegrationTestConnectionHelper
                     case AiModelType.Chat:
                         using (var client = ChatCompletionClient.CreateChatCompletionClient(requestHandler.ServerStore.ContextPool, aiConnectionString))
                         {
-                            var schema = ChatCompletionClient.GetSchemaFromSampleObject("{}");
+                            var schema = ChatCompletionClient.GetSchemaFromSampleObject("{\"answer\":\"the answer to the user's prompt\"}");
                             await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, requestHandler.HttpContext.RequestAborted);
                         }
 
