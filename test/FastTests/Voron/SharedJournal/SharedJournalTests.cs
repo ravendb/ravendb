@@ -336,6 +336,108 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
 
 
     [RavenFact(RavenTestCategory.Voron)]
+    public void WillRestoreMissingHardLinksForMultipleBranchesOnRootRecovery()
+    {
+        // RavenDB-26708.
+        //
+        // LinkedJournalsRecord.Add() appends to both _paths and _journalIds in lockstep, but
+        // CreateEntry() used to clear ONLY _paths - never _journalIds. After the first flush that
+        // emits a record, _journalIds keeps growing while _paths restarts at 0, so the serialization
+        // loop (which reads _journalIds[index] for index < _paths.Count) read the OLDEST ids, not the
+        // ones matching the current paths.
+        //
+        // With two branches whose links are recorded in separate CreateEntry() calls, the second
+        // branch's link record was serialized with the FIRST branch's JournalId. On recovery,
+        // ProcessLinkedJournalsRecord does `if (envJournalId != journalId) continue;` and silently
+        // skipped the link, so the branch's hard link was never rebuilt - opening it after its
+        // Journals/ dir was lost failed with InvalidJournalException.
+        //
+        // WillRestoreMissingHardLinksOnRootRecovery uses a single branch / single JournalId, where the
+        // desync is invisible because every id is identical. This test uses two distinct branches.
+        string rootPath = NewDataPath(suffix: "-root");
+        string branchAPath = NewDataPath(suffix: "-branchA");
+        string branchBPath = NewDataPath(suffix: "-branchB");
+        IOExtensions.DeleteDirectory(rootPath);
+        IOExtensions.DeleteDirectory(branchAPath);
+        IOExtensions.DeleteDirectory(branchBPath);
+
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope();
+
+            // Branch A commits first -> its link is the first entry ever added; recorded correctly.
+            {
+                var mre = new ManualResetEventSlim(false);
+                root.Journal.BranchJournalMerger = new MyJournalMerger(mre);
+                var task = Task.Run(() =>
+                {
+                    using var branchA = CreateBranchEnv(branchAPath, root);
+                    using (var tx = branchA.WriteTransaction())
+                    {
+                        tx.CreateTree("treeA");
+                        tx.Commit();
+                    }
+                });
+                task.ContinueWith(_ => mre.Set());
+                WaitForTaskAndExecuteBranchTransactions(task, mre, root);
+            }
+
+            // Branch B commits in a separate CreateEntry() call. With the bug, its link record carried
+            // branch A's JournalId (the stale _journalIds[0]) instead of branch B's.
+            {
+                var mre = new ManualResetEventSlim(false);
+                root.Journal.BranchJournalMerger = new MyJournalMerger(mre);
+                var task = Task.Run(() =>
+                {
+                    using var branchB = CreateBranchEnv(branchBPath, root);
+                    using (var tx = branchB.WriteTransaction())
+                    {
+                        tx.CreateTree("treeB");
+                        tx.Commit();
+                    }
+                });
+                task.ContinueWith(_ => mre.Set());
+                WaitForTaskAndExecuteBranchTransactions(task, mre, root);
+            }
+        }
+
+        // Simulate a crash that took out branch B's Journals/ directory (branch A's is left intact).
+        foreach (string journal in Directory.GetFiles(Path.Combine(branchBPath, "Journals"), "*.journal"))
+            File.Delete(journal);
+
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            // Root recovery replays the LinkedJournalsRecords here, rebuilding the missing links.
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope();
+
+            // Control: branch A opens fine (its journals were not deleted, its link record was correct).
+            using (var branchA = CreateBranchEnv(branchAPath, root))
+            using (var tx = branchA.ReadTransaction())
+            {
+                Assert.NotNull(tx.ReadTree("treeA"));
+            }
+
+            // Regression: branch B's hard link must be rebuilt during recovery so the env opens and
+            // treeB is readable. Before the fix, CreateBranchEnv(branchBPath) threw InvalidJournalException
+            // ("No such journal ...") because the link record carried the wrong JournalId and was skipped.
+            using (var branchB = CreateBranchEnv(branchBPath, root))
+            using (var tx = branchB.ReadTransaction())
+            {
+                Assert.NotNull(tx.ReadTree("treeB"));
+            }
+        }
+    }
+
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanFlushWithSharedJournals()
     {
         string rootPath = NewDataPath(suffix: "root");

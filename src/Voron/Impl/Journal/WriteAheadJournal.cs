@@ -172,6 +172,7 @@ namespace Voron.Impl.Journal
                 header->Hash = Hashing.XXHash64.Calculate(data, dataSize, (ulong)header->TransactionId);
                 
                 _paths.Clear();
+                _journalIds.Clear();
                 _linksDataSize = 0;
                 
                 var actualSize = header->UncompressedSize + sizeof(TransactionHeader);
