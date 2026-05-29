@@ -1,6 +1,6 @@
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import type { CdcSinkConfiguration } from "@/api/generated/server-api";
-import { VirtualDataTable } from "@/components/data/virtual-data-table";
+import { VirtualDataTable } from "@/components/table/virtual-data-table";
 import { getMappedTableKey } from "@/pages/setup/add-app-wizard/wizard-model";
 
 type MappedTable = NonNullable<CdcSinkConfiguration["tables"]>[number];
