@@ -102,10 +102,7 @@ function buildEndpointHelpers(operations) {
                 .join(", ");
             let template = operation.routePath;
             for (const parameter of operation.pathParameters) {
-                template = template.replace(
-                    `{${parameter.name}}`,
-                    "${encodeURIComponent(" + parameter.name + ")}",
-                );
+                template = template.replace(`{${parameter.name}}`, "${encodeURIComponent(" + parameter.name + ")}");
             }
 
             lines.push(`        ${helperName}: (${signature}) => \`${template}\`,`);
@@ -140,34 +137,42 @@ function buildGeneratedClient(operations) {
             }
 
             if (operation.queryParameters.length > 0) {
-                args.push(`searchParams${operation.hasRequiredQueryParameters ? "" : "?"}: ${buildQueryParameterType(operation.queryParameters)}`);
+                args.push(
+                    `searchParams${operation.hasRequiredQueryParameters ? "" : "?"}: ${buildQueryParameterType(operation.queryParameters)}`,
+                );
             }
 
-            const endpointExpression = operation.pathParameters.length === 0
-                ? `API_ENDPOINTS.${groupName}.${helperName}`
-                : `API_ENDPOINTS.${groupName}.${helperName}(${pathArgumentList})`;
+            const endpointExpression =
+                operation.pathParameters.length === 0
+                    ? `API_ENDPOINTS.${groupName}.${helperName}`
+                    : `API_ENDPOINTS.${groupName}.${helperName}(${pathArgumentList})`;
             const clientArguments = [endpointExpression];
 
             if (operation.requestBodyType) {
                 clientArguments.push("request");
                 if (operation.queryParameters.length > 0) {
-                    clientArguments.push(operation.responseTypeOption
-                        ? `{ searchParams, responseType: "${operation.responseTypeOption}" }`
-                        : "{ searchParams }");
+                    clientArguments.push(
+                        operation.responseTypeOption
+                            ? `{ searchParams, responseType: "${operation.responseTypeOption}" }`
+                            : "{ searchParams }",
+                    );
                 } else if (operation.responseTypeOption) {
                     clientArguments.push(`{ responseType: "${operation.responseTypeOption}" }`);
                 }
             } else if (operation.queryParameters.length > 0) {
-                clientArguments.push(operation.responseTypeOption
-                    ? `{ searchParams, responseType: "${operation.responseTypeOption}" }`
-                    : "{ searchParams }");
+                clientArguments.push(
+                    operation.responseTypeOption
+                        ? `{ searchParams, responseType: "${operation.responseTypeOption}" }`
+                        : "{ searchParams }",
+                );
             } else if (operation.responseTypeOption) {
                 clientArguments.push(`{ responseType: "${operation.responseTypeOption}" }`);
             }
 
-            const typeArguments = operation.errorType === "unknown"
-                ? operation.responseType
-                : `${operation.responseType}, ${operation.errorType}`;
+            const typeArguments =
+                operation.errorType === "unknown"
+                    ? operation.responseType
+                    : `${operation.responseType}, ${operation.errorType}`;
 
             lines.push(
                 `            ${helperName}: (${args.join(", ")}) => client.${operation.method}<${typeArguments}>(${clientArguments.join(", ")}),`,
@@ -244,7 +249,11 @@ function collectOperations(paths) {
                 throw new Error(`OperationId '${operationId}' must match '<group>.<name>'.`);
             }
 
-            const { pathParameters, queryParameters } = resolveParameters(routePath, pathItem.parameters, operation.parameters);
+            const { pathParameters, queryParameters } = resolveParameters(
+                routePath,
+                pathItem.parameters,
+                operation.parameters,
+            );
             operations.push({
                 groupName,
                 helperName,
@@ -326,10 +335,10 @@ function resolveRequestBodyType(requestBody) {
 }
 
 function resolveResponse(responses = {}) {
-    const successResponse = Object.entries(responses)
-        .filter(([statusCode]) => /^2\d\d$/.test(statusCode))
-        .sort(([left], [right]) => Number(left) - Number(right))[0]?.[1]
-        ?? responses.default;
+    const successResponse =
+        Object.entries(responses)
+            .filter(([statusCode]) => /^2\d\d$/.test(statusCode))
+            .sort(([left], [right]) => Number(left) - Number(right))[0]?.[1] ?? responses.default;
 
     const content = successResponse?.content ?? {};
     const jsonSchema = content["application/json"]?.schema;
@@ -376,7 +385,9 @@ function resolveErrorType(responses = {}) {
 }
 
 function buildQueryParameterType(parameters) {
-    const members = parameters.map((parameter) => `${parameter.name}${parameter.required ? "" : "?"}: ${parameter.type};`);
+    const members = parameters.map(
+        (parameter) => `${parameter.name}${parameter.required ? "" : "?"}: ${parameter.type};`,
+    );
     return `{ ${members.join(" ")} }`;
 }
 

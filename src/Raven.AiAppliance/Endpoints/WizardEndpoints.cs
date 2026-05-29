@@ -26,21 +26,6 @@ public static class WizardEndpoints
     /// overwritten on each Connect call.
     private const string WizardSourceProbeName = "_wizard-source-probe";
 
-    /// <summary>
-    /// CDC-supported subset of <see cref="SqlProvider"/>. The CDC server-side
-    /// (<c>CdcSinkSchemaDiscovery</c>) accepts only these three enum values;
-    /// the rest of <see cref="SqlProvider"/> (Oracle / OleDb / SqlServerCe) is
-    /// recognized by Raven.Client but not supported by CDC. Kept here instead
-    /// of duplicating factory-name strings — <see cref="SqlProviderParser"/>
-    /// already owns the string-to-enum mapping.
-    /// </summary>
-    private static readonly HashSet<SqlProvider> CdcSupportedProviders = new()
-    {
-        SqlProvider.Npgsql,
-        SqlProvider.SqlClient,
-        SqlProvider.MySqlConnectorFactory,
-    };
-
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/setup").WithTags("setup");
@@ -78,13 +63,13 @@ public static class WizardEndpoints
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (TryRejectInvalidRequest(body, out var error))
+        if (TryRejectInvalidRequest(body, out var factoryName, out var error))
             return error;
 
         var sqlConnectionString = new SqlConnectionString
         {
             Name             = WizardSourceProbeName,
-            FactoryName      = body!.Provider,
+            FactoryName      = factoryName,
             ConnectionString = body.ConnectionString,
         };
         await store.Maintenance.ForDatabase(store.Database).SendAsync(
@@ -108,7 +93,7 @@ public static class WizardEndpoints
             // Don't persist the raw ConnectionString — credentials are kept
             // only on the registered _wizard-source-probe SqlConnectionString
             // (one source of truth) to minimise exposure.
-            state.Provider         = body.Provider;
+            state.Provider         = factoryName;
             state.LastVerifyResult = result;
             state.LastVerifyAt     = DateTime.UtcNow;
         }, ct);
@@ -122,29 +107,21 @@ public static class WizardEndpoints
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (TryRejectInvalidRequest(body, out var error))
+        if (TryRejectInvalidRequest(body, out var factoryName, out var error))
             return error;
 
-        // Upsert the probe (idempotent — same shape Connect uses) so the
-        // schema-discovery call can use the *named* SqlConnectionString
-        // overload. That avoids sending the raw credentials inline a second
-        // time, and guarantees Discover uses the same connection string the
-        // probe is registered with (no drift if the caller passes different
-        // bytes to Connect vs Discover).
         var sqlConnectionString = new SqlConnectionString
         {
             Name             = WizardSourceProbeName,
-            FactoryName      = body!.Provider,
+            FactoryName      = factoryName,
             ConnectionString = body.ConnectionString,
         };
-        await store.Maintenance.ForDatabase(store.Database).SendAsync(
-            new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString), ct);
 
         CdcSinkSourceSchema schema;
         try
         {
             schema = await store.Maintenance.ForDatabase(store.Database).SendAsync(
-                new GetCdcSinkSchemaOperation(WizardSourceProbeName), ct);
+                new GetCdcSinkSchemaOperation(sqlConnectionString), ct);
         }
         catch (Exception ex)
         {
@@ -156,7 +133,7 @@ public static class WizardEndpoints
         await PersistAsync(store, state =>
         {
             // ConnectionString deliberately not persisted — see Connect handler note.
-            state.Provider             = body.Provider;
+            state.Provider             = factoryName;
             state.LastDiscoveredSchema = schema;
             state.LastDiscoverAt       = DateTime.UtcNow;
         }, ct);
@@ -375,34 +352,19 @@ public static class WizardEndpoints
         return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
     }
 
-    private static bool TryRejectInvalidRequest(ConnectRequest? body, out IResult error)
+    private static bool TryRejectInvalidRequest(ConnectRequest? body, out string factoryName, out IResult error)
     {
+        factoryName = string.Empty;
+
         if (body is null || string.IsNullOrWhiteSpace(body.Provider) || string.IsNullOrWhiteSpace(body.ConnectionString))
         {
             error = Results.BadRequest(new ApiErrorResponse("provider and connectionString are required"));
             return true;
         }
 
-        // Resolve the factory-name string via Raven.Client's canonical parser
-        // (covers both legacy + modern driver names, e.g. System.Data.SqlClient
-        // *and* Microsoft.Data.SqlClient both -> SqlProvider.SqlClient). Then
-        // narrow to the CDC-supported enum subset — Oracle/OleDb/SqlServerCe
-        // are valid SqlProvider values but the CDC sink doesn't support them.
-        SqlProvider parsed;
-        try
+        if (!SqlConnectionStringValidation.TryNormalizeCdcProvider(body.Provider, out factoryName, out var providerError))
         {
-            parsed = SqlProviderParser.GetSupportedProvider(body.Provider);
-        }
-        catch (Exception ex) when (ex is NotSupportedException or NotImplementedException)
-        {
-            error = Results.BadRequest(new ApiErrorResponse($"unsupported provider '{body.Provider}': {ex.Message}"));
-            return true;
-        }
-
-        if (!CdcSupportedProviders.Contains(parsed))
-        {
-            error = Results.BadRequest(new ApiErrorResponse(
-                $"provider '{body.Provider}' (parses as {parsed}) is recognized by Raven.Client but not supported by CDC. Supported: {string.Join(", ", CdcSupportedProviders)}."));
+            error = Results.BadRequest(providerError);
             return true;
         }
 

@@ -33,7 +33,7 @@ export function DashboardHome() {
                             {appsQuery.data.map((app) => (
                                 <Link
                                     key={app.id}
-                                    to={`/apps/${app.id}`}
+                                    to={`/${app.id}`}
                                     className="rounded-lg border bg-background p-4 text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                                 >
                                     <div className="flex items-center gap-3">
