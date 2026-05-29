@@ -1,50 +1,21 @@
 # Raven.AiAppliance.Web
 
-Short rules for AI agents working in this project.
-
-## Purpose
-
 Frontend for Raven AI Appliance. It is a Vite + React + TypeScript app and is finally built by Docker through the `Raven.AiAppliance` project.
 
-## Key Files
+## Coding Mindset
 
-- Packages and scripts: `package.json`
-- TypeScript config: `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`
-- shadcn config: `components.json`
-
-## Structure
-
-- `src/api` - API clients and service calls.
-- `src/components/auth` - auth components and context.
-- `src/components/form` - reusable form components used in multiple places.
-- `src/components/shadcn` - components added by shadcn.
-- `src/components/shadcn/ui` - shadcn UI primitives.
-- `src/lib` - shared helpers, hooks, clients.
-- `src/pages` - route pages.
-- `src/app.tsx`, `src/routes.tsx`, `src/main.tsx` - app shell, routing, entry.
-
-## Conventions
-
-- Use kebab-case file names: `setup-connect.tsx`, `form-input.tsx`.
-- Use PascalCase for React components.
-- Use the `@/*` alias for imports from `src`.
-- Put shared form UI in `src/components/form`.
-- Put new shadcn-generated files only under `src/components/shadcn`.
-- Treat shadcn files as external generated code; avoid editing them unless necessary.
-- Use uppercase `SCREAMING_SNAKE_CASE` for module-level constants.
-- Prefix boolean variables and properties with clear boolean words like `is`, `has`, `can`, `should`, or `was`.
-- Follow React best practices: avoid unnecessary effects; prefer derived state, event handlers and packages mechanisms before reaching for `useEffect`.
-
-## Commands
-
-Run from this directory:
-
-- Install: `pnpm install`
-- Dev server: `pnpm dev`
-- Type check: `pnpm typecheck`
-- Lint: `pnpm lint`
-- Format check: `pnpm format:check`
-- Format fix: `pnpm format:fix`
-- Production build: `pnpm build`
-
-Keep this file short and easy to edit.
+- First read nearby code and follow existing project patterns. Prefer project libraries, generated clients, hooks, shadcn components, and established helpers over custom solutions.
+- Keep code boring, readable, and explicit. Avoid clever shortcuts, magic values, over-abstraction, and premature optimization.
+- Avoid `useEffect` unless it is genuinely needed. Prefer derived state, event handlers, React Query, React Hook Form, Zod, and existing framework mechanisms.
+- Do not add `useMemo`/`useCallback` just for routine render optimization; React Compiler is enabled.
+- API code should use the generated server API by default. Add custom services only when generated API is not enough.
+- For GET endpoints, add query helpers following existing query patterns. Use `useQuery` with `enabled` and `refetch` for action-triggered reads; use `queryClient.fetchQuery` only when it clearly fits better.
+- For writes and side effects, use `useMutation`.
+- Forms should use React Hook Form + Zod. If a reusable field is missing, add a generic form component instead of solving it only in one view.
+- Prefer shadcn components. Add missing shadcn components with `pnpm dlx shadcn@latest add <component>`. If shadcn does not cover the need, create a project component in the appropriate `src/components` area.
+- Use Tailwind for styling, but move hard-to-read style combinations into CSS/classes. Components must work in both light and dark themes; avoid one-theme hardcoded colors.
+- Keep components focused and reasonably small. If a component or hook grows awkward, step back and simplify the design before continuing.
+- Put reusable hooks/helpers in shared project utilities only when there is a realistic second use.
+- Boolean names must clearly read as booleans, e.g. `is`, `has`, `can`, `should`, `was`.
+- Use kebab-case filenames, PascalCase React components, `@/*` imports, and `SCREAMING_SNAKE_CASE` module constants.
+- Install new dependencies only when they remove real complexity. Prefer popular, maintained packages and latest versions.
