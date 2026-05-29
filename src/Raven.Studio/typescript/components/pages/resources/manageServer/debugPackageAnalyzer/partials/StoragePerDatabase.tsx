@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
-import { StatePill } from "components/common/StatePill";
+import NodeTagPill from "./NodeTagPill";
 import { EmptySet } from "components/common/EmptySet";
 import genUtils from "common/generalUtils";
 
@@ -46,7 +46,7 @@ export default function StoragePerDatabase({ summary, nodeTag }: StoragePerDatab
                                     <tr key={row.key}>
                                         <td className="fw-bold">{row.database}</td>
                                         <td>
-                                            <StatePill bg="node">{row.node}</StatePill>
+                                            <NodeTagPill tag={row.node} />
                                         </td>
                                         <td>{genUtils.formatBytesToSize(row.size)}</td>
                                         <td>{genUtils.formatBytesToSize(row.temp)}</td>

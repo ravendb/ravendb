@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
-import { StatePill } from "components/common/StatePill";
+import NodeTagPill from "./NodeTagPill";
 import { EmptySet } from "components/common/EmptySet";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -44,7 +44,7 @@ export default function IndexingPerNode({ summary, nodeTag }: IndexingPerNodePro
                                 {rows.map((row) => (
                                     <tr key={row.node}>
                                         <td>
-                                            <StatePill bg="node">{row.node}</StatePill>
+                                            <NodeTagPill tag={row.node} />
                                         </td>
                                         <td>{formatRate(row.indexed)}</td>
                                         <td>{formatRate(row.mapped)}</td>

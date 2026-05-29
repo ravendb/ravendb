@@ -26,6 +26,23 @@
         min-width: 220px;
     }
 
+    // circular node avatar matching the cluster dashboard node icons (.node-label):
+    // the letter uses the panel background (--well-bg) so it reads as a cut-out on every node color
+    .node-tag-circle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.4rem;
+        height: 1.4rem;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        font-weight: 800;
+        line-height: 1;
+        flex-shrink: 0;
+        text-transform: uppercase;
+        color: var(--well-bg);
+    }
+
     .storage-per-database,
     .indexing-per-node {
         min-width: 360px;

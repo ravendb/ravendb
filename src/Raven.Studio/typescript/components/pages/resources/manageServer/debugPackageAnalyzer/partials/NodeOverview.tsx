@@ -1,7 +1,7 @@
 import React from "react";
 import Card from "react-bootstrap/Card";
 import StatTile from "./StatTile";
-import { StatePill } from "components/common/StatePill";
+import NodeTagPill from "./NodeTagPill";
 import { formatUpTime, osIcon } from "./analyzerUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -22,7 +22,7 @@ export default function NodeOverview({ summary, nodeTag }: NodeOverviewProps) {
         <div className="node-overview">
             <h3 className="mb-2 hstack gap-2">
                 Node Overview
-                <StatePill bg="node">{nodeTag}</StatePill>
+                <NodeTagPill tag={nodeTag} />
             </h3>
             <Card>
                 <Card.Body>

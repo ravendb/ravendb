@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import { StatePill } from "components/common/StatePill";
+import NodeTagPill from "./NodeTagPill";
 import { RichAlert } from "components/common/RichAlert";
 import { EmptySet } from "components/common/EmptySet";
 import Button from "react-bootstrap/Button";
@@ -216,12 +217,12 @@ function ScopeBadges({ issue }: { issue: FlatIssue }) {
     }
 
     if (issue.scope === "node") {
-        return <StatePill bg="node">Node {issue.nodeTag}</StatePill>;
+        return <NodeTagPill tag={issue.nodeTag} />;
     }
 
     return (
         <div className="hstack gap-1 align-items-start">
-            {issue.nodeTag && <StatePill bg="node">Node {issue.nodeTag}</StatePill>}
+            {issue.nodeTag && <NodeTagPill tag={issue.nodeTag} />}
             <StatePill bg="orchestrator">Database {issue.database}</StatePill>
         </div>
     );

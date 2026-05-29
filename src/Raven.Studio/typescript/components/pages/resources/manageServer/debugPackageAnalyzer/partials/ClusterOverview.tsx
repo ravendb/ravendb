@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
-import { StatePill } from "components/common/StatePill";
+import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
 import { formatUpTime, osIcon, parseUpTimeSeconds } from "./analyzerUtils";
 
@@ -75,7 +75,7 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
                             {nodeInfos.map((node) => (
                                 <tr key={node.NodeTag}>
                                     <td>
-                                        <StatePill bg="node">{node.NodeTag}</StatePill>
+                                        <NodeTagPill tag={node.NodeTag} />
                                     </td>
                                     <td>{node.NodeState}</td>
                                     <td>{node.NodeType}</td>

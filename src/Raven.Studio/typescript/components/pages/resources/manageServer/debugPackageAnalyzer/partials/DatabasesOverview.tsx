@@ -3,6 +3,7 @@ import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
 import { StatePill } from "components/common/StatePill";
+import NodeTagPill from "./NodeTagPill";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -82,9 +83,7 @@ export default function DatabasesOverview({ summary }: DatabasesOverviewProps) {
                                         <td>
                                             <div className="hstack gap-1 flex-wrap">
                                                 {db.nodes.map((nodeTag) => (
-                                                    <StatePill key={nodeTag} bg="node">
-                                                        {nodeTag}
-                                                    </StatePill>
+                                                    <NodeTagPill key={nodeTag} tag={nodeTag} />
                                                 ))}
                                             </div>
                                         </td>

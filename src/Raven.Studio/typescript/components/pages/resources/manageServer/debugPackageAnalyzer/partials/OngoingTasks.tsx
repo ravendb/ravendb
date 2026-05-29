@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
-import { StatePill } from "components/common/StatePill";
+import NodeTagPill from "./NodeTagPill";
 import { EmptySet } from "components/common/EmptySet";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -70,9 +70,7 @@ export default function OngoingTasks({ summary, nodeTag }: OngoingTasksProps) {
                                         <td>
                                             <div className="hstack gap-1 flex-wrap">
                                                 {row.nodes.map((node) => (
-                                                    <StatePill key={node} bg="node">
-                                                        {node}
-                                                    </StatePill>
+                                                    <NodeTagPill key={node} tag={node} />
                                                 ))}
                                             </div>
                                         </td>
