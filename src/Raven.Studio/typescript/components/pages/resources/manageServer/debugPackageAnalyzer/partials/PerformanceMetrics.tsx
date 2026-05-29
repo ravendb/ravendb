@@ -6,6 +6,7 @@ import { InputItem } from "components/models/common";
 import { EmptySet } from "components/common/EmptySet";
 import StatTile from "./StatTile";
 import genUtils from "common/generalUtils";
+import { formatNumber, formatPercentage } from "./analyzerUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type CpuUsageAnalysisInfo =
@@ -65,18 +66,18 @@ function CpuTab({ cpu }: { cpu?: CpuUsageAnalysisInfo }) {
                     label="Process CPU"
                     icon="processor"
                     iconColor="info"
-                    value={formatPct(cpu.CurrentCpuUsage)}
+                    value={formatPercentage(cpu.CurrentCpuUsage)}
                 />
                 <StatTile
                     label="Machine CPU"
                     icon="processor"
                     iconColor="warning"
-                    value={formatPct(cpu.CurrentMachineCpuUsage)}
+                    value={formatPercentage(cpu.CurrentMachineCpuUsage)}
                 />
-                <StatTile label="Average CPU" icon="graph" value={formatPct(cpu.AverageCpuUsage)} />
-                <StatTile label="Kernel time" icon="processor" value={formatPct(cpu.KernelTimePercentage)} />
-                <StatTile label="Cores" icon="cluster-node" value={formatNum(cpu.NumberOfCores)} />
-                <StatTile label="Utilized cores" icon="cluster-node" value={formatNum(cpu.UtilizedCores)} />
+                <StatTile label="Average CPU" icon="graph" value={formatPercentage(cpu.AverageCpuUsage)} />
+                <StatTile label="Kernel time" icon="processor" value={formatPercentage(cpu.KernelTimePercentage)} />
+                <StatTile label="Cores" icon="cluster-node" value={formatNumber(cpu.NumberOfCores)} />
+                <StatTile label="Utilized cores" icon="cluster-node" value={formatNumber(cpu.UtilizedCores)} />
             </div>
             <ThreadList title="Top current CPU usage threads" threads={cpu.TopCurrentCpuUsageThreads} />
             <ThreadList title="Top overall CPU usage threads" threads={cpu.TopOverallCpuUsageThreads} />
@@ -174,8 +175,8 @@ function GcTab({ gc }: { gc?: GcMemoryInfo }) {
         <>
             <div className="overview-stats d-flex gap-2 flex-wrap">
                 <StatTile label="Last GC generation" icon="generation" value={`Gen ${gc.Generation}`} />
-                <StatTile label="GC index" icon="refresh" value={formatNum(gc.Index)} />
-                <StatTile label="Pause time" icon="clock" value={formatPct(gc.PauseTimePercentage)} />
+                <StatTile label="GC index" icon="refresh" value={formatNumber(gc.Index)} />
+                <StatTile label="Pause time" icon="clock" value={formatPercentage(gc.PauseTimePercentage)} />
                 <StatTile
                     label="Total heap after"
                     icon="memory"
@@ -226,18 +227,4 @@ function GcTab({ gc }: { gc?: GcMemoryInfo }) {
             )}
         </>
     );
-}
-
-function formatPct(value: number | undefined): string {
-    if (value == null) {
-        return "-";
-    }
-    return `${Math.round(value)}%`;
-}
-
-function formatNum(value: number | undefined): string {
-    if (value == null) {
-        return "-";
-    }
-    return value.toLocaleString();
 }

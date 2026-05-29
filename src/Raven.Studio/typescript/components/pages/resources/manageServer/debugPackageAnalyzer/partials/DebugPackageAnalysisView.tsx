@@ -8,6 +8,7 @@ import Select, { SelectOption } from "components/common/select/Select";
 import AnalysisResults from "./AnalysisResults";
 import AnalysisErrors from "./AnalysisErrors";
 import ClusterOverview from "./ClusterOverview";
+import ResourceUsage from "./ResourceUsage";
 import DatabasesOverview from "./DatabasesOverview";
 import NodeOverview from "./NodeOverview";
 import PerformanceMetrics from "./PerformanceMetrics";
@@ -102,6 +103,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
             {context === "cluster" && (
                 <>
                     <ClusterOverview summary={summary} />
+                    <ResourceUsage summary={summary} />
                     <DatabasesOverview summary={summary} />
                     <div className="d-flex gap-4 flex-wrap">
                         <StoragePerDatabase summary={summary} />

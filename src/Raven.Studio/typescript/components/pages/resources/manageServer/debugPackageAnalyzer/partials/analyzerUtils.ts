@@ -84,6 +84,20 @@ export function flattenIssues(summary: DebugPackageAnalysisSummary): FlatIssue[]
     return result;
 }
 
+export function formatPercentage(value: number | undefined): string {
+    if (value == null) {
+        return "-";
+    }
+    return `${Math.round(value)}%`;
+}
+
+export function formatNumber(value: number | undefined): string {
+    if (value == null) {
+        return "-";
+    }
+    return value.toLocaleString();
+}
+
 export function countBy<T extends string>(
     issues: FlatIssue[],
     selector: (issue: FlatIssue) => T

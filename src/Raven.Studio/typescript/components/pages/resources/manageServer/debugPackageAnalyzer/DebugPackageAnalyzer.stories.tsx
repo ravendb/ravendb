@@ -129,10 +129,10 @@ function gcInfo() {
     };
 }
 
-function cpuInfo() {
+function cpuInfo(current = 12, machine = 34) {
     return {
-        CurrentCpuUsage: 12,
-        CurrentMachineCpuUsage: 34,
+        CurrentCpuUsage: current,
+        CurrentMachineCpuUsage: machine,
         AverageCpuUsage: 18,
         KernelTimePercentage: 4,
         NumberOfCores: 8,
@@ -245,6 +245,9 @@ function mockSummary(): DebugPackageAnalysisSummary {
             } as any,
             B: {
                 ClusterNodeInfo: nodeInfo("B", "Follower", "http://127.0.0.1:8081"),
+                CpuUsageInfo: cpuInfo(9, 28),
+                MemoryUsageInfo: memoryInfo(),
+                GcInfo: gcInfo(),
                 DatabasesOverview: databasesOverview(["Orders", "Products", "Customers"]),
                 DatabaseStorageUsage: storageUsage([
                     { name: "Orders", size: 498 * mb, temp: 30 * mb },
@@ -289,6 +292,9 @@ function mockSummary(): DebugPackageAnalysisSummary {
             } as any,
             C: {
                 ClusterNodeInfo: nodeInfo("C", "Follower", "http://127.0.0.1:8082"),
+                CpuUsageInfo: cpuInfo(1, 15),
+                MemoryUsageInfo: memoryInfo(),
+                GcInfo: gcInfo(),
                 DatabasesOverview: databasesOverview(["Orders", "Products", "Customers"]),
                 DatabaseStorageUsage: storageUsage([
                     { name: "Orders", size: 505 * mb, temp: 31 * mb },
