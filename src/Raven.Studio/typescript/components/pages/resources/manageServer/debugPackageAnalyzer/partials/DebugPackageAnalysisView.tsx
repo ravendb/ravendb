@@ -6,6 +6,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
 import Select, { SelectOption } from "components/common/select/Select";
 import AnalysisResults from "./AnalysisResults";
+import AnalysisErrors from "./AnalysisErrors";
 import ClusterOverview from "./ClusterOverview";
 import DatabasesOverview from "./DatabasesOverview";
 import NodeOverview from "./NodeOverview";
@@ -93,6 +94,8 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                 <FlexGrow />
                 <PackageInfo fileName={fileName} onReset={onReset} />
             </div>
+
+            <AnalysisErrors summary={summary} />
 
             <AnalysisResults issues={contextIssues} />
 

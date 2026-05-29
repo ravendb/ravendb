@@ -257,6 +257,17 @@ function mockSummary(): DebugPackageAnalysisSummary {
                     PeriodicBackupCount: 1,
                     RavenEtlCount: 2,
                 }),
+                AnalyzeErrors: {
+                    Errors: [
+                        {
+                            ComponentName: "GcAnalyzer",
+                            ErrorMessage: "Failed to parse gc.log: unexpected end of stream",
+                            Exception:
+                                "System.IO.InvalidDataException: Unexpected end of stream\n   at Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.GcAnalyzer.Analyze()",
+                            Severity: "Warning",
+                        },
+                    ],
+                },
                 DetectedIssues: {
                     ServerIssues: [],
                     ClusterIssues: [
