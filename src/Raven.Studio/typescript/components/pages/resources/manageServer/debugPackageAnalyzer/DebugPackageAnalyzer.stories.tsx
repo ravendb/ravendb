@@ -86,6 +86,23 @@ function databasesOverview(names: string[]) {
     };
 }
 
+function storageUsage(items: { name: string; size: number; temp: number }[]) {
+    return {
+        Items: items.map((item) => ({ Database: item.name, Size: item.size, TempBuffersSize: item.temp })),
+    };
+}
+
+function indexingSpeed(indexed: number, mapped: number, reduced: number) {
+    return { IndexedPerSecond: indexed, MappedPerSecond: mapped, ReducedPerSecond: reduced };
+}
+
+function ongoingTasks(counts: Partial<Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem>) {
+    const item: Partial<Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem> = { Database: null, ...counts };
+    return { Items: [item] };
+}
+
+const mb = 1024 * 1024;
+
 function mockSummary(): DebugPackageAnalysisSummary {
     return {
         PackageId: "story-package",
@@ -106,6 +123,18 @@ function mockSummary(): DebugPackageAnalysisSummary {
             A: {
                 ClusterNodeInfo: nodeInfo("A", "Leader", "http://127.0.0.1:8080"),
                 DatabasesOverview: databasesOverview(["Orders", "Products", "Customers"]),
+                DatabaseStorageUsage: storageUsage([
+                    { name: "Orders", size: 512 * mb, temp: 32 * mb },
+                    { name: "Products", size: 256 * mb, temp: 16 * mb },
+                    { name: "Customers", size: 128 * mb, temp: 8 * mb },
+                ]),
+                DatabaseIndexingSpeed: indexingSpeed(1250, 3400, 120),
+                DatabasesOngoingTasks: ongoingTasks({
+                    ExternalReplicationCount: 1,
+                    PeriodicBackupCount: 1,
+                    RavenEtlCount: 2,
+                    SubscriptionCount: 3,
+                }),
                 DetectedIssues: {
                     ServerIssues: [
                         issue(
@@ -145,6 +174,17 @@ function mockSummary(): DebugPackageAnalysisSummary {
             B: {
                 ClusterNodeInfo: nodeInfo("B", "Follower", "http://127.0.0.1:8081"),
                 DatabasesOverview: databasesOverview(["Orders", "Products", "Customers"]),
+                DatabaseStorageUsage: storageUsage([
+                    { name: "Orders", size: 498 * mb, temp: 30 * mb },
+                    { name: "Products", size: 251 * mb, temp: 15 * mb },
+                    { name: "Customers", size: 130 * mb, temp: 9 * mb },
+                ]),
+                DatabaseIndexingSpeed: indexingSpeed(980, 2700, 95),
+                DatabasesOngoingTasks: ongoingTasks({
+                    ExternalReplicationCount: 1,
+                    PeriodicBackupCount: 1,
+                    RavenEtlCount: 2,
+                }),
                 DetectedIssues: {
                     ServerIssues: [],
                     ClusterIssues: [
@@ -167,6 +207,16 @@ function mockSummary(): DebugPackageAnalysisSummary {
             C: {
                 ClusterNodeInfo: nodeInfo("C", "Follower", "http://127.0.0.1:8082"),
                 DatabasesOverview: databasesOverview(["Orders", "Products", "Customers"]),
+                DatabaseStorageUsage: storageUsage([
+                    { name: "Orders", size: 505 * mb, temp: 31 * mb },
+                    { name: "Products", size: 248 * mb, temp: 14 * mb },
+                    { name: "Customers", size: 126 * mb, temp: 7 * mb },
+                ]),
+                DatabaseIndexingSpeed: indexingSpeed(1100, 3100, 110),
+                DatabasesOngoingTasks: ongoingTasks({
+                    PeriodicBackupCount: 1,
+                    SubscriptionCount: 3,
+                }),
                 DetectedIssues: {
                     ServerIssues: [],
                     ClusterIssues: [
