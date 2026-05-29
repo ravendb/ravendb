@@ -1,0 +1,47 @@
+import React from "react";
+import Button from "react-bootstrap/Button";
+import { Icon } from "components/common/Icon";
+
+interface PackageInfoProps {
+    fileName: string;
+    onReset: () => void;
+}
+
+export default function PackageInfo({ fileName, onReset }: PackageInfoProps) {
+    const created = parseCreatedDate(fileName);
+
+    return (
+        <div className="package-info d-flex align-items-center gap-2">
+            <Icon icon="document" margin="m-0" className="fs-3 text-muted flex-shrink-0" />
+            <div className="d-flex flex-column overflow-hidden">
+                <small className="text-muted">Selected package{created ? ` (created: ${created})` : ""}</small>
+                <span className="fw-bold text-truncate" title={fileName}>
+                    {fileName}
+                </span>
+            </div>
+            <Button variant="link" size="sm" className="p-0 ms-1 flex-shrink-0" onClick={onReset}>
+                Reset
+            </Button>
+        </div>
+    );
+}
+
+// debug package file names are produced as e.g. "2025-11-19 10-55-11 Cluster Wide.zip"
+function parseCreatedDate(fileName: string): string {
+    if (!fileName) {
+        return null;
+    }
+
+    const match = fileName.match(/(\d{4})-(\d{2})-(\d{2})[ _](\d{2})-(\d{2})-(\d{2})/);
+    if (!match) {
+        return null;
+    }
+
+    const [, year, month, day, hour, minute, second] = match;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+    if (isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date.toLocaleString();
+}

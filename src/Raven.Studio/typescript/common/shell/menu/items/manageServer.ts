@@ -7,6 +7,7 @@ import AdminJsConsole = require("components/pages/resources/manageServer/adminJs
 import ClientGlobalConfiguration = require("components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration");
 import StudioGlobalConfiguration = require("components/pages/resources/manageServer/studioConfiguration/StudioGlobalConfiguration");
 import GatherDebugInfo = require("components/pages/resources/manageServer/gatherDebugInfo/GatherDebugInfo");
+import DebugPackageAnalyzer = require("components/pages/resources/manageServer/debugPackageAnalyzer/DebugPackageAnalyzer");
 import ServerWideCustomAnalyzers = require("components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers");
 import ServerWideCustomSorters = require("components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSorters");
 import ServerSettings = require("components/pages/resources/manageServer/serverSettings/ServerSettings");
@@ -230,6 +231,22 @@ function getManageServerMenuItem() {
                 innerActions: [
                     { name: "Gather Debug Info" },
                     { name: "Download Debug Package" },
+                ],
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debugPackageAnalyzer',
+            moduleId: reactUtils.bridgeToReact(DebugPackageAnalyzer.default, "nonShardedView"),
+            title: 'Debug Package Analyzer',
+            nav: true,
+            css: 'icon-gather-debug-information',
+            dynamicHash: appUrl.forDebugPackageAnalyzer,
+            requiredAccess: "Operator",
+            search: {
+                alternativeTitles: ["Analyze Debug Package"],
+                innerActions: [
+                    { name: "Analyze Debug Package" },
+                    { name: "Upload Debug Package" },
                 ],
             }
         }),

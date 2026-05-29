@@ -199,7 +199,11 @@ class appUrl {
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
     }
-    
+
+    static forDebugPackageAnalyzer(): string {
+        return "#admin/settings/debugPackageAnalyzer";
+    }
+
     static forSystemStorageReport(): string {
         return "#admin/settings/storageReport"
     }

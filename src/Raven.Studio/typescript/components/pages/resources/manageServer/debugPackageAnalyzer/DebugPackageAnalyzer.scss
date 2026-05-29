@@ -1,0 +1,81 @@
+.debug-package-analyzer {
+    .debug-package-exception-details {
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 12px;
+    }
+
+    .package-info {
+        max-width: 460px;
+    }
+
+    .small-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--bs-secondary-color);
+    }
+
+    .group-by-control {
+        min-width: 200px;
+    }
+
+    .analysis-results {
+        .severity-cards {
+            // each card is a reusable RichAlert (theme-aware colors); we only handle layout here
+            .severity-card {
+                flex: 1 1 0;
+                margin-bottom: 0;
+                cursor: pointer;
+
+                .severity-card-count {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                }
+
+                &.active {
+                    outline: 2px solid currentColor;
+                    outline-offset: -2px;
+                }
+            }
+        }
+
+        .issue-row {
+            border-bottom: 1px solid var(--bs-border-color);
+
+            &:last-child {
+                border-bottom: none;
+            }
+        }
+
+        .issue-description {
+            &.clamped {
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            &.expanded {
+                max-height: 320px;
+                overflow: auto;
+                // keep the same font/size as the collapsed preview - only reveal the full text
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+        }
+    }
+
+    .cluster-overview-stats {
+        .stat-tile {
+            flex: 1 1 0;
+            min-width: 150px;
+        }
+
+        .stat-tile-value {
+            font-weight: 600;
+        }
+    }
+}

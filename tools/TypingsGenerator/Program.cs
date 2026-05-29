@@ -433,6 +433,21 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseNotificationsSummaryPayload));
             scripter.AddType(typeof(DatabaseNotificationsSummaryRequestConfig));
 
+            // debug package analyzer (RavenDB-24115) - reuses the dashboard payloads above
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageNodeAnalysisSummary));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.DebugPackageAnalysisIssues));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.DetectedIssue));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.IssueSeverity));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.IssueCategory));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors.DebugPackageAnalyzeErrors));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors.AnalyzeError));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors.AnalyzeErrorSeverity));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.CpuUsageAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.MemoryAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.ManagedMemoryAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.UnmanagedMemoryAnalysisInfo));
+
             // data archival
             scripter.AddType(typeof(DataArchivalConfiguration));
 

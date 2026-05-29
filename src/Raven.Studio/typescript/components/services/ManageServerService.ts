@@ -35,6 +35,9 @@ import fetchSsoServerCertCommand = require("commands/auth/fetchSsoServerCertComm
 import registerSsoUserEntryCommand = require("commands/auth/registerSsoUserEntryCommand");
 import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
+import uploadDebugPackageForAnalysisCommand = require("commands/maintenance/uploadDebugPackageForAnalysisCommand");
+import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeDebugPackageAnalysisCommand");
+import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -184,5 +187,17 @@ export default class ManageServerService {
 
     async getClusterDomains() {
         return new getClusterDomainsCommand().execute();
+    }
+
+    async uploadDebugPackageForAnalysis(...args: ConstructorParameters<typeof uploadDebugPackageForAnalysisCommand>) {
+        return new uploadDebugPackageForAnalysisCommand(...args).execute();
+    }
+
+    async removeDebugPackageAnalysis(...args: ConstructorParameters<typeof removeDebugPackageAnalysisCommand>) {
+        return new removeDebugPackageAnalysisCommand(...args).execute();
+    }
+
+    async getDebugPackageAnalysisSummary(...args: ConstructorParameters<typeof getDebugPackageAnalysisSummaryCommand>) {
+        return new getDebugPackageAnalysisSummaryCommand(...args).execute();
     }
 }
