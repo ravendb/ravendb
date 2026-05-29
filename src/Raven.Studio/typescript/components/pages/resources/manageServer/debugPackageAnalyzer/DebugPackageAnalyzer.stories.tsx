@@ -103,6 +103,75 @@ function ongoingTasks(counts: Partial<Raven.Server.Dashboard.DatabaseOngoingTask
 
 const mb = 1024 * 1024;
 
+function gen(before: number, after: number) {
+    return {
+        SizeBeforeBytes: before,
+        SizeAfterBytes: after,
+        FragmentationBeforeBytes: Math.round(before * 0.05),
+        FragmentationAfterBytes: Math.round(after * 0.03),
+    };
+}
+
+function gcInfo() {
+    return {
+        Index: 142,
+        Generation: 2,
+        Concurrent: true,
+        Compacted: false,
+        PauseTimePercentage: 1,
+        PauseDurationsInMs: [12, 8],
+        TotalHeapSizeAfterBytes: 2254857830,
+        Gen0HeapSize: gen(512 * mb, 64 * mb),
+        Gen1HeapSize: gen(128 * mb, 96 * mb),
+        Gen2HeapSize: gen(1024 * mb, 980 * mb),
+        LargeObjectHeapSize: gen(256 * mb, 250 * mb),
+        PinnedObjectHeapSize: gen(8 * mb, 8 * mb),
+    };
+}
+
+function cpuInfo() {
+    return {
+        CurrentCpuUsage: 12,
+        CurrentMachineCpuUsage: 34,
+        AverageCpuUsage: 18,
+        KernelTimePercentage: 4,
+        NumberOfCores: 8,
+        UtilizedCores: 6,
+        ProcessorAffinity: 255,
+        PrivilegedProcessorTime: "00:12:05",
+        TotalProcessorTime: "02:34:11",
+        UserProcessorTime: "02:22:06",
+        TopCurrentCpuUsageThreads: ["Thread 1234 'Indexing of Orders' - 8%", "Thread 5678 'Raven.Voron' - 3%"],
+        TopOverallCpuUsageThreads: ["Thread 1234 'Indexing of Orders' - 12%", "Thread 999 'GC' - 5%"],
+    };
+}
+
+function memoryInfo() {
+    return {
+        WorkingSet: "19.21 GB",
+        PhysicalMemory: "32 GB",
+        AvailableMemory: "11.4 GB",
+        AvailableMemoryForProcessing: "10.1 GB",
+        DirtyMemory: "256 MB",
+        IsHighDirty: false,
+        MemoryMapped: "8.3 GB",
+        Managed: {
+            ManagedAllocations: "2.1 GB",
+            LuceneManagedAllocationsForTermCache: "120 MB",
+            LastGcInfo: gcInfo(),
+        },
+        Unmanaged: {
+            UnmanagedAllocations: "1.4 GB",
+            EncryptionBuffersInUse: "0 Bytes",
+            EncryptionBuffersPool: "0 Bytes",
+            EncryptionLockedMemory: "0 Bytes",
+            LuceneUnmanagedAllocationsForSorting: "32 MB",
+            LuceneUnmanagedAllocationsForTermCache: "64 MB",
+            ThreadAllocations: [] as unknown[],
+        },
+    };
+}
+
 function mockSummary(): DebugPackageAnalysisSummary {
     return {
         PackageId: "story-package",
@@ -122,6 +191,9 @@ function mockSummary(): DebugPackageAnalysisSummary {
         SummaryPerNode: {
             A: {
                 ClusterNodeInfo: nodeInfo("A", "Leader", "http://127.0.0.1:8080"),
+                CpuUsageInfo: cpuInfo(),
+                MemoryUsageInfo: memoryInfo(),
+                GcInfo: gcInfo(),
                 DatabasesOverview: databasesOverview(["Orders", "Products", "Customers"]),
                 DatabaseStorageUsage: storageUsage([
                     { name: "Orders", size: 512 * mb, temp: 32 * mb },

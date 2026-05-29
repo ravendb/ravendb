@@ -9,6 +9,7 @@ import AnalysisResults from "./AnalysisResults";
 import ClusterOverview from "./ClusterOverview";
 import DatabasesOverview from "./DatabasesOverview";
 import NodeOverview from "./NodeOverview";
+import PerformanceMetrics from "./PerformanceMetrics";
 import StoragePerDatabase from "./StoragePerDatabase";
 import IndexingPerNode from "./IndexingPerNode";
 import OngoingTasks from "./OngoingTasks";
@@ -86,6 +87,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
             {context === "node" && selectedNode && (
                 <>
                     <NodeOverview summary={summary} nodeTag={selectedNode} />
+                    <PerformanceMetrics summary={summary} nodeTag={selectedNode} />
                     <div className="d-flex gap-4 flex-wrap">
                         <StoragePerDatabase summary={summary} nodeTag={selectedNode} />
                         <IndexingPerNode summary={summary} nodeTag={selectedNode} />
