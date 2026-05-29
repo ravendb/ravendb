@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { useState } from "react";
 import type { DiscoverTableResponse } from "@/api/generated/server-api";
-import { VirtualDataTable } from "@/components/data/virtual-data-table";
+import { VirtualDataTable } from "@/components/table/virtual-data-table";
 import { Input } from "@/components/shadcn/ui/input";
 import { cn } from "@/lib/utils";
 import {

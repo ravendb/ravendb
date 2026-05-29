@@ -1,0 +1,3 @@
+export const ACE_EDITOR_LINE_HEIGHT_IN_PX = 26;
+export const ACE_EDITOR_MIN_HEIGHT_IN_PX = 150;
+export const ACE_EDITOR_MAX_HEIGHT_IN_PX = 800;
