@@ -789,6 +789,8 @@ namespace FastTests
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
 
+            exceptionAggregator.Execute(() => DefaultRavenHttpClientFactory.Instance.Clear());
+
             exceptionAggregator.ThrowIfNeeded();
         }
 
