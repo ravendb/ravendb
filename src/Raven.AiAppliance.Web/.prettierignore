@@ -1,1 +1,2 @@
 pnpm-lock.yaml
+src/api/generated/server-api.ts
