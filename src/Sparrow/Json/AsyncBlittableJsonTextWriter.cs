@@ -50,22 +50,22 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
+        public ValueTask<long> MaybeFlushAsync(CancellationToken token = default)
         {
             // PERF: Use cached RecyclableMemoryStream reference
             if (_innerStream.Length * 2 <= _innerStream.Capacity)
-                return new ValueTask<int>(0);
+                return new ValueTask<long>(0);
 
             FlushInternal(); // this is OK, because inner stream is a RecyclableMemoryStream
             return FlushAsync(token);
         }
 
-        public ValueTask<int> FlushAsync(CancellationToken token = default)
+        public ValueTask<long> FlushAsync(CancellationToken token = default)
         {
             FlushInternal();
-            var bytesCount = (int)_innerStream.Length;
+            var bytesCount = _innerStream.Length;
             if (bytesCount == 0)
-                return new ValueTask<int>(0);
+                return new ValueTask<long>(0);
 
             _innerStream.Position = 0;
             // bufferSize is required by the netstandard2.0 overload but is unused by RecyclableMemoryStream.CopyToAsync, which writes each internal block directly.
@@ -75,13 +75,13 @@ namespace Sparrow.Json
                 // PERF: Fast synchronous path - avoid async state machine overhead
                 copyTask.GetAwaiter().GetResult();
                 _innerStream.SetLength(0);
-                return new ValueTask<int>(bytesCount);
+                return new ValueTask<long>(bytesCount);
             }
 
             return FlushAsyncSlow(copyTask, bytesCount);
         }
 
-        private async ValueTask<int> FlushAsyncSlow(Task copyTask, int bytesCount)
+        private async ValueTask<long> FlushAsyncSlow(Task copyTask, long bytesCount)
         {
             await copyTask.ConfigureAwait(_continueOnCapturedContext);
 
@@ -121,7 +121,7 @@ namespace Sparrow.Json
             return DisposeAsyncSlow(flushTask);
         }
 
-        private async ValueTask DisposeAsyncSlow(ValueTask<int> flushTask)
+        private async ValueTask DisposeAsyncSlow(ValueTask<long> flushTask)
         {
             var bytesWritten = await flushTask.ConfigureAwait(_continueOnCapturedContext);
             if (bytesWritten > 0)
