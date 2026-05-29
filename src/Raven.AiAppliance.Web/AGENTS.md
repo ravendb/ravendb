@@ -9,8 +9,8 @@ Frontend for Raven AI Appliance. It is a Vite + React + TypeScript app and is fi
 - Avoid `useEffect` unless it is genuinely needed. Prefer derived state, event handlers, React Query, React Hook Form, Zod, and existing framework mechanisms.
 - Do not add `useMemo`/`useCallback` just for routine render optimization; React Compiler is enabled.
 - API code should use the generated server API by default. Add custom services only when generated API is not enough.
-- For GET endpoints, add query helpers following existing query patterns. Use `useQuery` with `enabled` and `refetch` for action-triggered reads; use `queryClient.fetchQuery` only when it clearly fits better.
-- For writes and side effects, use `useMutation`.
+- Choose between `useQuery` and `useMutation` based on frontend behavior, not only the HTTP verb. Prefer `useQuery` for read-only data fetching when query features such as caching, deduplication, `enabled`, and `refetch` fit well, even if the endpoint is technically `POST`.
+- Use `useMutation` for writes and side effects, and also for imperative or user-triggered reads when mutation-style execution is a better fit than query-style state management.
 - Forms should use React Hook Form + Zod. If a reusable field is missing, add a generic form component instead of solving it only in one view.
 - Prefer shadcn components. Add missing shadcn components with `pnpm dlx shadcn@latest add <component>`. If shadcn does not cover the need, create a project component in the appropriate `src/components` area.
 - Use Tailwind for styling, but move hard-to-read style combinations into CSS/classes. Components must work in both light and dark themes; avoid one-theme hardcoded colors.
