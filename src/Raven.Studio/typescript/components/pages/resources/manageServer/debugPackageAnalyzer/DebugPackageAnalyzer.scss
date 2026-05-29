@@ -26,6 +26,11 @@
         min-width: 220px;
     }
 
+    .storage-per-database,
+    .indexing-per-node {
+        min-width: 360px;
+    }
+
     .analysis-results {
         .severity-cards {
             // each card is a reusable RichAlert (theme-aware colors); we only handle layout here

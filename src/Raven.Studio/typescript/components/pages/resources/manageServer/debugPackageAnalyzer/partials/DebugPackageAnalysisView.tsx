@@ -9,6 +9,8 @@ import AnalysisResults from "./AnalysisResults";
 import ClusterOverview from "./ClusterOverview";
 import DatabasesOverview from "./DatabasesOverview";
 import NodeOverview from "./NodeOverview";
+import StoragePerDatabase from "./StoragePerDatabase";
+import IndexingPerNode from "./IndexingPerDatabase";
 import { flattenIssues } from "./analyzerUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -73,9 +75,21 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                 <>
                     <ClusterOverview summary={summary} />
                     <DatabasesOverview summary={summary} />
+                    <div className="d-flex gap-4 flex-wrap">
+                        <StoragePerDatabase summary={summary} />
+                        <IndexingPerNode summary={summary} />
+                    </div>
                 </>
             )}
-            {context === "node" && selectedNode && <NodeOverview summary={summary} nodeTag={selectedNode} />}
+            {context === "node" && selectedNode && (
+                <>
+                    <NodeOverview summary={summary} nodeTag={selectedNode} />
+                    <div className="d-flex gap-4 flex-wrap">
+                        <StoragePerDatabase summary={summary} nodeTag={selectedNode} />
+                        <IndexingPerNode summary={summary} nodeTag={selectedNode} />
+                    </div>
+                </>
+            )}
             {context === "database" && <EmptySet>The Database context is coming in a future iteration</EmptySet>}
         </div>
     );
