@@ -1,3 +1,6 @@
+import IconName from "typings/server/icons";
+
+type OSType = Raven.Client.ServerWide.Operations.OSType;
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type DebugPackageAnalysisIssues =
     Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.DebugPackageAnalysisIssues;
@@ -91,4 +94,57 @@ export function countBy<T extends string>(
         counts[key] = (counts[key] ?? 0) + 1;
     }
     return counts;
+}
+
+export function osIcon(osType: OSType): IconName {
+    switch (osType) {
+        case "Linux":
+            return "linux";
+        case "Windows":
+            return "windows";
+        case "MacOS":
+            return "apple";
+        default:
+            return "server";
+    }
+}
+
+// UpTime arrives as a serialized .NET TimeSpan (e.g. "45.12:33:00.123")
+export function parseUpTimeSeconds(upTime: string): number {
+    const match = matchUpTime(upTime);
+    if (!match) {
+        return -1;
+    }
+    const [, days, hours, minutes, seconds] = match;
+    return (days ? Number(days) : 0) * 86400 + Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+}
+
+export function formatUpTime(upTime: string): string {
+    if (!upTime) {
+        return "-";
+    }
+    const match = matchUpTime(upTime);
+    if (!match) {
+        return upTime;
+    }
+
+    const [, daysPart, hoursPart, minutesPart] = match;
+    const days = daysPart ? Number(daysPart) : 0;
+    const hours = Number(hoursPart);
+    const minutes = Number(minutesPart);
+
+    const parts: string[] = [];
+    if (days) {
+        parts.push(`${days}d`);
+    }
+    if (days || hours) {
+        parts.push(`${hours}h`);
+    }
+    parts.push(`${minutes}m`);
+
+    return parts.join(" ");
+}
+
+function matchUpTime(upTime: string): RegExpMatchArray {
+    return upTime ? upTime.match(/^(?:(\d+)\.)?(\d{1,2}):(\d{2}):(\d{2})/) : null;
 }

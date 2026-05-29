@@ -4,8 +4,11 @@ import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
 import { InputItem } from "components/models/common";
 import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
+import Select, { SelectOption } from "components/common/select/Select";
 import AnalysisResults from "./AnalysisResults";
 import ClusterOverview from "./ClusterOverview";
+import DatabasesOverview from "./DatabasesOverview";
+import NodeOverview from "./NodeOverview";
 import { flattenIssues } from "./analyzerUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -18,15 +21,26 @@ interface DebugPackageAnalysisViewProps {
 }
 
 export default function DebugPackageAnalysisView({ summary, fileName, onReset }: DebugPackageAnalysisViewProps) {
+    const nodeTags = useMemo(() => Object.keys(summary.SummaryPerNode ?? {}).sort(), [summary]);
     const [context, setContext] = useState<AnalysisContext>("cluster");
+    const [selectedNode, setSelectedNode] = useState<string>(() => defaultNode(summary, nodeTags));
+
+    const allIssues = useMemo(() => flattenIssues(summary), [summary]);
+
+    const contextIssues = useMemo(() => {
+        if (context === "node") {
+            return allIssues.filter((issue) => issue.nodeTag === selectedNode);
+        }
+        return allIssues;
+    }, [allIssues, context, selectedNode]);
 
     const contextItems: InputItem<AnalysisContext>[] = [
-        { label: "Cluster", value: "cluster" },
-        { label: "Node", value: "node" },
-        { label: "Database", value: "database" },
+        { label: "Cluster", value: "cluster", count: allIssues.length },
+        { label: "Node", value: "node", count: allIssues.filter((i) => i.nodeTag === selectedNode).length },
+        { label: "Database", value: "database", count: allIssues.filter((i) => i.scope === "database").length },
     ];
 
-    const issues = useMemo(() => flattenIssues(summary), [summary]);
+    const nodeOptions: SelectOption<string>[] = nodeTags.map((tag) => ({ value: tag, label: `Node ${tag}` }));
 
     return (
         <div className="debug-package-analysis vstack gap-4">
@@ -37,17 +51,37 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                     setSelectedItem={setContext}
                     label="Select analysis context"
                 />
+                {context === "node" && nodeTags.length > 0 && (
+                    <div className="node-select">
+                        <div className="small-label ms-1 mb-1">Select node</div>
+                        <Select
+                            options={nodeOptions}
+                            value={nodeOptions.find((o) => o.value === selectedNode)}
+                            onChange={(option) => option && setSelectedNode(option.value)}
+                            isSearchable={false}
+                            isRoundedPill
+                        />
+                    </div>
+                )}
                 <FlexGrow />
                 <PackageInfo fileName={fileName} onReset={onReset} />
             </div>
 
-            <AnalysisResults issues={issues} />
+            <AnalysisResults issues={contextIssues} />
 
-            {context === "cluster" ? (
-                <ClusterOverview summary={summary} />
-            ) : (
-                <EmptySet>This analysis context is coming in a future iteration</EmptySet>
+            {context === "cluster" && (
+                <>
+                    <ClusterOverview summary={summary} />
+                    <DatabasesOverview summary={summary} />
+                </>
             )}
+            {context === "node" && selectedNode && <NodeOverview summary={summary} nodeTag={selectedNode} />}
+            {context === "database" && <EmptySet>The Database context is coming in a future iteration</EmptySet>}
         </div>
     );
+}
+
+function defaultNode(summary: DebugPackageAnalysisSummary, nodeTags: string[]): string {
+    const leader = nodeTags.find((tag) => summary.SummaryPerNode?.[tag]?.ClusterNodeInfo?.NodeState === "Leader");
+    return leader ?? nodeTags[0] ?? null;
 }

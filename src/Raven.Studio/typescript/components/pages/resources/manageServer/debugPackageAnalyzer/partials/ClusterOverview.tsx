@@ -3,10 +3,10 @@ import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
 import { StatePill } from "components/common/StatePill";
-import IconName from "typings/server/icons";
+import StatTile from "./StatTile";
+import { formatUpTime, osIcon, parseUpTimeSeconds } from "./analyzerUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
-type OSType = Raven.Client.ServerWide.Operations.OSType;
 
 interface ClusterOverviewProps {
     summary: DebugPackageAnalysisSummary;
@@ -24,16 +24,39 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
         return names.size;
     }, [nodes]);
 
+    // a static package has no live online/offline flag - every captured node is treated as online
+    const nodeCount = nodeInfos.length;
+
+    // closest proxy for "cluster uptime" available in the summary: the longest-running node
+    const clusterUpTime = useMemo(() => {
+        let best: string = null;
+        let bestSeconds = -1;
+        nodeInfos.forEach((n) => {
+            const seconds = parseUpTimeSeconds(n.UpTime);
+            if (seconds > bestSeconds) {
+                bestSeconds = seconds;
+                best = n.UpTime;
+            }
+        });
+        return best;
+    }, [nodeInfos]);
+
     return (
         <div className="cluster-overview">
             <h3 className="mb-3">Cluster Overview</h3>
             <Card>
                 <Card.Body className="vstack gap-3">
-                    <div className="cluster-overview-stats d-flex gap-3 flex-wrap">
-                        <StatTile label="Nodes" icon="cluster" value={String(nodeInfos.length)} />
+                    <div className="overview-stats d-flex gap-3 flex-wrap">
+                        <StatTile
+                            label="Nodes status"
+                            icon="check"
+                            iconColor="success"
+                            value={`${nodeCount}/${nodeCount} online`}
+                        />
                         <StatTile label="Leader node" icon="cluster-member" value={leader?.NodeTag ?? "-"} />
-                        <StatTile label="Cluster uptime" icon="clock" value={formatUpTime(leader?.UpTime)} />
+                        <StatTile label="Cluster uptime" icon="clock" value={formatUpTime(clusterUpTime)} />
                         <StatTile label="Total databases" icon="database" value={String(totalDatabases)} />
+                        <StatTile label="License tier" icon="license" value="n/a" />
                     </div>
 
                     <Table responsive className="m-0 align-middle">
@@ -74,62 +97,4 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
             </Card>
         </div>
     );
-}
-
-interface StatTileProps {
-    label: string;
-    icon: IconName;
-    value: string;
-}
-
-function StatTile({ label, icon, value }: StatTileProps) {
-    return (
-        <div className="stat-tile well px-3 py-2 rounded">
-            <div className="stat-tile-label text-muted small">{label}</div>
-            <div className="stat-tile-value hstack gap-1 align-items-center fs-4">
-                <Icon icon={icon} margin="m-0" /> {value}
-            </div>
-        </div>
-    );
-}
-
-function osIcon(osType: OSType): IconName {
-    switch (osType) {
-        case "Linux":
-            return "linux";
-        case "Windows":
-            return "windows";
-        case "MacOS":
-            return "apple";
-        default:
-            return "server";
-    }
-}
-
-// UpTime arrives as a serialized .NET TimeSpan (e.g. "45.12:33:00")
-function formatUpTime(upTime: string | undefined): string {
-    if (!upTime) {
-        return "-";
-    }
-
-    const match = upTime.match(/^(?:(\d+)\.)?(\d{1,2}):(\d{2}):(\d{2})/);
-    if (!match) {
-        return upTime;
-    }
-
-    const [, daysPart, hoursPart, minutesPart] = match;
-    const days = daysPart ? Number(daysPart) : 0;
-    const hours = Number(hoursPart);
-    const minutes = Number(minutesPart);
-
-    const parts: string[] = [];
-    if (days) {
-        parts.push(`${days}d`);
-    }
-    if (days || hours) {
-        parts.push(`${hours}h`);
-    }
-    parts.push(`${minutes}m`);
-
-    return parts.join(" ");
 }
