@@ -6,28 +6,20 @@ import type {
     MapRequest,
 } from "@/api/generated/server-api";
 
-export const DESCRIPTION_MAX_LENGTH = 200;
 export const DEFAULT_TEST_ROWS = 5;
 
 export type SetupWizardFormValues = {
     appName: string;
     connectionString: string;
     dataSource: "external";
-    description: string;
     mappingMode: "auto";
-    maxRows: number | null;
     provider: string;
-    tableNames: Array<{ name: string }>;
 };
 
 export const SETUP_WIZARD_STEPS = [
     {
         id: "choose-source",
         label: "Choose data source",
-    },
-    {
-        id: "basic-configuration",
-        label: "Basic configuration",
     },
     {
         id: "connect-source",
@@ -44,10 +36,6 @@ export const SETUP_WIZARD_STEPS = [
     {
         id: "preview",
         label: "Preview",
-    },
-    {
-        id: "load-progress",
-        label: "Load in progress",
     },
 ] as const;
 
@@ -126,11 +114,8 @@ export function getInitialFormValues(): SetupWizardFormValues {
         appName: "",
         connectionString: "",
         dataSource: "external",
-        description: "",
         mappingMode: "auto",
-        maxRows: DEFAULT_TEST_ROWS,
         provider: PROVIDER_OPTIONS[0].value,
-        tableNames: [],
     };
 }
 
@@ -155,29 +140,25 @@ export function getPreviousStep(stepId: SetupWizardStepId) {
 }
 
 export function toConnectRequest(values: SetupWizardFormValues): ConnectRequest {
-    const tableNames = parseTableNames(values.tableNames);
-
     return {
         connectionString: values.connectionString.trim(),
         provider: values.provider,
-        tableNames: tableNames.length ? tableNames : null,
+        tableNames: null,
     };
 }
 
-export function parseTableNames(value: SetupWizardFormValues["tableNames"]) {
-    return value.map((table) => table.name.trim()).filter(Boolean);
+export function toVerifyConnectRequest(values: SetupWizardFormValues, schema: DiscoverResponse): ConnectRequest {
+    return {
+        connectionString: values.connectionString.trim(),
+        provider: values.provider,
+        tableNames: getDiscoveredTableNames(schema),
+    };
 }
 
-export function buildAutoConfiguration(schema: DiscoverResponse, tableNames: string[]): MapRequest {
-    const requestedTables = new Set(tableNames.map((name) => name.toLowerCase()));
+export function buildAutoConfiguration(schema: DiscoverResponse, selectedTableKeys?: string[]): MapRequest {
+    const selectedTables = selectedTableKeys ? new Set(selectedTableKeys) : null;
     const tables = schema.tables
-        .filter((table) => isTableUsable(table))
-        .filter(
-            (table) =>
-                requestedTables.size === 0 ||
-                requestedTables.has(getTableKey(table).toLowerCase()) ||
-                requestedTables.has(table.sourceTableName.toLowerCase()),
-        )
+        .filter((table) => isTableUsable(table) && (!selectedTables || selectedTables.has(getTableKey(table))))
         .map((table) => ({
             collectionName: toCollectionName(table.sourceTableName),
             columns: table.columns
@@ -232,6 +213,10 @@ export function isConnectSuccess(result: { success: boolean; errors: string[] })
 
 export function firstMessage(messages: string[]) {
     return messages.find(Boolean);
+}
+
+function getDiscoveredTableNames(schema: DiscoverResponse) {
+    return [...new Set(schema.tables.map((table) => table.sourceTableName).filter(Boolean))];
 }
 
 function toColumnMappingType(type: DiscoverTableResponse["columns"][number]["suggestedType"]) {
