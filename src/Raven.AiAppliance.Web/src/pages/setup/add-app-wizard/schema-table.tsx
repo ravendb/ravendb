@@ -17,6 +17,7 @@ import {
     isTableUsable,
 } from "@/pages/setup/add-app-wizard/wizard-model";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
+import { Checkbox } from "@/components/shadcn/ui/checkbox";
 
 export function SchemaTable() {
     const schema = useSetupWizardStore((state) => state.schema);
@@ -29,49 +30,22 @@ export function SchemaTable() {
     const columns: ColumnDef<DiscoverTableResponse>[] = [
         {
             id: "select",
-            header: ({ table }) => {
-                const selectableRows = table.getFilteredRowModel().rows.filter((row) => row.getCanSelect());
-                const selectedRows = selectableRows.filter((row) => row.getIsSelected());
-                const isAllSelected = selectableRows.length > 0 && selectedRows.length === selectableRows.length;
-                const isPartiallySelected = selectedRows.length > 0 && !isAllSelected;
-
-                return (
-                    <input
-                        type="checkbox"
-                        aria-label="Select all visible verified tables"
-                        checked={isAllSelected}
-                        ref={(input) => {
-                            if (input) {
-                                input.indeterminate = isPartiallySelected;
-                            }
-                        }}
-                        onChange={(event) => {
-                            const nextSelectedTableKeys = new Set(selectedTableKeys);
-
-                            for (const row of selectableRows) {
-                                if (event.target.checked) {
-                                    nextSelectedTableKeys.add(row.id);
-                                } else {
-                                    nextSelectedTableKeys.delete(row.id);
-                                }
-                            }
-
-                            selectTableKeys([...nextSelectedTableKeys]);
-                        }}
-                        className="size-4 rounded border-border accent-primary"
-                    />
-                );
-            },
-            cell: ({ row }) => (
-                <input
-                    type="checkbox"
-                    aria-label={`Use ${getTableLabel(row.original)}`}
-                    checked={row.getIsSelected()}
-                    disabled={!row.getCanSelect()}
-                    onChange={row.getToggleSelectedHandler()}
-                    className="size-4 rounded border-border accent-primary disabled:cursor-not-allowed disabled:opacity-50"
+            header: ({ table }) => (
+                <Checkbox
+                    checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
                 />
             ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
             size: 48,
         },
         {
