@@ -50,6 +50,8 @@ public sealed unsafe class HnswIndexCache : IDisposable
 
         _capacityBytes = capacityBytes;
         _buffer = (byte*)NativeMemory.AlignedAlloc((nuint)capacityBytes, 4096);
+        if (_buffer == null)
+            throw new OutOfMemoryException($"Failed to allocate {capacityBytes} bytes for the HNSW node cache.");
         _ids = new ConcurrentDictionary<long, NodeRef>();
         Options = options;
         SimilarityCalc = similarityCalc;
@@ -128,7 +130,12 @@ public sealed unsafe class HnswIndexCache : IDisposable
         src.Edges.CopyTo(new Span<long>(edges, src.EdgesTotalCount));
 
         // Linearization point: only after the bytes above are written do readers become able to
-        // discover this record. The volatile store inside TryAdd provides the release barrier.
+        // discover this record. ConcurrentDictionary does not document release semantics for the
+        // bucket store, so on weakly-ordered architectures (ARM64) the buffer writes above and the
+        // dictionary insert below could be observed out of order by a reader on another core. This
+        // fence makes the buffer writes globally visible before the record is published; the reader
+        // side gets an acquire load from the dictionary plus a control dependency on the offset.
+        Interlocked.MemoryBarrier();
         return _ids.TryAdd(nodeId, new NodeRef(offset));
     }
 
