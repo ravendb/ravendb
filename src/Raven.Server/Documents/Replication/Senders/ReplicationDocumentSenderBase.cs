@@ -653,6 +653,7 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
+                [nameof(ReplicationMessageHeader.LastSentChangeVector)] = _parent.LastSentChangeVector,
                 [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count,
                 [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count
             };

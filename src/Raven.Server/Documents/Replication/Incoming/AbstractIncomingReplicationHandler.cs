@@ -58,6 +58,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected readonly CancellationTokenSource _cts;
         protected StreamsTempFile _attachmentStreamsTempFile;
         protected long _lastDocumentEtag;
+        protected string _lastBatchChangeVector;
         protected readonly AsyncManualResetEvent _replicationFromAnotherSource;
         protected RavenLogger Logger;
         private DeescalatingWarnToDebugLogger _endOfStreamExceptionLogger;
@@ -284,6 +285,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag) == false)
                     throw new InvalidOperationException("Expected LastDocumentEtag property in the replication message, " +
                                                         "but didn't find it..");
+
+                message.TryGet(nameof(ReplicationMessageHeader.LastSentChangeVector), out _lastBatchChangeVector);
 
                 switch (messageType)
                 {
