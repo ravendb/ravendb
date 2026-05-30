@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -882,8 +883,8 @@ namespace FastTests.Server.Basic
                 $"{ChangeVector((shard2DbId, 700, 1))}|{version95}"
             };
 
-            Assert.Null(ChangeVectorMerger.MergeDown(changeVectors, ChangeVectorPart.Whole));
-            Assert.Equal(version95, ChangeVectorMerger.MergeDown(changeVectors, ChangeVectorPart.Version));
+            Assert.Null(ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(changeVectors), ChangeVectorPart.Whole));
+            Assert.Equal(version95, ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(changeVectors), ChangeVectorPart.Version));
         }
 
         [RavenFact(RavenTestCategory.Replication)]

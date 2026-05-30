@@ -61,7 +61,5 @@ namespace Raven.Server.Documents.Replication
                 tag /= 26;
             } while (tag != 0);
         }
-
-        public static int FromBase26(string tag) => tag.ParseNodeTag();
     }
 }

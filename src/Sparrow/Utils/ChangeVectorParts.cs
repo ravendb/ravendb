@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Sparrow.Utils;
 
@@ -33,11 +32,11 @@ internal static class ChangeVectorParts
     /// [A:10-dbA] + [B:20-dbB]            => false
     /// </code>
     /// </example>
-    public static bool HasComposite(IReadOnlyList<string> changeVectors)
+    public static bool HasComposite(ReadOnlySpan<string> changeVectors)
     {
-        for (int i = 0; i < changeVectors.Count; i++)
+        foreach (var changeVector in changeVectors)
         {
-            if (GetCompositeSeparatorIndex(changeVectors[i]) >= 0)
+            if (GetCompositeSeparatorIndex(changeVector.AsSpan()) >= 0)
                 return true;
         }
 
@@ -55,7 +54,7 @@ internal static class ChangeVectorParts
     /// A:10-dbA, Order              => A:10-dbA
     /// </code>
     /// </example>
-    public static ReadOnlySpan<char> GetPart(string changeVector, ChangeVectorPart part) => GetPart(changeVector, GetCompositeSeparatorIndex(changeVector), part);
+    public static ReadOnlySpan<char> GetPart(ReadOnlySpan<char> changeVector, ChangeVectorPart part) => GetPart(changeVector, GetCompositeSeparatorIndex(changeVector), part);
 
     /// <summary>
     /// Selects the requested logical part using a known separator index to avoid searching for the pipe twice.
@@ -66,18 +65,17 @@ internal static class ChangeVectorParts
     /// S1:500-dbS|A:10-dbA, separator at '|', Version => A:10-dbA
     /// </code>
     /// </example>
-    public static ReadOnlySpan<char> GetPart(string changeVector, int separatorIndex, ChangeVectorPart part)
+    public static ReadOnlySpan<char> GetPart(ReadOnlySpan<char> changeVector, int separatorIndex, ChangeVectorPart part)
     {
-        if (string.IsNullOrEmpty(changeVector))
+        if (changeVector.Length == 0)
             return ReadOnlySpan<char>.Empty;
 
-        var changeVectorSpan = changeVector.AsSpan();
         if (part == ChangeVectorPart.Whole || separatorIndex < 0)
-            return changeVectorSpan;
+            return changeVector;
 
         return part == ChangeVectorPart.Order
-            ? changeVectorSpan.Slice(0, separatorIndex)
-            : changeVectorSpan.Slice(separatorIndex + 1);
+            ? changeVector.Slice(0, separatorIndex)
+            : changeVector.Slice(separatorIndex + 1);
     }
 
     /// <summary>
@@ -91,7 +89,7 @@ internal static class ChangeVectorParts
     /// </example>
     public static string GetVersion(string changeVector)
     {
-        var separatorIndex = GetCompositeSeparatorIndex(changeVector);
+        var separatorIndex = GetCompositeSeparatorIndex(changeVector.AsSpan());
         return separatorIndex < 0
             ? changeVector
             : changeVector.Substring(separatorIndex + 1);
@@ -107,18 +105,17 @@ internal static class ChangeVectorParts
     /// S1:500-dbS|A:10|extra    => throws
     /// </code>
     /// </example>
-    public static int GetCompositeSeparatorIndex(string changeVector)
+    public static int GetCompositeSeparatorIndex(ReadOnlySpan<char> changeVector)
     {
-        if (string.IsNullOrEmpty(changeVector))
+        if (changeVector.Length == 0)
             return -1;
 
         var separatorIndex = changeVector.IndexOf('|');
         if (separatorIndex < 0)
             return -1;
 
-        return changeVector.IndexOf('|', separatorIndex + 1) < 0
+        return changeVector.Slice(separatorIndex + 1).IndexOf('|') < 0
             ? separatorIndex
-            : throw new ArgumentException($"Invalid change vector {changeVector}");
+            : throw new ArgumentException($"Invalid change vector {changeVector.ToString()}");
     }
 }
-

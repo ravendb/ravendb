@@ -12,10 +12,10 @@ namespace Raven.Server.Documents.Replication
         public const string SinkTag = "SINK";
         public const string MoveTag = "MOVE";
 
-        public static readonly int RaftInt = RaftTag.ParseNodeTag();
-        public static readonly int TrxnInt = TrxnTag.ParseNodeTag();
-        public static readonly int SinkInt = SinkTag.ParseNodeTag();
-        public static readonly int MoveInt = MoveTag.ParseNodeTag();
+        public static readonly int RaftInt = ParseNodeTag(RaftTag.AsSpan(), 0, RaftTag.Length - 1);
+        public static readonly int TrxnInt = ParseNodeTag(TrxnTag.AsSpan(), 0, TrxnTag.Length - 1);
+        public static readonly int SinkInt = ParseNodeTag(SinkTag.AsSpan(), 0, SinkTag.Length - 1);
+        public static readonly int MoveInt = ParseNodeTag(MoveTag.AsSpan(), 0, MoveTag.Length - 1);
         public static readonly int DbBase64IdSize = 23;
 
         private enum State
@@ -25,13 +25,7 @@ namespace Raven.Server.Documents.Replication
             Whitespace
         }
 
-
-        public static int ParseNodeTag(this string nodeTag)
-        {
-            return ParseNodeTag(nodeTag, 0, nodeTag.Length - 1);
-        }
-
-        public static int ParseNodeTag(string changeVector, int start, int end)
+        public static int ParseNodeTag(ReadOnlySpan<char> changeVector, int start, int end)
         {
             AssertValidNodeTagChar(changeVector[end]);
 
@@ -58,7 +52,7 @@ namespace Raven.Server.Documents.Replication
             throw new ArgumentException("Invalid node tag character: " + ch);
         }
 
-        private static long ParseEtag(string changeVector, int start, int end)
+        internal static long ParseEtag(ReadOnlySpan<char> changeVector, int start, int end)
         {
             long etag = changeVector[start] - '0';
 
@@ -88,7 +82,7 @@ namespace Raven.Server.Documents.Replication
                     case State.Tag:
                         if (changeVector[current] == ':')
                         {
-                            tag = ParseNodeTag(changeVector, start, current - 1);
+                            tag = ParseNodeTag(changeVector.AsSpan(), start, current - 1);
                             state = State.Etag;
                             start = current + 1;
                         }
@@ -97,7 +91,7 @@ namespace Raven.Server.Documents.Replication
                     case State.Etag:
                         if (changeVector[current] == '-')
                         {
-                            var etag = ParseEtag(changeVector, start, current - 1);
+                            var etag = ParseEtag(changeVector.AsSpan(), start, current - 1);
                             if (current + DbBase64IdSize > changeVector.Length)
                                 ThrowInvalidEndOfString("DbId", changeVector);
                             list.Add(new ChangeVectorEntry
@@ -148,187 +142,18 @@ namespace Raven.Server.Documents.Replication
             return changeVector.ToChangeVectorList().ToArray();
         }
 
-        public static void MergeChangeVector(string changeVector, List<ChangeVectorEntry> entries)
-        {
-            if (string.IsNullOrEmpty(changeVector))
-                return;
-
-            AssertChangeVector(changeVector);
-
-            var start = 0;
-            var current = 0;
-            var state = State.Tag;
-            int tag = -1;
-
-            while (current < changeVector.Length)
-            {
-                switch (state)
-                {
-                    case State.Tag:
-                        if (changeVector[current] == ':')
-                        {
-                            tag = ParseNodeTag(changeVector, start, current - 1);
-                            state = State.Etag;
-                            start = current + 1;
-                        }
-                        current++;
-                        break;
-                    case State.Etag:
-                        if (changeVector[current] == '-')
-                        {
-                            var etag = ParseEtag(changeVector, start, current - 1);
-
-                            if (current + DbBase64IdSize > changeVector.Length)
-                                ThrowInvalidEndOfString("DbId", changeVector);
-                            bool found = false;
-                            var dbId = changeVector.Substring(current + 1, 22);
-                            for (int i = 0; i < entries.Count; i++)
-                            {
-                                if (entries[i].DbId == dbId)
-                                {
-                                    if (entries[i].Etag < etag)
-                                    {
-                                        entries[i] = new ChangeVectorEntry
-                                        {
-                                            NodeTag = tag,
-                                            Etag = etag,
-                                            DbId = dbId
-                                        };
-                                    }
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (found == false)
-                            {
-                                entries.Add(new ChangeVectorEntry
-                                {
-                                    NodeTag = tag,
-                                    Etag = etag,
-                                    DbId = dbId
-                                });
-                            }
-                          
-                            start = current + DbBase64IdSize;
-                            current = start;
-                            state = State.Whitespace;
-                        }
-                        current++;
-                        break;
-                    case State.Whitespace:
-                        if (char.IsWhiteSpace(changeVector[current]) ||
-                            changeVector[current] == ',')
-                        {
-                            start++;
-                            current++;
-                        }
-                        else
-                        {
-                            start = current;
-                            current++;
-                            state = State.Tag;
-                        }
-                        break;
-
-                    default:
-                        ThrowInvalidState(state, changeVector);
-                        break;
-                }
-            }
-
-            if (state == State.Whitespace)
-                return;
-
-            ThrowInvalidEndOfString(state.ToString(), changeVector);
-        }
-
-        public static bool MergeChangeVectorDown(string changeVector, List<ChangeVectorEntry> entries)
-        {
-            var start = 0;
-            var current = 0;
-            var state = State.Tag;
-            int tag = -1;
-            bool found = false;
-
-            while (current < changeVector.Length)
-            {
-                switch (state)
-                {
-                    case State.Tag:
-                        if (changeVector[current] == ':')
-                        {
-                            tag = ParseNodeTag(changeVector, start, current - 1);
-                            state = State.Etag;
-                            start = current + 1;
-                        }
-                        current++;
-                        break;
-                    case State.Etag:
-                        if (changeVector[current] == '-')
-                        {
-                            var etag = ParseEtag(changeVector, start, current - 1);
-
-                            if (current + DbBase64IdSize > changeVector.Length)
-                                ThrowInvalidEndOfString("DbId", changeVector);
-                 
-                            var dbId = changeVector.Substring(current + 1, 22);
-                            for (int i = 0; i < entries.Count; i++)
-                            {
-                                if (entries[i].DbId == dbId)
-                                {
-                                    found = true;
-                                    if (entries[i].Etag > etag)
-                                    {
-                                        entries[i] = new ChangeVectorEntry
-                                        {
-                                            NodeTag = tag,
-                                            Etag = etag,
-                                            DbId = dbId
-                                        };
-                                    }
-                                    break;
-                                }
-                            }
-                          
-                            start = current + DbBase64IdSize;
-                            current = start;
-                            state = State.Whitespace;
-                        }
-                        current++;
-                        break;
-                    case State.Whitespace:
-                        if (char.IsWhiteSpace(changeVector[current]) ||
-                            changeVector[current] == ',')
-                        {
-                            start++;
-                            current++;
-                        }
-                        else
-                        {
-                            start = current;
-                            current++;
-                            state = State.Tag;
-                        }
-                        break;
-
-                    default:
-                        ThrowInvalidState(state, changeVector);
-                        break;
-                }
-            }
-
-            if (state == State.Whitespace)
-                return found;
-
-            ThrowInvalidEndOfString(state.ToString(), changeVector);
-            return false;
-        }
-
         [Conditional("DEBUG")]
         public static void AssertChangeVector(string changeVector)
         {
             if (changeVector.Contains('|'))
                 Debug.Assert(false, $"Cannot contain pipe {changeVector}");
+        }
+
+        [Conditional("DEBUG")]
+        public static void AssertChangeVector(ReadOnlySpan<char> changeVector)
+        {
+            if (changeVector.IndexOf('|') >= 0)
+                Debug.Assert(false, $"Cannot contain pipe {changeVector.ToString()}");
         }
 
         [DoesNotReturn]

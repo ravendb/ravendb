@@ -104,7 +104,7 @@ for(const comment of this.Comments)
             var doc = await session.LoadAsync<GenAiBasics.Post>(docId);
             doc.Comments.Add(new GenAiBasics.Comment("new spam comment", "evil hacker"));
 
-            var etag = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
+            var etag = ChangeVectorUtils.GetVersionEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
 
             await session.SaveChangesAsync();
 

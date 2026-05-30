@@ -74,7 +74,7 @@ for(const comment of this.Comments)
             // one per comment
             Assert.Equal(3, hashes.Length);
 
-            etag = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(postDoc), db.DbBase64Id);
+            etag = ChangeVectorUtils.GetVersionEtagById(session.Advanced.GetChangeVectorFor(postDoc), db.DbBase64Id);
         }
 
         // Second run: delete one context source (remove a comment).
@@ -107,7 +107,7 @@ for(const comment of this.Comments)
 
             Assert.Equal(2, hashes.Length);
 
-            etag = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(postDoc), db.DbBase64Id);
+            etag = ChangeVectorUtils.GetVersionEtagById(session.Advanced.GetChangeVectorFor(postDoc), db.DbBase64Id);
         }
 
         // Remove both of the remaining comments, which are cached.

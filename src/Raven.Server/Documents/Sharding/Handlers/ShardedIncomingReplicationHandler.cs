@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     cvs.Add(replicationBatch.LastAcceptedChangeVector);
                 }
 
-                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(cvs, Utils.ChangeVectorPart.Version);
+                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(cvs), Utils.ChangeVectorPart.Version);
             }
         }
 
@@ -165,7 +166,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 lastAcceptedEtag = Math.Min(acceptedEtag, lastAcceptedEtag);
             }
 
-            var mergedChangeVector = ChangeVectorMerger.MergeDown(handlersChangeVector, Utils.ChangeVectorPart.Version);
+            var mergedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(handlersChangeVector), Utils.ChangeVectorPart.Version);
             return (mergedChangeVector, lastAcceptedEtag);
         }
 
@@ -199,7 +200,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (handlersChangeVector == null)
                 return (null, 0);
 
-            var mergedChangeVector = ChangeVectorMerger.MergeDown(handlersChangeVector, Utils.ChangeVectorPart.Version);
+            var mergedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(handlersChangeVector), Utils.ChangeVectorPart.Version);
             return (mergedChangeVector, lastAcceptedEtag);
         }
 
@@ -288,7 +289,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     _lastSentEtagPerDestination[shardNumber] = batch.LastEtagAccepted;
                 }
 
-                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(cvs, Utils.ChangeVectorPart.Version);
+                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(cvs), Utils.ChangeVectorPart.Version);
             }
         }
 

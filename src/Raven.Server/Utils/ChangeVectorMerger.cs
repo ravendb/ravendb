@@ -46,43 +46,9 @@ internal static class ChangeVectorMerger
     /// [S1:500-dbS|A:10-dbA] + [A:12-dbA]            => A:12-dbA, S1:500-dbS|A:12-dbA
     /// </code>
     /// </example>
-    public static string Merge(string vectorAstring, string vectorBstring)
+    public static string Merge(params ReadOnlySpan<string> changeVectors)
     {
-        if (string.IsNullOrEmpty(vectorAstring))
-            return vectorBstring;
-        if (string.IsNullOrEmpty(vectorBstring))
-            return vectorAstring;
-
-        var vectorASeparatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(vectorAstring);
-        var vectorBSeparatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(vectorBstring);
-
-        if (vectorASeparatorIndex < 0 && vectorBSeparatorIndex < 0)
-        {
-            var buffer = MergeVectorBuffer ??= new EquatableList<ChangeVectorEntry>();
-            buffer.Clear();
-            ApplyFlatChangeVector(vectorAstring.AsSpan(), buffer, MergeMode.Max);
-            ApplyFlatChangeVector(vectorBstring.AsSpan(), buffer, MergeMode.Max);
-            return buffer.SerializeVector();
-        }
-
-        var orderBuffer = MergeVectorBuffer ??= new EquatableList<ChangeVectorEntry>();
-        var versionBuffer = MergeVectorVersionBuffer ??= new EquatableList<ChangeVectorEntry>();
-        orderBuffer.Clear();
-        versionBuffer.Clear();
-
-        ApplyFlatChangeVector(ChangeVectorParts.GetPart(vectorAstring, vectorASeparatorIndex, SparrowChangeVectorPart.Order), orderBuffer, MergeMode.Max);
-        ApplyFlatChangeVector(ChangeVectorParts.GetPart(vectorBstring, vectorBSeparatorIndex, SparrowChangeVectorPart.Order), orderBuffer, MergeMode.Max);
-        ApplyFlatChangeVector(ChangeVectorParts.GetPart(vectorAstring, vectorASeparatorIndex, SparrowChangeVectorPart.Version), versionBuffer, MergeMode.Max);
-        ApplyFlatChangeVector(ChangeVectorParts.GetPart(vectorBstring, vectorBSeparatorIndex, SparrowChangeVectorPart.Version), versionBuffer, MergeMode.Max);
-
-        return ChangeVectorParts.ToComposite(orderBuffer.SerializeVector(), versionBuffer.SerializeVector());
-    }
-
-    public static string Merge(params string[] changeVectors) => Merge((IReadOnlyList<string>)changeVectors);
-
-    public static string Merge(IReadOnlyList<string> changeVectors)
-    {
-        if (changeVectors.Count == 2)
+        if (changeVectors.Length == 2)
         {
             if (string.IsNullOrEmpty(changeVectors[0]))
                 return changeVectors[1];
@@ -116,9 +82,10 @@ internal static class ChangeVectorMerger
             if (string.IsNullOrEmpty(changeVector))
                 continue;
 
-            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector);
-            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVector, separatorIndex, SparrowChangeVectorPart.Order), orderBuffer, MergeMode.Max);
-            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVector, separatorIndex, SparrowChangeVectorPart.Version), versionBuffer, MergeMode.Max);
+            var changeVectorSpan = changeVector.AsSpan();
+            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVectorSpan);
+            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVectorSpan, separatorIndex, SparrowChangeVectorPart.Order), orderBuffer, MergeMode.Max);
+            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVectorSpan, separatorIndex, SparrowChangeVectorPart.Version), versionBuffer, MergeMode.Max);
         }
 
         return ChangeVectorParts.ToComposite(orderBuffer.SerializeVector(), versionBuffer.SerializeVector());
@@ -136,7 +103,7 @@ internal static class ChangeVectorMerger
     /// Version: [S1:500-dbS|A:10-dbA] + [S2:700-dbT|A:8-dbA] => A:8-dbA
     /// </code>
     /// </example>
-    public static string MergeDown(IReadOnlyList<string> changeVectors, ChangeVectorPart changeVectorPart)
+    public static string MergeDown(ReadOnlySpan<string> changeVectors, ChangeVectorPart changeVectorPart)
     {
         if (changeVectorPart != ChangeVectorPart.Whole)
             return MergePartDown(changeVectors, changeVectorPart);
@@ -153,26 +120,26 @@ internal static class ChangeVectorMerger
             ? ChangeVectorParts.ToComposite(order, version)
             : null;
 
-        static string MergePartDown(IReadOnlyList<string> vectors, ChangeVectorPart part)
+        static string MergePartDown(ReadOnlySpan<string> vectors, ChangeVectorPart part)
         {
             var buffer = MergeVectorBuffer ??= new EquatableList<ChangeVectorEntry>();
             buffer.Clear();
 
-            if (vectors.Count == 0 || string.IsNullOrEmpty(vectors[0]))
+            if (vectors.Length == 0 || string.IsNullOrEmpty(vectors[0]))
                 return null;
 
-            var first = ChangeVectorParts.GetPart(vectors[0], ToSparrowPart(part));
+            var first = ChangeVectorParts.GetPart(vectors[0].AsSpan(), ToSparrowPart(part));
             if (first.Length == 0)
                 return null;
 
             ApplyFlatChangeVector(first, buffer, MergeMode.Max);
 
-            for (int i = 1; i < vectors.Count; i++)
+            for (int i = 1; i < vectors.Length; i++)
             {
                 if (string.IsNullOrEmpty(vectors[i]))
                     return null;
 
-                var current = ChangeVectorParts.GetPart(vectors[i], ToSparrowPart(part));
+                var current = ChangeVectorParts.GetPart(vectors[i].AsSpan(), ToSparrowPart(part));
                 if (current.Length == 0)
                     return null;
 
@@ -204,6 +171,8 @@ internal static class ChangeVectorMerger
         if (changeVector.Length == 0)
             return mode == MergeMode.Max;
 
+        if (mode == MergeMode.Max)
+            ChangeVectorParser.AssertChangeVector(changeVector);
 
         var current = 0;
         var start = 0;
@@ -218,7 +187,7 @@ internal static class ChangeVectorMerger
                 case State.Tag:
                     if (changeVector[current] == ':')
                     {
-                        tag = ParseNodeTag(changeVector, start, current - 1);
+                        tag = ChangeVectorParser.ParseNodeTag(changeVector, start, current - 1);
                         state = State.Etag;
                         start = current + 1;
                     }
@@ -228,7 +197,7 @@ internal static class ChangeVectorMerger
                 case State.Etag:
                     if (changeVector[current] == '-')
                     {
-                        var etag = ParseEtag(changeVector, start, current - 1);
+                        var etag = ChangeVectorParser.ParseEtag(changeVector, start, current - 1);
 
                         if (current + ChangeVectorParser.DbBase64IdSize > changeVector.Length)
                             ThrowInvalidEndOfString("DbId", changeVector);
@@ -318,38 +287,7 @@ internal static class ChangeVectorMerger
             _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
         };
     }
-    private static int ParseNodeTag(ReadOnlySpan<char> changeVector, int start, int end)
-    {
-        AssertValidNodeTagChar(changeVector[end]);
 
-        int tag = changeVector[end] - 'A';
-        for (int i = end - 1; i >= start; i--)
-        {
-            AssertValidNodeTagChar(changeVector[i]);
-            tag *= 26;
-            tag += changeVector[i] - 'A';
-        }
-
-        return tag;
-    }
-
-    private static void AssertValidNodeTagChar(char ch)
-    {
-        if (ch < 'A' || ch > 'Z')
-            throw new ArgumentException("Invalid node tag character: " + ch);
-    }
-
-    private static long ParseEtag(ReadOnlySpan<char> changeVector, int start, int end)
-    {
-        long etag = changeVector[start] - '0';
-        for (int i = start + 1; i <= end; i++)
-        {
-            etag *= 10;
-            etag += changeVector[i] - '0';
-        }
-
-        return etag;
-    }
     [DoesNotReturn]
     private static void ThrowInvalidEndOfString(string state, ReadOnlySpan<char> cv)
     {
@@ -362,4 +300,3 @@ internal static class ChangeVectorMerger
         throw new ArgumentOutOfRangeException(state + " in " + cv.ToString());
     }
 }
-

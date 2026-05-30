@@ -337,7 +337,7 @@ public sealed class ChangeVector
 
         var newChangeVector = new List<ChangeVectorEntry>();
         var changeVectorList = from.ToChangeVectorList();
-        var tagAsInt = ChangeVectorExtensions.FromBase26(tag);
+        var tagAsInt = ChangeVectorParser.ParseNodeTag(tag.AsSpan(), 0, tag.Length - 1);
 
         foreach (var entry in changeVectorList)
         {

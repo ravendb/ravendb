@@ -754,7 +754,7 @@ for(const comment of this.Comments)
 
             var doc = session.Load<Post>(docId);
             doc.Comments.Add(new Comment("spam comment", "evil bot"));
-            etag = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
+            etag = ChangeVectorUtils.GetVersionEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
 
             session.SaveChanges();
         }

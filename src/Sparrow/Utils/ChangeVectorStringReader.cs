@@ -6,7 +6,7 @@ namespace Sparrow.Utils
     {
         public static long GetOrderEtagById(string changeVector, string id)
         {
-            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector);
+            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector.AsSpan());
             return separatorIndex < 0
                 ? GetEtagByIdInternal(changeVector, id, startIndex: 0, count: changeVector?.Length ?? 0)
                 : GetEtagByIdInternal(changeVector, id, startIndex: 0, count: separatorIndex);
@@ -14,7 +14,7 @@ namespace Sparrow.Utils
 
         public static long GetVersionEtagById(string changeVector, string id)
         {
-            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector);
+            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector.AsSpan());
             return separatorIndex < 0
                 ? GetEtagByIdInternal(changeVector, id, startIndex: 0, count: changeVector?.Length ?? 0)
                 : GetEtagByIdInternal(changeVector, id, startIndex: separatorIndex + 1, count: changeVector.Length - separatorIndex - 1);
@@ -22,7 +22,7 @@ namespace Sparrow.Utils
 
         public static string GetOrderNodeTagById(string changeVector, string id)
         {
-            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector);
+            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector.AsSpan());
             return separatorIndex < 0
                 ? GetNodeTagByIdInternal(changeVector, id, startIndex: 0, count: changeVector?.Length ?? 0)
                 : GetNodeTagByIdInternal(changeVector, id, startIndex: 0, count: separatorIndex);
@@ -30,7 +30,7 @@ namespace Sparrow.Utils
 
         public static string GetVersionNodeTagById(string changeVector, string id)
         {
-            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector);
+            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVector.AsSpan());
             return separatorIndex < 0
                 ? GetNodeTagByIdInternal(changeVector, id, startIndex: 0, count: changeVector?.Length ?? 0)
                 : GetNodeTagByIdInternal(changeVector, id, startIndex: separatorIndex + 1, count: changeVector.Length - separatorIndex - 1);
