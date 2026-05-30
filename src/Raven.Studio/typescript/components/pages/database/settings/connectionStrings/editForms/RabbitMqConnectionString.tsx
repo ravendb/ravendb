@@ -7,7 +7,6 @@ import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { ConnectionFormData, EditConnectionStringFormProps, RabbitMqConnection } from "../connectionStringsTypes";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -47,7 +46,6 @@ export default function RabbitMqConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -118,10 +116,7 @@ export default function RabbitMqConnectionString({
                     </ButtonWithSpinner>
                 </div>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editRabbitMqEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
             {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
@@ -144,5 +139,5 @@ function getDefaultValues(initialConnection: RabbitMqConnection, isForNewConnect
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

@@ -7,7 +7,6 @@ import { ConnectionFormData, EditConnectionStringFormProps, SnowflakeConnection 
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
@@ -47,7 +46,6 @@ export default function SnowflakeConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async () => {
@@ -116,10 +114,7 @@ export default function SnowflakeConnectionString({
                     </ButtonWithSpinner>
                 </div>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editSnowflakeEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
             {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
@@ -142,5 +137,5 @@ function getDefaultValues(initialConnection: SnowflakeConnection, isForNewConnec
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

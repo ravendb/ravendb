@@ -123,7 +123,7 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
         return new connectionStringAmazonSqsModel({
             Type: "Queue",
             BrokerType: "AmazonSqs",
-            UsedByTasks: [],
+            UsedBy: [],
             Name: "",
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,
@@ -159,7 +159,7 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
         return {
             Type: "Queue",
             BrokerType: "AmazonSqs",
-            UsedByTasks: [],
+            UsedBy: [],
             Name: this.connectionStringName(),
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,

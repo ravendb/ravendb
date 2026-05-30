@@ -9,7 +9,6 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
@@ -58,7 +57,6 @@ export default function AzureQueueStorageConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -143,10 +141,7 @@ export default function AzureQueueStorageConnectionString({
                 </div>
             )}
 
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editAzureQueueStorageEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
             {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
@@ -333,7 +328,7 @@ function getDefaultValues(initialConnection: AzureQueueStorageConnection, isForN
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }
 
 const exampleConnectionString =

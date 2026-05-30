@@ -87,7 +87,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         return new connectionStringRavenEtlModel({
             Type: "Raven",
             Name: "",
-            UsedByTasks: [],
+            UsedBy: [],
             TopologyDiscoveryUrls: [],
             Database: ""
         }, true, []);

@@ -26,7 +26,6 @@ import { mapElasticSearchAuthenticationToDto } from "../store/connectionStringsM
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import ElasticSearchCertificate from "./ElasticSearchCertificate";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -65,7 +64,6 @@ export default function ElasticSearchConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
 
     const onCertificateUploaded = (data: string) => {
         const currentCertificates = formValues.certificatesBase64 ?? [];
@@ -251,10 +249,7 @@ export default function ElasticSearchConnectionString({
                     )}
                 </div>
             )}
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editElasticSearchEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
             {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
@@ -417,5 +412,5 @@ function getDefaultValues(initialConnection: any, isForNewConnection: any): Form
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

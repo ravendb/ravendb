@@ -118,7 +118,7 @@ export function mapRabbitMqStringToDto(connection: RabbitMqConnection): Connecti
 }
 
 export function mapAzureQueueStorageConnectionStringSettingsToDto(
-    connection: Omit<AzureQueueStorageConnection, "type" | "usedByTasks">
+    connection: Omit<AzureQueueStorageConnection, "type" | "usedBy">
 ): Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings {
     switch (connection.authType) {
         case "connectionString": {
@@ -160,7 +160,7 @@ export function mapAzureQueueStorageConnectionStringSettingsToDto(
 }
 
 export function mapAmazonSqsConnectionStringSettingsToDto(
-    connection: Omit<AmazonSqsConnection, "type" | "usedByTasks">
+    connection: Omit<AmazonSqsConnection, "type" | "usedBy">
 ): Raven.Client.Documents.Operations.ETL.Queue.AmazonSqsConnectionSettings {
     switch (connection.authType) {
         case "basic": {

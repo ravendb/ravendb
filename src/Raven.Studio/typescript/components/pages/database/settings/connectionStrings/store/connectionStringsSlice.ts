@@ -71,7 +71,7 @@ export const connectionStringsSlice = createSlice({
         connectionAdded: (state, { payload: connection }: PayloadAction<Connection>) => {
             const newConnection: Connection = {
                 ...connection,
-                usedByTasks: connection.usedByTasks ?? [],
+                usedBy: connection.usedBy ?? [],
             };
             state.connections[connection.type].push(newConnection);
         },

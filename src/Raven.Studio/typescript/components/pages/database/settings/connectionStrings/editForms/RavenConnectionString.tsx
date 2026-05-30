@@ -11,7 +11,6 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useAsyncCallback } from "react-async-hook";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import ConnectionTestError from "../../../../../common/connectionTests/ConnectionTestError";
@@ -50,8 +49,6 @@ export default function RavenConnectionString({
         name: "topologyDiscoveryUrls",
         control,
     });
-
-    const { forCurrentDatabase } = useAppUrls();
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -106,10 +103,7 @@ export default function RavenConnectionString({
                     Add next discovery URL
                 </Button>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editRavenEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
             {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
@@ -240,5 +234,5 @@ function getDefaultValues(initialConnection: RavenConnection, isForNewConnection
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

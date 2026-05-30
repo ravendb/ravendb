@@ -127,7 +127,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
         return new connectionStringOlapEtlModel({
             Type: "Olap",
             Name: "",
-            UsedByTasks: [],
+            UsedBy: [],
             S3Settings: s3Settings.empty(null, "OLAP").toDto(),
             LocalSettings: localSettings.empty("connectionString").toDto(),
             AzureSettings: azureSettings.empty("OLAP").toDto(),
@@ -140,7 +140,7 @@ class connectionStringOlapEtlModel extends connectionStringModel {
     toDto(): Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString {
         return {
             Type: "Olap",
-            UsedByTasks: [],
+            UsedBy: [],
             Name: this.connectionStringName(),
             S3Settings: this.s3Settings().enabled() ? this.s3Settings().toDto() : undefined,
             LocalSettings: this.localSettings().enabled() ? this.localSettings().toDto() : undefined,

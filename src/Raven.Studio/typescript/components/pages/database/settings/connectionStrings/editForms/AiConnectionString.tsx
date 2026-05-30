@@ -17,7 +17,6 @@ import OpenAiSettings from "components/pages/database/settings/connectionStrings
 import EmbeddedSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/EmbeddedSettings";
 import MistralAiSettings from "./aiFields/MistralAiSettings";
 import VertexSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/VertexSettings";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
@@ -66,8 +65,6 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
 
     const { control, handleSubmit, setValue, watch } = form;
 
-    const { forCurrentDatabase } = useAppUrls();
-
     const formValues = useWatch({ control });
     const { connectorType, modelType } = formValues;
 
@@ -91,7 +88,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
         setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
     };
 
-    const isUsedByAnyTask = !!initialConnection.usedByTasks?.length;
+    const isUsedByAnyTask = !!initialConnection.usedBy?.length;
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -186,10 +183,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     </RichAlert>
                 )}
 
-                <ConnectionStringUsedByTasks
-                    tasks={initialConnection.usedByTasks}
-                    urlProvider={forCurrentDatabase.editEmbeddingsGeneration}
-                />
+                <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
                 {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             </Form>
         </FormProvider>

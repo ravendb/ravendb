@@ -444,7 +444,7 @@ export class DatabasesStubs {
         return {
             RavenConnectionStrings: {
                 "raven-name (used by task)": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Raven",
                     Name: "raven-name (used by task)",
                     Database: "some-db",
@@ -453,7 +453,7 @@ export class DatabasesStubs {
             },
             SqlConnectionStrings: {
                 "sql-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Sql",
                     Name: "sql-name",
                     ConnectionString: "some-connection-string",
@@ -462,7 +462,7 @@ export class DatabasesStubs {
             },
             SnowflakeConnectionStrings: {
                 "snowflake-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Snowflake",
                     Name: "snowflake-name",
                     ConnectionString: "some-snowflake-connection-string",
@@ -470,7 +470,7 @@ export class DatabasesStubs {
             },
             OlapConnectionStrings: {
                 "olap-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Olap",
                     Name: "olap-name",
                     LocalSettings: {
@@ -487,7 +487,7 @@ export class DatabasesStubs {
             },
             ElasticSearchConnectionStrings: {
                 "elasticsearch-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "ElasticSearch",
                     Name: "elasticsearch-name",
                     Nodes: ["http://test"],
@@ -501,7 +501,7 @@ export class DatabasesStubs {
             },
             QueueConnectionStrings: {
                 "kafka-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "kafka-name",
                     BrokerType: "Kafka",
@@ -516,7 +516,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "rabbitmq-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "rabbitmq-name",
                     BrokerType: "RabbitMq",
@@ -529,7 +529,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-queue-storage-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "azure-queue-storage-name",
                     BrokerType: "AzureQueueStorage",
@@ -544,7 +544,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-sqs-name": {
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "azure-sqs-name",
                     BrokerType: "AmazonSqs",
@@ -580,7 +580,7 @@ export class DatabasesStubs {
             AiConnectionStrings: {
                 "ai-name": {
                     Type: "Ai",
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Name: "ai-name",
                     Identifier: "some-identifier",
                     ModelType: "TextEmbeddings",
@@ -600,7 +600,7 @@ export class DatabasesStubs {
                 },
                 "ai-name-gen-ai": {
                     Type: "Ai",
-                    UsedByTasks: [],
+                    UsedBy: [],
                     Name: "ai-name-gen-ai",
                     Identifier: "some-identifier",
                     ModelType: "Chat",
@@ -626,7 +626,7 @@ export class DatabasesStubs {
         return [
             {
                 Type: "Raven",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-raven-name",
                 Database: "some-db",
                 TopologyDiscoveryUrls: ["http://test"],
@@ -634,7 +634,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Sql",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-sql-name",
                 ConnectionString: "some-connection-string",
                 FactoryName: "System.Data.SqlClient",
@@ -642,7 +642,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Olap",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-olap-name",
                 LocalSettings: {
                     Disabled: false,
@@ -658,7 +658,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "ElasticSearch",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-elasticsearch-name",
                 Nodes: ["http://test"],
                 EnableCompatibilityMode: false,
@@ -671,7 +671,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Queue",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-kafka-name",
                 BrokerType: "Kafka",
                 KafkaConnectionSettings: {
@@ -686,7 +686,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Queue",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-rabbitmq-name",
                 BrokerType: "RabbitMq",
                 KafkaConnectionSettings: null,
@@ -699,14 +699,14 @@ export class DatabasesStubs {
             },
             {
                 Type: "Snowflake",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-snowflake-name",
                 ConnectionString: "some-snowflake-connection-string",
                 ExcludedDatabases: [],
             },
             {
                 Type: "Queue",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-azure-queue-storage-name",
                 BrokerType: "AzureQueueStorage",
                 KafkaConnectionSettings: null,
@@ -721,7 +721,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Queue",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-amazon-sqs-name",
                 BrokerType: "AmazonSqs",
                 KafkaConnectionSettings: null,
@@ -739,7 +739,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Ai",
-                UsedByTasks: [],
+                UsedBy: [],
                 Name: "sw-ai-name",
                 Identifier: "some-identifier",
                 ModelType: "TextEmbeddings",

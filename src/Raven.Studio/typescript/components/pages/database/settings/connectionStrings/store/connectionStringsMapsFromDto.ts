@@ -1,6 +1,6 @@
 import {
     Connection,
-    ConnectionStringUsedTask,
+    ConnectionStringUsage,
     ElasticSearchAuthenticationMethod,
     ElasticSearchConnection,
     KafkaConnection,
@@ -29,7 +29,7 @@ type AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionSt
 
 function mapRavenFromSingleDto(
     d: RavenConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): RavenConnection {
     return {
@@ -37,14 +37,14 @@ function mapRavenFromSingleDto(
         name: d.Name,
         database: d.Database,
         topologyDiscoveryUrls: d.TopologyDiscoveryUrls.map((url) => ({ url })),
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies RavenConnection;
 }
 
 function mapSqlFromSingleDto(
     d: SqlConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): SqlConnection {
     return {
@@ -52,21 +52,21 @@ function mapSqlFromSingleDto(
         name: d.Name,
         connectionString: d.ConnectionString,
         factoryName: d.FactoryName,
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies SqlConnection;
 }
 
 function mapSnowflakeFromSingleDto(
     d: SnowflakeConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): SnowflakeConnection {
     return {
         type: "Snowflake",
         name: d.Name,
         connectionString: d.ConnectionString,
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies SnowflakeConnection;
 }
@@ -75,7 +75,10 @@ export function mapRavenConnectionsFromDto(connections: Record<string, RavenConn
     return Object.values(connections).map((d) =>
         mapRavenFromSingleDto(
             d,
-            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            (d.UsedBy ?? []).map(
+                (t) =>
+                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
+            )
         )
     );
 }
@@ -84,7 +87,10 @@ export function mapSqlConnectionsFromDto(connections: Record<string, SqlConnecti
     return Object.values(connections).map((d) =>
         mapSqlFromSingleDto(
             d,
-            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            (d.UsedBy ?? []).map(
+                (t) =>
+                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
+            )
         )
     );
 }
@@ -95,20 +101,23 @@ export function mapSnowflakeConnectionsFromDto(
     return Object.values(connections).map((d) =>
         mapSnowflakeFromSingleDto(
             d,
-            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            (d.UsedBy ?? []).map(
+                (t) =>
+                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
+            )
         )
     );
 }
 
 function mapOlapFromSingleDto(
     d: OlapConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): OlapConnection {
     return {
         type: "Olap",
         name: d.Name,
-        usedByTasks,
+        usedBy,
         excludedDatabases,
         ...mapDestinationsFromDto(_.omit(d, "Type", "Name")),
     } satisfies OlapConnection;
@@ -118,7 +127,10 @@ export function mapOlapConnectionsFromDto(connections: Record<string, OlapConnec
     return Object.values(connections).map((d) =>
         mapOlapFromSingleDto(
             d,
-            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            (d.UsedBy ?? []).map(
+                (t) =>
+                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
+            )
         )
     );
 }
@@ -149,7 +161,7 @@ function getElasticSearchAuthenticationMethod(
 
 function mapElasticSearchFromSingleDto(
     d: ElasticSearchConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): ElasticSearchConnection {
     return {
@@ -162,7 +174,7 @@ function mapElasticSearchFromSingleDto(
         password: d.Authentication?.Basic?.Password,
         certificatesBase64: d.Authentication?.Certificate?.CertificatesBase64,
         nodes: d.Nodes.map((url) => ({ url })),
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies ElasticSearchConnection;
 }
@@ -173,14 +185,17 @@ export function mapElasticSearchConnectionsFromDto(
     return Object.values(connections).map((d) =>
         mapElasticSearchFromSingleDto(
             d,
-            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            (d.UsedBy ?? []).map(
+                (t) =>
+                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
+            )
         )
     );
 }
 
 function mapKafkaFromSingleDto(
     d: QueueConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): KafkaConnection {
     return {
@@ -192,21 +207,21 @@ function mapKafkaFromSingleDto(
             value: d.KafkaConnectionSettings.ConnectionOptions[key],
         })),
         isUseRavenCertificate: d.KafkaConnectionSettings.UseRavenCertificate,
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies KafkaConnection;
 }
 
 function mapRabbitMqFromSingleDto(
     d: QueueConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): RabbitMqConnection {
     return {
         type: "RabbitMQ",
         name: d.Name,
         connectionString: d.RabbitMqConnectionSettings.ConnectionString,
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies RabbitMqConnection;
 }
@@ -217,8 +232,14 @@ export function mapKafkaConnectionsFromDto(connections: Record<string, QueueConn
         .map((d) =>
             mapKafkaFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map(
-                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                (d.UsedBy ?? []).map(
+                    (t) =>
+                        ({
+                            kind: t.Kind,
+                            id: t.Id,
+                            identifier: t.Identifier,
+                            name: t.Name,
+                        }) satisfies ConnectionStringUsage
                 )
             )
         );
@@ -232,8 +253,14 @@ export function mapRabbitMqConnectionsFromDto(
         .map((d) =>
             mapRabbitMqFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map(
-                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                (d.UsedBy ?? []).map(
+                    (t) =>
+                        ({
+                            kind: t.Kind,
+                            id: t.Id,
+                            identifier: t.Identifier,
+                            name: t.Name,
+                        }) satisfies ConnectionStringUsage
                 )
             )
         );
@@ -253,7 +280,7 @@ function getAzureQueueStorageAuthType(dto: QueueConnectionStringDto): AzureQueue
 
 function mapAzureQueueStorageFromSingleDto(
     d: QueueConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): AzureQueueStorageConnection {
     return {
@@ -274,14 +301,14 @@ function mapAzureQueueStorageFromSingleDto(
                 storageAccountName: d.AzureQueueStorageConnectionSettings.Passwordless?.StorageAccountName,
             },
         },
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies AzureQueueStorageConnection;
 }
 
 function mapAmazonSqsFromSingleDto(
     d: QueueConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): AmazonSqsConnection {
     return {
@@ -296,7 +323,7 @@ function mapAmazonSqsFromSingleDto(
                 regionName: d.AmazonSqsConnectionSettings.Basic?.RegionName,
             },
         },
-        usedByTasks,
+        usedBy,
         excludedDatabases,
     } satisfies AmazonSqsConnection;
 }
@@ -309,8 +336,14 @@ export function mapAzureQueueStorageConnectionsFromDto(
         .map((d) =>
             mapAzureQueueStorageFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map(
-                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                (d.UsedBy ?? []).map(
+                    (t) =>
+                        ({
+                            kind: t.Kind,
+                            id: t.Id,
+                            identifier: t.Identifier,
+                            name: t.Name,
+                        }) satisfies ConnectionStringUsage
                 )
             )
         );
@@ -324,8 +357,14 @@ export function mapAmazonSqsConnectionsFromDto(
         .map((d) =>
             mapAmazonSqsFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map(
-                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                (d.UsedBy ?? []).map(
+                    (t) =>
+                        ({
+                            kind: t.Kind,
+                            id: t.Id,
+                            identifier: t.Identifier,
+                            name: t.Name,
+                        }) satisfies ConnectionStringUsage
                 )
             )
         );
@@ -416,13 +455,13 @@ function getAiConnectorType(connection: AiConnectionStringDto): AiConnection["co
 
 function mapAiFromSingleDto(
     d: AiConnectionStringDto,
-    usedByTasks: ConnectionStringUsedTask[],
+    usedBy: ConnectionStringUsage[],
     excludedDatabases?: string[]
 ): AiConnection {
     return {
         type: "Ai",
         name: d.Name,
-        usedByTasks,
+        usedBy,
         excludedDatabases,
         identifier: d.Identifier,
         connectorType: getAiConnectorType(d),
@@ -495,7 +534,10 @@ export function mapAiConnectionsFromDto(connections: Record<string, AiConnection
     return Object.values(connections).map((d) =>
         mapAiFromSingleDto(
             d,
-            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            (d.UsedBy ?? []).map(
+                (t) =>
+                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
+            )
         )
     );
 }
@@ -548,51 +590,56 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
 
     for (const dto of results) {
         const excludedDatabases = dto.ExcludedDatabases ?? [];
-        const usedByTasks = (dto.UsedByTasks ?? []).map(
-            (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+        const usedBy = (dto.UsedBy ?? []).map(
+            (t) =>
+                ({
+                    kind: t.Kind,
+                    id: t.Id,
+                    identifier: t.Identifier,
+                    name: t.Name,
+                    databaseName: (t as { DatabaseName?: string }).DatabaseName,
+                }) satisfies ConnectionStringUsage
         );
         switch (dto.Type) {
             case "Raven": {
                 const d = dto as WithExcludedDatabases<RavenConnectionStringDto>;
-                mapped.Raven.push(mapRavenFromSingleDto(d, usedByTasks, excludedDatabases));
+                mapped.Raven.push(mapRavenFromSingleDto(d, usedBy, excludedDatabases));
                 break;
             }
             case "Sql": {
                 const d = dto as WithExcludedDatabases<SqlConnectionStringDto>;
-                mapped.Sql.push(mapSqlFromSingleDto(d, usedByTasks, excludedDatabases));
+                mapped.Sql.push(mapSqlFromSingleDto(d, usedBy, excludedDatabases));
                 break;
             }
             case "Snowflake": {
                 const d = dto as WithExcludedDatabases<SnowflakeConnectionStringDto>;
-                mapped.Snowflake.push(mapSnowflakeFromSingleDto(d, usedByTasks, excludedDatabases));
+                mapped.Snowflake.push(mapSnowflakeFromSingleDto(d, usedBy, excludedDatabases));
                 break;
             }
             case "Olap": {
                 const d = dto as WithExcludedDatabases<OlapConnectionStringDto>;
-                mapped.Olap.push(mapOlapFromSingleDto(d, usedByTasks, excludedDatabases));
+                mapped.Olap.push(mapOlapFromSingleDto(d, usedBy, excludedDatabases));
                 break;
             }
             case "ElasticSearch": {
                 const d = dto as WithExcludedDatabases<ElasticSearchConnectionStringDto>;
-                mapped.ElasticSearch.push(mapElasticSearchFromSingleDto(d, usedByTasks, excludedDatabases));
+                mapped.ElasticSearch.push(mapElasticSearchFromSingleDto(d, usedBy, excludedDatabases));
                 break;
             }
             case "Queue": {
                 const d = dto as WithExcludedDatabases<QueueConnectionStringDto>;
                 switch (d.BrokerType) {
                     case "Kafka":
-                        mapped.Kafka.push(mapKafkaFromSingleDto(d, usedByTasks, excludedDatabases));
+                        mapped.Kafka.push(mapKafkaFromSingleDto(d, usedBy, excludedDatabases));
                         break;
                     case "RabbitMq":
-                        mapped.RabbitMQ.push(mapRabbitMqFromSingleDto(d, usedByTasks, excludedDatabases));
+                        mapped.RabbitMQ.push(mapRabbitMqFromSingleDto(d, usedBy, excludedDatabases));
                         break;
                     case "AzureQueueStorage":
-                        mapped.AzureQueueStorage.push(
-                            mapAzureQueueStorageFromSingleDto(d, usedByTasks, excludedDatabases)
-                        );
+                        mapped.AzureQueueStorage.push(mapAzureQueueStorageFromSingleDto(d, usedBy, excludedDatabases));
                         break;
                     case "AmazonSqs":
-                        mapped.AmazonSqs.push(mapAmazonSqsFromSingleDto(d, usedByTasks, excludedDatabases));
+                        mapped.AmazonSqs.push(mapAmazonSqsFromSingleDto(d, usedBy, excludedDatabases));
                         break;
                     case "None":
                         break;
@@ -603,7 +650,7 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
             }
             case "Ai": {
                 const d = dto as WithExcludedDatabases<AiConnectionStringDto>;
-                mapped.Ai.push(mapAiFromSingleDto(d, usedByTasks, excludedDatabases));
+                mapped.Ai.push(mapAiFromSingleDto(d, usedBy, excludedDatabases));
                 break;
             }
             case "None":

@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         connectionStrings = rawRecord.GetConnectionStrings();
                     }
 
-                    AssignUsedByTasks(connectionStrings, rawRecord);
+                    AssignUsedBy(connectionStrings, rawRecord);
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             }
         }
 
-        private static void AssignUsedByTasks(GetConnectionStringsResult result, RawDatabaseRecord rawRecord)
+        private static void AssignUsedBy(GetConnectionStringsResult result, RawDatabaseRecord rawRecord)
         {
             var usageMap = BuildUsageMap(rawRecord);
 
@@ -85,35 +85,42 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 foreach (var cs in dict.Values)
                 {
                     if (usageMap.TryGetValue(cs.Name, out var usages))
-                        cs.UsedByTasks = usages;
+                        cs.UsedBy = usages;
                 }
             }
         }
 
-        private static Dictionary<string, List<ConnectionStringTaskUsage>> BuildUsageMap(RawDatabaseRecord rawRecord)
+        private static Dictionary<string, List<ConnectionStringUsage>> BuildUsageMap(RawDatabaseRecord rawRecord)
         {
-            var map = new Dictionary<string, List<ConnectionStringTaskUsage>>(StringComparer.OrdinalIgnoreCase);
+            var map = new Dictionary<string, List<ConnectionStringUsage>>(StringComparer.OrdinalIgnoreCase);
 
-            void Add(string connectionStringName, long taskId, string taskName)
+            void AddTask(string connectionStringName, ConnectionStringUsageKind kind, long taskId, string taskName) =>
+                Add(connectionStringName, new ConnectionStringUsage { Kind = kind, Id = taskId, Name = taskName });
+
+            void AddAgent(string connectionStringName, string identifier, string agentName) =>
+                Add(connectionStringName, new ConnectionStringUsage { Kind = ConnectionStringUsageKind.AiAgent, Identifier = identifier, Name = agentName });
+
+            void Add(string connectionStringName, ConnectionStringUsage usage)
             {
                 if (connectionStringName == null)
                     return;
                 if (map.TryGetValue(connectionStringName, out var list) == false)
-                    map[connectionStringName] = list = new List<ConnectionStringTaskUsage>();
-                list.Add(new ConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
+                    map[connectionStringName] = list = new List<ConnectionStringUsage>();
+                list.Add(usage);
             }
 
-            foreach (var t in rawRecord.RavenEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.SqlEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.OlapEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.ElasticSearchEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.QueueEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.SnowflakeEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.QueueSinks) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.EmbeddingsGenerations) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.GenAis) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.ExternalReplications) Add(t.ConnectionStringName, t.TaskId, t.Name);
-            foreach (var t in rawRecord.SinkPullReplications) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.RavenEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.RavenEtl, t.TaskId, t.Name);
+            foreach (var t in rawRecord.SqlEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.SqlEtl, t.TaskId, t.Name);
+            foreach (var t in rawRecord.OlapEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.OlapEtl, t.TaskId, t.Name);
+            foreach (var t in rawRecord.ElasticSearchEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.ElasticSearchEtl, t.TaskId, t.Name);
+            foreach (var t in rawRecord.QueueEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.QueueEtl, t.TaskId, t.Name);
+            foreach (var t in rawRecord.SnowflakeEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.SnowflakeEtl, t.TaskId, t.Name);
+            foreach (var t in rawRecord.QueueSinks) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.QueueSink, t.TaskId, t.Name);
+            foreach (var t in rawRecord.EmbeddingsGenerations) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.EmbeddingsGeneration, t.TaskId, t.Name);
+            foreach (var t in rawRecord.GenAis) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.GenAi, t.TaskId, t.Name);
+            foreach (var t in rawRecord.ExternalReplications) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.ExternalReplication, t.TaskId, t.Name);
+            foreach (var t in rawRecord.SinkPullReplications) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.PullReplicationAsSink, t.TaskId, t.Name);
+            foreach (var a in rawRecord.AiAgents) AddAgent(a.ConnectionStringName, a.Identifier, a.Name);
 
             return map;
         }

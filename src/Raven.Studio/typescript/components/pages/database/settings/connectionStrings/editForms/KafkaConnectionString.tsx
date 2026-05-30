@@ -8,7 +8,6 @@ import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, KafkaConnection } from "../connectionStringsTypes";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
@@ -54,7 +53,6 @@ export default function KafkaConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
 
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
@@ -210,10 +208,7 @@ export default function KafkaConnectionString({
                     Add new connection option
                 </Button>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editKafkaEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
             {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
@@ -266,7 +261,7 @@ function getDefaultValues(initialConnection: KafkaConnection, isForNewConnection
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }
 
 const sslCaLocation = "ssl.ca.location";

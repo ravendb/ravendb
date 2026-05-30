@@ -554,10 +554,12 @@ public class RavenDB_24310 : RavenTestBase
             Assert.Equal(1, getResult.Results.Count);
             var cs = getResult.Results[0];
             Assert.Equal(csName, cs.Name);
-            Assert.NotNull(cs.UsedByTasks);
-            Assert.Equal(1, cs.UsedByTasks.Count);
-            Assert.Equal(addEtlResult.TaskId, cs.UsedByTasks[0].TaskId);
-            Assert.Equal("MyEtlTask", cs.UsedByTasks[0].TaskName);
+            Assert.NotNull(cs.UsedBy);
+            Assert.Equal(1, cs.UsedBy.Count);
+            Assert.Equal(ConnectionStringUsageKind.RavenEtl, cs.UsedBy[0].Kind);
+            Assert.Equal(addEtlResult.TaskId, cs.UsedBy[0].Id);
+            Assert.Equal("MyEtlTask", cs.UsedBy[0].Name);
+            Assert.Equal(store.Database, cs.UsedBy[0].DatabaseName);
         }
     }
 
@@ -588,10 +590,11 @@ public class RavenDB_24310 : RavenTestBase
             Assert.True(getResult.RavenConnectionStrings.ContainsKey("MyRavenCS"));
             var fetchedCs = getResult.RavenConnectionStrings["MyRavenCS"];
 
-            Assert.NotNull(fetchedCs.UsedByTasks);
-            Assert.Equal(1, fetchedCs.UsedByTasks.Count);
-            Assert.Equal(addEtlResult.TaskId, fetchedCs.UsedByTasks[0].TaskId);
-            Assert.Equal("MyEtlTask", fetchedCs.UsedByTasks[0].TaskName);
+            Assert.NotNull(fetchedCs.UsedBy);
+            Assert.Equal(1, fetchedCs.UsedBy.Count);
+            Assert.Equal(ConnectionStringUsageKind.RavenEtl, fetchedCs.UsedBy[0].Kind);
+            Assert.Equal(addEtlResult.TaskId, fetchedCs.UsedBy[0].Id);
+            Assert.Equal("MyEtlTask", fetchedCs.UsedBy[0].Name);
         }
     }
 
@@ -752,10 +755,12 @@ public class RavenDB_24310 : RavenTestBase
             Assert.Equal(1, getResult.Results.Count);
             var cs = getResult.Results[0];
             Assert.Equal(csName, cs.Name);
-            Assert.NotNull(cs.UsedByTasks);
-            Assert.Equal(1, cs.UsedByTasks.Count);
-            Assert.Equal(addResult.TaskId, cs.UsedByTasks[0].TaskId);
-            Assert.Equal("MyGenAiTask", cs.UsedByTasks[0].TaskName);
+            Assert.NotNull(cs.UsedBy);
+            Assert.Equal(1, cs.UsedBy.Count);
+            Assert.Equal(ConnectionStringUsageKind.GenAi, cs.UsedBy[0].Kind);
+            Assert.Equal(addResult.TaskId, cs.UsedBy[0].Id);
+            Assert.Equal("MyGenAiTask", cs.UsedBy[0].Name);
+            Assert.Equal(store.Database, cs.UsedBy[0].DatabaseName);
         }
     }
 }

@@ -14,7 +14,6 @@ import {
     defaultLocalFormData,
     defaultS3FormData,
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useAppSelector } from "components/store";
@@ -48,7 +47,6 @@ export default function OlapConnectionString({
 
     const { control, handleSubmit } = form;
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
 
     const handleSave = async () => {
         onSave({
@@ -75,10 +73,7 @@ export default function OlapConnectionString({
                 {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             </Form>
 
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editOlapEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
         </FormProvider>
     );
 }
@@ -105,5 +100,5 @@ function getDefaultValues(initialConnection: OlapConnection, isForNewConnection:
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

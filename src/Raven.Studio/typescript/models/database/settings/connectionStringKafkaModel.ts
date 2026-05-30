@@ -154,7 +154,7 @@ class connectionStringKafkaModel extends connectionStringModel {
             Type: "Queue",
             BrokerType: "Kafka",
             Name: "",
-            UsedByTasks: [],
+            UsedBy: [],
 
             KafkaConnectionSettings: {
                 BootstrapServers: "",
@@ -172,7 +172,7 @@ class connectionStringKafkaModel extends connectionStringModel {
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString  {
         return {
             Type: "Queue",
-            UsedByTasks: [],
+            UsedBy: [],
             BrokerType: "Kafka",
             Name: this.connectionStringName(),
             

@@ -30,9 +30,10 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         public string[] ExcludedDatabases { get; set; }
 
         /// <summary>
-        /// The list of ETL tasks that are currently using this server-wide connection string.
+        /// The list of usages (ETL, replication, sinks, AI agents) that currently reference this server-wide connection string.
+        /// This is computed server-side when reading; any value provided by a client is ignored.
         /// </summary>
-        public List<ConnectionStringTaskUsage> UsedByTasks { get; set; } = new List<ConnectionStringTaskUsage>();
+        public List<ServerWideConnectionStringUsage> UsedBy { get; set; } = new List<ServerWideConnectionStringUsage>();
 
         /// <summary>
         /// The name of the connection string, delegated from the underlying <see cref="ConnectionString"/>.
@@ -67,7 +68,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             var json = ConnectionString?.ToJson() ?? new DynamicJsonValue();
             json[nameof(Type)] = Type.ToString();
             json[nameof(ExcludedDatabases)] = ExcludedDatabases;
-            json[nameof(UsedByTasks)] = new DynamicJsonArray(UsedByTasks.Select(x => x.ToJson()));
+            json[nameof(UsedBy)] = new DynamicJsonArray(UsedBy.Select(x => x.ToJson()));
             return json;
         }
 
@@ -99,15 +100,8 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
                 ExcludedDatabases = excludedDatabases
             };
 
-            if (blittable.TryGet(nameof(UsedByTasks), out BlittableJsonReaderArray usedByTasksArray) && usedByTasksArray != null)
-            {
-                foreach (BlittableJsonReaderObject taskBlittable in usedByTasksArray)
-                {
-                    taskBlittable.TryGet(nameof(ConnectionStringTaskUsage.TaskId), out long taskId);
-                    taskBlittable.TryGet(nameof(ConnectionStringTaskUsage.TaskName), out string taskName);
-                    result.UsedByTasks.Add(new ConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
-                }
-            }
+            // UsedBy is computed server-side at read time (see the connection-string GET handlers);
+            // it is intentionally not parsed from the blittable here.
 
             return result;
         }
@@ -133,6 +127,23 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {type}");
             }
+        }
+    }
+
+    /// <summary>
+    /// A usage of a server-wide connection string. Extends <see cref="ConnectionStringUsage"/> with the
+    /// <see cref="DatabaseName"/> of the database where the referencing task/agent lives, since server-wide
+    /// usages are aggregated across all databases.
+    /// </summary>
+    public sealed class ServerWideConnectionStringUsage : ConnectionStringUsage
+    {
+        public string DatabaseName { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(DatabaseName)] = DatabaseName;
+            return json;
         }
     }
 }

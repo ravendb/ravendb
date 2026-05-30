@@ -71,7 +71,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                 dispatch(
                     connectionStringsActions.connectionAdded({
                         ...newConnection,
-                        usedByTasks: initialConnection.usedByTasks,
+                        usedBy: initialConnection.usedBy,
                     })
                 );
             } else {
@@ -80,7 +80,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         oldName: initialConnection.name,
                         newConnection: {
                             ...newConnection,
-                            usedByTasks: initialConnection.usedByTasks,
+                            usedBy: initialConnection.usedBy,
                         },
                     })
                 );

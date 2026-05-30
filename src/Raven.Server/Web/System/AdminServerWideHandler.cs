@@ -275,7 +275,7 @@ namespace Raven.Server.Web.System
                     {
                         var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name);
                         if (usageMap.TryGetValue(prefixedName, out var usages))
-                            cs.UsedByTasks = usages;
+                            cs.UsedBy = usages;
                     }
                 }
 
@@ -283,46 +283,54 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static Dictionary<string, List<ConnectionStringTaskUsage>> BuildUsageMap(
+        private static Dictionary<string, List<ServerWideConnectionStringUsage>> BuildUsageMap(
             List<DatabaseRecord> databases, HashSet<string> relevantNames)
         {
-            var map = new Dictionary<string, List<ConnectionStringTaskUsage>>(StringComparer.OrdinalIgnoreCase);
+            var map = new Dictionary<string, List<ServerWideConnectionStringUsage>>(StringComparer.OrdinalIgnoreCase);
 
-            void Add(string connectionStringName, long taskId, string taskName)
+            void AddTask(string connectionStringName, string databaseName, ConnectionStringUsageKind kind, long taskId, string taskName) =>
+                Add(connectionStringName, new ServerWideConnectionStringUsage { Kind = kind, Id = taskId, Name = taskName, DatabaseName = databaseName });
+
+            void AddAgent(string connectionStringName, string databaseName, string identifier, string agentName) =>
+                Add(connectionStringName, new ServerWideConnectionStringUsage { Kind = ConnectionStringUsageKind.AiAgent, Identifier = identifier, Name = agentName, DatabaseName = databaseName });
+
+            void Add(string connectionStringName, ServerWideConnectionStringUsage usage)
             {
                 if (connectionStringName == null)
                     return;
                 if (relevantNames.Contains(connectionStringName) == false)
                     return;
                 if (map.TryGetValue(connectionStringName, out var list) == false)
-                    map[connectionStringName] = list = new List<ConnectionStringTaskUsage>();
-                list.Add(new ConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
+                    map[connectionStringName] = list = new List<ServerWideConnectionStringUsage>();
+                list.Add(usage);
             }
 
             foreach (var db in databases)
             {
                 foreach (var t in db.RavenEtls)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.RavenEtl, t.TaskId, t.Name);
                 foreach (var t in db.SqlEtls)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.SqlEtl, t.TaskId, t.Name);
                 foreach (var t in db.OlapEtls)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.OlapEtl, t.TaskId, t.Name);
                 foreach (var t in db.ElasticSearchEtls)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.ElasticSearchEtl, t.TaskId, t.Name);
                 foreach (var t in db.QueueEtls)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.QueueEtl, t.TaskId, t.Name);
                 foreach (var t in db.SnowflakeEtls)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.SnowflakeEtl, t.TaskId, t.Name);
                 foreach (var t in db.QueueSinks)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.QueueSink, t.TaskId, t.Name);
                 foreach (var t in db.EmbeddingsGenerations)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.EmbeddingsGeneration, t.TaskId, t.Name);
                 foreach (var t in db.GenAis)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.GenAi, t.TaskId, t.Name);
                 foreach (var t in db.ExternalReplications)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.ExternalReplication, t.TaskId, t.Name);
                 foreach (var t in db.SinkPullReplications)
-                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.PullReplicationAsSink, t.TaskId, t.Name);
+                foreach (var a in db.AiAgents)
+                    AddAgent(a.ConnectionStringName, db.DatabaseName, a.Identifier, a.Name);
             }
 
             return map;

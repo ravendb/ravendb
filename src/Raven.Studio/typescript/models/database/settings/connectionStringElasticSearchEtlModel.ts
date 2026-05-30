@@ -303,7 +303,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
     toDto(): Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString {
         return {
             Type: "ElasticSearch",
-            UsedByTasks: [],
+            UsedBy: [],
             Name: this.connectionStringName(),
             Nodes: this.nodesUrls().map((x) => x.discoveryUrlName()),
             Authentication: this.authentication().toDto(),

@@ -9,7 +9,6 @@ import { ConnectionFormData, EditConnectionStringFormProps, SqlConnection } from
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
 import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
@@ -52,7 +51,6 @@ export default function SqlConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const [syntaxHelpElement, setSyntaxHelpElement] = useState<HTMLElement>();
 
@@ -162,10 +160,7 @@ export default function SqlConnectionString({
                     </ButtonWithSpinner>
                 </div>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editSqlEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
             {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
@@ -279,5 +274,5 @@ function getDefaultValues(initialConnection: SqlConnection, isForNewConnection: 
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

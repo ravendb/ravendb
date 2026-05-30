@@ -39,8 +39,8 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
 
     const isInheritedFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
 
-    const isDeleteDisabled = connection.usedByTasks?.length > 0 || isInheritedFromServerWide;
-    const isEditDisabled = connection.usedByTasks?.length > 0 || isInheritedFromServerWide;
+    const isDeleteDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide;
+    const isEditDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide;
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();

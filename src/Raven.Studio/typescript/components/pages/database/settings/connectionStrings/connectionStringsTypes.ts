@@ -23,14 +23,18 @@ export type StudioConnectionType =
     | "AzureServiceBus"
     | "Ai";
 
-export interface ConnectionStringUsedTask {
-    id: number;
+export interface ConnectionStringUsage {
+    kind: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringUsageKind;
+    id?: number;
+    identifier?: string;
     name: string;
+    // Set only for server-wide connection strings, whose usages are aggregated across databases.
+    databaseName?: string;
 }
 
 interface ConnectionBase {
     name?: string;
-    usedByTasks?: ConnectionStringUsedTask[];
+    usedBy?: ConnectionStringUsage[];
     excludedDatabases?: string[];
 }
 
@@ -249,4 +253,4 @@ export interface EditConnectionStringFormProps {
     onSave: (x: Connection) => void;
 }
 
-export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedByTasks">;
+export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedBy">;

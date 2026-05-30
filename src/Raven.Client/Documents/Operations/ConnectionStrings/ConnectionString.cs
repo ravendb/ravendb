@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
     {
         public string Name { get; set; }
 
-        public List<ConnectionStringTaskUsage> UsedByTasks { get; set; } = new List<ConnectionStringTaskUsage>();
+        public List<ConnectionStringUsage> UsedBy { get; set; } = new List<ConnectionStringUsage>();
 
         public bool Validate(List<string> errors)
         {
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(UsedByTasks)] = new DynamicJsonArray(UsedByTasks.Select(x => x.ToJson())),
+                [nameof(UsedBy)] = new DynamicJsonArray(UsedBy.Select(x => x.ToJson())),
             };
         }
 
@@ -65,16 +65,45 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         }
     }
 
-    public sealed class ConnectionStringTaskUsage : IDynamicJson
+    public class ConnectionStringUsage : IDynamicJson
     {
-        public long TaskId { get; set; }
-        public string TaskName { get; set; }
+        public ConnectionStringUsageKind Kind { get; set; }
 
-        public DynamicJsonValue ToJson() => new DynamicJsonValue
+        /// <summary>
+        /// The numeric task id, for ongoing tasks (ETL, replication, sinks). <c>null</c> for AI agents.
+        /// </summary>
+        public long? Id { get; set; }
+
+        /// <summary>
+        /// The string identifier, for AI agents. <c>null</c> for ongoing tasks.
+        /// </summary>
+        public string Identifier { get; set; }
+
+        public string Name { get; set; }
+
+        public virtual DynamicJsonValue ToJson() => new DynamicJsonValue
         {
-            [nameof(TaskId)] = TaskId,
-            [nameof(TaskName)] = TaskName,
+            [nameof(Kind)] = Kind.ToString(),
+            [nameof(Id)] = Id,
+            [nameof(Identifier)] = Identifier,
+            [nameof(Name)] = Name,
         };
+    }
+
+    public enum ConnectionStringUsageKind
+    {
+        RavenEtl,
+        SqlEtl,
+        OlapEtl,
+        ElasticSearchEtl,
+        QueueEtl,
+        SnowflakeEtl,
+        QueueSink,
+        ExternalReplication,
+        PullReplicationAsSink,
+        EmbeddingsGeneration,
+        GenAi,
+        AiAgent
     }
 
     public enum ConnectionStringType
