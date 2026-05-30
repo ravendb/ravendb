@@ -25,5 +25,6 @@ namespace Raven.Server.Documents.Replication
         public string DatabaseId { get; set; }
         public string NodeTag { get; set; }
         public long CurrentEtag { get; set; }
+        public string ConfirmedSinkCv { get; set; }
     }
 }

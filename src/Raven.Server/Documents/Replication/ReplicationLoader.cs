@@ -1030,6 +1030,21 @@ namespace Raven.Server.Documents.Replication
             return whoseTaskIsIt == _server.NodeTag;
         }
 
+        public long GetConfirmedMinimalClusterWideReplicatedEtag()
+        {
+            long min = long.MaxValue;
+            bool hasHandlers = false;
+            foreach (var handler in OutgoingHandlers)
+            {
+                if (handler is OutgoingInternalReplicationHandler)
+                {
+                    hasHandlers = true;
+                    min = Math.Min(min, handler.LastSentDocumentEtag);
+                }
+            }
+            return hasHandlers ? min : long.MaxValue;
+        }
+
         public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
         {
             using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
