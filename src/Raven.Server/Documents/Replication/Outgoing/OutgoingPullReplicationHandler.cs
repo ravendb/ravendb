@@ -5,13 +5,16 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -97,8 +100,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
     public sealed class OutgoingPullReplicationHandlerAsSink : OutgoingPullReplicationHandler
     {
         private readonly PullReplicationAsSink _node;
+        private string _lastPersistedSinkCv;
 
-        public OutgoingPullReplicationHandlerAsSink(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsSink node, TcpConnectionInfo connectionInfo) : 
+        public OutgoingPullReplicationHandlerAsSink(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsSink node, TcpConnectionInfo connectionInfo) :
             base(parent, database, node, connectionInfo)
         {
             _node = node;
@@ -128,6 +132,59 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 PreventDeletionsMode = response.Reply.PreventDeletionsMode,
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
             };
+
+            if (_node.TaskId == 0)
+                return;
+
+            string cursorCv = ReadSinkCursorFromCluster() ?? LastAcceptedChangeVector;
+            long startEtag = ChangeVectorUtils.GetEtagById(cursorCv, _database.DbBase64Id);
+
+            if (startEtag > _lastSentDocumentEtag)
+                _lastSentDocumentEtag = startEtag;
+        }
+
+        protected override void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
+        {
+            base.UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
+            if (_node.TaskId != 0 && string.IsNullOrEmpty(replicationBatchReply.ConfirmedSinkCv) == false)
+                PersistSinkCursor(replicationBatchReply.ConfirmedSinkCv);
+        }
+
+        private void PersistSinkCursor(string confirmedSinkCv)
+        {
+            if (confirmedSinkCv == _lastPersistedSinkCv)
+                return;
+
+            var command = new UpdateExternalReplicationStateCommand(_database.Name, RaftIdGenerator.NewId())
+            {
+                ExternalReplicationState = new ExternalReplicationState
+                {
+                    TaskId = _node.TaskId,
+                    NodeTag = _parent._server.NodeTag,
+                    SourceChangeVector = confirmedSinkCv,
+                    Type = ExternalReplicationState.ReplicationStateType.SinkCursor
+                }
+            };
+            _parent._server.SendToLeaderAsync(command).ContinueWith(x =>
+            {
+                if (x.IsCompletedSuccessfully)
+                    _lastPersistedSinkCv = confirmedSinkCv;
+            }).IgnoreUnobservedExceptions();
+        }
+
+        private string ReadSinkCursorFromCluster()
+        {
+            using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var key = ExternalReplicationState.GenerateItemName(_database.Name, _node.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor);
+                var stateBlittable = _parent._server.Cluster.Read(context, key);
+                if (stateBlittable == null)
+                    return null;
+
+                var state = JsonDeserializationCluster.ExternalReplicationState(stateBlittable);
+                return state.SourceChangeVector;
+            }
         }
     }
 }

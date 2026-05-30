@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
@@ -24,6 +25,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         private readonly bool _preventIncomingSinkDeletions;
 
         private AllowedPathsValidator _allowedPathsValidator;
+
+        private const int BatchHistorySize = 128;
+        private readonly (long HubEtag, string SinkCv)[] _batchHistory = new (long HubEtag, string SinkCv)[BatchHistorySize];
+        private int _batchHistoryHead;
+        private int _batchHistoryCount;
 
         public string CertificateThumbprint;
         public IncomingPullReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationLoader parent, JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLoader.PullReplicationParams pullReplicationParams) : 
@@ -90,6 +96,45 @@ namespace Raven.Server.Documents.Replication.Incoming
                     }
                 }
             }
+        }
+
+        protected override DynamicJsonValue GetHeartbeatStatusMessage(DocumentsOperationContext documentsContext, long lastDocumentEtag, string handledMessageType)
+        {
+            var heartbeat = base.GetHeartbeatStatusMessage(documentsContext, lastDocumentEtag, handledMessageType);
+
+            if (_incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+            {
+                if (handledMessageType == ReplicationMessageType.Documents)
+                {
+                    long hubEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
+                    _batchHistory[_batchHistoryHead] = (hubEtag, _lastBatchChangeVector);
+                    _batchHistoryHead = (_batchHistoryHead + 1) % BatchHistorySize;
+                    if (_batchHistoryCount < BatchHistorySize)
+                        _batchHistoryCount++;
+                }
+
+                string confirmedSinkCv = ComputeConfirmedSinkCv();
+                if (confirmedSinkCv != null)
+                    heartbeat[nameof(ReplicationMessageReply.ConfirmedSinkCv)] = confirmedSinkCv;
+            }
+
+            return heartbeat;
+        }
+
+        private string ComputeConfirmedSinkCv()
+        {
+            long confirmedHubEtag = ReplicationLoaderParent.GetConfirmedMinimalClusterWideReplicatedEtag();
+            if (confirmedHubEtag == long.MaxValue)
+                return _lastBatchChangeVector;
+
+            for (int i = 0; i < _batchHistoryCount; i++)
+            {
+                int idx = ((_batchHistoryHead - 1 - i) % BatchHistorySize + BatchHistorySize) % BatchHistorySize;
+                var (hubEtag, sinkCv) = _batchHistory[idx];
+                if (hubEtag <= confirmedHubEtag)
+                    return sinkCv;
+            }
+            return null;
         }
 
         protected override void DisposeInternal()
