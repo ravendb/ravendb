@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -2511,7 +2511,7 @@ more responsive application.
                     var clusterId = _session.SessionInfo?.ClusterTransactionId;
                     if (clusterId is not null)
                     {
-                        var clusterTxIndex = ClientChangeVectorUtils.GetEtagById(documentInfo.ChangeVector, clusterId);
+                        var clusterTxIndex = ChangeVectorStringReader.GetVersionEtagById(documentInfo.ChangeVector, clusterId);
                         if (clusterTxIndex > 0)
                         {
                             _session.SessionInfo.LastClusterTransactionIndex = Math.Max(_session.SessionInfo.LastClusterTransactionIndex ?? 0, clusterTxIndex);

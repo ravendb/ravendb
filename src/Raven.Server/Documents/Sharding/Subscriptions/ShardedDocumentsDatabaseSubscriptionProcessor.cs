@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Sharding;
@@ -86,7 +86,7 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
 
         var vector = context.GetChangeVector(batchItem.Document.ChangeVector);
 
-        var result = ChangeVectorUtils.MergeVectors(
+        var result = ChangeVectorMerger.Merge(
             currentLast,
             ChangeVectorUtils.NewChangeVector(_database.ServerStore.NodeTag, batchItem.Document.Etag, _database.DbBase64Id),
             vector.Order);

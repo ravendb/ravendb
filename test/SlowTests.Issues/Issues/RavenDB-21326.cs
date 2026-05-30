@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -298,12 +298,12 @@ namespace SlowTests.Issues
                 var revisions5MetaData = (await session.Advanced.Revisions.GetMetadataForAsync(users[5].Id));
                 Assert.True(revisions5MetaData[0].TryGetValue(Constants.Documents.Metadata.ChangeVector, out string cv5));
 
-                lastEtag5 = ChangeVectorUtils.GetEtagById(cv5, db.DbBase64Id) + 1;
+                lastEtag5 = ChangeVectorUtils.GetVersionEtagById(cv5, db.DbBase64Id) + 1;
 
                 var revisions9MetaData = (await session.Advanced.Revisions.GetMetadataForAsync(users[9].Id));
                 Assert.True(revisions9MetaData[0].TryGetValue(Constants.Documents.Metadata.ChangeVector, out string cv9));
 
-                lastEtag9 = ChangeVectorUtils.GetEtagById(cv9, db.DbBase64Id) + 1;
+                lastEtag9 = ChangeVectorUtils.GetVersionEtagById(cv9, db.DbBase64Id) + 1;
             }
 
             db.Time.UtcDateTime = () => baseTime;
@@ -379,7 +379,7 @@ namespace SlowTests.Issues
                 var revisions0MetaData = await session.Advanced.Revisions.GetMetadataForAsync(users[0].Id);
                 Assert.True(revisions0MetaData[0].TryGetValue(Constants.Documents.Metadata.ChangeVector, out string cv0));
 
-                lastEtag0 = ChangeVectorUtils.GetEtagById(cv0, db.DbBase64Id) + 1;
+                lastEtag0 = ChangeVectorUtils.GetVersionEtagById(cv0, db.DbBase64Id) + 1;
             }
 
             var config = new RevisionsBinConfiguration

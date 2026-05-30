@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -260,9 +260,9 @@ namespace SlowTests.Issues
             {
                 var changeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
 
-                var etagA = ChangeVectorUtils.GetEtagById(changeVector, dbA.DbBase64Id);
-                var etagB = ChangeVectorUtils.GetEtagById(changeVector, dbB.DbBase64Id);
-                var etagC = ChangeVectorUtils.GetEtagById(changeVector, dbC.DbBase64Id);
+                var etagA = ChangeVectorUtils.GetOrderEtagById(changeVector, dbA.DbBase64Id);
+                var etagB = ChangeVectorUtils.GetOrderEtagById(changeVector, dbB.DbBase64Id);
+                var etagC = ChangeVectorUtils.GetOrderEtagById(changeVector, dbC.DbBase64Id);
 
                 // ensure that all nodes have the same Etag (indicating consistent replication state)
 
@@ -288,9 +288,9 @@ namespace SlowTests.Issues
             {
                 var changeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
 
-                var etagA = ChangeVectorUtils.GetEtagById(changeVector, dbA.DbBase64Id);
-                var etagB = ChangeVectorUtils.GetEtagById(changeVector, dbB.DbBase64Id);
-                var etagC = ChangeVectorUtils.GetEtagById(changeVector, dbC.DbBase64Id);
+                var etagA = ChangeVectorUtils.GetOrderEtagById(changeVector, dbA.DbBase64Id);
+                var etagB = ChangeVectorUtils.GetOrderEtagById(changeVector, dbB.DbBase64Id);
+                var etagC = ChangeVectorUtils.GetOrderEtagById(changeVector, dbC.DbBase64Id);
 
                 Assert.Equal(2, etagA);
                 Assert.Equal(2, etagB);

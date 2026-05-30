@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -1663,7 +1663,7 @@ namespace Raven.Server.Documents
                 {
                     var dbId = dbIds[dbIdIndex].ToString();
                     var value = GetPartialValue(dbIdIndex, blob);
-                    var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId);
+                    var nodeTag = ChangeVectorUtils.GetOrderNodeTagById(dbCv, dbId);
                     yield return new CounterPartialValue(value.Value, etag, $"{nodeTag ?? "?"}-{dbId}");
                 }
             }

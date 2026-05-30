@@ -669,7 +669,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         continue;
                     }
 
-                    var etag = ChangeVectorUtils.GetEtagById(localStatus.LastDatabaseChangeVector, _database.DbBase64Id);
+                    var etag = ChangeVectorUtils.GetOrderEtagById(localStatus.LastDatabaseChangeVector, _database.DbBase64Id);
                     lastProcessedTombstonesInfo?.Add($"{config.Name}/{collection}", new LastTombstoneInfo(config.Name, collection, etag, ITombstoneAware.TombstoneDeletionBlockerType.Backup));
                     min = Math.Min(etag, min);
                 }

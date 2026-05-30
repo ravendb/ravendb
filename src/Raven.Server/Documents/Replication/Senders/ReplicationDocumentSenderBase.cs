@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Replication.Senders
                     ChangeVector mergedChangeVector = documentsContext.GetEmptyChangeVector();
                     ChangeVector itemChangeVector = documentsContext.GetEmptyChangeVector();
 
-                    var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
+                    var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetOrderEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
                     if (lastEtagFromDestinationChangeVector > _lastEtag)
                     {
                         if (Log.IsDebugEnabled)

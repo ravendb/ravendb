@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Jint;
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             if (batchItem.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend) // got this document from resend
                 return currentLast;
 
-            return ChangeVectorUtils.MergeVectors(
+            return ChangeVectorMerger.Merge(
                 currentLast,
                 ChangeVectorUtils.NewChangeVector(Database, batchItem.Document.Etag, context),
                 batchItem.Document.ChangeVector);

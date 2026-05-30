@@ -1,10 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Lucene.Net.Support;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
@@ -40,6 +38,9 @@ namespace Raven.Server.Utils
 
         public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString, HashSet<string> exclude = null)
         {
+            remoteAsString = ChangeVectorParts.GetVersion(remoteAsString);
+            localAsString = ChangeVectorParts.GetVersion(localAsString);
+
             if (remoteAsString == localAsString)
                 return ConflictStatus.AlreadyMerged;
 
@@ -111,7 +112,6 @@ namespace Raven.Server.Utils
             ThreadLocalCleanup.ReleaseThreadLocalState += () =>
             {
                 _changeVectorBuffer = null;
-                _mergeVectorBuffer = null;
             };
         }
 
@@ -225,90 +225,9 @@ namespace Raven.Server.Utils
             _changeVectorBuffer.Length = 0;
         }
 
-        [ThreadStatic] private static List<ChangeVectorEntry> _mergeVectorBuffer;
-
-
         public static string MergeVectors(string vectorAstring, string vectorBstring)
         {
-            if (string.IsNullOrEmpty(vectorAstring))
-                return vectorBstring;
-            if (string.IsNullOrEmpty(vectorBstring))
-                return vectorAstring;
-
-            ChangeVectorParser.AssertChangeVector(vectorAstring);
-            ChangeVectorParser.AssertChangeVector(vectorBstring);
-
-            _mergeVectorBuffer ??= new List<ChangeVectorEntry>();
-            _mergeVectorBuffer.Clear();
-  
-            ChangeVectorParser.MergeChangeVector(vectorAstring, _mergeVectorBuffer);
-            ChangeVectorParser.MergeChangeVector(vectorBstring, _mergeVectorBuffer);
-
-            return _mergeVectorBuffer.SerializeVector();
-        }
-
-        public static string MergeVectors(params string[] changeVectors)
-        {
-            return MergeVectors(changeVectors.ToList());
-        }
-
-        public static string MergeVectors(List<string> changeVectors)
-        {
-            if (_mergeVectorBuffer == null)
-                _mergeVectorBuffer = new EquatableList<ChangeVectorEntry>();
-            _mergeVectorBuffer.Clear();
-
-            for (int i = 0; i < changeVectors.Count; i++)
-            {
-                ChangeVectorParser.MergeChangeVector(changeVectors[i], _mergeVectorBuffer);
-            }
-
-            return _mergeVectorBuffer.SerializeVector();
-        }
-
-        public static ChangeVector MergeVectors(IChangeVectorOperationContext context, IEnumerable<ChangeVector> changeVectors)
-        {
-            var merged = context.GetChangeVector(null);
-            foreach (var changeVector in changeVectors)
-            {
-                merged = changeVector.MergeWith(merged, context);
-            }
-
-            return merged;
-        }
-
-        public static ChangeVector MergeVectors(IChangeVectorOperationContext context, IEnumerable<string> changeVectors)
-        {
-            var merged = context.GetChangeVector(null);
-            foreach (var changeVector in changeVectors)
-            {
-                merged = context.GetChangeVector(changeVector).MergeWith(merged, context);
-            }
-
-            return merged;
-        }
-
-        public static string MergeVectorsDown(List<string> changeVectors)
-        {
-            if (_mergeVectorBuffer == null)
-                _mergeVectorBuffer = new EquatableList<ChangeVectorEntry>();
-            _mergeVectorBuffer.Clear();
-
-            if (changeVectors.Count == 0 || string.IsNullOrEmpty(changeVectors[0]))
-                return null;
-
-            ChangeVectorParser.MergeChangeVector(changeVectors[0], _mergeVectorBuffer);
-            
-            for (int i = 1; i < changeVectors.Count; i++)
-            {
-                if (string.IsNullOrEmpty(changeVectors[i]))
-                    return null;
-
-                if (ChangeVectorParser.MergeChangeVectorDown(changeVectors[i], _mergeVectorBuffer) == false)
-                    return null;
-            }
-
-            return _mergeVectorBuffer.SerializeVector();
+            return ChangeVectorMerger.Merge(vectorAstring, vectorBstring);
         }
 
         public static ChangeVector NewChangeVector(DocumentDatabase database, long etag, IChangeVectorOperationContext context)
@@ -329,32 +248,18 @@ namespace Raven.Server.Utils
                 .ToString();
         }
 
-        public static long GetEtagById(string changeVector, string id) => ClientChangeVectorUtils.GetEtagById(changeVector, id);
+        public static long GetOrderEtagById(string changeVector, string id) => ChangeVectorStringReader.GetOrderEtagById(changeVector, id);
 
-        public static string GetNodeTagById(string changeVector, string id)
-        {
-            if (changeVector == null)
-                return null;
+        public static long GetVersionEtagById(string changeVector, string id) => ChangeVectorStringReader.GetVersionEtagById(changeVector, id);
 
-            var indexOfId = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
-            if (indexOfId < 1)
-                return null;
+        public static string GetOrderNodeTagById(string changeVector, string id) => ChangeVectorStringReader.GetOrderNodeTagById(changeVector, id);
 
-            var endOfNodeTag = changeVector.LastIndexOf(":", indexOfId - 1, StringComparison.Ordinal);
-            if (endOfNodeTag < 1)
-                return null;
-
-            var start = changeVector.LastIndexOf(", ", endOfNodeTag - 1, StringComparison.OrdinalIgnoreCase) + 1;
-            if (start > 1)
-                start++;
-
-            return changeVector.Substring(start, endOfNodeTag - start);
-        }
+        internal static string GetVersionNodeTagById(string changeVector, string id) => ChangeVectorStringReader.GetVersionNodeTagById(changeVector, id);
 
         public static long Distance(string changeVectorA, string changeVectorB)
         {
-            var a = changeVectorA?.ToChangeVectorList();
-            var b = changeVectorB?.ToChangeVectorList();
+            var a = ChangeVectorParts.GetVersion(changeVectorA)?.ToChangeVectorList();
+            var b = ChangeVectorParts.GetVersion(changeVectorB)?.ToChangeVectorList();
 
             if (a == null && b == null)
                 return 0;

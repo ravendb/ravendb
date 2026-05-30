@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -852,7 +852,7 @@ namespace Raven.Server.Smuggler.Documents
                     //The ClusterTransactionId can be null if the database was migrated from version smaller then v5.2 
                     if (_database.ClusterTransactionId != null)
                     {
-                        var trxn = ChangeVectorUtils.GetEtagById(oldChangeVector, _database.ClusterTransactionId);
+                        var trxn = ChangeVectorUtils.GetVersionEtagById(oldChangeVector, _database.ClusterTransactionId);
                         if (trxn > 0)
                             changeVector += $",TRXN:{trxn}-{_database.ClusterTransactionId}";
                     }

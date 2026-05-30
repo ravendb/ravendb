@@ -453,7 +453,7 @@ namespace Raven.Server.ServerWide.Commands
                 long changeVectorIndex = 0;
 
                 if (changeVector != null)
-                    changeVectorIndex = ChangeVectorUtils.GetEtagById(changeVector, clusterTransactionId);
+                    changeVectorIndex = ChangeVectorUtils.GetVersionEtagById(changeVector, clusterTransactionId);
 
                 if (FromBackup)
                     changeVectorIndex = GetCurrentIndex(context, items, atomicGuardKey) ?? 0;

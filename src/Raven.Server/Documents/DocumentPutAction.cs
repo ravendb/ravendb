@@ -77,7 +77,7 @@ namespace Raven.Server.Documents
                 if (_parent._documentDatabase.ClusterTransactionId == null)
                     return;
 
-                long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
+                long indexFromChangeVector = ChangeVectorUtils.GetVersionEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
                 if (indexFromChangeVector == 0)
                     return;
 

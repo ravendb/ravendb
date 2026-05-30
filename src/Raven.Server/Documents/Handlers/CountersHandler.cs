@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -610,7 +610,7 @@ namespace Raven.Server.Documents.Handlers
                                 dbIds.TryAdd(dbId, dbIdIndex);
                             }
 
-                            var etag = ChangeVectorUtils.GetEtagById(tuple.ChangeVector, dbId);
+                            var etag = ChangeVectorUtils.GetVersionEtagById(tuple.ChangeVector, dbId);
 
                             var newEntry = (CountersStorage.CounterValues*)newVal.Ptr + dbIdIndex;
                             newEntry->Value = tuple.Value;
