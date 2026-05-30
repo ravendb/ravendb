@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -72,7 +72,7 @@ public class RavenDB_20757 : ReplicationTestBase
             {
                 var user = await session.LoadAsync<User>("users/1");
                 var cvString = session.Advanced.GetChangeVectorFor(user);
-                etag = ChangeVectorUtils.GetEtagById(cvString, destDb.DbBase64Id);
+                etag = ChangeVectorUtils.GetVersionEtagById(cvString, destDb.DbBase64Id);
             }
 
             // dispose leader
@@ -96,7 +96,7 @@ public class RavenDB_20757 : ReplicationTestBase
             {
                 var user = await session.LoadAsync<User>("users/1");
                 var cvString = session.Advanced.GetChangeVectorFor(user);
-                var newEtag = ChangeVectorUtils.GetEtagById(cvString, destDb.DbBase64Id);
+                var newEtag = ChangeVectorUtils.GetVersionEtagById(cvString, destDb.DbBase64Id);
 
                 Assert.Equal(etag + 1, newEtag);
 
@@ -153,7 +153,7 @@ public class RavenDB_20757 : ReplicationTestBase
                 Assert.Equal("Garcia", user.LastName);
 
                 var cvString = session.Advanced.GetChangeVectorFor(user);
-                var newEtag = ChangeVectorUtils.GetEtagById(cvString, destDb.DbBase64Id);
+                var newEtag = ChangeVectorUtils.GetVersionEtagById(cvString, destDb.DbBase64Id);
 
                 Assert.Equal(etag + 1, newEtag);
             }

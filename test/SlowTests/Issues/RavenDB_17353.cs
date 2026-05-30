@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -25,10 +25,10 @@ namespace SlowTests.Issues
             const string dbid2 = "F9I6Egqwm0Kz+K0oFVIR9Q";
             const string cv = "C:8397-07e2GrSMdkunq1AC+KgwIg, A:8917-3UiZOcXaZ0+d6GI/VTr//A, B:8397-5FYpkl5TX0SPlIBPwjmhUw, A:2568-F9I6Egqwm0Kz+K0oFVIR9Q, A:13366-IG4VwBTOnkqoT/uwgm2OQg, A:2568-OSKWIRBEDEGoAxbEIiFJeQ";
 
-            var nodeTag = ChangeVectorUtils.GetNodeTagById(cv, dbid1);
+            var nodeTag = ChangeVectorUtils.GetOrderNodeTagById(cv, dbid1);
             Assert.Equal("C", nodeTag);
 
-            nodeTag = ChangeVectorUtils.GetNodeTagById(cv, dbid2);
+            nodeTag = ChangeVectorUtils.GetOrderNodeTagById(cv, dbid2);
             Assert.NotEqual(" A", nodeTag);
             Assert.Equal("A", nodeTag);
         }

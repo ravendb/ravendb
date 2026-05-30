@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -47,7 +47,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections, CancellationToken token = default)
     {
-        long lastEtag = ChangeVectorUtils.GetEtagById(lastChangeVector, RequestHandler.Database.DbBase64Id);
+        long lastEtag = ChangeVectorUtils.GetOrderEtagById(lastChangeVector, RequestHandler.Database.DbBase64Id);
         await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastEtag, lastTombstoneEtag, modifiedCollections, token);
     }
 

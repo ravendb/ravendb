@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -21,7 +20,6 @@ using Raven.Server.Documents.Refresh;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -284,7 +282,7 @@ namespace Raven.Server.Documents
                     _collectionsCache = ReadCollections(tx);
 
                     var cv = GetDatabaseChangeVector(tx);
-                    var lastEtagInChangeVector = ChangeVectorUtils.GetEtagById(cv, DocumentDatabase.DbBase64Id);
+                    var lastEtagInChangeVector = ChangeVectorUtils.GetOrderEtagById(cv, DocumentDatabase.DbBase64Id);
                     _lastEtag = Math.Max(_lastEtag, lastEtagInChangeVector);
 
                     tx.Commit();
@@ -294,7 +292,7 @@ namespace Raven.Server.Documents
                 using (context.OpenReadTransaction())
                 {
                     var cv = GetDatabaseChangeVector(context);
-                    var lastEtagInChangeVector = ChangeVectorUtils.GetEtagById(cv, DocumentDatabase.DbBase64Id);
+                    var lastEtagInChangeVector = ChangeVectorUtils.GetOrderEtagById(cv, DocumentDatabase.DbBase64Id);
                     _lastEtag = Math.Max(_lastEtag, lastEtagInChangeVector);
                 }
             }

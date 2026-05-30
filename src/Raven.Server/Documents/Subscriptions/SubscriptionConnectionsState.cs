@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Subscriptions
         public override Task WaitForIndexNotificationAsync(long index) => 
             DocumentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _server.Engine.OperationTimeout);
 
-        public virtual long GetLastEtagSent() => ChangeVectorUtils.GetEtagById(LastChangeVectorSent, DocumentDatabase.DbBase64Id);
+        public virtual long GetLastEtagSent() => ChangeVectorUtils.GetOrderEtagById(LastChangeVectorSent, DocumentDatabase.DbBase64Id);
 
         public IDisposable RegisterForNotificationOnNewDocuments(SubscriptionConnection connection)
         {

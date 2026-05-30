@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
@@ -29,7 +29,7 @@ public sealed class ClusterTransactionMergedCommand : TransactionMergedCommand
     {
         var global = context.LastDatabaseChangeVector ??
                      (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
-        var current = ChangeVectorUtils.GetEtagById(global, Database.DatabaseGroupId);
+        var current = ChangeVectorUtils.GetOrderEtagById(global, Database.DatabaseGroupId);
 
         Replies.Clear();
         Options.Clear();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.TimeSeries
             private static string FetchNodeDetails(SingleResult result, string databaseChangeVector)
             {
                 var dbId = result.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
-                var nodeTag = ChangeVectorUtils.GetNodeTagById(databaseChangeVector, dbId) ?? "?";
+                var nodeTag = ChangeVectorUtils.GetOrderNodeTagById(databaseChangeVector, dbId) ?? "?";
                 return nodeTag + "-" + dbId;
             }
         }

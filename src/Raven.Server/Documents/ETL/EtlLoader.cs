@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -986,7 +986,7 @@ namespace Raven.Server.Documents.ETL
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
-                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+                var etag = ChangeVectorUtils.GetOrderEtagById(state.ChangeVector, _database.DbBase64Id);
 
                 // the default in this case is '0', which means that nothing of this node was consumed and therefore we cannot delete anything
                 if (transform.ApplyToAllDocuments)
@@ -1019,7 +1019,7 @@ namespace Raven.Server.Documents.ETL
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
-                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+                var etag = ChangeVectorUtils.GetOrderEtagById(state.ChangeVector, _database.DbBase64Id);
 
                 if (transform.ApplyToAllDocuments)
                 {
@@ -1042,7 +1042,7 @@ namespace Raven.Server.Documents.ETL
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
-                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+                var etag = ChangeVectorUtils.GetOrderEtagById(state.ChangeVector, _database.DbBase64Id);
 
                 if (transform.ApplyToAllDocuments)
                 {

@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -758,6 +759,341 @@ namespace FastTests.Server.Basic
             }
         }
 
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVectorsShouldMergeCompositeOrderAndVersionSeparately()
+        {
+            var sourceDbId = Guid.NewGuid();
+            var shard1DbId = Guid.NewGuid();
+            var shard2DbId = Guid.NewGuid();
+
+            var order1 = ChangeVector((shard1DbId, 500, 0));
+            var order2 = ChangeVector((shard2DbId, 700, 1));
+            var version1 = ChangeVector((sourceDbId, 100, 2));
+            var version2 = ChangeVector((sourceDbId, 95, 2));
+
+            var result = ChangeVectorUtils.MergeVectors($"{order1}|{version1}", $"{order2}|{version2}");
+
+            Assert.Equal($"{ChangeVector((shard1DbId, 500, 0), (shard2DbId, 700, 1))}|{version1}", result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVectorsShouldTreatMonoVectorAsBothOrderAndVersionWhenMixedWithComposite()
+        {
+            var sourceDbId = Guid.NewGuid();
+            var shardDbId = Guid.NewGuid();
+
+            var order = ChangeVector((shardDbId, 500, 0));
+            var version = ChangeVector((sourceDbId, 100, 1));
+            var mono = ChangeVector((sourceDbId, 110, 1));
+
+            var result = ChangeVectorUtils.MergeVectors($"{order}|{version}", mono);
+
+            Assert.Equal($"{ChangeVectorUtils.MergeVectors(order, mono)}|{mono}", result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVectorsShouldKeepMonoOutputForMonoInputs()
+        {
+            var dbId = Guid.NewGuid();
+
+            var result = ChangeVectorUtils.MergeVectors(ChangeVector((dbId, 100, 0)), ChangeVector((dbId, 110, 0)));
+
+            Assert.DoesNotContain("|", result);
+            Assert.Equal(ChangeVector((dbId, 110, 0)), result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVectorsShouldMergeManyCompositeInputsSeparately()
+        {
+            var destinationDbId0 = Guid.NewGuid();
+            var destinationDbId1 = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+
+            var destination0At500 = ChangeVector((destinationDbId0, 500, 0));
+            var destination0At650 = ChangeVector((destinationDbId0, 650, 0));
+            var destination1At700 = ChangeVector((destinationDbId1, 700, 1));
+            var sourceAt95 = ChangeVector((sourceDbId, 95, 2));
+            var sourceAt100 = ChangeVector((sourceDbId, 100, 2));
+            var sourceAt110 = ChangeVector((sourceDbId, 110, 2));
+
+            var result = ChangeVectorMerger.Merge([
+                $"{destination0At500}|{sourceAt100}",
+                $"{destination1At700}|{sourceAt95}",
+                $"{destination0At650}|{sourceAt110}"
+            ]);
+
+            Assert.Equal($"{ChangeVector((destinationDbId0, 650, 0), (destinationDbId1, 700, 1))}|{sourceAt110}", result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVectorsDownShouldMergeCompositeOrderAndVersionSeparately()
+        {
+            var sourceDbId = Guid.NewGuid();
+            var shardDbId = Guid.NewGuid();
+
+            var result = ChangeVectorMerger.MergeDown([
+                $"{ChangeVector((shardDbId, 500, 0))}|{ChangeVector((sourceDbId, 100, 1))}",
+                $"{ChangeVector((shardDbId, 450, 0))}|{ChangeVector((sourceDbId, 95, 1))}"
+            ], ChangeVectorPart.Whole);
+
+            Assert.Equal($"{ChangeVector((shardDbId, 450, 0))}|{ChangeVector((sourceDbId, 95, 1))}", result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVectorsDownShouldKeepUnmatchedEntriesFromFirstVectorWhenLaterVectorPartiallyOverlaps()
+        {
+            var dbA = Guid.NewGuid();
+            var dbB = Guid.NewGuid();
+
+            var result = ChangeVectorMerger.MergeDown([
+                ChangeVector((dbA, 10, 0), (dbB, 20, 1)),
+                ChangeVector((dbA, 8, 0))
+            ], ChangeVectorPart.Whole);
+
+            Assert.Equal(ChangeVector((dbA, 8, 0), (dbB, 20, 1)), result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVectorsDownShouldReturnNullWhenNoEntriesOverlap()
+        {
+            var dbA = Guid.NewGuid();
+            var dbB = Guid.NewGuid();
+            var dbC = Guid.NewGuid();
+
+            var result = ChangeVectorMerger.MergeDown([
+                ChangeVector((dbA, 10, 0), (dbB, 20, 1)),
+                ChangeVector((dbC, 5, 2))
+            ], ChangeVectorPart.Whole);
+
+            Assert.Null(result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVersionVectorsDownShouldUseVersionFrontierOnly()
+        {
+            var sourceDbId = Guid.NewGuid();
+            var shard1DbId = Guid.NewGuid();
+            var shard2DbId = Guid.NewGuid();
+
+            var version100 = ChangeVector((sourceDbId, 100, 2));
+            var version95 = ChangeVector((sourceDbId, 95, 2));
+            var changeVectors = new List<string>
+            {
+                $"{ChangeVector((shard1DbId, 500, 0))}|{version100}",
+                $"{ChangeVector((shard2DbId, 700, 1))}|{version95}"
+            };
+
+            Assert.Null(ChangeVectorMerger.MergeDown(changeVectors, ChangeVectorPart.Whole));
+            Assert.Equal(version95, ChangeVectorMerger.MergeDown(changeVectors, ChangeVectorPart.Version));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeVersionDownShouldTreatMonoVectorAsVersionWhenMixedWithComposite()
+        {
+            var sourceDbId = Guid.NewGuid();
+            var destinationDbId = Guid.NewGuid();
+
+            var sourceAt108 = ChangeVector((sourceDbId, 108, 0));
+            var sourceAt104 = ChangeVector((sourceDbId, 104, 0));
+            var destinationAt900 = ChangeVector((destinationDbId, 900, 1));
+
+            var result = ChangeVectorMerger.MergeDown([
+                sourceAt108,
+                $"{destinationAt900}|{sourceAt104}"
+            ], ChangeVectorPart.Version);
+
+            Assert.Equal(sourceAt104, result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeOrderDownShouldUseOrderFrontierOnly()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+
+            var destinationAt900 = ChangeVector((destinationDbId, 900, 0));
+            var destinationAt850 = ChangeVector((destinationDbId, 850, 0));
+            var sourceAt104 = ChangeVector((sourceDbId, 104, 1));
+            var sourceAt999 = ChangeVector((sourceDbId, 999, 1));
+
+            var result = ChangeVectorMerger.MergeDown([
+                $"{destinationAt900}|{sourceAt104}",
+                $"{destinationAt850}|{sourceAt999}"
+            ], ChangeVectorPart.Order);
+
+            Assert.Equal(destinationAt850, result);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ExplicitEtagPartHelpersShouldReadOnlyRequestedCompositePart()
+        {
+            var orderDbId = Guid.NewGuid();
+            var versionDbId = Guid.NewGuid();
+            var missingDbIdString = Guid.NewGuid().AsChangeVectorDbId();
+            var orderDbIdString = orderDbId.AsChangeVectorDbId();
+            var versionDbIdString = versionDbId.AsChangeVectorDbId();
+
+            var order = ChangeVector((orderDbId, 500, 0));
+            var version = ChangeVector((versionDbId, 100, 1));
+            var composite = $"{order}|{version}";
+
+            Assert.Equal(500, ChangeVectorUtils.GetOrderEtagById(composite, orderDbIdString));
+            Assert.Equal(0, ChangeVectorUtils.GetOrderEtagById(composite, versionDbIdString));
+            Assert.Equal(0, ChangeVectorUtils.GetVersionEtagById(composite, orderDbIdString));
+            Assert.Equal(100, ChangeVectorUtils.GetVersionEtagById(composite, versionDbIdString));
+            Assert.Equal(0, ChangeVectorUtils.GetOrderEtagById(composite, missingDbIdString));
+            Assert.Equal(0, ChangeVectorUtils.GetVersionEtagById(composite, missingDbIdString));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ExplicitEtagPartHelpersShouldTreatMonoChangeVectorAsOrderAndVersion()
+        {
+            var dbId = Guid.NewGuid();
+            var dbIdString = dbId.AsChangeVectorDbId();
+            var changeVector = ChangeVector((dbId, 100, 0));
+
+            Assert.Equal(100, ChangeVectorUtils.GetOrderEtagById(changeVector, dbIdString));
+            Assert.Equal(100, ChangeVectorUtils.GetVersionEtagById(changeVector, dbIdString));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ExplicitPartHelpersShouldReadSameDbIdFromRequestedCompositePartOnly()
+        {
+            var dbId = Guid.NewGuid();
+            var dbIdString = dbId.AsChangeVectorDbId();
+            var composite = $"{ChangeVector((dbId, 500, 0))}|{ChangeVector((dbId, 100, 1))}";
+
+            Assert.Equal(500, ChangeVectorUtils.GetOrderEtagById(composite, dbIdString));
+            Assert.Equal(100, ChangeVectorUtils.GetVersionEtagById(composite, dbIdString));
+            Assert.Equal("A", ChangeVectorUtils.GetOrderNodeTagById(composite, dbIdString));
+            Assert.Equal("B", ChangeVectorUtils.GetVersionNodeTagById(composite, dbIdString));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ExplicitNodeTagPartHelpersShouldReadOnlyRequestedCompositePart()
+        {
+            var orderDbId = Guid.NewGuid();
+            var versionDbId = Guid.NewGuid();
+            var missingDbIdString = Guid.NewGuid().AsChangeVectorDbId();
+            var orderDbIdString = orderDbId.AsChangeVectorDbId();
+            var versionDbIdString = versionDbId.AsChangeVectorDbId();
+
+            var order = ChangeVector((orderDbId, 500, 0));
+            var version = ChangeVector((versionDbId, 100, 1));
+            var composite = $"{order}|{version}";
+
+            Assert.Equal("A", ChangeVectorUtils.GetOrderNodeTagById(composite, orderDbIdString));
+            Assert.Null(ChangeVectorUtils.GetOrderNodeTagById(composite, versionDbIdString));
+            Assert.Null(ChangeVectorUtils.GetVersionNodeTagById(composite, orderDbIdString));
+            Assert.Equal("B", ChangeVectorUtils.GetVersionNodeTagById(composite, versionDbIdString));
+            Assert.Null(ChangeVectorUtils.GetOrderNodeTagById(composite, missingDbIdString));
+            Assert.Null(ChangeVectorUtils.GetVersionNodeTagById(composite, missingDbIdString));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ExplicitPartHelpersShouldHandleNullEmptyAndNullId()
+        {
+            var dbIdString = Guid.NewGuid().AsChangeVectorDbId();
+
+            Assert.Equal(0, ChangeVectorUtils.GetOrderEtagById(null, dbIdString));
+            Assert.Equal(0, ChangeVectorUtils.GetVersionEtagById(null, dbIdString));
+            Assert.Null(ChangeVectorUtils.GetOrderNodeTagById(null, dbIdString));
+            Assert.Null(ChangeVectorUtils.GetVersionNodeTagById(null, dbIdString));
+
+            Assert.Equal(0, ChangeVectorUtils.GetOrderEtagById(string.Empty, dbIdString));
+            Assert.Equal(0, ChangeVectorUtils.GetVersionEtagById(string.Empty, dbIdString));
+            Assert.Null(ChangeVectorUtils.GetOrderNodeTagById(string.Empty, dbIdString));
+            Assert.Null(ChangeVectorUtils.GetVersionNodeTagById(string.Empty, dbIdString));
+
+            Assert.Throws<ArgumentNullException>(() => ChangeVectorUtils.GetOrderEtagById(string.Empty, null));
+            Assert.Throws<ArgumentNullException>(() => ChangeVectorUtils.GetVersionEtagById(string.Empty, null));
+            Assert.Throws<ArgumentNullException>(() => ChangeVectorUtils.GetOrderNodeTagById(string.Empty, null));
+            Assert.Throws<ArgumentNullException>(() => ChangeVectorUtils.GetVersionNodeTagById(string.Empty, null));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void CompositeChangeVectorShouldRejectMultipleSeparators()
+        {
+            var dbId = Guid.NewGuid();
+            var malformedComposite = $"{ChangeVector((dbId, 1, 0))}|{ChangeVector((dbId, 2, 1))}|{ChangeVector((dbId, 3, 2))}";
+
+            Assert.Throws<ArgumentException>(() => ChangeVectorUtils.GetOrderEtagById(malformedComposite, dbId.AsChangeVectorDbId()));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void GetConflictStatusShouldUseVersionPartForCompositeStrings()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+
+            var remoteWithAdvancedOrderOnly = $"{ChangeVector((destinationDbId, 900, 0))}|{ChangeVector((sourceDbId, 100, 1))}";
+            var local = $"{ChangeVector((destinationDbId, 1, 0))}|{ChangeVector((sourceDbId, 100, 1))}";
+            var remoteWithAdvancedVersion = $"{ChangeVector((destinationDbId, 0, 0))}|{ChangeVector((sourceDbId, 104, 1))}";
+
+            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remoteWithAdvancedOrderOnly, local));
+            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remoteWithAdvancedVersion, local));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void GetConflictStatusShouldRespectExplicitOrderMode()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+
+            var remote = context.GetChangeVector(
+                $"{ChangeVector((destinationDbId, 900, 0))}|{ChangeVector((sourceDbId, 100, 1))}");
+            var local = context.GetChangeVector(
+                $"{ChangeVector((destinationDbId, 1, 0))}|{ChangeVector((sourceDbId, 100, 1))}");
+
+            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote, local, mode: ChangeVectorMode.Order));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ChangeVectorMergeShouldMergeCompositeOrderAndVersionSeparately()
+        {
+            var destinationDbId0 = Guid.NewGuid();
+            var destinationDbId1 = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+
+            var left = context.GetChangeVector($"{ChangeVector((destinationDbId0, 500, 0))}|{ChangeVector((sourceDbId, 100, 2))}");
+            var right = context.GetChangeVector($"{ChangeVector((destinationDbId1, 700, 1))}|{ChangeVector((sourceDbId, 95, 2))}");
+
+            var result = Raven.Server.Utils.ChangeVector.Merge(left, right, context);
+
+            Assert.Equal($"{ChangeVector((destinationDbId0, 500, 0), (destinationDbId1, 700, 1))}|{ChangeVector((sourceDbId, 100, 2))}", result.AsString());
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ChangeVectorMergeShouldTreatMonoVectorAsBothOrderAndVersion()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+
+            var composite = context.GetChangeVector($"{ChangeVector((destinationDbId, 500, 0))}|{ChangeVector((sourceDbId, 100, 1))}");
+            var mono = context.GetChangeVector(ChangeVector((sourceDbId, 110, 1)));
+
+            var result = Raven.Server.Utils.ChangeVector.Merge(composite, mono, context);
+
+            Assert.Equal($"{ChangeVector((destinationDbId, 500, 0), (sourceDbId, 110, 1))}|{ChangeVector((sourceDbId, 110, 1))}", result.AsString());
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void DistanceShouldUseVersionPartForCompositeChangeVectors()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+
+            var left = $"{ChangeVector((destinationDbId, 999, 0))}|{ChangeVector((sourceDbId, 104, 1))}";
+            var right = $"{ChangeVector((destinationDbId, 1, 0))}|{ChangeVector((sourceDbId, 100, 1))}";
+
+            Assert.Equal(4, ChangeVectorUtils.Distance(left, right));
+            Assert.Equal(-4, ChangeVectorUtils.Distance(right, left));
+        }
+
         public string ChangeVector(params (Guid dbId, long etag, int nodeTag)[] changeVectorEntries)
         {
             return changeVectorEntries.Select(x => (ChangeVectorEntry)(x.dbId.AsChangeVectorDbId(), x.etag, x.nodeTag))
@@ -769,6 +1105,21 @@ namespace FastTests.Server.Basic
         {
             var dbId = Guid.NewGuid();
             return dbId.AsChangeVectorDbId();
+        }
+
+        private sealed class TestChangeVectorContext : IChangeVectorOperationContext
+        {
+            public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion = false)
+            {
+                return new ChangeVector(changeVector, throwOnRecursion, this);
+            }
+
+            public ChangeVector GetChangeVector(string version, string order)
+            {
+                return new ChangeVector(
+                    new ChangeVector(version, throwOnRecursion: true, this),
+                    new ChangeVector(order, throwOnRecursion: true, this));
+            }
         }
     }
 }

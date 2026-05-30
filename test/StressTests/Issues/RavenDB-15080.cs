@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -659,7 +659,7 @@ namespace StressTests.Issues
                 .AppendLine($"Failed to replicate from '{src.Database}' to '{dst.Database}'");
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(src);
-            var etag = ChangeVectorUtils.GetEtagById(cv, database.DbBase64Id);
+            var etag = ChangeVectorUtils.GetVersionEtagById(cv, database.DbBase64Id);
             Console.WriteLine($"document etag : {etag}");
 
             var outgoingFailureInfo = database.ReplicationLoader.OutgoingFailureInfo.ToList();

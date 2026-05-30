@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -181,8 +181,7 @@ public sealed class ChangeVector
             return context.GetChangeVector(versionMerge, orderMerge);
         }
 
-        // we are keeping the existing order without merging it with the version of the single change vector
-        var mergedOrder = cv2.IsSingle ? cv1.Order : cv2.Order;
+        var mergedOrder = ChangeVectorUtils.MergeVectors(cv1.Order._changeVector, cv2.Order._changeVector);
         var mergedVersion = ChangeVectorUtils.MergeVectors(cv1.Version._changeVector, cv2.Version._changeVector);
         return context.GetChangeVector(mergedVersion, mergedOrder);
     }

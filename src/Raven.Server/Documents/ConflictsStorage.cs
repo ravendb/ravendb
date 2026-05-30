@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -406,7 +406,16 @@ namespace Raven.Server.Documents
 
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
             conflictChangeVectors.Add(newChangeVector);
-            return ChangeVectorUtils.MergeVectors(context, conflictChangeVectors);
+            return MergeConflictChangeVectors(context, conflictChangeVectors);
+        }
+
+        private static ChangeVector MergeConflictChangeVectors(DocumentsOperationContext context, IEnumerable<string> changeVectors)
+        {
+            var merged = context.GetChangeVector(null);
+            foreach (var changeVector in changeVectors)
+                merged = context.GetChangeVector(changeVector).MergeWith(merged, context);
+
+            return merged;
         }
 
         private ChangeVector MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)

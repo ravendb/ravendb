@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents;
@@ -320,7 +320,7 @@ namespace SlowTests.Server.Replication
                     {
                         flags = revisionMetadata["@flags"];
                         var cv = revisionMetadata["@change-vector"].ToString();
-                        var etag = ChangeVectorUtils.GetEtagById(cv, db2.DbBase64Id);
+                        var etag = ChangeVectorUtils.GetVersionEtagById(cv, db2.DbBase64Id);
                         var expected = etag != 0 ? expectedFlags1 : expectedFlags2;
                         Assert.Equal(expected, flags);
                     }
