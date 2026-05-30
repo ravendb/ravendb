@@ -434,6 +434,7 @@ function mapAiFromSingleDto(
             deploymentName: d.AzureOpenAiSettings?.DeploymentName,
             dimensions: d.AzureOpenAiSettings?.Dimensions,
             embeddingsMaxConcurrentBatches: d.AzureOpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+            enablePromptCache: d.AzureOpenAiSettings?.EnablePromptCache,
             isSetTemperature: d.AzureOpenAiSettings?.Temperature != null,
             temperature: d.AzureOpenAiSettings?.Temperature ?? null,
         },
@@ -443,6 +444,7 @@ function mapAiFromSingleDto(
             model: d.GoogleSettings?.Model,
             dimensions: d.GoogleSettings?.Dimensions,
             embeddingsMaxConcurrentBatches: d.GoogleSettings?.EmbeddingsMaxConcurrentBatches,
+            enablePromptCache: d.GoogleSettings?.EnablePromptCache,
         },
         huggingFaceSettings: {
             apiKey: d.HuggingFaceSettings?.ApiKey,
@@ -469,6 +471,7 @@ function mapAiFromSingleDto(
             projectId: d.OpenAiSettings?.ProjectId,
             dimensions: d.OpenAiSettings?.Dimensions,
             embeddingsMaxConcurrentBatches: d.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+            enablePromptCache: d.OpenAiSettings?.EnablePromptCache,
             isSetTemperature: d.OpenAiSettings?.Temperature != null,
             temperature: d.OpenAiSettings?.Temperature ?? null,
         },
