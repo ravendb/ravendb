@@ -319,7 +319,8 @@ public class RavenDB_24310 : RavenTestBase
 
             var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(dbLevelCS)));
-            Assert.StartsWith(ServerWideConnectionString.NamePrefix, prefixedName);
+            Assert.Contains(prefixedName, ex.Message);
+            Assert.Contains("create or update connection string", ex.Message, StringComparison.OrdinalIgnoreCase);
 
             // attempt to DELETE via database-level API should fail
             var removeCS = new RavenConnectionString
@@ -331,7 +332,8 @@ public class RavenDB_24310 : RavenTestBase
 
             ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                 await store.Maintenance.SendAsync(new RemoveConnectionStringOperation<RavenConnectionString>(removeCS)));
-            Assert.StartsWith(ServerWideConnectionString.NamePrefix, prefixedName);
+            Assert.Contains(prefixedName, ex.Message);
+            Assert.Contains("can only be removed", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
     }
 
