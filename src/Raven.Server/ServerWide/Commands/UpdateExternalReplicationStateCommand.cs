@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string GetItemId()
         {
-            return ExternalReplicationState.GenerateItemName(DatabaseName, ExternalReplicationState.TaskId);
+            return ExternalReplicationState.GenerateItemName(DatabaseName, ExternalReplicationState.TaskId, ExternalReplicationState.Type);
         }
 
         protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)

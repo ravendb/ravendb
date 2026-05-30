@@ -37,6 +37,8 @@ namespace Raven.Server.Documents.Replication.Incoming
         private readonly DocumentDatabase _database;
         private readonly ReplicationLoader _parent;
 
+        protected ReplicationLoader ReplicationLoaderParent => _parent;
+
         public long LastHeartbeatTicks;
         public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
