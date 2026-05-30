@@ -33,7 +33,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         /// The list of usages (ETL, replication, sinks, AI agents) that currently reference this server-wide connection string.
         /// This is computed server-side when reading; any value provided by a client is ignored.
         /// </summary>
-        public List<ServerWideConnectionStringUsage> UsedBy { get; set; } = new List<ServerWideConnectionStringUsage>();
+        internal List<ServerWideConnectionStringUsage> UsedBy { get; set; } = new List<ServerWideConnectionStringUsage>();
 
         /// <summary>
         /// The name of the connection string, delegated from the underlying <see cref="ConnectionString"/>.
@@ -100,8 +100,33 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
                 ExcludedDatabases = excludedDatabases
             };
 
-            // UsedBy is computed server-side at read time (see the connection-string GET handlers);
-            // it is intentionally not parsed from the blittable here.
+            // UsedBy is computed server-side and returned in GET responses; parse it back so the
+            // (typed) client and tests can read it. On write it is ignored (recomputed on the next read).
+            if (blittable.TryGet(nameof(UsedBy), out BlittableJsonReaderArray usedByArray) && usedByArray != null)
+            {
+                foreach (BlittableJsonReaderObject usageBlittable in usedByArray)
+                {
+                    var usage = new ServerWideConnectionStringUsage();
+
+                    if (usageBlittable.TryGet(nameof(ConnectionStringUsage.Kind), out string kindString) &&
+                        Enum.TryParse(kindString, out ConnectionStringUsageKind kind))
+                        usage.Kind = kind;
+
+                    if (usageBlittable.TryGet(nameof(ConnectionStringUsage.Id), out long id))
+                        usage.Id = id;
+
+                    usageBlittable.TryGet(nameof(ConnectionStringUsage.Identifier), out string identifier);
+                    usage.Identifier = identifier;
+
+                    usageBlittable.TryGet(nameof(ConnectionStringUsage.Name), out string usageName);
+                    usage.Name = usageName;
+
+                    usageBlittable.TryGet(nameof(ServerWideConnectionStringUsage.DatabaseName), out string databaseName);
+                    usage.DatabaseName = databaseName;
+
+                    result.UsedBy.Add(usage);
+                }
+            }
 
             return result;
         }
@@ -135,7 +160,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
     /// <see cref="DatabaseName"/> of the database where the referencing task/agent lives, since server-wide
     /// usages are aggregated across all databases.
     /// </summary>
-    public sealed class ServerWideConnectionStringUsage : ConnectionStringUsage
+    internal sealed class ServerWideConnectionStringUsage : ConnectionStringUsage
     {
         public string DatabaseName { get; set; }
 

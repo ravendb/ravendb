@@ -597,7 +597,7 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
                     id: t.Id,
                     identifier: t.Identifier,
                     name: t.Name,
-                    databaseName: (t as { DatabaseName?: string }).DatabaseName,
+                    databaseName: t.DatabaseName,
                 }) satisfies ConnectionStringUsage
         );
         switch (dto.Type) {

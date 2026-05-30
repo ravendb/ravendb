@@ -10,7 +10,8 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
     {
         public string Name { get; set; }
 
-        public List<ConnectionStringUsage> UsedBy { get; set; } = new List<ConnectionStringUsage>();
+        [ForceJsonSerialization]
+        internal List<ConnectionStringUsage> UsedBy { get; set; } = new List<ConnectionStringUsage>();
 
         public bool Validate(List<string> errors)
         {
@@ -65,7 +66,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         }
     }
 
-    public class ConnectionStringUsage : IDynamicJson
+    internal class ConnectionStringUsage : IDynamicJson
     {
         public ConnectionStringUsageKind Kind { get; set; }
 
@@ -90,7 +91,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         };
     }
 
-    public enum ConnectionStringUsageKind
+    internal enum ConnectionStringUsageKind
     {
         RavenEtl,
         SqlEtl,
