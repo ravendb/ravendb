@@ -94,7 +94,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                         return false;
 
                     var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
-                    return state.SourceChangeVector != null && state.SourceChangeVector.StartsWith("A:1024");
+                    return state.SourceChangeVector != null && state.SourceChangeVector.Contains("A:1024-");
                 }
             }, true, 30_000));
 
@@ -639,7 +639,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                         return false;
 
                     var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
-                    return state.SourceChangeVector != null && state.SourceChangeVector.StartsWith("A:3072");
+                    return state.SourceChangeVector != null && state.SourceChangeVector.Contains("A:3072-");
                 }
             }, true, 30_000));
 
@@ -896,7 +896,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                         return false;
 
                     var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
-                    return state.SourceChangeVector != null && state.SourceChangeVector.StartsWith("A:4096");
+                    return state.SourceChangeVector != null && state.SourceChangeVector.Contains("A:4096-");
                 }
             }, true, 30_000));
 
