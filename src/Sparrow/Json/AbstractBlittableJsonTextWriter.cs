@@ -342,12 +342,6 @@ namespace Sparrow.Json
 
         public void WriteString(string str, bool skipEscaping = false)
         {
-            if (str == null)
-            {
-                WriteNull();
-                return;
-            }
-
             using (var lazyStr = _context.GetLazyString(str))
             {
                 WriteString(lazyStr, skipEscaping);

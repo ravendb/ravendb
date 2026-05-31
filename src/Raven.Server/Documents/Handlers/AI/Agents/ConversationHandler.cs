@@ -594,7 +594,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     /// message containing the matching <c>tool_calls</c> entry.
     /// </summary>
     private static void TrimMessages(
-        List<BlittableJsonReaderObject> messages,
+        ConversationDocument.MessagesList messages,
         int truncateCount)
     {
         if (messages == null || messages.Count <= 1 || truncateCount <= 0)

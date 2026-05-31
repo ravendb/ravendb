@@ -20,7 +20,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
 
         var conversationId = RequestHandler.GetStringQueryString("conversationId");
-        var pageSize = RequestHandler.GetPageSize(25);
+        var pageSize = RequestHandler.GetPageSize();
         var detailLevel = RequestHandler.GetEnumQueryString<AiConversationDetailLevel>("detailLevel", required: false);
         var before = RequestHandler.GetDateTimeQueryString("before", required: false);
         var after = RequestHandler.GetDateTimeQueryString("after", required: false);

@@ -59,8 +59,7 @@ public class AiConversationMessagesResult : IDynamicJson
     public List<string> SubConversationIds { get; set; }
 
     /// <summary>
-    /// All attachment file names referenced across the returned messages, deduplicated.
-    /// Aggregated from per-message <see cref="AiConversationMessage.Attachments"/>.
+    /// All attachments referenced across the conversation.
     /// </summary>
     public List<string> Attachments { get; set; }
 
