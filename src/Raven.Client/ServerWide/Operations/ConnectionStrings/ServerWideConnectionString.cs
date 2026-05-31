@@ -68,6 +68,17 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             var json = ConnectionString?.ToJson() ?? new DynamicJsonValue();
             json[nameof(Type)] = Type.ToString();
             json[nameof(ExcludedDatabases)] = ExcludedDatabases;
+            return json;
+        }
+
+        /// <summary>
+        /// Produces the JSON returned to the Studio/clients on GET, including the server-computed
+        /// <see cref="UsedBy"/> metadata. The plain <see cref="ToJson"/> is used for persistence
+        /// (cluster state and per-database propagation) and intentionally omits <see cref="UsedBy"/>.
+        /// </summary>
+        internal DynamicJsonValue ToStudioJson()
+        {
+            var json = ToJson();
             json[nameof(UsedBy)] = new DynamicJsonArray(UsedBy.Select(x => x.ToJson()));
             return json;
         }

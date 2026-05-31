@@ -100,7 +100,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         {
             return new DynamicJsonValue
             {
-                [nameof(Results)] = new DynamicJsonArray(Results.Select(x => x.ToJson()))
+                [nameof(Results)] = new DynamicJsonArray(Results.Select(x => x.ToStudioJson()))
             };
         }
 

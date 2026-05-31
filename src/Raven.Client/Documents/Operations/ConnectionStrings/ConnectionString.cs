@@ -34,8 +34,19 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(UsedBy)] = new DynamicJsonArray(UsedBy.Select(x => x.ToJson())),
             };
+        }
+
+        /// <summary>
+        /// Produces the JSON returned to the Studio/clients on GET, including the server-computed
+        /// <see cref="UsedBy"/> metadata. The plain <see cref="ToJson"/> is used for persistence and
+        /// intentionally omits <see cref="UsedBy"/> so it is never stored or propagated.
+        /// </summary>
+        internal DynamicJsonValue ToStudioJson()
+        {
+            var json = ToJson();
+            json[nameof(UsedBy)] = new DynamicJsonArray(UsedBy.Select(x => x.ToJson()));
+            return json;
         }
 
         public virtual DynamicJsonValue ToAuditJson()
