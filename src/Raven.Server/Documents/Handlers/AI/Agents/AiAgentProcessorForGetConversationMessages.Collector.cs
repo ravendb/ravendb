@@ -50,6 +50,20 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
         public List<AiConversationMessage> GetResults()
         {
+            // The collector overshoots the page by one "sentinel" result when more messages
+            // remain (see NeedsMore / CollectFromMessages). HasMoreMessages is decided here —
+            // and only here — from whether the sentinel actually materialized. This is robust
+            // against detail-level filtering, tool-response merging, and history-vs-origin
+            // traversal, which all make "messages scanned" an unreliable proxy for "results produced".
+            //
+            // The sentinel is always the last-appended result (forward: the newest extra;
+            // backward: the oldest extra), so we trim it BEFORE the reverse below.
+            if (_results.Count > _pageSize)
+            {
+                _hasMoreMessages = true;
+                _results.RemoveAt(_results.Count - 1);
+            }
+
             // Forward traversal collects oldest→newest (already chronological).
             // Backward traversal collects newest→oldest, so flip to match the DTO contract
             // ("Messages in chronological order (oldest first)").
@@ -81,8 +95,6 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                     // we finished passing the history docs -> we collect also from the origin doc
                     CollectFromMessages(_conversation.Messages);
                 }
-                else
-                    _hasMoreMessages = true; // if we don't visit the origin doc - we have more
             }
             else
             {
@@ -96,13 +108,14 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 {
                     CollectFromHistoryDoc(_conversation.LinkedConversations[i]);
                 }
-
-                if (NeedsMore == false)
-                    _hasMoreMessages = true;
             }
         }
 
-        private bool NeedsMore => _results.Count < _pageSize;
+        // Collect one result beyond the page (the "sentinel"): NeedsMore stays true until we hold
+        // pageSize + 1 results. Whether that extra result actually materialized is how GetResults()
+        // decides HasMoreMessages — robust against detail-level filtering and tool-response merging,
+        // which make "messages scanned" an unreliable proxy for "results produced".
+        private bool NeedsMore => _results.Count <= _pageSize;
 
         private void CollectFromHistoryDoc(string historyDocId)
         {
@@ -189,18 +202,15 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             if (startIndex >= endIndex)
                 return;
 
-            bool stoppedEarly = false;
-
+            // Stop once the sentinel (pageSize + 1) result has been collected. The
+            // HasMoreMessages decision is made later, in GetResults(), from its presence.
             if (_forward)
             {
                 for (int i = startIndex; i < endIndex; i++)
                 {
                     TryProcessMessage(messages, ref i);
-                    if (_results.Count >= _pageSize)
-                    {
-                        stoppedEarly = true; 
+                    if (_results.Count > _pageSize)
                         break;
-                    }
                 }
             }
             else
@@ -208,16 +218,10 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 for (int i = endIndex - 1; i >= startIndex; i--)
                 {
                     TryProcessMessage(messages, ref i);
-                    if (_results.Count >= _pageSize)
-                    {
-                        stoppedEarly = true; 
+                    if (_results.Count > _pageSize)
                         break;
-                    }
                 }
             }
-
-            if (stoppedEarly)
-                _hasMoreMessages = true;
         }
 
         private bool TryCollectToolResponse(BlittableJsonReaderObject msg)

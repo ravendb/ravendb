@@ -46,6 +46,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
 
             var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation, pageSize, detailLevel, before, after);
             collector.Collect();
+            var messages = collector.GetResults();
 
             var result = new AiConversationMessagesResult
             {
@@ -56,7 +57,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 LastMessageAt = conversation.LastMessageAt,
                 HasMoreMessages = collector.HasMoreMessages,
                 SubConversationIds = conversation.SubConversationIds.ToList(),
-                Messages = collector.GetResults(),
+                Messages = messages,
                 Attachments = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(
                     RequestHandler.Database, context, conversationId)
             };
