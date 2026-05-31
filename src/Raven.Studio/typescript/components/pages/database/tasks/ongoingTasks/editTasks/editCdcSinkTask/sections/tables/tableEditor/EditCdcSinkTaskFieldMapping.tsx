@@ -61,7 +61,7 @@ export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappi
                         <div>
                             Target property
                             <PopoverWithHoverWrapper message="The RavenDB document field where the source column value will be stored.">
-                                <Icon icon="info" color="info" margin="ms-1" />
+                                <Icon icon="info-new" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </div>
                         <div>
@@ -79,7 +79,7 @@ export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappi
                                     </>
                                 }
                             >
-                                <Icon icon="info" color="info" margin="ms-1" />
+                                <Icon icon="info-new" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </div>
                         <div></div>

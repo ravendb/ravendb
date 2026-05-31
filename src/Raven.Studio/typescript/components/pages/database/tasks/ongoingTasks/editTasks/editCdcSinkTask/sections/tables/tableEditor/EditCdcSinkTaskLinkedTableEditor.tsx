@@ -60,7 +60,7 @@ export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: Linke
                     <FormLabel>
                         Target property
                         <PopoverWithHoverWrapper message="The RavenDB document field that will hold the reference to the linked (related) document.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.propertyName`} />
@@ -78,7 +78,7 @@ export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: Linke
                                 </>
                             }
                         >
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.linkedCollectionName`} />
@@ -89,7 +89,7 @@ export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: Linke
                     <>
                         Join columns
                         <PopoverWithHoverWrapper message="The foreign key columns used to join this linked table to the parent table. Their values, combined with the linked collection name, form the related document ID.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </>
                 }

@@ -178,7 +178,7 @@ export default function EditCdcSinkTaskBasicSection() {
                                         </>
                                     }
                                 >
-                                    <Icon icon="info" color="info" margin="ms-1" />
+                                    <Icon icon="info-new" margin="ms-1" />
                                 </PopoverWithHoverWrapper>
                             </FormSwitch>
                         </FormGroup>

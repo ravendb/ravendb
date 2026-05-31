@@ -10,6 +10,55 @@ import { Icon } from "components/common/Icon";
 import AceEditor from "components/common/ace/AceEditor";
 import Code from "components/common/Code";
 
+export default function EditCdcSinkTaskPatchAdvancedField({ path }: { path: RootTablePath | EmbeddedTablePath }) {
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+
+    return (
+        <FormGroup marginClass="mb-0">
+            <FormLabel>
+                Patch
+                <PopoverWithHoverWrapper
+                    message={
+                        <>
+                            <p>
+                                A patch is a JavaScript snippet that runs on <strong>INSERT</strong> and{" "}
+                                <strong>UPDATE</strong> AFTER column mapping is applied and before the document is
+                                written to RavenDB.
+                            </p>
+                            <p>
+                                Use it when the mapped document needs additional changes, such as computed fields,
+                                aggregate values, metadata updates, or data loaded from related documents.
+                            </p>
+                        </>
+                    }
+                >
+                    <Icon icon="info-new" margin="ms-1" />
+                </PopoverWithHoverWrapper>
+            </FormLabel>
+            <FormAceEditor
+                control={control}
+                name={`${path}.patch`}
+                mode="javascript"
+                height="150px"
+                placeholder={patchPlaceholder}
+                actions={[
+                    { component: <AceEditor.FullScreenAction /> },
+                    { component: <AceEditor.FormatAction /> },
+                    {
+                        component: <AceEditor.HelpAction message={patchSyntaxHelp} />,
+                        position: "bottom",
+                    },
+                ]}
+                isFullScreenLabelHidden
+            />
+        </FormGroup>
+    );
+}
+
+const patchPlaceholder = `// Optional. Transforms 'this' (the document) AFTER column mapping for INSERT and UPDATE events.
+// e.g. this.FullName = $row.first_name + ' ' + $row.last_name;
+// Click the (?) icon on the right for syntax help and more examples.`;
+
 const ComputeFieldSyntaxHelp = () => {
     const code = `// $row contains the raw CDC row with all columns as-is from the source database
 this.FullName = ($row.first_name + ' ' + $row.last_name).trim();`;
@@ -89,10 +138,6 @@ if (customer) {
     );
 };
 
-const patchPlaceholder = `// Optional. Transforms 'this' (the document) AFTER column mapping for INSERT and UPDATE events.
-// e.g. this.FullName = $row.first_name + ' ' + $row.last_name;
-// Click the (?) icon on the right for syntax help and more examples.`;
-
 const VariablesLegend = () => (
     <div className="border border-secondary rounded-2 panel-bg-2 p-3">
         <div className="mb-2">
@@ -130,48 +175,3 @@ const patchSyntaxHelp = (
         <LoadRelatedDocumentSyntaxHelp />
     </div>
 );
-
-export default function EditCdcSinkTaskPatchAdvancedField({ path }: { path: RootTablePath | EmbeddedTablePath }) {
-    const { control } = useFormContext<EditCdcSinkTaskFormData>();
-
-    return (
-        <FormGroup marginClass="mb-0">
-            <FormLabel>
-                Patch
-                <PopoverWithHoverWrapper
-                    message={
-                        <>
-                            <p>
-                                A patch is a JavaScript snippet that runs on <strong>INSERT</strong> and{" "}
-                                <strong>UPDATE</strong> AFTER column mapping is applied and before the document is
-                                written to RavenDB.
-                            </p>
-                            <p>
-                                Use it when the mapped document needs additional changes, such as computed fields,
-                                aggregate values, metadata updates, or data loaded from related documents.
-                            </p>
-                        </>
-                    }
-                >
-                    <Icon icon="info" color="info" margin="ms-1" />
-                </PopoverWithHoverWrapper>
-            </FormLabel>
-            <FormAceEditor
-                control={control}
-                name={`${path}.patch`}
-                mode="javascript"
-                height="150px"
-                placeholder={patchPlaceholder}
-                actions={[
-                    { component: <AceEditor.FullScreenAction /> },
-                    { component: <AceEditor.FormatAction /> },
-                    {
-                        component: <AceEditor.HelpAction message={patchSyntaxHelp} />,
-                        position: "bottom",
-                    },
-                ]}
-                isFullScreenLabelHidden
-            />
-        </FormGroup>
-    );
-}

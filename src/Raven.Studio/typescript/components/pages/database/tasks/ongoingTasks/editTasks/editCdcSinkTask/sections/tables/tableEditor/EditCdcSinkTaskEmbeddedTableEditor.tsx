@@ -79,7 +79,7 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
                     <FormLabel>
                         Target property
                         <PopoverWithHoverWrapper message="The RavenDB document field where the embedded related data will be stored.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.propertyName`} />
@@ -100,7 +100,7 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
                                 </>
                             }
                         >
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormSelect control={control} name={`${path}.type`} options={relationTypeOptions} />
@@ -111,7 +111,7 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
                     <>
                         Primary key columns
                         <PopoverWithHoverWrapper message="Columns that uniquely identify rows in this related table.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </>
                 }
@@ -127,7 +127,7 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
                     <>
                         Join columns
                         <PopoverWithHoverWrapper message="Columns used to match rows in this related table with rows from the root table.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </>
                 }

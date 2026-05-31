@@ -34,7 +34,7 @@ export default function EditCdcSinkTaskRootTableEditor({ path }: { path: RootTab
                     <FormLabel>
                         Target collection
                         <PopoverWithHoverWrapper message="The RavenDB collection where documents generated from rows in the source table will be stored.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.collectionName`} />
@@ -45,7 +45,7 @@ export default function EditCdcSinkTaskRootTableEditor({ path }: { path: RootTab
                     <>
                         Primary key columns
                         <PopoverWithHoverWrapper message="Columns that uniquely identify each source row. Their values are used to derive the RavenDB document ID.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </>
                 }
