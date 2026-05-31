@@ -20,7 +20,7 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
         return null;
     }
 
-    const getQueueEtlUrl = (databaseName: string, id: number): string => {
+    const getQueueEtlUrl = (databaseName: string, id: number): string | null => {
         switch (connectionType) {
             case "Kafka":
                 return appUrl.forEditKafkaEtl(databaseName, id);
@@ -35,7 +35,7 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
         }
     };
 
-    const getQueueSinkUrl = (databaseName: string, id: number): string => {
+    const getQueueSinkUrl = (databaseName: string, id: number): string | null => {
         switch (connectionType) {
             case "Kafka":
                 return appUrl.forEditKafkaSink(databaseName, id);
