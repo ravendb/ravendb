@@ -538,6 +538,24 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             {
                 var truncateCount = _document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
                 truncateCount = int.Min(truncateCount, _document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
+
+                // Avoid splitting a tool call group (assistant with tool_calls + subsequent tool responses).
+                // If the cut point lands inside a group, advance past the tool responses to keep the group together.
+                int cutIndex = 1 + truncateCount; // first message to keep (0 is system prompt)
+                while (cutIndex < _document.Messages.Count)
+                {
+                    var msg = _document.Messages[cutIndex];
+                    if (msg.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) &&
+                        role == ChatCompletionClient.Constants.RequestFields.RoleToolValue)
+                    {
+                        cutIndex++;
+                        truncateCount++;
+                    }
+                    else
+                        break;
+                }
+
+                truncateCount = int.Min(truncateCount, _document.Messages.Count - 1);
                 if (truncateCount > 0)
                 {
                     var chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
@@ -718,7 +736,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 new DynamicJsonValue
                 {
                     [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleAssistantValue,
-                    [ChatCompletionClient.Constants.RequestFields.Content] = summarization.ResultPrefix + messagesSummary
+                    [ChatCompletionClient.Constants.RequestFields.Content] = summarization.ResultPrefix + messagesSummary,
+                    [ConversationDocument.SummaryProperty] = true
                 },
                 "system/msg"), usage);
 
