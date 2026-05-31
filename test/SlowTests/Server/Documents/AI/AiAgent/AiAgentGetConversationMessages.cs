@@ -1121,6 +1121,94 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.False(page3.HasMoreMessages, "No more messages after msg10");
     }
 
+    // Sentinel-pagination regression (RavenDB-24609): the collector internally peeks one extra
+    // result (pageSize + 1) to decide HasMoreMessages, then trims it before returning.
+    //
+    // - Exact-fill   (matching results == pageSize):     no sentinel materializes → HasMore=false,
+    //                                                    every matching message is returned.
+    // - One-extra    (matching results == pageSize + 1): sentinel materializes → HasMore=true,
+    //                                                    but the caller must never see it — the
+    //                                                    returned count must equal pageSize.
+    //
+    // The four [InlineData] rows below cover both axes (direction × exact-fill / one-extra)
+    // against the same 6-message conversation:
+    //   * backward, pageSize=5 → one-extra (sentinel = msg1, the oldest)
+    //   * backward, pageSize=6 → exact-fill (all 6 returned, no sentinel)
+    //   * forward (after=msg1), pageSize=4 → one-extra (sentinel = msg6, the newest)
+    //   * forward (after=msg1), pageSize=5 → exact-fill (5 remaining, all returned)
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(/* forward */ false, /* pageSize */ 5, /* expectedCount */ 5, /* expectedHasMore */ true,  /* expectedFirst */ "msg2", /* expectedLast */ "msg6")]
+    [InlineData(/* forward */ false, /* pageSize */ 6, /* expectedCount */ 6, /* expectedHasMore */ false, /* expectedFirst */ "msg1", /* expectedLast */ "msg6")]
+    [InlineData(/* forward */ true,  /* pageSize */ 4, /* expectedCount */ 4, /* expectedHasMore */ true,  /* expectedFirst */ "msg2", /* expectedLast */ "msg5")]
+    [InlineData(/* forward */ true,  /* pageSize */ 5, /* expectedCount */ 5, /* expectedHasMore */ false, /* expectedFirst */ "msg2", /* expectedLast */ "msg6")]
+    public async Task CanGetConversationMessages_SentinelPagination_RespectsPageBoundaries(
+        bool forward, int pageSize, int expectedCount, bool expectedHasMore, string expectedFirst, string expectedLast)
+    {
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        const int total = 6;
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (var tx = context.OpenWriteTransaction())
+        {
+            var messages = new Sparrow.Json.Parsing.DynamicJsonArray();
+            for (int i = 1; i <= total; i++)
+                messages.Add(MakeMsg(context, i % 2 == 1 ? "user" : "assistant", $"msg{i}", baseTime.AddMinutes(i)));
+
+            var doc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = AgentName,
+                ["Parameters"] = null,
+                ["Messages"] = messages,
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = baseTime.AddMinutes(total),
+                ["CreatedAt"] = baseTime,
+                ["Expires"] = null,
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection
+                }
+            }, "test-doc");
+            database.DocumentsStorage.Put(context, "chats/sentinel", null, doc);
+            tx.Commit();
+        }
+
+        var options = new GetConversationMessagesOptions
+        {
+            ConversationId = "chats/sentinel",
+            DetailLevel = AiConversationDetailLevel.Detailed,
+            PageSize = pageSize
+        };
+        if (forward)
+            options.After = baseTime.AddMinutes(1); // msg1's timestamp — paging starts at msg2
+
+        var result = await store.AI.GetConversationMessagesAsync(options);
+
+        // Count must match expectations — and crucially, must never exceed pageSize.
+        // The internal sentinel (pageSize + 1) must NEVER be exposed to the caller.
+        Assert.Equal(expectedCount, result.Messages.Count);
+        Assert.True(result.Messages.Count <= pageSize,
+            $"Returned count {result.Messages.Count} exceeded PageSize {pageSize} — the sentinel result must never reach the caller.");
+
+        Assert.Equal(expectedHasMore, result.HasMoreMessages);
+
+        // Chronological order (oldest first per the DTO contract) must hold in BOTH directions —
+        // backward paging collects newest→oldest and reverses on the way out, so a regression
+        // in the reverse step would surface here.
+        Assert.Equal(expectedFirst, result.Messages[0].Content);
+        Assert.Equal(expectedLast, result.Messages[^1].Content);
+        for (int i = 1; i < result.Messages.Count; i++)
+            Assert.True(result.Messages[i].Timestamp > result.Messages[i - 1].Timestamp,
+                $"Message {i} timestamp ({result.Messages[i].Timestamp:O}) must come after message {i - 1} ({result.Messages[i - 1].Timestamp:O}).");
+    }
+
     [RavenFact(RavenTestCategory.Ai)]
     public async Task CanGetConversationMessages_SubConversationIds()
     {
