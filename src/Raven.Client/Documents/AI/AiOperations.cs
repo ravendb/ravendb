@@ -145,9 +145,47 @@ public class AiOperations
     /// <param name="conversationId">The unique identifier for the conversation.</param>
     /// <param name="creationOptions">Options for creating the conversation.</param>
     /// <param name="changeVector">An optional change vector for concurrency control.</param>
-    public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null) => 
+    public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null) =>
         new AiConversation(this, agentId, conversationId, creationOptions, changeVector);
 
     internal IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, bool? debug, string changeVector = null) =>
         new AiConversation(this, agentId, conversationId, creationOptions, changeVector, debug);
+
+    /// <summary>
+    /// Reads messages from an AI conversation. Returns the most recent messages by default.
+    /// </summary>
+    /// <param name="conversationId">The conversation document ID.</param>
+    /// <param name="token">Cancellation token.</param>
+    public Task<AiConversationMessagesResult> GetConversationMessagesAsync(string conversationId, CancellationToken token = default)
+    {
+        return _executor.SendAsync(new GetConversationMessagesOperation(conversationId), token);
+    }
+
+    /// <summary>
+    /// Reads messages from an AI conversation with full control over paging and filtering.
+    /// </summary>
+    /// <param name="parameters">Parameters controlling paging (Before/After timestamps), page size, and view filter.</param>
+    /// <param name="token">Cancellation token.</param>
+    public Task<AiConversationMessagesResult> GetConversationMessagesAsync(GetConversationMessagesOptions parameters, CancellationToken token = default)
+    {
+        return _executor.SendAsync(new GetConversationMessagesOperation(parameters), token);
+    }
+
+    /// <summary>
+    /// Reads messages from an AI conversation. Returns the most recent messages by default.
+    /// </summary>
+    /// <param name="conversationId">The conversation document ID.</param>
+    public AiConversationMessagesResult GetConversationMessages(string conversationId)
+    {
+        return AsyncHelpers.RunSync(() => GetConversationMessagesAsync(conversationId));
+    }
+
+    /// <summary>
+    /// Reads messages from an AI conversation with full control over paging and filtering.
+    /// </summary>
+    /// <param name="parameters">Parameters controlling paging (Before/After timestamps), page size, and view filter.</param>
+    public AiConversationMessagesResult GetConversationMessages(GetConversationMessagesOptions parameters)
+    {
+        return AsyncHelpers.RunSync(() => GetConversationMessagesAsync(parameters));
+    }
 }

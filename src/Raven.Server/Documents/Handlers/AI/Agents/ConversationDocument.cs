@@ -249,10 +249,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public const string DateProperty = "date";
     public const string UsageProperty = "usage";
+    public const string SummaryProperty = "summary";
 
     public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg, AiUsage usage)
     {
         var currentDate = DateTime.UtcNow;
+        if (currentDate <= LastMessageAt)
+            currentDate = LastMessageAt.AddTicks(1);
+
         msg.Modifications ??= new DynamicJsonValue(msg);
         msg.Modifications[DateProperty] = currentDate;
         if (usage != null)

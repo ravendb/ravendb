@@ -50,4 +50,14 @@ public class AiAgentHandler : DatabaseRequestHandler
             await processor.ExecuteAsync();
         }
     }
+
+
+    [RavenAction("/databases/*/ai/conversation/messages", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetConversationMessages()
+    {
+        using (var processor = new AiAgentProcessorForGetConversationMessages(this))
+        {
+            await processor.ExecuteAsync();
+        }
+    }
 }
