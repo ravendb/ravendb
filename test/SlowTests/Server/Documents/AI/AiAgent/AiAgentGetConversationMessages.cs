@@ -1253,18 +1253,6 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         }, "msg");
     }
 
-    private static BlittableJsonReaderObject MakeToolResponse(DocumentsOperationContext context,
-        string callId, string content, DateTime date)
-    {
-        return context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
-        {
-            ["role"] = "tool",
-            ["tool_call_id"] = callId,
-            ["content"] = content,
-            ["date"] = date
-        }, "msg");
-    }
-
     #endregion
 
     #region Helpers

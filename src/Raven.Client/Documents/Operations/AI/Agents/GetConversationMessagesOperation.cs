@@ -35,9 +35,9 @@ public sealed class GetConversationMessagesOptions
     public DateTime? After { get; set; }
 
     /// <summary>
-    /// Maximum number of messages to return. Default: 25.
+    /// Maximum number of messages to return. Default: int.MaxValue.
     /// </summary>
-    public int PageSize { get; set; } = 25;
+    public int PageSize { get; set; } = int.MaxValue;
 
     /// <summary>
     /// Controls the level of detail in returned messages.
@@ -96,7 +96,7 @@ public sealed class GetConversationMessagesOperation : IMaintenanceOperation<AiC
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/ai/conversation/messages")
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/ai/agent/conversation/messages")
                 .Append($"?conversationId={Uri.EscapeDataString(_params.ConversationId)}");
 
             if (_params.Before.HasValue)
