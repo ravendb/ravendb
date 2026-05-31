@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             if (_incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub)
             {
-                if (handledMessageType == ReplicationMessageType.Documents)
+                if (handledMessageType == ReplicationMessageType.Documents && _lastBatchChangeVector != null)
                 {
                     long hubEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
                     _batchHistory[_batchHistoryHead] = (hubEtag, _lastBatchChangeVector);
