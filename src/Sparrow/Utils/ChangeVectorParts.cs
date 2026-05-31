@@ -79,23 +79,6 @@ internal static class ChangeVectorParts
     }
 
     /// <summary>
-    /// Returns the version part of a composite change vector, or the original mono vector unchanged.
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// S1:500-dbS|A:10-dbA => A:10-dbA
-    /// A:10-dbA            => A:10-dbA
-    /// </code>
-    /// </example>
-    public static string GetVersion(string changeVector)
-    {
-        var separatorIndex = GetCompositeSeparatorIndex(changeVector.AsSpan());
-        return separatorIndex < 0
-            ? changeVector
-            : changeVector.Substring(separatorIndex + 1);
-    }
-
-    /// <summary>
     /// Finds the single composite separator, returning -1 for a mono change vector and rejecting multiple separators.
     /// </summary>
     /// <example>

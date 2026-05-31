@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils;
 
@@ -15,6 +18,10 @@ public sealed class ChangeVector
     internal static readonly PerCoreContainer<FastList<ChangeVector>> PerCoreChangeVectors = new PerCoreContainer<FastList<ChangeVector>>(32);
 
     private const char Separator = '|';
+    [ThreadStatic] private static List<ChangeVectorSpanEntry> ChangeVectorEntryBuffer;
+    [ThreadStatic] private static List<string> ChangeVectorMergeStringBuffer;
+    [ThreadStatic] private static StringBuilder ChangeVectorStringBuffer;
+
     private string _changeVector;
 
     private ChangeVector _order;
@@ -22,6 +29,16 @@ public sealed class ChangeVector
 
     private ChangeVector _version;
     public ChangeVector Version => _version ?? this;
+
+    static ChangeVector()
+    {
+        ThreadLocalCleanup.ReleaseThreadLocalState += () =>
+        {
+            ChangeVectorEntryBuffer = null;
+            ChangeVectorMergeStringBuffer = null;
+            ChangeVectorStringBuffer = null;
+        };
+    }
 
     public ChangeVector(string changeVector, IChangeVectorOperationContext context)
         : this(changeVector, throwOnRecursion: false, context)
@@ -45,17 +62,15 @@ public sealed class ChangeVector
         if (changeVector == null)
             return;
 
-        if (changeVector.Contains(Separator))
+        var changeVectorSpan = changeVector.AsSpan();
+        var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVectorSpan);
+        if (separatorIndex >= 0)
         {
             if (throwOnRecursion)
-                throw new ArgumentException("Recursion was detected");
+                throw new ArgumentException("Nested composite change vector was detected while parsing a composite change vector. A change vector part must be flat; this indicates a bug in change vector construction.");
 
-            var parts = changeVector.Split(Separator);
-            if (parts.Length != 2)
-                throw new ArgumentException($"Invalid change vector {changeVector}");
-
-            _order = context.GetChangeVector(parts[0], throwOnRecursion: true);
-            _version = context.GetChangeVector(parts[1], throwOnRecursion: true);
+            _order = context.GetChangeVector(changeVectorSpan.Slice(0, separatorIndex).ToString(), throwOnRecursion: true);
+            _version = context.GetChangeVector(changeVectorSpan.Slice(separatorIndex + 1).ToString(), throwOnRecursion: true);
             return;
         }
 
@@ -229,13 +244,42 @@ public sealed class ChangeVector
 
     public static ChangeVector Merge(List<ChangeVector> changeVectors, IChangeVectorOperationContext context)
     {
-        var result = changeVectors[0];
-        for (int i = 1; i < changeVectors.Count; i++)
+        ChangeVectorMergeStringBuffer?.Clear();
+
+        if (changeVectors.Count == 0)
+            return null;
+
+        ChangeVector singleChangeVector = null;
+        int count = 0;
+
+        for (int i = 0; i < changeVectors.Count; i++)
         {
-            result = Merge(result, changeVectors[i], context);
+            var changeVector = changeVectors[i];
+            if (changeVector == null)
+                continue;
+
+            singleChangeVector = changeVector;
+            count++;
         }
 
-        return result;
+        if (count == 0)
+            return null;
+
+        if (count == 1)
+            return singleChangeVector;
+
+        var changeVectorStrings = ChangeVectorMergeStringBuffer ??= [];
+
+        for (int i = 0; i < changeVectors.Count; i++)
+        {
+            var changeVector = changeVectors[i];
+            if (changeVector == null)
+                continue;
+
+            changeVectorStrings.Add(changeVector.AsString());
+        }
+
+        return context.GetChangeVector(ChangeVectorMerger.Merge(CollectionsMarshal.AsSpan(changeVectorStrings)));
     }
 
     public static int CompareVersion(ChangeVector changeVector1, ChangeVector changeVector2) => 
@@ -254,10 +298,38 @@ public sealed class ChangeVector
 
     public ChangeVector RemoveId(string id, IChangeVectorOperationContext context)
     {
-        if (TryRemoveIds(new HashSet<string>(capacity: 1) { id }, context, out var result))
+        if (TryRemoveId(id, context, out ChangeVector result))
             return result;
 
         return this;
+    }
+
+    private bool TryRemoveId(string id, IChangeVectorOperationContext context, out ChangeVector changeVector)
+    {
+        changeVector = this;
+
+        if (IsNullOrEmpty || id == null)
+            return false;
+
+        if (string.IsNullOrEmpty(_changeVector) == false)
+        {
+            if (TryRemoveIdInternal(_changeVector, id, out var newChangeVector) == false)
+                return false;
+
+            changeVector = context.GetChangeVector(newChangeVector);
+            return true;
+        }
+
+        var versionSuccess = TryRemoveIdInternal(Version._changeVector, id, out var newVersionChangeVector);
+        var orderSuccess = TryRemoveIdInternal(Order._changeVector, id, out var newOrderChangeVector);
+
+        if (versionSuccess || orderSuccess)
+        {
+            changeVector = context.GetChangeVector(newVersionChangeVector, newOrderChangeVector);
+            return true;
+        }
+
+        return false;
     }
 
     public bool TryRemoveIds(HashSet<string> ids, IChangeVectorOperationContext context, out ChangeVector changeVector)
@@ -294,10 +366,25 @@ public sealed class ChangeVector
 
         static bool TryRemoveIdsInternal(string changeVector, HashSet<string> ids, out string newChangeVector)
         {
-            var entries = changeVector.ToChangeVectorList();
-            if (entries.RemoveAll(x => ids.Contains(x.DbId)) > 0)
+            var entries = ChangeVectorEntryBuffer ??= [];
+            entries.Clear();
+
+            bool removed = false;
+            var enumerator = new ChangeVectorEnumerator(changeVector.AsSpan());
+            while (enumerator.MoveNext())
             {
-                newChangeVector = entries.SerializeVector();
+                if (ContainsId(ids, enumerator.DbId))
+                {
+                    removed = true;
+                    continue;
+                }
+
+                entries.Add(new ChangeVectorSpanEntry(enumerator.NodeTag, enumerator.Etag, enumerator.DbIdStart, enumerator.DbIdLength));
+            }
+
+            if (removed)
+            {
+                newChangeVector = SerializeChangeVector(changeVector, entries);
                 return true;
             }
 
@@ -306,15 +393,53 @@ public sealed class ChangeVector
         }
     }
 
+    private static bool TryRemoveIdInternal(string changeVector, string id, out string newChangeVector)
+    {
+        var entries = ChangeVectorEntryBuffer ??= [];
+        entries.Clear();
+
+        bool removed = false;
+        var idSpan = id.AsSpan();
+        var enumerator = new ChangeVectorEnumerator(changeVector.AsSpan());
+        while (enumerator.MoveNext())
+        {
+            if (enumerator.DbId.SequenceEqual(idSpan))
+            {
+                removed = true;
+                continue;
+            }
+
+            entries.Add(new ChangeVectorSpanEntry(enumerator.NodeTag, enumerator.Etag, enumerator.DbIdStart, enumerator.DbIdLength));
+        }
+
+        if (removed)
+        {
+            newChangeVector = SerializeChangeVector(changeVector, entries);
+            return true;
+        }
+
+        newChangeVector = changeVector;
+        return false;
+    }
+
     private ChangeVector StripTags(string tag, string exclude, IChangeVectorOperationContext context)
     {
         if (IsNullOrEmpty)
             return this;
 
         if (string.IsNullOrEmpty(_changeVector) == false)
-            return context.GetChangeVector(StripTags(_changeVector, tag, exclude));
+        {
+            var stripped = StripTags(_changeVector, tag, exclude);
+            return ReferenceEquals(stripped, _changeVector)
+                ? this
+                : context.GetChangeVector(stripped);
+        }
 
-        return context.GetChangeVector(StripTags(Version._changeVector, tag, exclude), StripTags(Order._changeVector, tag, exclude));
+        var version = StripTags(Version._changeVector, tag, exclude);
+        var order = StripTags(Order._changeVector, tag, exclude);
+        return ReferenceEquals(version, Version._changeVector) && ReferenceEquals(order, Order._changeVector)
+            ? this
+            : context.GetChangeVector(version, order);
     }
 
     public ChangeVector StripMoveTag(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.MoveTag, exclude: null, context);
@@ -335,20 +460,67 @@ public sealed class ChangeVector
         if (from.Contains(tag, StringComparison.OrdinalIgnoreCase) == false)
             return from;
 
-        var newChangeVector = new List<ChangeVectorEntry>();
-        var changeVectorList = from.ToChangeVectorList();
+        var newChangeVector = ChangeVectorEntryBuffer ??= [];
+        newChangeVector.Clear();
         var tagAsInt = ChangeVectorParser.ParseNodeTag(tag.AsSpan(), 0, tag.Length - 1);
+        var excludeSpan = exclude.AsSpan();
 
-        foreach (var entry in changeVectorList)
+        var enumerator = new ChangeVectorEnumerator(from.AsSpan());
+        while (enumerator.MoveNext())
         {
-            if (entry.NodeTag != tagAsInt ||
-                exclude?.Contains(entry.DbId) == true)
-            {
-                newChangeVector.Add(entry);
-            }
+            if (enumerator.NodeTag != tagAsInt ||
+                (exclude != null && excludeSpan.IndexOf(enumerator.DbId) >= 0))
+                newChangeVector.Add(new ChangeVectorSpanEntry(enumerator.NodeTag, enumerator.Etag, enumerator.DbIdStart, enumerator.DbIdLength));
         }
 
-        return newChangeVector.SerializeVector();
+        return SerializeChangeVector(from, newChangeVector);
+    }
+
+    private static bool ContainsId(HashSet<string> ids, ReadOnlySpan<char> dbId)
+    {
+        return ids.TryGetAlternateLookup<ReadOnlySpan<char>>(out var lookup)
+            ? lookup.Contains(dbId)
+            : ids.Contains(dbId.ToString());
+    }
+
+    private static string SerializeChangeVector(string changeVector, List<ChangeVectorSpanEntry> entries)
+    {
+        if (entries.Count == 0)
+            return string.Empty;
+
+        CollectionsMarshal.AsSpan(entries).Sort(new ChangeVectorSpanEntryComparer(changeVector));
+
+        var sb = ChangeVectorStringBuffer ??= new StringBuilder();
+        sb.Clear();
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (i != 0)
+                sb.Append(", ");
+
+            entries[i].Append(sb, changeVector);
+        }
+
+        return sb.ToString();
+    }
+
+    private readonly struct ChangeVectorSpanEntry(int nodeTag, long etag, int dbIdStart, int dbIdLength)
+    {
+        public ReadOnlySpan<char> GetDbId(string changeVector) => changeVector.AsSpan(dbIdStart, dbIdLength);
+
+        public void Append(StringBuilder sb, string changeVector)
+        {
+            ChangeVectorExtensions.ToBase26(sb, nodeTag);
+            sb.Append(':').Append(etag).Append('-').Append(GetDbId(changeVector));
+        }
+    }
+
+    private readonly struct ChangeVectorSpanEntryComparer(string changeVector) : IComparer<ChangeVectorSpanEntry>
+    {
+        public int Compare(ChangeVectorSpanEntry x, ChangeVectorSpanEntry y)
+        {
+            return x.GetDbId(changeVector).CompareTo(y.GetDbId(changeVector), StringComparison.Ordinal);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -11,19 +11,12 @@ namespace Raven.Server.Documents.Replication
         public const string TrxnTag = "TRXN";
         public const string SinkTag = "SINK";
         public const string MoveTag = "MOVE";
+        public const int DbBase64IdSize = 23;
 
         public static readonly int RaftInt = ParseNodeTag(RaftTag.AsSpan(), 0, RaftTag.Length - 1);
         public static readonly int TrxnInt = ParseNodeTag(TrxnTag.AsSpan(), 0, TrxnTag.Length - 1);
         public static readonly int SinkInt = ParseNodeTag(SinkTag.AsSpan(), 0, SinkTag.Length - 1);
         public static readonly int MoveInt = ParseNodeTag(MoveTag.AsSpan(), 0, MoveTag.Length - 1);
-        public static readonly int DbBase64IdSize = 23;
-
-        private enum State
-        {
-            Tag,
-            Etag,
-            Whitespace
-        }
 
         public static int ParseNodeTag(ReadOnlySpan<char> changeVector, int start, int end)
         {
@@ -70,76 +63,25 @@ namespace Raven.Server.Documents.Replication
                 return null;
 
             var list = new List<ChangeVectorEntry>();
-            var start = 0;
-            var current = 0;
-            var state = State.Tag;
-            int tag = -1;
-
-            while (current < changeVector.Length)
+            var enumerator = new ChangeVectorEnumerator(changeVector.AsSpan());
+            while (enumerator.MoveNext())
             {
-                switch (state)
+                list.Add(new ChangeVectorEntry
                 {
-                    case State.Tag:
-                        if (changeVector[current] == ':')
-                        {
-                            tag = ParseNodeTag(changeVector.AsSpan(), start, current - 1);
-                            state = State.Etag;
-                            start = current + 1;
-                        }
-                        current++;
-                        break;
-                    case State.Etag:
-                        if (changeVector[current] == '-')
-                        {
-                            var etag = ParseEtag(changeVector.AsSpan(), start, current - 1);
-                            if (current + DbBase64IdSize > changeVector.Length)
-                                ThrowInvalidEndOfString("DbId", changeVector);
-                            list.Add(new ChangeVectorEntry
-                            {
-                                NodeTag = tag,
-                                Etag = etag,
-                                DbId = changeVector.Substring(current + 1, 22)
-                            });
-                            start = current + DbBase64IdSize;
-                            current = start;
-                            state = State.Whitespace;
-                        }
-                        current++;
-                        break;
-                    case State.Whitespace:
-                        if (char.IsWhiteSpace(changeVector[current]) ||
-                            changeVector[current] == ',')
-                        {
-                            start++;
-                            current++;
-                        }
-                        else
-                        {
-                            start = current;
-                            current++;
-                            state = State.Tag;
-                        }
-                        break;
-
-                    default:
-                        ThrowInvalidState(state, changeVector);
-                        break;
-                }
+                    NodeTag = enumerator.NodeTag,
+                    Etag = enumerator.Etag,
+                    DbId = enumerator.DbId.ToString()
+                });
             }
 
-            if (state == State.Whitespace)
-                return list;
-
-            ThrowInvalidEndOfString(state.ToString(), changeVector);
-            return null; // never hit
+            return list;
         }
 
         public static ChangeVectorEntry[] ToChangeVector(this string changeVector)
         {
-            if (string.IsNullOrEmpty(changeVector))
-                return Array.Empty<ChangeVectorEntry>();
-
-            return changeVector.ToChangeVectorList().ToArray();
+            return string.IsNullOrEmpty(changeVector)
+                ? []
+                : changeVector.ToChangeVectorList().ToArray();
         }
 
         [Conditional("DEBUG")]
@@ -157,15 +99,122 @@ namespace Raven.Server.Documents.Replication
         }
 
         [DoesNotReturn]
-        private static void ThrowInvalidEndOfString(string state, string cv)
+        internal static void ThrowInvalidEndOfString(string state, ReadOnlySpan<char> cv)
         {
-            throw new ArgumentException("Expected " + state + ", but got end of string in : " + cv);
+            throw new ArgumentException($"Expected '{state}' but got end of string in: '{cv}'");
         }
 
         [DoesNotReturn]
-        private static void ThrowInvalidState(State state, string cv)
+        internal static void ThrowInvalidState<TState>(TState state, ReadOnlySpan<char> cv)
         {
-            throw new ArgumentOutOfRangeException(state + " in " + cv);
+            throw new ArgumentOutOfRangeException(nameof(state), state,
+                $"Unexpected change vector parser state '{state}' while parsing: '{cv}'");
+        }
+    }
+
+    internal ref struct ChangeVectorEnumerator
+    {
+        private enum State
+        {
+            Tag,
+            Etag,
+            Whitespace
+        }
+
+        private readonly ReadOnlySpan<char> _changeVector;
+        private int _start;
+        private int _current;
+        private State _state;
+        private int _tag;
+
+        public ChangeVectorEnumerator(ReadOnlySpan<char> changeVector)
+        {
+            _changeVector = changeVector;
+            _start = 0;
+            _current = 0;
+            _state = State.Tag;
+            _tag = -1;
+            NodeTag = -1;
+            Etag = 0;
+            DbIdStart = -1;
+            DbIdLength = 0;
+        }
+
+        public int NodeTag { get; private set; }
+
+        public long Etag { get; private set; }
+
+        public ReadOnlySpan<char> DbId => _changeVector.Slice(DbIdStart, DbIdLength);
+
+        public int DbIdStart { get; private set; }
+
+        public int DbIdLength { get; private set; }
+
+        public bool MoveNext()
+        {
+            if (_changeVector.Length == 0)
+                return false;
+
+            while (_current < _changeVector.Length)
+            {
+                switch (_state)
+                {
+                    case State.Tag:
+                        if (_changeVector[_current] == ':')
+                        {
+                            _tag = ChangeVectorParser.ParseNodeTag(_changeVector, _start, _current - 1);
+                            _state = State.Etag;
+                            _start = _current + 1;
+                        }
+                        _current++;
+                        break;
+
+                    case State.Etag:
+                        if (_changeVector[_current] == '-')
+                        {
+                            var etag = ChangeVectorParser.ParseEtag(_changeVector, _start, _current - 1);
+                            if (_current + ChangeVectorParser.DbBase64IdSize > _changeVector.Length)
+                                ChangeVectorParser.ThrowInvalidEndOfString("DbId", _changeVector);
+
+                            NodeTag = _tag;
+                            Etag = etag;
+                            DbIdStart = _current + 1;
+                            DbIdLength = 22;
+
+                            _start = _current + ChangeVectorParser.DbBase64IdSize;
+                            _current = _start + 1;
+                            _state = State.Whitespace;
+                            return true;
+                        }
+                        _current++;
+                        break;
+
+                    case State.Whitespace:
+                        if (char.IsWhiteSpace(_changeVector[_current]) ||
+                            _changeVector[_current] == ',')
+                        {
+                            _start++;
+                            _current++;
+                        }
+                        else
+                        {
+                            _start = _current;
+                            _current++;
+                            _state = State.Tag;
+                        }
+                        break;
+
+                    default:
+                        ChangeVectorParser.ThrowInvalidState(_state, _changeVector);
+                        break;
+                }
+            }
+
+            if (_state == State.Whitespace)
+                return false;
+
+            ChangeVectorParser.ThrowInvalidEndOfString(_state.ToString(), _changeVector);
+            return false;
         }
     }
 }

@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -12,6 +14,12 @@ namespace FastTests.Server.Basic
 {
     public class ChangeVectorConflictStatusTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
+        private static string _stringResultSink;
+        private static ConflictStatus _conflictStatusResultSink;
+        private static long _longResultSink;
+        private static bool _boolResultSink;
+        private static ChangeVector _changeVectorResultSink;
+
         [RavenFact(RavenTestCategory.Replication)]
         public void EtagShouldNotOverflow()
         {
@@ -1051,6 +1059,20 @@ namespace FastTests.Server.Basic
         }
 
         [RavenFact(RavenTestCategory.Replication)]
+        public void GetConflictStatusSkipsExcludedDbIdsDuringMatchingButStillCountsThemTowardLocalLength()
+        {
+            var dbId = Guid.NewGuid();
+            var excludedDbId = Guid.NewGuid();
+            var exclude = new HashSet<string>(StringComparer.Ordinal) { excludedDbId.AsChangeVectorDbId() };
+
+            var remote = ChangeVector((dbId, 10, 0), (excludedDbId, 1, 1));
+            var local = ChangeVector((dbId, 1, 0), (excludedDbId, 100, 1));
+
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local, exclude));
+            Assert.Equal(0, MeasureSteadyStateAllocations(() => _conflictStatusResultSink = ChangeVectorUtils.GetConflictStatus(remote, local, exclude)));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
         public void ChangeVectorMergeShouldMergeCompositeOrderAndVersionSeparately()
         {
             var destinationDbId0 = Guid.NewGuid();
@@ -1082,6 +1104,62 @@ namespace FastTests.Server.Basic
         }
 
         [RavenFact(RavenTestCategory.Replication)]
+        public void StripSinkTagsWithGlobalChangeVectorShouldKeepSinkEntryWhoseDbIdIsPresent()
+        {
+            var retainedSinkDbId = Guid.NewGuid();
+            var strippedSinkDbId = Guid.NewGuid();
+            var regularDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+
+            var changeVector = context.GetChangeVector(ChangeVector(
+                (retainedSinkDbId, 100, ChangeVectorParser.SinkInt),
+                (strippedSinkDbId, 200, ChangeVectorParser.SinkInt),
+                (regularDbId, 300, 0)));
+            var globalChangeVector = ChangeVector((retainedSinkDbId, 10, 1));
+
+            var result = changeVector.StripSinkTags(globalChangeVector, context);
+
+            Assert.Equal(ChangeVector(
+                (retainedSinkDbId, 100, ChangeVectorParser.SinkInt),
+                (regularDbId, 300, 0)), result.AsString());
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void StripSinkTagsWithGlobalChangeVectorShouldKeepMatchingSinkEntriesInCompositeParts()
+        {
+            var retainedOrderSinkDbId = Guid.NewGuid();
+            var strippedOrderSinkDbId = Guid.NewGuid();
+            var regularOrderDbId = Guid.NewGuid();
+            var retainedVersionSinkDbId = Guid.NewGuid();
+            var strippedVersionSinkDbId = Guid.NewGuid();
+            var regularVersionDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+
+            var order = ChangeVector(
+                (retainedOrderSinkDbId, 100, ChangeVectorParser.SinkInt),
+                (strippedOrderSinkDbId, 200, ChangeVectorParser.SinkInt),
+                (regularOrderDbId, 300, 0));
+            var version = ChangeVector(
+                (retainedVersionSinkDbId, 400, ChangeVectorParser.SinkInt),
+                (strippedVersionSinkDbId, 500, ChangeVectorParser.SinkInt),
+                (regularVersionDbId, 600, 1));
+            var changeVector = context.GetChangeVector(version, order);
+            var globalChangeVector = ChangeVector(
+                (retainedOrderSinkDbId, 10, 2),
+                (retainedVersionSinkDbId, 20, 3));
+
+            var result = changeVector.StripSinkTags(globalChangeVector, context);
+
+            var expectedOrder = ChangeVector(
+                (retainedOrderSinkDbId, 100, ChangeVectorParser.SinkInt),
+                (regularOrderDbId, 300, 0));
+            var expectedVersion = ChangeVector(
+                (retainedVersionSinkDbId, 400, ChangeVectorParser.SinkInt),
+                (regularVersionDbId, 600, 1));
+            Assert.Equal($"{expectedOrder}|{expectedVersion}", result.AsString());
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
         public void DistanceShouldUseVersionPartForCompositeChangeVectors()
         {
             var destinationDbId = Guid.NewGuid();
@@ -1092,6 +1170,153 @@ namespace FastTests.Server.Basic
 
             Assert.Equal(4, ChangeVectorUtils.Distance(left, right));
             Assert.Equal(-4, ChangeVectorUtils.Distance(right, left));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void AtomicGuardIndexUsedByValidateAtomicGuardShouldComeFromVersionPartForCompositeChangeVector()
+        {
+            var clusterTransactionId = Guid.NewGuid();
+            var clusterTransactionIdString = clusterTransactionId.AsChangeVectorDbId();
+
+            var composite = $"{ChangeVector((clusterTransactionId, 900, 0))}|{ChangeVector((clusterTransactionId, 123, 1))}";
+
+            Assert.Equal(123, ChangeVectorUtils.GetVersionEtagById(composite, clusterTransactionIdString));
+            Assert.Equal(900, ChangeVectorUtils.GetOrderEtagById(composite, clusterTransactionIdString));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void SessionLastClusterTransactionIndexUsedByUpdateEntityDocumentInfoShouldComeFromVersionPartForCompositeChangeVector()
+        {
+            var clusterTransactionId = Guid.NewGuid();
+            var clusterTransactionIdString = clusterTransactionId.AsChangeVectorDbId();
+
+            var composite = $"{ChangeVector((clusterTransactionId, 700, 0))}|{ChangeVector((clusterTransactionId, 321, 1))}";
+
+            Assert.Equal(321, ChangeVectorUtils.GetVersionEtagById(composite, clusterTransactionIdString));
+            Assert.NotEqual(ChangeVectorUtils.GetOrderEtagById(composite, clusterTransactionIdString), ChangeVectorUtils.GetVersionEtagById(composite, clusterTransactionIdString));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void LegacyCounterImportEtagUsedByToCounterGroupShouldComeFromVersionPartForCompositeChangeVector()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var counterDbId = Guid.NewGuid();
+            var counterDbIdString = counterDbId.AsChangeVectorDbId();
+
+            var composite = $"{ChangeVector((destinationDbId, 900, 0), (counterDbId, 800, 1))}|{ChangeVector((counterDbId, 456, 2))}";
+            var dbIdReadByLegacyCounterImport = composite.Substring(composite.Length - CountersStorage.DbIdAsBase64Size);
+
+            Assert.Equal(counterDbIdString, dbIdReadByLegacyCounterImport);
+            Assert.Equal(456, ChangeVectorUtils.GetVersionEtagById(composite, dbIdReadByLegacyCounterImport));
+            Assert.Equal(800, ChangeVectorUtils.GetOrderEtagById(composite, dbIdReadByLegacyCounterImport));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ConflictStatusAndDistanceShouldNotAllocateInSteadyState()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+
+            var remote = $"{ChangeVector((destinationDbId, 900, 0))}|{ChangeVector((sourceDbId, 104, 1))}";
+            var local = $"{ChangeVector((destinationDbId, 1, 0))}|{ChangeVector((sourceDbId, 100, 1))}";
+            var monoRemote = ChangeVector((sourceDbId, 104, 1));
+            var monoLocal = ChangeVector((sourceDbId, 100, 1));
+
+            Assert.Equal(0, MeasureSteadyStateAllocations(() => _conflictStatusResultSink = ChangeVectorUtils.GetConflictStatus(remote, local)));
+            Assert.Equal(0, MeasureSteadyStateAllocations(() => _conflictStatusResultSink = ChangeVectorUtils.GetConflictStatus(monoRemote, monoLocal)));
+            Assert.Equal(0, MeasureSteadyStateAllocations(() => _longResultSink = ChangeVectorUtils.Distance(remote, local)));
+            Assert.Equal(0, MeasureSteadyStateAllocations(() => _longResultSink = ChangeVectorUtils.Distance(monoRemote, monoLocal)));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void MergeShouldAllocateOnlyReturnedStringInSteadyState()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+
+            var monoLeft = ChangeVector((sourceDbId, 100, 0));
+            var monoRight = ChangeVector((sourceDbId, 110, 0));
+            var compositeLeft = $"{ChangeVector((destinationDbId, 900, 0))}|{ChangeVector((sourceDbId, 100, 1))}";
+            var compositeRight = $"{ChangeVector((destinationDbId, 950, 0))}|{ChangeVector((sourceDbId, 104, 1))}";
+
+            Assert.InRange(MeasureSteadyStateAllocations(() => _stringResultSink = ChangeVectorMerger.Merge(monoLeft, monoRight)), 1, 512);
+            Assert.InRange(MeasureSteadyStateAllocations(() => _stringResultSink = ChangeVectorMerger.Merge(compositeLeft, compositeRight)), 1, 768);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void ChangeVectorMergeListShouldStayWithinResultAllocationBudgetInSteadyState()
+        {
+            var destinationDbId = Guid.NewGuid();
+            var sourceDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+            var monoChangeVectors = new List<ChangeVector>
+            {
+                context.GetChangeVector(ChangeVector((sourceDbId, 100, 0))),
+                context.GetChangeVector(ChangeVector((sourceDbId, 110, 0)))
+            };
+            var compositeChangeVectors = new List<ChangeVector>
+            {
+                context.GetChangeVector($"{ChangeVector((destinationDbId, 900, 0))}|{ChangeVector((sourceDbId, 100, 1))}"),
+                context.GetChangeVector($"{ChangeVector((destinationDbId, 950, 0))}|{ChangeVector((sourceDbId, 104, 1))}")
+            };
+
+            Assert.InRange(MeasureSteadyStateAllocations(() => _changeVectorResultSink = Raven.Server.Utils.ChangeVector.Merge(monoChangeVectors, context)), 1, 1024);
+            Assert.InRange(MeasureSteadyStateAllocations(() => _changeVectorResultSink = Raven.Server.Utils.ChangeVector.Merge(compositeChangeVectors, context)), 1, 4096);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void StripMoveTagAndTryRemoveIdsShouldAvoidWorkWhenNothingChanges()
+        {
+            var dbId = Guid.NewGuid();
+            var missingDbId = Guid.NewGuid().AsChangeVectorDbId();
+            var context = new TestChangeVectorContext();
+            var changeVector = context.GetChangeVector(ChangeVector((dbId, 100, 0)));
+            var ids = new HashSet<string>(StringComparer.Ordinal) { missingDbId };
+
+            Assert.Equal(0, MeasureSteadyStateAllocations(() => _changeVectorResultSink = changeVector.StripMoveTag(context)));
+            Assert.Equal(0, MeasureSteadyStateAllocations(() =>
+            {
+                _boolResultSink = changeVector.TryRemoveIds(ids, context, out var result);
+                _changeVectorResultSink = result;
+            }));
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void StripMoveTagAndTryRemoveIdsShouldStayWithinResultAllocationBudgetWhenChanged()
+        {
+            var dbId = Guid.NewGuid();
+            var moveDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+            var withMoveTag = context.GetChangeVector(ChangeVector((dbId, 100, 0), (moveDbId, 200, ChangeVectorParser.MoveInt)));
+            var ids = new HashSet<string>(StringComparer.Ordinal) { dbId.AsChangeVectorDbId() };
+
+            Assert.InRange(MeasureSteadyStateAllocations(() => _changeVectorResultSink = withMoveTag.StripMoveTag(context)), 1, 1024);
+            Assert.InRange(MeasureSteadyStateAllocations(() =>
+            {
+                _boolResultSink = withMoveTag.TryRemoveIds(ids, context, out var result);
+                _changeVectorResultSink = result;
+            }), 1, 1024);
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void CompositeStripMoveTagAndTryRemoveIdsShouldStayWithinResultAllocationBudgetWhenChanged()
+        {
+            var orderDbId = Guid.NewGuid();
+            var versionDbId = Guid.NewGuid();
+            var orderMoveDbId = Guid.NewGuid();
+            var versionMoveDbId = Guid.NewGuid();
+            var context = new TestChangeVectorContext();
+            var order = ChangeVector((orderDbId, 100, 0), (orderMoveDbId, 200, ChangeVectorParser.MoveInt));
+            var version = ChangeVector((versionDbId, 300, 1), (versionMoveDbId, 400, ChangeVectorParser.MoveInt));
+            var changeVector = context.GetChangeVector(version, order);
+            var ids = new HashSet<string>(StringComparer.Ordinal) { orderDbId.AsChangeVectorDbId(), versionDbId.AsChangeVectorDbId() };
+
+            Assert.InRange(MeasureSteadyStateAllocations(() => _changeVectorResultSink = changeVector.StripMoveTag(context)), 1, 2048);
+            Assert.InRange(MeasureSteadyStateAllocations(() =>
+            {
+                _boolResultSink = changeVector.TryRemoveIds(ids, context, out var result);
+                _changeVectorResultSink = result;
+            }), 1, 2048);
         }
 
         public string ChangeVector(params (Guid dbId, long etag, int nodeTag)[] changeVectorEntries)
@@ -1107,6 +1332,23 @@ namespace FastTests.Server.Basic
             return dbId.AsChangeVectorDbId();
         }
 
+        private static long MeasureSteadyStateAllocations(Action action)
+        {
+            for (int i = 0; i < 32; i++)
+                action();
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            const int iterations = 1_000;
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < iterations; i++)
+                action();
+
+            return (GC.GetAllocatedBytesForCurrentThread() - before) / iterations;
+        }
+
         private sealed class TestChangeVectorContext : IChangeVectorOperationContext
         {
             public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion = false)
@@ -1117,8 +1359,8 @@ namespace FastTests.Server.Basic
             public ChangeVector GetChangeVector(string version, string order)
             {
                 return new ChangeVector(
-                    new ChangeVector(version, throwOnRecursion: true, this),
-                    new ChangeVector(order, throwOnRecursion: true, this));
+                    version: new ChangeVector(version, throwOnRecursion: true, context: this),
+                    order: new ChangeVector(order, throwOnRecursion: true, context: this));
             }
         }
     }

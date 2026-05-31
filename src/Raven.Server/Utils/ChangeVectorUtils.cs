@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -38,48 +39,48 @@ namespace Raven.Server.Utils
 
         public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString, HashSet<string> exclude = null)
         {
-            remoteAsString = ChangeVectorParts.GetVersion(remoteAsString);
-            localAsString = ChangeVectorParts.GetVersion(localAsString);
+            var remote = ChangeVectorParts.GetPart(remoteAsString.AsSpan(), ChangeVectorPart.Version);
+            var local = ChangeVectorParts.GetPart(localAsString.AsSpan(), ChangeVectorPart.Version);
 
-            if (remoteAsString == localAsString)
+            if (remote.SequenceEqual(local))
                 return ConflictStatus.AlreadyMerged;
 
-            if (string.IsNullOrEmpty(remoteAsString))
+            if (remote.Length == 0)
                 return ConflictStatus.AlreadyMerged;
 
-            if (string.IsNullOrEmpty(localAsString))
+            if (local.Length == 0)
                 return ConflictStatus.Update;
-
-            var local = localAsString.ToChangeVector();
-            var remote = remoteAsString.ToChangeVector();
 
             //any missing entries from a change vector are assumed to have zero value
             var localHasLargerEntries = false;
             var remoteHasLargerEntries = false;
 
+            var localLength = CountEntries(local);
             int numOfMatches = 0;
-            for (int i = 0; i < remote.Length; i++)
+            var remoteEnumerator = new ChangeVectorEnumerator(remote);
+            while (remoteEnumerator.MoveNext())
             {
                 bool found = false;
 
-                if (exclude?.Contains(remote[i].DbId) == true)
+                if (ContainsExcluded(exclude, remoteEnumerator.DbId))
                     continue;
 
-                for (int j = 0; j < local.Length; j++)
+                var localEnumerator = new ChangeVectorEnumerator(local);
+                while (localEnumerator.MoveNext())
                 {
-                    if (exclude?.Contains(local[j].DbId) == true)
+                    if (ContainsExcluded(exclude, localEnumerator.DbId))
                         continue;
 
-                    if (remote[i].DbId == local[j].DbId)
+                    if (remoteEnumerator.DbId.SequenceEqual(localEnumerator.DbId))
                     {
                         found = true;
                         numOfMatches++;
 
-                        if (remote[i].Etag > local[j].Etag)
+                        if (remoteEnumerator.Etag > localEnumerator.Etag)
                         {
                             remoteHasLargerEntries = true;
                         }
-                        else if (remote[i].Etag < local[j].Etag)
+                        else if (remoteEnumerator.Etag < localEnumerator.Etag)
                         {
                             localHasLargerEntries = true;
                         }
@@ -103,15 +104,39 @@ namespace Raven.Server.Utils
                 return ConflictStatus.AlreadyMerged; // change vectors identical
 
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
+
+            static int CountEntries(ReadOnlySpan<char> changeVector)
+            {
+                var count = 0;
+                var enumerator = new ChangeVectorEnumerator(changeVector);
+                while (enumerator.MoveNext())
+                    count++;
+
+                return count;
+            }
+
+            static bool ContainsExcluded(HashSet<string> exclude, ReadOnlySpan<char> dbId)
+            {
+                if (exclude == null)
+                    return false;
+
+                return exclude.TryGetAlternateLookup<ReadOnlySpan<char>>(out var lookup)
+                    ? lookup.Contains(dbId)
+                    : exclude.Contains(dbId.ToString());
+            }
         }
 
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
+        [ThreadStatic] private static List<ChangeVectorIndexEntry> _changeVectorIndexBufferA;
+        [ThreadStatic] private static List<ChangeVectorIndexEntry> _changeVectorIndexBufferB;
 
         static ChangeVectorUtils()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += () =>
             {
                 _changeVectorBuffer = null;
+                _changeVectorIndexBufferA = null;
+                _changeVectorIndexBufferB = null;
             };
         }
 
@@ -258,20 +283,25 @@ namespace Raven.Server.Utils
 
         public static long Distance(string changeVectorA, string changeVectorB)
         {
-            var a = ChangeVectorParts.GetVersion(changeVectorA)?.ToChangeVectorList();
-            var b = ChangeVectorParts.GetVersion(changeVectorB)?.ToChangeVectorList();
+            var a = _changeVectorIndexBufferA ??= [];
+            var b = _changeVectorIndexBufferB ??= [];
+            a.Clear();
+            b.Clear();
 
-            if (a == null && b == null)
+            FillChangeVectorIndexEntries(changeVectorA, a);
+            FillChangeVectorIndexEntries(changeVectorB, b);
+
+            if (a.Count == 0 && b.Count == 0)
                 return 0;
 
-            if (a == null)
+            if (a.Count == 0)
                 return -ConsumeRest(b, 0);
 
-            if (b == null)
+            if (b.Count == 0)
                 return ConsumeRest(a, 0);
 
-            a.Sort((x, y) => string.Compare(x.DbId, y.DbId, StringComparison.Ordinal));
-            b.Sort((x, y) => string.Compare(x.DbId, y.DbId, StringComparison.Ordinal));
+            CollectionsMarshal.AsSpan(a).Sort(new ChangeVectorIndexEntryComparer(changeVectorA));
+            CollectionsMarshal.AsSpan(b).Sort(new ChangeVectorIndexEntryComparer(changeVectorB));
 
             var aIndex = 0;
             var bIndex = 0;
@@ -288,7 +318,7 @@ namespace Raven.Server.Utils
                 var aElement = a[aIndex];
                 var bElement = b[bIndex];
 
-                var compare = string.Compare(aElement.DbId, bElement.DbId, StringComparison.Ordinal);
+                var compare = aElement.GetDbId(changeVectorA).CompareTo(bElement.GetDbId(changeVectorB), StringComparison.Ordinal);
                 
                 if (compare == 0)
                 {
@@ -309,7 +339,29 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static long ConsumeRest(List<ChangeVectorEntry> changeVectorEntries, in int index)
+        private static void FillChangeVectorIndexEntries(string changeVector, List<ChangeVectorIndexEntry> entries)
+        {
+            var version = GetVersionSpan(changeVector, out var versionStart);
+            var enumerator = new ChangeVectorEnumerator(version);
+            while (enumerator.MoveNext())
+                entries.Add(new ChangeVectorIndexEntry(enumerator.Etag, versionStart + enumerator.DbIdStart, enumerator.DbIdLength));
+        }
+
+        private static ReadOnlySpan<char> GetVersionSpan(string changeVector, out int versionStart)
+        {
+            var changeVectorSpan = changeVector.AsSpan();
+            var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVectorSpan);
+            if (separatorIndex < 0)
+            {
+                versionStart = 0;
+                return changeVectorSpan;
+            }
+
+            versionStart = separatorIndex + 1;
+            return changeVectorSpan.Slice(versionStart);
+        }
+
+        private static long ConsumeRest(List<ChangeVectorIndexEntry> changeVectorEntries, in int index)
         {
             var rest = 0L;
             for (int i = index; i < changeVectorEntries.Count; i++)
@@ -318,6 +370,20 @@ namespace Raven.Server.Utils
             }
 
             return rest;
+        }
+
+        private readonly struct ChangeVectorIndexEntry(long etag, int dbIdStart, int dbIdLength)
+        {
+            public readonly long Etag = etag;
+            public ReadOnlySpan<char> GetDbId(string changeVector) => changeVector.AsSpan(dbIdStart, dbIdLength);
+        }
+
+        private readonly struct ChangeVectorIndexEntryComparer(string changeVector) : IComparer<ChangeVectorIndexEntry>
+        {
+            public int Compare(ChangeVectorIndexEntry x, ChangeVectorIndexEntry y)
+            {
+                return x.GetDbId(changeVector).CompareTo(y.GetDbId(changeVector), StringComparison.Ordinal);
+            }
         }
 
         public static string GetClusterWideChangeVector(string databaseId, long prevCountPerShard, bool addTrxAddition, long index, string clusterTransactionId)

@@ -1,22 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using Lucene.Net.Support;
+using System.Text;
 using Raven.Server.Documents.Replication;
 using Sparrow.Utils;
-using SparrowChangeVectorPart = Sparrow.Utils.ChangeVectorPart;
 
 namespace Raven.Server.Utils;
 
 internal static class ChangeVectorMerger
 {
-    private enum State
-    {
-        Tag,
-        Etag,
-        Whitespace
-    }
-
     private enum MergeMode
     {
         Max,
@@ -25,6 +16,7 @@ internal static class ChangeVectorMerger
 
     [ThreadStatic] private static List<ChangeVectorEntry> MergeVectorBuffer;
     [ThreadStatic] private static List<ChangeVectorEntry> MergeVectorVersionBuffer;
+    [ThreadStatic] private static StringBuilder MergeVectorStringBuffer;
 
     static ChangeVectorMerger()
     {
@@ -32,6 +24,7 @@ internal static class ChangeVectorMerger
         {
             MergeVectorBuffer = null;
             MergeVectorVersionBuffer = null;
+            MergeVectorStringBuffer = null;
         };
     }
 
@@ -58,7 +51,7 @@ internal static class ChangeVectorMerger
 
         if (ChangeVectorParts.HasComposite(changeVectors) == false)
         {
-            var buffer = MergeVectorBuffer ??= new EquatableList<ChangeVectorEntry>();
+            var buffer = MergeVectorBuffer ??= [];
             buffer.Clear();
 
             foreach (var changeVector in changeVectors)
@@ -69,11 +62,11 @@ internal static class ChangeVectorMerger
                 ApplyFlatChangeVector(changeVector.AsSpan(), buffer, MergeMode.Max);
             }
 
-            return buffer.SerializeVector();
+            return SerializeVector(buffer);
         }
 
-        var orderBuffer = MergeVectorBuffer ??= new EquatableList<ChangeVectorEntry>();
-        var versionBuffer = MergeVectorVersionBuffer ??= new EquatableList<ChangeVectorEntry>();
+        var orderBuffer = MergeVectorBuffer ??= [];
+        var versionBuffer = MergeVectorVersionBuffer ??= [];
         orderBuffer.Clear();
         versionBuffer.Clear();
 
@@ -84,11 +77,11 @@ internal static class ChangeVectorMerger
 
             var changeVectorSpan = changeVector.AsSpan();
             var separatorIndex = ChangeVectorParts.GetCompositeSeparatorIndex(changeVectorSpan);
-            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVectorSpan, separatorIndex, SparrowChangeVectorPart.Order), orderBuffer, MergeMode.Max);
-            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVectorSpan, separatorIndex, SparrowChangeVectorPart.Version), versionBuffer, MergeMode.Max);
+            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVectorSpan, separatorIndex, ChangeVectorPart.Order), orderBuffer, MergeMode.Max);
+            ApplyFlatChangeVector(ChangeVectorParts.GetPart(changeVectorSpan, separatorIndex, ChangeVectorPart.Version), versionBuffer, MergeMode.Max);
         }
 
-        return ChangeVectorParts.ToComposite(orderBuffer.SerializeVector(), versionBuffer.SerializeVector());
+        return SerializeComposite(orderBuffer, versionBuffer);
     }
 
     /// <summary>
@@ -122,13 +115,13 @@ internal static class ChangeVectorMerger
 
         static string MergePartDown(ReadOnlySpan<string> vectors, ChangeVectorPart part)
         {
-            var buffer = MergeVectorBuffer ??= new EquatableList<ChangeVectorEntry>();
+            var buffer = MergeVectorBuffer ??= [];
             buffer.Clear();
 
             if (vectors.Length == 0 || string.IsNullOrEmpty(vectors[0]))
                 return null;
 
-            var first = ChangeVectorParts.GetPart(vectors[0].AsSpan(), ToSparrowPart(part));
+            var first = ChangeVectorParts.GetPart(vectors[0].AsSpan(), part);
             if (first.Length == 0)
                 return null;
 
@@ -139,7 +132,7 @@ internal static class ChangeVectorMerger
                 if (string.IsNullOrEmpty(vectors[i]))
                     return null;
 
-                var current = ChangeVectorParts.GetPart(vectors[i].AsSpan(), ToSparrowPart(part));
+                var current = ChangeVectorParts.GetPart(vectors[i].AsSpan(), part);
                 if (current.Length == 0)
                     return null;
 
@@ -147,7 +140,7 @@ internal static class ChangeVectorMerger
                     return null;
             }
 
-            return buffer.SerializeVector();
+            return SerializeVector(buffer);
         }
     }
 
@@ -174,71 +167,15 @@ internal static class ChangeVectorMerger
         if (mode == MergeMode.Max)
             ChangeVectorParser.AssertChangeVector(changeVector);
 
-        var current = 0;
-        var start = 0;
-        var state = State.Tag;
-        int tag = -1;
         bool matchedAnyEntry = false;
-
-        while (current < changeVector.Length)
+        var enumerator = new ChangeVectorEnumerator(changeVector);
+        while (enumerator.MoveNext())
         {
-            switch (state)
-            {
-                case State.Tag:
-                    if (changeVector[current] == ':')
-                    {
-                        tag = ChangeVectorParser.ParseNodeTag(changeVector, start, current - 1);
-                        state = State.Etag;
-                        start = current + 1;
-                    }
-                    current++;
-                    break;
-
-                case State.Etag:
-                    if (changeVector[current] == '-')
-                    {
-                        var etag = ChangeVectorParser.ParseEtag(changeVector, start, current - 1);
-
-                        if (current + ChangeVectorParser.DbBase64IdSize > changeVector.Length)
-                            ThrowInvalidEndOfString("DbId", changeVector);
-
-                        var dbId = changeVector.Slice(current + 1, 22);
-                        if (ApplyEntry(entries, tag, etag, dbId, mode) && mode == MergeMode.Min)
-                            matchedAnyEntry = true;
-
-                        start = current + ChangeVectorParser.DbBase64IdSize;
-                        current = start;
-                        state = State.Whitespace;
-                    }
-                    current++;
-                    break;
-
-                case State.Whitespace:
-                    if (char.IsWhiteSpace(changeVector[current]) ||
-                        changeVector[current] == ',')
-                    {
-                        start++;
-                        current++;
-                    }
-                    else
-                    {
-                        start = current;
-                        current++;
-                        state = State.Tag;
-                    }
-                    break;
-
-                default:
-                    ThrowInvalidState(state, changeVector);
-                    break;
-            }
+            if (ApplyEntry(entries, enumerator.NodeTag, enumerator.Etag, enumerator.DbId, mode) && mode == MergeMode.Min)
+                matchedAnyEntry = true;
         }
 
-        if (state == State.Whitespace)
-            return mode == MergeMode.Max || matchedAnyEntry;
-
-        ThrowInvalidEndOfString(state.ToString(), changeVector);
-        return false;
+        return mode == MergeMode.Max || matchedAnyEntry;
 
         static bool ApplyEntry(List<ChangeVectorEntry> entries, int tag, long etag, ReadOnlySpan<char> dbId, MergeMode mode)
         {
@@ -277,26 +214,54 @@ internal static class ChangeVectorMerger
         }
     }
 
-    private static SparrowChangeVectorPart ToSparrowPart(ChangeVectorPart part)
+    private static string SerializeVector(List<ChangeVectorEntry> entries)
     {
-        return part switch
+        if (entries.Count == 0)
+            return string.Empty;
+
+        entries.Sort(ChangeVectorEntryDbIdComparer.Instance);
+
+        var sb = MergeVectorStringBuffer ??= new StringBuilder();
+        sb.Clear();
+        AppendEntries(sb, entries);
+        return sb.ToString();
+    }
+
+    private static string SerializeComposite(List<ChangeVectorEntry> orderEntries, List<ChangeVectorEntry> versionEntries)
+    {
+        orderEntries.Sort(ChangeVectorEntryDbIdComparer.Instance);
+        versionEntries.Sort(ChangeVectorEntryDbIdComparer.Instance);
+
+        var sb = MergeVectorStringBuffer ??= new StringBuilder();
+        sb.Clear();
+        AppendEntries(sb, orderEntries);
+        sb.Append('|');
+        AppendEntries(sb, versionEntries);
+        return sb.ToString();
+    }
+
+    private static void AppendEntries(StringBuilder sb, List<ChangeVectorEntry> entries)
+    {
+        for (int i = 0; i < entries.Count; i++)
         {
-            ChangeVectorPart.Whole => SparrowChangeVectorPart.Whole,
-            ChangeVectorPart.Order => SparrowChangeVectorPart.Order,
-            ChangeVectorPart.Version => SparrowChangeVectorPart.Version,
-            _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
-        };
+            if (i != 0)
+                sb.Append(", ");
+
+            entries[i].Append(sb);
+        }
     }
 
-    [DoesNotReturn]
-    private static void ThrowInvalidEndOfString(string state, ReadOnlySpan<char> cv)
+    private sealed class ChangeVectorEntryDbIdComparer : IComparer<ChangeVectorEntry>
     {
-        throw new ArgumentException("Expected " + state + ", but got end of string in : " + cv.ToString());
-    }
+        public static readonly ChangeVectorEntryDbIdComparer Instance = new();
 
-    [DoesNotReturn]
-    private static void ThrowInvalidState(State state, ReadOnlySpan<char> cv)
-    {
-        throw new ArgumentOutOfRangeException(state + " in " + cv.ToString());
+        private ChangeVectorEntryDbIdComparer()
+        {
+        }
+
+        public int Compare(ChangeVectorEntry x, ChangeVectorEntry y)
+        {
+            return string.CompareOrdinal(x.DbId, y.DbId);
+        }
     }
 }

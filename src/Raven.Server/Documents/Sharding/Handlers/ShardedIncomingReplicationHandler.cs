@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     cvs.Add(replicationBatch.LastAcceptedChangeVector);
                 }
 
-                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(cvs), Utils.ChangeVectorPart.Version);
+                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(cvs), ChangeVectorPart.Version);
             }
         }
 
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 lastAcceptedEtag = Math.Min(acceptedEtag, lastAcceptedEtag);
             }
 
-            var mergedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(handlersChangeVector), Utils.ChangeVectorPart.Version);
+            var mergedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(handlersChangeVector), ChangeVectorPart.Version);
             return (mergedChangeVector, lastAcceptedEtag);
         }
 
@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (handlersChangeVector == null)
                 return (null, 0);
 
-            var mergedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(handlersChangeVector), Utils.ChangeVectorPart.Version);
+            var mergedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(handlersChangeVector), ChangeVectorPart.Version);
             return (mergedChangeVector, lastAcceptedEtag);
         }
 
@@ -289,7 +289,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     _lastSentEtagPerDestination[shardNumber] = batch.LastEtagAccepted;
                 }
 
-                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(cvs), Utils.ChangeVectorPart.Version);
+                _lastAcceptedChangeVector = ChangeVectorMerger.MergeDown(CollectionsMarshal.AsSpan(cvs), ChangeVectorPart.Version);
             }
         }
 

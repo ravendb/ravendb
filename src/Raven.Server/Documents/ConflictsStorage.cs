@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
@@ -11,13 +12,11 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -411,13 +410,11 @@ namespace Raven.Server.Documents
             return MergeConflictChangeVectors(context, conflictChangeVectors);
         }
 
-        private static ChangeVector MergeConflictChangeVectors(DocumentsOperationContext context, IEnumerable<string> changeVectors)
+        private static ChangeVector MergeConflictChangeVectors(DocumentsOperationContext context, List<string> changeVectors)
         {
-            var merged = context.GetChangeVector(null);
-            foreach (var changeVector in changeVectors)
-                merged = context.GetChangeVector(changeVector).MergeWith(merged, context);
-
-            return merged;
+            return changeVectors.Count == 0
+                ? context.GetChangeVector(null)
+                : context.GetChangeVector(ChangeVectorMerger.Merge(CollectionsMarshal.AsSpan(changeVectors)));
         }
 
         private ChangeVector MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
