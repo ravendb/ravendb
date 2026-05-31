@@ -1,0 +1,72 @@
+using System;
+using System.Collections.Generic;
+
+namespace Raven.Client.Documents.Operations.AI.Agents;
+
+public enum AiMessageRole
+{
+    System,
+    User,
+    Assistant,
+    Summary,
+    Internal
+}
+
+public class AiToolCallResult
+{
+    /// <summary>
+    /// The tool call ID from the model.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Tool name.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Arguments the model passed, as JSON string.
+    /// </summary>
+    public string Arguments { get; set; }
+
+    /// <summary>
+    /// The tool's response content. Null if still pending (ActionRequired).
+    /// </summary>
+    public string Result { get; set; }
+}
+
+public class AiConversationMessage
+{
+    /// <summary>
+    /// The role of the message sender.
+    /// </summary>
+    public AiMessageRole Role { get; set; }
+
+    /// <summary>
+    /// Text content. When the stored message has multiple text parts, they are
+    /// joined with line breaks. Null for assistant messages that only initiated tool calls.
+    /// </summary>
+    public string Content { get; set; }
+
+    /// <summary>
+    /// Attachment file names associated with this message, if any.
+    /// </summary>
+    public List<string> Attachments { get; set; }
+
+    /// <summary>
+    /// When this message was recorded (UTC). Guaranteed unique and monotonic
+    /// within a conversation — safe to use as a paging cursor.
+    /// </summary>
+    public DateTime Timestamp { get; set; }
+
+    /// <summary>
+    /// Tool calls initiated by this assistant message, with their responses inlined.
+    /// Null for non-assistant messages.
+    /// </summary>
+    public List<AiToolCallResult> ToolCalls { get; set; }
+
+    /// <summary>
+    /// Token usage for this message (typically on assistant messages).
+    /// </summary>
+    public AiUsage Usage { get; set; }
+}
