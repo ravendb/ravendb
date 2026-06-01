@@ -1,16 +1,20 @@
+import z from "zod";
 import type { WizardSteps } from "@/components/form/wizard/form-wizard";
-import type { AppStepId, AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/choose-data-source-step";
-import { useConnectSourceStep, ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect-source-step";
-import { MapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-suggest-step";
-import { useMapSchemaStep, MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map-schema-step";
-import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview-step";
-import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify-schema-step";
-import { useFormContext, useWatch } from "react-hook-form";
+import { appSchema, type AppStepId } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/data-source/choose-data-source-step";
+import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
+import { MapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-suggested/map-ai-suggest-step";
+import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
+import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-step";
+import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-step";
+import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
+import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
+import { useMapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-suggested/use-map-ai-suggest-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId> => {
     const connectSourceStep = useConnectSourceStep();
     const mapSchemaStep = useMapSchemaStep();
+    const mapAiSuggestStep = useMapAiSuggestStep();
 
     return {
         dataSource: {
@@ -46,6 +50,9 @@ export const useAppSteps = (): WizardSteps<AppStepId> => {
             title: "Map schema",
             description: "Review the draft mapping the AI proposed from your intent and the discovered schema.",
             bodyComponent: MapAiSuggestStep,
+            beforeNext: mapAiSuggestStep.mutateAsync,
+            status: mapAiSuggestStep.status,
+            error: mapAiSuggestStep.error,
         },
         mapManual: {
             id: "mapManual",
@@ -62,18 +69,7 @@ export const useAppSteps = (): WizardSteps<AppStepId> => {
     };
 };
 
-export const useAppFlow = (): AppStepId[] => {
-    const { control } = useFormContext<AppFormData>();
-    const dataSource = useWatch({
-        control,
-        name: "dataSource.source",
-    });
-
-    const mapSource = useWatch({
-        control,
-        name: "map.source",
-    });
-
+export const getAppFlow = ({ dataSource, mapSource }: { dataSource: string; mapSource: string }): AppStepId[] => {
     if (dataSource === "ravendb") {
         return ["dataSource", "preview"];
     }
@@ -86,4 +82,17 @@ export const useAppFlow = (): AppStepId[] => {
         mapSource === "ai-suggested" ? "mapAiSuggest" : "mapManual",
         "preview",
     ];
+};
+
+export const buildAppSchemaForFlow = (flow: AppStepId[]) => {
+    const schemaStepIds = Object.keys(appSchema.shape) as AppStepId[];
+    const skippedSchemaSteps = schemaStepIds.filter((stepId) => !flow.includes(stepId));
+
+    if (skippedSchemaSteps.length === 0) {
+        return appSchema;
+    }
+
+    return appSchema.extend(
+        Object.fromEntries(skippedSchemaSteps.map((stepId) => [stepId, z.any()])) as Record<string, z.ZodTypeAny>,
+    ) as typeof appSchema;
 };

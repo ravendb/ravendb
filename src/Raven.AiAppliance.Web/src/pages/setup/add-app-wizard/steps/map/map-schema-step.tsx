@@ -1,13 +1,10 @@
-/* eslint-disable react-refresh/only-export-components */
-import { useMutation } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { api } from "@/api/api";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { cn } from "@/lib/utils";
-import { tablesSchema, type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
+import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 
 export function MapSchemaStep(props: WizardBodyComponentProps) {
     const { control, setValue } = useFormContext<AppFormData>();
@@ -80,32 +77,4 @@ export function MapSchemaStep(props: WizardBodyComponentProps) {
             </div>
         </StepSection>
     );
-}
-
-export function useMapSchemaStep() {
-    const { getValues, setValue } = useFormContext<AppFormData>();
-
-    return useMutation({
-        mutationFn: async () => {
-            const { source, aiPrompt } = getValues("map");
-
-            if (source !== "ai-suggested") {
-                return true;
-            }
-
-            const result = await api.services.setup.suggestCdc({
-                intentPrompt: aiPrompt.trim(),
-            });
-
-            if (result.status !== "Success" || !result.configuration) {
-                throw new Error(
-                    result.rationale.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`,
-                );
-            }
-            const tables = tablesSchema.parse(result.configuration.tables);
-            setValue("mapAiSuggest.tables", tables);
-
-            return true;
-        },
-    });
 }

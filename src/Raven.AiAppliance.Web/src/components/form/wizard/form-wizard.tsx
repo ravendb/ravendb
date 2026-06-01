@@ -128,11 +128,11 @@ function WizardStepper<StepId extends string>({ flow, currentIndex, steps }: Wiz
                 const isComplete = index < currentIndex;
 
                 return (
-                    <li key={stepId} className="flex items-start gap-3">
+                    <li key={stepId} className="flex items-center gap-3">
                         <StepIndicator isComplete={isComplete} isCurrent={isCurrent} />
                         <span
                             className={cn(
-                                "pt-1 text-sm leading-5 text-muted-foreground",
+                                "text-sm leading-5 text-muted-foreground",
                                 (isCurrent || isComplete) && "font-semibold text-foreground",
                             )}
                         >

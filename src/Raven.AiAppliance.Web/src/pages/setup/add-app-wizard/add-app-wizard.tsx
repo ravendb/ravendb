@@ -1,47 +1,28 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { FormProvider, useForm } from "react-hook-form";
-import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
-import { appSchema, type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
+import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
-import { api } from "@/api/api";
-import { useMutation } from "@tanstack/react-query";
-import { useAppSteps, useAppFlow } from "@/pages/setup/add-app-wizard/app-wizard-flow";
+import { useAppSteps, buildAppSchemaForFlow, getAppFlow } from "@/pages/setup/add-app-wizard/app-wizard-flow";
 import { redirect } from "react-router";
 import { appRoutes } from "@/lib/app-routes";
+import { api } from "@/api/api";
+import { useMutation } from "@tanstack/react-query";
 
 export function AddAppWizard() {
     const resetStore = useSetupWizardStore((state) => state.reset);
 
     const form = useForm<AppFormData>({
         mode: "onChange",
-        defaultValues: {
-            dataSource: {
-                source: "external",
-            },
-            externalConnection: {
-                appName: "",
-                provider: "Npgsql",
-                connectionString: "",
-            },
-            verifySchema: {
-                tables: [],
-            },
-            map: {
-                source: "ai-suggested",
-                aiPrompt: "",
-            },
-            mapAiSuggest: {
-                tables: [],
-            },
-            mapManual: {
-                tables: [],
-            },
-            preview: {
-                table: "",
-            },
+        defaultValues: getDefaultValues(),
+        resolver: async (values, context, options) => {
+            const flow = getAppFlow({
+                dataSource: values.dataSource?.source,
+                mapSource: values.map?.source,
+            });
+            return zodResolver(buildAppSchemaForFlow(flow))(values, context, options);
         },
-        resolver: zodResolver(appSchema),
     });
 
     useEffect(() => {
@@ -49,7 +30,7 @@ export function AddAppWizard() {
         return resetStore;
     }, [resetStore]);
 
-    const provision = useMutation({
+    const provisionMutation = useMutation({
         mutationFn: async (formValues: AppFormData) => {
             await api.services.setup.provision({
                 appName: formValues.externalConnection.appName,
@@ -59,10 +40,7 @@ export function AddAppWizard() {
 
     return (
         <FormProvider {...form}>
-            <form
-                onSubmit={form.handleSubmit(async (formValues) => await provision.mutateAsync(formValues))}
-                className="h-full"
-            >
+            <form onSubmit={form.handleSubmit((x) => provisionMutation.mutateAsync(x))} className="h-full">
                 <AddAppWizardBody />
             </form>
         </FormProvider>
@@ -71,7 +49,59 @@ export function AddAppWizard() {
 
 function AddAppWizardBody() {
     const steps = useAppSteps();
-    const flow = useAppFlow();
+    const { control } = useFormContext<AppFormData>();
 
-    return <FormWizard steps={steps} flow={flow} cancel={() => redirect(appRoutes.dashboard())} />;
+    const dataSource = useWatch({
+        control,
+        name: "dataSource.source",
+    });
+
+    const mapSource = useWatch({
+        control,
+        name: "map.source",
+    });
+
+    const flow = getAppFlow({
+        dataSource,
+        mapSource,
+    });
+
+    return (
+        <FormWizard
+            steps={steps}
+            flow={flow}
+            cancel={() => {
+                redirect(appRoutes.dashboard());
+            }}
+        />
+    );
+}
+
+function getDefaultValues(): AppFormData {
+    return {
+        dataSource: {
+            source: "external",
+        },
+        externalConnection: {
+            appName: "",
+            provider: "Npgsql",
+            connectionString: "",
+        },
+        verifySchema: {
+            tables: [],
+        },
+        map: {
+            source: "ai-suggested",
+            aiPrompt: "",
+        },
+        mapAiSuggest: {
+            tables: [],
+        },
+        mapManual: {
+            tables: [],
+        },
+        preview: {
+            table: "",
+        },
+    };
 }

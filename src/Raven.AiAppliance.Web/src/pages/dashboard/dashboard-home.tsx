@@ -24,7 +24,7 @@ export function DashboardHome() {
                         <div className="flex items-center justify-between gap-3">
                             <h2 className="text-sm font-semibold">Available apps</h2>
                             <Button asChild size="sm">
-                                <Link to={appRoutes.setupConnect()}>
+                                <Link to={appRoutes.addApp()}>
                                     <Plus className="size-3.5" aria-hidden="true" />
                                     Add app
                                 </Link>
@@ -70,7 +70,7 @@ function EmptyAppsState() {
                     Create an app from a source database and CDC mapping.
                 </p>
                 <Button asChild size="sm" className="mt-5">
-                    <Link to={appRoutes.setupConnect()}>
+                    <Link to={appRoutes.addApp()}>
                         <Plus className="size-3.5" aria-hidden="true" />
                         Add app
                     </Link>
