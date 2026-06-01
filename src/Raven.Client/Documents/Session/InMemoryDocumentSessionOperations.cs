@@ -2511,7 +2511,7 @@ more responsive application.
                     var clusterId = _session.SessionInfo?.ClusterTransactionId;
                     if (clusterId is not null && documentInfo.ChangeVector is not null)
                     {
-                        var cv = documentInfo.ChangeVector.Split('|');
+                        var cv = documentInfo.ChangeVector.Split(ClientChangeVectorUtils.Separator);
                         if (cv.Length > 2)
                             throw new InvalidOperationException($"The document '{documentInfo.Id}' has invalid change vector '{documentInfo.ChangeVector}'");
 
