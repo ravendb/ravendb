@@ -1644,7 +1644,7 @@ namespace Raven.Server.Documents
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
                 ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
+                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr),
             };
 
             switch (result.Type)
@@ -1655,10 +1655,22 @@ namespace Raven.Server.Documents
                     break;
                 case Tombstone.TombstoneType.Revision:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
+                    break;
+                case Tombstone.TombstoneType.Attachment:
+                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
                     break;
             }
 
             return result;
+        }
+
+        // Field 9 (TombstoneTable.RevisionVersion) -- present only on Hashed-form RT/RAT writes; legacy 9-field rows have no slot.
+        private static string ReadRevisionVersion(JsonOperationContext context, ref TableValueReader tvr)
+        {
+            return tvr.Count > (int)TombstoneTable.RevisionVersion
+                ? TableValueToChangeVector(context, (int)TombstoneTable.RevisionVersion, ref tvr)
+                : null;
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)
