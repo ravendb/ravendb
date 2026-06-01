@@ -88,6 +88,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public int MissingAttachmentsRetries;
 
+        internal virtual bool CanOmitSourceItems => false;
+
         public readonly ReplicationMetricsCountersManager Metrics;
 
         public string OutgoingReplicationThreadName
@@ -567,6 +569,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         LastSentChangeVector = changeVector;
                         heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
                     }
+
+                    if (CanOmitSourceItems)
+                        heartbeat[nameof(ReplicationMessageHeader.CanOmitSourceItems)] = true;
+
                     context.Write(writer, heartbeat);
                     writer.Flush();
                 }
