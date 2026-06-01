@@ -421,9 +421,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, " +
                                                $"but had no numeric field of this value, this is likely a bug");
 
-            message.TryGet(nameof(ReplicationMessageHeader.CanOmitSourceItems), out bool canOmitSourceItems);
-
-            ReceiveSingleDocumentsBatch(context, itemsCount, attachmentStreamCount, lastDocumentEtag, stats, canOmitSourceItems);
+            ReceiveSingleDocumentsBatch(context, itemsCount, attachmentStreamCount, lastDocumentEtag, stats);
 
             InvokeOnAttachmentStreamsReceived(attachmentStreamCount);
 
@@ -469,8 +467,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             dataForReplicationCommand.ReplicatedAttachmentStreams = replicatedAttachmentStreams;
         }
 
-        protected void ReceiveSingleDocumentsBatch(TOperationContext context, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats,
-            bool canOmitSourceItems)
+        protected void ReceiveSingleDocumentsBatch(TOperationContext context, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
             if (Logger.IsDebugEnabled)
             {
@@ -490,8 +487,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 SourceDatabaseId = ConnectionInfo.SourceDatabaseId,
                 SupportedFeatures = SupportedFeatures,
                 IncomingHandler = this,
-                Logger = Logger,
-                CanOmitSourceItems = canOmitSourceItems
+                Logger = Logger
             })
             {
                 try
@@ -738,8 +734,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
             public RavenLogger Logger { get; set; }
-
-            public bool CanOmitSourceItems { get; set; }
 
             public void Dispose()
             {

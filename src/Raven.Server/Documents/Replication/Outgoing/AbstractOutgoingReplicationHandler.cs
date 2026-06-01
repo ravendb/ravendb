@@ -459,7 +459,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         protected virtual DynamicJsonValue GetInitialHandshakeRequest()
         {
-            return new DynamicJsonValue
+            var request = new DynamicJsonValue
             {
                 ["Type"] = "GetLastEtag",
                 [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _databaseName,
@@ -468,6 +468,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
                 [nameof(ReplicationLatestEtagRequest.ReplicationsType)] = GetReplicationType()
             };
+
+            if (CanOmitSourceItems)
+                request[nameof(ReplicationLatestEtagRequest.CanOmitSourceItems)] = true;
+
+            return request;
         }
 
         private ReplicationLatestEtagRequest.ReplicationType GetReplicationType()
@@ -569,9 +574,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         LastSentChangeVector = changeVector;
                         heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
                     }
-
-                    if (CanOmitSourceItems)
-                        heartbeat[nameof(ReplicationMessageHeader.CanOmitSourceItems)] = true;
 
                     context.Write(writer, heartbeat);
                     writer.Flush();

@@ -48,9 +48,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         }
 
         internal override bool CanOmitSourceItems =>
-            PullReplicationPathFilterUtils.CanOmitByAllowedPaths(PathsToSend) ||
-            PullReplicationPathFilterUtils.CanOmitByAllowedPaths(_destinationAcceptablePaths) ||
-            CanOmitSourceItemsByPreventingSinkToHubDeletions;
+            PullReplicationPathFilterUtils.CanOmitByAllowedPaths(PathsToSend);
 
         internal bool CanOmitSourceItemsByPreventingSinkToHubDeletions =>
             Destination is PullReplicationAsSink sink &&
