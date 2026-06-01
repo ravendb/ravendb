@@ -216,13 +216,15 @@ function ScopeBadges({ issue }: { issue: FlatIssue }) {
         return <StatePill bg="info">Cluster-Wide</StatePill>;
     }
 
+    const nodePills = issue.nodeTags.map((tag) => <NodeTagPill key={tag} tag={tag} />);
+
     if (issue.scope === "node") {
-        return <NodeTagPill tag={issue.nodeTag} />;
+        return <div className="hstack gap-1 align-items-center flex-wrap justify-content-end">{nodePills}</div>;
     }
 
     return (
-        <div className="hstack gap-1 align-items-start">
-            {issue.nodeTag && <NodeTagPill tag={issue.nodeTag} />}
+        <div className="hstack gap-1 align-items-center flex-wrap justify-content-end">
+            {nodePills}
             <StatePill bg="orchestrator">Database {issue.database}</StatePill>
         </div>
     );

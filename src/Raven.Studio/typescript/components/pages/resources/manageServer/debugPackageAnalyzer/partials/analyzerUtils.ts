@@ -18,7 +18,8 @@ export interface FlatIssue {
     severity: IssueSeverity;
     category: IssueCategory;
     scope: IssueScope;
-    nodeTag?: string;
+    // every node that reported this (identical) finding; empty for cluster-wide issues
+    nodeTags: string[];
     database?: string;
 }
 
@@ -41,46 +42,70 @@ export function scopeLabel(scope: IssueScope): string {
     }
 }
 
+// The server analyzes each node independently, so a database- or cluster-wide property (encryption
+// enabled, an index defined to use Corax, etc.) is reported once per node as an identical issue.
+// We collapse issues with identical content into a single item that carries every contributing node
+// tag. Generic and content-driven - no per-issue-type logic; only the node tag is allowed to differ.
 export function flattenIssues(summary: DebugPackageAnalysisSummary): FlatIssue[] {
-    const result: FlatIssue[] = [];
-    let counter = 0;
+    const byKey = new Map<string, FlatIssue>();
 
-    const push = (issue: DetectedIssue, scope: IssueScope, nodeTag?: string, database?: string) => {
+    const add = (issue: DetectedIssue, scope: IssueScope, nodeTag?: string, database?: string) => {
         if (!issue) {
             return;
         }
-        result.push({
-            key: `${scope}-${nodeTag ?? ""}-${database ?? ""}-${counter++}`,
+
+        const key = [
+            scope,
+            issue.Category,
+            issue.Severity,
+            database ?? "",
+            issue.Title ?? "",
+            issue.Description ?? "",
+            issue.RecommendedAction ?? "",
+        ].join(" ");
+
+        const existing = byKey.get(key);
+        if (existing) {
+            if (nodeTag && existing.nodeTags.includes(nodeTag) === false) {
+                existing.nodeTags.push(nodeTag);
+            }
+            return;
+        }
+
+        byKey.set(key, {
+            key,
             title: issue.Title,
             description: issue.Description,
             recommendedAction: issue.RecommendedAction,
             severity: issue.Severity,
             category: issue.Category,
             scope,
-            nodeTag,
+            nodeTags: nodeTag ? [nodeTag] : [],
             database,
         });
     };
 
-    const addNonDatabaseBuckets = (issues: DebugPackageAnalysisIssues, scope: IssueScope, nodeTag?: string) => {
+    const addBuckets = (issues: DebugPackageAnalysisIssues, scope: IssueScope, nodeTag?: string) => {
         if (!issues) {
             return;
         }
-        (issues.ServerIssues ?? []).forEach((x) => push(x, scope, nodeTag));
-        (issues.ClusterIssues ?? []).forEach((x) => push(x, scope, nodeTag));
+        (issues.ServerIssues ?? []).forEach((x) => add(x, scope, nodeTag));
+        (issues.ClusterIssues ?? []).forEach((x) => add(x, scope, nodeTag));
         Object.entries(issues.DatabaseIssues ?? {}).forEach(([database, list]) =>
-            (list ?? []).forEach((x) => push(x, "database", nodeTag, database))
+            (list ?? []).forEach((x) => add(x, "database", nodeTag, database))
         );
     };
 
     // cluster-wide findings (cross-node comparisons, observer, etc.)
-    addNonDatabaseBuckets(summary.ClusterWideIssues, "cluster-wide");
+    addBuckets(summary.ClusterWideIssues, "cluster-wide");
 
-    // per-node findings
+    // per-node findings - identical ones across nodes merge into the items created above
     Object.entries(summary.SummaryPerNode ?? {}).forEach(([nodeTag, node]) => {
-        addNonDatabaseBuckets(node.DetectedIssues, "node", nodeTag);
+        addBuckets(node.DetectedIssues, "node", nodeTag);
     });
 
+    const result = Array.from(byKey.values());
+    result.forEach((issue) => issue.nodeTags.sort());
     return result;
 }
 

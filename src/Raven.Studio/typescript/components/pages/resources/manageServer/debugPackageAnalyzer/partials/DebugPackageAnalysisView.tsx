@@ -38,7 +38,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
 
     const contextIssues = useMemo(() => {
         if (context === "node") {
-            return allIssues.filter((issue) => issue.nodeTag === selectedNode);
+            return allIssues.filter((issue) => issue.nodeTags.includes(selectedNode));
         }
         if (context === "database") {
             return allIssues.filter((issue) => issue.scope === "database" && issue.database === selectedDatabase);
@@ -48,7 +48,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
 
     const contextItems: InputItem<AnalysisContext>[] = [
         { label: "Cluster", value: "cluster", count: allIssues.length },
-        { label: "Node", value: "node", count: allIssues.filter((i) => i.nodeTag === selectedNode).length },
+        { label: "Node", value: "node", count: allIssues.filter((i) => i.nodeTags.includes(selectedNode)).length },
         {
             label: "Database",
             value: "database",
