@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -202,6 +202,18 @@ public sealed class ChangeVector
             return;
 
         MergeWithDatabaseChangeVector(context, context.GetChangeVector(changeVector));
+    }
+
+    internal static ChangeVector GetLocalCvFromPriorAndUpdateDbCv(DocumentsOperationContext context, ChangeVector priorChangeVector, DocumentDatabase database, long etag)
+    {
+        ArgumentNullException.ThrowIfNull(priorChangeVector);
+
+        var changeVector = MergeWithDatabaseChangeVector(context, priorChangeVector);
+        changeVector = changeVector.UpdateVersion(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        changeVector = changeVector.UpdateOrder(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        context.LastDatabaseChangeVector = changeVector.Order;
+
+        return changeVector;
     }
 
     public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, long? newEtag = null)

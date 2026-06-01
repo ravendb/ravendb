@@ -268,10 +268,10 @@ namespace Raven.Server.Documents
                 using (GetRemoteAttachmentParametersSlices(context.Allocator, remoteParams, out var identifierSlice, out RemoteAttachmentFlags flags, out long ticks))
                 {
                     Debug.Assert(base64Hash.Size == AttachmentHashSize, $"Hash size should be 44 but was: {keySlice.Size}");
-                    DeleteTombstoneIfNeeded(context, keySlice);
 
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
-                    Debug.Assert(changeVector != null);
+                    ChangeVector changeVector = null;
+                    if (DeleteTombstoneIfNeeded(context, keySlice, out var tombstoneChangeVector))
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, attachmentEtag);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     IDisposable SetTableValue(out TableValueBuilder tvb)
@@ -306,12 +306,12 @@ namespace Raven.Server.Documents
                         // This is an update to the local storage attachment with the same stream and content type
                         // Just updating the etag and casing of the name and the content type.
 
-                        if (expectedChangeVector != null)
-                        {
-                            var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
-                            if (ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
-                                ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
-                        }
+                        var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
+                        if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
+                            ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
+
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
+                        Debug.Assert(changeVector != null);
 
                         size = TableValueToLong((int)AttachmentsTable.Size, ref oldValue);
                         ticks = RemoteAttachmentsStorage.TryUpdateRemoteAttachment(context, documentId, name, remoteParams?.At, TableValueToLong((int)AttachmentsTable.RemoteAt, ref oldValue), remoteParams?.Identifier, TableValueToString(context, (int)AttachmentsTable.Identifier, ref oldValue), keySlice);
@@ -332,12 +332,12 @@ namespace Raven.Server.Documents
                             if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
                             {
                                 attachmentExists = true;
-                                if (expectedChangeVector != null)
-                                {
-                                    var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
-                                    if (ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
-                                        ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
-                                }
+
+                                var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
+                                if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
+                                    ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
+
+                                changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
 
                                 if (fromSmuggler == false)
                                 {
@@ -414,6 +414,9 @@ namespace Raven.Server.Documents
                             }
                         }
 
+                        changeVector ??= _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                        Debug.Assert(changeVector != null);
+
                         using (SetTableValue(out TableValueBuilder tvb))
                         {
                             table.Insert(tvb);
@@ -466,12 +469,14 @@ namespace Raven.Server.Documents
 
             var newEtag = _documentsStorage.GenerateNextEtag();
 
+            var hadTombstone = DeleteTombstoneIfNeeded(context, key, out var tombstoneChangeVector);
             if (string.IsNullOrEmpty(changeVector))
             {
-                changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                changeVector = hadTombstone
+                    ? ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, newEtag).AsString()
+                    : _documentsStorage.GetNewChangeVector(context, newEtag);
             }
             Debug.Assert(changeVector != null);
-            DeleteTombstoneIfNeeded(context, key);
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             using (GetRemoteAttachmentParametersSlices(context.Allocator, remoteParams, out var identifierSlice, out RemoteAttachmentFlags flags, out long ticks))
@@ -1440,10 +1445,17 @@ namespace Raven.Server.Documents
             context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
         }
 
-        private void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
+        private bool DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice, out ChangeVector changeVector)
         {
+            changeVector = null;
+
             var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
-            table.DeleteByKey(keySlice);
+            if (table.ReadByKey(keySlice, out var existingTombstoneTvr) == false)
+                return false;
+
+            changeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref existingTombstoneTvr);
+            table.Delete(existingTombstoneTvr.Id);
+            return true;
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,

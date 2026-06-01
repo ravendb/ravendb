@@ -389,6 +389,9 @@ namespace Raven.Server.Documents.Revisions
 
                 var etag = _database.DocumentsStorage.GenerateNextEtag();
                 var newEtagSwapBytes = Bits.SwapBytes(etag);
+                // TODO RavenDB-26295 / RavenDB-22358:
+                // Reapply this database CV order-side advance through the hashed revision-key write path after the revision schema upgrade lands.
+                _documentsStorage.GetNewChangeVector(context, etag);
 
                 WriteRevisionTableRecord(context, table, in keys, new RevisionsTableRow
                 {
@@ -1432,6 +1435,9 @@ namespace Raven.Server.Documents.Revisions
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
 
             var newEtag = _documentsStorage.GenerateNextEtag();
+            // TODO RavenDB-26295 / RavenDB-22358:
+            // Reapply this database CV order-side advance through the hashed revision-tombstone write path after the revision schema upgrade lands.
+            _documentsStorage.GetNewChangeVector(context, newEtag);
 
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, tombstoneChangeVector, out Slice cv))
@@ -1527,6 +1533,9 @@ namespace Raven.Server.Documents.Revisions
 
                 var newEtag = _database.DocumentsStorage.GenerateNextEtag();
                 var newEtagSwapBytes = Bits.SwapBytes(newEtag);
+                // TODO RavenDB-26295 / RavenDB-22358:
+                // Reapply this database CV order-side advance through the hashed delete-revision write path after the revision schema upgrade lands.
+                _documentsStorage.GetNewChangeVector(context, newEtag);
 
                 WriteRevisionTableRecord(context, table, in keys, new RevisionsTableRow
                 {

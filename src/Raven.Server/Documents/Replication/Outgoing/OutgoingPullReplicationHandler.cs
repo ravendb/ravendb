@@ -45,6 +45,17 @@ namespace Raven.Server.Documents.Replication.Outgoing
             // it supplements (but does not extend) what we are willing to send out 
             _destinationAcceptablePaths = response.Reply.AcceptablePaths;
         }
+
+        internal override bool CanOmitSourceItems =>
+            PullReplicationPathFilterUtils.CanOmitByAllowedPaths(PathsToSend) ||
+            PullReplicationPathFilterUtils.CanOmitByAllowedPaths(_destinationAcceptablePaths) ||
+            CanOmitSourceItemsByPreventingSinkToHubDeletions;
+
+        internal bool CanOmitSourceItemsByPreventingSinkToHubDeletions =>
+            Destination is PullReplicationAsSink sink &&
+            sink.Mode == PullReplicationMode.SinkToHub &&
+            OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
+            _database.ForTestingPurposes?.ForceSendTombstones != true;
     }
 
     internal sealed class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler

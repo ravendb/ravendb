@@ -13,5 +13,7 @@
         public int ItemsCount { get; set; }
 
         public int AttachmentStreamsCount { get; set; }
+
+        public bool CanOmitSourceItems { get; set; }
     }
 }
