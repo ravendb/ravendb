@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -362,7 +363,7 @@ namespace SlowTests.Sharding.Cluster
             index = database.DocumentsStorage.RevisionsStorage.RevisionsSchema.DynamicKeyIndexes[Revisions.RevisionsBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var revisionCv = DocumentsStorage.TableValueToChangeVector(context, (int)Revisions.RevisionsTable.ChangeVector, ref result.Result.Reader);
+                var revisionCv = RevisionsStorage.ReadChangeVectorFromTvr(context, ref result.Result.Reader);
                 merged = merged.MergeWith(revisionCv, context);
             }
 
