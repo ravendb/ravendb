@@ -138,12 +138,14 @@ export const appSchema = z.object({
         connectionString: z.string().trim().min(1, "Connection string is required."),
     }),
     verifySchema: z.object({
-        tables: z.array(
-            z.object({
-                sourceTableSchema: z.string().nullable().optional(),
-                sourceTableName: z.string(),
-            }),
-        ),
+        tables: z
+            .array(
+                z.object({
+                    sourceTableSchema: z.string().nullable().optional(),
+                    sourceTableName: z.string(),
+                }),
+            )
+            .min(1, "At least one table is required"),
     }),
     map: z
         .object({
