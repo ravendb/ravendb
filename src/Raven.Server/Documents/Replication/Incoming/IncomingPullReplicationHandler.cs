@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public readonly ReplicationLoader.PullReplicationParams _incomingPullReplicationParams;
 
         private readonly bool _preventIncomingSinkDeletions;
+        private readonly bool _isGapCapableFilteredBoundary;
 
         private AllowedPathsValidator _allowedPathsValidator;
         
@@ -56,6 +57,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             _preventIncomingSinkDeletions = _incomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                             _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
+            _isGapCapableFilteredBoundary = IsGapCapableFilteredBoundary(_incomingPullReplicationParams);
 
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
@@ -182,21 +184,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         public override string FromToString => base.FromToString +
                                                $"{(_incomingPullReplicationParams?.Name == null ? null : $"(pull definition: {_incomingPullReplicationParams?.Name})")}";
 
-        protected override string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context,string changeVector)
-        {
-            var isHub = _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
-            if (isHub && string.IsNullOrEmpty(changeVector) == false)
-            {
-                changeVector = MergedDocumentForPullReplicationCommand.ReplaceUnknownEntriesWithSinkTag(context, ref changeVector);
-            }
-
-            return changeVector;
-        }
-
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
-            var cmd = new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams);
+            var canOmitSourceItems = data.CanOmitSourceItems || _isGapCapableFilteredBoundary;
+            var cmd = new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams, canOmitSourceItems);
             foreach (var item in data.ReplicatedItems)
             {
                 cmd.HandleExpiredDocuments(context, item);
@@ -205,41 +197,101 @@ namespace Raven.Server.Documents.Replication.Incoming
             return cmd;
         }
 
-        protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
+        protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
+            bool canOmitSourceItems)
         {
-            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams);
+            var effectiveCanOmitSourceItems = canOmitSourceItems || _isGapCapableFilteredBoundary;
+            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams,
+                effectiveCanOmitSourceItems);
+        }
+
+        protected override bool ShouldMergeHeartbeatChangeVector(bool canOmitSourceItems)
+        {
+            return ShouldMergePullHeartbeatChangeVector(_incomingPullReplicationParams.Mode, canOmitSourceItems || _isGapCapableFilteredBoundary);
+        }
+
+        private static bool ShouldMergePullHeartbeatChangeVector(PullReplicationMode mode, bool isGapCapableFilteredBoundary)
+        {
+            // A filtered boundary can skip source items, so the sender DB CV is not receiver DB coverage.
+            if (isGapCapableFilteredBoundary)
+                return false;
+
+            // Incoming pull params describe this TCP connection direction, not the raw pull definition flags.
+            return mode switch
+            {
+                PullReplicationMode.HubToSink => true,
+                PullReplicationMode.SinkToHub => false,
+                PullReplicationMode.None => throw new InvalidOperationException("Incoming pull replication heartbeat cannot run with replication mode 'None'."),
+                _ => throw new InvalidOperationException($"Incoming pull replication heartbeat cannot run with unexpected replication mode '{mode}'.")
+            };
+        }
+
+        private static bool IsGapCapableFilteredBoundary(ReplicationLoader.PullReplicationParams pullReplicationParams)
+        {
+            if (pullReplicationParams == null)
+                return false;
+
+            if (PullReplicationPathFilterUtils.CanOmitByAllowedPaths(pullReplicationParams.AllowedPaths))
+                return true;
+
+            return pullReplicationParams.Mode == PullReplicationMode.SinkToHub &&
+                   pullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true;
         }
 
         internal sealed class MergedDocumentForPullReplicationCommand : MergedDocumentReplicationCommand
         {
             private readonly bool _isHub;
             private readonly bool _isSink;
+            private readonly bool _isGapCapableFilteredBoundary;
             private readonly PreventDeletionsMode? _preventDeletionsMode;
 
             public MergedDocumentForPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag,
-                ReplicationLoader.PullReplicationParams pullReplicationParams) : base(replicationInfo, lastEtag)
+                ReplicationLoader.PullReplicationParams pullReplicationParams, bool isGapCapableFilteredBoundary) : base(replicationInfo, lastEtag)
             {
                 _isHub = pullReplicationParams.Mode == PullReplicationMode.SinkToHub;
                 _isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
+                _isGapCapableFilteredBoundary = isGapCapableFilteredBoundary;
                 _preventDeletionsMode = pullReplicationParams.PreventDeletionsMode;
             }
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                if (_isSink) 
+                if (_isGapCapableFilteredBoundary == false && _isSink)
                     ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
                 var changeVectorToMerge = item.ChangeVector;
 
-                if (_isHub) 
+                if (_isGapCapableFilteredBoundary == false && _isHub)
                     changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
 
-                return context.GetChangeVector(changeVectorToMerge);
+                if (_isGapCapableFilteredBoundary == false)
+                {
+                    var parsedChangeVectorToMerge = context.GetChangeVector(changeVectorToMerge);
+                    return parsedChangeVectorToMerge.IsSingle ? parsedChangeVectorToMerge : parsedChangeVectorToMerge.Order;
+                }
+
+                var filteredBoundaryChangeVectors = CreateFilteredBoundaryChangeVectors(context, item.ChangeVector);
+                item.ChangeVector = filteredBoundaryChangeVectors.StoredItemChangeVector.AsString();
+                return filteredBoundaryChangeVectors.DatabaseChangeVectorContribution;
+            }
+
+            private static (ChangeVector StoredItemChangeVector, ChangeVector DatabaseChangeVectorContribution) CreateFilteredBoundaryChangeVectors(
+                DocumentsOperationContext context,
+                string itemChangeVector)
+            {
+                var incomingChangeVector = context.GetChangeVector(itemChangeVector);
+                var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+                var receiverLocalOrder = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, etag);
+                var storedItemChangeVector = context.GetChangeVector(incomingChangeVector.Version.AsString(), receiverLocalOrder.AsString());
+
+                return (storedItemChangeVector, receiverLocalOrder);
             }
 
             protected override string HandleRevisionTombstone(DocumentsOperationContext context, string changeVector)
             {
-                ReplaceKnownSinkEntries(context, ref changeVector);
+                if (_isGapCapableFilteredBoundary == false)
+                    ReplaceKnownSinkEntries(context, ref changeVector);
+
                 return base.HandleRevisionTombstone(context, changeVector);
             }
 
@@ -263,7 +315,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
             {
                 var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
-                var incoming = changeVector.ToChangeVectorList();
+                var parsedChangeVector = context.GetChangeVector(changeVector);
+                var incomingVersion = parsedChangeVector.Version.AsString();
+                var incoming = incomingVersion.ToChangeVectorList();
                 var knownEntries = new List<ChangeVectorEntry>();
                 var newIncoming = new List<ChangeVectorEntry>();
 
@@ -300,20 +354,26 @@ namespace Raven.Server.Documents.Replication.Incoming
                     }
                 }
 
-                changeVector = newIncoming.SerializeVector();
+                var newVersion = newIncoming.SerializeVector();
+                changeVector = parsedChangeVector.IsSingle
+                    ? newVersion
+                    : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
 
-                return knownEntries.Count > 0 ? 
-                    knownEntries.SerializeVector() : 
+                return knownEntries.Count > 0 ?
+                    knownEntries.SerializeVector() :
                     null;
             }
 
             private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
             {
-                if (changeVector.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
+                var parsedChangeVector = context.GetChangeVector(changeVector);
+                var incomingVersion = parsedChangeVector.Version.AsString();
+
+                if (incomingVersion.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
                     return;
 
                 var global = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList();
-                var incoming = changeVector.ToChangeVectorList();
+                var incoming = incomingVersion.ToChangeVectorList();
                 var newIncoming = new List<ChangeVectorEntry>();
 
                 foreach (var entry in incoming)
@@ -349,7 +409,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                     newIncoming.Add(entry);
                 }
 
-                changeVector = newIncoming.SerializeVector();
+                var newVersion = newIncoming.SerializeVector();
+                changeVector = parsedChangeVector.IsSingle
+                    ? newVersion
+                    : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
             }
 
             private static void RemoveExpiresFromSinkBatchItem(DocumentReplicationItem doc, JsonOperationContext context)
@@ -372,15 +435,17 @@ namespace Raven.Server.Documents.Replication.Incoming
         internal sealed class MergedUpdateDatabaseChangeVectorForHubCommand : MergedUpdateDatabaseChangeVectorCommand
         {
             private readonly ReplicationLoader.PullReplicationParams _pullReplicationParams;
+            private readonly bool _isGapCapableFilteredBoundary;
 
             public MergedUpdateDatabaseChangeVectorForHubCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
-                ReplicationLoader.PullReplicationParams pullReplicationParams) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
+                ReplicationLoader.PullReplicationParams pullReplicationParams, bool isGapCapableFilteredBoundary) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
             {
                 _pullReplicationParams = pullReplicationParams;
+                _isGapCapableFilteredBoundary = isGapCapableFilteredBoundary;
             }
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+                if (ShouldMergePullHeartbeatChangeVector(_pullReplicationParams.Mode, _isGapCapableFilteredBoundary) == false)
                     return false;
 
                 return base.TryUpdateChangeVector(context);
@@ -391,7 +456,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return new MergedUpdateDatabaseChangeVectorForHubCommandDto
                 {
                     BaseDto = (MergedUpdateDatabaseChangeVectorCommandDto)base.ToDto(context),
-                    PullReplicationParams = _pullReplicationParams
+                    PullReplicationParams = _pullReplicationParams,
+                    IsGapCapableFilteredBoundary = _isGapCapableFilteredBoundary
                 };
             }
         }
@@ -400,13 +466,13 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             public MergedUpdateDatabaseChangeVectorCommandDto BaseDto;
             public ReplicationLoader.PullReplicationParams PullReplicationParams;
+            public bool IsGapCapableFilteredBoundary;
             public MergedUpdateDatabaseChangeVectorForHubCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
                 var command = new MergedUpdateDatabaseChangeVectorForHubCommand(BaseDto.ChangeVector, BaseDto.LastDocumentEtag, BaseDto.IncomingConnectionInfo,
-                    new AsyncManualResetEvent(), PullReplicationParams);
+                    new AsyncManualResetEvent(), PullReplicationParams, IsGapCapableFilteredBoundary);
                 return command;
             }
         }
     }
-
 }
