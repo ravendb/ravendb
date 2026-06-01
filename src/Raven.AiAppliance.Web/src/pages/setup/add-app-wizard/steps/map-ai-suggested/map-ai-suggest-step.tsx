@@ -2,7 +2,7 @@ import AceEditor from "@/components/ace-editor/ace-editor";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { Alert } from "@/components/shadcn/ui/alert";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
+import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 import { useFormContext, useWatch } from "react-hook-form";
 
 export function MapAiSuggestStep(props: WizardBodyComponentProps) {

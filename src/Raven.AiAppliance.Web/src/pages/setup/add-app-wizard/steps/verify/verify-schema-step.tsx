@@ -1,12 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
-import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
+import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { getCoreRowModel, getFilteredRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import type { DiscoverTableResponse } from "@/api/generated/server-api";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
 import { Input } from "@/components/shadcn/ui/input";
 import { cn } from "@/lib/utils";
-import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
+import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { Checkbox } from "@/components/shadcn/ui/checkbox";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";

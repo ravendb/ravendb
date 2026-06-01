@@ -20,9 +20,9 @@ import { AppTasks } from "@/pages/apps/app-tasks";
 import { Login } from "@/pages/auth/login";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
 import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
-import { SetupConnect } from "@/pages/setup/setup-connect";
 import { AiPage } from "@/pages/utility/ai-page";
 import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
+import { AddAppWizard } from "@/pages/setup/add-app-wizard/add-app-wizard";
 
 export type AppRouteHandle = {
     title: string;
@@ -216,8 +216,8 @@ function toRouteObject(page: AppRouteDefinition, appScoped = false): RouteObject
 
 const utilityRoutes: RouteObject[] = [
     {
-        path: ROUTE_PATTERNS.setupConnect,
-        element: <SetupConnect />,
+        path: ROUTE_PATTERNS.addApp,
+        element: <AddAppWizard />,
         handle: {
             title: "Add new application",
             subtitle: "Application connection wizard",

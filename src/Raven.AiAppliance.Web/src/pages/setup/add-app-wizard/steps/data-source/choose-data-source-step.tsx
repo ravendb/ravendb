@@ -1,6 +1,6 @@
 import { Database, DatabaseZap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
+import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { useFormContext, useWatch } from "react-hook-form";

@@ -1,6 +1,6 @@
 export const ROUTE_PATTERNS = {
     app: "apps/:appId",
-    setupConnect: "setup/connect",
+    addApp: "app/add",
 } as const;
 
 export const appRoutes = {
@@ -9,5 +9,5 @@ export const appRoutes = {
         return path ? `${basePath}/${path}` : basePath;
     },
     dashboard: () => "/",
-    setupConnect: () => `/${ROUTE_PATTERNS.setupConnect}`,
+    addApp: () => `/${ROUTE_PATTERNS.addApp}`,
 } as const;
