@@ -1,4 +1,6 @@
-/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/incompatible-library */
+"use no memo";
+
 import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { getCoreRowModel, getFilteredRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
@@ -8,8 +10,10 @@ import { Input } from "@/components/shadcn/ui/input";
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { Checkbox } from "@/components/shadcn/ui/checkbox";
-import { useFieldArray, useFormContext } from "react-hook-form";
-import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { useFormContext } from "react-hook-form";
+import { useState } from "react";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { Alert } from "@/components/shadcn/ui/alert";
 
 export function VerifySchemaStep(props: WizardBodyComponentProps) {
     return (
@@ -20,15 +24,9 @@ export function VerifySchemaStep(props: WizardBodyComponentProps) {
 }
 
 export function SchemaTable() {
-    const { control } = useFormContext<AppFormData>();
+    const { setValue, formState } = useFormContext<AppFormData>();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
-
-    const tablesFieldArray = useFieldArray({
-        control,
-        name: "verifySchema.tables",
-    });
-
-    console.log("kalczur tablesFieldArray", tablesFieldArray.fields);
+    const [rowSelection, setRowSelection] = useState({});
 
     const allTables = discoverResult?.tables ?? [];
 
@@ -37,58 +35,21 @@ export function SchemaTable() {
             id: "select",
             header: ({ table }) => (
                 <Checkbox
-                    checked={table.getIsAllRowsSelected()}
-                    onChange={(event) => {
-                        // TODO FIX
-                        table.getToggleAllRowsSelectedHandler()(event);
-
-                        if (event.currentTarget.value) {
-                            tablesFieldArray.replace([]);
-                        } else {
-                            tablesFieldArray.replace(
-                                allTables.map((x) => ({
-                                    sourceTableName: x.sourceTableName,
-                                    sourceTableSchema: x.sourceTableSchema,
-                                })),
-                            );
-                        }
-                    }}
+                    checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                     aria-label="Select all"
                 />
             ),
             cell: ({ row }) => (
                 <Checkbox
                     checked={row.getIsSelected()}
-                    onCheckedChange={(value) => {
-                        row.toggleSelected();
-
-                        // TODO simplify
-                        if (value) {
-                            tablesFieldArray.append({
-                                sourceTableSchema: row.original.sourceTableSchema,
-                                sourceTableName: row.original.sourceTableName,
-                            });
-                        } else {
-                            const tableField = tablesFieldArray.fields.find(
-                                (x) =>
-                                    x.sourceTableSchema === row.original.sourceTableSchema &&
-                                    x.sourceTableName === row.original.sourceTableName,
-                            );
-
-                            if (!tableField) {
-                                return;
-                            }
-
-                            const fieldIndex = tablesFieldArray.fields.indexOf(tableField);
-
-                            tablesFieldArray.remove(fieldIndex);
-                        }
-                    }}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
                     aria-label="Select row"
                 />
             ),
             enableSorting: false,
-            size: 48,
+            enableHiding: false,
+            size: 32,
         },
         {
             accessorFn: (table) => getTableLabel(table),
@@ -107,15 +68,35 @@ export function SchemaTable() {
         },
     ];
 
-    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         columns,
         data: allTables,
         enableRowSelection: (row) => isTableUsable(row.original),
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
-        getRowId: (table) => getTableLabel(table),
+        onRowSelectionChange: (updaterOrValue) => {
+            const value = typeof updaterOrValue === "function" ? updaterOrValue(rowSelection) : updaterOrValue;
+            setRowSelection(updaterOrValue);
+
+            const ids = Object.keys(value);
+            const selectedTables = table
+                .getRowModel()
+                .rows.filter((row) => ids.includes(row.id))
+                .map((row) => row.original);
+
+            setValue(
+                "verifySchema.tables",
+                selectedTables.map((table) => ({
+                    sourceTableName: table.sourceTableName,
+                    sourceTableSchema: table.sourceTableSchema,
+                })),
+                { shouldValidate: true },
+            );
+        },
         globalFilterFn: "includesString",
+        state: {
+            rowSelection,
+        },
     });
 
     return (
@@ -134,6 +115,9 @@ export function SchemaTable() {
                 emptyMessage="No tables match the current filter."
                 heightInPx={300}
             />
+            {formState.errors?.verifySchema?.tables && (
+                <Alert variant="destructive">{formState.errors.verifySchema.tables.message}</Alert>
+            )}
         </div>
     );
 }

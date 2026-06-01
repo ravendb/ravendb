@@ -1,3 +1,7 @@
+/* eslint-disable react-hooks/incompatible-library */
+// https://github.com/TanStack/table/issues/5567
+"use no memo";
+
 import { useRef } from "react";
 import { flexRender, type Table as ReactTable } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -34,7 +38,6 @@ export function VirtualDataTable<TData>({
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const rows = table.getRowModel().rows;
 
-    // eslint-disable-next-line react-hooks/incompatible-library
     const rowVirtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: () => rowHeightInPx,
