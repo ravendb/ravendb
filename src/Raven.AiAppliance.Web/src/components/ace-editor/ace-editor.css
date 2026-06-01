@@ -7,6 +7,11 @@
     transition:
         border-color 150ms ease,
         box-shadow 150ms ease;
+    box-shadow: none !important;
+}
+
+#ace-editor {
+    border-radius: calc(var(--radius) - 2px);
 }
 
 .ace-editor:focus-within {
@@ -94,6 +99,10 @@
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-mono) !important;
+}
+
+.ace-tm .ace_indent-guide {
+    background: none !important;
 }
 
 .ace-editor .ace_gutter {

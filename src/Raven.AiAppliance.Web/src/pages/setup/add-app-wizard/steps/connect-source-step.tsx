@@ -5,7 +5,7 @@ import { api } from "@/api/api";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormTextarea } from "@/components/form/form-textarea";
-import { type AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
+import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
@@ -73,7 +73,7 @@ export function useConnectSourceStep() {
             });
 
             if (!connectResult.success) {
-                throw Error(connectResult.errors[0]);
+                throw Error(connectResult.errors?.join("\n") || "Connection failed.");
             }
 
             const discoverResult = await api.services.setup.discover({

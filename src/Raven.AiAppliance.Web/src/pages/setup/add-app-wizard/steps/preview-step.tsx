@@ -2,7 +2,7 @@
 import { Button } from "@/components/shadcn/ui/button";
 import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
 import { useFormContext } from "react-hook-form";
-import type { AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { FormInput } from "@/components/form/form-input";
 

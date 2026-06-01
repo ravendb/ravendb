@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Ace } from "ace-builds";
+import "ace-builds/src-noconflict/ace";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
-import ReactAce, { type IAceEditorProps as ReactAceEditorProps, type IAceOptions, type ICommand } from "react-ace";
+import ReactAce, { type IAceEditorProps as ReactAceEditorProps, type IAceOptions } from "react-ace";
 import "ace-builds/src-noconflict/mode-csharp";
 import "ace-builds/src-noconflict/mode-css";
 import "ace-builds/src-noconflict/mode-html";
@@ -39,6 +40,13 @@ import { useResizableHeight } from "@/components/ace-editor/use-resizable-height
 import { cn } from "@/lib/utils";
 import "./ace-editor.css";
 
+// Vite 8's Rolldown bundler uses Node-style CommonJS interop, so the default import of
+// react-ace is the whole module.exports object and the actual component sits on `.default`.
+// Unwrap it for rendering, falling back to the import itself for bundlers that already
+// unwrap (e.g. the production build). The `ReactAce` default import is still used directly
+// as a type for the editor refs below.
+const ReactAceComponent = ((ReactAce as { default?: typeof ReactAce }).default ?? ReactAce) as typeof ReactAce;
+
 type ActionItem = {
     component: ReactNode;
     position?: "bottom" | "top";
@@ -48,7 +56,6 @@ export type AceEditorProps = Omit<ReactAceEditorProps, "mode"> & {
     aceRef?: RefObject<ReactAce | null>;
     actions?: ActionItem[];
     execute?: (...args: unknown[]) => unknown;
-    isFullScreenLabelHidden?: boolean;
     languageService?: LanguageService;
     maxHeight?: number | string;
     minHeight?: number | string;
@@ -73,24 +80,6 @@ function toHeightNumber(height: number | string, fallback: number) {
     return fallback;
 }
 
-function requestEditorFullScreen(editor: Ace.Editor) {
-    const editorRoot = editor.container.closest(".ace-editor") as HTMLElement | null;
-    void (editorRoot ?? editor.container).requestFullscreen();
-}
-
-const defaultCommands: ICommand[] = [
-    {
-        bindKey: {
-            mac: "Shift+F11",
-            win: "Shift+F11",
-        },
-        exec: (editor: Ace.Editor) => {
-            requestEditorFullScreen(editor);
-        },
-        name: "Open Fullscreen",
-    },
-];
-
 function removeFindNextCommand(editor: Ace.Editor) {
     const commands = editor.commands as Ace.Editor["commands"] & {
         byName?: Record<string, unknown>;
@@ -107,9 +96,7 @@ function AceEditor({
     aceRef,
     actions = [],
     className,
-    execute,
     height = "200px",
-    isFullScreenLabelHidden,
     languageService,
     maxHeight = ACE_EDITOR_MAX_HEIGHT_IN_PX,
     minHeight = ACE_EDITOR_MIN_HEIGHT_IN_PX,
@@ -135,21 +122,6 @@ function AceEditor({
     const validActions = actions.filter(Boolean);
     const topActions = validActions.filter((action) => !action.position || action.position === "top");
     const bottomActions = validActions.filter((action) => action.position === "bottom");
-    const commands: ICommand[] = execute
-        ? [
-              ...defaultCommands,
-              {
-                  bindKey: {
-                      mac: "Command+Enter",
-                      win: "Ctrl+Enter",
-                  },
-                  exec: (...args: unknown[]) => {
-                      execute(...args);
-                  },
-                  name: "Execute",
-              },
-          ]
-        : defaultCommands;
     const overriddenSetOptions: IAceOptions = {
         enableBasicAutocompletion: true,
         enableLiveAutocompletion: true,
@@ -212,8 +184,7 @@ function AceEditor({
                 ref={rootRef}
             >
                 <div className="ace-editor__body" style={{ height: `${resizableHeight.height}px` }}>
-                    <ReactAce
-                        commands={commands}
+                    <ReactAceComponent
                         editorProps={{ $blockScrolling: Infinity }}
                         fontSize={14}
                         height="100%"
@@ -243,9 +214,6 @@ function AceEditor({
                                 ))}
                             </div>
                         </div>
-                    )}
-                    {!isFullScreenLabelHidden && (
-                        <span className="ace-editor__fullscreen-label">Shift+F11 for full screen</span>
                     )}
                 </div>
                 {errorMessage && <div className="ace-editor__error">{errorMessage}</div>}

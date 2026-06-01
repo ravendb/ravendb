@@ -2,10 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
-import { appSchema, useAppFlow, useAppSteps, type AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
+import { appSchema, type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { api } from "@/api/api";
 import { useMutation } from "@tanstack/react-query";
+import { useAppSteps, useAppFlow } from "@/pages/setup/add-app-wizard/app-wizard-flow";
+import { redirect } from "react-router";
+import { appRoutes } from "@/lib/app-routes";
 
 export function AddAppWizard() {
     const resetStore = useSetupWizardStore((state) => state.reset);
@@ -24,11 +27,14 @@ export function AddAppWizard() {
             verifySchema: {
                 tables: [],
             },
-            howToMap: {
-                aiPrompt: "",
-                source: "ai-suggested",
-            },
             map: {
+                source: "ai-suggested",
+                aiPrompt: "",
+            },
+            mapAiSuggest: {
+                tables: [],
+            },
+            mapManual: {
                 tables: [],
             },
             preview: {
@@ -67,13 +73,5 @@ function AddAppWizardBody() {
     const steps = useAppSteps();
     const flow = useAppFlow();
 
-    return (
-        <FormWizard
-            steps={steps}
-            flow={flow}
-            cancel={() => {
-                console.log("TODO cancel");
-            }}
-        />
-    );
+    return <FormWizard steps={steps} flow={flow} cancel={() => redirect(appRoutes.dashboard())} />;
 }

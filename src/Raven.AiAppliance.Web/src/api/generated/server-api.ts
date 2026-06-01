@@ -100,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/suggest/agent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["apps.suggestAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/ai/connection-strings": {
         parameters: {
             query?: never;
@@ -180,6 +196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/setup/suggest/cdc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setup.suggestCdc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/test-mapping": {
         parameters: {
             query?: never;
@@ -232,6 +264,68 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AiAgentChatTrimmingConfiguration: {
+            tokens?: components["schemas"]["AiAgentSummarizationByTokens"];
+            history?: components["schemas"]["AiAgentHistoryConfiguration"];
+        };
+        AiAgentConfiguration: {
+            identifier?: null | string;
+            name?: null | string;
+            connectionStringName?: null | string;
+            systemPrompt?: null | string;
+            sampleObject?: null | string;
+            outputSchema?: null | string;
+            queries?: null | components["schemas"]["AiAgentToolQuery"][];
+            actions?: null | components["schemas"]["AiAgentToolAction"][];
+            subAgents?: null | components["schemas"]["AiAgentToolSubAgent"][];
+            parameters?: null | components["schemas"]["AiAgentParameter"][];
+            chatTrimming?: components["schemas"]["AiAgentChatTrimmingConfiguration"];
+            /** Format: int32 */
+            maxModelIterationsPerCall?: null | number;
+            disabled?: boolean;
+        };
+        AiAgentHistoryConfiguration: {
+            /** Format: int32 */
+            historyExpirationInSec?: null | number;
+        };
+        AiAgentParameter: {
+            sendToModel?: null | boolean;
+            name?: null | string;
+            description?: null | string;
+            policy?: components["schemas"]["AiAgentParameterPolicy"];
+            type?: components["schemas"]["AiAgentParameterValueType"];
+        };
+        AiAgentParameterPolicy: string;
+        /** @enum {unknown} */
+        AiAgentParameterValueType: "Default" | "String" | "Number" | "Boolean" | "ArrayOfString" | "ArrayOfNumber" | "ArrayOfBoolean" | "Null";
+        AiAgentSummarizationByTokens: {
+            summarizationTaskBeginningPrompt?: null | string;
+            summarizationTaskEndPrompt?: null | string;
+            resultPrefix?: null | string;
+            /** Format: int64 */
+            maxTokensBeforeSummarization?: null | number;
+            /** Format: int64 */
+            maxTokensAfterSummarization?: null | number;
+        };
+        AiAgentToolAction: {
+            name?: null | string;
+            description?: null | string;
+            parametersSampleObject?: null | string;
+            parametersSchema?: null | string;
+        };
+        AiAgentToolQuery: {
+            name?: null | string;
+            description?: null | string;
+            query?: null | string;
+            parametersSampleObject?: null | string;
+            parametersSchema?: null | string;
+            options?: components["schemas"]["AiAgentToolQueryOptions"];
+        };
+        AiAgentToolQueryOptions: {
+            allowModelQueries?: null | boolean;
+            addToInitialContext?: null | boolean;
+        };
+        AiAgentToolSubAgent: Record<string, never>;
         AiConnectionString: {
             identifier?: null | string;
             openAiSettings?: components["schemas"]["OpenAiSettings"];
@@ -483,10 +577,6 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
-        ProvisionAgentRequest: {
-            connectionStringName: string;
-            framing?: null | string;
-        };
         ProvisionAgentResponse: {
             agentId: string;
         };
@@ -508,6 +598,23 @@ export interface components {
         };
         RedeemLicenseRequest: {
             licenseKey: string;
+        };
+        SuggestAgentRequest: {
+            intentPrompt: null | string;
+            mode: string;
+        };
+        SuggestAgentResponse: {
+            configurations: components["schemas"]["AiAgentConfiguration"][];
+            rationale: string[];
+            status: string;
+        };
+        SuggestCdcRequest: {
+            intentPrompt: string;
+        };
+        SuggestCdcResponse: {
+            configuration: null | components["schemas"]["CdcSinkConfiguration"];
+            rationale: string[];
+            status: string;
         };
         TestMappingRequest: {
             sourceTableName: string;
@@ -672,7 +779,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ProvisionAgentRequest"];
+                "application/json": components["schemas"]["AiAgentConfiguration"];
             };
         };
         responses: {
@@ -740,6 +847,59 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "apps.suggestAgent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestAgentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestAgentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -994,6 +1154,48 @@ export interface operations {
             };
         };
     };
+    "setup.suggestCdc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestCdcRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestCdcResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.testMapping": {
         parameters: {
             query?: never;
@@ -1104,6 +1306,17 @@ export interface operations {
     };
 }
 
+export type AiAgentChatTrimmingConfiguration = components["schemas"]["AiAgentChatTrimmingConfiguration"];
+export type AiAgentConfiguration = components["schemas"]["AiAgentConfiguration"];
+export type AiAgentHistoryConfiguration = components["schemas"]["AiAgentHistoryConfiguration"];
+export type AiAgentParameter = components["schemas"]["AiAgentParameter"];
+export type AiAgentParameterPolicy = components["schemas"]["AiAgentParameterPolicy"];
+export type AiAgentParameterValueType = components["schemas"]["AiAgentParameterValueType"];
+export type AiAgentSummarizationByTokens = components["schemas"]["AiAgentSummarizationByTokens"];
+export type AiAgentToolAction = components["schemas"]["AiAgentToolAction"];
+export type AiAgentToolQuery = components["schemas"]["AiAgentToolQuery"];
+export type AiAgentToolQueryOptions = components["schemas"]["AiAgentToolQueryOptions"];
+export type AiAgentToolSubAgent = components["schemas"]["AiAgentToolSubAgent"];
 export type AiConnectionString = components["schemas"]["AiConnectionString"];
 export type AiConnectionStringCreatedResponse = components["schemas"]["AiConnectionStringCreatedResponse"];
 export type AiConnectionStringDeleteConflictResponse = components["schemas"]["AiConnectionStringDeleteConflictResponse"];
@@ -1142,13 +1355,16 @@ export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiReasoningEffort = components["schemas"]["OpenAiReasoningEffort"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
-export type ProvisionAgentRequest = components["schemas"]["ProvisionAgentRequest"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
 export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelRequest"];
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
 export type ProvisionRequest = components["schemas"]["ProvisionRequest"];
 export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
 export type RedeemLicenseRequest = components["schemas"]["RedeemLicenseRequest"];
+export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
+export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
+export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
+export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];
 export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];
@@ -1167,6 +1383,7 @@ export const API_ENDPOINTS = {
         list: "/apps",
         provisionAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/agent`,
         provisionChannel: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/channel`,
+        suggestAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/suggest/agent`,
     },
     bootstrap: {
         redeemLicense: "/bootstrap/redeem-license",
@@ -1180,6 +1397,7 @@ export const API_ENDPOINTS = {
         discover: "/setup/discover",
         map: "/setup/map",
         provision: "/setup/provision",
+        suggestCdc: "/setup/suggest/cdc",
         testMapping: "/setup/test-mapping",
     },
 } as const;
@@ -1195,8 +1413,9 @@ export function createServerApi(client: ApiClient) {
         apps: {
             detail: (slug: string) => client.get<AppResponse, ApiErrorResponse>(API_ENDPOINTS.apps.detail(slug)),
             list: () => client.get<AppResponse[]>(API_ENDPOINTS.apps.list),
-            provisionAgent: (slug: string, request: ProvisionAgentRequest) => client.post<ProvisionAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.provisionAgent(slug), request),
+            provisionAgent: (slug: string, request: AiAgentConfiguration) => client.post<ProvisionAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.provisionAgent(slug), request),
             provisionChannel: (slug: string, request: ProvisionChannelRequest) => client.post<ProvisionChannelResponse, ApiErrorResponse>(API_ENDPOINTS.apps.provisionChannel(slug), request),
+            suggestAgent: (slug: string, request: SuggestAgentRequest) => client.post<SuggestAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.suggestAgent(slug), request),
         },
         bootstrap: {
             redeemLicense: (request: RedeemLicenseRequest) => client.post<BootstrapStatusResponse, ApiErrorResponse | BootstrapRedeemConflictResponse>(API_ENDPOINTS.bootstrap.redeemLicense, request),
@@ -1210,6 +1429,7 @@ export function createServerApi(client: ApiClient) {
             discover: (request: ConnectRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
+            suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
         },
     };

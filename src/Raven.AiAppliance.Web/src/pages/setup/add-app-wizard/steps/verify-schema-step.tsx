@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
 import { Checkbox } from "@/components/shadcn/ui/checkbox";
 import { useFieldArray, useFormContext } from "react-hook-form";
-import { type AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
+import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 
 export function VerifySchemaStep(props: WizardBodyComponentProps) {
     return (
