@@ -174,7 +174,7 @@ public static class CdcSinkSourceVerifier
                 CdcSinkProcess.AddParameter(cmd, "@schema", schemaName);
                 CdcSinkProcess.AddParameter(cmd, "@table", table.SourceTableName);
                 var result = await cmd.ExecuteScalarAsync(token);
-                replicaIdentity = result is char c ? c : 'd';
+                replicaIdentity = ReadReplicaIdentity(result);
             }
 
             string problem = replicaIdentity switch
@@ -194,6 +194,18 @@ public static class CdcSinkSourceVerifier
                 $"ALTER TABLE {qb.QuoteIdentifier(schemaName)}.{qb.QuoteIdentifier(table.SourceTableName)} REPLICA IDENTITY FULL;");
         }
     }
+
+    /// <summary>
+    /// Reads the single <c>pg_class.relreplident</c> scalar. Postgres' internal <c>"char"</c> type
+    /// maps to <see cref="char"/> under the pinned Npgsql, but tolerate a <see cref="string"/> in
+    /// case the driver / type mapping ever changes; unknown shapes fall back to 'd' (DEFAULT).
+    /// </summary>
+    private static char ReadReplicaIdentity(object scalar) => scalar switch
+    {
+        char c => c,
+        string s when s.Length > 0 => s[0],
+        _ => 'd'
+    };
 
     /// <summary>
     /// Checks whether a table's REPLICA IDENTITY covers a set of required columns (PK + join columns).
@@ -221,7 +233,7 @@ public static class CdcSinkSourceVerifier
             CdcSinkProcess.AddParameter(cmd, "@schema", schema);
             CdcSinkProcess.AddParameter(cmd, "@table", table);
             var result = await cmd.ExecuteScalarAsync();
-            replicaIdentity = result is char c ? c : 'd';
+            replicaIdentity = ReadReplicaIdentity(result);
         }
 
         switch (replicaIdentity)

@@ -101,9 +101,14 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // with_pk: normal table, default REPLICA IDENTITY carries the PK on DELETE -> no warning.
             // no_pk: no primary key + default REPLICA IDENTITY -> DELETE carries nothing -> warning.
+            // pk_nothing: has a PK but REPLICA IDENTITY NOTHING -> DELETE carries nothing -> warning.
+            //   This case warns ONLY if relreplident 'n' is parsed correctly; a PK table misread as
+            //   'd' (DEFAULT) would not warn, so it guards the relreplident scalar parsing.
             ExecuteNpgSql(connectionString, @"
                 CREATE TABLE with_pk (id SERIAL PRIMARY KEY, name VARCHAR(100));
                 CREATE TABLE no_pk (id INT, name VARCHAR(100));
+                CREATE TABLE pk_nothing (id SERIAL PRIMARY KEY, name VARCHAR(100));
+                ALTER TABLE pk_nothing REPLICA IDENTITY NOTHING;
             ");
 
             using var store = GetDocumentStore();
@@ -122,6 +127,10 @@ namespace SlowTests.Server.Documents.CdcSink
             var noPk = schema.Tables.Single(t => t.SourceTableName == "no_pk");
             var warning = Assert.Single(noPk.Warnings);
             Assert.Contains("REPLICA IDENTITY", warning);
+
+            var pkNothing = schema.Tables.Single(t => t.SourceTableName == "pk_nothing");
+            var nothingWarning = Assert.Single(pkNothing.Warnings);
+            Assert.Contains("NOTHING", nothingWarning);
 
             // A per-table data-quality warning does not block setup.
             Assert.True(schema.Success);
