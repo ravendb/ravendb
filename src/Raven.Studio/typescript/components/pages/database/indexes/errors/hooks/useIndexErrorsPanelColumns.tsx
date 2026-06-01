@@ -91,23 +91,25 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
 
 type HyperLinkDocumentCellValueProps = Pick<
     CellContext<IndexErrorPerDocument, IndexErrorPerDocument["Document"]>,
-    "getValue"
+    "getValue" | "table"
 >;
 
-const HyperLinkDocumentCellValue = ({ getValue }: HyperLinkDocumentCellValueProps) => {
+const HyperLinkDocumentCellValue = ({ getValue, table }: HyperLinkDocumentCellValueProps) => {
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
 
-    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds />;
+    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds={!disableLinks} />;
 };
 
 type HyperlinkIndexCellValueProps = Pick<
     CellContext<IndexErrorPerDocument, IndexErrorPerDocument["IndexName"]>,
-    "getValue"
+    "getValue" | "table"
 >;
 
-const HyperlinkIndexCellValue = ({ getValue }: HyperlinkIndexCellValueProps) => {
+const HyperlinkIndexCellValue = ({ getValue, table }: HyperlinkIndexCellValueProps) => {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
+    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
 
     const getLinkToIndex = (cellValue: IndexErrorPerDocument["IndexName"]): string => {
         if (typeof cellValue !== "string") {
@@ -117,7 +119,7 @@ const HyperlinkIndexCellValue = ({ getValue }: HyperlinkIndexCellValueProps) => 
         return appUrl.forEditIndex(getValue(), databaseName);
     };
 
-    const editIndexLink = getLinkToIndex(getValue());
+    const editIndexLink = disableLinks ? null : getLinkToIndex(getValue());
     if (editIndexLink) {
         return (
             <CellWithCopy value={getValue()}>

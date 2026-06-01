@@ -7,6 +7,7 @@ import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
 import DatabaseIndexStats from "./DatabaseIndexStats";
+import DatabaseIndexErrors from "./DatabaseIndexErrors";
 import genUtils from "common/generalUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -162,6 +163,12 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
             </div>
 
             <DatabaseIndexStats
+                packageId={summary.PackageId}
+                database={database}
+                nodes={overviewRows.map((row) => row.node)}
+            />
+
+            <DatabaseIndexErrors
                 packageId={summary.PackageId}
                 database={database}
                 nodes={overviewRows.map((row) => row.node)}

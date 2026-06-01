@@ -39,6 +39,7 @@ import uploadDebugPackageForAnalysisCommand = require("commands/maintenance/uplo
 import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeDebugPackageAnalysisCommand");
 import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
 import getDebugPackageDatabaseIndexStatsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexStatsCommand");
+import getDebugPackageDatabaseIndexErrorsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexErrorsCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -206,5 +207,11 @@ export default class ManageServerService {
         ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexStatsCommand>
     ) {
         return new getDebugPackageDatabaseIndexStatsCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseIndexErrors(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexErrorsCommand>
+    ) {
+        return new getDebugPackageDatabaseIndexErrorsCommand(...args).execute();
     }
 }
