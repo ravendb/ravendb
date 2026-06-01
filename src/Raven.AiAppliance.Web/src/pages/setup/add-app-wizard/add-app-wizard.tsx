@@ -1,143 +1,79 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { z } from "zod";
-import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/choose-data-source-step";
-import { ConnectSourceStep, useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect-source-step";
-import { MapSchemaStep, useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map-schema-step";
-import { PreviewStep, usePreviewStep } from "@/pages/setup/add-app-wizard/steps/preview-step";
-import { useVerifySchemaStep, VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify-schema-step";
-import { WizardLayout } from "@/pages/setup/add-app-wizard/wizard-layout";
-import {
-    getInitialFormValues,
-    getPreviousStep,
-    getStepIndex,
-    type SetupWizardFormValues,
-    type SetupWizardStepId,
-} from "@/pages/setup/add-app-wizard/wizard-model";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
-
-const setupWizardSchema = z.object({
-    appName: z.string().trim().min(1, "Application name is required."),
-    connectionString: z.string().trim().min(1, "Connection string is required."),
-    dataSource: z.literal("external"),
-    mappingMode: z.literal("auto"),
-    provider: z.string().trim().min(1, "Database type is required."),
-});
+import { appSchema, useAppFlow, useAppSteps, type AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
+import { FormWizard } from "@/components/form/wizard/form-wizard";
+import { api } from "@/api/api";
+import { useMutation } from "@tanstack/react-query";
 
 export function AddAppWizard() {
-    const [currentStep, setCurrentStep] = useState<SetupWizardStepId>("choose-source");
-    const stepMessages = useSetupWizardStore((state) => state.stepMessages);
-    const resetWizard = useSetupWizardStore((state) => state.reset);
-    const form = useForm<SetupWizardFormValues>({
+    const resetStore = useSetupWizardStore((state) => state.reset);
+
+    const form = useForm<AppFormData>({
         mode: "onChange",
-        defaultValues: getInitialFormValues(),
-        resolver: zodResolver(setupWizardSchema),
+        defaultValues: {
+            dataSource: {
+                source: "external",
+            },
+            externalConnection: {
+                appName: "",
+                provider: "Npgsql",
+                connectionString: "",
+            },
+            verifySchema: {
+                tables: [],
+            },
+            howToMap: {
+                aiPrompt: "",
+                source: "ai-suggested",
+            },
+            map: {
+                tables: [],
+            },
+            preview: {
+                table: "",
+            },
+        },
+        resolver: zodResolver(appSchema),
     });
 
     useEffect(() => {
-        resetWizard();
+        resetStore();
+        return resetStore;
+    }, [resetStore]);
 
-        return resetWizard;
-    }, [resetWizard]);
+    const provision = useMutation({
+        mutationFn: async (formValues: AppFormData) => {
+            await api.services.setup.provision({
+                appName: formValues.externalConnection.appName,
+            });
+        },
+    });
 
     return (
         <FormProvider {...form}>
-            <AddAppWizardContent currentStep={currentStep} onStepChange={setCurrentStep} stepMessages={stepMessages} />
+            <form
+                onSubmit={form.handleSubmit(async (formValues) => await provision.mutateAsync(formValues))}
+                className="h-full"
+            >
+                <AddAppWizardBody />
+            </form>
         </FormProvider>
     );
 }
 
-function AddAppWizardContent({
-    currentStep,
-    onStepChange,
-    stepMessages,
-}: {
-    currentStep: SetupWizardStepId;
-    onStepChange: (step: SetupWizardStepId) => void;
-    stepMessages: ReturnType<typeof useSetupWizardStore.getState>["stepMessages"];
-}) {
-    const connectSourceStep = useConnectSourceStep();
-    const verifySchemaStep = useVerifySchemaStep();
-    const mapSchemaStep = useMapSchemaStep();
-    const previewStep = usePreviewStep();
-    const isWorking =
-        connectSourceStep.isWorking || verifySchemaStep.isWorking || mapSchemaStep.isWorking || previewStep.isWorking;
-
-    async function handleNext() {
-        switch (currentStep) {
-            case "choose-source":
-                onStepChange("connect-source");
-                return;
-            case "connect-source":
-                if (await connectSourceStep.connectAndDiscoverSource()) {
-                    onStepChange("verify-schema");
-                }
-                return;
-            case "verify-schema":
-                if (await verifySchemaStep.completeStep()) {
-                    onStepChange("map-schema");
-                }
-                return;
-            case "map-schema":
-                if (await mapSchemaStep.completeStep()) {
-                    onStepChange("preview");
-                }
-                return;
-            case "preview":
-                await previewStep.completeStep();
-                return;
-        }
-    }
+function AddAppWizardBody() {
+    const steps = useAppSteps();
+    const flow = useAppFlow();
 
     return (
-        <WizardLayout
-            canGoBack={getStepIndex(currentStep) > 0}
-            currentStep={currentStep}
-            isWorking={isWorking}
-            nextLabel={getNextLabel(currentStep)}
-            onBack={() => onStepChange(getPreviousStep(currentStep))}
-            onNext={() => void handleNext()}
-        >
-            {currentStep === "choose-source" && <ChooseDataSourceStep message={stepMessages["choose-source"]} />}
-            {currentStep === "connect-source" && (
-                <ConnectSourceStep isWorking={isWorking} message={stepMessages["connect-source"]} />
-            )}
-            {currentStep === "verify-schema" && (
-                <VerifySchemaStep
-                    isWorking={isWorking}
-                    message={stepMessages["verify-schema"]}
-                    onDiscoverSchema={() => void verifySchemaStep.discoverSchema()}
-                    onVerifyConnection={() => void verifySchemaStep.verifyConnection()}
-                />
-            )}
-            {currentStep === "map-schema" && (
-                <MapSchemaStep
-                    isWorking={isWorking}
-                    message={stepMessages["map-schema"]}
-                    onPrepareMapping={() => void mapSchemaStep.prepareAutoMapping()}
-                />
-            )}
-            {currentStep === "preview" && (
-                <PreviewStep
-                    isWorking={isWorking}
-                    message={stepMessages.preview}
-                    onRunPreview={() => void previewStep.runPreview()}
-                />
-            )}
-        </WizardLayout>
+        <FormWizard
+            steps={steps}
+            flow={flow}
+            cancel={() => {
+                console.log("TODO cancel");
+            }}
+        />
     );
-}
-
-function getNextLabel(currentStep: SetupWizardStepId) {
-    switch (currentStep) {
-        case "choose-source":
-        case "verify-schema":
-        case "map-schema":
-            return "Next";
-        case "connect-source":
-            return "Verify and next";
-        case "preview":
-            return "Setup your application";
-    }
 }

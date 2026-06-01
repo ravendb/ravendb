@@ -44,12 +44,17 @@ export function createApiClient({ baseUrl = "/api", transport = fetch }: ApiClie
             requestHeaders.set("Content-Type", contentType);
         }
 
-        const response = await transport(url, {
+        const requestInit: RequestInit = {
             credentials: "same-origin",
             ...init,
             headers: requestHeaders,
-            body: serializedBody,
-        });
+        };
+
+        if (serializedBody !== undefined) {
+            requestInit.body = serializedBody;
+        }
+
+        const response = await transport(url, requestInit);
 
         if (!response.ok) {
             throw await createApiError<TError>(response);
@@ -135,7 +140,7 @@ function createUrl(baseUrl: string, path: string, searchParams?: ApiRequestOptio
         return url;
     }
 
-    const [urlWithoutHash, hash = ""] = url.split("#", 2);
+    const [urlWithoutHash = url, hash = ""] = url.split("#", 2);
     const querySeparator = urlWithoutHash.includes("?") ? "&" : "?";
     const query = new URLSearchParams();
 

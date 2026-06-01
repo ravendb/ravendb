@@ -3,134 +3,90 @@ import { useMutation } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
 import { api } from "@/api/api";
 import { FormInput } from "@/components/form/form-input";
-import { FormSelect } from "@/components/form/form-select";
+import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormTextarea } from "@/components/form/form-textarea";
-import {
-    firstMessage,
-    PROVIDER_OPTIONS,
-    toConnectRequest,
-    toVerifyConnectRequest,
-    type SetupWizardFormValues,
-    type SetupWizardMessage,
-} from "@/pages/setup/add-app-wizard/wizard-model";
-import {
-    runWizardRequest,
-    setConnectionResultMessage,
-    setWizardMessage,
-} from "@/pages/setup/add-app-wizard/wizard-request-utils";
+import { type AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
 import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
+import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
 
-export function ConnectSourceStep({ isWorking, message }: { isWorking: boolean; message?: SetupWizardMessage }) {
-    const { control } = useFormContext<SetupWizardFormValues>();
+export function ConnectSourceStep(props: WizardBodyComponentProps) {
+    const { control } = useFormContext<AppFormData>();
 
     return (
-        <StepSection
-            title="Connect to your source database"
-            description="Enter the external database connection details."
-            message={message}
-        >
+        <StepSection {...props}>
             <div className="grid gap-5">
                 <FormInput
                     control={control}
-                    name="appName"
+                    name="externalConnection.appName"
                     label="Application name"
                     placeholder="e.g. AcmeShop"
-                    disabled={isWorking}
+                    disabled={props.status === "pending"}
                 />
                 <FormSelect
                     control={control}
-                    name="provider"
+                    name="externalConnection.provider"
                     label="Database type"
                     options={PROVIDER_OPTIONS}
-                    disabled={isWorking}
+                    disabled={props.status === "pending"}
                 />
                 <FormTextarea
                     control={control}
-                    name="connectionString"
+                    name="externalConnection.connectionString"
                     label="Connection string"
                     placeholder="Host=localhost;Port=5432;Database=my_db;Username=admin;Password=pass"
                     textareaClassName="font-mono text-xs"
+                    disabled={props.status === "pending"}
                 />
             </div>
         </StepSection>
     );
 }
 
+const PROVIDER_OPTIONS: FormSelectOption<AppFormData["externalConnection"]["provider"]>[] = [
+    {
+        value: "Npgsql",
+        label: "PostgreSQL",
+    },
+    {
+        value: "SqlClient",
+        label: "SQL Server",
+    },
+    {
+        value: "MySqlConnectorFactory",
+        label: "MySQL",
+    },
+];
+
 export function useConnectSourceStep() {
-    const form = useFormContext<SetupWizardFormValues>();
-    const clearStepMessage = useSetupWizardStore((state) => state.clearStepMessage);
-    const setSchema = useSetupWizardStore((state) => state.setSchema);
-    const discoverSchemaMutation = useMutation({
-        mutationFn: (values: SetupWizardFormValues) => api.services.setup.discover(toConnectRequest(values)),
-    });
-    const verifyConnectionMutation = useMutation({
-        mutationFn: ({
-            values,
-            schema,
-        }: {
-            values: SetupWizardFormValues;
-            schema: NonNullable<ReturnType<typeof useSetupWizardStore.getState>["schema"]>;
-        }) => api.services.setup.connect(toVerifyConnectRequest(values, schema)),
-    });
+    const { getValues } = useFormContext<AppFormData>();
+    const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
 
-    async function connectAndDiscoverSource() {
-        clearStepMessage("connect-source");
+    const connectAndDiscover = useMutation({
+        mutationFn: async () => {
+            const formValues = getValues("externalConnection");
 
-        if (
-            !(await form.trigger("appName", { shouldFocus: true })) ||
-            !(await form.trigger(["provider", "connectionString"], { shouldFocus: true }))
-        ) {
-            return false;
-        }
-
-        const values = form.getValues();
-        const discoveredSchema = await runWizardRequest("connect-source", () =>
-            discoverSchemaMutation.mutateAsync(values),
-        );
-
-        if (!discoveredSchema) {
-            return false;
-        }
-
-        setSchema(discoveredSchema);
-
-        if (discoveredSchema.errors?.length) {
-            setWizardMessage("connect-source", {
-                title: "Schema discovery failed.",
-                description: firstMessage(discoveredSchema.errors),
-                type: "error",
+            const connectResult = await api.services.setup.connect({
+                connectionString: formValues.connectionString,
+                provider: formValues.provider,
+                tableNames: ["users", "orders"], // TODO null
             });
-            return false;
-        }
 
-        if (discoveredSchema.tables?.length === 0) {
-            setWizardMessage("connect-source", {
-                title: "No tables were discovered.",
-                description: "Check the source database permissions and selected table filters.",
-                type: "error",
+            if (!connectResult.success) {
+                throw Error(connectResult.errors[0]);
+            }
+
+            const discoverResult = await api.services.setup.discover({
+                connectionString: formValues.connectionString,
+                provider: formValues.provider,
+                tableNames: ["users", "orders"], // TODO null
             });
-            return false;
-        }
 
-        const result = await runWizardRequest("connect-source", () =>
-            verifyConnectionMutation.mutateAsync({ schema: discoveredSchema, values }),
-        );
+            setDiscoverResult(discoverResult);
 
-        if (!result || !setConnectionResultMessage("connect-source", result)) {
-            return false;
-        }
+            return true;
+        },
+    });
 
-        setWizardMessage("verify-schema", {
-            title: "Source verified.",
-            description: `${discoveredSchema.tables.length} tables were discovered and checked.`,
-            type: "success",
-        });
-        return true;
-    }
-
-    return {
-        connectAndDiscoverSource,
-        isWorking: discoverSchemaMutation.isPending || verifyConnectionMutation.isPending,
-    };
+    return connectAndDiscover;
 }

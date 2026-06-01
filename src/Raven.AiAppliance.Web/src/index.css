@@ -142,6 +142,13 @@
         color: var(--color-foreground);
     }
 
+    :is(input, textarea):autofill,
+    :is(input, textarea):-webkit-autofill {
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: var(--color-foreground);
+        caret-color: var(--color-foreground);
+    }
+
     ::-webkit-scrollbar {
         width: 10px;
         height: 10px;

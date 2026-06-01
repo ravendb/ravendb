@@ -1,34 +1,37 @@
 import { Database, DatabaseZap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DATA_SOURCE_OPTIONS, type SetupWizardMessage } from "@/pages/setup/add-app-wizard/wizard-model";
 import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
+import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
+import { useFormContext, useWatch } from "react-hook-form";
 
-export function ChooseDataSourceStep({ message }: { message?: SetupWizardMessage }) {
+export function ChooseDataSourceStep(props: WizardBodyComponentProps) {
+    const { control } = useFormContext<AppFormData>();
+    const source = useWatch({
+        control,
+        name: "dataSource.source",
+    });
+
     return (
-        <StepSection
-            title="Choose data source"
-            description="Where is the data this application will work with?"
-            message={message}
-        >
+        <StepSection {...props}>
             <div className="grid gap-3 md:grid-cols-2">
                 {DATA_SOURCE_OPTIONS.map((option) => {
-                    const isSelected = option.id === "external";
-                    const Icon = option.id === "external" ? Database : DatabaseZap;
+                    const isSelected = option.value === source;
 
                     return (
                         <button
-                            key={option.id}
+                            key={option.value}
                             type="button"
-                            disabled={option.disabled}
+                            disabled={option.isDisabled}
                             aria-pressed={isSelected}
                             className={cn(
                                 "min-h-28 rounded-lg border bg-background p-4 text-left transition-colors",
                                 "hover:bg-accent hover:text-accent-foreground",
                                 isSelected && "border-foreground bg-accent text-accent-foreground",
-                                option.disabled && "cursor-not-allowed opacity-55 hover:bg-background",
+                                option.isDisabled && "cursor-not-allowed opacity-55 hover:bg-background",
                             )}
                         >
-                            <Icon className="mb-5 size-5" aria-hidden="true" />
+                            {option.icon}
                             <span className="block text-sm font-semibold">{option.label}</span>
                             <span className="mt-2 block text-xs leading-5 text-muted-foreground">
                                 {option.description}
@@ -40,3 +43,27 @@ export function ChooseDataSourceStep({ message }: { message?: SetupWizardMessage
         </StepSection>
     );
 }
+
+type DataSourceOption = {
+    value: AppFormData["dataSource"]["source"];
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    isDisabled?: boolean;
+};
+
+const DATA_SOURCE_OPTIONS: DataSourceOption[] = [
+    {
+        value: "external",
+        label: "External database",
+        description: "Mirror data from PostgreSQL, SQL Server, or MySQL via Change Data Capture.",
+        icon: <Database className="mb-5 size-5" />,
+    },
+    {
+        value: "ravendb",
+        label: "RavenDB database",
+        description: "Connect to an existing database on your RavenDB server.",
+        isDisabled: true,
+        icon: <DatabaseZap className="mb-5 size-5" />,
+    },
+];

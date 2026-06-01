@@ -1,21 +1,25 @@
+import { z } from "zod";
 import { API_ENDPOINTS } from "@/api/generated/server-api";
 import type { ChatRequest } from "@/api/generated/server-api";
 import type { ApiClient } from "@/api/http-client";
 
-export type ChatStreamEvent =
-    | {
-          type: "chunk";
-          text: string;
-      }
-    | {
-          type: "done";
-          answer: unknown;
-          conversationId: string;
-      }
-    | {
-          type: "error";
-          message: string;
-      };
+const chatStreamEventSchema = z.discriminatedUnion("type", [
+    z.object({
+        type: z.literal("chunk"),
+        text: z.string(),
+    }),
+    z.object({
+        type: z.literal("done"),
+        answer: z.unknown(),
+        conversationId: z.string(),
+    }),
+    z.object({
+        type: z.literal("error"),
+        message: z.string(),
+    }),
+]);
+
+export type ChatStreamEvent = z.infer<typeof chatStreamEventSchema>;
 
 export function createChatService(client: ApiClient) {
     return {
@@ -44,13 +48,13 @@ export function createChatService(client: ApiClient) {
 
                     for (const line of lines) {
                         if (line.trim()) {
-                            yield JSON.parse(line) as ChatStreamEvent;
+                            yield parseChatStreamEvent(line);
                         }
                     }
                 }
 
                 if (buffer.trim()) {
-                    yield JSON.parse(buffer) as ChatStreamEvent;
+                    yield parseChatStreamEvent(buffer);
                 }
             } finally {
                 reader.releaseLock();
@@ -60,3 +64,13 @@ export function createChatService(client: ApiClient) {
 }
 
 export type ChatService = ReturnType<typeof createChatService>;
+
+function parseChatStreamEvent(line: string) {
+    const result = chatStreamEventSchema.safeParse(JSON.parse(line) as unknown);
+
+    if (!result.success) {
+        throw new Error("Received an invalid chat stream event.");
+    }
+
+    return result.data;
+}

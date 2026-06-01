@@ -1,43 +1,20 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
-import { api } from "@/api/api";
 import type { BootstrapPhase } from "@/api/generated/server-api";
 import { FormInput } from "@/components/form/form-input";
 import { Button } from "@/components/shadcn/ui/button";
 import { useAuth } from "@/components/auth/auth-context";
+import { appRoutes } from "@/lib/app-routes";
+import { useActivationPolling } from "@/pages/auth/use-activation-polling";
 
 export function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
-    const bootstrapStatusQuery = api.queries.bootstrap.status();
-    const activationStartedAtRef = useRef<number | null>(null);
-    const [activationTimedOut, setActivationTimedOut] = useState(false);
-    const statusQuery = useQuery({
-        ...bootstrapStatusQuery,
-        refetchInterval: (query) => {
-            if (!isActivationPending(query.state.data?.state)) {
-                activationStartedAtRef.current = null;
-                return false;
-            }
-
-            activationStartedAtRef.current ??= query.state.dataUpdatedAt;
-
-            const lastStatusCheckAt = Math.max(query.state.dataUpdatedAt, query.state.errorUpdatedAt);
-            if (lastStatusCheckAt - activationStartedAtRef.current >= ACTIVATION_TIMEOUT_MS) {
-                setActivationTimedOut(true);
-                return false;
-            }
-
-            return activationTimedOut ? false : ACTIVATION_POLL_INTERVAL_MS;
-        },
-    });
-    const isActivationWaiting = isActivationPending(statusQuery.data?.state);
+    const { isActivationWaiting, retryActivationPolling, startActivationPolling, timedOut } = useActivationPolling();
     const {
         control,
         formState: { isSubmitting },
@@ -53,14 +30,14 @@ export function Login() {
         try {
             const status = await login(values);
             if (status.state === "Ready") {
-                navigate("/", {
+                navigate(appRoutes.dashboard(), {
                     replace: true,
                 });
                 return;
             }
 
             if (isActivationPending(status.state)) {
-                setActivationTimedOut(false);
+                startActivationPolling();
                 return;
             }
 
@@ -88,14 +65,7 @@ export function Login() {
                     </div>
 
                     {isActivationWaiting ? (
-                        <ActivationWaiting
-                            timedOut={activationTimedOut}
-                            onRetry={() => {
-                                activationStartedAtRef.current = null;
-                                setActivationTimedOut(false);
-                                void statusQuery.refetch();
-                            }}
-                        />
+                        <ActivationWaiting timedOut={timedOut} onRetry={retryActivationPolling} />
                     ) : (
                         <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
                             <FormInput control={control} name="licenseKey" label="License key" type="password" />
@@ -117,10 +87,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const ACTIVATION_POLL_INTERVAL_MS = 5_000;
-const ACTIVATION_TIMEOUT_MS = 120_000;
-
-function isActivationPending(state: BootstrapPhase | undefined) {
+function isActivationPending(state?: BootstrapPhase) {
     return state === "Redeeming" || state === "Restarting";
 }
 

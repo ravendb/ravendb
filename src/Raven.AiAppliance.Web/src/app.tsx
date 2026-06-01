@@ -7,6 +7,7 @@ import { appNavigationSections, isAppRouteHandle, navigationItems } from "@/rout
 import { api } from "@/api/api";
 import { Button } from "@/components/shadcn/ui/button";
 import { useTheme } from "@/components/shadcn/theme-provider";
+import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
@@ -43,20 +44,20 @@ function App() {
             <header className="app-shell__header border-b bg-background px-3 py-2">
                 <div className="flex min-w-0 items-center gap-3">
                     <Link
-                        to="/"
+                        to={appRoutes.dashboard()}
                         className="flex size-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground"
                         aria-label="RavenDB home"
                     >
                         R
                     </Link>
-                    <Link to="/" className="text-sm font-semibold text-sidebar-foreground">
+                    <Link to={appRoutes.dashboard()} className="text-sm font-semibold text-sidebar-foreground">
                         ravendb
                     </Link>
                     {breadcrumbLabel && (
                         <>
                             <span className="text-sidebar-foreground/40">/</span>
                             <Link
-                                to={hasActiveApp && appId ? `/apps/${appId}` : "."}
+                                to={hasActiveApp && appId ? appRoutes.app(appId) : "."}
                                 className="truncate text-sm font-semibold text-sidebar-foreground"
                             >
                                 {breadcrumbLabel}
@@ -69,7 +70,7 @@ function App() {
                     className="ml-4 flex shrink-0 items-center gap-4 text-xs font-semibold"
                     aria-label="Top navigation"
                 >
-                    <Link to="/" className="text-foreground hover:text-muted-foreground">
+                    <Link to={appRoutes.dashboard()} className="text-foreground hover:text-muted-foreground">
                         Dashboard
                     </Link>
                     <a
@@ -209,10 +210,10 @@ function ThemeSwitch() {
 
 function getAppNavigationUrl(appId: string | undefined, path: string) {
     if (!appId) {
-        return "/";
+        return appRoutes.dashboard();
     }
 
-    return path ? `/apps/${appId}/${path}` : `/apps/${appId}`;
+    return appRoutes.app(appId, path);
 }
 
 type SidebarLinkProps = {

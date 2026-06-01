@@ -4,11 +4,10 @@ import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/fiel
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { cn } from "@/lib/utils";
 
-type FormSelectOption = {
-    description?: string;
-    disabled?: boolean;
+export type FormSelectOption<T> = {
+    value: T;
     label: string;
-    value: string;
+    disabled?: boolean;
 };
 
 type FormSelectProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = UseControllerProps<
@@ -19,7 +18,7 @@ type FormSelectProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     description?: ReactNode;
     disabled?: boolean;
     label?: ReactNode;
-    options: readonly FormSelectOption[];
+    options: readonly FormSelectOption<TFieldValues[TName]>[];
     placeholder?: string;
     triggerClassName?: string;
 };
