@@ -6,6 +6,7 @@ import { StatePill } from "components/common/StatePill";
 import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
+import DatabaseStats from "./DatabaseStats";
 import DatabaseIndexStats from "./DatabaseIndexStats";
 import DatabaseIndexErrors from "./DatabaseIndexErrors";
 import genUtils from "common/generalUtils";
@@ -161,6 +162,12 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
                     </Card.Body>
                 </Card>
             </div>
+
+            <DatabaseStats
+                packageId={summary.PackageId}
+                database={database}
+                nodes={overviewRows.map((row) => row.node)}
+            />
 
             <div>
                 <h3 className="mb-3">Storage Overview</h3>

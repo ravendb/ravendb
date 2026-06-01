@@ -39,6 +39,7 @@ import uploadDebugPackageForAnalysisCommand = require("commands/maintenance/uplo
 import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeDebugPackageAnalysisCommand");
 import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
 import getDebugPackageDatabaseIndexStatsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexStatsCommand");
+import getDebugPackageDatabaseStatsCommand = require("commands/maintenance/getDebugPackageDatabaseStatsCommand");
 import getDebugPackageDatabaseIndexErrorsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexErrorsCommand");
 import getDebugPackageNetworkInfoCommand = require("commands/maintenance/getDebugPackageNetworkInfoCommand");
 import getDebugPackageThreadsInfoCommand = require("commands/maintenance/getDebugPackageThreadsInfoCommand");
@@ -209,6 +210,10 @@ export default class ManageServerService {
         ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexStatsCommand>
     ) {
         return new getDebugPackageDatabaseIndexStatsCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseStats(...args: ConstructorParameters<typeof getDebugPackageDatabaseStatsCommand>) {
+        return new getDebugPackageDatabaseStatsCommand(...args).execute();
     }
 
     async getDebugPackageDatabaseIndexErrors(
