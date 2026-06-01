@@ -36,7 +36,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/nonexistent/setup/agent",
-            new { framing = "customer-support" });
+            new { name = "Support Bot", systemPrompt = "You help.", connectionStringName = "demo-llm" });
 
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
@@ -69,7 +69,12 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/agent",
-            new { connectionStringName = "demo-llm", framing = "customer-support" });
+            new
+            {
+                name = "Support Bot",
+                systemPrompt = "You are a helpful support agent for the Northwind store.",
+                connectionStringName = "demo-llm",
+            });
 
         Assert.True(resp.IsSuccessStatusCode,
             $"agent returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
@@ -87,6 +92,50 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_accepts_explicit_null_parameters()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        // Over-posting "parameters": null binds a null Parameters list. Provisioning
+        // serializes the agent through conventions (AddOrUpdateAiAgentOperation ->
+        // DefaultConverter.ToBlittable), which tolerates the null, so the POST must succeed.
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new
+            {
+                name = "Support Bot",
+                systemPrompt = "You help.",
+                connectionStringName = "demo-llm",
+                parameters = (object?)null,
+            });
+
+        Assert.True(resp.IsSuccessStatusCode,
+            $"agent returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
+
+        // Read-back must also work: GetAiAgentsOperation deserializes the stored agent
+        // (null Parameters included) through conventions without error.
+        var agents = await store.Maintenance.ForDatabase(perAppDb).SendAsync(new GetAiAgentsOperation());
+        Assert.Single(agents.AiAgents);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Agent_endpoint_returns_400_for_missing_connection_string_name()
     {
         var store = GetDocumentStore();
@@ -99,7 +148,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/agent",
-            new { framing = "customer-support" });
+            new { name = "Support Bot", systemPrompt = "You help." });
 
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
@@ -118,7 +167,288 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         // No POST to /ai/connection-strings — the named CS doesn't exist.
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/agent",
-            new { connectionStringName = "ghost-llm", framing = "customer-support" });
+            new { name = "Support Bot", systemPrompt = "You help.", connectionStringName = "ghost-llm" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_returns_400_when_server_rejects_configuration()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        // A tool-query name with a space passes the appliance's intake gates (which
+        // only validate Actions/SubAgents), but the server's ValidateConfiguration
+        // rejects it (ToolNameChecker = ^[a-zA-Z0-9_-]+$). Operator input that fails
+        // server-side validation must surface as a 400, not a 500 from the
+        // bubbled RavenException.
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new
+            {
+                name = "Support Bot",
+                systemPrompt = "You help.",
+                connectionStringName = "demo-llm",
+                queries = new[] { new { name = "bad name", description = "lookup", query = "from Orders" } },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_persists_request_name_prompt_and_queries()
+    {
+        // The core behavioural change: the agent's brain (name, system prompt,
+        // RQL tool queries) now comes from the request, not the hardcoded
+        // DemoAgentSchema. Without the enlarged endpoint the persisted agent
+        // would carry DemoAgentSchema's placeholder prompt and zero queries.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new
+            {
+                identifier = "support-bot",
+                name = "Support Bot",
+                systemPrompt = "You are a Northwind support agent. Answer using the orders data.",
+                connectionStringName = "demo-llm",
+                queries = new[]
+                {
+                    new
+                    {
+                        name = "findOrdersByCustomer",
+                        description = "Find orders for a given customer id.",
+                        query = "from Orders where Customer = $customerId",
+                        // A parameterized tool query must declare its parameters
+                        // shape; RavenDB rejects the agent otherwise.
+                        parametersSampleObject = """{"customerId":"ALFKI"}""",
+                    },
+                },
+            });
+
+        Assert.True(resp.IsSuccessStatusCode,
+            $"agent returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
+
+        var agents = await store.Maintenance.ForDatabase(perAppDb)
+            .SendAsync(new GetAiAgentsOperation());
+        var agent = Assert.Single(agents.AiAgents);
+        Assert.Equal("support-bot", agent.Identifier);
+        Assert.Equal("Support Bot", agent.Name);
+        Assert.Equal("You are a Northwind support agent. Answer using the orders data.", agent.SystemPrompt);
+        var query = Assert.Single(agent.Queries);
+        Assert.Equal("findOrdersByCustomer", query.Name);
+        Assert.Equal("from Orders where Customer = $customerId", query.Query);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_returns_400_for_missing_name()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // Create the CS so the only reason to 400 is the missing name (not an
+        // unresolved connection string).
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new { systemPrompt = "You help.", connectionStringName = "demo-llm" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_returns_400_for_missing_system_prompt()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // Create the CS so the only reason to 400 is the missing systemPrompt.
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new { name = "Support Bot", connectionStringName = "demo-llm" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_creates_agent_when_sample_object_omitted()
+    {
+        // RavenDB's AddOrUpdateAiAgentOperation requires either OutputSchema or
+        // SampleObject. The endpoint defaults SampleObject when both are omitted
+        // so the minimal frontend body (name + prompt + CS) still provisions.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new { name = "Support Bot", systemPrompt = "You help.", connectionStringName = "demo-llm" });
+
+        Assert.True(resp.IsSuccessStatusCode,
+            $"agent returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
+
+        var agents = await store.Maintenance.ForDatabase(perAppDb)
+            .SendAsync(new GetAiAgentsOperation());
+        var agent = Assert.Single(agents.AiAgents);
+
+        // The omitted SampleObject must have been defaulted to DefaultSampleObject ({"reply":""}).
+        // Parse rather than string-compare so server-side JSON normalization (whitespace) can't
+        // make the assertion brittle.
+        using var sample = JsonDocument.Parse(agent.SampleObject);
+        Assert.True(sample.RootElement.TryGetProperty("reply", out var reply));
+        Assert.Equal("", reply.GetString());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_rejects_actions()
+    {
+        // Demo subset: model-side Actions are not smoke-tested; reject at intake
+        // rather than silently provisioning an agent that behaves unexpectedly.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new
+            {
+                name = "Support Bot",
+                systemPrompt = "You help.",
+                connectionStringName = "demo-llm",
+                actions = new[] { new { name = "sendEmail", description = "send an email" } },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_rejects_sub_agents()
+    {
+        // Demo subset: server-side SubAgents aren't smoke-tested; reject at intake
+        // (symmetry with Agent_endpoint_rejects_actions).
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new
+            {
+                name = "Support Bot",
+                systemPrompt = "You help.",
+                connectionStringName = "demo-llm",
+                subAgents = new[] { new { name = "helper", systemPrompt = "assist" } },
+            });
 
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }

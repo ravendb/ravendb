@@ -430,7 +430,12 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
 
         var agentResp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/agent",
-            new { connectionStringName = "demo-llm", framing = "customer-support" });
+            new
+            {
+                name = "Support Bot",
+                systemPrompt = "You help.",
+                connectionStringName = "demo-llm",
+            });
         Assert.True(agentResp.IsSuccessStatusCode, await agentResp.Content.ReadAsStringAsync());
 
         var agentId = (await agentResp.Content.ReadFromJsonAsync<JsonElement>())

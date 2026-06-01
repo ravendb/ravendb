@@ -58,6 +58,23 @@ public sealed class ApplianceOptions
     public string LicenseApiUrl { get; set; } = DefaultLicenseApiUrl;
 
     /// <summary>
+    /// Default internal AI service endpoint. The AI Helper proxies LLM-backed config
+    /// generation to <c>{AiApiUrl}/api/v1/ai/setup/*</c>; production uses this as-is,
+    /// tests point it at an in-process <c>MockAiApi</c>.
+    /// </summary>
+    public const string DefaultAiApiUrl = "https://api.ravendb.net";
+
+    /// <summary>
+    /// Internal AI service endpoint for the AI Helper. Bound from <c>RAVEN_AI_API_URL</c>.
+    /// <see cref="UrlAttribute"/> + the options pipeline's <c>ValidateOnStart</c> reject a
+    /// malformed value (missing scheme, whitespace) at boot, so <c>new Uri(AiApiUrl)</c>
+    /// cannot throw a <see cref="UriFormatException"/> on the first
+    /// <c>AiHelperInternalClient</c> resolution.
+    /// </summary>
+    [Url]
+    public string AiApiUrl { get; set; } = DefaultAiApiUrl;
+
+    /// <summary>
     /// Silent grace period before the first readiness probe fires. RavenDB
     /// reliably takes ~10-15s to start, so pinging earlier just generates
     /// noise. Logged once at info level, then we wait.
