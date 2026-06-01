@@ -1,171 +1,163 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useMutation } from "@tanstack/react-query";
-import { Search, TestTube2 } from "lucide-react";
-import { useFormContext } from "react-hook-form";
-import { api } from "@/api/api";
-import type { DiscoverResponse } from "@/api/generated/server-api";
-import { Button } from "@/components/shadcn/ui/button";
-import { SchemaTable } from "@/pages/setup/add-app-wizard/schema-table";
-import {
-    firstMessage,
-    toConnectRequest,
-    toVerifyConnectRequest,
-    type SetupWizardFormValues,
-    type SetupWizardMessage,
-} from "@/pages/setup/add-app-wizard/wizard-model";
-import {
-    isDiscoveredSchemaReady,
-    runWizardRequest,
-    setConnectionResultMessage,
-    setWizardMessage,
-} from "@/pages/setup/add-app-wizard/wizard-request-utils";
 import { StepSection } from "@/pages/setup/add-app-wizard/wizard-step-section";
+import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
+import { getCoreRowModel, getFilteredRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
+import type { DiscoverTableResponse } from "@/api/generated/server-api";
+import { VirtualDataTable } from "@/components/table/virtual-data-table";
+import { Input } from "@/components/shadcn/ui/input";
+import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/wizard-store";
+import { Checkbox } from "@/components/shadcn/ui/checkbox";
+import { useFieldArray, useFormContext } from "react-hook-form";
+import { type AppFormData } from "@/pages/setup/add-app-wizard/wizard-model";
 
-export function VerifySchemaStep({
-    isWorking,
-    message,
-    onDiscoverSchema,
-    onVerifyConnection,
-}: {
-    isWorking: boolean;
-    message?: SetupWizardMessage;
-    onDiscoverSchema: () => void;
-    onVerifyConnection: () => void;
-}) {
+export function VerifySchemaStep(props: WizardBodyComponentProps) {
     return (
-        <StepSection
-            title="Verify your schema"
-            description="Tables from the default schema are discovered and verified automatically."
-            message={message}
-        >
-            <div className="grid gap-4">
-                <div className="flex flex-wrap justify-end gap-2">
-                    <Button type="button" variant="secondary" onClick={onDiscoverSchema} disabled={isWorking}>
-                        <Search className="size-4" aria-hidden="true" />
-                        Discover tables
-                    </Button>
-                    <Button type="button" variant="secondary" onClick={onVerifyConnection} disabled={isWorking}>
-                        <TestTube2 className="size-4" aria-hidden="true" />
-                        Verify source
-                    </Button>
-                </div>
-                <SchemaTable />
-            </div>
+        <StepSection {...props}>
+            <SchemaTable />
         </StepSection>
     );
 }
 
-export function useVerifySchemaStep() {
-    const form = useFormContext<SetupWizardFormValues>();
-    const schema = useSetupWizardStore((state) => state.schema);
-    const clearStepMessage = useSetupWizardStore((state) => state.clearStepMessage);
-    const setSchema = useSetupWizardStore((state) => state.setSchema);
-    const discoverSchemaMutation = useMutation({
-        mutationFn: (values: SetupWizardFormValues) => api.services.setup.discover(toConnectRequest(values)),
-    });
-    const verifyConnectionMutation = useMutation({
-        mutationFn: ({ schema, values }: { schema: DiscoverResponse; values: SetupWizardFormValues }) =>
-            api.services.setup.connect(toVerifyConnectRequest(values, schema)),
+export function SchemaTable() {
+    const { control } = useFormContext<AppFormData>();
+    const discoverResult = useSetupWizardStore((state) => state.discoverResult);
+
+    const tablesFieldArray = useFieldArray({
+        control,
+        name: "verifySchema.tables",
     });
 
-    async function discoverSchema() {
-        clearStepMessage("verify-schema");
+    console.log("kalczur tablesFieldArray", tablesFieldArray.fields);
 
-        if (!(await form.trigger(["provider", "connectionString"]))) {
-            return false;
-        }
+    const allTables = discoverResult?.tables ?? [];
 
-        const discoveredSchema = await runWizardRequest("verify-schema", () =>
-            discoverSchemaMutation.mutateAsync(form.getValues()),
-        );
+    const columns: ColumnDef<DiscoverTableResponse>[] = [
+        {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={table.getIsAllRowsSelected()}
+                    onChange={(event) => {
+                        // TODO FIX
+                        table.getToggleAllRowsSelectedHandler()(event);
 
-        if (!discoveredSchema) {
-            return false;
-        }
+                        if (event.currentTarget.value) {
+                            tablesFieldArray.replace([]);
+                        } else {
+                            tablesFieldArray.replace(
+                                allTables.map((x) => ({
+                                    sourceTableName: x.sourceTableName,
+                                    sourceTableSchema: x.sourceTableSchema,
+                                })),
+                            );
+                        }
+                    }}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => {
+                        row.toggleSelected();
 
-        setSchema(discoveredSchema);
+                        // TODO simplify
+                        if (value) {
+                            tablesFieldArray.append({
+                                sourceTableSchema: row.original.sourceTableSchema,
+                                sourceTableName: row.original.sourceTableName,
+                            });
+                        } else {
+                            const tableField = tablesFieldArray.fields.find(
+                                (x) =>
+                                    x.sourceTableSchema === row.original.sourceTableSchema &&
+                                    x.sourceTableName === row.original.sourceTableName,
+                            );
 
-        if (discoveredSchema.errors?.length) {
-            setWizardMessage("verify-schema", {
-                title: "Schema discovery failed.",
-                description: firstMessage(discoveredSchema.errors),
-                type: "error",
-            });
-            return false;
-        }
+                            if (!tableField) {
+                                return;
+                            }
 
-        if (discoveredSchema.tables?.length === 0) {
-            setWizardMessage("verify-schema", {
-                title: "No tables were discovered.",
-                description: "Check the source database permissions and selected table filters.",
-                type: "error",
-            });
-            return false;
-        }
+                            const fieldIndex = tablesFieldArray.fields.indexOf(tableField);
 
-        setWizardMessage("verify-schema", {
-            title: "Schema discovered.",
-            description: `${discoveredSchema.tables?.length ?? 0} tables found in the default schema.`,
-            type: "success",
-        });
-        return true;
+                            tablesFieldArray.remove(fieldIndex);
+                        }
+                    }}
+                    aria-label="Select row"
+                />
+            ),
+            enableSorting: false,
+            size: 48,
+        },
+        {
+            accessorFn: (table) => getTableLabel(table),
+            header: "Table name",
+            id: "tableName",
+        },
+        {
+            accessorFn: (table) => table.primaryKeyColumns.join(", "),
+            header: "Primary key",
+            id: "primaryKey",
+        },
+        {
+            accessorFn: (table) => table.columns.length,
+            header: "Columns count",
+            id: "columnsCount",
+        },
+    ];
+
+    // eslint-disable-next-line react-hooks/incompatible-library
+    const table = useReactTable({
+        columns,
+        data: allTables,
+        enableRowSelection: (row) => isTableUsable(row.original),
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getRowId: (table) => getTableLabel(table),
+        globalFilterFn: "includesString",
+    });
+
+    return (
+        <div className="grid gap-3">
+            <MessageList messages={discoverResult?.errors} tone="destructive" />
+            <Input
+                value={table.getColumn("tableName")?.getFilterValue() as string}
+                onChange={(event) => table.getColumn("tableName")?.setFilterValue(event.target.value)}
+                placeholder="Search by table name"
+                className="max-w-sm"
+                type="search"
+            />
+            <VirtualDataTable
+                table={table}
+                columnCount={columns.length}
+                emptyMessage="No tables match the current filter."
+                heightInPx={300}
+            />
+        </div>
+    );
+}
+
+export function MessageList({ messages, tone = "muted" }: { messages?: string[]; tone?: "destructive" | "muted" }) {
+    const visibleMessages = messages?.filter(Boolean) ?? [];
+
+    if (visibleMessages.length === 0) {
+        return null;
     }
 
-    async function verifyConnection() {
-        clearStepMessage("verify-schema");
+    return (
+        <ul className={cn("grid gap-1 text-sm", tone === "destructive" ? "text-destructive" : "text-muted-foreground")}>
+            {visibleMessages.map((message, index) => (
+                <li key={index}>{message}</li>
+            ))}
+        </ul>
+    );
+}
 
-        if (!(await form.trigger(["provider", "connectionString"]))) {
-            return false;
-        }
+function isTableUsable(table: DiscoverTableResponse) {
+    return table.isCdcEnabled && !table.unsupportedReason;
+}
 
-        const sourceSchema = schema ?? ((await discoverSchema()) ? useSetupWizardStore.getState().schema : null);
-
-        if (!sourceSchema) {
-            return false;
-        }
-
-        if (!sourceSchema.tables.length) {
-            setWizardMessage("verify-schema", {
-                title: "No tables to verify.",
-                description: "Discover source tables before running verification.",
-                type: "error",
-            });
-            return false;
-        }
-
-        const result = await runWizardRequest("verify-schema", () =>
-            verifyConnectionMutation.mutateAsync({ schema: sourceSchema, values: form.getValues() }),
-        );
-
-        return Boolean(result && setConnectionResultMessage("verify-schema", result));
-    }
-
-    async function completeStep() {
-        const hasSchema = isDiscoveredSchemaReady(schema) || (await discoverSchema());
-        const selectedTableKeys = useSetupWizardStore.getState().selectedTableKeys;
-
-        if (hasSchema && selectedTableKeys.length > 0) {
-            setWizardMessage("map-schema", {
-                title: "Schema is ready.",
-                description: "Auto mapping can now generate a CDC configuration.",
-                type: "success",
-            });
-            return true;
-        }
-
-        setWizardMessage("verify-schema", {
-            title: "Select at least one table.",
-            description: "Choose the verified source tables that should be used by this application.",
-            type: "error",
-        });
-        return false;
-    }
-
-    return {
-        completeStep,
-        discoverSchema,
-        isWorking: discoverSchemaMutation.isPending || verifyConnectionMutation.isPending,
-        verifyConnection,
-    };
+function getTableLabel(table: DiscoverTableResponse) {
+    return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 }

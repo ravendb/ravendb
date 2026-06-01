@@ -20,7 +20,7 @@ type FormStringListProps<TFieldValues extends FieldValues, TName extends ArrayPa
     description?: string;
     emptyLabel?: string;
     fieldName: (index: number) => FieldPath<TFieldValues>;
-    itemLabel?: (index: number) => string | undefined;
+    itemLabel?: (index: number) => string;
     label: string;
 };
 

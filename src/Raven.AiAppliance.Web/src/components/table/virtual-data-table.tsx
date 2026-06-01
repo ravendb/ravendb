@@ -16,8 +16,8 @@ interface VirtualDataTableProps<TData> {
     heightInPx?: number;
     overscan?: number;
     rowHeightInPx?: number;
-    getCellClassName?: (cellId: string) => string | undefined;
-    getRowState?: (rowId: string) => string | undefined;
+    getCellClassName?: (cellId: string) => string;
+    getRowState?: (rowId: string) => string;
 }
 
 export function VirtualDataTable<TData>({
@@ -72,6 +72,10 @@ export function VirtualDataTable<TData>({
                     >
                         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                             const row = rows[virtualRow.index];
+
+                            if (!row) {
+                                return null;
+                            }
 
                             return (
                                 <TableRow

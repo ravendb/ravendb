@@ -57,7 +57,7 @@ export type AceEditorProps = Omit<ReactAceEditorProps, "mode"> & {
     validationErrorMessage?: string;
 };
 
-function toHeightNumber(height: number | string | undefined, fallback: number) {
+function toHeightNumber(height: number | string, fallback: number) {
     if (typeof height === "number") {
         return height;
     }

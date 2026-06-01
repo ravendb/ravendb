@@ -19,6 +19,7 @@ import { AppOverview } from "@/pages/apps/app-overview";
 import { AppTasks } from "@/pages/apps/app-tasks";
 import { Login } from "@/pages/auth/login";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
+import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
 import { SetupConnect } from "@/pages/setup/setup-connect";
 import { AiPage } from "@/pages/utility/ai-page";
 import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
@@ -152,7 +153,7 @@ export const navigationItems = dashboardPages.flatMap((page) =>
         ? [
               {
                   ...page.navigation,
-                  to: page.index ? "/" : `/${page.path}`,
+                  to: page.index ? appRouteBuilders.dashboard() : `/${page.path}`,
               },
           ]
         : [],
@@ -187,30 +188,35 @@ export const appNavigationSections = [
     },
 ] satisfies Array<{ label: string; items: NavigationItem[] }>;
 
-const dashboardRoutes: RouteObject[] = dashboardPages.map((page) => ({
-    path: page.path,
-    index: page.index,
-    element: page.element,
-    handle: {
-        title: page.title,
-        subtitle: page.subtitle,
-    } satisfies AppRouteHandle,
-}));
+const dashboardRoutes: RouteObject[] = dashboardPages.map((page) => toRouteObject(page));
 
-const appRoutes: RouteObject[] = appPages.map((page) => ({
-    path: page.path,
-    index: page.index,
-    element: page.element,
-    handle: {
+const appRoutes: RouteObject[] = appPages.map((page) => toRouteObject(page, true));
+
+function toRouteObject(page: AppRouteDefinition, appScoped = false): RouteObject {
+    const handle = {
         title: page.title,
         subtitle: page.subtitle,
-        appScoped: true,
-    } satisfies AppRouteHandle,
-}));
+        appScoped: appScoped,
+    } satisfies AppRouteHandle;
+
+    if (page.index) {
+        return {
+            index: true,
+            element: page.element,
+            handle,
+        };
+    }
+
+    return {
+        path: page.path,
+        element: page.element,
+        handle,
+    };
+}
 
 const utilityRoutes: RouteObject[] = [
     {
-        path: "setup/connect",
+        path: ROUTE_PATTERNS.setupConnect,
         element: <SetupConnect />,
         handle: {
             title: "Add new application",
@@ -275,7 +281,7 @@ export const router = createBrowserRouter([
             ...dashboardRoutes,
             ...utilityRoutes,
             {
-                path: "apps/:appId",
+                path: ROUTE_PATTERNS.app,
                 children: appRoutes,
             },
         ],

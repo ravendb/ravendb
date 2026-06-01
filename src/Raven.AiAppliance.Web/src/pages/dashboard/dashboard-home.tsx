@@ -5,6 +5,7 @@ import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { PagePanel } from "@/components/data/page-panel";
 import { Button } from "@/components/shadcn/ui/button";
+import { appRoutes } from "@/lib/app-routes";
 
 export function DashboardHome() {
     const appsQuery = useQuery(api.queries.apps.list());
@@ -23,7 +24,7 @@ export function DashboardHome() {
                         <div className="flex items-center justify-between gap-3">
                             <h2 className="text-sm font-semibold">Available apps</h2>
                             <Button asChild size="sm">
-                                <Link to="/setup/connect">
+                                <Link to={appRoutes.setupConnect()}>
                                     <Plus className="size-3.5" aria-hidden="true" />
                                     Add app
                                 </Link>
@@ -33,7 +34,7 @@ export function DashboardHome() {
                             {appsQuery.data.map((app) => (
                                 <Link
                                     key={app.id}
-                                    to={`/${app.id}`}
+                                    to={appRoutes.app(app.id)}
                                     className="rounded-lg border bg-background p-4 text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                                 >
                                     <div className="flex items-center gap-3">
@@ -69,7 +70,7 @@ function EmptyAppsState() {
                     Create an app from a source database and CDC mapping.
                 </p>
                 <Button asChild size="sm" className="mt-5">
-                    <Link to="/setup/connect">
+                    <Link to={appRoutes.setupConnect()}>
                         <Plus className="size-3.5" aria-hidden="true" />
                         Add app
                     </Link>
