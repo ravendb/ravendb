@@ -69,7 +69,7 @@ namespace Raven.Server.Documents
                 _parent = parent;
             }
 
-            public void ValidateAtomicGuard(string id, NonPersistentDocumentFlags nonPersistentDocumentFlags, string changeVector)
+            public void ValidateAtomicGuard(string id, NonPersistentDocumentFlags nonPersistentDocumentFlags, ChangeVector changeVector)
             {
                 if (nonPersistentDocumentFlags != NonPersistentDocumentFlags.None) // replication or engine running an operation, we can skip checking it 
                     return;
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents
                 if (_parent._documentDatabase.ClusterTransactionId == null)
                     return;
 
-                long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
+                long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector.Version, _parent._documentDatabase.ClusterTransactionId);
                 if (indexFromChangeVector == 0)
                     return;
 
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents
             var compareClusterTransaction = new CompareClusterTransactionId(this);
             if (oldChangeVectorForClusterTransactionIndexCheck != null)
             {
-                compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, oldChangeVectorForClusterTransactionIndexCheck);
+                compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, context.GetChangeVector(oldChangeVectorForClusterTransactionIndexCheck));
             }
 
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
