@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Raven.AiAppliance.AiHelper;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Infrastructure;
 using Raven.AiAppliance.Wizard;
@@ -44,6 +45,12 @@ public static class WizardEndpoints
             .Accepts<MapRequest>("application/json")
             .Produces<CdcSinkConfiguration>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/suggest/cdc", SuggestCdcAsync)
+            .WithName("setup.suggest.cdc")
+            .Accepts<SuggestCdcRequest>("application/json")
+            .Produces<SuggestCdcResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
         group.MapPost("/test-mapping", TestMappingAsync)
             .WithName("setup.testMapping")
             .Accepts<TestMappingRequest>("application/json")
@@ -184,6 +191,50 @@ public static class WizardEndpoints
         }, ct);
 
         return Results.Ok(cdcConfig);
+    }
+
+    /// <summary>
+    /// AI-suggest counterpart to W3 Map. Gathers the discovered schema (from Discover),
+    /// asks the internal AI service for a draft <see cref="CdcSinkConfiguration"/>,
+    /// re-validates it, and returns it for the editable Review card. <b>Generate-only</b>: it does
+    /// not persist; the admin edits and the existing <c>/api/setup/map</c> stays the single writer.
+    /// Non-Success internal statuses (OutOfTokens / InvalidCredentials) are surfaced in the response
+    /// <c>Status</c> with a null configuration rather than as an HTTP error.
+    /// </summary>
+    private static async Task<IResult> SuggestCdcAsync(
+        SuggestCdcRequest body,
+        IDocumentStore store,
+        IAiHelperClient aiClient,
+        ILogger<WizardLogger> logger,
+        CancellationToken ct)
+    {
+        if (body is null || string.IsNullOrWhiteSpace(body.IntentPrompt))
+            return Results.BadRequest(new ApiErrorResponse("intentPrompt is required"));
+
+        WizardState? state;
+        using (var session = store.OpenAsyncSession())
+            state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
+
+        if (state?.LastDiscoveredSchema is null)
+            return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
+
+        // Pass the discovered schema (CdcSinkSourceSchema, internal to Raven.Client) straight to the
+        // client as object; the client serializes it via store conventions to the canonical wire shape.
+        var result = await aiClient.SuggestCdcAsync(state.LastDiscoveredSchema, samples: null, body.IntentPrompt, ct);
+
+        if (result.Status != AiHelperStatus.Success)
+            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString()));
+
+        if (result.Configuration is null)
+            return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned a success status but no configuration"));
+
+        if (!result.Configuration.Validate(out var errors, validateName: false, validateConnection: false))
+        {
+            logger.LogInformation("SuggestCdc: returned configuration failed validation ({Count} errors)", errors.Count);
+            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
+        }
+
+        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString()));
     }
 
     /// <summary>

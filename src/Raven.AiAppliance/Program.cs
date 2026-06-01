@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
 using Polly.Timeout;
+using Raven.AiAppliance.AiHelper;
 using Raven.AiAppliance.Endpoints;
 using Raven.AiAppliance.Hosting;
 using Raven.AiAppliance.Infrastructure;
@@ -72,6 +73,7 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_AI_SETUP_PACKAGE_ZIP",    v => options.SetupPackageZipPath = v);
         ReadEnv("RAVEN_AI_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_AI_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
+        ReadEnv("RAVEN_AI_API_URL",              v => options.AiApiUrl = v);
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -86,6 +88,30 @@ builder.Services.AddSingleton<IAgentSchema, DemoAgentSchema>();
 if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<RavenReadinessService>();
 builder.Services.AddHttpClient();
+
+// AI Helper: identity provider (license.json + admin-thumbprint) and the AI-Helper
+// client. In demo mode, the same local setup-package zip that makes the bootstrap
+// endpoint bypass the real license API (see BootstrapEndpoints) also leaves the
+// internal AI service on api.ravendb.net unreachable, so serve canned Northwind sample
+// data via MockAiHelperClient. Production (no zip) always uses the real HTTP client
+// dialed at ApplianceOptions.AiApiUrl. Read the env directly here, like listenUrl above:
+// IOptions isn't resolved yet at registration time.
+builder.Services.AddSingleton<IApplianceLicenseProvider, SetupPackageLicenseProvider>();
+
+var setupPackageZip = Environment.GetEnvironmentVariable("RAVEN_AI_SETUP_PACKAGE_ZIP");
+var useAiHelperMock = string.IsNullOrEmpty(setupPackageZip) == false && File.Exists(setupPackageZip);
+if (useAiHelperMock)
+{
+    builder.Services.AddSingleton<IAiHelperClient, MockAiHelperClient>();
+}
+else
+{
+    builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
+    {
+        var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+        http.BaseAddress = new Uri(opts.AiApiUrl);
+    });
+}
 
 // Wire-shape: enums travel as their string names (e.g. AiModelType "Chat" not 1,
 // AiConnectorType "Ollama" not 3). Matches RavenDB Studio's payload, lets
@@ -139,6 +165,12 @@ if (app.Environment.IsDevelopment())
         app.Logger.LogWarning(
             "LicenseApiUrl is set to the production default ({Default}); set RAVEN_AI_LICENSE_API_URL to a mock or staging endpoint for local development.",
             ApplianceOptions.DefaultLicenseApiUrl);
+    }
+
+    if (useAiHelperMock)
+    {
+        app.Logger.LogInformation(
+            "AI Helper is running in demo mode: suggest/cdc and suggest/agent return canned Northwind sample data (MockAiHelperClient), not live results from the internal AI service.");
     }
 }
 

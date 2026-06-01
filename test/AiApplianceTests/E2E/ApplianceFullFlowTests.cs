@@ -179,8 +179,17 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             $"ai connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
 
         // ---------- T11b. Provision agent referencing the CS ----------
+        // identifier is pinned to "demo-agent" so the T12 channel step still
+        // resolves it against the compile-time AgentSchemaRegistry. Channel
+        // binding of arbitrary operator-defined agent ids is a follow-up slice.
         var agentResp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/agent",
-            new { connectionStringName = "demo-llm", framing = "customer-support" });
+            new
+            {
+                identifier = "demo-agent",
+                name = "Support Bot",
+                systemPrompt = "You are a helpful Northwind support agent.",
+                connectionStringName = "demo-llm",
+            });
         Assert.True(agentResp.IsSuccessStatusCode,
             $"agent returned {agentResp.StatusCode}: {await agentResp.Content.ReadAsStringAsync()}");
         var agentJson = await agentResp.Content.ReadFromJsonAsync<JsonElement>();
