@@ -4,6 +4,10 @@ import Table from "react-bootstrap/Table";
 import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
 import { InputItem } from "components/models/common";
 import { EmptySet } from "components/common/EmptySet";
+import Spinner from "react-bootstrap/Spinner";
+import { useAsync } from "react-async-hook";
+import { useServices } from "hooks/useServices";
+import { RichAlert } from "components/common/RichAlert";
 import StatTile from "./StatTile";
 import genUtils from "common/generalUtils";
 import { formatNumber, formatPercentage } from "./analyzerUtils";
@@ -16,15 +20,15 @@ type MemoryAnalysisInfo =
 type GcMemoryInfo = Raven.Server.Dashboard.Cluster.Notifications.GcInfoPayload.GcMemoryInfo;
 type GenerationInfoSize = Raven.Server.Dashboard.Cluster.Notifications.GcInfoPayload.GenerationInfoSize;
 
-type MetricTab = "cpu" | "memory" | "gc";
+type MetricTab = "cpu" | "memory" | "gc" | "network";
 
 interface PerformanceMetricsProps {
     summary: DebugPackageAnalysisSummary;
     nodeTag: string;
 }
 
-// Network/threads metrics need the dedicated debug-package endpoints; this widget covers the
-// CPU / Memory / GC data already present in the summary payload.
+// CPU / Memory / GC come from the summary payload; Network is fetched on demand from the analyzer
+// network endpoint. Thread stack traces have their own (deferred) drill-down.
 export default function PerformanceMetrics({ summary, nodeTag }: PerformanceMetricsProps) {
     const node = summary.SummaryPerNode?.[nodeTag];
     const [tab, setTab] = useState<MetricTab>("cpu");
@@ -33,6 +37,7 @@ export default function PerformanceMetrics({ summary, nodeTag }: PerformanceMetr
         { label: "CPU", value: "cpu" },
         { label: "Memory", value: "memory" },
         { label: "GC", value: "gc" },
+        { label: "Network", value: "network" },
     ];
 
     return (
@@ -49,6 +54,7 @@ export default function PerformanceMetrics({ summary, nodeTag }: PerformanceMetr
                     {tab === "cpu" && <CpuTab cpu={node?.CpuUsageInfo} />}
                     {tab === "memory" && <MemoryTab memory={node?.MemoryUsageInfo} />}
                     {tab === "gc" && <GcTab gc={node?.GcInfo} />}
+                    {tab === "network" && <NetworkTab packageId={summary.PackageId} nodeTag={nodeTag} />}
                 </Card.Body>
             </Card>
         </div>
@@ -227,4 +233,82 @@ function GcTab({ gc }: { gc?: GcMemoryInfo }) {
             )}
         </>
     );
+}
+
+// Network info is not in the summary; fetch it on demand from the analyzer network endpoint.
+function NetworkTab({ packageId, nodeTag }: { packageId: string; nodeTag: string }) {
+    const { manageServerService } = useServices();
+    const network = useAsync(
+        () => manageServerService.getDebugPackageNetworkInfo(packageId, nodeTag),
+        [packageId, nodeTag]
+    );
+
+    if (network.loading) {
+        return (
+            <div className="hstack gap-2 justify-content-center text-muted py-3">
+                <Spinner size="sm" /> Loading network info for node {nodeTag}...
+            </div>
+        );
+    }
+
+    if (network.error) {
+        return (
+            <RichAlert variant="warning">
+                Could not load network info for node {nodeTag}. The analysis report may have expired on the server
+                (re-upload the package to inspect), or this data was not captured.
+            </RichAlert>
+        );
+    }
+
+    const info = network.result;
+    if (!info) {
+        return <EmptySet compact>No network data in the package</EmptySet>;
+    }
+
+    return (
+        <>
+            <div className="overview-stats d-flex gap-2 flex-wrap">
+                <StatTile
+                    label="Active TCP connections"
+                    icon="global"
+                    iconColor="info"
+                    value={formatNumber(info.TotalActiveTcpConnections)}
+                />
+                <StatTile label="Connection states" icon="link" value={formatNumber(info.TcpConnections?.length)} />
+            </div>
+            {(info.TcpConnections?.length ?? 0) === 0 ? (
+                <EmptySet compact>No TCP connection data in the package</EmptySet>
+            ) : (
+                <Table responsive className="m-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>TCP state</th>
+                            <th>Connections</th>
+                            <th>Top remote endpoints</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {info.TcpConnections.map((connection) => (
+                            <tr key={connection.TcpState}>
+                                <td className="fw-bold">{connection.TcpState}</td>
+                                <td>{formatNumber(connection.NumberOfConnectionsInState)}</td>
+                                <td className="text-break">{formatTopConnections(connection.TopConnectionsInState)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
+            )}
+        </>
+    );
+}
+
+function formatTopConnections(top: { [endpoint: string]: number }): string {
+    const entries = Object.entries(top ?? {});
+    if (entries.length === 0) {
+        return "-";
+    }
+    return entries
+        .sort((a, b) => b[1] - a[1])
+        .map(([endpoint, count]) => `${endpoint} (${count})`)
+        .join(", ");
 }

@@ -447,6 +447,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.MemoryAnalysisInfo));
             scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.ManagedMemoryAnalysisInfo));
             scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.UnmanagedMemoryAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.NetworkAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.TcpConnections));
 
             // data archival
             scripter.AddType(typeof(DataArchivalConfiguration));

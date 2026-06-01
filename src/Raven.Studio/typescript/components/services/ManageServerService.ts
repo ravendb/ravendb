@@ -40,6 +40,7 @@ import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeD
 import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
 import getDebugPackageDatabaseIndexStatsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexStatsCommand");
 import getDebugPackageDatabaseIndexErrorsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexErrorsCommand");
+import getDebugPackageNetworkInfoCommand = require("commands/maintenance/getDebugPackageNetworkInfoCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -213,5 +214,9 @@ export default class ManageServerService {
         ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexErrorsCommand>
     ) {
         return new getDebugPackageDatabaseIndexErrorsCommand(...args).execute();
+    }
+
+    async getDebugPackageNetworkInfo(...args: ConstructorParameters<typeof getDebugPackageNetworkInfoCommand>) {
+        return new getDebugPackageNetworkInfoCommand(...args).execute();
     }
 }
