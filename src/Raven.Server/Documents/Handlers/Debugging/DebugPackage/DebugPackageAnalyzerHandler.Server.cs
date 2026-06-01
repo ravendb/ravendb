@@ -75,6 +75,6 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         var responseStream = ResponseBodyStream();
 
-        await nodeReport.Server.ThreadsInfo.StackTracesEntry.Content.CopyToAsync(responseStream);
+        await nodeReport.Server.ThreadsInfo.StackTracesEntry.WriteContentToAsync(responseStream);
     }
 }

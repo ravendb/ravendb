@@ -78,7 +78,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         var responseStream = ResponseBodyStream();
 
-        await dbReport.DatabaseInfo.DatabaseRecordEntry.Content.CopyToAsync(responseStream);
+        await dbReport.DatabaseInfo.DatabaseRecordEntry.WriteContentToAsync(responseStream);
     }
     
     [RavenAction("/debug/info-package/analyzer/databases/indexes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -93,7 +93,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         var responseStream = ResponseBodyStream();
 
-        await dbReport.IndexesInfo.DefinitionsEntry.Content.CopyToAsync(responseStream);
+        await dbReport.IndexesInfo.DefinitionsEntry.WriteContentToAsync(responseStream);
     }
     
     [RavenAction("/debug/info-package/analyzer/databases/indexes/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -125,7 +125,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         var responseStream = ResponseBodyStream();
 
-        await dbReport.IndexesInfo.PerformanceEntry.Content.CopyToAsync(responseStream);
+        await dbReport.IndexesInfo.PerformanceEntry.WriteContentToAsync(responseStream);
     }
     
     [RavenAction("/debug/info-package/analyzer/databases/indexes/errors", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -140,7 +140,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         var responseStream = ResponseBodyStream();
 
-        await dbReport.IndexesInfo.ErrorsEntry.Content.CopyToAsync(responseStream);
+        await dbReport.IndexesInfo.ErrorsEntry.WriteContentToAsync(responseStream);
     }
     
     [RavenAction("/debug/info-package/analyzer/databases/configuration/settings", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -155,7 +155,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         var responseStream = ResponseBodyStream();
 
-        await dbReport.Settings.SettingsEntry.Content.CopyToAsync(responseStream);
+        await dbReport.Settings.SettingsEntry.WriteContentToAsync(responseStream);
     }
     
     private bool TryGetDatabaseReportOrSetNotFound(string packageId, string nodeTag, string dbName, out DebugPackageDatabaseReport dbReport)

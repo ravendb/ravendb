@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Extensions;
@@ -55,6 +56,22 @@ public class DebugPackageEntries
         public T Deserialize<T>()
         {
             return Json.RootElement.Deserialize<T>(DeserializeOptions);
+        }
+
+        public async Task WriteContentToAsync(Stream stream)
+        {
+            // Entries are buffered into a MemoryStream when the package is read and kept for the
+            // report's lifetime. The report is served on demand and re-read multiple times, so write
+            // from the buffer instead of CopyToAsync - the latter advances the stream position and
+            // would leave nothing for subsequent reads.
+            if (Content is MemoryStream memoryStream && memoryStream.TryGetBuffer(out var buffer))
+            {
+                await stream.WriteAsync(buffer.AsMemory());
+                return;
+            }
+
+            Content.Position = 0;
+            await Content.CopyToAsync(stream);
         }
     }
 

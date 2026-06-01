@@ -1,11 +1,8 @@
-﻿using System.IO;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
-using Raven.Server.Utils;
 using Raven.Server.Web;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage;
 
@@ -29,7 +26,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
 
         var responseStream = ResponseBodyStream();
 
-        await nodeReport.ClusterNode.NodeStateInfo.TopologyEntry.Content.CopyToAsync(responseStream);
+        await nodeReport.ClusterNode.NodeStateInfo.TopologyEntry.WriteContentToAsync(responseStream);
     }
     
     
@@ -46,7 +43,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
 
         var responseStream = ResponseBodyStream();
 
-        await nodeReport.ClusterNode.NodeLogInfo.LogEntry.Content.CopyToAsync(responseStream);
+        await nodeReport.ClusterNode.NodeLogInfo.LogEntry.WriteContentToAsync(responseStream);
     }
     
     [RavenAction("/debug/info-package/analyzer/cluster/observer/decisions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -67,6 +64,6 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
 
         var responseStream = ResponseBodyStream();
 
-        await nodeReport.ClusterNode.ObserverInfo.ObserverDecisionsEntry.Content.CopyToAsync(responseStream);
+        await nodeReport.ClusterNode.ObserverInfo.ObserverDecisionsEntry.WriteContentToAsync(responseStream);
     }
 }
