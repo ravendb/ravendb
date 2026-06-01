@@ -100,8 +100,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override int GetNextReplicationStatsId() => _parent.GetNextReplicationStatsId();
 
-        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
-            bool canOmitSourceItems)
+        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
         {
             return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, connectionInfo, trigger);
         }
@@ -207,8 +206,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector) == false)
                 return;
 
-            var canOmitSourceItems = message.TryGet(nameof(ReplicationMessageHeader.CanOmitSourceItems), out bool value) && value;
-
             // saving the change vector and the last received document etag
             long lastEtag;
             string lastChangeVector;
@@ -219,7 +216,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
 
             var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
-            if ((ShouldMergeHeartbeatChangeVector(canOmitSourceItems) == false || status != ConflictStatus.Update) &&
+            if ((ShouldMergeHeartbeatChangeVector() == false || status != ConflictStatus.Update) &&
                 _lastDocumentEtag <= lastEtag)
                 return;
 
@@ -230,7 +227,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                     $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
             }
 
-            var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource, canOmitSourceItems);
+            var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
 
             if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
             {
@@ -247,7 +244,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        protected virtual bool ShouldMergeHeartbeatChangeVector(bool canOmitSourceItems) => true;
+        protected virtual bool ShouldMergeHeartbeatChangeVector() => true;
 
         public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {

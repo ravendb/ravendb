@@ -658,9 +658,6 @@ namespace Raven.Server.Documents.Replication.Senders
                 [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count
             };
 
-            if (_parent.CanOmitSourceItems)
-                headerJson[nameof(ReplicationMessageHeader.CanOmitSourceItems)] = true;
-
             stats.RecordLastEtag(_lastEtag);
             stats.RecordLastAcceptedChangeVector(_parent.LastAcceptedChangeVector);
             _parent.WriteToServer(headerJson);
