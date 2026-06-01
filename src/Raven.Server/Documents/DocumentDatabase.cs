@@ -2358,11 +2358,17 @@ namespace Raven.Server.Documents
 
             if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix))
                 SupportedFeatureTypes.ThrowRevisionKeyTooBigFix = true;
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.HashedRevisionPk))
+                SupportedFeatureTypes.HashedRevisionPk = true;
         }
     }
 
     public class SupportedFeatureTypes
     {
         public bool ThrowRevisionKeyTooBigFix;
+
+        // Gate matching the HashedRevisionPk wire token; suppresses the raw-form probe in DualFormProbe
+        // on born-clean databases.
+        public bool HashedRevisionPk;
     }
 }
