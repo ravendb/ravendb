@@ -4,6 +4,8 @@ namespace Sparrow.Utils
 {
     internal static class ClientChangeVectorUtils
     {
+        internal const string Separator = "|";
+
         public static long GetEtagById(string changeVector, string id)
         {
             if (changeVector == null)
@@ -11,6 +13,9 @@ namespace Sparrow.Utils
 
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
+
+            if (changeVector.Contains(Separator))
+                throw new ArgumentException($"Change vector contains '{Separator}', which is not supported for this operation.", nameof(changeVector));
 
             var index = changeVector.IndexOf("-" + id, StringComparison.Ordinal);
             if (index == -1)

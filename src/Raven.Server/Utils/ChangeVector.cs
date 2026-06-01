@@ -7,6 +7,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils;
 
@@ -14,7 +15,6 @@ public sealed class ChangeVector
 {
     internal static readonly PerCoreContainer<FastList<ChangeVector>> PerCoreChangeVectors = new PerCoreContainer<FastList<ChangeVector>>(32);
 
-    private const char Separator = '|';
     private string _changeVector;
 
     private ChangeVector _order;
@@ -45,12 +45,12 @@ public sealed class ChangeVector
         if (changeVector == null)
             return;
 
-        if (changeVector.Contains(Separator))
+        if (changeVector.Contains(ClientChangeVectorUtils.Separator))
         {
             if (throwOnRecursion)
                 throw new ArgumentException("Recursion was detected");
 
-            var parts = changeVector.Split(Separator);
+            var parts = changeVector.Split(ClientChangeVectorUtils.Separator);
             if (parts.Length != 2)
                 throw new ArgumentException($"Invalid change vector {changeVector}");
 
@@ -394,7 +394,7 @@ public sealed class ChangeVector
         if (IsSingle)
             return _changeVector;
 
-        return $"{_order._changeVector}{Separator}{_version._changeVector}";
+        return $"{_order._changeVector}{ClientChangeVectorUtils.Separator}{_version._changeVector}";
     }
 }
 
