@@ -46,7 +46,7 @@ public static class WizardEndpoints
             .Produces<CdcSinkConfiguration>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/suggest/cdc", SuggestCdcAsync)
-            .WithName("setup.suggest.cdc")
+            .WithName("setup.suggestCdc")
             .Accepts<SuggestCdcRequest>("application/json")
             .Produces<SuggestCdcResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)

@@ -1,45 +1,16 @@
 import type { WizardSteps } from "@/components/form/wizard/form-wizard";
+import type { AppStepId, AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/choose-data-source-step";
-import { ConnectSourceStep, useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect-source-step";
+import { useConnectSourceStep, ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect-source-step";
+import { MapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-suggest-step";
+import { useMapSchemaStep, MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map-schema-step";
 import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview-step";
 import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify-schema-step";
 import { useFormContext, useWatch } from "react-hook-form";
-import { z } from "zod";
-
-export const appSchema = z.object({
-    dataSource: z.object({
-        source: z.union([z.literal("external"), z.literal("ravendb")]),
-    }),
-    externalConnection: z.object({
-        appName: z.string().trim().min(1, "Application name is required"),
-        provider: z.union([z.literal("Npgsql"), z.literal("SqlClient"), z.literal("MySqlConnectorFactory")]),
-        connectionString: z.string().trim().min(1, "Connection string is required."),
-    }),
-    verifySchema: z.object({
-        tables: z.array(
-            z.object({
-                sourceTableSchema: z.string().nullable().optional(),
-                sourceTableName: z.string(),
-            }),
-        ),
-    }),
-    howToMap: z.object({
-        source: z.union([z.literal("ai-suggested"), z.literal("manual")]),
-        aiPrompt: z.string(),
-    }),
-    map: z.object({
-        tables: z.array(z.any()),
-    }),
-    preview: z.object({
-        table: z.string(),
-    }),
-});
-
-export type AppFormData = z.infer<typeof appSchema>;
-export type AppStepId = keyof AppFormData;
 
 export const useAppSteps = (): WizardSteps<AppStepId> => {
     const connectSourceStep = useConnectSourceStep();
+    const mapSchemaStep = useMapSchemaStep();
 
     return {
         dataSource: {
@@ -62,15 +33,24 @@ export const useAppSteps = (): WizardSteps<AppStepId> => {
             description: "Fetch existing tables from the linked source.",
             bodyComponent: VerifySchemaStep,
         },
-        howToMap: {
-            id: "howToMap",
-            title: "How would you like to map your schema?",
-            bodyComponent: () => <div>howToMap</div>,
-        },
         map: {
             id: "map",
+            title: "How would you like to map your schema?",
+            bodyComponent: MapSchemaStep,
+            beforeNext: mapSchemaStep.mutateAsync,
+            status: mapSchemaStep.status,
+            error: mapSchemaStep.error,
+        },
+        mapAiSuggest: {
+            id: "mapAiSuggest",
             title: "Map schema",
-            bodyComponent: () => <div>Map schema</div>,
+            description: "Review the draft mapping the AI proposed from your intent and the discovered schema.",
+            bodyComponent: MapAiSuggestStep,
+        },
+        mapManual: {
+            id: "mapManual",
+            title: "Map schema",
+            bodyComponent: () => <div>Map schema manual</div>,
         },
         preview: {
             id: "preview",
@@ -84,14 +64,26 @@ export const useAppSteps = (): WizardSteps<AppStepId> => {
 
 export const useAppFlow = (): AppStepId[] => {
     const { control } = useFormContext<AppFormData>();
-    const source = useWatch({
+    const dataSource = useWatch({
         control,
         name: "dataSource.source",
     });
 
-    if (source === "ravendb") {
+    const mapSource = useWatch({
+        control,
+        name: "map.source",
+    });
+
+    if (dataSource === "ravendb") {
         return ["dataSource", "preview"];
     }
 
-    return ["dataSource", "externalConnection", "verifySchema", "howToMap", "map", "preview"];
+    return [
+        "dataSource",
+        "externalConnection",
+        "verifySchema",
+        "map",
+        mapSource === "ai-suggested" ? "mapAiSuggest" : "mapManual",
+        "preview",
+    ];
 };
