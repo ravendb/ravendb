@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -8,6 +9,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -1329,6 +1332,444 @@ public class PullReplicationFailoverTests : ReplicationTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task SinkToHub_NoResendAfterChainedHubNodeFailovers()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (hubNodes, hub, certs) = await CreateRaftClusterWithSsl(5);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ReplicationFactor = 5,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            AdminCertificate = certs.ServerCertificateForCommunication.Value,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub,
+                    MentorNode = "A"
+                }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                }));
+
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubNodes.Select(s => s.WebUrl).ToArray());
+
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 1024; i++)
+                    session.Store(new User { Name = $"User{i}" }, $"users/{i}");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "users/1023", 30_000));
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
+            }, true, 30_000));
+
+            var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeAUrl));
+
+            using (var session = sinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker1" }, "marker/failover-1");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "marker/failover-1", 30_000));
+
+            var statsAfterFirst = await sinkStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docsAfterFirst = statsAfterFirst.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(docsAfterFirst == 1,
+                $"After first hub failover, expected == 1 docs on new connection but got {docsAfterFirst}.");
+
+            // Wait for cursor to advance past marker/failover-1 before killing B
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null && state.SourceChangeVector.Contains("A:1025");
+                }
+            }, true, 30_000));
+
+            var nodeBUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeBUrl));
+
+            using (var session = sinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker2" }, "marker/failover-2");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "marker/failover-2", 30_000));
+
+            var statsAfterSecond = await sinkStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docsAfterSecond = statsAfterSecond.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(docsAfterSecond == 1,
+                $"After second hub failover, expected == 1 docs on new connection but got {docsAfterSecond}.");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task SinkToHub_TwoSinksNoResendAfterHubNodeFailover()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (hubNodes, hub, certs) = await CreateRaftClusterWithSsl(3);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ReplicationFactor = 3,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sink1Store = GetDocumentStore(new Options
+        {
+            AdminCertificate = certs.ServerCertificateForCommunication.Value,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sink2Store = GetDocumentStore(new Options
+        {
+            AdminCertificate = certs.ServerCertificateForCommunication.Value,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert1 = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate1Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+            var pullCert2 = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub,
+                    MentorNode = "A"
+                }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "Sink1Access",
+                    CertificateBase64 = Convert.ToBase64String(pullCert1.Export(X509ContentType.Cert))
+                }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "Sink2Access",
+                    CertificateBase64 = Convert.ToBase64String(pullCert2.Export(X509ContentType.Cert))
+                }));
+
+            var pullReplication1 = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}-sink1", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert1.Export(X509ContentType.Pfx))
+            };
+            var result1 = await AddWatcherToReplicationTopology((DocumentStore)sink1Store, pullReplication1, hubNodes.Select(s => s.WebUrl).ToArray());
+
+            var pullReplication2 = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}-sink2", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert2.Export(X509ContentType.Pfx))
+            };
+            var result2 = await AddWatcherToReplicationTopology((DocumentStore)sink2Store, pullReplication2, hubNodes.Select(s => s.WebUrl).ToArray());
+
+            using (var session = sink1Store.OpenSession())
+            {
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"Sink1User{i}" }, $"sink1-docs/{i}");
+                session.SaveChanges();
+            }
+
+            using (var session = sink2Store.OpenSession())
+            {
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"Sink2User{i}" }, $"sink2-docs/{i}");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "sink1-docs/511", 30_000));
+            Assert.True(WaitForDocument(hubStore, "sink2-docs/511", 30_000));
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key1 = ExternalReplicationState.GenerateItemName(
+                        sink1Store.Database, result1.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable1 = Server.ServerStore.Cluster.Read(ctx, key1);
+                    if (blittable1 == null)
+                        return false;
+                    var state1 = JsonDeserializationCluster.ExternalReplicationState(blittable1);
+                    if (state1.SourceChangeVector == null)
+                        return false;
+
+                    var key2 = ExternalReplicationState.GenerateItemName(
+                        sink2Store.Database, result2.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable2 = Server.ServerStore.Cluster.Read(ctx, key2);
+                    if (blittable2 == null)
+                        return false;
+                    var state2 = JsonDeserializationCluster.ExternalReplicationState(blittable2);
+                    return state2.SourceChangeVector != null;
+                }
+            }, true, 30_000));
+
+            var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeAUrl));
+
+            using (var session = sink1Store.OpenSession())
+            {
+                session.Store(new User { Name = "Marker" }, "marker/sink1");
+                session.SaveChanges();
+            }
+
+            using (var session = sink2Store.OpenSession())
+            {
+                session.Store(new User { Name = "Marker" }, "marker/sink2");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "marker/sink1", 30_000));
+            Assert.True(WaitForDocument(hubStore, "marker/sink2", 30_000));
+
+            var stats1After = await sink1Store.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docs1 = stats1After.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(docs1 == 1,
+                $"After hub failover (sink1), expected == 1 docs on new connection but got {docs1}.");
+
+            var stats2After = await sink2Store.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docs2 = stats2After.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(docs2 == 1,
+                $"After hub failover (sink2), expected == 1 docs on new connection but got {docs2}.");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task SinkToHub_AllDocumentsArriveAfterHubCrashBeforeCursorCommit()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (hubNodes, hub, certs) = await CreateRaftClusterWithSsl(3);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ReplicationFactor = 3,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            AdminCertificate = certs.ServerCertificateForCommunication.Value,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub,
+                    MentorNode = "A"
+                }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                }));
+
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubNodes.Select(s => s.WebUrl).ToArray());
+
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 1024; i++)
+                    session.Store(new User { Name = $"User{i}" }, $"users/{i}");
+                session.SaveChanges();
+            }
+
+            // Kill hub A immediately before cursor can be committed
+            var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeAUrl));
+
+            // All documents must still arrive at hub B/C
+            Assert.True(WaitForDocument(hubStore, "users/1023", 60_000));
+
+            using (var session = sinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker" }, "marker/after-crash");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "marker/after-crash", 30_000));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task SinkToHub_OnlyUncommittedPortionIsResentAfterHubNodeFailover()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (hubNodes, hub, certs) = await CreateRaftClusterWithSsl(3);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ReplicationFactor = 3,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            AdminCertificate = certs.ServerCertificateForCommunication.Value,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub,
+                    MentorNode = "A"
+                }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                }));
+
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubNodes.Select(s => s.WebUrl).ToArray());
+
+            // Batch 1 — fully committed
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"Batch1User{i}" }, $"batch1-docs/{i}");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "batch1-docs/511", 30_000));
+
+            // Batch 2 — in-flight when hub A dies
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"Batch2User{i}" }, $"batch2-docs/{i}");
+                session.SaveChanges();
+            }
+
+            var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeAUrl));
+
+            Assert.True(WaitForDocument(hubStore, "batch2-docs/511", 60_000));
+
+            using (var session = sinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker" }, "marker/post-failover");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "marker/post-failover", 30_000));
+
+            var statsAfter = await sinkStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docsInNewConnection = statsAfter.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+
+            // Only batch2 (≤512) + marker should be resent, not batch1 (512 already cursor-confirmed)
+            Assert.True(docsInNewConnection <= 520,
+                $"After partial-cursor failover, expected ≤520 docs on new connection but got {docsInNewConnection}.");
+            Assert.True(docsInNewConnection >= 1,
+                $"Expected at least 1 doc (the marker) on new connection but got {docsInNewConnection}.");
+        }
+    }
+
     #endregion
 
     #region HubToSink
@@ -2494,6 +2935,401 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             Assert.True(tsInNewConnection == 0,
                 $"After sink node failover, expected == 0 time series segments sent on new connection but got {tsInNewConnection}. " +
                 "Hub is re-sending already-replicated time series after the sink task moved to node B.");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task HubToSink_NoResendAfterSinkNodeRestart()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (sinkNodes, sink) = await CreateRaftCluster(3, shouldRunInMemory: false);
+
+        var sinkDB = GetDatabaseName();
+        await CreateDatabaseInCluster(sinkDB, 3, sink.WebUrl);
+
+        using (var hubStore = GetDocumentStore())
+        using (var sinkStore = new DocumentStore
+        {
+            Urls = new[] { sink.WebUrl },
+            Database = sinkDB
+        }.Initialize())
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database)
+                .SendAsync(new PutPullReplicationAsHubOperation(name));
+
+            using (var session = hubStore.OpenSession())
+            {
+                for (int i = 0; i < 1024; i++)
+                    session.Store(new User { Name = $"User{i}" }, $"users/{i}");
+                session.SaveChanges();
+            }
+
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                MentorNode = "A"
+            };
+            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubStore.Urls);
+
+            Assert.True(await WaitForDocumentInClusterAsync<User>(
+                sinkNodes.Where(n => n.ServerStore.NodeTag == "A").ToList(),
+                sinkDB, "users/1023", u => true, TimeSpan.FromSeconds(30)));
+
+            var sinkNodeA = sinkNodes.Single(n => n.ServerStore.NodeTag == "A");
+            var (dataDir, url, _) = await DisposeServerAndWaitForFinishOfDisposalAsync(sinkNodeA);
+
+            using (var session = hubStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker" }, "marker/pre-restart");
+                session.SaveChanges();
+            }
+
+            Assert.True(await WaitForDocumentInClusterAsync<User>(
+                sinkNodes.Where(n => n.ServerStore.NodeTag != "A").ToList(),
+                sinkDB, "marker/pre-restart", u => true, TimeSpan.FromSeconds(30)));
+
+            var statsAfterFailover = await hubStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docsAfterFailover = statsAfterFailover.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(docsAfterFailover <= 10,
+                $"After sink node failover, expected ≤10 docs on new connection but got {docsAfterFailover}.");
+
+            GetNewServer(new ServerCreationOptions
+            {
+                RunInMemory = false,
+                DeletePrevious = false,
+                DataDirectory = dataDir,
+                CustomSettings = new Dictionary<string, string>
+                {
+                    { RavenConfiguration.GetKey(x => x.Core.ServerUrls), url }
+                }
+            });
+
+            await WaitForValueAsync(async () =>
+            {
+                var record = await sinkStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(sinkDB));
+                return record?.Topology?.Members?.Contains("A") ?? false;
+            }, true, 30_000);
+
+            using (var session = hubStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker2" }, "marker/post-restart");
+                session.SaveChanges();
+            }
+
+            Assert.True(await WaitForDocumentInClusterAsync<User>(
+                sinkNodes.Where(n => n.ServerStore.NodeTag != "A").ToList(),
+                sinkDB, "marker/post-restart", u => true, TimeSpan.FromSeconds(30)));
+
+            var statsAfterRestart = await hubStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docsAfterRestart = statsAfterRestart.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(docsAfterRestart <= 10,
+                $"After sink node restart, expected ≤10 docs on new connection but got {docsAfterRestart}.");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task HubToSink_NoResendAfterHubNodeFailover_BothClusters()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (_, hub) = await CreateRaftCluster(3);
+        var (_, minion) = await CreateRaftCluster(3);
+
+        var hubDB = GetDatabaseName();
+        var minionDB = GetDatabaseName();
+
+        await CreateDatabaseInCluster(hubDB, 3, hub.WebUrl);
+        await CreateDatabaseInCluster(minionDB, 3, minion.WebUrl);
+
+        using (var hubStore = new DocumentStore
+        {
+            Urls = new[] { hub.WebUrl },
+            Database = hubDB
+        }.Initialize())
+        using (var minionStore = new DocumentStore
+        {
+            Urls = new[] { minion.WebUrl },
+            Database = minionDB
+        }.Initialize())
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database)
+                .SendAsync(new PutPullReplicationAsHubOperation(name));
+
+            using (var session = hubStore.OpenSession())
+            {
+                session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), replicas: 2);
+                for (int i = 0; i < 1024; i++)
+                    session.Store(new User { Name = $"User{i}" }, $"users/{i}");
+                session.SaveChanges();
+            }
+
+            var pullReplication = new PullReplicationAsSink(hubDB, $"ConnectionString-{hubDB}", name)
+            {
+                MentorNode = "B"
+            };
+            await AddWatcherToReplicationTopology((DocumentStore)minionStore, pullReplication, new[] { hub.WebUrl });
+
+            Assert.True(WaitForDocument(minionStore, "users/1023", 30_000));
+
+            var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeAUrl));
+
+            using (var session = hubStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker" }, "marker/post-failover");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(minionStore, "marker/post-failover", 30_000));
+
+            var minionBUrl = minion.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+            using (var minionBStore = new DocumentStore
+            {
+                Urls = new[] { minionBUrl },
+                Database = minionDB
+            }.Initialize())
+            {
+                var statsAfter = await minionBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+                var docsInNewConnection = statsAfter.Outgoing
+                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+                Assert.True(docsInNewConnection <= 10,
+                    $"After hub failover, expected ≤10 docs on new connection but got {docsInNewConnection}.");
+            }
+        }
+    }
+
+    #endregion
+
+    #region Bidirectional
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task Bidirectional_NoResendAfterHubNodeFailover()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (hubNodes, hub, certs) = await CreateRaftClusterWithSsl(3);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ReplicationFactor = 3,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            AdminCertificate = certs.ServerCertificateForCommunication.Value,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                    MentorNode = "A",
+                    WithFiltering = true
+                }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedHubToSinkPaths = new[] { "hub-docs/*" },
+                    AllowedSinkToHubPaths = new[] { "sink-docs/*" }
+                }));
+
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubNodes.Select(s => s.WebUrl).ToArray());
+
+            using (var session = hubStore.OpenSession())
+            {
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"HubUser{i}" }, $"hub-docs/{i}");
+                session.SaveChanges();
+            }
+
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"SinkUser{i}" }, $"sink-docs/{i}");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(sinkStore, "hub-docs/511", 30_000));
+            Assert.True(WaitForDocument(hubStore, "sink-docs/511", 30_000));
+
+            // Wait for the SinkToHub cursor to be durably committed before killing hub A
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
+            }, true, 30_000));
+
+            var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeAUrl));
+
+            using (var session = hubStore.OpenSession())
+            {
+                session.Store(new User { Name = "HubMarker" }, "hub-docs/marker");
+                session.SaveChanges();
+            }
+
+            using (var session = sinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "SinkMarker" }, "sink-docs/marker");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(sinkStore, "hub-docs/marker", 30_000));
+            Assert.True(WaitForDocument(hubStore, "sink-docs/marker", 30_000));
+
+            var sinkStatsAfter = await sinkStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var sinkDocsInNewConnection = sinkStatsAfter.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(sinkDocsInNewConnection == 1,
+                $"After hub failover (SinkToHub direction), expected == 1 docs on new connection but got {sinkDocsInNewConnection}.");
+
+            var hubStatsAfter = await hubStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var hubDocsInNewConnection = hubStatsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(hubDocsInNewConnection == 1,
+                $"After hub failover (HubToSink direction), expected == 1 docs on new connection but got {hubDocsInNewConnection}.");
+        }
+    }
+
+    #endregion
+
+    #region Filtered Replication
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task SinkToHub_FilteredItemsDoNotCauseResendAfterHubNodeFailover()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (hubNodes, hub, certs) = await CreateRaftClusterWithSsl(3);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ReplicationFactor = 3,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            AdminCertificate = certs.ServerCertificateForCommunication.Value,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            var name = $"pull-replication {GetDatabaseName()}";
+
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub,
+                    MentorNode = "A",
+                    WithFiltering = true
+                }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedSinkToHubPaths = new[] { "tickets/*" }
+                }));
+
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubNodes.Select(s => s.WebUrl).ToArray());
+
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"User{i}" }, $"users/{i}");
+                for (int i = 0; i < 512; i++)
+                    session.Store(new User { Name = $"Ticket{i}" }, $"tickets/{i}");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "tickets/511", 30_000));
+
+            using (var session = hubStore.OpenSession())
+            {
+                Assert.Null(session.Load<User>("users/0"));
+            }
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
+            }, true, 30_000));
+
+            var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == nodeAUrl));
+
+            using (var session = sinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marker" }, "tickets/marker");
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(hubStore, "tickets/marker", 30_000));
+
+            var statsAfter = await sinkStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var docsInNewConnection = statsAfter.Outgoing
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            Assert.True(docsInNewConnection == 1,
+                $"After hub failover with filtering, expected == 1 docs on new connection but got {docsInNewConnection}.");
         }
     }
 
