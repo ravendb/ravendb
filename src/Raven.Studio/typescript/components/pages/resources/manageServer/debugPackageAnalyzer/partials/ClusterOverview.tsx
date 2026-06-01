@@ -5,12 +5,23 @@ import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
 import { formatUpTime, osIcon, parseUpTimeSeconds } from "./analyzerUtils";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
+type ClusterNodeInfo = DebugPackageAnalysisSummary["SummaryPerNode"][string]["ClusterNodeInfo"];
 
 interface ClusterOverviewProps {
     summary: DebugPackageAnalysisSummary;
 }
+
+const clusterNodeSortAccessors: Record<string, (node: ClusterNodeInfo) => number | string> = {
+    nodeTag: (node) => node.NodeTag,
+    state: (node) => node.NodeState,
+    type: (node) => node.NodeType,
+    os: (node) => node.OsName ?? "",
+    version: (node) => node.ServerVersion ?? "",
+    uptime: (node) => parseUpTimeSeconds(node.UpTime),
+};
 
 export default function ClusterOverview({ summary }: ClusterOverviewProps) {
     const nodes = useMemo(() => Object.values(summary.SummaryPerNode ?? {}), [summary]);
@@ -41,6 +52,14 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
         return best;
     }, [nodeInfos]);
 
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
+        nodeInfos,
+        clusterNodeSortAccessors,
+        "nodeTag",
+        "asc"
+    );
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+
     return (
         <div className="cluster-overview">
             <h3 className="mb-3">Cluster Overview</h3>
@@ -62,17 +81,17 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
                     <Table responsive className="m-0 align-middle">
                         <thead>
                             <tr>
-                                <th>Node tag</th>
-                                <th>State</th>
-                                <th>Type</th>
-                                <th>OS</th>
-                                <th>Server version</th>
-                                <th>Uptime</th>
+                                <SortableHeader label="Node tag" columnKey="nodeTag" {...sortProps} />
+                                <SortableHeader label="State" columnKey="state" {...sortProps} />
+                                <SortableHeader label="Type" columnKey="type" {...sortProps} />
+                                <SortableHeader label="OS" columnKey="os" {...sortProps} />
+                                <SortableHeader label="Server version" columnKey="version" {...sortProps} />
+                                <SortableHeader label="Uptime" columnKey="uptime" {...sortProps} />
                                 <th>URL</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {nodeInfos.map((node) => (
+                            {sorted.map((node) => (
                                 <tr key={node.NodeTag}>
                                     <td>
                                         <NodeTagPill tag={node.NodeTag} />

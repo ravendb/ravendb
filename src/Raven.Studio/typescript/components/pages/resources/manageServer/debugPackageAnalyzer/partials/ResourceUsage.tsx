@@ -4,6 +4,7 @@ import Table from "react-bootstrap/Table";
 import { EmptySet } from "components/common/EmptySet";
 import NodeTagPill from "./NodeTagPill";
 import { formatNumber, formatPercentage } from "./analyzerUtils";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -24,10 +25,22 @@ interface ResourceUsageProps {
     summary: DebugPackageAnalysisSummary;
 }
 
+// memory columns are server-formatted strings ("1.2 GB"), so only the numeric columns are sortable
+const resourceSortAccessors: Record<string, (row: ResourceRow) => number | string> = {
+    node: (row) => row.node,
+    processCpu: (row) => row.processCpu ?? 0,
+    machineCpu: (row) => row.machineCpu ?? 0,
+    cores: (row) => row.cores ?? 0,
+    lastGc: (row) => row.gcGeneration ?? -1,
+    gcPause: (row) => row.gcPause ?? 0,
+};
+
 // Per-node CPU / Memory / GC comparison for the Cluster context - the triage view for spotting a hot
 // or struggling node at a glance. PerformanceMetrics (Node context) has the per-node detail.
 export default function ResourceUsage({ summary }: ResourceUsageProps) {
     const rows = useMemo(() => collectResourceRows(summary), [summary]);
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, resourceSortAccessors, "processCpu");
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     return (
         <div className="resource-usage">
@@ -40,19 +53,19 @@ export default function ResourceUsage({ summary }: ResourceUsageProps) {
                         <Table responsive className="m-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th>Node</th>
-                                    <th>Process CPU</th>
-                                    <th>Machine CPU</th>
-                                    <th>Cores</th>
+                                    <SortableHeader label="Node" columnKey="node" {...sortProps} />
+                                    <SortableHeader label="Process CPU" columnKey="processCpu" {...sortProps} />
+                                    <SortableHeader label="Machine CPU" columnKey="machineCpu" {...sortProps} />
+                                    <SortableHeader label="Cores" columnKey="cores" {...sortProps} />
                                     <th>Working set</th>
                                     <th>Available memory</th>
                                     <th>Dirty memory</th>
-                                    <th>Last GC</th>
-                                    <th>GC pause</th>
+                                    <SortableHeader label="Last GC" columnKey="lastGc" {...sortProps} />
+                                    <SortableHeader label="GC pause" columnKey="gcPause" {...sortProps} />
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row) => (
+                                {sorted.map((row) => (
                                     <tr key={row.node}>
                                         <td>
                                             <NodeTagPill tag={row.node} />

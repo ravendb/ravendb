@@ -8,6 +8,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { RichAlert } from "components/common/RichAlert";
 import { StatePill } from "components/common/StatePill";
 import Select, { SelectOption } from "components/common/select/Select";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 type IndexState = Raven.Client.Documents.Indexes.IndexState;
@@ -17,6 +18,17 @@ interface DatabaseIndexStatsProps {
     database: string;
     nodes: string[];
 }
+
+const indexStatsSortAccessors: Record<string, (index: IndexStats) => number | string> = {
+    index: (index) => index.Name,
+    state: (index) => index.State,
+    priority: (index) => index.Priority,
+    type: (index) => index.Type,
+    entries: (index) => index.EntriesCount ?? 0,
+    errors: (index) => index.ErrorsCount ?? 0,
+    stale: (index) => (index.IsStale ? 1 : 0),
+    lock: (index) => index.LockMode,
+};
 
 // On-demand per-node index stats for the selected database, from the analyzer
 // databases/indexes/stats endpoint (the summary only has aggregate indexing speed).
@@ -33,6 +45,12 @@ export default function DatabaseIndexStats({ packageId, database, nodes }: Datab
 
     const nodeOptions: SelectOption<string>[] = nodes.map((tag) => ({ value: tag, label: `Node ${tag}` }));
     const indexes = stats.result ?? [];
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
+        indexes,
+        indexStatsSortAccessors,
+        "entries"
+    );
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     return (
         <div className="database-index-stats">
@@ -69,18 +87,18 @@ export default function DatabaseIndexStats({ packageId, database, nodes }: Datab
                         <Table responsive className="m-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th>Index</th>
-                                    <th>State</th>
-                                    <th>Priority</th>
-                                    <th>Type</th>
-                                    <th>Entries</th>
-                                    <th>Errors</th>
-                                    <th>Stale</th>
-                                    <th>Lock mode</th>
+                                    <SortableHeader label="Index" columnKey="index" {...sortProps} />
+                                    <SortableHeader label="State" columnKey="state" {...sortProps} />
+                                    <SortableHeader label="Priority" columnKey="priority" {...sortProps} />
+                                    <SortableHeader label="Type" columnKey="type" {...sortProps} />
+                                    <SortableHeader label="Entries" columnKey="entries" {...sortProps} />
+                                    <SortableHeader label="Errors" columnKey="errors" {...sortProps} />
+                                    <SortableHeader label="Stale" columnKey="stale" {...sortProps} />
+                                    <SortableHeader label="Lock mode" columnKey="lock" {...sortProps} />
                                 </tr>
                             </thead>
                             <tbody>
-                                {indexes.map((index) => (
+                                {sorted.map((index) => (
                                     <tr key={index.Name}>
                                         <td className="fw-bold">
                                             <div className="text-truncate index-name" title={index.Name}>

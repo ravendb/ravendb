@@ -3,6 +3,7 @@ import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import NodeTagPill from "./NodeTagPill";
 import { EmptySet } from "components/common/EmptySet";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type DatabaseOngoingTasksInfoItem = Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem;
@@ -40,8 +41,15 @@ interface OngoingTasksProps {
     nodeTag?: string;
 }
 
+const taskSortAccessors: Record<string, (row: TaskRow) => number | string> = {
+    label: (row) => row.label,
+    count: (row) => row.count,
+};
+
 export default function OngoingTasks({ summary, nodeTag }: OngoingTasksProps) {
     const rows = useMemo(() => aggregateTasks(summary, nodeTag), [summary, nodeTag]);
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, taskSortAccessors, "count");
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     const total = rows.reduce((sum, row) => sum + row.count, 0);
 
@@ -57,13 +65,13 @@ export default function OngoingTasks({ summary, nodeTag }: OngoingTasksProps) {
                         <Table responsive className="m-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th>Task</th>
-                                    <th>Count</th>
+                                    <SortableHeader label="Task" columnKey="label" {...sortProps} />
+                                    <SortableHeader label="Count" columnKey="count" {...sortProps} />
                                     <th>Nodes</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row) => (
+                                {sorted.map((row) => (
                                     <tr key={row.label}>
                                         <td className="fw-bold">{row.label}</td>
                                         <td>{row.count.toLocaleString()}</td>

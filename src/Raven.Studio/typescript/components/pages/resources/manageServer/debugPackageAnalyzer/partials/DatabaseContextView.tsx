@@ -9,6 +9,7 @@ import StatTile from "./StatTile";
 import DatabaseIndexStats from "./DatabaseIndexStats";
 import DatabaseIndexErrors from "./DatabaseIndexErrors";
 import genUtils from "common/generalUtils";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -37,12 +38,43 @@ interface StorageRow {
     temp: number;
 }
 
+const overviewSortAccessors: Record<string, (row: OverviewRow) => number | string> = {
+    node: (row) => row.node,
+    state: (row) => (row.disabled ? 1 : 0),
+    documents: (row) => row.documents ?? 0,
+    indexes: (row) => row.indexes ?? 0,
+    indexingErrors: (row) => row.indexingErrors ?? 0,
+    ongoingTasks: (row) => row.ongoingTasks ?? 0,
+    alerts: (row) => row.alerts ?? 0,
+    perfHints: (row) => row.performanceHints ?? 0,
+};
+
+const storageSortAccessors: Record<string, (row: StorageRow) => number | string> = {
+    node: (row) => row.node,
+    data: (row) => row.data,
+    temp: (row) => row.temp,
+    total: (row) => row.data + row.temp,
+};
+
 // Per-node view of a single database. Documents/indexes/storage are reported per node, so this
 // surfaces divergence between nodes (replication lag, node-local indexing errors, uneven storage).
 // Per-task-type and per-database indexing speed are not in the summary (node-scoped only).
 export default function DatabaseContextView({ summary, database }: DatabaseContextViewProps) {
     const overviewRows = useMemo(() => collectOverviewRows(summary, database), [summary, database]);
     const storageRows = useMemo(() => collectStorageRows(summary, database), [summary, database]);
+
+    const overviewSort = useSortableData(overviewRows, overviewSortAccessors, "documents");
+    const overviewSortProps = {
+        sortKey: overviewSort.sortKey,
+        sortDirection: overviewSort.sortDirection,
+        onSort: overviewSort.requestSort,
+    };
+    const storageSort = useSortableData(storageRows, storageSortAccessors, "total");
+    const storageSortProps = {
+        sortKey: storageSort.sortKey,
+        sortDirection: storageSort.sortDirection,
+        onSort: storageSort.requestSort,
+    };
 
     const totalData = storageRows.reduce((sum, row) => sum + row.data, 0);
     const totalTemp = storageRows.reduce((sum, row) => sum + row.temp, 0);
@@ -63,19 +95,35 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
                             <Table responsive className="m-0 align-middle">
                                 <thead>
                                     <tr>
-                                        <th>Node</th>
-                                        <th>State</th>
-                                        <th>Documents</th>
-                                        <th>Indexes</th>
-                                        <th>Indexing errors</th>
-                                        <th>Ongoing tasks</th>
-                                        <th>Alerts</th>
-                                        <th>Perf. hints</th>
+                                        <SortableHeader label="Node" columnKey="node" {...overviewSortProps} />
+                                        <SortableHeader label="State" columnKey="state" {...overviewSortProps} />
+                                        <SortableHeader
+                                            label="Documents"
+                                            columnKey="documents"
+                                            {...overviewSortProps}
+                                        />
+                                        <SortableHeader label="Indexes" columnKey="indexes" {...overviewSortProps} />
+                                        <SortableHeader
+                                            label="Indexing errors"
+                                            columnKey="indexingErrors"
+                                            {...overviewSortProps}
+                                        />
+                                        <SortableHeader
+                                            label="Ongoing tasks"
+                                            columnKey="ongoingTasks"
+                                            {...overviewSortProps}
+                                        />
+                                        <SortableHeader label="Alerts" columnKey="alerts" {...overviewSortProps} />
+                                        <SortableHeader
+                                            label="Perf. hints"
+                                            columnKey="perfHints"
+                                            {...overviewSortProps}
+                                        />
                                         <th>Last backup</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {overviewRows.map((row) => (
+                                    {overviewSort.sorted.map((row) => (
                                         <tr key={row.node}>
                                             <td>
                                                 <NodeTagPill tag={row.node} />
@@ -138,14 +186,14 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
                             <Table responsive className="m-0 align-middle">
                                 <thead>
                                     <tr>
-                                        <th>Node</th>
-                                        <th>Data</th>
-                                        <th>Temp</th>
-                                        <th>Total</th>
+                                        <SortableHeader label="Node" columnKey="node" {...storageSortProps} />
+                                        <SortableHeader label="Data" columnKey="data" {...storageSortProps} />
+                                        <SortableHeader label="Temp" columnKey="temp" {...storageSortProps} />
+                                        <SortableHeader label="Total" columnKey="total" {...storageSortProps} />
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {storageRows.map((row) => (
+                                    {storageSort.sorted.map((row) => (
                                         <tr key={row.node}>
                                             <td>
                                                 <NodeTagPill tag={row.node} />

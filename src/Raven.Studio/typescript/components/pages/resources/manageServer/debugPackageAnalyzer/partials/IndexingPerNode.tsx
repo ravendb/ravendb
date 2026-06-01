@@ -3,6 +3,7 @@ import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import NodeTagPill from "./NodeTagPill";
 import { EmptySet } from "components/common/EmptySet";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -18,10 +19,19 @@ interface IndexingPerNodeProps {
     nodeTag?: string;
 }
 
+const indexingSortAccessors: Record<string, (row: IndexingRow) => number | string> = {
+    node: (row) => row.node,
+    indexed: (row) => row.indexed ?? 0,
+    mapped: (row) => row.mapped ?? 0,
+    reduced: (row) => row.reduced ?? 0,
+};
+
 // the summary exposes indexing speed as a per-node aggregate (no per-database breakdown),
 // so this shows one row per node rather than per database
 export default function IndexingPerNode({ summary, nodeTag }: IndexingPerNodeProps) {
     const rows = useMemo(() => collectIndexingRows(summary, nodeTag), [summary, nodeTag]);
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, indexingSortAccessors, "indexed");
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     return (
         <div className="indexing-per-node flex-grow-1">
@@ -34,14 +44,14 @@ export default function IndexingPerNode({ summary, nodeTag }: IndexingPerNodePro
                         <Table responsive className="m-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th>Node</th>
-                                    <th>Indexed/s</th>
-                                    <th>Mapped/s</th>
-                                    <th>Reduced/s</th>
+                                    <SortableHeader label="Node" columnKey="node" {...sortProps} />
+                                    <SortableHeader label="Indexed/s" columnKey="indexed" {...sortProps} />
+                                    <SortableHeader label="Mapped/s" columnKey="mapped" {...sortProps} />
+                                    <SortableHeader label="Reduced/s" columnKey="reduced" {...sortProps} />
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row) => (
+                                {sorted.map((row) => (
                                     <tr key={row.node}>
                                         <td>
                                             <NodeTagPill tag={row.node} />

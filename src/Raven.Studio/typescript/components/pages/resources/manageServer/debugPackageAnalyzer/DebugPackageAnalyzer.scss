@@ -58,6 +58,22 @@
         max-width: 360px;
     }
 
+    .sortable-header {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+
+        // the active column always shows its sort arrow solid; inactive columns reveal a faint
+        // arrow on hover as a "click to sort" affordance (no theme-color change, which read as black)
+        .sortable-header-arrow-inactive {
+            opacity: 0;
+        }
+
+        &:hover .sortable-header-arrow-inactive {
+            opacity: 0.4;
+        }
+    }
+
     .analysis-results {
         .severity-cards {
             // each card is a reusable RichAlert (theme-aware colors); we only handle layout here

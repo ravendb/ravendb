@@ -11,6 +11,7 @@ import { RichAlert } from "components/common/RichAlert";
 import StatTile from "./StatTile";
 import genUtils from "common/generalUtils";
 import { formatNumber, formatPercentage } from "./analyzerUtils";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type CpuUsageAnalysisInfo =
@@ -19,8 +20,9 @@ type MemoryAnalysisInfo =
     Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.MemoryAnalysisInfo;
 type GcMemoryInfo = Raven.Server.Dashboard.Cluster.Notifications.GcInfoPayload.GcMemoryInfo;
 type GenerationInfoSize = Raven.Server.Dashboard.Cluster.Notifications.GcInfoPayload.GenerationInfoSize;
+type TcpConnections = Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.TcpConnections;
 
-type MetricTab = "cpu" | "memory" | "gc" | "network";
+type MetricTab = "cpu" | "memory" | "gc" | "network" | "threads";
 
 interface PerformanceMetricsProps {
     summary: DebugPackageAnalysisSummary;
@@ -38,6 +40,7 @@ export default function PerformanceMetrics({ summary, nodeTag }: PerformanceMetr
         { label: "Memory", value: "memory" },
         { label: "GC", value: "gc" },
         { label: "Network", value: "network" },
+        { label: "Threads", value: "threads" },
     ];
 
     return (
@@ -55,6 +58,7 @@ export default function PerformanceMetrics({ summary, nodeTag }: PerformanceMetr
                     {tab === "memory" && <MemoryTab memory={node?.MemoryUsageInfo} />}
                     {tab === "gc" && <GcTab gc={node?.GcInfo} />}
                     {tab === "network" && <NetworkTab packageId={summary.PackageId} nodeTag={nodeTag} />}
+                    {tab === "threads" && <ThreadsTab packageId={summary.PackageId} nodeTag={nodeTag} />}
                 </Card.Body>
             </Card>
         </div>
@@ -235,6 +239,11 @@ function GcTab({ gc }: { gc?: GcMemoryInfo }) {
     );
 }
 
+const tcpSortAccessors: Record<string, (connection: TcpConnections) => number | string> = {
+    state: (connection) => connection.TcpState ?? "",
+    connections: (connection) => connection.NumberOfConnectionsInState ?? 0,
+};
+
 // Network info is not in the summary; fetch it on demand from the analyzer network endpoint.
 function NetworkTab({ packageId, nodeTag }: { packageId: string; nodeTag: string }) {
     const { manageServerService } = useServices();
@@ -242,6 +251,13 @@ function NetworkTab({ packageId, nodeTag }: { packageId: string; nodeTag: string
         () => manageServerService.getDebugPackageNetworkInfo(packageId, nodeTag),
         [packageId, nodeTag]
     );
+
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
+        network.result?.TcpConnections ?? [],
+        tcpSortAccessors,
+        "connections"
+    );
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     if (network.loading) {
         return (
@@ -282,13 +298,13 @@ function NetworkTab({ packageId, nodeTag }: { packageId: string; nodeTag: string
                 <Table responsive className="m-0 align-middle">
                     <thead>
                         <tr>
-                            <th>TCP state</th>
-                            <th>Connections</th>
+                            <SortableHeader label="TCP state" columnKey="state" {...sortProps} />
+                            <SortableHeader label="Connections" columnKey="connections" {...sortProps} />
                             <th>Top remote endpoints</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {info.TcpConnections.map((connection) => (
+                        {sorted.map((connection) => (
                             <tr key={connection.TcpState}>
                                 <td className="fw-bold">{connection.TcpState}</td>
                                 <td>{formatNumber(connection.NumberOfConnectionsInState)}</td>
@@ -311,4 +327,122 @@ function formatTopConnections(top: { [endpoint: string]: number }): string {
         .sort((a, b) => b[1] - a[1])
         .map(([endpoint, count]) => `${endpoint} (${count})`)
         .join(", ");
+}
+
+const maxThreadsShown = 25;
+
+const threadSortAccessors: Record<string, (thread: Raven.Server.Dashboard.ThreadInfo) => number | string> = {
+    name: (thread) => thread.Name ?? "",
+    cpu: (thread) => thread.CpuUsage ?? 0,
+    state: (thread) => thread.State ?? "",
+    processorTime: (thread) => genUtils.timeSpanToSeconds(thread.TotalProcessorTime) ?? 0,
+    unmanaged: (thread) => thread.UnmanagedAllocationsInBytes ?? 0,
+    ioRead: (thread) => thread.IoStats?.ReadBytes ?? 0,
+    ioWrite: (thread) => thread.IoStats?.WriteBytes ?? 0,
+};
+
+// Thread runtime info is not in the summary; fetch on demand from the analyzer threads/runaway
+// endpoint. Columns are sortable (default: most CPU-intensive) and the table shows the top N for the
+// active sort. IO columns are shown even though older packages did not capture per-thread IO (null).
+function ThreadsTab({ packageId, nodeTag }: { packageId: string; nodeTag: string }) {
+    const { manageServerService } = useServices();
+    const threads = useAsync(
+        () => manageServerService.getDebugPackageThreadsInfo(packageId, nodeTag),
+        [packageId, nodeTag]
+    );
+
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
+        threads.result?.List ?? [],
+        threadSortAccessors,
+        "cpu"
+    );
+
+    if (threads.loading) {
+        return (
+            <div className="hstack gap-2 justify-content-center text-muted py-3">
+                <Spinner size="sm" /> Loading threads for node {nodeTag}...
+            </div>
+        );
+    }
+
+    if (threads.error) {
+        return (
+            <RichAlert variant="warning">
+                Could not load threads for node {nodeTag}. The analysis report may have expired on the server (re-upload
+                the package to inspect), or this data was not captured.
+            </RichAlert>
+        );
+    }
+
+    const info = threads.result;
+    if (!info) {
+        return <EmptySet compact>No threads data in the package</EmptySet>;
+    }
+
+    const shownThreads = sorted.slice(0, maxThreadsShown);
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+
+    return (
+        <>
+            <div className="overview-stats d-flex gap-2 flex-wrap">
+                <StatTile
+                    label="Process CPU"
+                    icon="processor"
+                    iconColor="info"
+                    value={formatPercentage(info.ProcessCpuUsage)}
+                />
+                <StatTile label="Threads" icon="thread-stack-trace" value={formatNumber(info.ThreadsCount)} />
+                <StatTile
+                    label="Dedicated threads"
+                    icon="stack-traces"
+                    value={formatNumber(info.DedicatedThreadsCount)}
+                />
+                <StatTile label="Active cores" icon="cluster-node" value={formatNumber(info.ActiveCores)} />
+            </div>
+            {sorted.length === 0 ? (
+                <EmptySet compact>No threads in the package</EmptySet>
+            ) : (
+                <>
+                    {sorted.length > maxThreadsShown && (
+                        <div className="small-label">
+                            Showing {maxThreadsShown} of {formatNumber(sorted.length)} threads - click a column to sort
+                        </div>
+                    )}
+                    <Table responsive className="m-0 align-middle">
+                        <thead>
+                            <tr>
+                                <SortableHeader label="Thread" columnKey="name" {...sortProps} />
+                                <SortableHeader label="CPU" columnKey="cpu" {...sortProps} />
+                                <SortableHeader label="State" columnKey="state" {...sortProps} />
+                                <SortableHeader label="Processor time" columnKey="processorTime" {...sortProps} />
+                                <SortableHeader label="Unmanaged alloc." columnKey="unmanaged" {...sortProps} />
+                                <SortableHeader label="IO read" columnKey="ioRead" {...sortProps} />
+                                <SortableHeader label="IO write" columnKey="ioWrite" {...sortProps} />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {shownThreads.map((thread) => (
+                                <tr key={thread.Id}>
+                                    <td>
+                                        <div className="fw-bold text-break">{thread.Name}</div>
+                                        <div className="small-label">#{thread.Id}</div>
+                                    </td>
+                                    <td>{formatPercentage(thread.CpuUsage)}</td>
+                                    <td>{thread.State ?? "-"}</td>
+                                    <td>{thread.TotalProcessorTime}</td>
+                                    <td>{genUtils.formatBytesToSize(thread.UnmanagedAllocationsInBytes ?? 0)}</td>
+                                    <td>{formatThreadIo(thread.IoStats?.ReadBytes)}</td>
+                                    <td>{formatThreadIo(thread.IoStats?.WriteBytes)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                </>
+            )}
+        </>
+    );
+}
+
+function formatThreadIo(bytes: number | undefined): string {
+    return bytes == null ? "-" : genUtils.formatBytesToSize(bytes);
 }

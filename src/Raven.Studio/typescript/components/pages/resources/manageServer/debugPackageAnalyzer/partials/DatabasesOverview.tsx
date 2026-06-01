@@ -4,6 +4,7 @@ import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
 import { StatePill } from "components/common/StatePill";
 import NodeTagPill from "./NodeTagPill";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -23,8 +24,24 @@ interface AggregatedDatabase {
     nodes: string[];
 }
 
+const databasesSortAccessors: Record<string, (db: AggregatedDatabase) => number | string> = {
+    database: (db) => db.database,
+    documents: (db) => db.documentsCount ?? 0,
+    indexes: (db) => db.indexesCount ?? 0,
+    indexingErrors: (db) => db.indexingErrorsCount ?? 0,
+    ongoingTasks: (db) => db.ongoingTasksCount ?? 0,
+    replicationFactor: (db) => db.replicationFactor ?? 0,
+    state: (db) => (db.disabled ? 1 : 0),
+};
+
 export default function DatabasesOverview({ summary }: DatabasesOverviewProps) {
     const databases = useMemo(() => aggregateDatabases(summary), [summary]);
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
+        databases,
+        databasesSortAccessors,
+        "documents"
+    );
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     const disabledCount = databases.filter((d) => d.disabled).length;
     const onlineCount = databases.length - disabledCount;
@@ -52,18 +69,22 @@ export default function DatabasesOverview({ summary }: DatabasesOverviewProps) {
                         <Table responsive className="m-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th>Database</th>
-                                    <th>Documents</th>
-                                    <th>Indexes</th>
-                                    <th>Indexing errors</th>
-                                    <th>Ongoing tasks</th>
-                                    <th>Replication factor</th>
+                                    <SortableHeader label="Database" columnKey="database" {...sortProps} />
+                                    <SortableHeader label="Documents" columnKey="documents" {...sortProps} />
+                                    <SortableHeader label="Indexes" columnKey="indexes" {...sortProps} />
+                                    <SortableHeader label="Indexing errors" columnKey="indexingErrors" {...sortProps} />
+                                    <SortableHeader label="Ongoing tasks" columnKey="ongoingTasks" {...sortProps} />
+                                    <SortableHeader
+                                        label="Replication factor"
+                                        columnKey="replicationFactor"
+                                        {...sortProps}
+                                    />
                                     <th>Nodes</th>
-                                    <th>State</th>
+                                    <SortableHeader label="State" columnKey="state" {...sortProps} />
                                 </tr>
                             </thead>
                             <tbody>
-                                {databases.map((db) => (
+                                {sorted.map((db) => (
                                     <tr key={db.database}>
                                         <td className="fw-bold">{db.database}</td>
                                         <td>{formatCount(db.documentsCount)}</td>

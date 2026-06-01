@@ -8,6 +8,7 @@ import IconName from "typings/server/icons";
 import { ThemeColor } from "components/models/common";
 import useBoolean from "components/hooks/useBoolean";
 import NodeTagPill from "./NodeTagPill";
+import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type AnalyzeErrorSeverity =
@@ -26,12 +27,35 @@ interface AnalysisErrorsProps {
     summary: DebugPackageAnalysisSummary;
 }
 
+function severityRank(severity: AnalyzeErrorSeverity): number {
+    switch (severity) {
+        case "Error":
+            return 2;
+        case "Warning":
+            return 1;
+        default:
+            return 0;
+    }
+}
+
+const analyzeErrorSortAccessors: Record<string, (error: FlatAnalyzeError) => number | string> = {
+    node: (error) => error.nodeTag,
+    component: (error) => error.component,
+    severity: (error) => severityRank(error.severity),
+};
+
 // Surfaces the per-node analyzer failures (node.AnalyzeErrors): components whose package entries
 // could not be parsed. A heads-up that the analysis is partial, so missing data is not mistaken
 // for an absence of problems.
 export default function AnalysisErrors({ summary }: AnalysisErrorsProps) {
     const errors = useMemo(() => flattenAnalyzeErrors(summary), [summary]);
     const { value: detailsVisible, toggle: toggleDetails } = useBoolean(false);
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
+        errors,
+        analyzeErrorSortAccessors,
+        "severity"
+    );
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     if (errors.length === 0) {
         return null;
@@ -55,14 +79,14 @@ export default function AnalysisErrors({ summary }: AnalysisErrorsProps) {
                     <Table responsive className="m-0 mt-2 align-middle">
                         <thead>
                             <tr>
-                                <th>Node</th>
-                                <th>Component</th>
-                                <th>Severity</th>
+                                <SortableHeader label="Node" columnKey="node" {...sortProps} />
+                                <SortableHeader label="Component" columnKey="component" {...sortProps} />
+                                <SortableHeader label="Severity" columnKey="severity" {...sortProps} />
                                 <th>Message</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {errors.map((error) => (
+                            {sorted.map((error) => (
                                 <AnalyzeErrorRow key={error.key} error={error} />
                             ))}
                         </tbody>

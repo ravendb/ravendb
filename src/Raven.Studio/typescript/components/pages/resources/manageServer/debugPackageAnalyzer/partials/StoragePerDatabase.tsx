@@ -3,6 +3,7 @@ import Card from "react-bootstrap/Card";
 import Table from "react-bootstrap/Table";
 import NodeTagPill from "./NodeTagPill";
 import { EmptySet } from "components/common/EmptySet";
+import { SortableHeader, useSortableData } from "./sortableTable";
 import genUtils from "common/generalUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -20,8 +21,18 @@ interface StoragePerDatabaseProps {
     nodeTag?: string;
 }
 
+const storageSortAccessors: Record<string, (row: StorageRow) => number | string> = {
+    database: (row) => row.database,
+    node: (row) => row.node,
+    data: (row) => row.size,
+    temp: (row) => row.temp,
+    total: (row) => row.size + row.temp,
+};
+
 export default function StoragePerDatabase({ summary, nodeTag }: StoragePerDatabaseProps) {
     const rows = useMemo(() => collectStorageRows(summary, nodeTag), [summary, nodeTag]);
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, storageSortAccessors, "total");
+    const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     return (
         <div className="storage-per-database flex-grow-1">
@@ -34,15 +45,15 @@ export default function StoragePerDatabase({ summary, nodeTag }: StoragePerDatab
                         <Table responsive className="m-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th>Database</th>
-                                    <th>Node</th>
-                                    <th>Data</th>
-                                    <th>Temp</th>
-                                    <th>Total</th>
+                                    <SortableHeader label="Database" columnKey="database" {...sortProps} />
+                                    <SortableHeader label="Node" columnKey="node" {...sortProps} />
+                                    <SortableHeader label="Data" columnKey="data" {...sortProps} />
+                                    <SortableHeader label="Temp" columnKey="temp" {...sortProps} />
+                                    <SortableHeader label="Total" columnKey="total" {...sortProps} />
                                 </tr>
                             </thead>
                             <tbody>
-                                {rows.map((row) => (
+                                {sorted.map((row) => (
                                     <tr key={row.key}>
                                         <td className="fw-bold">{row.database}</td>
                                         <td>
