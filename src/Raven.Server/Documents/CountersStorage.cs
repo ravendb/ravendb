@@ -330,6 +330,8 @@ namespace Raven.Server.Documents
                     var value = delta;
                     var lowerName = Encodings.Utf8.GetString(counterName.Content.Ptr, counterName.Content.Length);
 
+                    ChangeVector existingChangeVector = null;
+
                     Slice countersGroupKey;
                     if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
                     {
@@ -339,6 +341,7 @@ namespace Raven.Server.Documents
                     else
                     {
                         countersGroupKeyScope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out countersGroupKey);
+                        existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
 
                         using (data = GetCounterValuesData(context, ref existing))
                         {
@@ -377,7 +380,6 @@ namespace Raven.Server.Documents
                                 // and adding it will cause to grow beyond 2KB (the 24bytes is an
                                 // estimate, we don't actually depend on hard 2KB limit).
 
-                                var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
                                 using (data)
                                 {
                                     SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, counters, dbIds, originalNames,
@@ -407,7 +409,9 @@ namespace Raven.Server.Documents
                     }
 
                     var groupEtag = _documentsStorage.GenerateNextEtag();
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, groupEtag);
+                    var changeVector = existingChangeVector != null
+                        ? ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, existingChangeVector, _documentDatabase, groupEtag)
+                        : _documentsStorage.GetNewChangeVector(context, groupEtag);
 
                     using (countersGroupKeyScope)
                     {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -100,14 +100,10 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override int GetNextReplicationStatsId() => _parent.GetNextReplicationStatsId();
 
-        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
+        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
+            bool canOmitSourceItems)
         {
             return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, connectionInfo, trigger);
-        }
-
-        protected virtual string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
-        {
-            return changeVector;
         }
 
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
@@ -208,47 +204,50 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
         {
-            if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
+            if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector) == false)
+                return;
+
+            var canOmitSourceItems = message.TryGet(nameof(ReplicationMessageHeader.CanOmitSourceItems), out bool value) && value;
+
+            // saving the change vector and the last received document etag
+            long lastEtag;
+            string lastChangeVector;
+            using (documentsContext.OpenReadTransaction())
             {
-                // saving the change vector and the last received document etag
-                long lastEtag;
-                string lastChangeVector;
-                using (documentsContext.OpenReadTransaction())
+                lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
+                lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+            }
+
+            var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
+            if ((ShouldMergeHeartbeatChangeVector(canOmitSourceItems) == false || status != ConflictStatus.Update) &&
+                _lastDocumentEtag <= lastEtag)
+                return;
+
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.Debug(
+                    $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
+                    $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
+            }
+
+            var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource, canOmitSourceItems);
+
+            if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
+            {
+                if (Logger.IsDebugEnabled)
                 {
-                    lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
-                    lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
-                }
-
-                changeVector = ReplaceUnknownEntriesWithSinkIfNeeded(documentsContext, changeVector);
-
-                var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
-                if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
-                {
-                    if (Logger.IsDebugEnabled)
-                    {
-                        Logger.Debug(
-                            $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
-                            $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
-                    }
-
-                    var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
-
-                    if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
-                    {
-                        if (Logger.IsDebugEnabled)
-                        {
-                            Logger.Debug(
-                                $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
-                                "nevertheless we create an additional task.");
-                        }
-                    }
-                    else
-                    {
-                        _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
-                    }
+                    Logger.Debug(
+                        $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
+                        "nevertheless we create an additional task.");
                 }
             }
+            else
+            {
+                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
+            }
         }
+
+        protected virtual bool ShouldMergeHeartbeatChangeVector(bool canOmitSourceItems) => true;
 
         public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
@@ -319,6 +318,13 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
+                if (item is DocumentReplicationItem doc &&
+                    (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision)))
+                    return context.GetEmptyChangeVector();
+
+                if (item is RevisionTombstoneReplicationItem)
+                    return context.GetEmptyChangeVector();
+
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
@@ -487,7 +493,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
                                 var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, options);
-                                context.LastDatabaseChangeVector = changeVectorToMerge.MergeWith(changeVector, context);
+                                context.LastDatabaseChangeVector = changeVectorToMerge.MergeWith(context.GetChangeVector(changeVector).Order, context);
 
                                 break;
 

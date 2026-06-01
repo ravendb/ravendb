@@ -21,10 +21,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (destinationAcceptablePaths != null && destinationAcceptablePaths.Length > 0)
                 _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
             
-            _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub && 
-                                           _parent is OutgoingPullReplicationHandler pull &&
-                                           pull.OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-                                           _parent._database.ForTestingPurposes?.ForceSendTombstones != true;
+            _shouldSkipSendingTombstones = parent.CanOmitSourceItemsByPreventingSinkToHubDeletions;
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
