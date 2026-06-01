@@ -489,7 +489,8 @@ namespace Raven.Server.Documents.Replication
                 },
 
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName,
-                CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint
+                CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint,
+                SinkCanStartFromChangeVector = initialRequest.SinkCanStartFromChangeVector
             };
 
             if (header.ReplicationHubAccess != null)
@@ -533,7 +534,8 @@ namespace Raven.Server.Documents.Replication
                     AllowedPaths = allowedPaths,
                     Mode = PullReplicationMode.HubToSink,
                     PreventDeletionsMode = null,
-                    Type = PullReplicationParams.ConnectionType.Incoming
+                    Type = PullReplicationParams.ConnectionType.Incoming,
+                    TaskId = destination.TaskId
                 };
                 var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
                 newIncoming.Failed += RetryPullReplication;
@@ -648,6 +650,7 @@ namespace Raven.Server.Documents.Replication
             public PullReplicationMode Mode;
             public PreventDeletionsMode? PreventDeletionsMode;
             public ConnectionType Type;
+            public long TaskId;
 
             public enum ConnectionType
             {
