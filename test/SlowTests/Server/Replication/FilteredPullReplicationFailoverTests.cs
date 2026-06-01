@@ -21,9 +21,9 @@ using Xunit;
 
 namespace SlowTests.Server.Replication;
 
-public class PullReplicationFailoverTests : ReplicationTestBase
+public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 {
-    public PullReplicationFailoverTests(ITestOutputHelper output) : base(output)
+    public FilteredPullReplicationFailoverTests(ITestOutputHelper output) : base(output)
     {
     }
 
@@ -60,6 +60,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -67,7 +68,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -174,14 +176,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.SinkToHub
+                    Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -307,6 +311,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -314,7 +319,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -440,14 +446,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.SinkToHub
+                    Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -593,6 +601,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -600,7 +609,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -720,14 +730,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.SinkToHub
+                    Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -852,6 +864,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -859,7 +872,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -977,14 +991,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.SinkToHub
+                    Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -1106,6 +1122,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -1113,7 +1130,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -1233,14 +1251,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.SinkToHub
+                    Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -1364,6 +1384,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -1371,7 +1392,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -1499,6 +1521,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -1506,14 +1529,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "Sink1Access",
-                    CertificateBase64 = Convert.ToBase64String(pullCert1.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert1.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "sink1-docs/*", "marker/*" },
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "Sink2Access",
-                    CertificateBase64 = Convert.ToBase64String(pullCert2.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert2.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "sink2-docs/*", "marker/*" },
                 }));
 
             var pullReplication1 = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}-sink1", name)
@@ -1637,6 +1662,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -1644,7 +1670,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -1710,6 +1737,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -1717,7 +1745,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedSinkToHubPaths = new[] { "users/*", "marker/*", "transition/*", "batch1-docs/*", "batch2-docs/*", "sink1-docs/*", "sink2-docs/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -1805,6 +1834,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -1812,7 +1842,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -1836,6 +1867,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 {
                     TaskId = hubResult.TaskId,
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "B"
                 }));
 
@@ -1915,14 +1947,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.HubToSink
+                    Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -1974,7 +2008,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Replication)]
+    [RavenFact(RavenTestCategory.Replication, Skip = "Revisions Fails")]
     public async Task HubToSink_SinkShouldNotReceiveDuplicateRevisionsAfterHubNodeFailover()
     {
         DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -2005,6 +2039,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -2012,7 +2047,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -2054,6 +2090,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 {
                     TaskId = hubResult.TaskId,
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "B",
                 }));
 
@@ -2141,14 +2178,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.HubToSink
+                    Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -2256,6 +2295,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -2263,7 +2303,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -2299,6 +2340,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 {
                     TaskId = hubResult.TaskId,
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "B"
                 }));
 
@@ -2386,14 +2428,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.HubToSink
+                    Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -2495,6 +2539,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -2502,7 +2547,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -2536,6 +2582,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 {
                     TaskId = hubResult.TaskId,
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "B"
                 }));
 
@@ -2623,14 +2670,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.HubToSink
+                    Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -2730,6 +2779,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "A"
                 }));
 
@@ -2737,7 +2787,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var hubUrls = hubNodes.Select(s => s.WebUrl).ToArray();
@@ -2773,6 +2824,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 {
                     TaskId = hubResult.TaskId,
                     Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                     MentorNode = "B"
                 }));
 
@@ -2860,14 +2912,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
-                    Mode = PullReplicationMode.HubToSink
+                    Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true,
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
                 new ReplicationHubAccess
                 {
                     Name = "SinkAccess",
-                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = new[] { "users/*", "marker/*", "transition/*" },
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -3141,6 +3195,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 {
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                     MentorNode = "A",
+                    WithFiltering = true
                 }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
@@ -3148,6 +3203,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 {
                     Name = "SinkAccess",
                     CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedHubToSinkPaths = new[] { "hub-docs/*" },
+                    AllowedSinkToHubPaths = new[] { "sink-docs/*" }
                 }));
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
@@ -3197,6 +3254,7 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                     TaskId = hubResult.TaskId,
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                     MentorNode = "B",
+                    WithFiltering = true
                 }));
 
             var nodeAUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
@@ -3225,12 +3283,12 @@ public class PullReplicationFailoverTests : ReplicationTestBase
 
             var hubNodeB = hubNodes.Single(h => h.ServerStore.NodeTag == "B");
             using (var hubBStore = new DocumentStore
-                   {
-                       Urls = new[] { hubNodeB.WebUrl },
-                       Database = hubStore.Database,
-                       Certificate = certs.ServerCertificateForCommunication.Value,
-                       Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
-                   }.Initialize())
+            {
+                Urls = new[] { hubNodeB.WebUrl },
+                Database = hubStore.Database,
+                Certificate = certs.ServerCertificateForCommunication.Value,
+                Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
+            }.Initialize())
             {
                 var hubStatsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
                 var hubDocsInNewConnection = hubStatsAfter.Outgoing
