@@ -5,13 +5,14 @@ import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-sto
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { useAppSteps, buildAppSchemaForFlow, getAppFlow } from "@/pages/setup/add-app-wizard/app-wizard-flow";
-import { redirect } from "react-router";
+import { useNavigate } from "react-router";
 import { appRoutes } from "@/lib/app-routes";
 import { api } from "@/api/api";
 import { useMutation } from "@tanstack/react-query";
 
 export function AddAppWizard() {
     const resetStore = useSetupWizardStore((state) => state.reset);
+    const navigate = useNavigate();
 
     const form = useForm<AppFormData>({
         mode: "onChange",
@@ -32,9 +33,11 @@ export function AddAppWizard() {
 
     const provisionMutation = useMutation({
         mutationFn: async (formValues: AppFormData) => {
-            await api.services.setup.provision({
+            const result = await api.services.setup.provision({
                 appName: formValues.externalConnection.appName,
             });
+
+            navigate(appRoutes.app(result.slug));
         },
     });
 
@@ -49,6 +52,7 @@ export function AddAppWizard() {
 
 function AddAppWizardBody() {
     const steps = useAppSteps();
+    const navigate = useNavigate();
     const { control } = useFormContext<AppFormData>();
 
     const dataSource = useWatch({
@@ -71,7 +75,7 @@ function AddAppWizardBody() {
             steps={steps}
             flow={flow}
             cancel={() => {
-                redirect(appRoutes.dashboard());
+                navigate(appRoutes.dashboard());
             }}
         />
     );
