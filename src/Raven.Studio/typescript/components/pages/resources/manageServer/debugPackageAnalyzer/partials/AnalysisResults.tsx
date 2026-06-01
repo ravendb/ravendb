@@ -21,7 +21,7 @@ const cardSeverities: IssueSeverity[] = ["Error", "Warning", "Info"];
 
 const groupByOptions: SelectOption<GroupBy>[] = [
     { value: "severity", label: "Severity" },
-    { value: "category", label: "Issue category" },
+    { value: "category", label: "Category" },
     { value: "none", label: "None" },
 ];
 
@@ -247,7 +247,7 @@ function SeverityCard({ severity, count, active, onClick }: SeverityCardProps) {
         >
             <span className="severity-card-count me-2">{count}</span>
             <span>{count === 1 ? meta.label : meta.plural}</span>
-            <Icon icon="arrow-thin-right" margin="m-0" className="ms-auto" />
+            <Icon icon={active ? "chevron-down" : "chevron-right"} margin="m-0" className="ms-auto" />
         </RichAlert>
     );
 }
@@ -267,7 +267,7 @@ function severityMeta(severity: IssueSeverity): SeverityMeta {
         case "Warning":
             return { icon: "warning", color: "warning", variant: "warning", label: "Warning", plural: "Warnings" };
         case "Info":
-            return { icon: "info", color: "info", variant: "info", label: "Info alert", plural: "Info alerts" };
+            return { icon: "info", color: "info", variant: "info", label: "Info", plural: "Info" };
         default:
             return { icon: "info", color: "muted", variant: "secondary", label: "Other", plural: "Other" };
     }

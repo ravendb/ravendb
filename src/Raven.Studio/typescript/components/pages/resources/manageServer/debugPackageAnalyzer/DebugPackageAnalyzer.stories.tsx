@@ -1,7 +1,7 @@
 import React from "react";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
-import DebugPackageAnalyzer from "./DebugPackageAnalyzer";
+import DebugPackage from "./DebugPackage";
 import DebugPackageAnalysisView from "./partials/DebugPackageAnalysisView";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -10,7 +10,7 @@ type ClusterOverviewPayload = Raven.Server.Dashboard.Cluster.Notifications.Clust
 
 export default {
     title: "Pages/Manage Server/Debug Package Analyzer",
-    component: DebugPackageAnalyzer,
+    component: DebugPackage,
     decorators: [withStorybookContexts, withBootstrap5],
     parameters: {
         design: {
@@ -18,14 +18,14 @@ export default {
             url: "https://www.figma.com/design/0AC6Rm0JBS5FBt3rsRKxOl/Pages---Debug-Package-Analyzer?node-id=576-4496",
         },
     },
-} satisfies Meta<typeof DebugPackageAnalyzer>;
+} satisfies Meta<typeof DebugPackage>;
 
-export const EmptyState: StoryObj<typeof DebugPackageAnalyzer> = {
+export const EmptyState: StoryObj<typeof DebugPackage> = {
     name: "Empty (upload) state",
-    render: () => <DebugPackageAnalyzer />,
+    render: () => <DebugPackage />,
 };
 
-export const ClusterContext: StoryObj<typeof DebugPackageAnalyzer> = {
+export const ClusterContext: StoryObj<typeof DebugPackage> = {
     name: "Loaded - Cluster context",
     render: () => (
         <div className="flex-window padding-xs">

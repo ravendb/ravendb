@@ -11,6 +11,11 @@
         max-width: 460px;
     }
 
+    .debug-package-analyze-icon {
+        font-size: 6rem;
+        line-height: 1;
+    }
+
     .small-label {
         font-size: 11px;
         text-transform: uppercase;
@@ -55,15 +60,20 @@
                 flex: 1 1 0;
                 margin-bottom: 0;
                 cursor: pointer;
+                transition: box-shadow 0.15s ease;
 
                 .severity-card-count {
                     font-size: 1.25rem;
                     font-weight: 700;
                 }
 
+                // selected tab: a solid ring in the severity color (the alert border, not the light
+                // text) plus a lift, so the active filter clearly stands out from the dimmed siblings
                 &.active {
-                    outline: 2px solid currentColor;
-                    outline-offset: -2px;
+                    box-shadow:
+                        0 0 0 2px var(--bs-alert-border-color, currentColor),
+                        0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
+                    font-weight: 600;
                 }
             }
         }
@@ -104,4 +114,14 @@
             font-weight: 600;
         }
     }
+}
+
+// Unified Debug Package landing: GatherDebugInfo renders its own Col with .content-margin
+// (flex-grow + margin: gutter) which breaks the 2-column grid and insets its card from the top.
+// The global .content-margin rule is nested (~0,3,0), so this override is scoped tightly enough to
+// win and let GatherDebugInfo simply fill our column flush with the analyze column.
+.debug-package.content-margin .gather-debug-info.content-margin {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
 }

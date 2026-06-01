@@ -200,8 +200,8 @@ class appUrl {
         return "#admin/settings/debugInfo";
     }
 
-    static forDebugPackageAnalyzer(): string {
-        return "#admin/settings/debugPackageAnalyzer";
+    static forDebugPackage(): string {
+        return "#admin/settings/debugPackage";
     }
 
     static forSystemStorageReport(): string {
