@@ -10,6 +10,9 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -26,10 +29,17 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         private AllowedPathsValidator _allowedPathsValidator;
 
+        // SinkToHub: hub-side ring buffer mapping hub local etag → confirmed sink source frontier
         private const int BatchHistorySize = 128;
         private readonly (long HubEtag, string SinkCv)[] _batchHistory = new (long HubEtag, string SinkCv)[BatchHistorySize];
         private int _batchHistoryHead;
         private int _batchHistoryCount;
+
+        // HubToSink: sink-side ring buffer mapping sink local etag → confirmed hub source frontier
+        private readonly (long SinkEtag, string HubCv)[] _hubBatchHistory = new (long SinkEtag, string HubCv)[BatchHistorySize];
+        private int _hubBatchHistoryHead;
+        private int _hubBatchHistoryCount;
+        private string _lastPersistedHubCv;
 
         public string CertificateThumbprint;
         public IncomingPullReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationLoader parent, JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLoader.PullReplicationParams pullReplicationParams) : 
@@ -45,7 +55,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 Name = pullReplicationParams?.Name,
                 SourceDatabaseName = replicatedLastEtag.SourceDatabaseName,
                 PreventDeletionsMode = pullReplicationParams?.PreventDeletionsMode,
-                Type = ReplicationLoader.PullReplicationParams.ConnectionType.Incoming
+                Type = ReplicationLoader.PullReplicationParams.ConnectionType.Incoming,
+                TaskId = pullReplicationParams?.TaskId ?? 0
             };
 
             _preventIncomingSinkDeletions = _incomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
@@ -117,6 +128,21 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (confirmedSinkCv != null)
                     heartbeat[nameof(ReplicationMessageReply.ConfirmedSinkCv)] = confirmedSinkCv;
             }
+            else if (_incomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
+            {
+                if (handledMessageType == ReplicationMessageType.Documents && _lastBatchChangeVector != null)
+                {
+                    long sinkEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
+                    _hubBatchHistory[_hubBatchHistoryHead] = (sinkEtag, _lastBatchChangeVector);
+                    _hubBatchHistoryHead = (_hubBatchHistoryHead + 1) % BatchHistorySize;
+                    if (_hubBatchHistoryCount < BatchHistorySize)
+                        _hubBatchHistoryCount++;
+                }
+
+                string confirmedHubCv = ComputeConfirmedHubCv();
+                if (confirmedHubCv != null)
+                    PersistHubCursor(confirmedHubCv);
+            }
 
             return heartbeat;
         }
@@ -135,6 +161,44 @@ namespace Raven.Server.Documents.Replication.Incoming
                     return sinkCv;
             }
             return null;
+        }
+
+        private string ComputeConfirmedHubCv()
+        {
+            long confirmedSinkEtag = ReplicationLoaderParent.GetConfirmedMinimalClusterWideReplicatedEtag();
+            if (confirmedSinkEtag == long.MaxValue)
+                return _lastBatchChangeVector;
+
+            for (int i = 0; i < _hubBatchHistoryCount; i++)
+            {
+                int idx = ((_hubBatchHistoryHead - 1 - i) % BatchHistorySize + BatchHistorySize) % BatchHistorySize;
+                var (sinkEtag, hubCv) = _hubBatchHistory[idx];
+                if (sinkEtag <= confirmedSinkEtag)
+                    return hubCv;
+            }
+            return null;
+        }
+
+        private void PersistHubCursor(string confirmedHubCv)
+        {
+            if (confirmedHubCv == _lastPersistedHubCv)
+                return;
+
+            var command = new UpdateExternalReplicationStateCommand(ReplicationLoaderParent.Database.Name, RaftIdGenerator.NewId())
+            {
+                ExternalReplicationState = new ExternalReplicationState
+                {
+                    TaskId = _incomingPullReplicationParams.TaskId,
+                    NodeTag = ReplicationLoaderParent._server.NodeTag,
+                    SourceChangeVector = confirmedHubCv,
+                    Type = ExternalReplicationState.ReplicationStateType.HubCursor
+                }
+            };
+            ReplicationLoaderParent._server.SendToLeaderAsync(command).ContinueWith(x =>
+            {
+                if (x.IsCompletedSuccessfully)
+                    _lastPersistedHubCv = confirmedHubCv;
+            }).IgnoreUnobservedExceptions();
         }
 
         protected override void DisposeInternal()
