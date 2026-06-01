@@ -79,6 +79,53 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(new[] { "customer_id" }, fk.Columns);
             Assert.Equal("customers", fk.ReferencedTable);
             Assert.Equal(new[] { "id" }, fk.ReferencedColumns);
+
+            // Verification is now folded into the same response. The integration container runs with
+            // wal_level=logical and a replication-capable superuser, so the source verifies cleanly.
+            Assert.NotNull(schema.Errors);
+            Assert.NotNull(schema.Warnings);
+            Assert.Empty(schema.Errors);
+            Assert.True(schema.Success);
+            Assert.True(schema.HasPermissionToSetup);
+
+            // Both tables have a primary key with the default REPLICA IDENTITY, so no per-table
+            // delete-capture warnings are expected.
+            Assert.Empty(customers.Warnings);
+            Assert.Empty(orders.Warnings);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_SurfacesPerTableReplicaIdentityWarning()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            // with_pk: normal table, default REPLICA IDENTITY carries the PK on DELETE -> no warning.
+            // no_pk: no primary key + default REPLICA IDENTITY -> DELETE carries nothing -> warning.
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE with_pk (id SERIAL PRIMARY KEY, name VARCHAR(100));
+                CREATE TABLE no_pk (id INT, name VARCHAR(100));
+            ");
+
+            using var store = GetDocumentStore();
+
+            var connection = new SqlConnectionString
+            {
+                FactoryName = "Npgsql",
+                ConnectionString = connectionString,
+            };
+
+            var schema = await store.Maintenance.SendAsync(new GetCdcSinkSchemaOperation(connection));
+
+            var withPk = schema.Tables.Single(t => t.SourceTableName == "with_pk");
+            Assert.Empty(withPk.Warnings);
+
+            var noPk = schema.Tables.Single(t => t.SourceTableName == "no_pk");
+            var warning = Assert.Single(noPk.Warnings);
+            Assert.Contains("REPLICA IDENTITY", warning);
+
+            // A per-table data-quality warning does not block setup.
+            Assert.True(schema.Success);
+            Assert.Empty(schema.Errors);
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]

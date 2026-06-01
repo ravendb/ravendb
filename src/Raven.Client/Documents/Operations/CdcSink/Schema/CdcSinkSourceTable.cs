@@ -43,6 +43,13 @@ internal class CdcSinkSourceTable : IDynamicJson
     /// </summary>
     public string UnsupportedReason { get; set; }
 
+    /// <summary>
+    /// Non-fatal, table-scoped verification findings that don't make the table unusable but
+    /// affect captured data quality — e.g. PostgreSQL REPLICA IDENTITY that won't carry
+    /// row-identifying columns on DELETE.
+    /// </summary>
+    public List<string> Warnings { get; set; } = new();
+
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
@@ -54,6 +61,7 @@ internal class CdcSinkSourceTable : IDynamicJson
             [nameof(ForeignKeys)] = new DynamicJsonArray(ForeignKeys.Select(fk => fk.ToJson())),
             [nameof(IsCdcEnabled)] = IsCdcEnabled,
             [nameof(UnsupportedReason)] = UnsupportedReason,
+            [nameof(Warnings)] = new DynamicJsonArray(Warnings),
         };
     }
 }

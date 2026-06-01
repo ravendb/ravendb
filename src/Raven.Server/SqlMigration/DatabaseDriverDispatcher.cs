@@ -33,7 +33,7 @@ namespace Raven.Server.SqlMigration
         /// <summary>
         /// Overload that accepts the ADO.NET factory-name string from
         /// <c>SqlConnectionString.FactoryName</c>. Same supported set as
-        /// <c>CdcSinkSourceVerifier.VerifyAsync</c>. Centralises the
+        /// <c>CdcSinkSourceVerifier.AnnotateAsync</c>. Centralises the
         /// factory-name → <see cref="MigrationProvider"/> mapping so the CDC handlers
         /// don't carry their own copy of the switch.
         /// </summary>
