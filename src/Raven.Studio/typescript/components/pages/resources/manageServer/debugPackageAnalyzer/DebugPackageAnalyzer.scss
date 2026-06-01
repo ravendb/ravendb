@@ -53,6 +53,11 @@
         min-width: 360px;
     }
 
+    // long auto-index names would otherwise stretch the table and push columns off-screen
+    .database-index-stats .index-name {
+        max-width: 360px;
+    }
+
     .analysis-results {
         .severity-cards {
             // each card is a reusable RichAlert (theme-aware colors); we only handle layout here

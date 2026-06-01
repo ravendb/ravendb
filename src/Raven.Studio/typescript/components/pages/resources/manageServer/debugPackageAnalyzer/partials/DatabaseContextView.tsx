@@ -6,6 +6,7 @@ import { StatePill } from "components/common/StatePill";
 import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
+import DatabaseIndexStats from "./DatabaseIndexStats";
 import genUtils from "common/generalUtils";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -159,6 +160,12 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
                     </Card.Body>
                 </Card>
             </div>
+
+            <DatabaseIndexStats
+                packageId={summary.PackageId}
+                database={database}
+                nodes={overviewRows.map((row) => row.node)}
+            />
         </div>
     );
 }

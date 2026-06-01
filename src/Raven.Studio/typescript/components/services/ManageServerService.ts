@@ -38,6 +38,7 @@ import getClusterDomainsCommand = require("commands/auth/getClusterDomainsComman
 import uploadDebugPackageForAnalysisCommand = require("commands/maintenance/uploadDebugPackageForAnalysisCommand");
 import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeDebugPackageAnalysisCommand");
 import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
+import getDebugPackageDatabaseIndexStatsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexStatsCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -199,5 +200,11 @@ export default class ManageServerService {
 
     async getDebugPackageAnalysisSummary(...args: ConstructorParameters<typeof getDebugPackageAnalysisSummaryCommand>) {
         return new getDebugPackageAnalysisSummaryCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseIndexStats(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexStatsCommand>
+    ) {
+        return new getDebugPackageDatabaseIndexStatsCommand(...args).execute();
     }
 }
