@@ -202,6 +202,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                                     _parent.EnsureNotDeleted(dest.NodeTag);
                                 }
 
+                                ForTestingPurposes?.BeforeExecuteReplicationOnce?.Invoke(this);
                                 var didWork = documentSender.ExecuteReplicationOnce(_tcpConnectionOptions, scope, ref NextReplicateTicks);
                                 if (documentSender.MissingAttachmentsInLastBatch)
                                     continue;
@@ -437,6 +438,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             public bool DisableWaitForChangesForExternalReplication;
 
             public ManualResetEventSlim DebugWaitAndRunReplicationOnce;
+
+            public Action<DatabaseOutgoingReplicationHandler> BeforeExecuteReplicationOnce;
         }
     }
 

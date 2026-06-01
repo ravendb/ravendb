@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Buffers.Text;
 using System.Collections;
@@ -221,12 +221,37 @@ namespace Raven.Server.Documents.TimeSeries
             from = EnsureMillisecondsPrecision(from);
             to = EnsureMillisecondsPrecision(to);
 
+            ChangeVector predecessorChangeVector = null;
+            if (remoteChangeVector == null)
+            {
+                using var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name);
+                foreach ((_, Table.TableValueHolder tableValueHolder) in table.SeekByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, startAfter: Slices.Empty, skip: 0))
+                {
+                    var existingFrom = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, ref tableValueHolder.Reader);
+                    var existingTo = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.To, ref tableValueHolder.Reader);
+
+                    // A local delete-range update continues only existing ranges that touch the same time interval.
+                    if (existingFrom > to || existingTo < from)
+                        continue;
+
+                    var currentPredecessorChangeVector = ExtractDeletedRangeChangeVector(context, ref tableValueHolder.Reader);
+                    predecessorChangeVector = predecessorChangeVector == null
+                        ? currentPredecessorChangeVector
+                        : ChangeVector.Merge(predecessorChangeVector, currentPredecessorChangeVector, context);
+                }
+            }
+
             long etag;
             ChangeVector changeVector;
             if (remoteChangeVector != null)
             {
                 changeVector = remoteChangeVector;
                 etag = _documentsStorage.GenerateNextEtag();
+            }
+            else if (predecessorChangeVector != null)
+            {
+                etag = _documentsStorage.GenerateNextEtag();
+                changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, predecessorChangeVector, _documentDatabase, etag);
             }
             else
             {
@@ -239,9 +264,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (table.ReadByKey(sliceHolder.TimeSeriesKeySlice, out var tableValueReader))
                 {
-                    var existingChangeVector = ExtractDeletedRangeChangeVector(context, ref tableValueReader);
+                    var storedDeletedRangeChangeVector = ExtractDeletedRangeChangeVector(context, ref tableValueReader);
 
-                    if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, storedDeletedRangeChangeVector) == ConflictStatus.AlreadyMerged)
                     {
                         return null;
                     }
@@ -272,27 +297,32 @@ namespace Raven.Server.Documents.TimeSeries
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
 
-            remoteChangeVector = InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector);
-            if (remoteChangeVector == null)
+            var deletedRangeChangeVector = InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector);
+            if (deletedRangeChangeVector == null)
                 return null;
 
-            var collection = deletionRangeRequest.Collection;
+            var collectionName = _documentsStorage.ExtractCollectionName(context, deletionRangeRequest.Collection);
             var documentId = deletionRangeRequest.DocumentId;
             var from = deletionRangeRequest.From;
             var to = deletionRangeRequest.To;
             var name = deletionRangeRequest.Name;
 
-            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
             using (var slicer = new TimeSeriesSliceHolder(context, documentId, name))
             {
                 var stats = Stats.GetStats(context, slicer);
                 if (stats == default || stats.Count == 0)
+                {
+                    AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, deletedRangeChangeVector, collectionName);
                     return null; // nothing to delete here
+                }
 
                 if (stats.End < from)
+                {
+                    AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, deletedRangeChangeVector, collectionName);
                     return null; // nothing to delete here
+                }
 
                 Debug.Assert(stats.Start.Kind == DateTimeKind.Utc);
                 slicer.SetBaselineToKey(stats.Start > from ? stats.Start : from);
@@ -302,7 +332,10 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     // or the first segment _after_ the from value
                     if (table.SeekOnePrimaryKeyWithPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out segmentValueReader) == false)
+                    {
+                        AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, deletedRangeChangeVector, collectionName);
                         return null;
+                    }
                 }
 
                 if (from == DateTime.MinValue && to == DateTime.MaxValue ||
@@ -314,22 +347,12 @@ namespace Raven.Server.Documents.TimeSeries
                     if (updateMetadata)
                         RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
 
-                    context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-                    {
-                        ChangeVector = remoteChangeVector,
-                        DocumentId = documentId,
-                        Name = name,
-                        Type = TimeSeriesChangeTypes.Delete,
-                        From = from,
-                        To = to,
-                        CollectionName = collection
-                    });
-
-                    return remoteChangeVector;
+                    AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, deletedRangeChangeVector, collectionName);
+                    return deletedRangeChangeVector;
                 }
 
                 var baseline = GetBaseline(segmentValueReader);
-                string changeVector = null;
+                ChangeVector segmentChangeVector = null;
                 var deleted = 0;
 
                 while (true)
@@ -344,20 +367,13 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 if (deleted == 0)
-                    return null; // nothing happened, the deletion request was out of date
-
-                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
-                    ChangeVector = changeVector,
-                    DocumentId = documentId,
-                    Name = name,
-                    Type = TimeSeriesChangeTypes.Delete,
-                    From = from,
-                    To = to,
-                    CollectionName = collectionName.Name
-                });
+                    AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, deletedRangeChangeVector, collectionName);
+                    return null; // nothing happened, the deletion request was out of date
+                }
 
-                return changeVector;
+                AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, segmentChangeVector, collectionName);
+                return segmentChangeVector;
 
                 bool TryDeleteRange(out DateTime? next)
                 {
@@ -366,7 +382,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (baseline > to)
                         return false; // we got to the end
 
-                    using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline, remoteChangeVector))
+                    using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline, deletedRangeChangeVector))
                     {
                         if (holder.LoadClosestSegment() == false)
                             return false;
@@ -380,11 +396,11 @@ namespace Raven.Server.Documents.TimeSeries
                         if (baseline > end)
                             return false;
 
-                            if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
-                            {
-                                // the deleted range is older than this segment, so we don't touch this segment
-                                return false;
-                            }
+                        if (ChangeVectorUtils.GetConflictStatus(deletedRangeChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
+                        {
+                            // the deleted range is older than this segment, so we don't touch this segment
+                            return false;
+                        }
 
                         if (readOnlySegment.NumberOfLiveEntries == 0)
                             return true; // nothing to delete here
@@ -410,7 +426,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                             }
 
-                            changeVector = holder.ChangeVector;
+                            segmentChangeVector = holder.ChangeVector;
                             return true;
                         }
 
@@ -449,7 +465,7 @@ namespace Raven.Server.Documents.TimeSeries
                                 // this ts was completely deleted
                                 RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                             }
-                            changeVector = holder.ChangeVector;
+                            segmentChangeVector = holder.ChangeVector;
                         }
                         else if (holder.FromReplication)
                             holder.UpdateSegmentChangeVector(newSegment);
@@ -838,10 +854,10 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, string changeVector,
+        private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, ChangeVector changeVector,
             CollectionName collectionName, TimeSeriesValuesSegment segment, DateTime baseline, LazyStringValue parentDocCv)
         {
-            var hash = (long)Hashing.XXHash64.Calculate(changeVector, Encoding.UTF8);
+            var hash = (long)Hashing.XXHash64.Calculate(changeVector.Version.AsString(), Encoding.UTF8);
             using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
             {
                 var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
@@ -855,13 +871,14 @@ namespace Raven.Server.Documents.TimeSeries
                     if (item.From > baseline || item.To < segment.GetLastTimestamp(baseline))
                         continue;
 
-                    if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
+                    var deletedRangeChangeVector = context.GetChangeVector(item.ChangeVector);
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, deletedRangeChangeVector) == ConflictStatus.AlreadyMerged)
                         return true;
 
                     // Segment CV may advance while replication is broken, so delete-range CV isn't always newer than the segment CV.
                     // As a fallback, compare the delete-range CV to the segment's parent document CV.
                     // If the delete-range already covers that doc CV, the segment belongs to a document version that was already deleted.
-                    if (parentDocCv != null && ChangeVectorUtils.GetConflictStatus(parentDocCv, item.ChangeVector) == ConflictStatus.AlreadyMerged)
+                    if (parentDocCv != null && ChangeVectorUtils.GetConflictStatus(context.GetChangeVector(parentDocCv), deletedRangeChangeVector) == ConflictStatus.AlreadyMerged)
                         return true;
                 }
 
@@ -3055,6 +3072,24 @@ namespace Raven.Server.Documents.TimeSeries
         {
             string tableName = collection.GetTableName(type);
             return tx.OpenTable(tableSchema, tableName);
+        }
+
+        private static void AddDeletedRangeItemChangeNotification(
+            DocumentsOperationContext context,
+            DeletionRangeRequest deletionRangeRequest,
+            ChangeVector changeVector,
+            CollectionName collectionName)
+        {
+            context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
+            {
+                ChangeVector = changeVector,
+                DocumentId = deletionRangeRequest.DocumentId,
+                Name = deletionRangeRequest.Name,
+                Type = TimeSeriesChangeTypes.Delete,
+                From = deletionRangeRequest.From,
+                To = deletionRangeRequest.To,
+                CollectionName = collectionName.Name
+            });
         }
     }
 

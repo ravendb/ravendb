@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -658,7 +658,7 @@ namespace SlowTests.Server
                     expectedChangeVector, 5, new IncomingConnectionInfo() { SourceDatabaseId = Guid.NewGuid().ToString() }, new AsyncManualResetEvent(), new ReplicationLoader.PullReplicationParams
                     {
                         Mode = PullReplicationMode.HubToSink
-                    });
+                    }, isGapCapableFilteredBoundary: false);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TxMerger.Enqueue(command);
