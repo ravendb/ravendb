@@ -54,6 +54,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
         // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
 
+        // Durable HubToSink cursor value sent by the Sink in the preliminary request.
+        // The Hub uses it to resume sending from that source frontier rather than from zero.
+        public string SinkCanStartFromChangeVector;
+
         /// <summary>
         /// The replication scope that should be disposed when the replication is done.
         /// </summary>
@@ -94,6 +98,18 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
+        protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
+        {
+            base.ProcessHandshakeResponse(response);
+
+            if (string.IsNullOrEmpty(SinkCanStartFromChangeVector))
+                return;
+
+            long startEtag = ChangeVectorUtils.GetEtagById(SinkCanStartFromChangeVector, _database.DbBase64Id);
+            if (startEtag > _lastSentDocumentEtag)
+                _lastSentDocumentEtag = startEtag;
+        }
+
         public override string FromToString => $"{base.FromToString} (pull definition: {PullReplicationDefinitionName})";
     }
 
@@ -120,6 +136,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
             request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
             request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = _node.HubName;
             request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = _node.GetTaskName();
+
+            if (_node.Mode == PullReplicationMode.HubToSink && _node.TaskId != 0)
+            {
+                var hubCursor = ReadHubCursorFromCluster();
+                if (hubCursor != null)
+                    request[nameof(ReplicationInitialRequest.SinkCanStartFromChangeVector)] = hubCursor;
+            }
 
             return request;
         }
@@ -178,6 +201,21 @@ namespace Raven.Server.Documents.Replication.Outgoing
             using (context.OpenReadTransaction())
             {
                 var key = ExternalReplicationState.GenerateItemName(_database.Name, _node.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor);
+                var stateBlittable = _parent._server.Cluster.Read(context, key);
+                if (stateBlittable == null)
+                    return null;
+
+                var state = JsonDeserializationCluster.ExternalReplicationState(stateBlittable);
+                return state.SourceChangeVector;
+            }
+        }
+
+        private string ReadHubCursorFromCluster()
+        {
+            using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var key = ExternalReplicationState.GenerateItemName(_database.Name, _node.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor);
                 var stateBlittable = _parent._server.Cluster.Read(context, key);
                 if (stateBlittable == null)
                     return null;

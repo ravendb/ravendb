@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Replication.Messages
     public sealed class ReplicationInitialRequest
     {
         public string PullReplicationDefinitionName { get; set; }
-        
+
         public string PullReplicationSinkTaskName { get; set; }
 
         public TcpConnectionInfo Info { get; set; }
@@ -45,5 +45,7 @@ namespace Raven.Client.Documents.Replication.Messages
         public string SourceUrl { get; set; }
 
         public string DatabaseGroupId { get; set; }
+
+        public string SinkCanStartFromChangeVector { get; set; }
     }
 }

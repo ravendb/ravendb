@@ -1816,6 +1816,13 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             ClientCertificate = certs.ServerCertificateForCommunication.Value,
             AdminCertificate = certs.ServerCertificateForCommunication.Value
         }))
+        using (var hubStoreB = new DocumentStore
+        {
+            Urls = new[] { hubNodes.First(h => h.ServerStore.NodeTag == "B").WebUrl },
+            Database = hubStore.Database,
+            Certificate = certs.ServerCertificateForCommunication.Value,
+            Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
+        }.Initialize())
         using (var sinkStore = GetDocumentStore(new Options
         {
             AdminCertificate = certs.ServerCertificateForCommunication.Value,
@@ -1852,15 +1859,31 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 Mode = PullReplicationMode.HubToSink,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
             };
-            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
 
-            using (var bulkInsert = hubStore.BulkInsert())
+            using (var bulkInsert = hubStoreB.BulkInsert())
             {
                 for (int i = 0; i < 1024; i++)
                     bulkInsert.Store(new User { Name = $"User{i}" }, $"users/{i}");
             }
 
             Assert.True(WaitForDocument(sinkStore, "users/1023", 30_000));
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
+            }, true, 30_000));
 
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
@@ -1875,7 +1898,7 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             var nodeAServer = Servers.Single(s => s.WebUrl == nodeAUrl);
             await DisposeServerAndWaitForFinishOfDisposalAsync(nodeAServer);
 
-            using (var session = hubStore.OpenSession())
+            using (var session = hubStoreB.OpenSession())
             {
                 session.Store(new User { Name = "Marker" }, "marker/post-failover");
                 session.SaveChanges();
@@ -1883,25 +1906,15 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             Assert.True(WaitForDocument(sinkStore, "marker/post-failover", 30_000));
 
-            var hubNodeB = hubNodes.Single(h => h.ServerStore.NodeTag == "B");
-            using (var hubBStore = new DocumentStore
-            {
-                Urls = new[] { hubNodeB.WebUrl },
-                Database = hubStore.Database,
-                Certificate = certs.ServerCertificateForCommunication.Value,
-                Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
-            }.Initialize())
-            {
-                var statsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var statsAfter = await hubStoreB.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
-                var docsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            var docsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(docsInNewConnection == 1,
-                    $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
-                    "Hub is re-sending already-replicated documents after failing over to a new hub node.");
-            }
+            Assert.True(docsInNewConnection == 1,
+                $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
+                "Hub is re-sending already-replicated documents after failing over to a new hub node.");
         }
     }
 
@@ -1931,7 +1944,7 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
         }.Initialize())
         using (var sinkStoreB = new DocumentStore
         {
-            Urls = new[] { sinkNodes.Single(n => n.ServerStore.NodeTag == "B").WebUrl },
+            Urls = new[] { sinkNodes.Single(n => n.ServerStore.NodeTag == "A").WebUrl },
             Database = sinkDB,
             Conventions = new DocumentConventions { DisableTopologyUpdates = true }
         }.Initialize())
@@ -1944,7 +1957,7 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             var name = $"pull-replication {GetDatabaseName()}";
 
-            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+            var hubResult = await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
                     Mode = PullReplicationMode.HubToSink,
@@ -1978,6 +1991,22 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 sinkNodes.Where(n => n.ServerStore.NodeTag == "A").ToList(),
                 sinkDB, "users/1023", u => true, TimeSpan.FromSeconds(30)));
 
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStoreA.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
+            }, true, 30_000));
+
             pullReplication.TaskId = result.TaskId;
             pullReplication.MentorNode = "B";
             await sinkStoreA.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(pullReplication));
@@ -2008,7 +2037,7 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Replication, Skip = "Revisions Fails")]
+    [RavenFact(RavenTestCategory.Replication)]
     public async Task HubToSink_SinkShouldNotReceiveDuplicateRevisionsAfterHubNodeFailover()
     {
         DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -2021,6 +2050,13 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             ClientCertificate = certs.ServerCertificateForCommunication.Value,
             AdminCertificate = certs.ServerCertificateForCommunication.Value
         }))
+        using (var hubStoreB = new DocumentStore
+        {
+            Urls = new[] { hubNodes.First(h => h.ServerStore.NodeTag == "B").WebUrl },
+            Database = hubStore.Database,
+            Certificate = certs.ServerCertificateForCommunication.Value,
+            Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
+        }.Initialize())
         using (var sinkStore = GetDocumentStore(new Options
         {
             AdminCertificate = certs.ServerCertificateForCommunication.Value,
@@ -2057,7 +2093,7 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 Mode = PullReplicationMode.HubToSink,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
             };
-            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
 
             await hubStore.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
             {
@@ -2069,7 +2105,7 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 Default = new RevisionsCollectionConfiguration { Disabled = false }
             }));
 
-            using (var session = hubStore.OpenAsyncSession())
+            using (var session = hubStoreB.OpenAsyncSession())
             {
                 for (int i = 0; i < 1024; i++)
                     await session.StoreAsync(new User { Name = $"User{i}" }, $"users/{i}");
@@ -2083,6 +2119,22 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 using var session = sinkStore.OpenSession();
                 var revisions = session.Advanced.Revisions.GetFor<User>("users/1023");
                 return revisions != null && revisions.Count >= 1;
+            }, true, 30_000));
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
             }, true, 30_000));
 
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
@@ -2106,33 +2158,23 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             Assert.True(WaitForDocument(sinkStore, "marker/post-failover", 30_000));
 
-            var hubNodeB = hubNodes.Single(h => h.ServerStore.NodeTag == "B");
-            using (var hubBStore = new DocumentStore
-            {
-                Urls = new[] { hubNodeB.WebUrl },
-                Database = hubStore.Database,
-                Certificate = certs.ServerCertificateForCommunication.Value,
-                Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
-            }.Initialize())
-            {
-                var statsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var statsAfter = await hubStoreB.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
-                var docsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            var docsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(docsInNewConnection == 1,
-                    $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
-                    "Hub is re-sending already-replicated documents after failing over to a new hub node.");
+            Assert.True(docsInNewConnection == 1,
+                $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
+                "Hub is re-sending already-replicated documents after failing over to a new hub node.");
 
-                var revisionsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.RevisionOutputCount ?? 0) ?? 0) ?? 0;
+            var revisionsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.RevisionOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(revisionsInNewConnection == 1,
-                    $"After hub failover, expected == 1 revisions sent on new connection but got {revisionsInNewConnection}. " +
-                    "Hub is re-sending already-replicated revisions after failing over to a new hub node.");
-            }
+            Assert.True(revisionsInNewConnection == 2,
+                $"After hub failover, expected == 2 revisions sent on new connection but got {revisionsInNewConnection}. " +
+                "Hub is re-sending already-replicated revisions after failing over to a new hub node.");
         }
     }
 
@@ -2277,6 +2319,13 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             ClientCertificate = certs.ServerCertificateForCommunication.Value,
             AdminCertificate = certs.ServerCertificateForCommunication.Value
         }))
+        using (var hubStoreB = new DocumentStore
+        {
+            Urls = new[] { hubNodes.First(h => h.ServerStore.NodeTag == "B").WebUrl },
+            Database = hubStore.Database,
+            Certificate = certs.ServerCertificateForCommunication.Value,
+            Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
+        }.Initialize())
         using (var sinkStore = GetDocumentStore(new Options
         {
             AdminCertificate = certs.ServerCertificateForCommunication.Value,
@@ -2313,9 +2362,9 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 Mode = PullReplicationMode.HubToSink,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
             };
-            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
 
-            using (var session = hubStore.OpenSession())
+            using (var session = hubStoreB.OpenSession())
             {
                 for (int i = 0; i < 1024; i++)
                 {
@@ -2333,6 +2382,22 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 using var session = sinkStore.OpenSession();
                 using var attachment = session.Advanced.Attachments.Get("users/1023", "file.txt");
                 return attachment != null;
+            }, true, 30_000));
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
             }, true, 30_000));
 
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
@@ -2356,33 +2421,23 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             Assert.True(WaitForDocument(sinkStore, "marker/post-failover", 30_000));
 
-            var hubNodeB = hubNodes.Single(h => h.ServerStore.NodeTag == "B");
-            using (var hubBStore = new DocumentStore
-            {
-                Urls = new[] { hubNodeB.WebUrl },
-                Database = hubStore.Database,
-                Certificate = certs.ServerCertificateForCommunication.Value,
-                Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
-            }.Initialize())
-            {
-                var statsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var statsAfter = await hubStoreB.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
-                var docsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            var docsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(docsInNewConnection == 1,
-                    $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
-                    "Hub is re-sending already-replicated documents after failing over to a new hub node.");
+            Assert.True(docsInNewConnection == 1,
+                $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
+                "Hub is re-sending already-replicated documents after failing over to a new hub node.");
 
-                var attachmentsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.AttachmentOutputCount ?? 0) ?? 0) ?? 0;
+            var attachmentsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.AttachmentOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(attachmentsInNewConnection == 0,
-                    $"After hub failover, expected == 0 attachments sent on new connection but got {attachmentsInNewConnection}. " +
-                    "Hub is re-sending already-replicated attachments after failing over to a new hub node.");
-            }
+            Assert.True(attachmentsInNewConnection == 0,
+                $"After hub failover, expected == 0 attachments sent on new connection but got {attachmentsInNewConnection}. " +
+                "Hub is re-sending already-replicated attachments after failing over to a new hub node.");
         }
     }
 
@@ -2521,6 +2576,13 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             ClientCertificate = certs.ServerCertificateForCommunication.Value,
             AdminCertificate = certs.ServerCertificateForCommunication.Value
         }))
+        using (var hubStoreB = new DocumentStore
+        {
+            Urls = new[] { hubNodes.First(h => h.ServerStore.NodeTag == "B").WebUrl },
+            Database = hubStore.Database,
+            Certificate = certs.ServerCertificateForCommunication.Value,
+            Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
+        }.Initialize())
         using (var sinkStore = GetDocumentStore(new Options
         {
             AdminCertificate = certs.ServerCertificateForCommunication.Value,
@@ -2557,9 +2619,9 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 Mode = PullReplicationMode.HubToSink,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
             };
-            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
 
-            using (var session = hubStore.OpenSession())
+            using (var session = hubStoreB.OpenSession())
             {
                 for (int i = 0; i < 1024; i++)
                 {
@@ -2575,6 +2637,22 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             {
                 using var session = sinkStore.OpenSession();
                 return session.CountersFor("users/1023").Get("likes") != null;
+            }, true, 30_000));
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
             }, true, 30_000));
 
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
@@ -2598,33 +2676,23 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             Assert.True(WaitForDocument(sinkStore, "marker/post-failover", 30_000));
 
-            var hubNodeB = hubNodes.Single(h => h.ServerStore.NodeTag == "B");
-            using (var hubBStore = new DocumentStore
-            {
-                Urls = new[] { hubNodeB.WebUrl },
-                Database = hubStore.Database,
-                Certificate = certs.ServerCertificateForCommunication.Value,
-                Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
-            }.Initialize())
-            {
-                var statsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var statsAfter = await hubStoreB.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
-                var docsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            var docsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(docsInNewConnection == 1,
-                    $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
-                    "Hub is re-sending already-replicated documents after failing over to a new hub node.");
+            Assert.True(docsInNewConnection == 1,
+                $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
+                "Hub is re-sending already-replicated documents after failing over to a new hub node.");
 
-                var countersInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.CounterOutputCount ?? 0) ?? 0) ?? 0;
+            var countersInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.CounterOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(countersInNewConnection == 0,
-                    $"After hub failover, expected == 0 counters sent on new connection but got {countersInNewConnection}. " +
-                    "Hub is re-sending already-replicated counters after failing over to a new hub node.");
-            }
+            Assert.True(countersInNewConnection == 0,
+                $"After hub failover, expected == 0 counters sent on new connection but got {countersInNewConnection}. " +
+                "Hub is re-sending already-replicated counters after failing over to a new hub node.");
         }
     }
 
@@ -2761,6 +2829,13 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             ClientCertificate = certs.ServerCertificateForCommunication.Value,
             AdminCertificate = certs.ServerCertificateForCommunication.Value
         }))
+        using (var hubStoreB = new DocumentStore
+        {
+            Urls = new[] { hubNodes.First(h => h.ServerStore.NodeTag == "B").WebUrl },
+            Database = hubStore.Database,
+            Certificate = certs.ServerCertificateForCommunication.Value,
+            Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
+        }.Initialize())
         using (var sinkStore = GetDocumentStore(new Options
         {
             AdminCertificate = certs.ServerCertificateForCommunication.Value,
@@ -2797,11 +2872,11 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 Mode = PullReplicationMode.HubToSink,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
             };
-            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubUrls);
 
             var baseline = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            using (var session = hubStore.OpenAsyncSession())
+            using (var session = hubStoreB.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Name = "TimeSeries" }, "users/ts");
                 var tsf = session.TimeSeriesFor("users/ts", "heartbeat");
@@ -2818,7 +2893,23 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 var entries = session.TimeSeriesFor("users/ts", "heartbeat").Get();
                 return entries != null && entries.Length == 1024;
             }, true, 30_000));
-    
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    return state.SourceChangeVector != null;
+                }
+            }, true, 30_000));
+
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
@@ -2840,33 +2931,23 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             Assert.True(WaitForDocument(sinkStore, "marker/post-failover", 30_000));
 
-            var hubNodeB = hubNodes.Single(h => h.ServerStore.NodeTag == "B");
-            using (var hubBStore = new DocumentStore
-            {
-                Urls = new[] { hubNodeB.WebUrl },
-                Database = hubStore.Database,
-                Certificate = certs.ServerCertificateForCommunication.Value,
-                Conventions = new DocumentConventions { DisableTopologyUpdates = true, DisposeCertificate = false }
-            }.Initialize())
-            {
-                var statsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
+            var statsAfter = await hubStoreB.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
-                var docsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
+            var docsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(docsInNewConnection == 1,
-                    $"After hub failover, expected == 1 document sent on new connection but got {docsInNewConnection}. " +
-                    "Hub is re-sending already-replicated documents after failing over to a new hub node.");
+            Assert.True(docsInNewConnection == 1,
+                $"After hub failover, expected == 1 documents sent on new connection but got {docsInNewConnection}. " +
+                "Hub is re-sending already-replicated documents after failing over to a new hub node.");
 
-                var tsInNewConnection = statsAfter.Outgoing
-                    .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
-                    ?.Sum(o => o.Performance?.Sum(p => p.Network?.TimeSeriesSegmentsOutputCount ?? 0) ?? 0) ?? 0;
+            var tsInNewConnection = statsAfter.Outgoing
+                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                ?.Sum(o => o.Performance?.Sum(p => p.Network?.TimeSeriesSegmentsOutputCount ?? 0) ?? 0) ?? 0;
 
-                Assert.True(tsInNewConnection == 0,
-                    $"After hub failover, expected == 0 time series segments sent on new connection but got {tsInNewConnection}. " +
-                    "Hub is re-sending already-replicated time series after failing over to a new hub node.");
-            }
+            Assert.True(tsInNewConnection == 0,
+                $"After hub failover, expected == 0 time series segments sent on new connection but got {tsInNewConnection}. " +
+                "Hub is re-sending already-replicated time series after failing over to a new hub node.");
         }
     }
 
