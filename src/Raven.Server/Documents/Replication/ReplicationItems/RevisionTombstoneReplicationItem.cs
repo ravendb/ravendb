@@ -100,27 +100,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Id = context.AllocateStringValue(null, Id.Buffer + index + 1, Id.Size - index - 1);
         }
 
-        public static ByteStringContext.InternalScope TryExtractChangeVectorSliceFromKey(ByteStringContext allocator, LazyStringValue key, out Slice changeVectorSlice)
-        {
-            TryExtractDocumentIdAndChangeVectorFromKey(key, out _, out var changeVector);
-            return Slice.From(allocator, changeVector, out changeVectorSlice);
-        }
-
-        public static void TryExtractDocumentIdAndChangeVectorFromKey(LazyStringValue key, out string docId, out string changeVector)
-        {
-            var index = key.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
-            if (index == -1)
-            {
-                docId = null;
-                changeVector = key;
-            }
-            else
-            {
-                docId = key.Substring(0, index);
-                changeVector = key.Substring(index + 1);
-            }
-        }
-
         protected override void InnerDispose()
         {
             Id?.Dispose();
