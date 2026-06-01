@@ -10,7 +10,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -317,7 +317,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                 {
                     // extract document Id from the key for Attachment, Counter and Revision tombstones 
-                    RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(tombstone.LowerId, out id, out _);
+                    RevisionsStorage.TryExtractDocumentIdFromRevisionTombstoneKey(tombstone.LowerId, out id);
                 }
 
                 var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, id ?? tombstone.LowerId);
