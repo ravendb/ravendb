@@ -8,6 +8,8 @@ import Spinner from "react-bootstrap/Spinner";
 import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { RichAlert } from "components/common/RichAlert";
+import { Icon } from "components/common/Icon";
+import { StatePill } from "components/common/StatePill";
 import StatTile from "./StatTile";
 import genUtils from "common/generalUtils";
 import { formatNumber, formatPercentage } from "./analyzerUtils";
@@ -21,6 +23,7 @@ type MemoryAnalysisInfo =
 type GcMemoryInfo = Raven.Server.Dashboard.Cluster.Notifications.GcInfoPayload.GcMemoryInfo;
 type GenerationInfoSize = Raven.Server.Dashboard.Cluster.Notifications.GcInfoPayload.GenerationInfoSize;
 type TcpConnections = Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.TcpConnections;
+type PingResult = Raven.Server.Documents.Handlers.Debugging.NodeDebugHandler.PingResult;
 
 type MetricTab = "cpu" | "memory" | "gc" | "network" | "threads";
 
@@ -244,6 +247,13 @@ const tcpSortAccessors: Record<string, (connection: TcpConnections) => number | 
     connections: (connection) => connection.NumberOfConnectionsInState ?? 0,
 };
 
+const pingSortAccessors: Record<string, (result: PingResult) => number | string> = {
+    target: (result) => result.Url ?? "",
+    setup: (result) => result.SetupAlive?.Time ?? 0,
+    tcp: (result) => result.TcpInfo?.ReceiveTime ?? 0,
+    status: (result) => (result.SetupAlive?.Error || result.TcpInfo?.Error ? 1 : 0),
+};
+
 // Network info is not in the summary; fetch it on demand from the analyzer network endpoint.
 function NetworkTab({ packageId, nodeTag }: { packageId: string; nodeTag: string }) {
     const { manageServerService } = useServices();
@@ -258,6 +268,9 @@ function NetworkTab({ packageId, nodeTag }: { packageId: string; nodeTag: string
         "connections"
     );
     const sortProps = { sortKey, sortDirection, onSort: requestSort };
+
+    const ping = useSortableData(network.result?.PingTestResults ?? [], pingSortAccessors, "tcp");
+    const pingSortProps = { sortKey: ping.sortKey, sortDirection: ping.sortDirection, onSort: ping.requestSort };
 
     if (network.loading) {
         return (
@@ -314,8 +327,60 @@ function NetworkTab({ packageId, nodeTag }: { packageId: string; nodeTag: string
                     </tbody>
                 </Table>
             )}
+            <div>
+                <div className="small-label ms-1 mb-1">Node-to-node ping (from node {nodeTag})</div>
+                {ping.sorted.length === 0 ? (
+                    <EmptySet compact>No ping test data in the package</EmptySet>
+                ) : (
+                    <Table responsive className="m-0 align-middle">
+                        <thead>
+                            <tr>
+                                <SortableHeader label="Target node" columnKey="target" {...pingSortProps} />
+                                <SortableHeader label="Setup-alive" columnKey="setup" {...pingSortProps} />
+                                <SortableHeader label="TCP ping" columnKey="tcp" {...pingSortProps} />
+                                <SortableHeader label="Status" columnKey="status" {...pingSortProps} />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {ping.sorted.map((result) => (
+                                <PingRow key={result.Url} result={result} />
+                            ))}
+                        </tbody>
+                    </Table>
+                )}
+            </div>
         </>
     );
+}
+
+// TCP ping thresholds mirror the server's issue detection (NetworkInfoAnalyzer): warn >2s, error >5s.
+function PingRow({ result }: { result: PingResult }) {
+    const setupError = result.SetupAlive?.Error;
+    const tcpError = result.TcpInfo?.Error;
+    const hasError = Boolean(setupError || tcpError);
+    const tcpPing = result.TcpInfo?.ReceiveTime;
+    const pingClass = tcpPing > 5000 ? "text-danger" : tcpPing > 2000 ? "text-warning" : "";
+
+    return (
+        <tr>
+            <td className="fw-bold text-break">{result.Url}</td>
+            <td>{formatPingMs(result.SetupAlive?.Time)}</td>
+            <td className={pingClass}>{formatPingMs(tcpPing)}</td>
+            <td>
+                {hasError ? (
+                    <span className="text-danger" title={[setupError, tcpError].filter(Boolean).join(" | ")}>
+                        <Icon icon="warning" margin="m-0" /> Error
+                    </span>
+                ) : (
+                    <StatePill bg="success">OK</StatePill>
+                )}
+            </td>
+        </tr>
+    );
+}
+
+function formatPingMs(ms: number | undefined): string {
+    return ms == null ? "-" : `${formatNumber(ms)} ms`;
 }
 
 function formatTopConnections(top: { [endpoint: string]: number }): string {
