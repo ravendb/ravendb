@@ -401,7 +401,7 @@ public sealed partial class ClusterStateMachine
         }
 
         if (databaseRecord.Revisions.Default != null && databaseRecord.Revisions.Default.Disabled == false)
-            AssertCollectionRevisionLimits("Default", databaseRecord.Revisions.Default, maxRevisionsToKeep, maxRevisionAgeToKeepInDays);
+            AssertCollectionRevisionLimits(collectionName: null, databaseRecord.Revisions.Default, maxRevisionsToKeep, maxRevisionAgeToKeepInDays);
 
         if (databaseRecord.Revisions.Collections == null)
             return;
@@ -417,13 +417,17 @@ public sealed partial class ClusterStateMachine
 
     private static void AssertCollectionRevisionLimits(string collectionName, RevisionsCollectionConfiguration configuration, int? maxRevisionsToKeep, int? maxRevisionAgeToKeepInDays)
     {
+        var scope = collectionName == null
+            ? "for the default revisions configuration"
+            : $"for collection '{collectionName}'";
+
         if (configuration.MinimumRevisionsToKeep != null &&
             maxRevisionsToKeep != null &&
             configuration.MinimumRevisionsToKeep > maxRevisionsToKeep)
         {
             throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                 $"The defined minimum revisions to keep '{configuration.MinimumRevisionsToKeep}' " +
-                $"for collection '{collectionName}' exceeds the licensed one '{maxRevisionsToKeep}'");
+                $"{scope} exceeds the licensed one '{maxRevisionsToKeep}'");
         }
 
         if (configuration.MinimumRevisionAgeToKeep != null &&
@@ -432,7 +436,7 @@ public sealed partial class ClusterStateMachine
         {
             throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                 $"The defined minimum revisions age to keep '{configuration.MinimumRevisionAgeToKeep}' " +
-                $"for collection '{collectionName}' exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
+                $"{scope} exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
         }
     }
 
