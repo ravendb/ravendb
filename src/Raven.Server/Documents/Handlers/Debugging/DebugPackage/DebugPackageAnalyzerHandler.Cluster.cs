@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.Web;
@@ -20,13 +19,11 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         DebugPackageNodeReport nodeReport;
 
         if (string.IsNullOrEmpty(nodeTag))
-            nodeReport = packageReport.Reports.First(x => x.ClusterNode.NodeStateInfo.TopologyEntry != null);
+            nodeReport = packageReport.Reports.FirstOrDefault(x => x.ClusterNode?.NodeStateInfo?.TopologyEntry != null);
         else
             nodeReport = packageReport.ForNode(nodeTag);
 
-        var responseStream = ResponseBodyStream();
-
-        await nodeReport.ClusterNode.NodeStateInfo.TopologyEntry.WriteContentToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(nodeReport?.ClusterNode?.NodeStateInfo?.TopologyEntry);
     }
     
     
@@ -41,9 +38,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
 
         var nodeReport = packageReport.ForNode(nodeTag);
 
-        var responseStream = ResponseBodyStream();
-
-        await nodeReport.ClusterNode.NodeLogInfo.LogEntry.WriteContentToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(nodeReport.ClusterNode?.NodeLogInfo?.LogEntry);
     }
     
     [RavenAction("/debug/info-package/analyzer/cluster/observer/decisions", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -54,16 +49,8 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         if (TryGetReportOrSetNotFound(packageId, out var packageReport) == false)
             return;
 
-        var nodeReport = packageReport.Reports.FirstOrDefault(x => x.ClusterNode.ObserverInfo != null);
+        var nodeReport = packageReport.Reports.FirstOrDefault(x => x.ClusterNode?.ObserverInfo != null);
 
-        if (nodeReport?.ClusterNode.ObserverInfo.ObserverDecisionsEntry == null)
-        {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            return;
-        }
-
-        var responseStream = ResponseBodyStream();
-
-        await nodeReport.ClusterNode.ObserverInfo.ObserverDecisionsEntry.WriteContentToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(nodeReport?.ClusterNode?.ObserverInfo?.ObserverDecisionsEntry);
     }
 }

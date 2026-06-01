@@ -72,9 +72,7 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
             return;
 
         var nodeReport = packageReport.ForNode(nodeTag);
-        
-        var responseStream = ResponseBodyStream();
 
-        await nodeReport.Server.ThreadsInfo.StackTracesEntry.WriteContentToAsync(responseStream);
+        await WriteEntryOrNotFoundAsync(nodeReport.Server?.ThreadsInfo?.StackTracesEntry);
     }
 }
