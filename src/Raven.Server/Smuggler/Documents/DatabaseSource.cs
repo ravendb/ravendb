@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Replication;
@@ -16,6 +17,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -320,7 +322,32 @@ namespace Raven.Server.Smuggler.Documents
 
             while (enumerator.MoveNext())
             {
-                yield return enumerator.Current;
+                var tombstone = enumerator.Current;
+                RewriteRevisionTombstoneKey(tombstone);
+                yield return tombstone;
+            }
+        }
+
+        // Same Legacy-form-emit policy as cross-version replication; document / document-attachment tombstones pass through.
+        private unsafe void RewriteRevisionTombstoneKey(Tombstone tombstone)
+        {
+            switch (tombstone.Type)
+            {
+                case Tombstone.TombstoneType.Attachment when AttachmentsStorage.AttachmentKey.GetAttachmentType(tombstone.LowerId) == AttachmentType.Revision:
+                    using (_database.DocumentsStorage.AttachmentsStorage.BuildAttachmentRevisionTombstoneKey(
+                               _context, tombstone, out Slice revisionAttachmentKey))
+                    {
+                        tombstone.LowerId = _context.GetLazyString(revisionAttachmentKey);
+                    }
+
+                    break;
+                case Tombstone.TombstoneType.Revision:
+                    using (RevisionsStorage.BuildRevisionTombstoneKeyForExternal(_context, tombstone, out RevisionTombstoneKey revisionTombstoneKey))
+                    {
+                        tombstone.LowerId = _context.GetLazyString(revisionTombstoneKey.RawComposite);
+                    }
+
+                    break;
             }
         }
 
