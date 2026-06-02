@@ -175,7 +175,8 @@ export function WizardFooter<T extends string>(props: WizardFooterComponentProps
 }
 
 export function WizardFooterBackButton<T extends string>(props: WizardFooterComponentProps<T>) {
-    const isPending = props.currentStep.status === "pending";
+    const { formState } = useFormContext();
+    const isPending = props.currentStep.status === "pending" || formState.isSubmitting;
 
     return (
         <div className="flex gap-2">
@@ -192,11 +193,14 @@ export function WizardFooterBackButton<T extends string>(props: WizardFooterComp
 }
 
 export function WizardFooterNextButton<T extends string>(props: WizardFooterComponentProps<T>) {
-    const { trigger } = useFormContext();
+    const { trigger, formState } = useFormContext();
+
+    const isPending = props.currentStep.status === "pending" || formState.isSubmitting;
 
     if (props.stepPosition === "last") {
         return (
-            <Button type="submit" className="ml-auto">
+            <Button type="submit" className="ml-auto" disabled={isPending}>
+                {isPending && <Spinner />}
                 Submit
             </Button>
         );
@@ -219,8 +223,6 @@ export function WizardFooterNextButton<T extends string>(props: WizardFooterComp
 
         props.nextStep();
     };
-
-    const isPending = props.currentStep.status === "pending";
 
     return (
         <Button onClick={handleNext} className="ml-auto" disabled={isPending}>

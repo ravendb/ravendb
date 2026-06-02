@@ -67,7 +67,7 @@ export function FormCombobox<TFieldValues extends FieldValues, TName extends Fie
                     items={options}
                     itemToStringValue={(option) => option.label}
                     value={selectedOption}
-                    onValueChange={(option) => onChange(option ? option.value : null)}
+                    onValueChange={(option) => onChange(option ? option.value : "")}
                     disabled={disabled || formState.isSubmitting}
                 >
                     <ComboboxInput

@@ -11,6 +11,7 @@ import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { agentSchema, type AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { CAPABILITY_FLOW, useCapabilitySteps } from "@/pages/setup/add-capability-wizard/capability-wizard-flow";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
+import { preventEnterKeySubmission } from "@/lib/form-utils";
 
 export function AddCapabilityWizard() {
     const { slug = "" } = useParams();
@@ -69,6 +70,7 @@ export function AddCapabilityWizard() {
                     // promise doesn't bubble out of handleSubmit.
                     await provisionMutation.mutateAsync(values).catch(() => {});
                 })}
+                onKeyDown={preventEnterKeySubmission}
                 className="h-full"
             >
                 <AddCapabilityWizardBody />
