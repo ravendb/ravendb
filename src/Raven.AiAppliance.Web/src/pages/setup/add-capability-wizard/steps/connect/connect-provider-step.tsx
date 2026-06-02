@@ -7,7 +7,7 @@ import { ApiState } from "@/components/data/api-state";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
-import { AddConnectionStringDialog } from "@/pages/setup/add-capability-wizard/steps/connect/add-connection-string-dialog";
+import { AddAiConnectionString } from "@/pages/setup/add-capability-wizard/steps/connect/add-ai-connection-string";
 import { FormCombobox } from "@/components/form/form-combobox";
 
 export function ConnectProviderStep(props: WizardBodyComponentProps) {
@@ -60,8 +60,9 @@ export function ConnectProviderStep(props: WizardBodyComponentProps) {
                             label: `${item.name} · ${item.provider}`,
                         }))}
                         addons={
-                            <AddConnectionStringDialog
+                            <AddAiConnectionString
                                 slug={slug}
+                                modelType="Chat"
                                 onCreated={async (name) => {
                                     createdConnectionStringNameRef.current = name;
                                     await connectionStringsQuery.refetch();
