@@ -33,12 +33,13 @@ public class VectorSearchWithHnswIndexCache(ITestOutputHelper output) : StorageT
     // equal distance, so which ones land in top-K depends on priority-queue tie-breaking —
     // an ambiguity that is unrelated to whether the cache is used.
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(VectorEmbeddingType.Single, 10_000)] // cache holds every node
-    [InlineData(VectorEmbeddingType.Single, 50)]     // cache holds only upper-level nodes
-    [InlineData(VectorEmbeddingType.Int8, 10_000)]
-    [InlineData(VectorEmbeddingType.Int8, 50)]
-    public void ResultsAreIdenticalWithAndWithoutCache(VectorEmbeddingType embedding, int cacheBudget)
-        => RunParityCheck(embedding, cacheBudget, baseSeed: 23);
+    [InlineData(VectorEmbeddingType.Single, 10_000, 23)] // cache holds every node
+    [InlineData(VectorEmbeddingType.Single, 50, 23)]     // cache holds only upper-level nodes
+    [InlineData(VectorEmbeddingType.Int8, 10_000, 23)]
+    [InlineData(VectorEmbeddingType.Int8, 50, 23)]
+    [InlineDataWithRandomSeed(VectorEmbeddingType.Single, 10_000)]
+    public void ResultsAreIdenticalWithAndWithoutCache(VectorEmbeddingType embedding, int cacheBudget, int baseSeed)
+        => RunParityCheck(embedding, cacheBudget, baseSeed);
 
     private void RunParityCheck(VectorEmbeddingType embedding, int cacheBudget, int baseSeed)
     {
@@ -73,23 +74,22 @@ public class VectorSearchWithHnswIndexCache(ITestOutputHelper output) : StorageT
     // id must map to a real doc and the top-K must agree with an exact scan on most of its
     // entries (HNSW is approximate; we require high recall, not byte-identity).
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(17, 71)]
-    [InlineData(null, null)]
-    public void SearchWorksWithNoCacheAttached(int? buildSeed, int? querySeed)
+    [InlineData(17)]
+    [InlineDataWithRandomSeed]
+    public void SearchWorksWithNoCacheAttached(int seed)
     {
-        var (bSeed, qSeed) = MaterializeSeeds(buildSeed, querySeed);
         using var _ = GetMappings(VectorEmbeddingType.Single, out var bsc, out var mapping);
         var metadata = mapping.GetByFieldId(1).Metadata;
-        BuildIndex(mapping, docCount: 200, seed: bSeed);
+        BuildIndex(mapping, docCount: 200, seed: seed);
 
         long[] truth, returned;
         using (var searcher = new IndexSearcher(Env, mapping))
-            truth = TopK(searcher, metadata, NewQueryVector(bsc, seed: qSeed), k: 16, isExact: true);
+            truth = TopK(searcher, metadata, NewQueryVector(bsc, seed: seed + 1), k: 16, isExact: true);
 
         using (var searcher = new IndexSearcher(Env, mapping))
         {
             // Deliberately do NOT call AttachVectorNodeCaches.
-            returned = TopK(searcher, metadata, NewQueryVector(bsc, seed: qSeed), k: 16);
+            returned = TopK(searcher, metadata, NewQueryVector(bsc, seed: seed + 1), k: 16);
         }
 
         Assert.Equal(16, returned.Length);
@@ -99,30 +99,29 @@ public class VectorSearchWithHnswIndexCache(ITestOutputHelper output) : StorageT
         // At least one returned id must overlap the exact top-K — lower bound on recall that
         // catches "the search returned random ids" without being sensitive to approximate-search
         // jitter on adversarial random seeds.
-        Assert.True(Recall(truth, returned) > 0, $"no overlap with exact top-K (buildSeed={bSeed}, querySeed={qSeed})");
+        Assert.True(Recall(truth, returned) > 0, $"no overlap with exact top-K (seed={seed})");
     }
 
     // When a cache is attached but empty (e.g. the graph has fewer nodes than the cache
     // budget could hold but none were persisted yet), queries must fall back to disk loads
     // and still return meaningful results.
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(19, 73)]
-    [InlineData(null, null)]
-    public void SearchWorksWithEmptyCacheDictionaryAttached(int? buildSeed, int? querySeed)
+    [InlineData(19)]
+    [InlineDataWithRandomSeed]
+    public void SearchWorksWithEmptyCacheDictionaryAttached(int seed)
     {
-        var (bSeed, qSeed) = MaterializeSeeds(buildSeed, querySeed);
         using var _ = GetMappings(VectorEmbeddingType.Single, out var bsc, out var mapping);
         var metadata = mapping.GetByFieldId(1).Metadata;
-        BuildIndex(mapping, docCount: 200, seed: bSeed);
+        BuildIndex(mapping, docCount: 200, seed: seed);
 
         long[] truth, returned;
         using (var searcher = new IndexSearcher(Env, mapping))
-            truth = TopK(searcher, metadata, NewQueryVector(bsc, seed: qSeed), k: 16, isExact: true);
+            truth = TopK(searcher, metadata, NewQueryVector(bsc, seed: seed + 1), k: 16, isExact: true);
 
         using (var searcher = new IndexSearcher(Env, mapping))
         {
             searcher.AttachVectorNodeCaches(new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance));
-            returned = TopK(searcher, metadata, NewQueryVector(bsc, seed: qSeed), k: 16);
+            returned = TopK(searcher, metadata, NewQueryVector(bsc, seed: seed + 1), k: 16);
         }
 
         Assert.Equal(16, returned.Length);
@@ -132,28 +131,7 @@ public class VectorSearchWithHnswIndexCache(ITestOutputHelper output) : StorageT
         // At least one returned id must overlap the exact top-K — lower bound on recall that
         // catches "the search returned random ids" without being sensitive to approximate-search
         // jitter on adversarial random seeds.
-        Assert.True(Recall(truth, returned) > 0, $"no overlap with exact top-K (buildSeed={bSeed}, querySeed={qSeed})");
-    }
-
-    private (int BuildSeed, int QuerySeed) MaterializeSeeds(int? buildSeed, int? querySeed)
-    {
-        if (buildSeed.HasValue && querySeed.HasValue)
-            return (buildSeed.Value, querySeed.Value);
-        var rng = new Random();
-        var b = buildSeed ?? rng.Next();
-        var q = querySeed ?? rng.Next();
-        Output.WriteLine($"Random seeds: buildSeed={b}, querySeed={q} (re-run with fixed seeds to reproduce)");
-        return (b, q);
-    }
-
-    // Randomized variant of the parity theory: picks a fresh seed at test time and logs it
-    // so a regression can be reproduced. Fixed-seed variants cover the deterministic path.
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void ResultsAreIdenticalWithAndWithoutCache_RandomSeed()
-    {
-        var seed = unchecked((int)DateTime.UtcNow.Ticks);
-        Output.WriteLine($"Random seed: {seed} (re-run with fixed seed to reproduce)");
-        RunParityCheck(VectorEmbeddingType.Single, cacheBudget: 10_000, baseSeed: seed);
+        Assert.True(Recall(truth, returned) > 0, $"no overlap with exact top-K (seed={seed})");
     }
 
     // The cached path must agree with the exact scan on most top-K. HNSW params are sized
