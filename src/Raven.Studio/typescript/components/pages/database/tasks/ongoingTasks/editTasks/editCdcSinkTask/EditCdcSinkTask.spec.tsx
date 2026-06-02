@@ -141,7 +141,7 @@ describe("Edit CDC Sink task", () => {
         expect(await screen.findByText(selectors.availableTables)).toBeInTheDocument();
         expect(screen.getByText(selectors.unavailableTables)).toBeInTheDocument();
 
-        const unavailableTableRow = screen.getByText(selectors.companiesTable).closest("tr");
+        const unavailableTableRow = screen.getByText(selectors.ordersTable).closest("tr");
         expect(unavailableTableRow.querySelector("input[type='checkbox']")).not.toBeInTheDocument();
 
         const errorIcon = screen.getByLabelText(selectors.cdcSetupRequired);
