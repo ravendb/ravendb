@@ -230,7 +230,21 @@ namespace Raven.Server.Documents.Replication.Senders
                         // the last etag they have from us on the other side
                         _parent._lastSentDocumentEtag = _lastEtag;
                         _parent._lastDocumentSentTime = DateTime.UtcNow;
-                        var changeVector = wasInterrupted ? null : DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                        string changeVector;
+                        string lastSentChangeVector = null;
+                        if (wasInterrupted)
+                        {
+                            changeVector = null;
+                        }
+                        else if (_parent.CanFilterOutSourceItems)
+                        {
+                            changeVector = null;
+                            lastSentChangeVector = mergedChangeVector.AsString();
+                        }
+                        else
+                        {
+                            changeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                        }
 
                         if (Log.IsDebugEnabled)
                         {
@@ -245,7 +259,7 @@ namespace Raven.Server.Documents.Replication.Senders
                             Log.Debug($"Sending heartbeat (empty batch, {reason}){skippedInfo}. Last scanned etag: '{_lastEtag}'. WasInterrupted: '{wasInterrupted}'.");
                         }
 
-                        _parent.SendHeartbeat(changeVector, mergedChangeVector);
+                        _parent.SendHeartbeat(changeVector, lastSentChangeVector);
                         return hasModification;
                     }
                     

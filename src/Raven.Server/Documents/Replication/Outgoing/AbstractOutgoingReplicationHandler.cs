@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public int MissingAttachmentsRetries;
 
-        internal virtual bool CanOmitSourceItems => false;
+        internal virtual bool CanFilterOutSourceItems => false;
 
         public readonly ReplicationMetricsCountersManager Metrics;
 
@@ -469,8 +469,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 [nameof(ReplicationLatestEtagRequest.ReplicationsType)] = GetReplicationType()
             };
 
-            if (CanOmitSourceItems)
-                request[nameof(ReplicationLatestEtagRequest.CanOmitSourceItems)] = true;
+            if (CanFilterOutSourceItems)
+                request[nameof(ReplicationLatestEtagRequest.CanFilterOutSourceItems)] = true;
 
             return request;
         }
@@ -577,7 +577,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     }
 
                     if (string.IsNullOrEmpty(lastSentChangeVector) == false)
+                    {
+                        LastSentChangeVector = lastSentChangeVector;
                         heartbeat[nameof(ReplicationMessageHeader.LastSentChangeVector)] = lastSentChangeVector;
+                    }
 
                     context.Write(writer, heartbeat);
                     writer.Flush();

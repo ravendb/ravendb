@@ -105,6 +105,11 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, connectionInfo, trigger);
         }
 
+        protected virtual string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
+        {
+            return changeVector;
+        }
+
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
@@ -215,9 +220,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                 lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
             }
 
+            changeVector = ReplaceUnknownEntriesWithSinkIfNeeded(documentsContext, changeVector);
+
             var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
-            if ((ShouldMergeHeartbeatChangeVector() == false || status != ConflictStatus.Update) &&
-                _lastDocumentEtag <= lastEtag)
+            if (status != ConflictStatus.Update && _lastDocumentEtag <= lastEtag)
                 return;
 
             if (Logger.IsDebugEnabled)
@@ -229,6 +235,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
 
+            EnqueueHeartbeatUpdate(cmd);
+        }
+
+        protected void EnqueueHeartbeatUpdate(DocumentMergedTransactionCommand cmd)
+        {
             if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
             {
                 if (Logger.IsDebugEnabled)
@@ -243,8 +254,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
             }
         }
-
-        protected virtual bool ShouldMergeHeartbeatChangeVector() => true;
 
         public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
