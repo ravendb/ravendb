@@ -46,10 +46,12 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _destinationAcceptablePaths = response.Reply.AcceptablePaths;
         }
 
-        internal override bool CanOmitSourceItems =>
-            PullReplicationPathFilterUtils.CanOmitByAllowedPaths(PathsToSend);
+        internal override bool CanFilterOutSourceItems =>
+            PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(PathsToSend) ||
+            PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(_destinationAcceptablePaths) ||
+            CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
 
-        internal bool CanOmitSourceItemsByPreventingSinkToHubDeletions =>
+        internal bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions =>
             Destination is PullReplicationAsSink sink &&
             sink.Mode == PullReplicationMode.SinkToHub &&
             OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
