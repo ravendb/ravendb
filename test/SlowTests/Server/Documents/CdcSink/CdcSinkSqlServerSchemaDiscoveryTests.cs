@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -106,6 +107,52 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.False(c.IsCdcCapturable);
                 Assert.False(string.IsNullOrEmpty(c.UnsupportedReason));
             });
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        public async Task RespectsSchemasFilter()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteMsSql(connectionString, "CREATE SCHEMA sales;");
+            ExecuteMsSql(connectionString, "CREATE TABLE sales.items (id INT IDENTITY(1,1) PRIMARY KEY, name VARCHAR(100));");
+            ExecuteMsSql(connectionString, "CREATE TABLE dbo.unrelated (id INT IDENTITY(1,1) PRIMARY KEY, junk VARCHAR(100));");
+
+            var discovery = CdcSinkSchemaDiscovery.For("Microsoft.Data.SqlClient");
+
+            var salesOnly = await discovery.DiscoverAsync(connectionString, new[] { "sales" }, CancellationToken.None);
+            Assert.Single(salesOnly.Tables);
+            Assert.Equal("items", salesOnly.Tables[0].SourceTableName);
+
+            // No schemas hint => defaults to the connection's default schema (dbo).
+            var defaultOnly = await discovery.DiscoverAsync(connectionString, schemas: null, CancellationToken.None);
+            Assert.Single(defaultOnly.Tables);
+            Assert.Equal("unrelated", defaultOnly.Tables[0].SourceTableName);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlCdcRequired = true)]
+        public async Task ExcludesCdcAndSystemSchemaTablesFromDiscovery()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteMsSql(connectionString, "CREATE TABLE tracked (id INT IDENTITY(1,1) PRIMARY KEY, name VARCHAR(100));");
+
+            // Enabling CDC creates the internal cdc.* catalog (cdc.change_tables, cdc.lsn_time_mapping,
+            // cdc.dbo_tracked_CT, ...) plus dbo.systranschemas. None of those are valid CDC sources.
+            ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_enable_db");
+            ExecuteMsSql(connectionString, @"
+                EXEC sys.sp_cdc_enable_table
+                    @source_schema = N'dbo',
+                    @source_name   = N'tracked',
+                    @role_name     = NULL");
+
+            var discovery = CdcSinkSchemaDiscovery.For("Microsoft.Data.SqlClient");
+            var schema = await discovery.DiscoverAsync(connectionString, schemas: null, CancellationToken.None);
+
+            Assert.DoesNotContain(schema.Tables, t => string.Equals(t.SourceTableSchema, "cdc", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(schema.Tables, t => string.Equals(t.SourceTableSchema, "sys", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(schema.Tables, t => string.Equals(t.SourceTableName, "systranschemas", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(schema.Tables, t => string.Equals(t.SourceTableName, "tracked", StringComparison.OrdinalIgnoreCase));
         }
     }
 }
