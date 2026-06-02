@@ -8,6 +8,7 @@ import Select, { SelectOption } from "components/common/select/Select";
 import AnalysisResults from "./AnalysisResults";
 import AnalysisErrors from "./AnalysisErrors";
 import ClusterOverview from "./ClusterOverview";
+import ClusterObserverDecisions from "./ClusterObserverDecisions";
 import ClusterRaftDebug from "./ClusterRaftDebug";
 import ResourceUsage from "./ResourceUsage";
 import DatabasesOverview from "./DatabasesOverview";
@@ -112,6 +113,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                     </div>
                     <OngoingTasks summary={summary} />
                     <ClusterRaftDebug summary={summary} />
+                    <ClusterObserverDecisions summary={summary} />
                 </>
             )}
             {context === "node" && selectedNode && (
