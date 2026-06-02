@@ -52,11 +52,13 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
     useEffect(() => {
         const tables = getValues("tables");
 
-        // Get all unique schemas from the tables, if there are any tables configured. If there are no tables, pass null to get default schema.
-        const allUsedSchemas = tables?.length ? Array.from(new Set(tables.map((t) => t.sourceTableSchema))) : null;
+        // Get all unique, non-empty schemas from the tables. If there are none, pass null to get the default schema.
+        const allUsedSchemas = Array.from(
+            new Set((tables ?? []).map((table) => table.sourceTableSchema?.trim()).filter(Boolean))
+        );
 
         if (connectionStringName) {
-            asyncGetSchema.execute(allUsedSchemas);
+            asyncGetSchema.execute(allUsedSchemas.length > 0 ? allUsedSchemas : null);
         }
     }, [connectionStringName]);
 

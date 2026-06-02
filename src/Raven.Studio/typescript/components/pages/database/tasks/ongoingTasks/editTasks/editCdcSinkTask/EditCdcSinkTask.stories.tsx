@@ -82,12 +82,12 @@ export const TableWarnings: StoryObj = {
 
 function getSchemaWithDisabledCompanies(hasPermissionToSetup: boolean) {
     const schema = TasksStubs.cdcSinkTaskSchema();
-    const companies = schema.Tables.find((table) => table.SourceTableName === "companies");
+    const firstTable = schema.Tables[0];
 
     schema.HasPermissionToSetup = hasPermissionToSetup;
-    companies.IsCdcEnabled = false;
+    firstTable.IsCdcEnabled = false;
 
-    for (const column of companies.Columns) {
+    for (const column of firstTable.Columns) {
         column.IsCdcCapturable = false;
         column.UnsupportedReason = "Table is not enrolled in SQL Server CDC.";
     }
@@ -97,9 +97,9 @@ function getSchemaWithDisabledCompanies(hasPermissionToSetup: boolean) {
 
 function getSchemaWithTableWarning() {
     const schema = TasksStubs.cdcSinkTaskSchema();
-    const orders = schema.Tables.find((table) => table.SourceTableName === "orders");
+    const firstTable = schema.Tables[0];
 
-    orders.Warnings = ["REPLICA IDENTITY is set to NOTHING, so DELETE events carry no columns."];
+    firstTable.Warnings = ["REPLICA IDENTITY is set to NOTHING, so DELETE events carry no columns."];
 
     return schema;
 }
