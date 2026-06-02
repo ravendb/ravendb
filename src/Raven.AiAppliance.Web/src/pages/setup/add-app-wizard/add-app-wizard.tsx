@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 import { appRoutes } from "@/lib/app-routes";
 import { api } from "@/api/api";
 import { useMutation } from "@tanstack/react-query";
+import { preventEnterKeySubmission } from "@/lib/form-utils";
 
 export function AddAppWizard() {
     const resetStore = useSetupWizardStore((state) => state.reset);
@@ -43,7 +44,11 @@ export function AddAppWizard() {
 
     return (
         <FormProvider {...form}>
-            <form onSubmit={form.handleSubmit((x) => provisionMutation.mutateAsync(x))} className="h-full">
+            <form
+                onSubmit={form.handleSubmit((x) => provisionMutation.mutateAsync(x))}
+                onKeyDown={preventEnterKeySubmission}
+                className="h-full"
+            >
                 <AddAppWizardBody />
             </form>
         </FormProvider>
