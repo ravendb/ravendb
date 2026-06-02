@@ -21,7 +21,6 @@ function prepareMocks(hasCdcSink = true) {
     });
 
     tasksService.withConnectionStrings();
-    tasksService.withVerifyCdcSink();
     tasksService.withTestCdcSink();
     tasksService.withGetCdcSinkTaskSchema();
 }
@@ -50,3 +49,57 @@ export const LicenseRestricted: StoryObj = {
         return <EditCdcSinkTask />;
     },
 };
+
+export const UnavailableTables: StoryObj = {
+    render: () => {
+        prepareMocks();
+        mockServices.tasksService.withGetCdcSinkTaskInfo();
+        mockServices.tasksService.withGetCdcSinkTaskSchema(getSchemaWithDisabledCompanies(false));
+
+        return <EditCdcSinkTask queryParams={{ taskId: String(TasksStubs.getCdcSink().TaskId) }} />;
+    },
+};
+
+export const AutoProvisioningTables: StoryObj = {
+    render: () => {
+        prepareMocks();
+        mockServices.tasksService.withGetCdcSinkTaskInfo();
+        mockServices.tasksService.withGetCdcSinkTaskSchema(getSchemaWithDisabledCompanies(true));
+
+        return <EditCdcSinkTask queryParams={{ taskId: String(TasksStubs.getCdcSink().TaskId) }} />;
+    },
+};
+
+export const TableWarnings: StoryObj = {
+    render: () => {
+        prepareMocks();
+        mockServices.tasksService.withGetCdcSinkTaskInfo();
+        mockServices.tasksService.withGetCdcSinkTaskSchema(getSchemaWithTableWarning());
+
+        return <EditCdcSinkTask queryParams={{ taskId: String(TasksStubs.getCdcSink().TaskId) }} />;
+    },
+};
+
+function getSchemaWithDisabledCompanies(hasPermissionToSetup: boolean) {
+    const schema = TasksStubs.cdcSinkTaskSchema();
+    const companies = schema.Tables.find((table) => table.SourceTableName === "companies");
+
+    schema.HasPermissionToSetup = hasPermissionToSetup;
+    companies.IsCdcEnabled = false;
+
+    for (const column of companies.Columns) {
+        column.IsCdcCapturable = false;
+        column.UnsupportedReason = "Table is not enrolled in SQL Server CDC.";
+    }
+
+    return schema;
+}
+
+function getSchemaWithTableWarning() {
+    const schema = TasksStubs.cdcSinkTaskSchema();
+    const orders = schema.Tables.find((table) => table.SourceTableName === "orders");
+
+    orders.Warnings = ["REPLICA IDENTITY is set to NOTHING, so DELETE events carry no columns."];
+
+    return schema;
+}

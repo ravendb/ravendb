@@ -20,16 +20,23 @@ export const pascalCase = (name: string) => upperFirst(camelCase(name));
 
 export const propertyNameFromJoinColumn = (name: string) => pascalCase(name.endsWith("_id") ? name.slice(0, -3) : name);
 
-export function isTableSupported(table: CdcSinkSourceTable) {
-    return table.IsCdcEnabled && table.UnsupportedReason == null;
+export function isTableSupported(schema: CdcSinkSourceSchema, table: CdcSinkSourceTable) {
+    return schema?.Success && table.UnsupportedReason == null && (table.IsCdcEnabled || schema.HasPermissionToSetup);
 }
 
-export function isColumnSupported(column: CdcSinkSchema.CdcSinkSourceColumn) {
-    return column.IsCdcCapturable && column.UnsupportedReason == null;
+export function isColumnSupported(
+    schema: CdcSinkSourceSchema,
+    table: CdcSinkSourceTable,
+    column: CdcSinkSchema.CdcSinkSourceColumn
+) {
+    return column.IsCdcCapturable || (schema?.HasPermissionToSetup && !table.IsCdcEnabled);
 }
 
-export function mapSourceColumnsToFormData(table: CdcSinkSourceTable): FormRootTableColumn[] {
-    return table.Columns.filter(isColumnSupported).map(
+export function mapSourceColumnsToFormData(
+    schema: CdcSinkSourceSchema,
+    table: CdcSinkSourceTable
+): FormRootTableColumn[] {
+    return table.Columns.filter((column) => isColumnSupported(schema, table, column)).map(
         (x): FormRootTableColumn => ({
             column: x.Name,
             name: pascalCase(x.Name),
@@ -58,7 +65,7 @@ export function getSourceTableOptions(
     const schemaFilter = sourceTableSchema?.trim();
 
     return (schema?.Tables ?? [])
-        .filter(isTableSupported)
+        .filter((table) => isTableSupported(schema, table))
         .filter((table) => !schemaFilter || table.SourceTableSchema === schemaFilter)
         .filter(
             (table) =>
@@ -74,7 +81,11 @@ export function getSourceTableOptions(
 }
 
 export function getSourceSchemaOptions(schema: CdcSinkSourceSchema): SelectOption<string>[] {
-    const schemas = new Set((schema?.Tables ?? []).filter(isTableSupported).map((table) => table.SourceTableSchema));
+    const schemas = new Set(
+        (schema?.Tables ?? [])
+            .filter((table) => isTableSupported(schema, table))
+            .map((table) => table.SourceTableSchema)
+    );
 
     return Array.from(schemas)
         .sort()
@@ -98,7 +109,7 @@ export function getForeignKeysToTable(sourceTable: CdcSinkSourceTable, targetTab
     );
 }
 
-export function mapSqlTableToFormData(table: CdcSinkSourceTable): FormRootTable {
+export function mapSqlTableToFormData(schema: CdcSinkSourceSchema, table: CdcSinkSourceTable): FormRootTable {
     const linkedTables = table.ForeignKeys.map(
         (x): FormLinkedTable => ({
             propertyName: x.Columns.map(propertyNameFromJoinColumn).join("And"),
@@ -111,7 +122,7 @@ export function mapSqlTableToFormData(table: CdcSinkSourceTable): FormRootTable 
 
     return {
         collectionName: pascalCase(table.SourceTableName),
-        columns: mapSourceColumnsToFormData(table),
+        columns: mapSourceColumnsToFormData(schema, table),
         disabled: false,
         embeddedTables: [],
         linkedTables,

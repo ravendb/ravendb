@@ -80,7 +80,7 @@ export function useEditCdcSinkTaskSourceTableAutoFill(path: AutoFillPath, mode: 
 
         setStringIfEmpty(`${path}.propertyName`, getEmbeddedPropertyName(selectedTable, relation));
         setListIfEmpty(`${path}.primaryKeyColumns`, stringValues(selectedTable.PrimaryKeyColumns));
-        setListIfEmpty(`${path}.columns`, mapSourceColumnsToFormData(selectedTable));
+        setListIfEmpty(`${path}.columns`, mapSourceColumnsToFormData(sourceSchema, selectedTable));
 
         if (relation) {
             setListIfEmpty(`${path}.joinColumns`, stringValues(relation.foreignKey.Columns));

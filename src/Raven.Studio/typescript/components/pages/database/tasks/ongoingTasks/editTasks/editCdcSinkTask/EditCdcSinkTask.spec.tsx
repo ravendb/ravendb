@@ -18,6 +18,13 @@ const selectors = {
     configuredTables: "Configured Tables",
     enterprise: "Enterprise",
     ordersTable: "dbo.orders",
+    companiesTable: "dbo.companies",
+    availableTables: "Available tables",
+    unavailableTables: "Unavailable tables",
+    cdcSetupRequired: "CDC setup required",
+    cdcSetupRequiredMessage: "CDC is not enabled. Ask a database administrator to enable CDC for this table.",
+    tableWarnings: "Table warnings",
+    tableWarningMessage: "REPLICA IDENTITY is set to NOTHING, so DELETE events carry no columns.",
     discoverTablesButton: /^Discover tables$/i,
     discoverButton: /^Discover$/i,
     configureSelectedTablesButton: /^Configure selected tables$/i,
@@ -45,15 +52,7 @@ describe("Edit CDC Sink task", () => {
         await screen.findByText(selectors.newTaskTitle);
 
         await fillInput(screen.getByLabelText(selectors.taskName), selectors.taskNameValue);
-        await selectOption(
-            user,
-            screen,
-            getSelectInputByLabel(screen, selectors.connectionString),
-            selectors.connectionStringValue
-        );
-
-        await fireClick(getButtonByText(screen, selectors.discoverTablesButton));
-        await fireClick(await screen.findByText(selectors.discoverButton).then((x) => x.closest("button")));
+        await discoverTables(screen, user, fireClick);
         expect(await screen.findByText(selectors.ordersTable)).toBeInTheDocument();
 
         await fireClick(screen.getByText(selectors.ordersTable).closest("tr").querySelector("input[type='checkbox']"));
@@ -131,7 +130,69 @@ describe("Edit CDC Sink task", () => {
         expect(screen.getAllByText(selectors.enterprise).length).toBeGreaterThan(0);
         expect(screen.getByRole("button", { name: selectors.saveTaskButton })).toBeDisabled();
     });
+
+    it("shows unavailable tables separately without selection checkboxes", async () => {
+        const Story = composeStory(stories.UnavailableTables, stories.default);
+
+        const { screen, user } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+
+        expect(await screen.findByText(selectors.availableTables)).toBeInTheDocument();
+        expect(screen.getByText(selectors.unavailableTables)).toBeInTheDocument();
+
+        const unavailableTableRow = screen.getByText(selectors.companiesTable).closest("tr");
+        expect(unavailableTableRow.querySelector("input[type='checkbox']")).not.toBeInTheDocument();
+
+        const errorIcon = screen.getByLabelText(selectors.cdcSetupRequired);
+        await user.hover(errorIcon.closest("div"));
+
+        expect(await screen.findByText(selectors.cdcSetupRequiredMessage)).toBeInTheDocument();
+    });
+
+    it("does not show a warning for a table that will be provisioned automatically", async () => {
+        const Story = composeStory(stories.AutoProvisioningTables, stories.default);
+
+        const { screen } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+
+        const autoProvisionedTableRow = await screen.findByText(selectors.companiesTable).then((x) => x.closest("tr"));
+        expect(autoProvisionedTableRow.querySelector("input[type='checkbox']")).toBeInTheDocument();
+        expect(screen.queryByText(selectors.cdcSetupRequiredMessage)).not.toBeInTheDocument();
+    });
+
+    it("shows table-scoped warnings in the available table row tooltip", async () => {
+        const Story = composeStory(stories.TableWarnings, stories.default);
+
+        const { screen, user } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+
+        expect(screen.queryByText(selectors.tableWarningMessage)).not.toBeInTheDocument();
+
+        const warningIcon = await screen.findByLabelText(selectors.tableWarnings);
+        await user.hover(warningIcon.closest("div"));
+
+        expect(await screen.findByText(selectors.tableWarningMessage)).toBeInTheDocument();
+    });
 });
+
+async function discoverTables(
+    screen: ReturnType<typeof rtlRender>["screen"],
+    user: ReturnType<typeof rtlRender>["user"],
+    fireClick: ReturnType<typeof rtlRender>["fireClick"]
+) {
+    await selectOption(
+        user,
+        screen,
+        getSelectInputByLabel(screen, selectors.connectionString),
+        selectors.connectionStringValue
+    );
+
+    await fireClick(getButtonByText(screen, selectors.discoverTablesButton));
+    await fireClick(await screen.findByText(selectors.discoverButton).then((x) => x.closest("button")));
+}
 
 async function selectOption(
     user: ReturnType<typeof rtlRender>["user"],

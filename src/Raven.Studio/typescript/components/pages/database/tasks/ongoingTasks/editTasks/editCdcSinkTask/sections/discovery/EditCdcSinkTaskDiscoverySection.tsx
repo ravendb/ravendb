@@ -11,10 +11,10 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import EditCdcSinkTaskDiscoveredTable from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoveredTable";
 import SizeGetter from "components/common/SizeGetter";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import EditCdcSinkTaskVerifyResult from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskVerifyResult";
 import EditCdcSinkTaskDiscoverySchemasModal from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoverySchemasModal";
 import { useAppDispatch } from "components/store";
 import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import { useEffect } from "react";
 
 interface EditCdcSinkTaskDiscoverySectionProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -27,7 +27,7 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
     const { value: isSchemasModalOpen, setTrue: openSchemasModal, setFalse: closeSchemasModal } = useBoolean(false);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
-    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const { control, getValues } = useFormContext<EditCdcSinkTaskFormData>();
     const connectionStringName = useWatch({
         control,
         name: "connectionStringName",
@@ -48,16 +48,17 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
         return sourceSchema;
     });
 
-    const asyncVerifySource = useAsyncCallback(async () => {
-        openPanel();
+    // When connection string changes, fetch the schema
+    useEffect(() => {
+        const tables = getValues("tables");
 
-        return await tasksService.verifyCdcSink(databaseName, {
-            ConnectionStringName: connectionStringName,
-            TableNames: asyncGetSchema.result?.Tables?.map((t) => t.SourceTableName) ?? [],
-        });
-    });
+        // Get all unique schemas from the tables, if there are any tables configured. If there are no tables, pass null to get default schema.
+        const allUsedSchemas = tables?.length ? Array.from(new Set(tables.map((t) => t.sourceTableSchema))) : null;
 
-    const hasTables = Boolean(asyncGetSchema.result?.Tables?.length);
+        if (connectionStringName) {
+            asyncGetSchema.execute(allUsedSchemas);
+        }
+    }, [connectionStringName]);
 
     return (
         <div className="mt-3">
@@ -101,38 +102,10 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                 {isSchemasModalOpen && (
                     <EditCdcSinkTaskDiscoverySchemasModal onClose={closeSchemasModal} asyncGetSchema={asyncGetSchema} />
                 )}
-                <ConditionalPopover
-                    conditions={[
-                        {
-                            isActive: !connectionStringName,
-                            message: "A connection string is required to verify the CDC setup.",
-                        },
-                        {
-                            isActive: !hasTables,
-                            message: "Tables must be discovered before verifying the CDC setup.",
-                        },
-                        {
-                            isActive: hasTables && !!connectionStringName,
-                            message: "Click to verify that CDC is properly configured on the source tables.",
-                        },
-                    ]}
-                >
-                    <ButtonWithSpinner
-                        variant="secondary"
-                        className="rounded-pill"
-                        onClick={asyncVerifySource.execute}
-                        isSpinning={asyncVerifySource.loading}
-                        disabled={!hasTables || !connectionStringName}
-                        icon="test"
-                    >
-                        Verify CDC setup
-                    </ButtonWithSpinner>
-                </ConditionalPopover>
             </div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>
                 <div>
                     <div className="vstack gap-2 mt-2">
-                        <EditCdcSinkTaskVerifyResult asyncVerifySource={asyncVerifySource} />
                         <SizeGetter
                             render={({ width }) => (
                                 <EditCdcSinkTaskDiscoveredTable

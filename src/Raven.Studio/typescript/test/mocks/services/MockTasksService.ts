@@ -108,15 +108,6 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         );
     }
 
-    withVerifyCdcSink(dto?: Raven.Server.Documents.CdcSink.CdcSinkVerificationResult) {
-        return this.mockResolvedValue(this.mocks.verifyCdcSink, dto, {
-            Success: true,
-            HasPermissionToSetup: true,
-            Errors: [],
-            Warnings: [],
-        });
-    }
-
     withTestCdcSink(dto?: Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult) {
         return this.mockResolvedValue(this.mocks.testCdcSink, dto, TasksStubs.testCdcSink());
     }

@@ -722,12 +722,16 @@ export class TasksStubs {
         return {
             CatalogName: "Northwind",
             Errors: [],
+            HasPermissionToSetup: true,
+            Success: true,
+            Warnings: [],
             Tables: [
                 {
                     SourceTableSchema: "dbo",
                     SourceTableName: "orders",
                     IsCdcEnabled: true,
                     UnsupportedReason: null,
+                    Warnings: [],
                     PrimaryKeyColumns: ["Id"],
                     Columns: [
                         {
@@ -761,6 +765,7 @@ export class TasksStubs {
                     SourceTableName: "companies",
                     IsCdcEnabled: true,
                     UnsupportedReason: null,
+                    Warnings: [],
                     PrimaryKeyColumns: ["Id"],
                     Columns: [
                         {
