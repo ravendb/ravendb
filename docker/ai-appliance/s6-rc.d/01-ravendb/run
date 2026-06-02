@@ -30,6 +30,20 @@ if [ -f "$SETUP_SETTINGS" ]; then
     if [ -f "$SETUP_DIR/admin-thumbprint" ]; then
         export RAVEN_Security_WellKnownCertificates_Admin="$(cat "$SETUP_DIR/admin-thumbprint")"
     fi
+
+    # Activate the license shipped in the setup package. The setup-wizard zip
+    # writes license.json at the package root (not into A/settings.json), and
+    # nothing else wires it up — without this RavenDB starts unlicensed
+    # (Community/AGPL) and rejects commercial features (AI Agent, etc.), even
+    # though a valid license sits on disk. RavenDB activates License.Path on
+    # first start when no license is stored yet, then persists it to cluster
+    # storage. License.Eula.Accepted is re-asserted because copying
+    # A/settings.json over the baked config drops the baked Eula flag, and a
+    # missing flag blocks activation.
+    if [ -f "$SETUP_DIR/license.json" ]; then
+        export RAVEN_License_Path="$SETUP_DIR/license.json"
+        export RAVEN_License_Eula_Accepted=true
+    fi
 fi
 
 cd /app/ravendb
