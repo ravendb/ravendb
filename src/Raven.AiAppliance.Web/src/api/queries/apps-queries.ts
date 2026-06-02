@@ -5,10 +5,10 @@ const baseKey = "apps";
 
 export function createAppsQueries(api: ServerApi["apps"]) {
     return {
-        detail: (appId: string) =>
+        detail: (slug: string) =>
             queryOptions({
-                queryKey: [baseKey, "detail", appId],
-                queryFn: () => api.detail(appId),
+                queryKey: [baseKey, "detail", slug],
+                queryFn: () => api.detail(slug),
             }),
         list: () =>
             queryOptions({

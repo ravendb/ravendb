@@ -1,11 +1,11 @@
 export const ROUTE_PATTERNS = {
-    app: "apps/:appId",
+    app: "apps/:slug",
     addApp: "app/add",
 } as const;
 
 export const appRoutes = {
-    app: (appId: string, path?: string) => {
-        const basePath = `/apps/${encodeURIComponent(appId)}`;
+    app: (slug: string, path?: string) => {
+        const basePath = `/apps/${encodeURIComponent(slug)}`;
         return path ? `${basePath}/${path}` : basePath;
     },
     dashboard: () => "/",
