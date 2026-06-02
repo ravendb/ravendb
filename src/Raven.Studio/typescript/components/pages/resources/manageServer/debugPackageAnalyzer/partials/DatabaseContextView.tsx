@@ -8,6 +8,7 @@ import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
 import DatabaseStats from "./DatabaseStats";
 import DatabaseIndexStats from "./DatabaseIndexStats";
+import DatabaseIndexPerformanceLink from "./DatabaseIndexPerformanceLink";
 import DatabaseIndexDefinitions from "./DatabaseIndexDefinitions";
 import DatabaseIndexErrors from "./DatabaseIndexErrors";
 import DatabaseSettings from "./DatabaseSettings";
@@ -220,6 +221,12 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
             </div>
 
             <DatabaseIndexStats
+                packageId={summary.PackageId}
+                database={database}
+                nodes={overviewRows.map((row) => row.node)}
+            />
+
+            <DatabaseIndexPerformanceLink
                 packageId={summary.PackageId}
                 database={database}
                 nodes={overviewRows.map((row) => row.node)}

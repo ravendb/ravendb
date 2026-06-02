@@ -9,6 +9,7 @@ import liveIndexPerformanceWebSocketClient = require("common/liveIndexPerformanc
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 import messagePublisher = require("common/messagePublisher");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
+import getDebugPackageDatabaseIndexPerformanceCommand = require("commands/maintenance/getDebugPackageDatabaseIndexPerformanceCommand");
 import colorsManager = require("common/colorsManager");
 import fileImporter = require("common/fileImporter");
 import moment = require("moment");
@@ -202,6 +203,11 @@ class indexPerformance extends shardViewModelBase {
     private isImport = ko.observable<boolean>(false);
     private importFileName = ko.observable<string>();
 
+    // when navigated from the Debug Package Analyzer, performance data is read from the package
+    // (a stored debug package) instead of the live websocket; the database is only used to host the route
+    private packageContext: { packageId: string; nodeTag: string } = null;
+    private packageLoading = ko.observable<boolean>(true);
+
     private canExpandAll: KnockoutComputed<boolean>;
 
     /* private */
@@ -343,18 +349,27 @@ class indexPerformance extends shardViewModelBase {
         });
 
         this.loading = ko.pureComputed(() => {
+            if (this.packageContext) {
+                return this.packageLoading();
+            }
             const client = this.liveViewClient();
             return client ? client.loading() : true;
         });
     }
 
-    activate(args: { indexName: string, database: string}) {
+    activate(args: { indexName: string, database: string, packageId?: string, nodeTag?: string }) {
         super.activate(args);
-        
+
         if (args.indexName) {
             this.expandedTracks.push(args.indexName);
         }
-        
+
+        if (args.packageId) {
+            // data comes from the debug package - skip the live index stats query against the host database
+            this.packageContext = { packageId: args.packageId, nodeTag: args.nodeTag };
+            return;
+        }
+
         return new getIndexesStatsCommand(this.db, this.location)
             .execute()
             .done((stats) => {
@@ -390,7 +405,11 @@ class indexPerformance extends shardViewModelBase {
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
 
-        this.enableLiveView();
+        if (this.packageContext) {
+            this.loadFromPackage();
+        } else {
+            this.enableLiveView();
+        }
     }
     
     private initCanvases() {
@@ -1407,17 +1426,40 @@ class indexPerformance extends shardViewModelBase {
             if (!Array.isArray(importedData)) {
                 messagePublisher.reportError("Invalid indexing performance file format", undefined, undefined);
             } else {
-                this.data = importedData;
-                this.fillCache();
-                this.resetGraphData();
-                const [workData, maxConcurrentItems] = this.prepareTimeData();
-                this.draw(workData, maxConcurrentItems, true);
-                this.isImport(true);
+                this.applyPerformanceData(importedData);
             }
         }
         catch (e) {
             messagePublisher.reportError("Failed to import indexing performance data", undefined, undefined);
         }
+    }
+
+    private applyPerformanceData(importedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
+        this.data = importedData;
+        this.fillCache();
+        this.resetGraphData();
+        const [workData, maxConcurrentItems] = this.prepareTimeData();
+        this.draw(workData, maxConcurrentItems, true);
+        this.isImport(true);
+    }
+
+    // pulls indexing performance for the selected node/database out of a stored debug package and renders it
+    // as an import (no live websocket); the host database is only used to satisfy the database-scoped route
+    private loadFromPackage() {
+        const { packageId, nodeTag } = this.packageContext;
+
+        this.cancelLiveView();
+        this.bufferIsFull(false);
+        this.isImport(true);
+        this.packageLoading(true);
+
+        new getDebugPackageDatabaseIndexPerformanceCommand(packageId, nodeTag, this.db.name)
+            .execute()
+            .done((results) => {
+                this.importFileName(`${this.db.name} @ node ${nodeTag} (debug package)`);
+                this.applyPerformanceData(results || []);
+            })
+            .always(() => this.packageLoading(false));
     }
 
     private fillCache() {

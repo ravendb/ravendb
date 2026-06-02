@@ -361,8 +361,15 @@ class appUrl {
         return "#databases/status/ioStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexPerformance(db: database | string, indexName?: string): string {
-        return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
+    static forIndexPerformance(db: database | string, indexName?: string, packageId?: string, nodeTag?: string): string {
+        let url = `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
+        if (packageId) {
+            url += "&packageId=" + encodeURIComponent(packageId);
+            if (nodeTag) {
+                url += "&nodeTag=" + encodeURIComponent(nodeTag);
+            }
+        }
+        return url;
     }
     
     static forIndexCleanup(db: database | string): string {
