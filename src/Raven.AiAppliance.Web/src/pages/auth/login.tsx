@@ -70,7 +70,7 @@ export function Login() {
                         <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
                             <FormInput control={control} name="licenseKey" label="License key" type="password" />
 
-                            <Button className="w-full" disabled={isSubmitting}>
+                            <Button className="w-full" disabled={isSubmitting} type="submit">
                                 {isSubmitting ? "Activating..." : "Continue"}
                             </Button>
                         </form>
