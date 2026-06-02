@@ -141,6 +141,13 @@ COPY --from=web-build     /publish/web   /app/web
 # precedence). Ours binds 0.0.0.0 so Docker port-publish can forward.
 COPY docker/ai-appliance/ravendb-settings.json /app/ravendb/settings.json
 
+# Apply the license. RavenDB's License.Path defaults to "license.json" resolved
+# against its working dir (/app/ravendb/, where the 01-ravendb run script cd's
+# before launch), so dropping the file here activates the server with no
+# settings change. The file is customer-secret and gitignored (see
+# docker/.gitignore); supply your own at docker/ai-appliance/license.json.
+COPY docker/ai-appliance/license.json /app/ravendb/license.json
+
 # Studio bundle. `dotnet publish src/Raven.Server` doesn't include Studio.zip
 # (the official image's CI does a separate zip step). Pulling it from the
 # published `ravendb/ravendb:latest` image keeps our build self-contained.
