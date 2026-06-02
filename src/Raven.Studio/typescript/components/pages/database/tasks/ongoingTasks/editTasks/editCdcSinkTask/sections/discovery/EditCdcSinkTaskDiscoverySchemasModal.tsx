@@ -42,7 +42,9 @@ export default function EditCdcSinkTaskDiscoverySchemasModal({
             <InnerForm onSubmit={handleSubmit(handleDiscover)}>
                 <Modal.Body className="vstack gap-3">
                     <RichAlert variant="info">
-                        Leave schemas empty to discover tables from the default schemas of the configured connection.
+                        Leave schemas empty to fetch tables from the default schema of the configured connection.
+                        <br />
+                        Add one or more schemas to fetch tables from specific schemas.
                     </RichAlert>
                     <FormStringValueList
                         title="Schemas"
