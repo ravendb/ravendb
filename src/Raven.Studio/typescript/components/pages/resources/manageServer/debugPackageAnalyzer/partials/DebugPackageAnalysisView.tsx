@@ -104,7 +104,6 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
             {context === "cluster" && (
                 <>
                     <ClusterOverview summary={summary} />
-                    <ClusterRaftDebug summary={summary} />
                     <ResourceUsage summary={summary} />
                     <DatabasesOverview summary={summary} />
                     <div className="d-flex gap-4 flex-wrap">
@@ -112,6 +111,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                         <IndexingPerNode summary={summary} />
                     </div>
                     <OngoingTasks summary={summary} />
+                    <ClusterRaftDebug summary={summary} />
                 </>
             )}
             {context === "node" && selectedNode && (
