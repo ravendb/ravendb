@@ -169,6 +169,8 @@ public class DebugPackageEntries
                                 return JsonSerializer.Deserialize<OngoingTaskElasticSearchEtl>(jsonObject, options);
                             case OngoingTaskType.QueueEtl:
                                 return JsonSerializer.Deserialize<OngoingTaskQueueEtl>(jsonObject, options);
+                            case OngoingTaskType.SnowflakeEtl:
+                                return JsonSerializer.Deserialize<OngoingTaskSnowflakeEtl>(jsonObject, options);
                             case OngoingTaskType.Subscription:
                                 return JsonSerializer.Deserialize<OngoingTaskSubscription>(jsonObject, options);
                             case OngoingTaskType.PullReplicationAsHub:
@@ -179,8 +181,6 @@ public class DebugPackageEntries
                                 return JsonSerializer.Deserialize<OngoingTaskQueueSink>(jsonObject, options);
                             case OngoingTaskType.CdcSink:
                                 return JsonSerializer.Deserialize<OngoingTaskCdcSink>(jsonObject, options);
-                            case OngoingTaskType.SnowflakeEtl:
-                                return JsonSerializer.Deserialize<OngoingTaskSnowflakeEtl>(jsonObject, options);
                             case OngoingTaskType.EmbeddingsGeneration:
                                 return JsonSerializer.Deserialize<EmbeddingsGeneration>(jsonObject, options);
                             case OngoingTaskType.GenAi:
