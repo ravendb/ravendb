@@ -169,6 +169,7 @@ export const appSchema = z.object({
     }),
     preview: z.object({
         table: z.string(),
+        maxRows: z.number().int().positive().max(1000, "Max rows must be less than or equal to 1000").optional(),
     }),
 });
 

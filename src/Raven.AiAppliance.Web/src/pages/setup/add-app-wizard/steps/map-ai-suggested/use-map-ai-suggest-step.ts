@@ -11,7 +11,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
 
 export function useMapAiSuggestStep() {
-    const { getValues } = useFormContext<AppFormData>();
+    const { getValues, setValue } = useFormContext<AppFormData>();
 
     const connectAndDiscover = useMutation({
         mutationFn: async () => {
@@ -20,6 +20,14 @@ export function useMapAiSuggestStep() {
             await api.services.setup.map({
                 tables: formTables.map(mapTableToDto),
             });
+
+            const firstTable = formTables?.[0];
+            setValue(
+                "preview.table",
+                firstTable.sourceTableSchema
+                    ? `${firstTable.sourceTableSchema}.${firstTable.sourceTableName}`
+                    : firstTable.sourceTableName,
+            );
 
             return true;
         },

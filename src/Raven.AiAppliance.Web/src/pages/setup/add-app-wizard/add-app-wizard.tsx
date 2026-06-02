@@ -106,6 +106,7 @@ function getDefaultValues(): AppFormData {
         },
         preview: {
             table: "",
+            maxRows: 1,
         },
     };
 }

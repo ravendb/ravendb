@@ -4,7 +4,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/fiel
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { cn } from "@/lib/utils";
 
-export type FormSelectOption<T> = {
+export type FormSelectOption<T extends string | number | boolean> = {
     value: T;
     label: string;
     disabled?: boolean;
