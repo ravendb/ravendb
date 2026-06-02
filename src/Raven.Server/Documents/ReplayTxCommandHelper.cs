@@ -238,6 +238,9 @@ namespace Raven.Server.Documents
                 case nameof(IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommand):
                     return jsonSerializer.Deserialize<IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommandDto>(reader);
 
+                case nameof(IncomingPullReplicationHandler.MergedUpdateLastReplicatedEtagFromCommand):
+                    return jsonSerializer.Deserialize<IncomingPullReplicationHandler.MergedUpdateLastReplicatedEtagFromCommandDto>(reader);
+
                 case nameof(RevisionsStorage.DeleteRevisionsByDocumentIdMergedCommand):
                     return jsonSerializer.Deserialize<RevisionsStorage.DeleteRevisionsByDocumentIdMergedCommand.DeleteRevisionsByDocumentIdMergedCommandDto>(reader);
 
