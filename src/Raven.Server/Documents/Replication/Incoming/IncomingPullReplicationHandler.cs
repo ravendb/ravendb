@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public readonly ReplicationLoader.PullReplicationParams _incomingPullReplicationParams;
 
         private readonly bool _preventIncomingSinkDeletions;
-        private readonly bool _canOmitSourceItems;
+        private readonly bool _canFilterOutSourceItems;
 
         private AllowedPathsValidator _allowedPathsValidator;
 
@@ -43,6 +43,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         private string _lastPersistedHubCv;
 
         public string CertificateThumbprint;
+
         public IncomingPullReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationLoader parent, JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLoader.PullReplicationParams pullReplicationParams) : 
             base(options, replicatedLastEtag, parent, bufferToCopy, replicationType)
         {
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             _preventIncomingSinkDeletions = _incomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                             _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
 
-            _canOmitSourceItems = replicatedLastEtag.CanOmitSourceItems || CanOmitSourceItems(_incomingPullReplicationParams);
+            _canFilterOutSourceItems = replicatedLastEtag.CanFilterOutSourceItems || CanFilterOutSourceItems(_incomingPullReplicationParams);
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
@@ -114,10 +115,13 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected override DynamicJsonValue GetHeartbeatStatusMessage(DocumentsOperationContext documentsContext, long lastDocumentEtag, string handledMessageType)
         {
             var heartbeat = base.GetHeartbeatStatusMessage(documentsContext, lastDocumentEtag, handledMessageType);
+            var hasConfirmedSourceFrontier = _lastBatchChangeVector != null &&
+                                             (handledMessageType == ReplicationMessageType.Documents ||
+                                              (_canFilterOutSourceItems && handledMessageType == ReplicationMessageType.Heartbeat));
 
             if (_incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub)
             {
-                if (handledMessageType == ReplicationMessageType.Documents && _lastBatchChangeVector != null)
+                if (hasConfirmedSourceFrontier)
                 {
                     long hubEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
                     _batchHistory[_batchHistoryHead] = (hubEtag, _lastBatchChangeVector);
@@ -132,7 +136,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             else if (_incomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
             {
-                if (handledMessageType == ReplicationMessageType.Documents && _lastBatchChangeVector != null)
+                if (hasConfirmedSourceFrontier)
                 {
                     long sinkEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
                     _hubBatchHistory[_hubBatchHistoryHead] = (sinkEtag, _lastBatchChangeVector);
@@ -219,10 +223,22 @@ namespace Raven.Server.Documents.Replication.Incoming
         public override string FromToString => base.FromToString +
                                                $"{(_incomingPullReplicationParams?.Name == null ? null : $"(pull definition: {_incomingPullReplicationParams?.Name})")}";
 
+        protected override string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
+        {
+            if (_canFilterOutSourceItems)
+                return changeVector;
+
+            var isHub = _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
+            if (isHub && string.IsNullOrEmpty(changeVector) == false)
+                changeVector = MergedDocumentForPullReplicationCommand.ReplaceUnknownEntriesWithSinkTag(context, ref changeVector);
+
+            return changeVector;
+        }
+
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
-            var cmd = new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams, _canOmitSourceItems);
+            var cmd = new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams, _canFilterOutSourceItems);
             foreach (var item in data.ReplicatedItems)
             {
                 cmd.HandleExpiredDocuments(context, item);
@@ -233,95 +249,88 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
         {
-            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams,
-                _canOmitSourceItems);
+            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams);
         }
 
-        protected override bool ShouldMergeHeartbeatChangeVector()
+        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
         {
-            return ShouldMergePullHeartbeatChangeVector(_incomingPullReplicationParams.Mode, _canOmitSourceItems);
-        }
-
-        private static bool ShouldMergePullHeartbeatChangeVector(PullReplicationMode mode, bool canOmitSourceItems)
-        {
-            // A filtered boundary can skip source items, so the sender DB CV is not receiver DB coverage.
-            if (canOmitSourceItems)
-                return false;
-
-            // Incoming pull params describe this TCP connection direction, not the raw pull definition flags.
-            return mode switch
+            if (_canFilterOutSourceItems == false)
             {
-                PullReplicationMode.HubToSink => true,
-                PullReplicationMode.SinkToHub => false,
-                PullReplicationMode.None => throw new InvalidOperationException("Incoming pull replication heartbeat cannot run with replication mode 'None'."),
-                _ => throw new InvalidOperationException($"Incoming pull replication heartbeat cannot run with unexpected replication mode '{mode}'.")
-            };
+                base.HandleHeartbeatMessage(documentsContext, message);
+                return;
+            }
+
+            if (message.TryGet(nameof(ReplicationMessageHeader.LastSentChangeVector), out string _) == false)
+                return;
+
+            long lastEtag;
+            using (documentsContext.OpenReadTransaction())
+            {
+                lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
+            }
+
+            if (_lastDocumentEtag <= lastEtag)
+                return;
+
+            var cmd = new MergedUpdateLastReplicatedEtagFromCommand(ConnectionInfo, _lastDocumentEtag);
+            EnqueueHeartbeatUpdate(cmd);
         }
 
-        private static bool CanOmitSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
+        private bool CanFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
         {
             if (pullReplicationParams == null)
                 return false;
 
-            if (PullReplicationPathFilterUtils.CanOmitByAllowedPaths(pullReplicationParams.AllowedPaths))
+            if (PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(pullReplicationParams.AllowedPaths))
                 return true;
 
-            return pullReplicationParams.Mode == PullReplicationMode.SinkToHub &&
-                   pullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true;
+            return _preventIncomingSinkDeletions;
         }
 
         internal sealed class MergedDocumentForPullReplicationCommand : MergedDocumentReplicationCommand
         {
             private readonly bool _isHub;
             private readonly bool _isSink;
-            private readonly bool _canOmitSourceItems;
+            private readonly bool _canFilterOutSourceItems;
             private readonly PreventDeletionsMode? _preventDeletionsMode;
 
             public MergedDocumentForPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag,
-                ReplicationLoader.PullReplicationParams pullReplicationParams, bool canOmitSourceItems) : base(replicationInfo, lastEtag)
+                ReplicationLoader.PullReplicationParams pullReplicationParams, bool canFilterOutSourceItems) : base(replicationInfo, lastEtag)
             {
                 _isHub = pullReplicationParams.Mode == PullReplicationMode.SinkToHub;
                 _isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
-                _canOmitSourceItems = canOmitSourceItems;
+                _canFilterOutSourceItems = canFilterOutSourceItems;
                 _preventDeletionsMode = pullReplicationParams.PreventDeletionsMode;
             }
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                if (_canOmitSourceItems == false && _isSink)
+                if (_canFilterOutSourceItems == false && _isSink)
                     ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
                 var changeVectorToMerge = item.ChangeVector;
 
-                if (_canOmitSourceItems == false && _isHub)
+                if (_canFilterOutSourceItems == false && _isHub)
                     changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
 
-                if (_canOmitSourceItems == false)
+                if (_canFilterOutSourceItems == false)
                 {
                     var parsedChangeVectorToMerge = context.GetChangeVector(changeVectorToMerge);
                     return parsedChangeVectorToMerge.IsSingle ? parsedChangeVectorToMerge : parsedChangeVectorToMerge.Order;
                 }
 
-                var filteredBoundaryChangeVectors = CreateFilteredBoundaryChangeVectors(context, item.ChangeVector);
-                item.ChangeVector = filteredBoundaryChangeVectors.StoredItemChangeVector.AsString();
-                return filteredBoundaryChangeVectors.DatabaseChangeVectorContribution;
-            }
-
-            private static (ChangeVector StoredItemChangeVector, ChangeVector DatabaseChangeVectorContribution) CreateFilteredBoundaryChangeVectors(
-                DocumentsOperationContext context,
-                string itemChangeVector)
-            {
-                var incomingChangeVector = context.GetChangeVector(itemChangeVector);
+                var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
                 var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
                 var receiverLocalOrder = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, etag);
-                var storedItemChangeVector = context.GetChangeVector(incomingChangeVector.Version.AsString(), receiverLocalOrder.AsString());
 
-                return (storedItemChangeVector, receiverLocalOrder);
+                // Store receiver-local order with the incoming version lineage.
+                item.ChangeVector = context.GetChangeVector(incomingChangeVector.Version.AsString(), receiverLocalOrder.AsString()).AsString();
+                return receiverLocalOrder;
             }
 
             protected override string HandleRevisionTombstone(DocumentsOperationContext context, string changeVector)
             {
-                if (_canOmitSourceItems == false)
+                if (_canFilterOutSourceItems == false)
                     ReplaceKnownSinkEntries(context, ref changeVector);
                 return base.HandleRevisionTombstone(context, changeVector);
             }
@@ -466,17 +475,15 @@ namespace Raven.Server.Documents.Replication.Incoming
         internal sealed class MergedUpdateDatabaseChangeVectorForHubCommand : MergedUpdateDatabaseChangeVectorCommand
         {
             private readonly ReplicationLoader.PullReplicationParams _pullReplicationParams;
-            private readonly bool _canOmitSourceItems;
 
             public MergedUpdateDatabaseChangeVectorForHubCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
-                ReplicationLoader.PullReplicationParams pullReplicationParams, bool canOmitSourceItems) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
+                ReplicationLoader.PullReplicationParams pullReplicationParams) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
             {
                 _pullReplicationParams = pullReplicationParams;
-                _canOmitSourceItems = canOmitSourceItems;
             }
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (ShouldMergePullHeartbeatChangeVector(_pullReplicationParams.Mode, _canOmitSourceItems) == false)
+                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
                     return false;
 
                 return base.TryUpdateChangeVector(context);
@@ -487,8 +494,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return new MergedUpdateDatabaseChangeVectorForHubCommandDto
                 {
                     BaseDto = (MergedUpdateDatabaseChangeVectorCommandDto)base.ToDto(context),
-                    PullReplicationParams = _pullReplicationParams,
-                    CanOmitSourceItems = _canOmitSourceItems
+                    PullReplicationParams = _pullReplicationParams
                 };
             }
         }
@@ -497,12 +503,53 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             public MergedUpdateDatabaseChangeVectorCommandDto BaseDto;
             public ReplicationLoader.PullReplicationParams PullReplicationParams;
-            public bool CanOmitSourceItems;
             public MergedUpdateDatabaseChangeVectorForHubCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
                 var command = new MergedUpdateDatabaseChangeVectorForHubCommand(BaseDto.ChangeVector, BaseDto.LastDocumentEtag, BaseDto.IncomingConnectionInfo,
-                    new AsyncManualResetEvent(), PullReplicationParams, CanOmitSourceItems);
+                    new AsyncManualResetEvent(), PullReplicationParams);
                 return command;
+            }
+        }
+
+        internal sealed class MergedUpdateLastReplicatedEtagFromCommand : DocumentMergedTransactionCommand
+        {
+            private readonly IncomingConnectionInfo _connectionInfo;
+            private readonly long _lastDocumentEtag;
+
+            public MergedUpdateLastReplicatedEtagFromCommand(IncomingConnectionInfo connectionInfo, long lastDocumentEtag)
+            {
+                _connectionInfo = connectionInfo;
+                _lastDocumentEtag = lastDocumentEtag;
+            }
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId);
+                if (_lastDocumentEtag <= lastReplicatedEtag)
+                    return 0;
+
+                DocumentsStorage.SetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId, _lastDocumentEtag);
+                return 1;
+            }
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
+            {
+                return new MergedUpdateLastReplicatedEtagFromCommandDto
+                {
+                    IncomingConnectionInfo = _connectionInfo,
+                    LastDocumentEtag = _lastDocumentEtag
+                };
+            }
+        }
+
+        internal sealed class MergedUpdateLastReplicatedEtagFromCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateLastReplicatedEtagFromCommand>
+        {
+            public IncomingConnectionInfo IncomingConnectionInfo;
+            public long LastDocumentEtag;
+
+            public MergedUpdateLastReplicatedEtagFromCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                return new MergedUpdateLastReplicatedEtagFromCommand(IncomingConnectionInfo, LastDocumentEtag);
             }
         }
     }

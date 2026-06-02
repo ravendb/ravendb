@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public ReplicationType ReplicationsType { get; set; }
 
-        public bool CanOmitSourceItems { get; set; }
+        public bool CanFilterOutSourceItems { get; set; }
 
         public long MigrationIndex { get; set; }
 
