@@ -3,11 +3,11 @@ import { ChatConsole } from "@/components/app/chat-console";
 import { PagePanel } from "@/components/data/page-panel";
 
 export function AppConversations() {
-    const { appId } = useParams();
+    const { slug = "" } = useParams();
 
     return (
         <PagePanel>
-            <ChatConsole key={appId} defaultAgentId={appId} />
+            <ChatConsole key={slug} defaultAgentId={slug} />
         </PagePanel>
     );
 }
