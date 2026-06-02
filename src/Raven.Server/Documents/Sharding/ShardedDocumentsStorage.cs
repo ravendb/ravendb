@@ -345,8 +345,8 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             var docCv = context.GetChangeVector(document.ChangeVector);
             if (ChangeVectorUtils.GetConflictStatus(docCv, upTo, UnusedDatabaseIds) != ConflictStatus.AlreadyMerged)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping cleanup of bucket '{bucket}': document '{document.Id}' is not covered by the migration change vector " +
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Skipping cleanup of bucket '{bucket}': document '{document.Id}' is not covered by the migration change vector " +
                                  $"(document CV: '{docCv}', upTo: '{upTo}', unused ids: [{(UnusedDatabaseIds == null ? string.Empty : string.Join(", ", UnusedDatabaseIds))}]). " +
                                  "The bucket cannot be cleaned up until this document is covered by 'upTo'.");
 
@@ -357,8 +357,8 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             // check change vectors of all document extensions
             if (HasDocumentExtensionWithGreaterChangeVector(context, document.Id, upTo))
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping deletion of document '{document.Id}' in bucket '{bucket}': it has a counter/time-series/attachment/revision " +
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Skipping deletion of document '{document.Id}' in bucket '{bucket}': it has a counter/time-series/attachment/revision " +
                                  $"with a change vector greater than the migration change vector (upTo: '{upTo}'). The bucket cleanup will be marked as skipped.");
 
                 result = ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.Skipped;
@@ -398,8 +398,8 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 var tombstoneChangeVector = context.GetChangeVector(tombstone.ChangeVector);
                 if (ChangeVectorUtils.GetConflictStatus(tombstoneChangeVector, upTo, UnusedDatabaseIds) != ConflictStatus.AlreadyMerged)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Not marking tombstone '{tombstone.LowerId}' (type {tombstone.Type}, etag {tombstone.Etag}) in bucket '{bucket}' as artificial: " +
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Not marking tombstone '{tombstone.LowerId}' (type {tombstone.Type}, etag {tombstone.Etag}) in bucket '{bucket}' as artificial: " +
                                      $"it is not covered by the migration change vector (tombstone CV: '{tombstoneChangeVector}', upTo: '{upTo}', " +
                                      $"unused ids: [{(UnusedDatabaseIds == null ? string.Empty : string.Join(", ", UnusedDatabaseIds))}]). " +
                                      "While this tombstone stays non-artificial it keeps the bucket eligible for re-migration.");

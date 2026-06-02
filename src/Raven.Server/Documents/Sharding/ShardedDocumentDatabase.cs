@@ -140,12 +140,12 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                             t = ServerStore.Sharding.DestinationMigrationConfirm(ShardedDatabaseName, process.Bucket, process.MigrationIndex);
                         }
 
-                        if (_logger.IsInfoEnabled)
+                        if (_logger.IsDebugEnabled)
                         {
                             if (status == ConflictStatus.AlreadyMerged)
-                                _logger.Info($"Bucket '{process.Bucket}' migration {process.MigrationIndex}: destination shard {process.DestinationShard} (node {ServerStore.NodeTag}) received all source data; sending DestinationMigrationConfirm (source CV: '{process.LastSourceChangeVector}').");
+                                _logger.Debug($"Bucket '{process.Bucket}' migration {process.MigrationIndex}: destination shard {process.DestinationShard} (node {ServerStore.NodeTag}) received all source data; sending DestinationMigrationConfirm (source CV: '{process.LastSourceChangeVector}').");
                             else
-                                _logger.Info($"Bucket '{process.Bucket}' migration {process.MigrationIndex}: destination shard {process.DestinationShard} (node {ServerStore.NodeTag}) has not yet received all source data " +
+                                _logger.Debug($"Bucket '{process.Bucket}' migration {process.MigrationIndex}: destination shard {process.DestinationShard} (node {ServerStore.NodeTag}) has not yet received all source data " +
                                              $"(current bucket CV: '{current}', required source CV: '{process.LastSourceChangeVector}', status: {status}). Waiting before confirming.");
                         }
                     }
@@ -165,8 +165,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                 Debug.Assert(process.ConfirmationIndex.HasValue, $"invalid ShardBucketMigration for bucket '{process.Bucket}', " +
                                                                  "got Status = OwnershipTransferred but no ConfirmationIndex");
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Bucket '{process.Bucket}' migration {process.MigrationIndex}: ownership transferred to shard {process.DestinationShard}; starting source cleanup on shard {ShardNumber} (upTo: '{process.LastSourceChangeVector}').");
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Bucket '{process.Bucket}' migration {process.MigrationIndex}: ownership transferred to shard {process.DestinationShard}; starting source cleanup on shard {ShardNumber} (upTo: '{process.LastSourceChangeVector}').");
 
                 // cleanup values - on fault, DeleteBucketAsync's own per-retry log
                 // (RaiseNotificationOnDeleteBucketFailure) plus the "giving up" log it emits in the
@@ -232,8 +232,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
     {
         if (string.IsNullOrEmpty(uptoChangeVector))
         {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Bucket '{bucket}' migration {migrationIndex}: no source change vector recorded (empty bucket); sending SourceMigrationCleanup directly.");
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Bucket '{bucket}' migration {migrationIndex}: no source change vector recorded (empty bucket); sending SourceMigrationCleanup directly.");
 
             await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex);
             return;
@@ -261,8 +261,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                 if (delay >= TimeSpan.FromMinutes(5))
                 {
                     // if the delay exceeds the maximum timeout, throw an exception and break the loop.
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Bucket '{bucket}' migration {migrationIndex}: giving up source cleanup on shard {ShardNumber} after backoff exceeded {TimeSpan.FromMinutes(5)}; the resharding task will now fault.", exception);
+                    if (_logger.IsErrorEnabled)
+                        _logger.Error($"Bucket '{bucket}' migration {migrationIndex}: giving up source cleanup on shard {ShardNumber} after backoff exceeded {TimeSpan.FromMinutes(5)}; the resharding task will now fault.", exception);
 
                     await Task.FromException(exception);
                     return;
@@ -277,16 +277,16 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
             {
                 // no documents in the bucket / everything was deleted
                 case DeleteBucketCommand.DeleteBucketResult.Empty:
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Bucket '{bucket}' migration {migrationIndex}: source cleanup on shard {ShardNumber} completed (bucket empty); sending SourceMigrationCleanup.");
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Bucket '{bucket}' migration {migrationIndex}: source cleanup on shard {ShardNumber} completed (bucket empty); sending SourceMigrationCleanup.");
 
                     await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex);
                     DismissNotificationOnDeleteBucketSuccessIfNeeded();
                     return;
                 // some documents skipped and left in the bucket
                 case DeleteBucketCommand.DeleteBucketResult.Skipped:
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Bucket '{bucket}' migration {migrationIndex}: source cleanup on shard {ShardNumber} was SKIPPED - some documents/tombstones are not yet covered by the migration change vector (upTo: '{uptoChangeVector}'). " +
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Bucket '{bucket}' migration {migrationIndex}: source cleanup on shard {ShardNumber} was SKIPPED - some documents/tombstones are not yet covered by the migration change vector (upTo: '{uptoChangeVector}'). " +
                                      "Cleanup will be retried on the next resharding cycle (database record change). See the ShardedDocumentsStorage log for the specific document/tombstone that blocked cleanup.");
 
                     return;
@@ -310,8 +310,8 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
     {
         var msg = $"An error occurred while attempting to clean up bucket '{bucket}' from source shard '{ShardNumber}' [{Name}].";
 
-        if (_logger.IsInfoEnabled)
-            _logger.Info(msg, exception);
+        if (_logger.IsWarnEnabled)
+            _logger.Warn(msg, exception);
 
         ServerStore.NotificationCenter.Add(AlertRaised.Create(
             ShardedDatabaseName,
