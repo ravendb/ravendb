@@ -9,6 +9,7 @@ import StatTile from "./StatTile";
 import DatabaseStats from "./DatabaseStats";
 import DatabaseIndexStats from "./DatabaseIndexStats";
 import DatabaseIndexErrors from "./DatabaseIndexErrors";
+import DatabaseSettings from "./DatabaseSettings";
 import genUtils from "common/generalUtils";
 import { SortableHeader, useSortableData } from "./sortableTable";
 
@@ -224,6 +225,12 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
             />
 
             <DatabaseIndexErrors
+                packageId={summary.PackageId}
+                database={database}
+                nodes={overviewRows.map((row) => row.node)}
+            />
+
+            <DatabaseSettings
                 packageId={summary.PackageId}
                 database={database}
                 nodes={overviewRows.map((row) => row.node)}
