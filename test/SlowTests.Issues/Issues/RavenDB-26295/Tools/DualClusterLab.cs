@@ -15,11 +15,13 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server.Utils;
 using Voron;
 using Xunit;
 using static SlowTests.Issues.RavenDB_26295.FilteredPullDualClusterTestBase;
@@ -466,17 +468,18 @@ public sealed class DualClusterLab : IAsyncDisposable
 
                 using (revisionTombstone)
                 {
-                    RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(
-                        revisionTombstone.Id,
-                        out var tombstoneDocumentId,
-                        out var keyChangeVector);
-
+                    if (RevisionsStorage.TryExtractDocumentIdFromRevisionTombstoneKey(revisionTombstone.Id, out var tombstoneDocumentId) == false)
+                        continue;
                     if (string.Equals(tombstoneDocumentId, documentId, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
+                    var rawKey = revisionTombstone.Id.ToString(CultureInfo.InvariantCulture);
+                    var separatorIndex = rawKey.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.Ordinal);
+                    var keyChangeVector = separatorIndex == -1 ? rawKey : rawKey.Substring(separatorIndex + 1);
+
                     result.Add(new RevisionTombstoneSnapshot
                     {
-                        RawKey = revisionTombstone.Id.ToString(CultureInfo.InvariantCulture),
+                        RawKey = rawKey,
                         KeyChangeVector = keyChangeVector,
                         ChangeVector = revisionTombstone.ChangeVector,
                         Etag = revisionTombstone.Etag
