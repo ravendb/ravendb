@@ -4,6 +4,7 @@ import { createChatService } from "@/api/custom-services/chat-service";
 import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createBootstrapQueries } from "@/api/queries/bootstrap-queries";
 import { createSetupQueries } from "@/api/queries/setup-queries";
+import { createAiConnectionStringsQueries } from "@/api/queries/ai-connection-strings-queries";
 
 export type ApiServices = Omit<ServerApi, "chat"> & {
     chat: ReturnType<typeof createChatService>;
@@ -13,6 +14,7 @@ export type ApiQueries = {
     bootstrap: ReturnType<typeof createBootstrapQueries>;
     apps: ReturnType<typeof createAppsQueries>;
     setup: ReturnType<typeof createSetupQueries>;
+    aiConnectionStrings: ReturnType<typeof createAiConnectionStringsQueries>;
 };
 
 export type Api = {
@@ -36,6 +38,7 @@ export function createApi(options?: ApiClientOptions): Api {
             bootstrap: createBootstrapQueries(services.bootstrap),
             apps: createAppsQueries(services.apps),
             setup: createSetupQueries(services.setup),
+            aiConnectionStrings: createAiConnectionStringsQueries(services.aiConnectionStrings),
         },
     };
 }
