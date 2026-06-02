@@ -61,7 +61,7 @@ public class TasksInfoAnalyzer(
 
         var taskCounts = new DatabaseOngoingTasksInfoItem();
 
-        TasksInfo = new TasksAnalysisInfo { TaskCounts = taskCounts };
+        TasksInfo = new TasksAnalysisInfo { TaskCounts = taskCounts, OngoingTasksEntry = ongoingTasksEntry };
 
         foreach (var ongoingTask in ongoingTasks.OngoingTasks)
         {

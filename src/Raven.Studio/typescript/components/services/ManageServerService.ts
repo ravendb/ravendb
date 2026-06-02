@@ -44,6 +44,7 @@ import getDebugPackageDatabaseSettingsCommand = require("commands/maintenance/ge
 import getDebugPackageDatabaseIndexDefinitionsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexDefinitionsCommand");
 import getDebugPackageClusterLogCommand = require("commands/maintenance/getDebugPackageClusterLogCommand");
 import getDebugPackageClusterObserverDecisionsCommand = require("commands/maintenance/getDebugPackageClusterObserverDecisionsCommand");
+import getDebugPackageDatabaseOngoingTasksCommand = require("commands/maintenance/getDebugPackageDatabaseOngoingTasksCommand");
 import getDebugPackageDatabaseIndexErrorsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexErrorsCommand");
 import getDebugPackageNetworkInfoCommand = require("commands/maintenance/getDebugPackageNetworkInfoCommand");
 import getDebugPackageThreadsInfoCommand = require("commands/maintenance/getDebugPackageThreadsInfoCommand");
@@ -240,6 +241,12 @@ export default class ManageServerService {
         ...args: ConstructorParameters<typeof getDebugPackageClusterObserverDecisionsCommand>
     ) {
         return new getDebugPackageClusterObserverDecisionsCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseOngoingTasks(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseOngoingTasksCommand>
+    ) {
+        return new getDebugPackageDatabaseOngoingTasksCommand(...args).execute();
     }
 
     async getDebugPackageDatabaseIndexErrors(

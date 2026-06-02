@@ -8,7 +8,9 @@ namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Resul
 public class TasksAnalysisInfo
 {
     public DatabaseOngoingTasksInfoItem TaskCounts { get; set; }
-    
+
     public List<OngoingTaskBackup> BackupTasks { get; set; }
     public BackupInfo LastBackupInfo { get; set; }
+
+    public DebugPackageEntries.Entry OngoingTasksEntry { get; set; }
 }

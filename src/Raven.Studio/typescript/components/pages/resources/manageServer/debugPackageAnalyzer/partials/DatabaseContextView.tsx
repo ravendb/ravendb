@@ -7,6 +7,7 @@ import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
 import DatabaseStats from "./DatabaseStats";
+import DatabaseOngoingTasks from "./DatabaseOngoingTasks";
 import DatabaseIndexStats from "./DatabaseIndexStats";
 import DatabaseIndexPerformanceLink from "./DatabaseIndexPerformanceLink";
 import DatabaseIndexDefinitions from "./DatabaseIndexDefinitions";
@@ -239,6 +240,12 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
             />
 
             <DatabaseIndexErrors
+                packageId={summary.PackageId}
+                database={database}
+                nodes={overviewRows.map((row) => row.node)}
+            />
+
+            <DatabaseOngoingTasks
                 packageId={summary.PackageId}
                 database={database}
                 nodes={overviewRows.map((row) => row.node)}

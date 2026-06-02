@@ -75,10 +75,23 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         
         if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
             return;
-        
+
         await WriteEntryOrNotFoundAsync(dbReport.DatabaseInfo?.DatabaseRecordEntry);
     }
-    
+
+    [RavenAction("/debug/info-package/analyzer/databases/tasks", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetTasks()
+    {
+        var packageId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("packageId");
+        var nodeTag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("nodeTag");
+        var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+        if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
+            return;
+
+        await WriteEntryOrNotFoundAsync(dbReport.TasksInfo?.OngoingTasksEntry);
+    }
+
     [RavenAction("/debug/info-package/analyzer/databases/indexes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task GetIndexes()
     {
