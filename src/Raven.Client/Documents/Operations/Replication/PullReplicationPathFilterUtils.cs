@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
@@ -33,7 +32,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return normalized?.ToArray() ?? [];
         }
 
-        public static bool CanOmitByAllowedPaths(string[] allowedPaths)
+        public static bool CanFilterOutByAllowedPaths(string[] allowedPaths)
         {
             var normalizedAllowedPaths = Normalize(allowedPaths);
             if ((normalizedAllowedPaths?.Length ?? 0) == 0)
