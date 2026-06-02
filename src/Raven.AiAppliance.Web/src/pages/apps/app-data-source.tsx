@@ -6,8 +6,8 @@ import { DetailList } from "@/components/data/detail-list";
 import { PagePanel } from "@/components/data/page-panel";
 
 export function AppDataSource() {
-    const { appId = "" } = useParams();
-    const appQuery = useQuery(api.queries.apps.detail(appId));
+    const { slug = "" } = useParams();
+    const appQuery = useQuery(api.queries.apps.detail(slug));
 
     return (
         <PagePanel>
