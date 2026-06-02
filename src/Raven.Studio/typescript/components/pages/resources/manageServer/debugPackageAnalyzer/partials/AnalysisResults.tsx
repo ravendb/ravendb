@@ -6,6 +6,7 @@ import NodeTagPill from "./NodeTagPill";
 import { RichAlert } from "components/common/RichAlert";
 import { EmptySet } from "components/common/EmptySet";
 import Button from "react-bootstrap/Button";
+import Alert from "react-bootstrap/Alert";
 import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
 import Select, { SelectOption } from "components/common/select/Select";
 import { InputItem } from "components/models/common";
@@ -132,20 +133,69 @@ function SeverityView({ issues, severityCounts, expandedSeverity, setExpandedSev
 }
 
 function CategoryView({ issues }: { issues: FlatIssue[] }) {
+    const [expandedCategory, setExpandedCategory] = useState<string>(null);
+
     const categories = issueCategories.filter((c) => issues.some((i) => i.category === c));
     const otherCategories = Array.from(new Set(issues.map((i) => i.category))).filter(
         (c) => !issueCategories.includes(c)
     );
+    const allCategories = [...categories, ...otherCategories];
 
     return (
-        <div className="vstack gap-4">
-            {[...categories, ...otherCategories].map((category) => (
-                <div key={category}>
-                    <h4 className="mb-2">{category}</h4>
-                    <IssueList issues={sortBySeverity(issues.filter((i) => i.category === category))} />
-                </div>
-            ))}
+        <div className="vstack gap-3">
+            <div className="severity-cards d-flex gap-3 flex-wrap">
+                {allCategories.map((category) => {
+                    const categoryIssues = issues.filter((i) => i.category === category);
+                    return (
+                        <CategoryCard
+                            key={category}
+                            category={category}
+                            count={categoryIssues.length}
+                            severity={highestSeverity(categoryIssues)}
+                            active={expandedCategory === category}
+                            onClick={() => setExpandedCategory(expandedCategory === category ? null : category)}
+                        />
+                    );
+                })}
+            </div>
+            {expandedCategory && (
+                <IssueList issues={sortBySeverity(issues.filter((i) => i.category === expandedCategory))} />
+            )}
         </div>
+    );
+}
+
+interface CategoryCardProps {
+    category: string;
+    count: number;
+    severity: IssueSeverity;
+    active: boolean;
+    onClick: () => void;
+}
+
+// neutral (gray) box with the leading icon colored by the worst severity in the group
+function CategoryCard({ category, count, severity, active, onClick }: CategoryCardProps) {
+    const meta = severityMeta(severity);
+
+    return (
+        <Alert
+            variant="secondary"
+            className={classNames("severity-card d-flex align-items-center", { active })}
+            onClick={onClick}
+        >
+            <Icon icon={meta.icon} color={meta.color} margin="m-0 me-2" className="fs-3" />
+            <span className="severity-card-count me-2">{count}</span>
+            <span>{category}</span>
+            <Icon icon={active ? "chevron-down" : "chevron-right"} margin="m-0" className="ms-auto" />
+        </Alert>
+    );
+}
+
+function highestSeverity(issues: FlatIssue[]): IssueSeverity {
+    return issues.reduce<IssueSeverity>(
+        (worst, issue) =>
+            severityOrder.indexOf(issue.severity) < severityOrder.indexOf(worst) ? issue.severity : worst,
+        "None"
     );
 }
 
