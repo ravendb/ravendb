@@ -39,7 +39,7 @@ const resourceSortAccessors: Record<string, (row: ResourceRow) => number | strin
 // or struggling node at a glance. PerformanceMetrics (Node context) has the per-node detail.
 export default function ResourceUsage({ summary }: ResourceUsageProps) {
     const rows = useMemo(() => collectResourceRows(summary), [summary]);
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, resourceSortAccessors, "processCpu");
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, resourceSortAccessors, "node", "asc");
     const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     return (

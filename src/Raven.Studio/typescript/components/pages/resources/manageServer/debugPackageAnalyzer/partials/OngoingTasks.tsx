@@ -118,5 +118,7 @@ function aggregateTasks(summary: DebugPackageAnalysisSummary, nodeTag?: string):
         });
     });
 
-    return Array.from(byType.values()).sort((a, b) => a.label.localeCompare(b.label));
+    const rows = Array.from(byType.values());
+    rows.forEach((row) => row.nodes.sort());
+    return rows.sort((a, b) => a.label.localeCompare(b.label));
 }

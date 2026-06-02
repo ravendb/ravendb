@@ -30,7 +30,7 @@ const indexingSortAccessors: Record<string, (row: IndexingRow) => number | strin
 // so this shows one row per node rather than per database
 export default function IndexingPerNode({ summary, nodeTag }: IndexingPerNodeProps) {
     const rows = useMemo(() => collectIndexingRows(summary, nodeTag), [summary, nodeTag]);
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, indexingSortAccessors, "indexed");
+    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, indexingSortAccessors, "node", "asc");
     const sortProps = { sortKey, sortDirection, onSort: requestSort };
 
     return (

@@ -173,5 +173,7 @@ function aggregateDatabases(summary: DebugPackageAnalysisSummary): AggregatedDat
         });
     });
 
-    return Array.from(map.values()).sort((a, b) => a.database.localeCompare(b.database));
+    const databases = Array.from(map.values());
+    databases.forEach((database) => database.nodes.sort());
+    return databases.sort((a, b) => a.database.localeCompare(b.database));
 }

@@ -66,13 +66,13 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
     const overviewRows = useMemo(() => collectOverviewRows(summary, database), [summary, database]);
     const storageRows = useMemo(() => collectStorageRows(summary, database), [summary, database]);
 
-    const overviewSort = useSortableData(overviewRows, overviewSortAccessors, "documents");
+    const overviewSort = useSortableData(overviewRows, overviewSortAccessors, "node", "asc");
     const overviewSortProps = {
         sortKey: overviewSort.sortKey,
         sortDirection: overviewSort.sortDirection,
         onSort: overviewSort.requestSort,
     };
-    const storageSort = useSortableData(storageRows, storageSortAccessors, "total");
+    const storageSort = useSortableData(storageRows, storageSortAccessors, "node", "asc");
     const storageSortProps = {
         sortKey: storageSort.sortKey,
         sortDirection: storageSort.sortDirection,
