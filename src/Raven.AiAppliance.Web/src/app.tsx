@@ -14,22 +14,22 @@ import { cn } from "@/lib/utils";
 const compactSidebarMediaQuery = "(max-width: 63.999rem)";
 
 function App() {
-    const { appId } = useParams();
+    const { slug } = useParams();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const isCompactSidebarViewport = useMediaQuery(compactSidebarMediaQuery);
     const activeRoute = [...useMatches()]
         .reverse()
         .map((match) => match.handle)
         .find(isAppRouteHandle);
-    const hasActiveApp = Boolean(appId || activeRoute?.appScoped);
+    const hasActiveApp = Boolean(slug || activeRoute?.appScoped);
     const isSidebarHidden = Boolean(activeRoute?.isSidebarHidden);
     const isPageTitleHidden = Boolean(activeRoute?.isPageTitleHidden);
     const isBareLayout = Boolean(activeRoute?.isBareLayout);
     const activeAppQuery = useQuery({
-        ...api.queries.apps.detail(appId ?? ""),
-        enabled: Boolean(appId),
+        ...api.queries.apps.detail(slug ?? ""),
+        enabled: Boolean(slug),
     });
-    const activeAppLabel = activeAppQuery.data?.name ?? appId;
+    const activeAppLabel = activeAppQuery.data?.name ?? slug;
     const breadcrumbLabel = hasActiveApp ? activeAppLabel : activeRoute?.breadcrumb;
     const isSidebarEffectivelyCollapsed = isCompactSidebarViewport || isSidebarCollapsed;
 
@@ -57,7 +57,7 @@ function App() {
                         <>
                             <span className="text-sidebar-foreground/40">/</span>
                             <Link
-                                to={hasActiveApp && appId ? appRoutes.app(appId) : "."}
+                                to={hasActiveApp && slug ? appRoutes.app(slug) : "."}
                                 className="truncate text-sm font-semibold text-sidebar-foreground"
                             >
                                 {breadcrumbLabel}
@@ -126,7 +126,7 @@ function App() {
                                             key={item.to}
                                             item={{
                                                 ...item,
-                                                to: getAppNavigationUrl(appId, item.to),
+                                                to: getAppNavigationUrl(slug, item.to),
                                             }}
                                             isCollapsed={isSidebarEffectivelyCollapsed}
                                         />
@@ -208,12 +208,12 @@ function ThemeSwitch() {
     );
 }
 
-function getAppNavigationUrl(appId: string | undefined, path: string) {
-    if (!appId) {
+function getAppNavigationUrl(appSlug: string | undefined, path: string) {
+    if (!appSlug) {
         return appRoutes.dashboard();
     }
 
-    return appRoutes.app(appId, path);
+    return appRoutes.app(appSlug, path);
 }
 
 type SidebarLinkProps = {

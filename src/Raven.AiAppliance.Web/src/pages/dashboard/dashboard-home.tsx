@@ -33,8 +33,8 @@ export function DashboardHome() {
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                             {appsQuery.data.map((app) => (
                                 <Link
-                                    key={app.id}
-                                    to={appRoutes.app(app.id)}
+                                    key={app.slug}
+                                    to={appRoutes.app(app.slug)}
                                     className="rounded-lg border bg-background p-4 text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                                 >
                                     <div className="flex items-center gap-3">
