@@ -156,26 +156,46 @@ public static class CdcSinkSourceVerifier
     /// </summary>
     private static async Task AnnotatePostgresReplicaIdentityAsync(DbConnection connection, CdcSinkSourceSchema schema, CancellationToken token)
     {
+        if (schema.Tables.Count == 0)
+            return;
+
         using var qb = new Npgsql.NpgsqlCommandBuilder();
+
+        // Fetch every discovered table's replica identity in a single set-based query over the distinct
+        // source schemas, instead of one round-trip per table — /schema enumerates all tables in the
+        // requested schemas, so a per-table loop would be an N+1 on interactive Studio calls.
+        var schemaNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var table in schema.Tables)
+            schemaNames.Add(string.IsNullOrEmpty(table.SourceTableSchema) ? "public" : table.SourceTableSchema);
+
+        var replicaIdentities = new Dictionary<(string Schema, string Table), char>();
+        await using (var cmd = connection.CreateCommand())
+        {
+            var schemaParams = new List<string>(schemaNames.Count);
+            var i = 0;
+            foreach (var schemaName in schemaNames)
+            {
+                var paramName = "@s" + i++;
+                schemaParams.Add(paramName);
+                CdcSinkProcess.AddParameter(cmd, paramName, schemaName);
+            }
+
+            cmd.CommandText = $"""
+                SELECT n.nspname, c.relname, c.relreplident
+                FROM pg_class c
+                JOIN pg_namespace n ON c.relnamespace = n.oid
+                WHERE c.relkind IN ('r', 'p') AND n.nspname IN ({string.Join(", ", schemaParams)})
+                """;
+
+            await using var reader = await cmd.ExecuteReaderAsync(token);
+            while (await reader.ReadAsync(token))
+                replicaIdentities[(reader.GetString(0), reader.GetString(1))] = ReadReplicaIdentity(reader.GetValue(2));
+        }
 
         foreach (var table in schema.Tables)
         {
             var schemaName = string.IsNullOrEmpty(table.SourceTableSchema) ? "public" : table.SourceTableSchema;
-
-            char replicaIdentity;
-            await using (var cmd = connection.CreateCommand())
-            {
-                cmd.CommandText = """
-                    SELECT relreplident
-                    FROM pg_class c
-                    JOIN pg_namespace n ON c.relnamespace = n.oid
-                    WHERE n.nspname = @schema AND c.relname = @table
-                    """;
-                CdcSinkProcess.AddParameter(cmd, "@schema", schemaName);
-                CdcSinkProcess.AddParameter(cmd, "@table", table.SourceTableName);
-                var result = await cmd.ExecuteScalarAsync(token);
-                replicaIdentity = ReadReplicaIdentity(result);
-            }
+            var replicaIdentity = replicaIdentities.TryGetValue((schemaName, table.SourceTableName), out var ri) ? ri : 'd';
 
             string problem = replicaIdentity switch
             {
