@@ -116,5 +116,96 @@ namespace SlowTests.Voron.Issues
                 Assert.Equal(pageNumber, refetched.PageNumber);
             }
         }
+
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Encryption)]
+        public void Encrypted_Page_Shared_By_Two_Streams_Must_Be_Refcounted_Per_Reader()
+        {
+            RequireFileBasedPager();
+
+            const int size = 40_000;
+            var data = new byte[size];
+            for (int i = 0; i < size; i++)
+                data[i] = (byte)(i % 251);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("Data");
+                tree.AddStream("stream1", new MemoryStream(data));
+                tx.Commit();
+            }
+
+            Env.FlushLogToDataFile();
+            RestartDatabase();
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var llt = tx.LowLevelTransaction;
+                var tree = tx.ReadTree("Data");
+
+                // The first chunk lives on its own (overflow) page that, after flush+restart, is served
+                // by CryptoPager (decrypted into a per-transaction EncryptionBuffer).
+                Slice.From(tx.Allocator, "stream1", out var key);
+                var chunks = tree.ReadTreeChunks(key, out _);
+                Assert.True(chunks.Length >= 2, $"expected the stream to span >=2 chunks, got {chunks.Length}");
+                long p0 = chunks[0].PageNumber;
+                int chunk0Size = chunks[0].ChunkSize;
+
+                // Two independent VoronStreams over the same key model two cloned Lucene index inputs
+                // sharing one read transaction (hence the same crypto state and the same page locator).
+                var streamA = tree.ReadStream(key);
+                var streamB = tree.ReadStream(key);
+
+                // A reads the first chunk -> page p0 is decrypted into a fresh buffer (Usages = 1) and,
+                // on the regressed code path, cached in the page locator.
+                Assert.NotEqual(-1, streamA.ReadByte());
+                Assert.Equal(1, GetUsages(llt, p0));
+
+                // B reads the same page. It MUST take its own reference (Usages -> 2). On the regressed
+                // path VoronStream uses Llt.GetPage(), whose page-locator HIT returns the cached pointer
+                // WITHOUT AcquirePagePointer, so Usages stays 1 - an un-refcounted second holder. That is
+                // the root cause of the AVE: a single TryReleasePage then frees a buffer still in use.
+                Assert.NotEqual(-1, streamB.ReadByte());
+                Assert.Equal(2, GetUsages(llt, p0));
+
+                // ---- use-after-free demonstration ----
+                // A consumes the rest of chunk 0 (staying on p0) and then steps into chunk 1, which makes
+                // VoronStream release p0 via TryReleasePage.
+                var discard = new byte[chunk0Size];
+                ReadExactly(streamA, discard, chunk0Size - 1);
+                Assert.NotEqual(-1, streamA.ReadByte());
+
+                // B still references p0, so the buffer must not have been freed.
+                Assert.True(GetUsages(llt, p0) >= 1,
+                    $"page {p0} buffer was freed while stream B still references it (use-after-free)");
+
+                // B reads the remainder of chunk 0; against a freed/zeroed buffer this returns garbage.
+                var fromB = new byte[chunk0Size - 1];
+                ReadExactly(streamB, fromB, fromB.Length);
+                for (int i = 0; i < fromB.Length; i++)
+                    Assert.Equal((byte)((i + 1) % 251), fromB[i]);
+            }
+
+            static int GetUsages(LowLevelTransaction llt, long page)
+            {
+                var state = (IPagerLevelTransactionState)llt;
+                if (state.CryptoPagerTransactionState == null)
+                    return -1;
+                foreach (var kvp in state.CryptoPagerTransactionState)
+                    if (kvp.Value.TryGetValue(page, out var buffer))
+                        return buffer.Usages;
+                return 0; // released / never decrypted
+            }
+
+            static void ReadExactly(System.IO.Stream stream, byte[] buffer, int count)
+            {
+                int read = 0;
+                while (read < count)
+                {
+                    int n = stream.Read(buffer, read, count - read);
+                    Assert.True(n > 0, "unexpected end of stream");
+                    read += n;
+                }
+            }
+        }
     }
 }
