@@ -98,14 +98,43 @@ namespace Raven.Server.Web.Studio
             return dir.Attributes.HasFlag(FileAttributes.Hidden | FileAttributes.System);
         }
 
+        internal const string MacOsVolumesPath = "/Volumes";
+
         private static List<string> GetAvailableDrives()
         {
             var list = new List<string>();
+
+            if (PlatformDetails.RunningOnMacOsx)
+                return GetAvailableDrivesOnMacOs(MacOsVolumesPath);
 
             var drives = DriveInfo.GetDrives();
             foreach (var drive in drives)
             {
                 list.Add(drive.RootDirectory.FullName);
+            }
+
+            return list;
+        }
+
+        // Deliberately avoids DriveInfo.GetDrives() on macOS.
+        // DriveInfo.GetDrives() ends up in the native SystemNative_GetAllMountPoints, which calls getmntinfo().
+        // getmntinfo() returns pointers into a libc-managed static buffer that is NOT thread-safe.
+        // The Studio requests the folder-path options endpoint concurrently, so two parallel
+        // DriveInfo.GetDrives() calls race on that shared buffer; one thread can marshal a clobbered
+        // C-string and over-read freed/unmapped memory, producing a process-fatal AccessViolationException.
+        // The defect is latent on macOS Sequoia (the race resolves benignly) and surfaces on macOS Tahoe,
+        // whose mount-table changes widen the race window and reallocate the buffer.
+        // See dotnet/runtime#122634 (fix: dotnet/runtime#122637, not yet backported to .NET 10).
+        // macOS has no /proc/mounts, so we list the filesystem root plus the mounted volumes,
+        // which is all the folder browser needs as navigation entry points.
+        public static List<string> GetAvailableDrivesOnMacOs(string volumesPath)
+        {
+            var list = new List<string> { "/" };
+
+            if (Directory.Exists(volumesPath))
+            {
+                foreach (var volume in Directory.GetDirectories(volumesPath))
+                    list.Add(volume);
             }
 
             return list;
