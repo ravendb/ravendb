@@ -14,6 +14,8 @@ import StatTile from "./StatTile";
 import genUtils from "common/generalUtils";
 import { formatNumber, formatPercentage } from "./analyzerUtils";
 import { SortableHeader, useSortableData } from "./sortableTable";
+import Button from "react-bootstrap/Button";
+import appUrl from "common/appUrl";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type CpuUsageAnalysisInfo =
@@ -61,7 +63,23 @@ export default function PerformanceMetrics({ summary, nodeTag }: PerformanceMetr
                     {tab === "memory" && <MemoryTab memory={node?.MemoryUsageInfo} />}
                     {tab === "gc" && <GcTab gc={node?.GcInfo} />}
                     {tab === "network" && <NetworkTab packageId={summary.PackageId} nodeTag={nodeTag} />}
-                    {tab === "threads" && <ThreadsTab packageId={summary.PackageId} nodeTag={nodeTag} />}
+                    {tab === "threads" && (
+                        <>
+                            <div className="hstack">
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="ms-auto"
+                                    href={appUrl.forCaptureStackTraces(summary.PackageId, nodeTag)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <Icon icon="stack-traces" /> Open in Stack Traces viewer
+                                </Button>
+                            </div>
+                            <ThreadsTab packageId={summary.PackageId} nodeTag={nodeTag} />
+                        </>
+                    )}
                 </Card.Body>
             </Card>
         </div>

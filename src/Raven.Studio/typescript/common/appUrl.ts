@@ -217,8 +217,12 @@ class appUrl {
         return "#admin/settings/runningQueries?" + databasePart;
     }
     
-    static forCaptureStackTraces(): string {
-        return "#admin/settings/captureStackTraces";
+    static forCaptureStackTraces(packageId?: string, nodeTag?: string): string {
+        const base = "#admin/settings/captureStackTraces";
+        if (packageId && nodeTag) {
+            return base + "?packageId=" + encodeURIComponent(packageId) + "&nodeTag=" + encodeURIComponent(nodeTag);
+        }
+        return base;
     }
 
     static forAdminJsConsole(): string {
