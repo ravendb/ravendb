@@ -21,6 +21,7 @@ type FormSelectProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     options: readonly FormSelectOption<TFieldValues[TName]>[];
     placeholder?: string;
     triggerClassName?: string;
+    addons?: ReactNode;
 };
 
 export function FormSelect<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -34,6 +35,7 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
     options,
     placeholder,
     triggerClassName,
+    addons,
 }: FormSelectProps<TFieldValues, TName>) {
     const generatedId = useId();
     const {
@@ -49,22 +51,25 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
     return (
         <Field className={className} data-invalid={invalid}>
             <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>
-            <Select
-                value={typeof value === "string" ? value : ""}
-                onValueChange={onChange}
-                disabled={disabled || formState.isSubmitting}
-            >
-                <SelectTrigger id={generatedId} aria-invalid={invalid} className={cn("w-full", triggerClassName)}>
-                    <SelectValue placeholder={placeholder} />
-                </SelectTrigger>
-                <SelectContent>
-                    {options.map((option) => (
-                        <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+                <Select
+                    value={typeof value === "string" ? value : ""}
+                    onValueChange={onChange}
+                    disabled={disabled || formState.isSubmitting}
+                >
+                    <SelectTrigger id={generatedId} aria-invalid={invalid} className={cn("w-full", triggerClassName)}>
+                        <SelectValue placeholder={placeholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {options.map((option) => (
+                            <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {addons && addons}
+            </div>
             {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
             {description && <FieldDescription>{description}</FieldDescription>}
         </Field>

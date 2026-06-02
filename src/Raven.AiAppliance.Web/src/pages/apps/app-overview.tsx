@@ -1,11 +1,13 @@
 import { Link, useParams } from "react-router";
-import { Database, MessageSquareText, SquareKanban } from "lucide-react";
+import { Database, MessageSquareText, Sparkles, SquareKanban } from "lucide-react";
 import type { ComponentType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { DetailList } from "@/components/data/detail-list";
 import { PagePanel } from "@/components/data/page-panel";
+import { Button } from "@/components/shadcn/ui/button";
+import { appRoutes } from "@/lib/app-routes";
 
 export function AppOverview() {
     const { slug = "" } = useParams();
@@ -21,6 +23,15 @@ export function AppOverview() {
             >
                 {appQuery.data && (
                     <div className="space-y-5">
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-sm font-semibold">{appQuery.data.name}</h2>
+                            <Button asChild size="sm">
+                                <Link to={appRoutes.addCapability(slug)}>
+                                    <Sparkles className="size-3.5" aria-hidden="true" />
+                                    Add AI Capability
+                                </Link>
+                            </Button>
+                        </div>
                         <DetailList
                             items={[
                                 { label: "Name", value: appQuery.data.name },

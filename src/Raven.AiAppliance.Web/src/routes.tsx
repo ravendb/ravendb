@@ -23,6 +23,7 @@ import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes"
 import { AiPage } from "@/pages/utility/ai-page";
 import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
 import { AddAppWizard } from "@/pages/setup/add-app-wizard/add-app-wizard";
+import { AddCapabilityWizard } from "@/pages/setup/add-capability-wizard/add-capability-wizard";
 
 export type AppRouteHandle = {
     title: string;
@@ -282,7 +283,20 @@ export const router = createBrowserRouter([
             ...utilityRoutes,
             {
                 path: ROUTE_PATTERNS.app,
-                children: appRoutes,
+                children: [
+                    ...appRoutes,
+                    {
+                        path: ROUTE_PATTERNS.addCapability,
+                        element: <AddCapabilityWizard />,
+                        handle: {
+                            title: "Add AI Capability",
+                            appScoped: true,
+                            isBareLayout: true,
+                            isPageTitleHidden: true,
+                            isSidebarHidden: true,
+                        } satisfies AppRouteHandle,
+                    },
+                ],
             },
         ],
     },

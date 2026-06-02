@@ -1,6 +1,8 @@
 export const ROUTE_PATTERNS = {
     app: "apps/:slug",
     addApp: "app/add",
+    // Relative to the app route (apps/:slug).
+    addCapability: "capability/add",
 } as const;
 
 export const appRoutes = {
@@ -10,4 +12,5 @@ export const appRoutes = {
     },
     dashboard: () => "/",
     addApp: () => `/${ROUTE_PATTERNS.addApp}`,
+    addCapability: (slug: string) => `/apps/${encodeURIComponent(slug)}/${ROUTE_PATTERNS.addCapability}`,
 } as const;
