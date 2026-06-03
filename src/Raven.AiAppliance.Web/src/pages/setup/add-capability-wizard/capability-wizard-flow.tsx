@@ -5,10 +5,7 @@ import { ConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/c
 import { useConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/connect/use-connect-provider-step";
 import { CreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/create-agent-step";
 import { ReviewAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/review-agent-step";
-import {
-    BindChannelsFooter,
-    BindChannelsStep,
-} from "@/pages/setup/add-capability-wizard/steps/channels/bind-channels-step";
+import { BindChannelsStep } from "@/pages/setup/add-capability-wizard/steps/channels/bind-channels-step";
 
 export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "create", "review", "channels"];
 
@@ -45,7 +42,6 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId> => {
             id: "channels",
             title: "Bind your agent to channels",
             bodyComponent: BindChannelsStep,
-            footerComponent: BindChannelsFooter,
             skipValidation: true,
         },
     };
