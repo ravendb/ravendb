@@ -221,9 +221,18 @@ public static class ChannelsEndpoints
         // LoadStartingWith on the shared "channels/" id prefix instead of a
         // collection Query: immediately consistent (no index-staleness wait
         // right after a create) and the natural fit since every channel doc
-        // shares the prefix. Order by CreatedAt in memory — the set is small.
-        var channels = await session.Advanced.LoadStartingWithAsync<Channel>(
-            ChannelIdPrefix, pageSize: 1024, token: ct);
+        // shares the prefix. Page until a short page returns so a large channel
+        // set is never silently truncated. Order by CreatedAt in memory.
+        const int pageSize = 1024;
+        var channels = new List<Channel>();
+        for (var start = 0; ; start += pageSize)
+        {
+            var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
+                ChannelIdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
+            channels.AddRange(page);
+            if (page.Length < pageSize)
+                break;
+        }
 
         var items = channels
             .OrderByDescending(c => c.CreatedAt)
