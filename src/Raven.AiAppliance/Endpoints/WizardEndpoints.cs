@@ -86,13 +86,13 @@ public static class WizardEndpoints
         try
         {
             result = await store.Maintenance.ForDatabase(store.Database).SendAsync(
-                new CdcSinkVerifyOperation(WizardSourceProbeName, body.TableNames), ct);
+                new TestSqlConnectionOperation(factoryName, body.ConnectionString), ct);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Connect: verify threw");
+            logger.LogError(ex, "Connect: test-connection threw");
             result = new ConnectResult();
-            result.Errors.Add($"Verification threw: {ex.Message}");
+            result.Errors.Add($"Connection test threw: {ex.Message}");
         }
 
         await PersistAsync(store, state =>

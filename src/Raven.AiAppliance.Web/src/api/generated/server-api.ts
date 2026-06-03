@@ -468,13 +468,10 @@ export interface components {
         ConnectRequest: {
             provider: string;
             connectionString: string;
-            tableNames?: null | string[];
         };
         ConnectResult: {
             success: boolean;
-            hasPermissionToSetup: boolean;
             errors: string[];
-            warnings: string[];
         };
         DiscoverColumnResponse: {
             name: string;
@@ -494,6 +491,9 @@ export interface components {
             catalogName?: null | string;
             tables: components["schemas"]["DiscoverTableResponse"][];
             errors: string[];
+            success: boolean;
+            hasPermissionToSetup: boolean;
+            warnings: string[];
         };
         DiscoverTableResponse: {
             sourceTableSchema?: null | string;
@@ -503,6 +503,7 @@ export interface components {
             foreignKeys: components["schemas"]["DiscoverForeignKeyResponse"][];
             isCdcEnabled: boolean;
             unsupportedReason?: null | string;
+            warnings: string[];
         };
         EmbeddedSettings: {
             /** Format: int32 */

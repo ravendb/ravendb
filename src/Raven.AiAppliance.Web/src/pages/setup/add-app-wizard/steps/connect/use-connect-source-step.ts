@@ -15,7 +15,6 @@ export function useConnectSourceStep() {
             const connectResult = await api.services.setup.connect({
                 connectionString: formValues.connectionString,
                 provider: formValues.provider,
-                tableNames: ["users", "orders"], // TODO null
             });
 
             if (!connectResult.success) {
@@ -25,7 +24,6 @@ export function useConnectSourceStep() {
             const discoverResult = await api.services.setup.discover({
                 connectionString: formValues.connectionString,
                 provider: formValues.provider,
-                tableNames: ["users", "orders"], // TODO null
             });
 
             setDiscoverResult(discoverResult);
