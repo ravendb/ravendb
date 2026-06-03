@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using AiApplianceTests.E2E.Fixtures;
 using FastTests;
 using Raven.Client.Documents;
@@ -30,6 +31,12 @@ public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : RavenTe
 
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
+        // Discover now carries the merged verification result. An unreachable source
+        // surfaces as success=false with a non-empty errors list (not an HTTP error).
+        var discover = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(discover.GetProperty("success").GetBoolean());
+        Assert.NotEmpty(discover.GetProperty("errors").EnumerateArray());
+
         var result = await store.Maintenance.ForDatabase(store.Database)
             .SendAsync(new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql));
 
@@ -37,7 +44,7 @@ public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : RavenTe
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Connect_persists_probe_connection_string_for_table_verification()
+    public async Task Connect_persists_probe_connection_string_and_reports_reachability()
     {
         var store = GetDocumentStore();
 
@@ -50,11 +57,17 @@ public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : RavenTe
             {
                 provider = "SqlClient",
                 connectionString = "invalid",
-                tableNames = new[] { "customers" },
             });
 
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
+        // Connect is a plain reachability probe now (SQL test-connection); an
+        // unparseable connection string fails fast with success=false.
+        var connect = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(connect.GetProperty("success").GetBoolean());
+
+        // The probe connection string is still persisted on the config DB —
+        // Provision later transplants its credentials into the per-app database.
         var result = await store.Maintenance.ForDatabase(store.Database)
             .SendAsync(new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql));
         var probe = Assert.Single(result.SqlConnectionStrings!).Value;

@@ -86,21 +86,20 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         using var sqlTeardown = WithSqlDatabase(MigrationProvider.NpgSQL,
             out var pgConnStr, out _, dataSet: "northwind-full", includeData: true);
 
-        // ---------- T5. Connect (CDC verify) ----------
-        // Server-side /admin/cdc-sink/verify requires at least one TableNames
-        // entry -- it does table-level CDC capability checks, not just
-        // server-level prerequisite checks.
+        // ---------- T5. Connect (reachability probe) ----------
+        // Connect is now a plain SQL test-connection: "can we open a connection to
+        // the source?" All CDC-readiness verification moved into Discover (the merged
+        // /admin/cdc-sink/schema), so no table list is sent here.
         var connectResp = await client.PostAsJsonAsync("/api/setup/connect", new
         {
             provider         = "Npgsql",
             connectionString = pgConnStr,
-            tableNames       = new[] { "customers", "orders", "products" },
         });
         Assert.True(connectResp.IsSuccessStatusCode,
             $"connect returned {connectResp.StatusCode}: {await connectResp.Content.ReadAsStringAsync()}");
-        var verify = await connectResp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.True(verify.GetProperty("success").GetBoolean(),
-            $"verify should succeed; payload: {verify}");
+        var connect = await connectResp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(connect.GetProperty("success").GetBoolean(),
+            $"connect (reachability) should succeed against a live Postgres; payload: {connect}");
 
         // ---------- T6. Discover schema ----------
         var discoverResp = await client.PostAsJsonAsync("/api/setup/discover",
@@ -116,6 +115,14 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.Contains("customers", tableNames);
         Assert.Contains("orders",    tableNames);
         Assert.Contains("products",  tableNames);
+
+        // Verification is now folded into discovery. The source is provably CDC-ready
+        // (T10 below runs a real initial load over a logical-replication slot), so the
+        // merged /schema must report success and the connecting user's setup permission.
+        Assert.True(schema.GetProperty("success").GetBoolean(),
+            $"discover should report a CDC-ready source; payload: {schema}");
+        Assert.True(schema.GetProperty("hasPermissionToSetup").GetBoolean(),
+            "the connecting user provisions CDC in T10, so hasPermissionToSetup must be true");
 
         // ---------- T7. Map: POST a pre-built CdcSinkConfiguration for Northwind ----------
         var configFixturePath = Path.Combine(AppContext.BaseDirectory, "E2E", "Fixtures", "northwind-cdc-config.json");
