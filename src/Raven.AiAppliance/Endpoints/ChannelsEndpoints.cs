@@ -460,11 +460,14 @@ public static class ChannelsEndpoints
             // C3 (Copilot review #4362803113): the browser Origin header is
             // scheme+host[:port] only — reject anything past the authority,
             // except a bare "/" path which Uri normalizes onto origin-only URLs.
+            // Also reject userinfo (e.g. https://user:pass@host): a real Origin
+            // never carries it, so such an entry would never match at runtime.
             if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
                 (uri.AbsolutePath != "" && uri.AbsolutePath != "/") ||
                 string.IsNullOrEmpty(uri.Query) == false ||
-                string.IsNullOrEmpty(uri.Fragment) == false)
+                string.IsNullOrEmpty(uri.Fragment) == false ||
+                string.IsNullOrEmpty(uri.UserInfo) == false)
             {
                 error = $"allowedOrigins entry '{origin}' is not an origin (scheme+host[:port] only)";
                 return false;

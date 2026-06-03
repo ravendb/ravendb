@@ -707,6 +707,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     [InlineData("example.com")]                        // M2: scheme-less
     [InlineData("ftp://example.com")]                  // M2: non-http(s) scheme
     [InlineData("")]                                   // M2: empty entry
+    [InlineData("https://user:pass@example.com")]      // M2: userinfo isn't part of an Origin
     public async Task Channel_endpoint_rejects_invalid_allowed_origin(string badOrigin)
     {
         var store = GetDocumentStore();

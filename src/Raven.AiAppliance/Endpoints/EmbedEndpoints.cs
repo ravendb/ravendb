@@ -167,19 +167,17 @@ public static class EmbedEndpoints
     private static async Task<(App app, Channel channel)?> ResolveAsync(
         IDocumentStore store, string widgetId, CancellationToken ct)
     {
-        string? slug;
+        App? app;
         using (var cfg = store.OpenAsyncSession())
         {
             var index = await cfg.LoadAsync<WidgetIndex>($"widget-index/{widgetId}", ct);
-            slug = index?.Slug;
+            if (string.IsNullOrEmpty(index?.Slug))
+                return null;
+
+            // The apps/{slug} load depends on the widget-index result, so it
+            // can't be batched — but it reuses the same config-DB session.
+            app = await cfg.LoadAsync<App>($"apps/{index.Slug}", ct);
         }
-
-        if (string.IsNullOrEmpty(slug))
-            return null;
-
-        App? app;
-        using (var cfg = store.OpenAsyncSession())
-            app = await cfg.LoadAsync<App>($"apps/{slug}", ct);
 
         if (app is null)
             return null;
