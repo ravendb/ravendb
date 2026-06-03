@@ -242,6 +242,28 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal(HttpStatusCode.Gone, resp.StatusCode);
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Embed_chat_trims_and_validates_conversationId()
+    {
+        var store = GetDocumentStore();
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // The conversationId guard runs before widget resolution, so these
+        // assertions don't need a provisioned channel. A non-"chats/" id is
+        // rejected with 400...
+        var bad = await client.PostAsJsonAsync("/embed/wgt_nope/chat",
+            new { prompt = "hi", conversationId = "users/admin" });
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+
+        // ...while a "chats/"-prefixed id wrapped in whitespace is trimmed and
+        // accepted, so the request proceeds past validation (here to a 404 for
+        // the unknown widget) rather than being rejected as malformed.
+        var trimmed = await client.PostAsJsonAsync("/embed/wgt_nope/chat",
+            new { prompt = "hi", conversationId = " chats/1 " });
+        Assert.Equal(HttpStatusCode.NotFound, trimmed.StatusCode);
+    }
+
     // ---- cdc/progress WebSocket ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]

@@ -92,6 +92,10 @@ internal sealed class AgentRouter(IDocumentStore store, IAgentSchemaRegistry sch
     /// </summary>
     internal static string NormalizeConversationId(string? conversationId)
     {
+        // Trim first so a stray-whitespace id (e.g. "chats/1 ") isn't persisted
+        // verbatim as a distinct RavenDB conversation document.
+        conversationId = conversationId?.Trim();
+
         if (string.IsNullOrWhiteSpace(conversationId))
             return "chats/";
 

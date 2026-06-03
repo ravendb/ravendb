@@ -89,9 +89,10 @@ public static class ChatEndpoints
         // Without this, a caller could pass `conversationId: "users/admin"`
         // and overwrite an unrelated document. Empty/missing → "chats/" lets
         // RavenDB auto-allocate. Otherwise the value must begin with "chats/".
-        var conversationId = string.IsNullOrWhiteSpace(body.ConversationId)
+        var conversationId = body.ConversationId?.Trim();
+        conversationId = string.IsNullOrWhiteSpace(conversationId)
             ? "chats/"
-            : body.ConversationId;
+            : conversationId;
         if (!conversationId.StartsWith("chats/", StringComparison.Ordinal))
         {
             await WriteBadRequestAsync(ctx, "conversationId must start with 'chats/'");
