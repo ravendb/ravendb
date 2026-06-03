@@ -214,49 +214,15 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
         {
-            var shouldMergeDatabaseChangeVector = ShouldMergeDatabaseChangeVectorFromHeartbeat();
-            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, shouldMergeDatabaseChangeVector);
+            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams);
         }
 
         protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
         {
-            if (_canFilterOutSourceItems == false)
-            {
-                base.HandleHeartbeatMessage(documentsContext, message);
-                return;
-            }
-
-            if (message.TryGet(nameof(ReplicationMessageHeader.LastSentChangeVector), out string _) == false)
-                return;
-
-            long lastEtag;
-            using (documentsContext.OpenReadTransaction())
-            {
-                lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
-            }
-
-            if (_lastDocumentEtag <= lastEtag)
-                return;
-
-            var cmd = new MergedUpdateDatabaseChangeVectorForHubCommand(
-                changeVector: null,
-                _lastDocumentEtag,
-                ConnectionInfo,
-                _replicationFromAnotherSource,
-                shouldMergeDatabaseChangeVector: false);
-
-            EnqueueHeartbeatUpdate(cmd);
-        }
-
-        private bool ShouldMergeDatabaseChangeVectorFromHeartbeat()
-        {
-            if (_incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub)
-                return false;
-
             if (_canFilterOutSourceItems)
-                return false;
+                return;
 
-            return true;
+            base.HandleHeartbeatMessage(documentsContext, message);
         }
 
         private bool CanReceiverFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
@@ -458,17 +424,16 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         internal sealed class MergedUpdateDatabaseChangeVectorForHubCommand : MergedUpdateDatabaseChangeVectorCommand
         {
-            private readonly bool _shouldMergeDatabaseChangeVector;
+            private readonly ReplicationLoader.PullReplicationParams _pullReplicationParams;
 
             public MergedUpdateDatabaseChangeVectorForHubCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
-                bool shouldMergeDatabaseChangeVector) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
+                ReplicationLoader.PullReplicationParams pullReplicationParams) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
             {
-                _shouldMergeDatabaseChangeVector = shouldMergeDatabaseChangeVector;
+                _pullReplicationParams = pullReplicationParams;
             }
-
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (_shouldMergeDatabaseChangeVector == false)
+                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
                     return false;
 
                 return base.TryUpdateChangeVector(context);
@@ -479,7 +444,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return new MergedUpdateDatabaseChangeVectorForHubCommandDto
                 {
                     BaseDto = (MergedUpdateDatabaseChangeVectorCommandDto)base.ToDto(context),
-                    MergeDatabaseChangeVector = _shouldMergeDatabaseChangeVector
+                    PullReplicationParams = _pullReplicationParams
                 };
             }
         }
@@ -487,11 +452,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         internal sealed class MergedUpdateDatabaseChangeVectorForHubCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorForHubCommand>
         {
             public MergedUpdateDatabaseChangeVectorCommandDto BaseDto;
-            public bool MergeDatabaseChangeVector = true;
+            public ReplicationLoader.PullReplicationParams PullReplicationParams;
             public MergedUpdateDatabaseChangeVectorForHubCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
                 var command = new MergedUpdateDatabaseChangeVectorForHubCommand(BaseDto.ChangeVector, BaseDto.LastDocumentEtag, BaseDto.IncomingConnectionInfo,
-                    new AsyncManualResetEvent(), MergeDatabaseChangeVector);
+                    new AsyncManualResetEvent(), PullReplicationParams);
                 return command;
             }
         }
