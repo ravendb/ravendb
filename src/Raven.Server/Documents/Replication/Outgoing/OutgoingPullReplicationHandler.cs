@@ -38,6 +38,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return new FilteredReplicationDocumentSender(stream, this, logger, PathsToSend, _destinationAcceptablePaths);
         }
 
+        protected override DynamicJsonValue GetInitialHandshakeRequest()
+        {
+            var request = base.GetInitialHandshakeRequest();
+
+            if (CanFilterOutSourceItems)
+                request[nameof(ReplicationLatestEtagRequest.CanFilterOutSourceItems)] = true;
+
+            return request;
+        }
+
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
             base.ProcessHandshakeResponse(response);
@@ -46,7 +56,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _destinationAcceptablePaths = response.Reply.AcceptablePaths;
         }
 
-        internal override bool CanFilterOutSourceItems =>
+        internal bool CanFilterOutSourceItems =>
             PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(PathsToSend) ||
             PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(_destinationAcceptablePaths) ||
             CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
