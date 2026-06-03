@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using AiApplianceTests.E2E.Fixtures;
@@ -45,6 +46,14 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             $"APPLIANCE_E2E_SETUP_PACKAGE_PATH points at '{zipPath}' but no file is there.");
         var zipBytes = await File.ReadAllBytesAsync(zipPath);
 
+        // T14 asserts a real streamed agent reply, so the agent's AI connection
+        // string (T11a) needs a live OpenAI key. Same env var the rest of the
+        // AI-integration suite uses.
+        var openAiKey = RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey;
+        Assert.False(string.IsNullOrWhiteSpace(openAiKey),
+            "Set RAVEN_AI_INTEGRATION_OPENAI_API_KEY to a real OpenAI key — T11a provisions an OpenAI connection " +
+            "string and T14 asserts a real streamed reply through it.");
+
         await using var licenseApi = await MockLicenseApi.StartAsync(HardcodedLicenseKey, zipBytes);
         var setupRoot = NewDataPath(forceCreateDir: true, prefix: "egor-ai-setup");
 
@@ -61,8 +70,11 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             applianceStore: store);
         var client = factory.CreateClient();
 
+        // The JSON status API returns the BootstrapPhase enum as its PascalCase
+        // name (kebab-case is reserved for non-JSON surfaces like /healthz — see
+        // BootstrapPhaseExtensions).
         var statusBefore = await client.GetFromJsonAsync<JsonElement>("/api/bootstrap/status");
-        Assert.Equal("needs-activation", statusBefore.GetProperty("state").GetString());
+        Assert.Equal("NeedsActivation", statusBefore.GetProperty("state").GetString());
 
         var healthBefore = await client.GetAsync("/healthz");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, healthBefore.StatusCode);
@@ -73,7 +85,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(redeem.IsSuccessStatusCode,
             $"redeem returned {redeem.StatusCode}: {await redeem.Content.ReadAsStringAsync()}");
 
-        await WaitForBootstrapStateAsync(client, expected: "ready", timeoutMs: 60_000);
+        await WaitForBootstrapStateAsync(client, expected: "Ready", timeoutMs: 60_000);
 
         var healthAfter = await client.GetAsync("/healthz");
         Assert.Equal(HttpStatusCode.OK, healthAfter.StatusCode);
@@ -158,6 +170,20 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.False(string.IsNullOrEmpty(appDocId));
         Assert.False(string.IsNullOrEmpty(slug));
 
+        // ---------- T9b. cdc/progress live feed (WebSocket) ----------
+        // During the initial-load window, the bridge proxies RavenDB's native
+        // cdc-sink/performance/live feed. Assert at least one (non-close) frame
+        // relays through — the ticket's "progress event during initial load" AC.
+        var cdcWsClient = factory.Server.CreateWebSocketClient();
+        var cdcWsUri = new Uri(factory.Server.BaseAddress, $"api/apps/{slug}/cdc/progress");
+        using (var cdcCts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+        using (var cdcWs = await cdcWsClient.ConnectAsync(cdcWsUri, cdcCts.Token))
+        {
+            var frameBuffer = new byte[16 * 1024];
+            var frame = await cdcWs.ReceiveAsync(new ArraySegment<byte>(frameBuffer), cdcCts.Token);
+            Assert.NotEqual(WebSocketMessageType.Close, frame.MessageType);
+        }
+
         // ---------- T10. Wait for initial load ----------
         // The northwind-full dataset has 830 orders; 800 is a comfortable
         // floor that still proves the bulk of the dump made it through CDC.
@@ -168,19 +194,15 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
 
         // ---------- T11a. Create the AI connection string ----------
         // Wizard step: operator picks "add new" on the LLM step and submits
-        // their LLM details (provider, endpoint, model, api key). We use
-        // Ollama here so the E2E doesn't depend on a live OpenAI key — the
-        // T11/T12 flow only exercises the connection-string + agent doc
-        // PUT against the per-app DB; we don't actually hit the LLM. A
-        // test that exercises live chat would POST an OpenAI CS with a
-        // real key instead.
+        // their LLM details (provider, endpoint, model, api key). OpenAI here
+        // so T14 can stream a real agent reply against the CDC-mirrored data.
         var csResp = await client.PostAsJsonAsync($"/api/apps/{slug}/ai/connection-strings",
             new
             {
                 name = "demo-llm",
                 identifier = "demo-llm",
                 modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+                openAiSettings = new { apiKey = openAiKey, endpoint = "https://api.openai.com/", model = "gpt-4.1-mini" }
             });
         Assert.True(csResp.IsSuccessStatusCode,
             $"ai connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
@@ -189,6 +211,9 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // identifier is pinned to "demo-agent" so the T12 channel step still
         // resolves it against the compile-time AgentSchemaRegistry. Channel
         // binding of arbitrary operator-defined agent ids is a follow-up slice.
+        // sampleObject uses PascalCase keys to match the demo agent schema's
+        // stream property path ("Reply", derived from DemoAgentAnswer via the
+        // store conventions) so the reply streams incrementally as chunks.
         var agentResp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/agent",
             new
             {
@@ -196,6 +221,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
                 name = "Support Bot",
                 systemPrompt = "You are a helpful Northwind support agent.",
                 connectionStringName = "demo-llm",
+                sampleObject = "{\"Reply\":\"A friendly reply for the user.\",\"Related\":[\"orders/1\"]}",
             });
         Assert.True(agentResp.IsSuccessStatusCode,
             $"agent returned {agentResp.StatusCode}: {await agentResp.Content.ReadAsStringAsync()}");
@@ -212,13 +238,93 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         var widgetId = channelJson.GetProperty("widgetId").GetString();
         Assert.False(string.IsNullOrEmpty(widgetId));
 
-        // ---------- T13. Optional manual park ----------
+        // ---------- T13. Embed page renders ----------
+        var embedResp = await client.GetAsync($"/embed/{widgetId}");
+        Assert.Equal(HttpStatusCode.OK, embedResp.StatusCode);
+        Assert.Contains("text/html", embedResp.Content.Headers.ContentType?.ToString() ?? "");
+        var embedHtml = await embedResp.Content.ReadAsStringAsync();
+        Assert.False(string.IsNullOrWhiteSpace(embedHtml), "embed page body was empty");
+        Assert.Contains(widgetId!, embedHtml);
+
+        // ---------- T14. Embed chat streams a real agent reply ----------
+        // Goes through the public embed route -> AgentRouter -> the per-app
+        // "demo-agent" registered in T11b -> the OpenAI CS from T11a. Proves the
+        // demo's closing moment: a browser chatting with the agent over the
+        // CDC-mirrored Postgres data.
+        using var chatCts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var chatReq = new HttpRequestMessage(HttpMethod.Post, $"/embed/{widgetId}/chat")
+        {
+            Content = JsonContent.Create(new { prompt = "Say hello in one short sentence." }),
+        };
+        var chatResp = await client.SendAsync(chatReq, HttpCompletionOption.ResponseHeadersRead, chatCts.Token);
+        Assert.True(chatResp.IsSuccessStatusCode,
+            $"embed chat returned {chatResp.StatusCode}: {await chatResp.Content.ReadAsStringAsync(chatCts.Token)}");
+        Assert.Contains("application/x-ndjson", chatResp.Content.Headers.ContentType?.ToString() ?? "");
+
+        var (replyText, sawDone, error) = await ReadEmbedChatAsync(chatResp, chatCts.Token);
+        Assert.True(string.IsNullOrEmpty(error), $"embed chat emitted an error frame: {error}");
+        Assert.True(sawDone, "embed chat stream did not emit a 'done' frame");
+        Assert.False(string.IsNullOrWhiteSpace(replyText), "embed chat produced no reply text");
+
+        // ---------- Optional manual park ----------
         if (Environment.GetEnvironmentVariable("APPLIANCE_E2E_HOLD") == "1")
         {
             Console.WriteLine($"Embed URL: {client.BaseAddress}embed/{widgetId}");
             Console.WriteLine("Test parked. Ctrl+C to exit.");
             await Task.Delay(Timeout.Infinite);
         }
+    }
+
+    /// <summary>
+    /// Reads the embed chat NDJSON stream, accumulating <c>chunk</c> text until
+    /// a <c>done</c> or <c>error</c> frame (or end of stream).
+    /// </summary>
+    private static async Task<(string Reply, bool SawDone, string? Error)> ReadEmbedChatAsync(
+        HttpResponseMessage resp, CancellationToken ct)
+    {
+        var sb = new StringBuilder();
+        var sawDone = false;
+        string? error = null;
+
+        await using var stream = await resp.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream);
+
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) is not null)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            using var doc = JsonDocument.Parse(line);
+            var type = doc.RootElement.GetProperty("type").GetString();
+            if (type == "chunk")
+            {
+                sb.Append(doc.RootElement.GetProperty("text").GetString());
+            }
+            else if (type == "done")
+            {
+                sawDone = true;
+                // Fall back to the final structured answer when the reply didn't
+                // stream incrementally, so we still assert a real reply arrived.
+                if (sb.Length == 0 &&
+                    doc.RootElement.TryGetProperty("answer", out var answer) &&
+                    answer.ValueKind == JsonValueKind.Object &&
+                    answer.TryGetProperty("reply", out var reply) &&
+                    reply.ValueKind == JsonValueKind.String)
+                {
+                    sb.Append(reply.GetString());
+                }
+
+                break;
+            }
+            else if (type == "error")
+            {
+                error = doc.RootElement.TryGetProperty("message", out var m) ? m.GetString() : "error";
+                break;
+            }
+        }
+
+        return (sb.ToString(), sawDone, error);
     }
 
     /// <summary>

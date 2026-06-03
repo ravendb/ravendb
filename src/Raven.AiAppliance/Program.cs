@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Retry;
 using Polly.Timeout;
+using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.AiHelper;
 using Raven.AiAppliance.Endpoints;
 using Raven.AiAppliance.Hosting;
@@ -85,6 +86,7 @@ builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentSchemaRegistry, AgentSchemaRegistry>();
 builder.Services.AddSingleton<IAgentSchema, DemoAgentSchema>();
+builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<RavenReadinessService>();
 builder.Services.AddHttpClient();
@@ -174,15 +176,22 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+// Enables WebSocket upgrades for the live-feed proxy (e.g. /api/apps/{slug}/cdc/progress).
+app.UseWebSockets();
+
 app.UseReadinessGate();
 
 StaticAssetEndpoints.Map(app);
 HealthEndpoints.Map(app);
 BootstrapEndpoints.Map(app);
 AppsEndpoints.Map(app);
+ChannelsEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
+// Must precede MapSpaFallback: /embed/* is a {*path:nonfile} match that the
+// SPA fallback would otherwise swallow and serve index.html instead.
+EmbedEndpoints.Map(app);
 StaticAssetEndpoints.MapSpaFallback(app);
 
 app.Run();

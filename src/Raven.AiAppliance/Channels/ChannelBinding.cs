@@ -1,4 +1,4 @@
-namespace Raven.AiAppliance.Wizard;
+namespace Raven.AiAppliance.Channels;
 
 /// <summary>
 /// Per-app uniqueness primitive for channels (C2 from Copilot review
@@ -15,7 +15,8 @@ namespace Raven.AiAppliance.Wizard;
 /// stable customer-facing identifier (still 128 random bits — H1 from the
 /// 2026-05-25 security review). Keeping these as separate documents
 /// preserves the design §3.4 <c>@channels/{widgetId}</c> lookup path for
-/// the future <c>/embed/{widgetId}</c> page.
+/// the <c>/embed/{widgetId}</c> page. Deleting this binding in a cluster-wide
+/// session removes the atomic guard, so the same tuple can be re-provisioned.
 /// </summary>
 internal sealed class ChannelBinding
 {

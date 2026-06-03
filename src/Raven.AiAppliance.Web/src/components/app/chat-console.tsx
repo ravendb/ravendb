@@ -140,7 +140,7 @@ export function ChatConsole({ defaultAgentId = "" }: ChatConsoleProps) {
                     <Trash2 className="size-4" aria-hidden="true" />
                     Clear
                 </Button>
-                <Button disabled={isStreaming}>
+                <Button type="submit" disabled={isStreaming}>
                     <Send className="size-4" aria-hidden="true" />
                     {isStreaming ? "Sending..." : "Send"}
                 </Button>

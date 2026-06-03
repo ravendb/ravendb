@@ -1,15 +1,15 @@
-using System.Security.Cryptography;
+using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.AiHelper;
 using Raven.AiAppliance.Contracts;
+using Raven.AiAppliance.Endpoints.Helpers;
+using Raven.AiAppliance.Live;
 using Raven.AiAppliance.Raven;
-using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 
@@ -33,10 +33,14 @@ public static class AppsEndpoints
             .Produces<ProvisionAgentResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
-        group.MapPost("/{slug}/setup/channel", ProvisionChannelAsync)
-            .WithName("apps.provisionChannel")
-            .Accepts<ProvisionChannelRequest>("application/json")
-            .Produces<ProvisionChannelResponse>()
+        group.MapGet("/{slug}/cdc/progress", CdcProgressAsync)
+            .WithName("apps.cdcProgress")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapPost("/{slug}/setup/try", SetupTryAsync)
+            .WithName("apps.setupTry")
+            .Accepts<SetupTryRequest>("application/json")
+            .Produces<string>(StatusCodes.Status200OK, contentType: "application/x-ndjson")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapPost("/{slug}/suggest/agent", SuggestAgentAsync)
@@ -241,207 +245,112 @@ public static class AppsEndpoints
         }
     }
 
-    // Channel-instance constants. M2/M4 caps prevent unbounded doc growth +
-    // give the future /embed/{widgetId} page a trustworthy list to consume.
-    private const int MaxAllowedOrigins = 32;
-    private const int MaxOriginLength = 256;
-    private const int MaxDisplayNameLength = 200;
-
-    // Channel-type label per design §3.4 (capital I + F). Single source of
-    // truth so DisplayName's default-to-Type behaviour (per the XML doc on
-    // ProvisionChannelRequest) actually does default to the persisted type
-    // and not a literal "iframe" string.
-    private const string IFrameType = "IFrame";
-
-    private static async Task<IResult> ProvisionChannelAsync(
+    /// <summary>
+    /// Live CDC initial-load progress over a WebSocket. Wizard read-side
+    /// (design §1.3 Stage C.1 step 7 / RavenDB-26629 carryover). The bridge
+    /// proxies RavenDB's native <c>cdc-sink/performance/live</c> feed (the same
+    /// telemetry Studio renders) via <see cref="RavenLiveFeedProxy"/> — the
+    /// browser can't present a client cert, so the bridge dials RavenDB with the
+    /// admin cert and relays frames. App is resolved (404) and the WS upgrade is
+    /// required (400) before the handshake is accepted.
+    /// </summary>
+    private static async Task CdcProgressAsync(
         string slug,
-        ProvisionChannelRequest body,
         IDocumentStore store,
-        IAgentSchemaRegistry schemas,
-        ILogger<AppsLogger> logger,
-        CancellationToken ct)
+        HttpContext ctx)
     {
-        if (body is null || string.IsNullOrWhiteSpace(body.Type) || string.IsNullOrWhiteSpace(body.AgentId))
-            return Results.BadRequest(new ApiErrorResponse("type and agentId are required"));
+        var ct = ctx.RequestAborted;
 
-        // 8-week demo: iFrame only. Telegram + WhatsApp are deferred per
-        // design §3.6 / §3.7. Case-insensitive — the design spells it "IFrame"
-        // but tests / curl will commonly send "iframe".
-        if (!string.Equals(body.Type, "iframe", StringComparison.OrdinalIgnoreCase))
-            return Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'. Supported: iframe."));
-
-        // L1: load App first so unknown-slug always returns 404 regardless of
-        // whether agentId is valid. Previously the schemas.TryGet ran first,
-        // and the 400-vs-404 differential leaked which agentIds were
-        // registered to unauthenticated probers (M1's lack of auth made this
-        // a real concern; once auth lands the leak becomes moot, but the
-        // reorder is free either way).
         App? app;
         using (var session = store.OpenAsyncSession())
-        {
-            // LoadAsync (not Query) — see ProvisionAgentAsync comment.
             app = await session.LoadAsync<App>($"apps/{slug}", ct);
-        }
 
         if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
-
-        // L3: validate against the registry AND adopt the registry's canonical
-        // casing for storage. schemas.TryGet is case-insensitive but the
-        // caller's original casing was being persisted, which would trip up
-        // any later case-sensitive groupBy / query on AgentId.
-        if (!schemas.TryGet(body.AgentId, out var schema))
-            return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
-
-        // M2: validate AllowedOrigins at intake so the future /embed/{widgetId}
-        // page reads from a trustworthy list. Reject "*" (silently widens trust
-        // across all customers via operator typo), scheme-less entries (no
-        // ambiguity about which protocol to allow), and cap entries + per-entry
-        // length to keep the doc bounded under repeated edits.
-        var origins = body.AllowedOrigins ?? [];
-        if (origins.Length > MaxAllowedOrigins)
-            return Results.BadRequest(new ApiErrorResponse($"allowedOrigins exceeds limit of {MaxAllowedOrigins} entries"));
-
-        for (var i = 0; i < origins.Length; i++)
         {
-            var origin = origins[i];
-            if (string.IsNullOrWhiteSpace(origin) || origin.Length > MaxOriginLength)
-                return Results.BadRequest(new ApiErrorResponse($"allowedOrigins entry is empty or exceeds {MaxOriginLength} chars"));
-
-            if (origin == "*")
-                return Results.BadRequest(new ApiErrorResponse("wildcard '*' is not an allowed origin; list explicit http(s) origins"));
-
-            // C3 (Copilot review #4362803113): the browser Origin header is
-            // scheme+host[:port] only — paths, queries, and fragments don't
-            // appear at runtime. Accepting them at intake meant the persisted
-            // entry would silently fail to match the browser's Origin string
-            // on the future /embed/{widgetId} page. Reject anything past the
-            // authority, except for a bare "/" path which Uri normalizes onto
-            // origin-only URLs.
-            if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
-                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
-                (uri.AbsolutePath != "" && uri.AbsolutePath != "/") ||
-                string.IsNullOrEmpty(uri.Query) == false ||
-                string.IsNullOrEmpty(uri.Fragment) == false)
-                return Results.BadRequest(new ApiErrorResponse($"allowedOrigins entry '{origin}' is not an origin (scheme+host[:port] only)"));
-
-            // C2 (Copilot review #4365219160): normalize on persist. `https://example.com/`
-            // passes the path gate above (AbsolutePath is `/`) but its raw form
-            // carries a trailing slash that the browser Origin header never
-            // does. Persist the canonical `scheme://host[:port]` form so
-            // runtime matching at /embed/{widgetId} doesn't have to defensively
-            // strip slashes on every read. Uri.Authority handles default-port
-            // stripping for us.
-            origins[i] = $"{uri.Scheme}://{uri.Authority}";
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse($"no app with slug '{slug}'"), ct);
+            return;
         }
 
-        // M4: cap DisplayName length and forbid control chars at intake. The
-        // XML doc on Channel.DisplayName says "shown in the dashboard";
-        // if the dashboard ever does dangerouslySetInnerHTML / equivalent,
-        // unsanitized DisplayName is operator-on-operator stored XSS. Intake
-        // sanitation = caught once; downstream sanitation = caught every read.
-        if (body.DisplayName is not null)
+        if (ctx.WebSockets.IsWebSocketRequest == false)
         {
-            if (body.DisplayName.Length > MaxDisplayNameLength)
-                return Results.BadRequest(new ApiErrorResponse($"displayName exceeds {MaxDisplayNameLength} chars"));
-
-            if (body.DisplayName.Any(char.IsControl))
-                return Results.BadRequest(new ApiErrorResponse("displayName contains control characters"));
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("websocket upgrade required"), ct);
+            return;
         }
 
-        // C2 (Copilot review #4362803113): idempotency on (slug, type, agentId)
-        // via an atomic guard on a deterministic binding doc id. The previous
-        // query-then-put was only race-safe for sequential retries (M3's
-        // WaitForNonStaleResults absorbed index staleness); concurrent POSTs
-        // could both miss the query and create duplicate channel docs.
-        //
-        // Mechanism: write the binding doc AND the channel doc in one
-        // TransactionMode.ClusterWide session — RavenDB auto-creates an
-        // atomic guard at "rvn-atomic/{bindingId}" (see
-        // ClusterWideTransactionHelper). Concurrent writers Raft-serialize;
-        // the loser catches ClusterTransactionConcurrencyException and reads
-        // the winner's binding to return the same widgetId.
-        var bindingId = $"channel-bindings/{app.Slug}/{IFrameType}/{schema.Identifier}";
+        using var browser = await ctx.WebSockets.AcceptWebSocketAsync();
+        await RavenLiveFeedProxy.RelayAsync(browser, store, app.Database, "cdc-sink/performance/live", ct);
+    }
 
-        // Fast path: the common "operator double-click / client retry" case
-        // skips the cluster-wide round trip entirely.
-        using (var session = store.OpenAsyncSession(app.Database))
+    /// <summary>
+    /// "Try the agent" smoke test (design §1.3 Stage C.2 step 12 /
+    /// RavenDB-26629 carryover). Streams one turn against the per-app agent via
+    /// <see cref="IAgentRouter"/> as NDJSON, so the operator can confirm the
+    /// agent answers before wiring a channel to it.
+    /// </summary>
+    private static async Task SetupTryAsync(
+        string slug,
+        SetupTryRequest body,
+        IDocumentStore store,
+        IAgentRouter router,
+        ILogger<AppsLogger> logger,
+        HttpContext ctx)
+    {
+        var ct = ctx.RequestAborted;
+
+        if (body is null || string.IsNullOrWhiteSpace(body.Prompt) || string.IsNullOrWhiteSpace(body.AgentId))
         {
-            var existing = await session.LoadAsync<ChannelBinding>(bindingId, ct);
-            if (existing is not null)
-            {
-                logger.LogInformation(
-                    "Channel binding already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
-                    app.Slug, schema.Identifier, existing.WidgetId);
-                return Results.Ok(new ProvisionChannelResponse(existing.WidgetId));
-            }
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("prompt and agentId are required"), ct);
+            return;
         }
 
-        // Slow path: no binding yet. Try to create one atomically.
-        //
-        // H1 (security review 2026-05-25): widgetId is the stable customer-
-        // facing identifier baked into embed snippets and the bearer
-        // credential for the future anonymous /embed/{widgetId} page. 128
-        // bits from RandomNumberGenerator keeps it unguessable — note that
-        // we do NOT derive it from the binding tuple, because slug + type +
-        // agentId are operator/public-facing inputs (Shape C from the
-        // planning doc was rejected for this reason).
-        var widgetId = "wgt_" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
-            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        var channelDocId = $"@channels/{widgetId}";
+        App? app;
+        using (var session = store.OpenAsyncSession())
+            app = await session.LoadAsync<App>($"apps/{slug}", ct);
 
+        if (app is null)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse($"no app with slug '{slug}'"), ct);
+            return;
+        }
+
+        var agentId = body.AgentId;
+
+        NdjsonStream.SetHeaders(ctx);
         try
         {
-            using var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
+            var result = await router.RunAsync(
+                new AgentRequest(app.Database, agentId, ConversationId: null, body.Prompt, Parameters: null),
+                async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
+                ct);
+
+            await NdjsonStream.WriteLineAsync(ctx, new
             {
-                Database = app.Database,
-                TransactionMode = TransactionMode.ClusterWide,
+                type = "done",
+                answer = result.Answer,
+                conversationId = result.ConversationId,
             });
-
-            await session.StoreAsync(new ChannelBinding
-            {
-                Id = bindingId,
-                WidgetId = widgetId,
-                CreatedAt = DateTime.UtcNow,
-            }, ct);
-
-            await session.StoreAsync(new Channel
-            {
-                Id = channelDocId,
-                Type = IFrameType,
-                DisplayName = body.DisplayName ?? IFrameType,
-                AgentId = schema.Identifier,
-                AllowedOrigins = origins,
-                CreatedAt = DateTime.UtcNow,
-                BindingId = bindingId,
-            }, ct);
-
-            await session.SaveChangesAsync(ct);
-
-            logger.LogInformation(
-                "Provisioned channel slug={Slug} widgetId={WidgetId} agentId={AgentId} type={Type}",
-                app.Slug, widgetId, schema.Identifier, IFrameType);
-
-            return Results.Ok(new ProvisionChannelResponse(widgetId));
         }
-        catch (ClusterTransactionConcurrencyException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // Lost the race. The winner's binding is now committed (the
-            // atomic guard fired BECAUSE the binding doc id we tried to
-            // create already exists). Read it back and return the same
-            // widgetId — the concurrent caller sees idempotent success.
-            using var session = store.OpenAsyncSession(app.Database);
-            var winner = await session.LoadAsync<ChannelBinding>(bindingId, ct);
-            if (winner is null)
+            // Client disconnected mid-stream.
+        }
+        catch (Exception e)
+        {
+            // Log full detail server-side; surface only a generic message — raw
+            // exceptions can leak DB names / connection strings / file paths.
+            logger.LogError(e, "setup/try failed for slug={Slug} agentId={AgentId}", slug, agentId);
+            try
             {
-                throw new InvalidOperationException(
-                    $"ClusterTransactionConcurrencyException fired for '{bindingId}' but the binding doc could not be loaded after the conflict.");
+                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Agent run failed. See server logs for details." });
             }
-
-            logger.LogInformation(
-                "Lost race for binding slug={Slug} agentId={AgentId}; returning winner's widgetId={WidgetId}",
-                app.Slug, schema.Identifier, winner.WidgetId);
-            return Results.Ok(new ProvisionChannelResponse(winner.WidgetId));
+            catch
+            {
+                // Response may already be partially flushed.
+            }
         }
     }
 
