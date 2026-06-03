@@ -35,7 +35,7 @@ public static class AppsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapGet("/{slug}/cdc/progress", CdcProgressAsync)
             .WithName("apps.cdcProgress")
-            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")

@@ -59,7 +59,7 @@ internal sealed class Channel
     /// delete-channel flow cascade-delete the binding (clearing its atomic
     /// guard) without a cross-DB lookup. The reverse link (binding -> channel)
     /// is intentionally NOT stored: <see cref="ChannelBinding.WidgetId"/>
-    /// already exists and the channel doc id is <c>@channels/{widgetId}</c> —
+    /// already exists and the channel doc id is <c>channels/{widgetId}</c> —
     /// trivially derivable.</summary>
     public string? BindingId { get; set; }
 }
