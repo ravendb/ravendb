@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -37,7 +38,7 @@ namespace Raven.Client.Documents.Commands
             return request;
         }
 
-        public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
             {

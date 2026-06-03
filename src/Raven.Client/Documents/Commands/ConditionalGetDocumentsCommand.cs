@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -56,12 +57,12 @@ namespace Raven.Client.Documents.Commands
             Result = JsonDeserializationClient.ConditionalGetResult(response);
         }
 
-        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
                 return ResponseDisposeHandling.Automatic;
             
-            var result = await base.ProcessResponse(context, cache, response, url).ConfigureAwait(false);
+            var result = await base.ProcessResponse(context, cache, response, url, token).ConfigureAwait(false);
             Result.ChangeVector = response.Headers.ETag.Tag;
             return result;
         }

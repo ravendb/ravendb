@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
@@ -310,12 +311,17 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             return request;
         }
 
-        public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+        public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context, CancellationToken token)
         {
             using var streamReader = new StreamReader(stream);
             while (true)
             {
+#if NETSTANDARD2_0 || NETSTANDARD2_1
                 var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+#else
+                var line = await streamReader.ReadLineAsync(token).ConfigureAwait(false);
+#endif
                 if (line is null)
                     break;
 

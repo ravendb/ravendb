@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -72,7 +73,7 @@ namespace Raven.Client.ServerWide.Commands
             Result = JsonDeserializationClient.Topology(response);
         }
 
-        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
         {
             var result = await TopologyCommandHelper.ParseTopologyResponseAsync(context, response, url, "database/topology").ConfigureAwait(false);
 

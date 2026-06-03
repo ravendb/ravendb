@@ -129,7 +129,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public virtual Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+        public virtual Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context, CancellationToken token)
         {
             SetResponseRaw(response, stream, context);
             return Task.CompletedTask;
@@ -157,7 +157,7 @@ namespace Raven.Client.Http
             return FailedNodes != null && FailedNodes.ContainsKey(node);
         }
 
-        public virtual async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public virtual async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
         {
             if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
                 return ResponseDisposeHandling.Automatic;
@@ -195,7 +195,7 @@ namespace Raven.Client.Http
                 await using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
 #endif
                 await using (var stream = new StreamWithTimeout(uncompressedStream))
-                    await SetResponseRawAsync(response, stream, context).ConfigureAwait(false);
+                    await SetResponseRawAsync(response, stream, context, token).ConfigureAwait(false);
             }
             return ResponseDisposeHandling.Automatic;
         }

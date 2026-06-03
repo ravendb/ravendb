@@ -120,7 +120,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
                     return message;
                 }
 
-                public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+                public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
                 {
                     var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
 

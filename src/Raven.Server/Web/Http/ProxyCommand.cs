@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
@@ -36,7 +37,7 @@ public class ProxyCommand<T> : RavenCommand
         return _command.CreateRequest(ctx, node, out url);
     }
 
-    public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+    public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
     {
         HttpResponseHelper.CopyStatusCode(response, _response);
         HttpResponseHelper.CopyHeaders(response, _response);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
@@ -43,7 +44,7 @@ namespace Raven.Client.Documents.Commands
             return request;
         }
 
-        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
         {
             var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
 

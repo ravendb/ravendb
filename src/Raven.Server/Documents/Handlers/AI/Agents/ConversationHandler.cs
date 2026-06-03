@@ -401,6 +401,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         {
             while (shouldContinueConversation)
             {
+                token.ThrowIfCancellationRequested();
+
                 var attachments = _request.Attachments ?? new List<AiAttachment>();
 
                 database.ForTestingPurposes?.BeforeAiAgentTalk?.Invoke(talker.Document);
