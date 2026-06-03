@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AiApplianceTests.E2E.Fixtures;
 using FastTests;
+using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -502,8 +503,11 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Channel_endpoint_rejects_unsupported_type()
+    public async Task Channel_endpoint_returns_501_for_recognized_but_unimplemented_type()
     {
+        // whatsapp/telegram are valid ChannelType values but not yet implemented
+        // (RavenDB-26631), so the per-type switch dispatches to a 501 stub rather
+        // than provisioning.
         var store = GetDocumentStore();
         var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
         using var _ = perAppDbCleanup;
@@ -516,6 +520,26 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             "/api/apps/my-app/setup/channel",
             new { type = "whatsapp", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
 
+        Assert.Equal(HttpStatusCode.NotImplemented, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_rejects_unknown_type()
+    {
+        // An unrecognized type string can't bind to the ChannelType enum, so the
+        // request fails model binding -> 400 (before the handler runs).
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "carrier-pigeon", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
+
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 
@@ -526,7 +550,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         // idempotency was only race-safe for *sequential* retries (an
         // index-staleness scenario the M3 WaitForNonStaleResults handled).
         // Two concurrent POSTs with the same (slug, type, agentId) could
-        // both miss the query and both store a fresh @channels/{widgetId}
+        // both miss the query and both store a fresh channels/{widgetId}
         // — different widgetIds, identical binding tuple, duplicate
         // channels routing to the same agent. The fix uses an atomic
         // guard on a deterministic channel-bindings/{slug}/{type}/{agentId}
