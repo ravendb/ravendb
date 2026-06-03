@@ -3,7 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.AiAppliance.AiHelper;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -61,5 +64,53 @@ public class MockAiHelperClientTests(ITestOutputHelper output) : RavenTestBase(o
         var agent = Assert.Single(result.Configurations);
         Assert.False(string.IsNullOrWhiteSpace(agent.Name));
         Assert.Contains(prompt, agent.SystemPrompt);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Suggested_agents_provision_against_a_real_server()
+    {
+        // The suggest endpoint only checks structural validity (Name + SystemPrompt), so a mock the
+        // server's ValidateConfiguration rejects would still pass review and only fail at provision
+        // time. Round-trip every suggested candidate through store.AI.CreateAgentAsync (the same call
+        // AiAgentRegistrar makes) to guard two regressions: the "defined on both the agent level and
+        // the query level" rejection, and the missing-SampleObject gap.
+        using var store = GetDocumentStore();
+
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(
+            new AiConnectionString
+            {
+                Name = "demo-llm",
+                ModelType = AiModelType.Chat,
+                // localhost Ollama is never contacted: agent creation only validates config structure.
+                OllamaSettings = new OllamaSettings("http://localhost:11434/", "llama3.1"),
+            }));
+
+        var mock = new MockAiHelperClient();
+        var dataMode = await mock.SuggestAiAgentAsync(
+            new CdcSinkConfiguration(), collectionsSample: null, "from-data", prompt: null, CancellationToken.None);
+        var promptMode = await mock.SuggestAiAgentAsync(
+            new CdcSinkConfiguration(), collectionsSample: null, "from-prompt", "help shoppers find orders", CancellationToken.None);
+
+        var candidates = dataMode.Configurations.Concat(promptMode.Configurations).ToList();
+        Assert.NotEmpty(candidates);
+
+        foreach (var candidate in candidates)
+        {
+            candidate.ConnectionStringName = "demo-llm";
+
+            // Must not throw: before the NorthwindSampleConfigs fix this raised a RavenException
+            // ("Parameter customerId is defined on both the agent level and the query level ...").
+            var result = await store.AI.CreateAgentAsync(candidate);
+            Assert.False(string.IsNullOrEmpty(result.Identifier));
+        }
+
+        var agents = await store.AI.GetAgentsAsync();
+
+        // Every candidate persisted (distinct identifiers, no accidental upsert collisions) ...
+        Assert.Equal(candidates.Count, agents.AiAgents.Count());
+
+        // ... and each carries its own non-empty SampleObject rather than relying on the appliance's
+        // provision-time {"reply":""} fallback.
+        Assert.All(agents.AiAgents, agent => Assert.False(string.IsNullOrWhiteSpace(agent.SampleObject)));
     }
 }

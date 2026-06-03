@@ -12,6 +12,11 @@ namespace Raven.AiAppliance.AiHelper;
 /// </summary>
 internal static class NorthwindSampleConfigs
 {
+    // Minimal output shape every suggested agent carries so the Review form shows a concrete
+    // example and provisioning never relies on AiAgentRegistrar's silent fallback. RavenDB
+    // requires either OutputSchema or SampleObject to be non-empty.
+    private const string DefaultSampleObject = """{"reply":""}""";
+
     /// <summary>
     /// One Northwind <see cref="CdcSinkConfiguration"/> covering Customers, Orders, and Products.
     /// <see cref="CdcSinkConfiguration.ConnectionStringName"/> is set because the wizard's suggest
@@ -77,6 +82,10 @@ internal static class NorthwindSampleConfigs
     /// the <c>from-data</c> mode result. <see cref="AiAgentConfiguration.ConnectionStringName"/> is
     /// left empty: the operator picks an existing AI connection string in the Review form, and the
     /// suggest endpoint does not validate it (only provisioning does).
+    /// Each candidate carries an explicit <see cref="AiAgentConfiguration.SampleObject"/>. Chat-scoped
+    /// inputs (<c>customerId</c>) stay agent-level parameters while model-filled inputs (<c>term</c>,
+    /// <c>from</c>/<c>to</c>) stay query-level via <c>ParametersSampleObject</c> — a parameter may live
+    /// at only one level, or server-side validation rejects the agent.
     /// </summary>
     public static AiAgentConfiguration[] BuildDataModeAgents() =>
     [
@@ -88,6 +97,7 @@ internal static class NorthwindSampleConfigs
                 "You are a customer-support assistant for the Northwind store. Help shoppers find " +
                 "their orders, check order dates and freight charges, and answer questions about a " +
                 "customer's purchase history. Use the provided query tools and never invent order data.",
+            SampleObject = DefaultSampleObject,
             Queries =
             [
                 new AiAgentToolQuery
@@ -95,7 +105,7 @@ internal static class NorthwindSampleConfigs
                     Name = "findOrdersByCustomer",
                     Description = "Returns the orders placed by a given customer, most recent first.",
                     Query = "from Orders where CustomerId = $customerId order by OrderDate desc",
-                    ParametersSampleObject = "{ \"customerId\": \"customers/ALFKI\" }",
+                    ParametersSampleObject = "{}",
                 },
             ],
             Parameters =
@@ -111,6 +121,7 @@ internal static class NorthwindSampleConfigs
                 "You are a product-catalog assistant for the Northwind store. Help shoppers search " +
                 "the catalog, compare prices, and check stock availability. Mention when a product is " +
                 "discontinued. Only answer from the catalog data returned by the query tools.",
+            SampleObject = DefaultSampleObject,
             Queries =
             [
                 new AiAgentToolQuery
@@ -121,10 +132,6 @@ internal static class NorthwindSampleConfigs
                     ParametersSampleObject = "{ \"term\": \"tea*\" }",
                 },
             ],
-            Parameters =
-            [
-                new AiAgentParameter { Name = "term", Description = "A product-name search term (supports the * wildcard)." },
-            ],
         },
         new AiAgentConfiguration
         {
@@ -134,6 +141,7 @@ internal static class NorthwindSampleConfigs
                 "You are a sales-insights analyst for the Northwind store. Answer questions about " +
                 "order volume, freight spend, and customer activity over a date range. Summarize the " +
                 "numbers returned by the query tools; do not fabricate figures.",
+            SampleObject = DefaultSampleObject,
             Queries =
             [
                 new AiAgentToolQuery
@@ -144,18 +152,15 @@ internal static class NorthwindSampleConfigs
                     ParametersSampleObject = "{ \"from\": \"1997-01-01\", \"to\": \"1997-12-31\" }",
                 },
             ],
-            Parameters =
-            [
-                new AiAgentParameter { Name = "from", Description = "Inclusive start date (ISO-8601)." },
-                new AiAgentParameter { Name = "to", Description = "Inclusive end date (ISO-8601)." },
-            ],
         },
     ];
 
     /// <summary>
     /// Single agent candidate for the <c>from-prompt</c> mode. The operator's intent prompt is
     /// folded into the system prompt, letting the front end demonstrate that prompt-mode reflects
-    /// the supplied input.
+    /// the supplied input. Like the data-mode candidates, it carries an explicit
+    /// <see cref="AiAgentConfiguration.SampleObject"/> and keeps <c>customerId</c> as an agent-level
+    /// (chat-scoped) parameter, so the query's <c>ParametersSampleObject</c> stays empty.
     /// </summary>
     public static AiAgentConfiguration BuildPromptModeAgent(string? prompt)
     {
@@ -171,6 +176,7 @@ internal static class NorthwindSampleConfigs
                 "You are an assistant for the Northwind store, backed by the Customers, Orders, and " +
                 "Products collections. " + intent + " Answer only from the data returned by the query " +
                 "tools and ask for clarification when a request is ambiguous.",
+            SampleObject = DefaultSampleObject,
             Queries =
             [
                 new AiAgentToolQuery
@@ -178,7 +184,7 @@ internal static class NorthwindSampleConfigs
                     Name = "findOrdersByCustomer",
                     Description = "Returns the orders placed by a given customer, most recent first.",
                     Query = "from Orders where CustomerId = $customerId order by OrderDate desc",
-                    ParametersSampleObject = "{ \"customerId\": \"customers/ALFKI\" }",
+                    ParametersSampleObject = "{}",
                 },
             ],
             Parameters =
