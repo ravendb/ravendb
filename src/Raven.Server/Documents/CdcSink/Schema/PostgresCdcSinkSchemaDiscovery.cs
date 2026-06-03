@@ -74,8 +74,39 @@ namespace Raven.Server.Documents.CdcSink.Schema
             }
 
             await PopulateOutgoingForeignKeysAsync(conn, queries, tableLookup, ct);
+            await ApplyGeneratedColumnsAsync(conn, columnLookup, ct);
 
             return schema;
+        }
+
+        /// <summary>
+        /// Marks STORED generated columns as not CDC-capturable. Postgres does not publish generated
+        /// columns over logical replication (before PG 18), so CDC cannot deliver them. The
+        /// <c>information_schema.columns.is_generated</c> column only exists on PostgreSQL 12+, so this
+        /// pass is skipped on older servers - which have no generated columns anyway - and keeps the
+        /// shared <see cref="NpgSqlSchemaQueries.SelectColumnsQuery"/> free of version-specific columns
+        /// (it is also used by the SQL Migration feature, which supports PG 10/11).
+        /// </summary>
+        private static async Task ApplyGeneratedColumnsAsync(
+            NpgsqlConnection conn,
+            Dictionary<(string Schema, string Table, string Column), CdcSinkSourceColumn> columnLookup,
+            CancellationToken ct)
+        {
+            if (conn.PostgreSqlVersion.Major < 12)
+                return;
+
+            await using var cmd = new NpgsqlCommand(
+                "SELECT table_schema, table_name, column_name FROM information_schema.columns WHERE is_generated = 'ALWAYS'", conn);
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var key = (reader["table_schema"].ToString(), reader["table_name"].ToString(), reader["column_name"].ToString());
+                if (columnLookup.TryGetValue(key, out var column))
+                {
+                    column.IsCdcCapturable = false;
+                    column.UnsupportedReason = GeneratedColumnReason;
+                }
+            }
         }
 
         /// <summary>

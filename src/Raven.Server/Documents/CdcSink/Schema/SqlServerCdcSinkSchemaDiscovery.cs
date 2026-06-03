@@ -14,6 +14,23 @@ namespace Raven.Server.Documents.CdcSink.Schema
     {
         private static readonly MsSqlSchemaQueries Queries = new MsSqlSchemaQueries();
 
+        // The internal CDC catalog (cdc.change_tables, cdc.lsn_time_mapping, cdc.<schema>_<table>_CT, ...)
+        // and other system schemas are never valid CDC sources; without this filter they show up in
+        // discovery and then get flagged "not enrolled in CDC", which breaks Verify Source.
+        private static readonly HashSet<string> SystemSchemas = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "cdc",
+            "sys",
+            "INFORMATION_SCHEMA",
+        };
+
+        // System tables that live in a user schema (so the schema filter alone won't drop them).
+        // systranschemas is created in dbo when CDC / transactional replication is enabled.
+        private static readonly HashSet<string> SystemTables = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "systranschemas",
+        };
+
         public override async Task<CdcSinkSourceSchema> DiscoverAsync(string connectionString, string[] schemas, CancellationToken ct)
         {
             await using var conn = new SqlConnection(connectionString);
@@ -23,7 +40,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
             var tableLookup = new Dictionary<(string Schema, string Table), CdcSinkSourceTable>();
             var columnLookup = new Dictionary<(string Schema, string Table, string Column), CdcSinkSourceColumn>();
 
-            await ReadColumnsAsync(conn, schema, tableLookup, columnLookup, ct);
+            var allowedSchemas = ResolveAllowedSchemas(schemas);
+
+            await ReadColumnsAsync(conn, schema, tableLookup, columnLookup, allowedSchemas, ct);
             await ReadPrimaryKeysAsync(conn, tableLookup, columnLookup, ct);
             await PopulateOutgoingForeignKeysAsync(conn, tableLookup, ct);
             await ApplyCdcEnrollmentAsync(conn, tableLookup, columnLookup, ct);
@@ -31,11 +50,36 @@ namespace Raven.Server.Documents.CdcSink.Schema
             return schema;
         }
 
+        /// <summary>
+        /// Resolves which source schemas discovery should expose. An explicit hint is honored;
+        /// an empty hint falls back to dbo (the SQL Server default returned by
+        /// <see cref="ResolveDefaultSchema"/> and used by the CDC runtime / Studio "Discover" contract),
+        /// not the login's actual default schema. System schemas are always excluded.
+        /// </summary>
+        private static HashSet<string> ResolveAllowedSchemas(string[] schemas)
+        {
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (schemas is { Length: > 0 })
+            {
+                foreach (var s in schemas)
+                    allowed.Add(s);
+            }
+            else
+            {
+                // SQL Server's default is the constant "dbo"; ResolveDefaultSchema ignores the connection string here.
+                allowed.Add(ResolveDefaultSchema(MicrosoftDataSqlClientFactory, connectionString: null));
+            }
+
+            allowed.ExceptWith(SystemSchemas);
+            return allowed;
+        }
+
         private static async Task ReadColumnsAsync(
             DbConnection conn,
             CdcSinkSourceSchema schema,
             Dictionary<(string Schema, string Table), CdcSinkSourceTable> tableLookup,
             Dictionary<(string Schema, string Table, string Column), CdcSinkSourceColumn> columnLookup,
+            HashSet<string> allowedSchemas,
             CancellationToken ct)
         {
             await using var cmd = conn.CreateCommand();
@@ -46,6 +90,10 @@ namespace Raven.Server.Documents.CdcSink.Schema
             {
                 var schemaName = reader["TABLE_SCHEMA"].ToString();
                 var tableName = reader["TABLE_NAME"].ToString();
+
+                if (allowedSchemas.Contains(schemaName) == false || SystemTables.Contains(tableName))
+                    continue;
+
                 var columnName = reader["COLUMN_NAME"].ToString();
                 var nativeType = reader["DATA_TYPE"].ToString().ToLowerInvariant();
 

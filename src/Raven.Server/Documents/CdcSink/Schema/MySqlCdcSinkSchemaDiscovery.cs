@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents.CdcSink.Schema
                     var tableName = reader["TABLE_NAME"].ToString();
                     var columnName = reader["COLUMN_NAME"].ToString();
                     var nativeType = reader["DATA_TYPE"].ToString().ToLowerInvariant();
+                    var isGenerated = IsGeneratedColumn(reader["EXTRA"]?.ToString());
 
                     if (tableLookup.TryGetValue((schemaName, tableName), out var table) == false)
                     {
@@ -51,7 +53,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
                         Name = columnName,
                         NativeType = nativeType,
                         SuggestedType = SuggestType(nativeType),
-                        IsCdcCapturable = true,
+                        IsCdcCapturable = isGenerated == false,
+                        UnsupportedReason = isGenerated ? GeneratedColumnReason : null,
                     };
                     table.Columns.Add(column);
                     columnLookup[(schemaName, tableName, columnName)] = column;
@@ -144,6 +147,26 @@ namespace Raven.Server.Documents.CdcSink.Schema
                     ReferencedColumns = entry.ReferencedColumns,
                 });
             }
+        }
+
+        /// <summary>
+        /// True for a MySQL/MariaDB generated (computed) column, read from INFORMATION_SCHEMA.COLUMNS.EXTRA.
+        /// EXTRA is present on every server version (unlike GENERATION_EXPRESSION, which is MySQL 5.7.6+),
+        /// keeping the shared SQL Migration query backward-compatible. MySQL 5.7.6+ / MariaDB 10.2+ report
+        /// "STORED GENERATED" / "VIRTUAL GENERATED"; older MariaDB reports standalone "VIRTUAL" / "PERSISTENT".
+        /// The space-delimited tokens deliberately exclude MySQL 8.0.13+'s "DEFAULT_GENERATED" marker, which
+        /// is set on ordinary expression-default columns that are present in the binlog row image and are
+        /// fully CDC-capturable.
+        /// </summary>
+        private static bool IsGeneratedColumn(string extra)
+        {
+            if (string.IsNullOrEmpty(extra))
+                return false;
+
+            return extra.Contains("STORED GENERATED", StringComparison.OrdinalIgnoreCase)
+                || extra.Contains("VIRTUAL GENERATED", StringComparison.OrdinalIgnoreCase)
+                || extra.Equals("VIRTUAL", StringComparison.OrdinalIgnoreCase)
+                || extra.Equals("PERSISTENT", StringComparison.OrdinalIgnoreCase);
         }
 
         private static CdcColumnType SuggestType(string lowerNativeType)
