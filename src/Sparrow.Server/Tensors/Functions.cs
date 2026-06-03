@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Net;
 using System.Numerics;
 using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
@@ -27,6 +26,39 @@ namespace Sparrow.Server.Tensors
             where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
         {
             return TResult.One - CosineSimilarity<T, TResult>(a, b);
+        }
+
+        /// <summary>
+        /// Returns Σ aᵢ·bᵢ for two equal-length f32 spans. On AVX2+FMA / AVX-512 the work is
+        /// issued as multiple independent FMA chains using <see cref="Arithmetics.MultiplyAddEstimate(Vector512{float}, Vector512{float}, Vector512{float})"/>.
+        /// On AArch64/NEON the NEON-shaped kernel is used. On 32-bit hosts or for inputs shorter
+        /// than one Vector512 the call is forwarded to <see cref="TensorPrimitives.Dot(ReadOnlySpan{float}, ReadOnlySpan{float})"/>.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float DotProduct(ReadOnlySpan<float> a, ReadOnlySpan<float> b)
+        {
+            Debug.Assert(a.Length == b.Length, "a.Length == b.Length");
+
+            if (PlatformDetails.Is32Bits || a.Length < Vector512<float>.Count)
+                return TensorPrimitives.Dot(a, b);
+
+            if (AdvInstructionSet.IsAcceleratedVector256)
+            {
+                return (float)Vectorized512.DotProductInternalX64(
+                    ref MemoryMarshal.GetReference(a),
+                    ref MemoryMarshal.GetReference(b),
+                    (nuint)a.Length);
+            }
+
+            if (AdvInstructionSet.Arm.IsSupported)
+            {
+                return (float)Vectorized512.DotProductInternalNeon(
+                    ref MemoryMarshal.GetReference(a),
+                    ref MemoryMarshal.GetReference(b),
+                    (nuint)a.Length);
+            }
+
+            return TensorPrimitives.Dot(a, b);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -407,6 +439,121 @@ namespace Sparrow.Server.Tensors
                 double b2Reciprocal = rsqrts.ToScalar(); // lane 0
                 double a2Reciprocal = Sse2.UnpackHigh(rsqrts, rsqrts).ToScalar(); // lane 1
                 return  ab * a2Reciprocal * b2Reciprocal;
+            }
+
+            /// <summary>
+            /// Σ aᵢ·bᵢ for an f32 span on x64 with AVX2+FMA or AVX-512. Two Vector512 accumulators
+            /// are updated per loop iteration; on AVX2-only hardware the JIT lowers each Vector512
+            /// FMA to a pair of Vector256 FMAs, yielding 4 independent ymm FMA chains that saturate
+            /// the FMA issue ports. The two-accumulator shape keeps total ymm pressure at 4, inside
+            /// the 16-register budget. The trailing partial vector is masked via
+            /// <see cref="MoveMaskTable"/> so no scalar tail loop is required.
+            /// </summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static double DotProductInternalX64(ref float aRef, ref float bRef, nuint size)
+            {
+                Vector512<float> ab0 = Vector512<float>.Zero;
+                Vector512<float> ab1 = Vector512<float>.Zero;
+
+                nuint step = (nuint)Vector512<float>.Count;
+                nuint oneVectorFromEnd = size - step;
+                nuint twoFromEnd = size >= 2 * step ? size - 2 * step : 0;
+                nuint i = 0;
+
+            Loop2:
+                // Two independent FMA chains per iteration. Enter only when the span is wide
+                // enough to load both vectors; the single-vector body below drains the rest.
+                if (size >= 2 * step && i <= twoFromEnd)
+                {
+                    var a0 = Vector512.LoadUnsafe(ref aRef, i);
+                    var b0 = Vector512.LoadUnsafe(ref bRef, i);
+                    var a1 = Vector512.LoadUnsafe(ref aRef, i + step);
+                    var b1 = Vector512.LoadUnsafe(ref bRef, i + step);
+
+                    ab0 = Arithmetics.MultiplyAddEstimate(a0, b0, ab0);
+                    ab1 = Arithmetics.MultiplyAddEstimate(a1, b1, ab1);
+
+                    i += 2 * step;
+                    goto Loop2;
+                }
+
+                if (i <= oneVectorFromEnd)
+                {
+                    var aV = Vector512.LoadUnsafe(ref aRef, i);
+                    var bV = Vector512.LoadUnsafe(ref bRef, i);
+                    ab0 = Arithmetics.MultiplyAddEstimate(aV, bV, ab0);
+                    i += step;
+                }
+
+                if (i != size)
+                {
+                    nuint offset = size - i;
+                    Debug.Assert((int)offset * sizeof(float) + Vector512<byte>.Count <= MoveMaskTable.Length);
+
+                    var mask = Vector512.LoadUnsafe<float>(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, float>(MoveMaskTable)), offset);
+
+                    var aTail = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef, oneVectorFromEnd), mask);
+                    var bTail = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef, oneVectorFromEnd), mask);
+                    ab0 = Arithmetics.MultiplyAddEstimate(aTail, bTail, ab0);
+                }
+
+                return (double)Vector512.Sum(ab0 + ab1);
+            }
+
+            /// <summary>
+            /// Σ aᵢ·bᵢ for an f32 span on AArch64/NEON. Two Vector512 accumulators are updated per
+            /// loop iteration; the JIT lowers each Vector512 op onto four 128-bit NEON vectors,
+            /// yielding independent FMA chains. Tail bytes are masked via <see cref="MoveMaskTable"/>.
+            /// </summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static double DotProductInternalNeon(ref float aRef, ref float bRef, nuint size)
+            {
+                Vector512<float> ab0 = Vector512<float>.Zero;
+                Vector512<float> ab1 = Vector512<float>.Zero;
+
+                nuint step = (nuint)Vector512<float>.Count;
+                nuint oneVectorFromEnd = size - step;
+                nuint twoFromEnd = size >= 2 * step ? size - 2 * step : 0;
+                nuint i = 0;
+
+            Loop2:
+                // Two independent FMA chains per iteration. Enter only when the span is wide
+                // enough to load both vectors; the single-vector body below drains the rest.
+                if (size >= 2 * step && i <= twoFromEnd)
+                {
+                    var a0 = Vector512.LoadUnsafe(ref aRef, i);
+                    var b0 = Vector512.LoadUnsafe(ref bRef, i);
+                    var a1 = Vector512.LoadUnsafe(ref aRef, i + step);
+                    var b1 = Vector512.LoadUnsafe(ref bRef, i + step);
+
+                    ab0 = Arithmetics.MultiplyAddEstimate(a0, b0, ab0);
+                    ab1 = Arithmetics.MultiplyAddEstimate(a1, b1, ab1);
+
+                    i += 2 * step;
+                    goto Loop2;
+                }
+
+                if (i <= oneVectorFromEnd)
+                {
+                    var aV = Vector512.LoadUnsafe(ref aRef, i);
+                    var bV = Vector512.LoadUnsafe(ref bRef, i);
+                    ab0 = Arithmetics.MultiplyAddEstimate(aV, bV, ab0);
+                    i += step;
+                }
+
+                if (i != size)
+                {
+                    nuint offset = size - i;
+                    var mask = Vector512.LoadUnsafe<float>(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, float>(MoveMaskTable)), offset);
+
+                    var aTail = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef, oneVectorFromEnd), mask);
+                    var bTail = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef, oneVectorFromEnd), mask);
+                    ab0 = Arithmetics.MultiplyAddEstimate(aTail, bTail, ab0);
+                }
+
+                return (double)Vector512.Sum(ab0 + ab1);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

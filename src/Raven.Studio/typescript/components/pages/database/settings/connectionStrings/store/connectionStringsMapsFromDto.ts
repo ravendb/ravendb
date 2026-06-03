@@ -10,6 +10,7 @@ import {
     SqlConnection,
     SnowflakeConnection,
     AmazonSqsConnection,
+    AzureServiceBusConnection,
     AiConnection,
     StudioConnectionType,
 } from "../connectionStringsTypes";
@@ -66,6 +67,9 @@ function getConnectionStringUsedTasks(
             break;
         case "AmazonSqs":
             filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
+            break;
+        case "AzureServiceBus":
+            filteredTasks = tasks.filter((task) => task.BrokerType === "AzureServiceBus");
             break;
         case "Ai":
             filteredTasks = tasks.filter((task) => task.TaskType === "EmbeddingsGeneration");
@@ -329,6 +333,51 @@ function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthentic
         return "basic";
     }
     return null;
+}
+
+function getAzureServiceBusAuthType(dto: QueueConnectionStringDto): AzureServiceBusAuthenticationType {
+    if (dto.AzureServiceBusConnectionSettings.ConnectionString) {
+        return "connectionString";
+    }
+    if (dto.AzureServiceBusConnectionSettings.EntraId) {
+        return "entraId";
+    }
+    if (dto.AzureServiceBusConnectionSettings.Passwordless) {
+        return "passwordless";
+    }
+}
+
+export function mapAzureServiceBusConnectionsFromDto(
+    connections: Record<string, QueueConnectionStringDto>,
+    ongoingTasks: OngoingTaskForConnection[]
+): AzureServiceBusConnection[] {
+    const type: AzureServiceBusConnection["type"] = "AzureServiceBus";
+
+    return Object.values(connections)
+        .filter((x) => x.BrokerType === "AzureServiceBus")
+        .map(
+            (connection) =>
+                ({
+                    type,
+                    name: connection.Name,
+                    authType: getAzureServiceBusAuthType(connection),
+                    settings: {
+                        connectionString: {
+                            connectionStringValue: connection.AzureServiceBusConnectionSettings.ConnectionString,
+                        },
+                        entraId: {
+                            namespace: connection.AzureServiceBusConnectionSettings.EntraId?.Namespace,
+                            tenantId: connection.AzureServiceBusConnectionSettings.EntraId?.TenantId,
+                            clientId: connection.AzureServiceBusConnectionSettings.EntraId?.ClientId,
+                            clientSecret: connection.AzureServiceBusConnectionSettings.EntraId?.ClientSecret,
+                        },
+                        passwordless: {
+                            namespace: connection.AzureServiceBusConnectionSettings.Passwordless?.Namespace,
+                        },
+                    },
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
+                }) satisfies AzureServiceBusConnection
+        );
 }
 
 export function mapAiConnectionsFromDto(

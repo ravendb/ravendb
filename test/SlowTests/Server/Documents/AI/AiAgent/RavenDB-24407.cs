@@ -48,6 +48,26 @@ public class RavenDB_24407 : RavenTestBase
 
         [JsonProperty("content")]
         public JToken Content { get; set; }
+
+        [JsonProperty("tool_calls")]
+        public List<ToolCall> ToolCalls { get; set; }
+
+        [JsonProperty("tool_call_id")]
+        public string ToolCallId { get; set; }
+    }
+
+    private class ToolCall
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+    }
+
+    private class Drink
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public int Price { get; set; }
+        public string[] Tags { get; set; }
     }
 
     [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
@@ -58,46 +78,127 @@ public class RavenDB_24407 : RavenTestBase
     public async Task CanResumeConversationWithSummarization(Options options, GenAiConfiguration config, bool summarization, bool withHistory)
     {
         using var store = GetDocumentStore(options);
-        await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/1",
+                Name = "coca cola",
+                Price = 10,
+                Tags = ["sweet", "cold", "carbonated"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/2",
+                Name = "sprite",
+                Price = 10,
+                Tags = ["sweet", "sour", "cold", "carbonated"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/3",
+                Name = "fanta orange",
+                Price = 11,
+                Tags = ["sweet", "fruity", "cold", "carbonated"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/4",
+                Name = "sparkling water",
+                Price = 8,
+                Tags = ["bitter", "cold", "carbonated"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/5",
+                Name = "beer",
+                Price = 18,
+                Tags = ["bitter", "alcoholic", "cold"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/6",
+                Name = "lager beer",
+                Price = 20,
+                Tags = ["bitter", "alcoholic", "cold", "light"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/7",
+                Name = "red wine",
+                Price = 95,
+                Tags = ["bitter", "sour", "very alcoholic"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/8",
+                Name = "whiskey",
+                Price = 140,
+                Tags = ["bitter", "very alcoholic", "strong"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/9",
+                Name = "vodka",
+                Price = 120,
+                Tags = ["very alcoholic", "strong"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/10",
+                Name = "mojito",
+                Price = 55,
+                Tags = ["sweet", "sour", "alcoholic", "mint"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/11",
+                Name = "lemonade",
+                Price = 14,
+                Tags = ["sweet", "sour", "cold"]
+            });
+
+            await session.StoreAsync(new Drink
+            {
+                Id = "drinks/12",
+                Name = "iced tea",
+                Price = 13,
+                Tags = ["sweet", "cold", "tea"]
+            });
+
+            await session.SaveChangesAsync();
+        }
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        const string systemPrompt = @"
-You are an AI shopping assistant for an online store.
+        const string systemPrompt = """
+                                    You are a shopping assistant.
 
-You MUST use the available tools to answer user questions whenever the information can be retrieved from them.
-
-Rules:
-- ALWAYS use the ""RecentOrder"" tool when the user asks about their orders or past purchases.
-- ALWAYS use the ""ProductSearch"" tool when suggesting products, alternatives, or recommendations.
-- DO NOT rely on your general knowledge for product suggestions when tools are available.
-- DO NOT invent products or details — only use real data returned from tools.
-- You may call multiple tools if needed before answering.
-- Only provide a final answer after you have gathered enough data using tools.
-
-When talking about orders or products, always include their IDs.
-
-If you do not have enough data, call another tool instead of guessing.";
+                                    Rules:
+                                    - Use DrinkSearch for recommendations.
+                                    - Never invent drink pairings, only use the tool results.
+                                    """;
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
         agent.Identifier = "shopping-assistant";
-        agent.Parameters.Add(new AiAgentParameter("company"));
 
         agent.Queries =
         [
             new AiAgentToolQuery
                 {
-                    Name = "ProductSearch",
-                    Description =  "semantic search the store product catalog",
-                    Query = "from Products where vector.search(embedding.text(Name), $query) limit 5",
-                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\", \"cheese or similar products\"]}"
-                }
-                ,
-                new AiAgentToolQuery
-                {
-                    Name = "RecentOrder",
-                    Description = "Get the recent orders of the current user",
-                    Query = "from Orders where Company = $company order by OrderedAt desc limit 3",
-                    ParametersSampleObject = "{}"
+                    Name = "DrinkSearch",
+                    Description =  "semantic search the store drinks catalog",
+                    Query = "from Drinks where vector.search(embedding.text(Name), $query) limit 5",
+                    ParametersSampleObject = "{\"query\": [\"Term or phrase to search in the catalog, for example: sweet and low alcoholic drink\"]}"
                 }
         ];
         agent.MaxModelIterationsPerCall = 5;
@@ -105,20 +206,20 @@ If you do not have enough data, call another tool instead of guessing.";
         var identifier = (await store.AI.CreateAgentAsync<OutputSampleObject>(agent, OutputSampleObject.Instance)).Identifier;
         // start chat
         var chat = store.AI.Conversation(
-            agent.Identifier,
+            identifier,
             "chats/",
-            new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
+            new AiConversationCreationOptions());
 
-        chat.SetUserPrompt("what goes well with my cheese for recent orders?");
+        chat.SetUserPrompt("What sweet alcoholic drink do you recommend? recommend 1 drink please");
         var r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
-
         Assert.NotNull(r.Answer);
 
         // resume
-        chat.SetUserPrompt("can you give me a cheaper alternative?");
-        r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
+        chat.SetUserPrompt("is it sweet?");
+        var r2 = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
 
-        Assert.NotNull(r.Answer);
+        Assert.NotNull(r2.Answer);
+        Assert.NotEqual(r.Answer, r2.Answer);
 
         var chatDoc = await GetChat(store, chat.Id);
         Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
@@ -152,14 +253,15 @@ If you do not have enough data, call another tool instead of guessing.";
         
         await store.AI.CreateAgentAsync(agent, OutputSampleObject.Instance);
 
-        chat.SetUserPrompt("use the tool I gave you and try to give me a cheaper alternative");
+        chat.SetUserPrompt("is it bitter?");
         r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
 
         Assert.NotNull(r.Answer);
 
         chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(summarization ? 3 : 2, chatDoc.Messages.Count);
+        Assert.Equal(2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        AssertNoOrphanToolMessages(chatDoc);
 
         if (withHistory)
         {
@@ -177,14 +279,15 @@ If you do not have enough data, call another tool instead of guessing.";
 
         // resume - still with summarization
 
-        chat.SetUserPrompt("can you give me a cheaper alternative?");
+        chat.SetUserPrompt("is it super alcoholic?");
         r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
 
         Assert.NotNull(r.Answer);
 
         chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(summarization ? 3 : 2, chatDoc.Messages.Count);
+        Assert.Equal(2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        AssertNoOrphanToolMessages(chatDoc);
 
         // resume
         agent.ChatTrimming = null;
@@ -325,6 +428,40 @@ If you do not have enough data, call another tool instead of guessing.";
             var msg = await dumpFactory(); // build dump only on failure
             Assert.Fail($"Expected last history message role 'tool' but was '{lastMsgRole}'.\n{msg}");
         }
+    }
+
+    // Validates that the conversation is structurally valid for OpenAI:
+    // every role="tool" message must reference a preceding assistant tool_calls entry,
+    // and no assistant tool_call may be left unanswered.
+    private static void AssertNoOrphanToolMessages(Chat chatDoc)
+    {
+        var outstanding = new HashSet<string>();
+
+        for (int i = 0; i < chatDoc.Messages.Count; i++)
+        {
+            var m = chatDoc.Messages[i];
+
+            if (m.Role == "tool")
+            {
+                Assert.False(string.IsNullOrEmpty(m.ToolCallId),
+                    $"Tool message at index {i} has no tool_call_id. Dump:\n{Dump(chatDoc)}");
+                Assert.True(outstanding.Remove(m.ToolCallId),
+                    $"Orphan tool response at index {i}: tool_call_id '{m.ToolCallId}' has no preceding assistant tool_calls entry. Dump:\n{Dump(chatDoc)}");
+                continue;
+            }
+
+            if (m.ToolCalls == null)
+                continue;
+
+            foreach (var tc in m.ToolCalls)
+            {
+                if (string.IsNullOrEmpty(tc.Id) == false)
+                    outstanding.Add(tc.Id);
+            }
+        }
+
+        Assert.True(outstanding.Count == 0,
+            $"Orphan assistant tool_calls left unanswered: [{string.Join(", ", outstanding)}]. Dump:\n{Dump(chatDoc)}");
     }
 
     private static string Dump(Chat c)

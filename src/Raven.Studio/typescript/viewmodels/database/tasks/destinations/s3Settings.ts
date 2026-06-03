@@ -17,6 +17,7 @@ class s3Settings extends amazonSettings {
     useCustomS3Host = ko.observable<boolean>();
     customServerUrl = ko.observable<string>();
     forcePathStyle = ko.observable<boolean>();
+    disableChecksumValidation = ko.observable<boolean>();
     accessKeyPropertyName: KnockoutComputed<string>;
     secretKeyPropertyName: KnockoutComputed<string>;
     isSecretHidden = ko.observable<boolean>(true);
@@ -34,6 +35,7 @@ class s3Settings extends amazonSettings {
         this.bucketName(dto.BucketName);
         this.customServerUrl(dto.CustomServerUrl);
         this.forcePathStyle(dto.ForcePathStyle);
+        this.disableChecksumValidation(dto.DisableChecksumValidation);
         this.useCustomS3Host(!!dto.CustomServerUrl);
         this.targetOperation = targetOperation;
         this.storageClass(dto.StorageClass ?? "Standard");
@@ -51,6 +53,7 @@ class s3Settings extends amazonSettings {
             this.selectedAwsRegion,
             this.customServerUrl,
             this.forcePathStyle,
+            this.disableChecksumValidation,
             this.useCustomS3Host,
             this.storageClass,
             
@@ -173,6 +176,7 @@ class s3Settings extends amazonSettings {
         dto.BucketName = this.bucketName();
         dto.CustomServerUrl = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.customServerUrl() : undefined;
         dto.ForcePathStyle = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.forcePathStyle() : false;
+        dto.DisableChecksumValidation = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.disableChecksumValidation() : false;
         dto.StorageClass = this.storageClass();
         
         return genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey", "AwsSessionToken"]);
@@ -189,6 +193,7 @@ class s3Settings extends amazonSettings {
             RemoteFolderName: null,
             GetBackupConfigurationScript: null,
             ForcePathStyle: false,
+            DisableChecksumValidation: false,
             CustomServerUrl: null,
             StorageClass: "Standard",
         }, allowedRegions, targetOperation);

@@ -69,23 +69,24 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     .AddParameter("minRamGb", 16) // send
                     .AddParameter("customerId", "Customers/1", new AiConversationParameterOptions(){ SendToModel = false}) //don't-send
                     // Additional fields for sub-agent
-                    .AddParameter("customerName", "Shahar", new AiConversationParameterOptions(){ SendToModel = true}) // dont-send (pass it as is to the sub-agent if exists)
+                    .AddParameter("customerName", "Shahar", new AiConversationParameterOptions(){ SendToModel = true}) // send (pass it as is to the sub-agent if exists)
             );
             chat.SetUserPrompt(
                 "Find laptops for me."
             );
             var r = await chat.RunAsync<OutputSchema>();
 
-            // only maxBudgetNis and minRamGb should be sent to the model,
-            // customerId shouldn't be sent (sendToModel is false on chat), customerName shouldn't be sent (additional param - only for sub-agent use)
-            var expectedParamsMsg = "AI Agent Parameters:\nmaxBudgetNis = 3500" + Environment.NewLine + 
-                                    "minRamGb = 16" + Environment.NewLine + 
+            // customerId shouldn't be sent (sendToModel is false on chat)
+            var expectedParamsMsg = "AI Agent Parameters:\nmaxBudgetNis = 3500" + Environment.NewLine +
+                                    "minRamGb = 16" + Environment.NewLine +
                                     "customerName = Shahar" + Environment.NewLine;
-            using (var session = store.OpenAsyncSession())
+            var result = await store.AI.GetConversationMessagesAsync(new GetConversationMessagesOptions
             {
-                var doc = await session.LoadAsync<Chat>("Chats/1");
-                Assert.True(doc.Messages.Any(m => m.Content as string == expectedParamsMsg));
-            }
+                ConversationId = "Chats/1",
+                DetailLevel = AiConversationDetailLevel.Full,
+                PageSize = 50
+            });
+            Assert.Contains(result.Messages, m => m.Content == expectedParamsMsg);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]

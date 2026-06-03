@@ -83,6 +83,7 @@ export const defaultS3FormData: S3Destination = {
     isUseCustomHost: false,
     customServerUrl: null,
     forcePathStyle: false,
+    disableChecksumValidation: false,
     bucketName: null,
 };
 
@@ -97,6 +98,7 @@ function mapS3FromDto(dto: Raven.Client.Documents.Operations.Backups.S3Settings)
         isUseCustomHost: dto.CustomServerUrl != null,
         customServerUrl: dto.CustomServerUrl,
         forcePathStyle: dto.ForcePathStyle,
+        disableChecksumValidation: dto.DisableChecksumValidation,
         bucketName: dto.BucketName,
     };
 }

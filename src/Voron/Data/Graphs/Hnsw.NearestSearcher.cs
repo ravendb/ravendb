@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Sparrow;
 using Voron.Global;
 using Voron.Util;
 
 namespace Voron.Data.Graphs;
 
-public partial class Hnsw
+public unsafe partial class Hnsw
 {
     public partial class SearchState
     {
@@ -29,6 +31,14 @@ public partial class Hnsw
             private long _vectorReadCounter = 0;
             private readonly int _startingPointIndex;
             private ContextBoundNativeList<int> _startingPointIndexes;
+
+            // Traversal state carried across MoveNextBatch calls so the caller can consume
+            // one batch at a time. _needsRestart triggers a fresh InitState; _isDone short-circuits
+            // further work once the outer traversal has finished.
+            private float _lowerBound;
+            private int _visitedCounter;
+            private bool _needsRestart = true;
+            private bool _isDone;
             
             public long CandidatesProcessed { get => _vectorReadCounter; }
             public int NumberOfCandidates { get; init; }
@@ -96,6 +106,7 @@ public partial class Hnsw
 
                 lowerBound = float.MaxValue;
                 visitedCounter = ++_searchState._visitsCounter;
+                _searchState.OnQueryVector(_vector);
 
                 foreach (var nodeIdx in _startingPointIndexes)
                 {
@@ -122,8 +133,9 @@ public partial class Hnsw
                 Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
                 Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
 
-                lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
                 visitedCounter = ++_searchState._visitsCounter;
+                _searchState.OnQueryVector(_vector);
+                lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
                 {
                     ref var startingPoint = ref _searchState.GetNodeByIndex(_startingPointIndex);
                     startingPoint.Visited = visitedCounter;
@@ -142,52 +154,66 @@ public partial class Hnsw
                 }
             }
 
-            public IEnumerable<bool> Search()
+            public bool MoveNextBatch()
             {
-                Start:
+                if (_isDone)
+                    return false;
+
                 var candidatesQ = _searchState._candidatesQ;
                 var nearestEdgesQ = _searchState._nearestEdgesQ;
-                var allocator = _searchState.Llt.Allocator;
 
-                Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
-                Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
-                InitState(out float lowerBound, out int visitedCounter);
+                if (_needsRestart)
+                {
+                    Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
+                    Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
+                    InitState(out _lowerBound, out _visitedCounter);
+                    _needsRestart = false;
+                }
 
                 while (candidatesQ.TryDequeue(out var cur, out var curDistance))
                 {
-                    if (-curDistance < lowerBound &&
+                    if (-curDistance < _lowerBound &&
                         nearestEdgesQ.Count == _internalNumberOfCandidates)
                     {
                         ProcessResults();
-                        yield return true;
-                        // If we need to fetch more, we'll start the query again with a higher NumberOfCandidates.
-                        // The SearchState keeps its state, so traversal through already visited nodes is I/O-free
-                        // because we keep distances in memory from the previous run.
-                        // This method can be greedy enough to traverse the entire graph, so it's the caller's
-                        // responsibility to enforce a stop condition.
-                        goto Start;
+                        // Drain candidatesQ before yielding. Non-filtered queries consume only the
+                        // first batch and never resume; without this clear, a shared SearchState
+                        // (e.g. MultiVectorSearch sub-queries) carries far-from-the-old-vector
+                        // candidates into the next query and pollutes its priority queue. It also
+                        // satisfies InitState's empty-queue precondition on the restart path.
+                        candidatesQ.Clear();
+                        // Yield the current batch. Subsequent MoveNextBatch calls re-enter via InitState;
+                        // revisits are I/O-free because per-node distances remain cached in SearchState.
+                        // The caller is responsible for enforcing a stop condition: otherwise the search
+                        // may traverse the entire graph.
+                        _needsRestart = true;
+                        return true;
                     }
 
-                    ref var candidate = ref _searchState.GetNodeByIndex(cur);
-                    candidate.Visited = visitedCounter;
+                    _searchState.GetNodeByIndex(cur).Visited = _visitedCounter;
+                    _searchState.ResolveEdgeIndexes(cur, _level, ref _nodeIds, ref _indexes);
 
-                    ref var edges = ref candidate.EdgesPerLevel[_level];
-
-                    _nodeIds.ResetAndCopyFrom(allocator, edges.ToSpan());
-                    _searchState.LoadNodeIndexes(ref _nodeIds, ref _indexes);
-
-                    for (int i = 0; i < _indexes.Count; i++)
+                    // Pin loop locals: NativeList field reads through `this` force the JIT to
+                    // reload the storage pointer on every candidate.
+                    int indexesCount = _indexes.Count;
+                    int* indexesPtr = _indexes.RawItems;
+                    int visitedCounter = _visitedCounter;
+                    for (int i = 0; i < indexesCount; i++)
                     {
-                        var nextIndex = _indexes[i];
+                        var nextIndex = indexesPtr[i];
                         ref var next = ref _searchState.GetNodeByIndex(nextIndex);
                         if (next.Visited == visitedCounter)
                             continue; // already checked
                         next.Visited = visitedCounter;
 
+                        // Prefetch the next unvisited neighbor's vector data to overlap
+                        // cache-miss latency with the current distance computation.
+                        PrefetchNextNeighborVector(indexesPtr, indexesCount, i + 1, visitedCounter);
+
                         var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
                                         || (_hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex));
 
-                        float nextDist = -_searchState.QueryDistance(_vector.Span, nextIndex, ref _vectorReadCounter);
+                        float nextDist = -_searchState.QueryDistance(_vector.Span, ref next, ref _vectorReadCounter);
                         if (nearestEdgesQ.Count < _internalNumberOfCandidates)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
@@ -197,7 +223,7 @@ public partial class Hnsw
                                 nearestEdgesQ.Enqueue(nextIndex, nextDist);
                             }
                         }
-                        else if (lowerBound < nextDist)
+                        else if (_lowerBound < nextDist)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
 
@@ -212,14 +238,15 @@ public partial class Hnsw
                         }
 
                         Debug.Assert(candidatesQ.Count > 0);
-                        nearestEdgesQ.TryPeek(out _, out lowerBound);
+                        nearestEdgesQ.TryPeek(out _, out _lowerBound);
                     }
                 }
 
                 // Nothing more to visit. Move the current results into the candidates list and finish.
                 ProcessResults();
                 candidatesQ.Clear();
-                yield return _candidates.Count > 0;
+                _isDone = true;
+                return _candidates.Count > 0;
             }
 
             public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates)
@@ -232,21 +259,20 @@ public partial class Hnsw
             {
                 Reset();
                 _internalNumberOfCandidates += GetPrefetchExtendSize(_internalNumberOfCandidates);
+                // The next MoveNextBatch call will InitState from the starting points again.
+                _needsRestart = true;
+                _isDone = false;
             }
 
             // Reset the NearestSearcher state; however, it does not clear the data already stored inside SearchState.
             // This is important because it allows us to reduce I/O pressure during over-fetching and when restarting the query.
+            // Node.Visited uses version-based invalidation keyed on SearchState._visitsCounter
+            // (incremented in InitState), and Node.QueryDistanceVersion uses a separate version
+            // keyed on the query vector, so neither needs a per-node reset here.
             private void Reset()
             {
                 _searchState._candidatesQ.Clear();
                 _searchState._nearestEdgesQ.Clear();
-
-                for (int nodeIdx = 0; nodeIdx < _searchState._nodes.Count; nodeIdx++)
-                {
-                    _searchState._nodes[nodeIdx].Visited = 0;
-                }
-
-                _searchState._visitsCounter = 0;
                 _candidates.Clear();
                 _nodeIds.Clear();
                 _indexes.Clear();
@@ -281,6 +307,33 @@ public partial class Hnsw
                 };
                 
                 return _vectorReadCounter < max;
+            }
+
+            /// <summary>
+            /// Finds the next unvisited neighbor starting from <paramref name="startFrom"/> and
+            /// issues software prefetch instructions for its vector data. This overlaps the
+            /// cache-miss latency (~500ns for 6KB from L3) with the current distance computation (~633ns).
+            /// On platforms without software prefetch the JIT eliminates this entirely.
+            /// </summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void PrefetchNextNeighborVector(int* indexesPtr, int indexesCount, int startFrom, int visitedCounter)
+            {
+                if (PortableIntrinsics.CanPrefetch == false)
+                    return;
+
+                for (int j = startFrom; j < indexesCount; j++)
+                {
+                    var idx = indexesPtr[j];
+                    ref var node = ref _searchState.GetNodeByIndex(idx);
+                    if (node.Visited == visitedCounter)
+                        continue;
+
+                    if (node.TryGetVectorAddress(out byte* address, out int length) == false)
+                        return; // vector not loaded yet, skip prefetch
+
+                    PortableIntrinsics.PrefetchRange(address, length);
+                    return;
+                }
             }
 
             private static int GetPrefetchExtendSize(int numberOfCandidates) => numberOfCandidates switch

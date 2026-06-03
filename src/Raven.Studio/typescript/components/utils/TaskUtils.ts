@@ -18,6 +18,8 @@ export default class TaskUtils {
                     return "AzureQueueStorageQueueEtl";
                 case "AmazonSqs":
                     return "AmazonSqsQueueEtl";
+                case "AzureServiceBus":
+                    return "AzureServiceBusQueueSink";
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -35,6 +37,8 @@ export default class TaskUtils {
                 case "AmazonSqs":
                 case "AzureQueueStorage":
                     throw new Error("Not yet supported");
+                case "AzureServiceBus":
+                    return "AzureServiceBusQueueSink";
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -56,6 +60,8 @@ export default class TaskUtils {
             case "AzureQueueStorage":
             case "AmazonSqs":
                 throw new Error("Not yet supported");
+            case "AzureServiceBus":
+                return "AzureServiceBusQueueSink";
             case "None":
                 return null;
             default:
@@ -73,7 +79,7 @@ export default class TaskUtils {
             return "QueueEtl";
         }
 
-        if (type === "KafkaQueueSink" || type === "RabbitQueueSink") {
+        if (type === "KafkaQueueSink" || type === "RabbitQueueSink" || type === "AzureServiceBusQueueSink") {
             return "QueueSink";
         }
 
