@@ -12,6 +12,7 @@ import {
     ConnectionFormData,
     SnowflakeConnection,
     AmazonSqsConnection,
+    AzureServiceBusConnection,
     AiConnection,
 } from "../connectionStringsTypes";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -203,6 +204,56 @@ export function mapAmazonSqsConnectionStringToDto(connection: AmazonSqsConnectio
     };
 }
 
+export function mapAzureServiceBusConnectionStringSettingsToDto(
+    connection: Omit<AzureServiceBusConnection, "type" | "usedByTasks">
+): Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings {
+    switch (connection.authType) {
+        case "connectionString": {
+            const connectionSettings = connection.settings[connection.authType];
+            const connectionStringWithoutNewLines = connectionSettings.connectionStringValue.replace(/\n/g, "");
+            return {
+                ConnectionString: connectionStringWithoutNewLines,
+                EntraId: null,
+                Passwordless: null,
+            };
+        }
+        case "entraId": {
+            const connectionSettings = connection.settings[connection.authType];
+            return {
+                ConnectionString: null,
+                EntraId: {
+                    Namespace: connectionSettings.namespace,
+                    TenantId: connectionSettings.tenantId,
+                    ClientId: connectionSettings.clientId,
+                    ClientSecret: connectionSettings.clientSecret,
+                },
+                Passwordless: null,
+            };
+        }
+        case "passwordless": {
+            const connectionSettings = connection.settings[connection.authType];
+            return {
+                ConnectionString: null,
+                EntraId: null,
+                Passwordless: {
+                    Namespace: connectionSettings.namespace,
+                },
+            };
+        }
+        default:
+            return assertUnreachable(connection.authType);
+    }
+}
+
+export function mapAzureServiceBusConnectionStringToDto(connection: AzureServiceBusConnection): ConnectionStringDto {
+    return {
+        Type: "Queue",
+        BrokerType: "AzureServiceBus",
+        Name: connection.name,
+        AzureServiceBusConnectionSettings: mapAzureServiceBusConnectionStringSettingsToDto(connection),
+    };
+}
+
 export function mapAiConnectionStringToDto(connection: AiConnection): ConnectionStringDto {
     return {
         Type: "Ai",
@@ -363,6 +414,8 @@ export function mapConnectionStringToDto(connection: Connection): ConnectionStri
             return mapAzureQueueStorageConnectionStringToDto(connection);
         case "AmazonSqs":
             return mapAmazonSqsConnectionStringToDto(connection);
+        case "AzureServiceBus":
+            return mapAzureServiceBusConnectionStringToDto(connection);
         case "Ai":
             return mapAiConnectionStringToDto(connection);
         default:

@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Enumerators;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Metrics;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
@@ -83,30 +84,46 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
 
     protected override int LoadInternal(IEnumerable<RelationalDatabaseTableWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
     {
-        var count = 0;
+        var tables = records as IList<RelationalDatabaseTableWithRecords> ?? records.ToList();
 
-        using (var lazyWriter =
-               new DisposableLazy<RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(
-                   GetRelationalDatabaseWriterInstance))
+        RetryableTransactionException lastRetryableFailure = null;
+
+        // each retry isolates at most one bad doc, so the meaningful cap is the batch size + 1;
+        // for larger batches use the configured ratio (higher failure rates suggest a systemic issue worth failing on)
+        var totalInserts = tables.Sum(x => x.Inserts.Count);
+        var maxRetries = Math.Min(totalInserts + 1, Math.Max(8, (int)Math.Ceiling(totalInserts * Database.Configuration.Etl.MaxTransactionRetryRatio)));
+
+        for (var attempt = 0; attempt < maxRetries; attempt++)
         {
-            foreach (var table in records)
+            using (var lazyWriter =
+                   new DisposableLazy<RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration>>(GetRelationalDatabaseWriterInstance))
             {
-                var writer = lazyWriter.Value;
+                try
+                {
+                    var count = 0;
+                    foreach (var table in tables)
+                    {
+                        var writer = lazyWriter.Value;
+                        var stats = writer.Write(table, null, CancellationToken);
+                        LogStats(stats, table);
+                        count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
+                    }
 
-                var stats = writer.Write(table, null, CancellationToken);
+                    if (lazyWriter.IsValueCreated)
+                        lazyWriter.Value.Commit();
 
-                LogStats(stats, table);
-
-                count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
-            }
-
-            if (lazyWriter.IsValueCreated)
-            {
-                lazyWriter.Value.Commit();
+                    return count;
+                }
+                catch (RetryableTransactionException e)
+                {
+                    lastRetryableFailure = e;
+                }
             }
         }
-
-        return count;
+        throw new InvalidOperationException(
+            $"Load aborted after {maxRetries} attempts: too many inserts in this batch caused transaction-aborting errors. " +
+            $"See per item errors for the cause or raise '{RavenConfiguration.GetKey(x => x.Etl.MaxTransactionRetryRatio)}' to tolerate more.",
+            lastRetryableFailure);
     }
 
     protected abstract RelationalDatabaseWriterBase<TRelationalConnectionString, TRelationalEtlConfiguration> GetRelationalDatabaseWriterInstance();
@@ -147,6 +164,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
     public RelationalDatabaseEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<RelationalDatabaseTableWithRecords> toWrite, bool performRolledBackTransaction)
     {
         var summaries = new List<TableQuerySummary>();
+        TaskProcessError processError = null;
 
         if (performRolledBackTransaction)
         {
@@ -168,14 +186,14 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
             }
             catch (Exception e)
             {
-                Database.TaskErrorsStorage.StoreProcessError(TaskCategory, new TaskProcessError
+                processError = new TaskProcessError
                 {
                     CreatedAt = SystemTime.UtcNow,
                     TaskName = Name,
                     AffectedDocumentsCount = 0,
-                    Step = TaskErrorStep.Load,
+                    Step = TaskErrorStep.Unknown,
                     Error = e.ToString()
-                });
+                };
                 Statistics.RecordProcessLoadError(count: 0);
             }
         }
@@ -191,7 +209,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
                 summaries.Add(new TableQuerySummary { TableName = records.TableName, Commands = commands });
             }
         }
-        
+
         var itemErrors = Statistics.ReadInMemoryItemErrors();
 
         return new RelationalDatabaseEtlTestScriptResult
@@ -199,7 +217,8 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
             TransformationErrors = itemErrors.Where(x => x.Step == TaskErrorStep.Transformation).ToList(),
             ItemLoadErrors = itemErrors.Where(x => x.Step == TaskErrorStep.Load).ToList(),
             SlowSqlWarnings = Statistics.LastSlowSqlWarningsInCurrentBatch.Statements.ToList(),
-            Summary = summaries
+            Summary = summaries,
+            ProcessError = processError
         };
     }
 }

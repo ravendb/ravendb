@@ -1841,6 +1841,27 @@ namespace SlowTests.Smuggler
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiConnectionString));
                 await store.Maintenance.SendAsync(new AddEmbeddingsGenerationOperation(embeddingsGenerationConfiguration));
 
+                var genAiConnectionString = new AiConnectionString
+                {
+                    Name = "genai-connection",
+                    ModelType = AiModelType.Chat,
+                    OpenAiSettings = new OpenAiSettings { ApiKey = "fake-key", Model = "test" }
+                };
+                genAiConnectionString.Identifier = genAiConnectionString.GenerateIdentifier();
+                var genAiConfiguration = new GenAiConfiguration
+                {
+                    Name = "gen-ai-test",
+                    ConnectionStringName = genAiConnectionString.Identifier,
+                    Collection = "Users",
+                    Prompt = "Process users",
+                    SampleObject = "{\"Result\":\"test\"}",
+                    UpdateScript = "this.Result = $output.Result",
+                    GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Name: this.Name });" }
+                };
+                genAiConfiguration.Identifier = genAiConfiguration.GenerateIdentifier();
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(genAiConnectionString));
+                await store.Maintenance.SendAsync(new AddGenAiOperation(genAiConfiguration));
+
                 // pull replication sink
                 var sink = new PullReplicationAsSink { HubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name };
                 await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
@@ -1909,6 +1930,12 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
+                        foreach (var task in databaseRecord.GenAis)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
                         foreach (var task in databaseRecord.PeriodicBackups)
                         {
                             Assert.Equal(disableOngoingTasks, task.Disabled);
@@ -1933,7 +1960,7 @@ namespace SlowTests.Smuggler
                             tasksCount++;
                         }
 
-                        Assert.Equal(10, tasksCount);
+                        Assert.Equal(11, tasksCount);
                     }
                 }
             }

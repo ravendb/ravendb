@@ -4,6 +4,13 @@ namespace Tests.Infrastructure;
 
 public static class SnowflakeHelper
 {
+    /// <summary>
+    /// Returns true when Snowflake-dependent tests can run in the current environment.
+    /// Intended for use with xUnit v3 <c>SkipUnless</c>, e.g.
+    /// <c>[InlineData(..., SkipType = typeof(SnowflakeHelper), SkipUnless = nameof(IsAvailable))]</c>.
+    /// </summary>
+    public static bool IsAvailable => ShouldSkip(out _) == false;
+
     internal static bool ShouldSkip(out string skipMessage)
     {
         if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)

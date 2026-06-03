@@ -99,6 +99,8 @@ public class TasksInfoAnalyzer(
                             taskCounts.KafkaEtlCount++;
                         else if (queueEtl.BrokerType == QueueBrokerType.RabbitMq)
                             taskCounts.RabbitMqEtlCount++;
+                        else if (queueEtl.BrokerType == QueueBrokerType.AmazonSqs)
+                            taskCounts.AmazonSqsEtlCount++;
                         else
                             throw new NotSupportedException($"Unknown queue broker type: {queueEtl.BrokerType}");
                     }
@@ -111,6 +113,8 @@ public class TasksInfoAnalyzer(
                             taskCounts.KafkaSinkCount++;
                         else if (queueSink.BrokerType == QueueBrokerType.RabbitMq)
                             taskCounts.RabbitMqSinkCount++;
+                        else if (queueSink.BrokerType == QueueBrokerType.AzureServiceBus)
+                            taskCounts.AzureServiceBusSinkCount++;
                         else
                             throw new NotSupportedException($"Unknown queue broker type: {queueSink.BrokerType}");
                     }

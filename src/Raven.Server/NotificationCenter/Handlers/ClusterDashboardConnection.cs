@@ -8,6 +8,7 @@ using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Logging;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -127,10 +128,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 }
                 catch (Exception ex)
                 {
-                    // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
-                    if (ex is WebSocketException webSocketException
-                        && webSocketException.WebSocketErrorCode == WebSocketError.InvalidState
-                        && _webSocket.State == WebSocketState.CloseReceived)
+                    if (WebSocketHelper.IsSocketClosed(ex, _webSocket))
                     {
                         // ignore
                     }

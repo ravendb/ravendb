@@ -2415,5 +2415,105 @@ select incl(c)"
         {
             public IEnumerable<object> Results { get; set; }
         }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionAfterAttachingDatabaseFilesToNewServer()
+        {
+            var dbPath = NewDataPath(suffix: "DatabaseFiles");
+            var dbName = GetDatabaseName();
+            const string docId = "users/new";
+
+            using (var store = GetDocumentStore(new Options
+                   {
+                       RunInMemory = false,
+                       Path = dbPath,
+                       ModifyDatabaseName = _ => dbName
+                   }))
+            {
+                for (int i = 0; i < 16; i++)
+                {
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        await session.StoreAsync(new User { Name = $"User{i}" }, $"users/{i}");
+                        await session.SaveChangesAsync();
+                    }
+                }
+            }
+
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server,
+                RunInMemory = false,
+                Path = dbPath,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(new User { Name = "NewUser" }, docId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var user = await session.LoadAsync<User>(docId);
+                    Assert.NotNull(user);
+                    Assert.Equal("NewUser", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.Sharding)]
+        public async Task ClusterTransactionAfterAttachingShardedDatabaseFilesToNewServer()
+        {
+            var dbPath = NewDataPath(suffix: "DatabaseFiles");
+            var dbName = GetDatabaseName();
+            const string docId = "users/new";
+
+            using (var server = GetNewServer())
+            {
+                var options = Sharding.GetOptionsForCluster(server, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
+                options.RunInMemory = false;
+                options.Path = dbPath;
+                options.ModifyDatabaseName = _ => dbName;
+
+                using (var store = GetDocumentStore(options))
+                {
+                    for (int i = 0; i < 16; i++)
+                    {
+                        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                        {
+                            await session.StoreAsync(new User { Name = $"User{i}" }, $"users/{i}");
+                            await session.SaveChangesAsync();
+                        }
+                    }
+                }
+            }
+
+            using (var server = GetNewServer())
+            {
+                var options = Sharding.GetOptionsForCluster(server, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
+                options.RunInMemory = false;
+                options.Path = dbPath;
+                options.ModifyDatabaseName = _ => dbName;
+
+                using (var store = GetDocumentStore(options))
+                {
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        await session.StoreAsync(new User { Name = "NewUser" }, docId);
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var user = await session.LoadAsync<User>(docId);
+                        Assert.NotNull(user);
+                        Assert.Equal("NewUser", user.Name);
+                    }
+                }
+            }
+        }
     }
 }

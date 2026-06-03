@@ -23,6 +23,7 @@ import { useAppSelector } from "components/store";
 import RichAlert from "components/common/RichAlert";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
+import { withNestedSubmit } from "components/utils/common";
 
 type FormData = ConnectionFormData<SqlConnection>;
 
@@ -70,7 +71,11 @@ export default function SqlConnectionString({
     };
 
     return (
-        <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
+        <Form
+            id="connection-string-form"
+            onSubmit={withNestedSubmit(handleSubmit(handleSave))}
+            className="vstack gap-3"
+        >
             <div className="mb-2">
                 <FormLabel>Name</FormLabel>
                 <FormInput

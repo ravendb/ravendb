@@ -18,7 +18,7 @@ import useUniqueId from "components/hooks/useUniqueId";
 import { useServices } from "components/hooks/useServices";
 import {
     CustomSorterFormData,
-    customSorterYupResolver,
+    createCustomSorterYupResolver,
 } from "components/common/customSorters/editCustomSorterValidation";
 import { useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
@@ -39,16 +39,17 @@ import Tooltip from "react-bootstrap/Tooltip";
 
 interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
+    takenNames: string[];
     serverWideSorterNames: string[];
     remove: () => void;
-    markAsSaved: () => void;
+    markAsSaved: (name: string) => void;
 }
 
 export default function DatabaseCustomSortersListItem(props: DatabaseCustomSortersListItemProps) {
-    const { initialSorter, serverWideSorterNames, remove, markAsSaved } = props;
+    const { initialSorter, takenNames, serverWideSorterNames, remove, markAsSaved } = props;
 
     const form = useForm<CustomSorterFormData>({
-        resolver: customSorterYupResolver,
+        resolver: createCustomSorterYupResolver(takenNames),
         defaultValues: initialSorter,
     });
     const { control, formState, handleSubmit, reset, setValue } = form;
@@ -84,7 +85,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                 Name: formData.name,
                 Code: formData.code,
             });
-            markAsSaved();
+            markAsSaved(formData.name);
             toggleIsEditMode();
             reset(formData);
             throttledUpdateLicenseLimitsUsage();

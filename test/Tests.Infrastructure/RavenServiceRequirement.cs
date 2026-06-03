@@ -70,8 +70,12 @@ public enum RavenServiceRequirement
     Azure = 1 << 10,
 
     /// <summary>
-    /// Test requires SQL Server with CDC support (Enterprise, Developer, or Standard edition â€” not Express).
+    /// Test requires Azure Service Bus.
     /// </summary>
-    MsSqlCdc = 1 << 11,
+    AzureServiceBus = 1 << 11,
 
+    /// <summary>
+    /// Test requires SQL Server with CDC support (Enterprise, Developer, or Standard edition — not Express).
+    /// </summary>
+    MsSqlCdc = 1 << 12
 }

@@ -34,7 +34,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await store.AI.CreateAgentAsync(agent, new AiAgentBasics.OutputSchema());
 
-            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
+            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions(), debug: true);
 
             // First turn: send the image and ask what fruit it is
             AiAnswer<AiAgentBasics.OutputSchema> result1;
@@ -47,7 +47,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             Assert.Equal(AiConversationResult.Done, result1.Status);
             Assert.NotNull(result1.Answer);
-            Assert.Contains("banana", result1.Answer.Answer, StringComparison.OrdinalIgnoreCase);
+            Assert.NotNull(result1.Answer.Answer);
+
+            var tracesAfterTurn1 = await RavenDB_24847.LoadDebugTracesAsync(store, chat.Id);
+            Assert.True(result1.Answer.Answer.Contains("banana", StringComparison.OrdinalIgnoreCase),
+                RavenDB_24847.BuildAssertMessage("banana", result1.Answer.Answer, tracesAfterTurn1));
 
             // Second turn: re-send the same image via a fresh stream and ask a follow-up question
             AiAnswer<AiAgentBasics.OutputSchema> result2;
@@ -60,7 +64,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             Assert.Equal(AiConversationResult.Done, result2.Status);
             Assert.NotNull(result2.Answer);
-            Assert.Contains("yellow", result2.Answer.Answer, StringComparison.OrdinalIgnoreCase);
+            Assert.NotNull(result2.Answer.Answer);
+
+            var tracesAfterTurn2 = await RavenDB_24847.LoadDebugTracesAsync(store, chat.Id);
+            Assert.True(result2.Answer.Answer.Contains("yellow", StringComparison.OrdinalIgnoreCase),
+                RavenDB_24847.BuildAssertMessage("yellow", result2.Answer.Answer, tracesAfterTurn2));
         }
 
 

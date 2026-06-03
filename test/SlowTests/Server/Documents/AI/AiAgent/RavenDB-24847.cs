@@ -1,15 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions.Documents.Attachments;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -40,7 +44,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await store.AI.CreateAgentAsync(agent, new OutputSchema());
 
-            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
+            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions(), debug: true);
             chat.SetUserPrompt("what are inside the images I sent you? what are their colors?");
 
             AiAnswer<OutputSchema> result;
@@ -56,12 +60,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             }
 
-            Assert.Equal(AiConversationResult.Done, result?.Status);
-            Assert.NotNull(result?.Answer);
-            Assert.Contains("banana", result.Answer.Answer, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("star", result.Answer.Answer, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("heart", result.Answer.Answer, StringComparison.OrdinalIgnoreCase);
-            
+            Assert.Equal(AiConversationResult.Done, result.Status);
+            Assert.NotNull(result.Answer);
+            Assert.NotNull(result.Answer.Answer);
+
+            var traces = await LoadDebugTracesAsync(store, chat.Id);
+            Assert.True(result.Answer.Answer.Contains("banana", StringComparison.OrdinalIgnoreCase),
+                BuildAssertMessage("banana", result.Answer.Answer, traces));
+            Assert.True(result.Answer.Answer.Contains("star", StringComparison.OrdinalIgnoreCase),
+                BuildAssertMessage("star", result.Answer.Answer, traces));
+            Assert.True(result.Answer.Answer.Contains("heart", StringComparison.OrdinalIgnoreCase),
+                BuildAssertMessage("heart", result.Answer.Answer, traces));
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -259,7 +268,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await store.AI.CreateAgentAsync(agent, new OutputSchema());
 
-            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
+            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions(), debug: true);
 
             chat.AddUserPrompt(new[] { "Please describe it.", "can you give tags related to it?" });
 
@@ -279,7 +288,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             Assert.Equal(AiConversationResult.Done, result2.Status);
             Assert.NotNull(result2.Answer);
-            Assert.Contains("banana", result2.Answer.Answer, StringComparison.OrdinalIgnoreCase);
+            Assert.NotNull(result2.Answer.Answer);
+
+            var traces = await LoadDebugTracesAsync(store, chat.Id);
+            Assert.True(result2.Answer.Answer.Contains("banana", StringComparison.OrdinalIgnoreCase),
+                BuildAssertMessage("banana", result2.Answer.Answer, traces));
         }
 
         private static Stream GetEmbeddedImgStream(string name)
@@ -292,6 +305,36 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
 
             return stream;
+        }
+
+        internal static async Task<string> LoadDebugTracesAsync(IDocumentStore store, string conversationId)
+        {
+            using var session = store.OpenAsyncSession();
+            var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>(
+                $"{conversationId}/{AiDebugTrace.TraceSegment}/")).ToList();
+
+            if (traces.Count == 0)
+                return "(no debug traces persisted)";
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < traces.Count; i++)
+            {
+                sb.AppendLine($"--- Trace #{i + 1} ---");
+                sb.AppendLine($"RequestBody: {traces[i].RequestBody}");
+                sb.AppendLine($"Response: {traces[i].Response}");
+            }
+            return sb.ToString();
+        }
+
+        internal static string BuildAssertMessage(string expected, string actual, string traces)
+        {
+            return $"Expected substring '{expected}' in answer.\nActual answer: {actual}\nDebug traces:\n{traces}";
+        }
+
+        internal class DebugTraceDoc
+        {
+            public string RequestBody { get; set; }
+            public object Response { get; set; }
         }
     }
 }

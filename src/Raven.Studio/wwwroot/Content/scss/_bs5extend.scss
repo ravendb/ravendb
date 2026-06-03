@@ -42,6 +42,25 @@
     transition: all 0.2s $global-easing;
 }
 
+.form-disabled {
+    cursor: not-allowed;
+    filter: contrast(85%);
+    mix-blend-mode: luminosity;
+    opacity: 0.4;
+    transition: all 0.2s $global-easing;
+
+    input,
+    select,
+    textarea,
+    button,
+    .react-select-container,
+    .ace-editor,
+    .form-check {
+        pointer-events: none;
+        cursor: not-allowed;
+    }
+}
+
 .item-busy {
     filter: contrast(75%) brightness(0.75);
     mix-blend-mode: luminosity;
@@ -700,6 +719,10 @@ $filtering-input-bg: $toggle-bg !default;
 .content-padding {
     width: 100%;
     height: 100%;
+}
+
+.min-height-0 {
+    min-height: 0;
 }
 
 .input-group {

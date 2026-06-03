@@ -493,10 +493,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
             {
-                if (_periodicBackups.TryGetValue(periodicBackup.BackupStatus.TaskId, out PeriodicBackup inMemoryBackupStatus))
+                if (_periodicBackups.TryGetValue(periodicBackup.Configuration.TaskId, out PeriodicBackup inMemoryBackupStatus))
                 {
-                    runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus.DelayUntil;
-                    runningBackupStatus.OriginalBackupTime = inMemoryBackupStatus.BackupStatus.OriginalBackupTime;
+                    runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus?.DelayUntil;
+                    runningBackupStatus.OriginalBackupTime = inMemoryBackupStatus.BackupStatus?.OriginalBackupTime;
                 }
 
                 if (_logger.IsInfoEnabled)

@@ -10,6 +10,17 @@
             </small>
         </div>
     </div>
+    <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
+        <div class="toggle margin-left">
+            <input id="disableChecksumValidation" type="checkbox" data-bind="checked: disableChecksumValidation">
+            <label for="disableChecksumValidation">Disable Checksum Validation</label>
+            <small data-toggle="tooltip"
+                   data-animation="true"
+                   title="Disables S3 checksum validation for uploads">
+                <i class="icon-info text-info"></i>
+            </small>
+        </div>
+    </div>
 </div>
 
 <div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">

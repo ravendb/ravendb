@@ -34,6 +34,7 @@ export const AiAgentsStory: StoryObj<AiAgentsStoryArgs> = {
         });
 
         aiAgentService.withAiAgents();
+        aiAgentService.withGenerateCode();
 
         return <AiAgents />;
     },

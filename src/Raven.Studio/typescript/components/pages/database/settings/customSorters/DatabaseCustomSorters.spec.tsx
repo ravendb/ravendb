@@ -67,4 +67,18 @@ describe("DatabaseCustomSorters", () => {
 
         expect(screen.queryByClassName(selectors.previewButtonClass)).toBeInTheDocument();
     });
+
+    it("shows validation error when adding a sorter with a name that already exists", async () => {
+        const { screen, waitForLoad, user } = rtlRender(<DatabaseCustomSortersStory />);
+        await waitForLoad();
+
+        await user.click(screen.getByRole("button", { name: /Add a custom sorter/ }));
+
+        const nameInput = screen.getByPlaceholderText("Enter a sorter name");
+        await user.type(nameInput, "First Database sorter");
+
+        await user.click(screen.getByRole("button", { name: /Save changes/ }));
+
+        expect(await screen.findByText("A sorter with this name already exists")).toBeInTheDocument();
+    });
 });

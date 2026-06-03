@@ -476,6 +476,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
             }
 
+            if (databaseRecord.GenAis != null)
+            {
+                foreach (var task in databaseRecord.GenAis)
+                {
+                    task.Disabled = true;
+                }
+            }
+
             if (databaseRecord.PeriodicBackups != null)
             {
                 foreach (var task in databaseRecord.PeriodicBackups)
