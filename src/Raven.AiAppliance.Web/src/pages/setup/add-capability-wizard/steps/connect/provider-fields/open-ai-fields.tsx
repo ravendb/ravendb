@@ -10,6 +10,7 @@ import {
     TemperatureField,
 } from "@/pages/setup/add-capability-wizard/steps/connect/provider-fields/shared-fields";
 
+// TODO get models from EP (not implemented yet)
 const CHAT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "o3", "o4-mini"];
 const EMBEDDINGS_MODELS = ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"];
 const ENDPOINTS = ["https://api.openai.com/v1/"];

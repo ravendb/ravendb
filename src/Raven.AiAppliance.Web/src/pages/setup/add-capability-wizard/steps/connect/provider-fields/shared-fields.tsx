@@ -1,7 +1,7 @@
 import { type FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormInput } from "@/components/form/form-input";
-import { FormSwitch } from "@/components/form/form-switch";
 import type { ConnectionStringFormData } from "@/pages/setup/add-capability-wizard/steps/connect/ai-connection-string-utils";
+import { FormCardSwitch } from "@/components/form/form-card-switch";
 
 type PromptCacheProvider = Extract<
     ConnectionStringFormData["provider"],
@@ -23,11 +23,11 @@ export function PromptCacheField({ baseName }: { baseName: PromptCacheProvider }
     const name = `${baseName}.enablePromptCache` satisfies FieldPath<ConnectionStringFormData>;
 
     return (
-        <FormSwitch
+        <FormCardSwitch
+            title="Enable prompt cache"
+            description="Reuse cached prompt prefixes across turns in a conversation to reduce latency and cost."
             control={control}
             name={name}
-            label="Enable prompt cache"
-            description="Reuse cached prompt prefixes across turns in a conversation to reduce latency and cost."
         />
     );
 }
@@ -40,11 +40,11 @@ export function TemperatureField({ baseName }: { baseName: TemperatureProvider }
 
     return (
         <div className="grid gap-3">
-            <FormSwitch
+            <FormCardSwitch
+                title="Set temperature"
+                description="Off uses the model's default randomness."
                 control={control}
                 name={isSetName}
-                label="Set temperature"
-                description="Off uses the model's default randomness."
             />
             {isSetTemperature && (
                 <FormInput

@@ -57,6 +57,8 @@ export function FormAutocomplete<TFieldValues extends FieldValues, TName extends
 
     const isDisabled = disabled || formState.isSubmitting;
 
+    // TODO fix selecting autocomplete item
+
     return (
         <Field className={className} data-invalid={invalid}>
             <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>
