@@ -34,6 +34,9 @@ namespace Raven.Server.Documents.Sharding.Background
                 if (configuration.HasActiveMigrations())
                     return;
 
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Documents migration scan (shard {_database.ShardNumber}) proceeding past HasActiveMigrations check; scanning for buckets that belong to another shard.");
+
                 int bucket = -1;
                 int moveToShard = -1;
                 using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -63,7 +66,12 @@ namespace Raven.Server.Documents.Sharding.Background
                 }
 
                 if (bucket != -1)
+                {
+                    if (_logger.IsDebugEnabled)
+                        _logger.Debug($"Documents migration scan found bucket '{bucket}' on shard {_database.ShardNumber} that should be moved to shard {moveToShard}. Starting bucket migration.");
+
                     await MoveDocumentsToShardAsync(bucket, moveToShard, configuration);
+                }
             }
             catch (Exception e)
             {
@@ -71,7 +79,7 @@ namespace Raven.Server.Documents.Sharding.Background
                     return;
 
                 if (_logger.IsErrorEnabled)
-                    _logger.Error($"Failed to execute documents migration for '{_database.Name}'", e);
+                    _logger.Error("Failed to execute documents migration.", e);
 
                 throw;
             }
@@ -102,11 +110,17 @@ namespace Raven.Server.Documents.Sharding.Background
                             tombstone.Flags.Contain(DocumentFlags.FromResharding))
                             continue;
 
+                        if (_logger.IsDebugEnabled)
+                            _logger.Debug($"Bucket '{bucket}' (shard {_database.ShardNumber}) has no documents but contains a non-artificial tombstone '{tombstone.LowerId}' (type {tombstone.Type}, etag {tombstone.Etag}); marking it for migration.");
+
                         return true;
                     }
 
                     continue;
                 }
+
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Bucket '{bucket}' (shard {_database.ShardNumber}) contains {bucketStats.NumberOfDocuments} document(s) that belong to another shard; marking it for migration.");
 
                 return true;
             }
@@ -145,6 +159,9 @@ namespace Raven.Server.Documents.Sharding.Background
                 _database.ShardedDatabaseName, 
                 prefix,
                 raftId: $"{Guid.NewGuid()}/{bucket}");
+
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Sending StartBucketMigrationCommand for bucket '{bucket}' from shard {_database.ShardNumber} to shard {moveToShard} (prefix: '{prefix}').");
 
             await _database.ServerStore.SendToLeaderAsync(cmd);
         }
