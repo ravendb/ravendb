@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public readonly ReplicationLoader.PullReplicationParams _incomingPullReplicationParams;
 
         private readonly bool _preventIncomingSinkDeletions;
-        private readonly bool _canFilterOutSourceItems;
+        private readonly bool _useCompositeChangeVectors;
 
         private AllowedPathsValidator _allowedPathsValidator;
         
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
 
             // Sender-side filtering is declared in the handshake; receiver-side filtering is derived from this side's pull replication rules.
-            _canFilterOutSourceItems = sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(_incomingPullReplicationParams);
+            _useCompositeChangeVectors = sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(_incomingPullReplicationParams);
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
@@ -190,12 +190,12 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
         {
-            if (_canFilterOutSourceItems)
+            if (_useCompositeChangeVectors)
                 return changeVector;
 
             var isHub = _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
             if (isHub && string.IsNullOrEmpty(changeVector) == false)
-                changeVector = MergedDocumentForPullReplicationCommand.ReplaceUnknownEntriesWithSinkTag(context, ref changeVector);
+                changeVector = ReplaceUnknownEntriesWithSinkTag(context, ref changeVector);
 
             return changeVector;
         }
@@ -203,13 +203,15 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
-            var cmd = new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams, _canFilterOutSourceItems);
             foreach (var item in data.ReplicatedItems)
             {
-                cmd.HandleExpiredDocuments(context, item);
+                HandleExpiredDocuments(context, item, _incomingPullReplicationParams);
             }
 
-            return cmd;
+            if (_useCompositeChangeVectors)
+                return new MergedFilteredPullReplicationCommand(data, lastDocumentEtag);
+
+            return new MergedLegacyPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams);
         }
 
         protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
@@ -219,7 +221,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
         {
-            if (_canFilterOutSourceItems)
+            if (_useCompositeChangeVectors)
                 return;
 
             base.HandleHeartbeatMessage(documentsContext, message);
@@ -236,189 +238,190 @@ namespace Raven.Server.Documents.Replication.Incoming
             return _preventIncomingSinkDeletions;
         }
 
-        internal sealed class MergedDocumentForPullReplicationCommand : MergedDocumentReplicationCommand
+        private static void HandleExpiredDocuments(DocumentsOperationContext ctx, ReplicationBatchItem item, ReplicationLoader.PullReplicationParams pullReplicationParams)
+        {
+            var isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
+            if (isSink)
+                return;
+
+            if (pullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == false)
+                return;
+
+            if (item is DocumentReplicationItem doc)
+            {
+                if (doc.Data == null)
+                    return;
+
+                RemoveExpiresFromSinkBatchItem(doc, ctx);
+            }
+        }
+
+        private sealed class MergedLegacyPullReplicationCommand : MergedDocumentReplicationCommand
         {
             private readonly bool _isHub;
             private readonly bool _isSink;
-            private readonly bool _canFilterOutSourceItems;
-            private readonly PreventDeletionsMode? _preventDeletionsMode;
 
-            public MergedDocumentForPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag,
-                ReplicationLoader.PullReplicationParams pullReplicationParams, bool canFilterOutSourceItems) : base(replicationInfo, lastEtag)
+            public MergedLegacyPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, ReplicationLoader.PullReplicationParams pullReplicationParams) : base(replicationInfo, lastEtag)
             {
                 _isHub = pullReplicationParams.Mode == PullReplicationMode.SinkToHub;
                 _isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
-                _canFilterOutSourceItems = canFilterOutSourceItems;
-                _preventDeletionsMode = pullReplicationParams.PreventDeletionsMode;
             }
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                if (_canFilterOutSourceItems == false && _isSink)
+                if (_isSink)
                     ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
                 var changeVectorToMerge = item.ChangeVector;
 
-                if (_canFilterOutSourceItems == false && _isHub)
+                if (_isHub)
                     changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
 
-                if (_canFilterOutSourceItems == false)
-                {
-                    var parsedChangeVectorToMerge = context.GetChangeVector(changeVectorToMerge);
-                    return parsedChangeVectorToMerge.IsSingle ? parsedChangeVectorToMerge : parsedChangeVectorToMerge.Order;
-                }
+                var parsedChangeVectorToMerge = context.GetChangeVector(changeVectorToMerge);
+                return parsedChangeVectorToMerge.IsSingle ? parsedChangeVectorToMerge : parsedChangeVectorToMerge.Order;
+            }
 
+            protected override void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+            {
+                ReplaceKnownSinkEntries(context, ref changeVector);
+                base.HandleRevisionTombstone(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
+            }
+        }
+
+        private sealed class MergedFilteredPullReplicationCommand : MergedDocumentReplicationCommand
+        {
+            public MergedFilteredPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
+            {
+            }
+
+            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            {
                 var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
                 var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
                 var receiverLocalOrder = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, etag);
 
                 // Store receiver-local order with the incoming version lineage.
-                item.ChangeVector = context.GetChangeVector(incomingChangeVector.Version.AsString(), receiverLocalOrder.AsString()).AsString();
+                item.ChangeVector = context.GetChangeVector(incomingChangeVector.Version, receiverLocalOrder).AsString();
                 return receiverLocalOrder;
             }
+        }
 
-            protected override string HandleRevisionTombstone(DocumentsOperationContext context, string changeVector)
+        private static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
+        {
+            var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
+            var parsedChangeVector = context.GetChangeVector(changeVector);
+            var incomingVersion = parsedChangeVector.Version.AsString();
+            var incoming = incomingVersion.ToChangeVectorList();
+            var knownEntries = new List<ChangeVectorEntry>();
+            var newIncoming = new List<ChangeVectorEntry>();
+
+            foreach (var entry in incoming)
             {
-                if (_canFilterOutSourceItems == false)
-                    ReplaceKnownSinkEntries(context, ref changeVector);
-
-                return base.HandleRevisionTombstone(context, changeVector);
-            }
-
-            public void HandleExpiredDocuments(DocumentsOperationContext ctx, ReplicationBatchItem item)
-            {
-                if (_isSink)
-                    return;
-
-                if (_preventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == false)
-                    return;
-
-                if (item is DocumentReplicationItem doc)
+                if (globalDbIds?.Contains(entry.DbId) == true)
                 {
-                    if (doc.Data == null)
-                        return;
-
-                    RemoveExpiresFromSinkBatchItem(doc, ctx);
-                }
-            }
-
-            internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
-            {
-                var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
-                var parsedChangeVector = context.GetChangeVector(changeVector);
-                var incomingVersion = parsedChangeVector.Version.AsString();
-                var incoming = incomingVersion.ToChangeVectorList();
-                var knownEntries = new List<ChangeVectorEntry>();
-                var newIncoming = new List<ChangeVectorEntry>();
-
-                foreach (var entry in incoming)
-                {
-                    if (globalDbIds?.Contains(entry.DbId) == true)
-                    {
-                        newIncoming.Add(entry);
-                        knownEntries.Add(entry);
-                    }
-                    else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
-                    {
-                        // TRXN
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.TrxnInt
-                        });
-
-                        continue;
-                    }
-                    else
-                    {
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.SinkInt
-                        });
-
-                        context.DbIdsToIgnore ??= new HashSet<string>();
-                        context.DbIdsToIgnore.Add(entry.DbId);
-                    }
-                }
-
-                var newVersion = newIncoming.SerializeVector();
-                changeVector = parsedChangeVector.IsSingle
-                    ? newVersion
-                    : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
-
-                return knownEntries.Count > 0 ?
-                    knownEntries.SerializeVector() :
-                    null;
-            }
-
-            private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
-            {
-                var parsedChangeVector = context.GetChangeVector(changeVector);
-                var incomingVersion = parsedChangeVector.Version.AsString();
-
-                if (incomingVersion.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
-                    return;
-
-                var global = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList();
-                var incoming = incomingVersion.ToChangeVectorList();
-                var newIncoming = new List<ChangeVectorEntry>();
-
-                foreach (var entry in incoming)
-                {
-                    if (entry.NodeTag == ChangeVectorParser.SinkInt)
-                    {
-                        var found = global?.Find(x => x.DbId == entry.DbId) ?? default;
-                        if (found.Etag > 0)
-                        {
-                            newIncoming.Add(new ChangeVectorEntry
-                            {
-                                DbId = entry.DbId,
-                                Etag = entry.Etag,
-                                NodeTag = found.NodeTag
-                            });
-                            continue;
-                        }
-                    }
-
-                    if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
-                    {
-                        // TRXN
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.TrxnInt
-                        });
-
-                        continue;
-                    }
-
                     newIncoming.Add(entry);
+                    knownEntries.Add(entry);
                 }
+                else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
+                {
+                    // TRXN
+                    newIncoming.Add(new ChangeVectorEntry
+                    {
+                        DbId = entry.DbId,
+                        Etag = entry.Etag,
+                        NodeTag = ChangeVectorParser.TrxnInt
+                    });
 
-                var newVersion = newIncoming.SerializeVector();
-                changeVector = parsedChangeVector.IsSingle
-                    ? newVersion
-                    : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
+                    continue;
+                }
+                else
+                {
+                    newIncoming.Add(new ChangeVectorEntry
+                    {
+                        DbId = entry.DbId,
+                        Etag = entry.Etag,
+                        NodeTag = ChangeVectorParser.SinkInt
+                    });
+
+                    context.DbIdsToIgnore ??= new HashSet<string>();
+                    context.DbIdsToIgnore.Add(entry.DbId);
+                }
             }
 
-            private static void RemoveExpiresFromSinkBatchItem(DocumentReplicationItem doc, JsonOperationContext context)
+            var newVersion = newIncoming.SerializeVector();
+            changeVector = parsedChangeVector.IsSingle
+                ? newVersion
+                : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
+
+            return knownEntries.Count > 0 ?
+                knownEntries.SerializeVector() :
+                null;
+        }
+
+        private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
+        {
+            var parsedChangeVector = context.GetChangeVector(changeVector);
+            var incomingVersion = parsedChangeVector.Version.AsString();
+
+            if (incomingVersion.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
+                return;
+
+            var global = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList();
+            var incoming = incomingVersion.ToChangeVectorList();
+            var newIncoming = new List<ChangeVectorEntry>();
+
+            foreach (var entry in incoming)
             {
-                if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                    return;
-
-                if (metadata.TryGet(Constants.Documents.Metadata.Expires, out string _) == false)
-                    return;
-
-                metadata.Modifications ??= new DynamicJsonValue(metadata);
-                metadata.Modifications.Remove(Constants.Documents.Metadata.Expires);
-                using (var old = doc.Data)
+                if (entry.NodeTag == ChangeVectorParser.SinkInt)
                 {
-                    doc.Data = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    var found = global?.Find(x => x.DbId == entry.DbId) ?? default;
+                    if (found.Etag > 0)
+                    {
+                        newIncoming.Add(new ChangeVectorEntry
+                        {
+                            DbId = entry.DbId,
+                            Etag = entry.Etag,
+                            NodeTag = found.NodeTag
+                        });
+                        continue;
+                    }
                 }
+
+                if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
+                {
+                    // TRXN
+                    newIncoming.Add(new ChangeVectorEntry
+                    {
+                        DbId = entry.DbId,
+                        Etag = entry.Etag,
+                        NodeTag = ChangeVectorParser.TrxnInt
+                    });
+
+                    continue;
+                }
+
+                newIncoming.Add(entry);
+            }
+
+            var newVersion = newIncoming.SerializeVector();
+            changeVector = parsedChangeVector.IsSingle
+                ? newVersion
+                : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
+        }
+
+        private static void RemoveExpiresFromSinkBatchItem(DocumentReplicationItem doc, JsonOperationContext context)
+        {
+            if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                return;
+
+            if (metadata.TryGet(Constants.Documents.Metadata.Expires, out string _) == false)
+                return;
+
+            metadata.Modifications ??= new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.Expires);
+            using (var old = doc.Data)
+            {
+                doc.Data = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
         }
 
