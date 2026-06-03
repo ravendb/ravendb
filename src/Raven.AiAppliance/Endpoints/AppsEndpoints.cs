@@ -36,8 +36,9 @@ public static class AppsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapGet("/{slug}/cdc/progress", CdcProgressAsync)
             .WithName("apps.cdcProgress")
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+            // WebSocket-only route (101 on success); OpenAPI can't describe the
+            // upgrade + streamed frames, so keep it out of the spec like /embed/*.
+            .ExcludeFromDescription();
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
             .Accepts<SetupTryRequest>("application/json")
