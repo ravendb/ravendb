@@ -74,5 +74,34 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(new[] { "order_id", "line_no" }, items.PrimaryKeyColumns);
             Assert.True(items.Columns.All(c => c.IsCdcCapturable));
         }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task GeneratedColumnsAreMarkedNotCapturable()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.MySQL_MySqlConnector, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE products (
+                    id            INT AUTO_INCREMENT PRIMARY KEY,
+                    price         DECIMAL(12,2) NOT NULL,
+                    qty           INT NOT NULL,
+                    total_stored  DECIMAL(20,2) AS (price * qty) STORED,
+                    total_virtual DECIMAL(20,2) AS (price * qty) VIRTUAL
+                );");
+
+            var discovery = CdcSinkSchemaDiscovery.For("MySqlConnector.MySqlConnectorFactory");
+            var schema = await discovery.DiscoverAsync(connectionString, schemas: null, CancellationToken.None);
+
+            var products = schema.Tables.Single(t => t.SourceTableName == "products");
+            Assert.True(products.Columns.Single(c => c.Name == "price").IsCdcCapturable);
+
+            var stored = products.Columns.Single(c => c.Name == "total_stored");
+            Assert.False(stored.IsCdcCapturable);
+            Assert.False(string.IsNullOrEmpty(stored.UnsupportedReason));
+
+            var virtualColumn = products.Columns.Single(c => c.Name == "total_virtual");
+            Assert.False(virtualColumn.IsCdcCapturable);
+            Assert.False(string.IsNullOrEmpty(virtualColumn.UnsupportedReason));
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,10 @@ namespace Raven.Server.Documents.CdcSink.Schema
                     var tableName = reader["TABLE_NAME"].ToString();
                     var columnName = reader["COLUMN_NAME"].ToString();
                     var nativeType = reader["DATA_TYPE"].ToString().ToLowerInvariant();
+                    // information_schema reports IS_GENERATED as 'ALWAYS' for STORED generated columns,
+                    // 'NEVER' otherwise. Generated columns are not published over logical replication,
+                    // so CDC cannot deliver them.
+                    var isGenerated = string.Equals(reader["IS_GENERATED"]?.ToString(), "ALWAYS", StringComparison.OrdinalIgnoreCase);
 
                     if (tableLookup.TryGetValue((schemaName, tableName), out var table) == false)
                     {
@@ -48,7 +53,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
                         Name = columnName,
                         NativeType = nativeType,
                         SuggestedType = SuggestType(nativeType),
-                        IsCdcCapturable = true,
+                        IsCdcCapturable = isGenerated == false,
+                        UnsupportedReason = isGenerated ? GeneratedColumnReason : null,
                     };
                     table.Columns.Add(column);
                     columnLookup[(schemaName, tableName, columnName)] = column;
@@ -84,6 +90,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
         /// well-known JSON / BYTEA cases here so Studio can pre-populate the column-mapping UI;
         /// everything else defaults to <see cref="CdcColumnType.Default"/>.
         /// </summary>
+        private const string GeneratedColumnReason =
+            "Column is generated/computed by the source database and is not emitted by CDC.";
+
         private static CdcColumnType SuggestType(string lowerNativeType)
         {
             return lowerNativeType switch

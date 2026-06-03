@@ -118,5 +118,29 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Single(publicOnly.Tables);
             Assert.Equal("unrelated", publicOnly.Tables[0].SourceTableName);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task GeneratedColumnsAreMarkedNotCapturable()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE products (
+                    id    SERIAL PRIMARY KEY,
+                    price NUMERIC(12,2) NOT NULL,
+                    qty   INTEGER NOT NULL,
+                    total NUMERIC(20,2) GENERATED ALWAYS AS (price * qty) STORED
+                );");
+
+            var discovery = CdcSinkSchemaDiscovery.For("Npgsql");
+            var schema = await discovery.DiscoverAsync(connectionString, schemas: null, CancellationToken.None);
+
+            var products = schema.Tables.Single(t => t.SourceTableName == "products");
+            Assert.True(products.Columns.Single(c => c.Name == "price").IsCdcCapturable);
+
+            var total = products.Columns.Single(c => c.Name == "total");
+            Assert.False(total.IsCdcCapturable);
+            Assert.False(string.IsNullOrEmpty(total.UnsupportedReason));
+        }
     }
 }

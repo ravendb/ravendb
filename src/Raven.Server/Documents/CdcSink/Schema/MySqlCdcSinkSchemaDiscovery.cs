@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents.CdcSink.Schema
                     var tableName = reader["TABLE_NAME"].ToString();
                     var columnName = reader["COLUMN_NAME"].ToString();
                     var nativeType = reader["DATA_TYPE"].ToString().ToLowerInvariant();
+                    var isGenerated = IsGeneratedColumn(reader["EXTRA"]?.ToString());
 
                     if (tableLookup.TryGetValue((schemaName, tableName), out var table) == false)
                     {
@@ -51,7 +53,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
                         Name = columnName,
                         NativeType = nativeType,
                         SuggestedType = SuggestType(nativeType),
-                        IsCdcCapturable = true,
+                        IsCdcCapturable = isGenerated == false,
+                        UnsupportedReason = isGenerated ? GeneratedColumnReason : null,
                     };
                     table.Columns.Add(column);
                     columnLookup[(schemaName, tableName, columnName)] = column;
@@ -144,6 +147,23 @@ namespace Raven.Server.Documents.CdcSink.Schema
                     ReferencedColumns = entry.ReferencedColumns,
                 });
             }
+        }
+
+        private const string GeneratedColumnReason =
+            "Column is generated/computed by the source database and is not emitted by CDC.";
+
+        /// <summary>
+        /// True for a MySQL/MariaDB generated (computed) column. MySQL 5.7+/8 and MariaDB 10.2+
+        /// report <c>EXTRA</c> as "STORED GENERATED" / "VIRTUAL GENERATED"; older MariaDB reports
+        /// "VIRTUAL" / "PERSISTENT". Such columns are not present in binlog row images, so CDC
+        /// cannot replicate them.
+        /// </summary>
+        private static bool IsGeneratedColumn(string extra)
+        {
+            return extra != null &&
+                   (extra.Contains("GENERATED", StringComparison.OrdinalIgnoreCase) ||
+                    extra.Contains("VIRTUAL", StringComparison.OrdinalIgnoreCase) ||
+                    extra.Contains("PERSISTENT", StringComparison.OrdinalIgnoreCase));
         }
 
         private static CdcColumnType SuggestType(string lowerNativeType)

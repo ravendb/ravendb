@@ -9,7 +9,7 @@ namespace Raven.Server.SqlMigration.MySQL
     internal sealed class MySqlSchemaQueries : SqlSchemaQueries
     {
         public override string SelectColumnsQuery { get; } =
-            "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE " +
+            "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE, C.EXTRA " +
             " FROM INFORMATION_SCHEMA.COLUMNS C JOIN INFORMATION_SCHEMA.TABLES T " +
             " ON C.TABLE_CATALOG = T.TABLE_CATALOG AND C.TABLE_SCHEMA = T.TABLE_SCHEMA AND C.TABLE_NAME = T.TABLE_NAME " +
             " WHERE C.TABLE_SCHEMA = @schema AND T.TABLE_TYPE <> 'VIEW' ";
