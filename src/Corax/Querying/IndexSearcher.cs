@@ -36,7 +36,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private readonly IndexFieldsMapping _fieldMapping;
     private Dictionary<Slice, Hnsw.SearchState> _vectorSearchStateCache;
-    private Dictionary<Slice, HnswIndexCache> _vectorNodeCaches;
+    private IReadOnlyDictionary<Slice, HnswIndexCache> _vectorNodeCaches;
     private HashSet<long> _nullTermsMarkers;
     private HashSet<long> _nonExistingTermsMarkers;
     private long[] _vectorFieldsMarkers;
@@ -531,7 +531,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     /// The dictionary is read by query code only and must not be mutated while the
     /// IndexSearcher is alive.
     /// </summary>
-    public void AttachVectorNodeCaches(Dictionary<Slice, HnswIndexCache> caches)
+    public void AttachVectorNodeCaches(IReadOnlyDictionary<Slice, HnswIndexCache> caches)
     {
         _vectorNodeCaches = caches;
     }
