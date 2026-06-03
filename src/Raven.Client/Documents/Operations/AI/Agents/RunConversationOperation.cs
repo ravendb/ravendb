@@ -35,6 +35,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly Func<string, Task> _streamedChunksCallback;
     private readonly List<ICommandData> _attachmentsCommands;
     private readonly bool? _debug;
+    private readonly bool? _cancelPendingActionTools;
 
     /// <summary>
     /// Initializes a new conversation step for the specified agent and conversation.
@@ -163,10 +164,12 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         List<ICommandData> attachmentsCommands,
         string streamPropertyPath,
         Func<string, Task> streamedChunksCallback,
-        bool? debug)
+        bool? debug,
+        bool? cancelPendingActionTools)
         : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, attachmentsCommands, streamPropertyPath, streamedChunksCallback)
     {
         _debug = debug;
+        _cancelPendingActionTools = cancelPendingActionTools;
     }
 
     [Obsolete("Use the constructor that accepts a List or an Array instead. This is for backward compatibility.", error: false)]
@@ -254,7 +257,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             if (_parent._debug.HasValue)
                 url += $"&debug={_parent._debug.Value}";
 
-            var body = new ConversionRequestBody
+            if (_parent._cancelPendingActionTools == true)
+                url += $"&cancelPendingActionTools={true}";
+
+            var body = new ConversionRequestBody    
             {
                 ActionResponses = _parent._actionResponses,
                 ArtificialActions = _parent._artificialActions,

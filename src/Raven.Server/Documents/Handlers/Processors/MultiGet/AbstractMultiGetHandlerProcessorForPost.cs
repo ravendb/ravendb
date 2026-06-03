@@ -3,12 +3,12 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IO;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Exceptions;
@@ -43,7 +43,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         }
     }
 
-    public async Task ExecuteMultiGetAsync(JsonOperationContext context, BlittableJsonReaderObject input, Stream responseBodyStream)
+    public async Task ExecuteMultiGetAsync(JsonOperationContext context, BlittableJsonReaderObject input, Stream responseBodyStream, CancellationToken token = default)
     {
         if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
             Raven.Server.Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Requests");
@@ -63,6 +63,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
                 var features = new FeatureCollection(HttpContext.Features);
                 features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
                 features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(memoryStream));
+                features.Set<IHttpRequestLifetimeFeature>(new MultiGetHttpRequestLifetimeFeature(token));
                 var httpContext = new DefaultHttpContext(features);
                 var host = HttpContext.Request.Host;
                 var scheme = HttpContext.Request.Scheme;
@@ -283,6 +284,20 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             }
         }
         writer.WriteEndObject();
+    }
+
+    private sealed class MultiGetHttpRequestLifetimeFeature : IHttpRequestLifetimeFeature
+    {
+        public MultiGetHttpRequestLifetimeFeature(CancellationToken requestAborted)
+        {
+            RequestAborted = requestAborted;
+        }
+
+        public CancellationToken RequestAborted { get; set; }
+
+        public void Abort()
+        {
+        }
     }
 
     private sealed class MultiGetHttpResponseFeature : IHttpResponseFeature

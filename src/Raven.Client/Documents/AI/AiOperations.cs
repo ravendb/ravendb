@@ -151,6 +151,9 @@ public class AiOperations
     internal IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, bool? debug, string changeVector = null) =>
         new AiConversation(this, agentId, conversationId, creationOptions, changeVector, debug);
 
+    internal IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, bool? debug, bool? cancelPendingActionTools, string changeVector = null) =>
+        new AiConversation(this, agentId, conversationId, creationOptions, changeVector, debug, cancelPendingActionTools);
+
     /// <summary>
     /// Reads messages from an AI conversation. Returns the most recent messages by default.
     /// </summary>

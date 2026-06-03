@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -48,7 +49,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         if (ServerStore.LicenseManager.LicenseStatus.HasAiAgent == false)
             throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
 
-        await ExecuteInternalAsync(handler, context, request.Configuration, conversationId, body, changeVector: null, streaming: streaming, debugOverride: null, token: token);
+        await ExecuteInternalAsync(handler, context, request.Configuration, conversationId, body, changeVector: null, streaming: streaming, debugOverride: null, cancelPendingActionTools: null, token: token);
     }
 
     public class TestConversationHandler(ServerStore server, DocumentDatabase database, AiAgentTestRequest request) : ConversationHandler(server, database)
@@ -57,14 +58,14 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         private DocumentsOperationContext _documentsContext;
         private readonly DocumentDatabase _database = database;
 
-        protected override DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
+        protected override DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions, bool cancelPendingActionTools = false)
         {
             // We send only documents from the current conversation subtree (self + descendants).
             // This gives the sub-agent full context for its scope,
             // and allows us to safely update only this scope in `UpdateDocuments`.
             var relevantDocuments = _documents.Where(kvp => IsSelfOrChild(conversationId, kvp.Key)).ToDictionary();
 
-            var baseJson = base.CreateAgentRequest(agent, conversationId, prompt, actionResponses, creationOptions);
+            var baseJson = base.CreateAgentRequest(agent, conversationId, prompt, actionResponses, creationOptions, cancelPendingActionTools);
             var content = (DynamicJsonValue)baseJson[nameof(GetRequest.Content)];
             content[nameof(AiAgentTestRequest.Configuration)] = GetAiAgentConfiguration(agent).ToJson();
             content[nameof(AiAgentTestRequest.Documents)] = DynamicJsonValue.Convert(relevantDocuments);
@@ -138,12 +139,12 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             return r;
         }
 
-        protected override async Task InitializeDocument(DocumentsOperationContext context)
+        protected override async Task InitializeDocument(DocumentsOperationContext context, CancellationToken token)
         {
             _documentsContext = context;
 
             if (request.Documents == null || request.Documents.TryGetValue(_conversationId, out BlittableJsonReaderObject docBjro) == false)
-                await base.InitializeDocument(context);
+                await base.InitializeDocument(context, token);
             else
                 _document = ConversationDocument.ToDocument(_conversationId, docBjro, _maxModelIterationsPerCall); // document exists, we initialize from it instead of creating a new one
 
