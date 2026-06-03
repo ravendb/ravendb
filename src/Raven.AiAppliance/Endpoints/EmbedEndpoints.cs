@@ -240,7 +240,7 @@ public static class EmbedEndpoints
   <div id="ai-chat-header">__TITLE__</div>
   <div id="ai-chat-feed"></div>
   <form id="ai-chat-form">
-    <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question...">
+    <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
     <button type="submit">Send</button>
   </form>
 </div>

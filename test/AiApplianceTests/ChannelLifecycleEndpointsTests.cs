@@ -210,6 +210,8 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Contains("text/html", resp.Content.Headers.ContentType?.ToString() ?? "");
         var html = await resp.Content.ReadAsStringAsync();
         Assert.Contains(widgetId, html);
+        // The chat input must expose an accessible name for screen readers.
+        Assert.Contains("aria-label", html);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
