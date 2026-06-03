@@ -86,7 +86,9 @@ namespace SlowTests.Server.Documents.CdcSink
                     price         DECIMAL(12,2) NOT NULL,
                     qty           INT NOT NULL,
                     total_stored  DECIMAL(20,2) AS (price * qty) STORED,
-                    total_virtual DECIMAL(20,2) AS (price * qty) VIRTUAL
+                    total_virtual DECIMAL(20,2) AS (price * qty) VIRTUAL,
+                    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    expr_default  INT NOT NULL DEFAULT (1 + 1)
                 );");
 
             var discovery = CdcSinkSchemaDiscovery.For("MySqlConnector.MySqlConnectorFactory");
@@ -102,6 +104,11 @@ namespace SlowTests.Server.Documents.CdcSink
             var virtualColumn = products.Columns.Single(c => c.Name == "total_virtual");
             Assert.False(virtualColumn.IsCdcCapturable);
             Assert.False(string.IsNullOrEmpty(virtualColumn.UnsupportedReason));
+
+            // Regular columns with an expression default report EXTRA = DEFAULT_GENERATED on MySQL 8.0.13+,
+            // but they are ordinary columns present in the binlog row image - they must stay capturable.
+            Assert.True(products.Columns.Single(c => c.Name == "created_at").IsCdcCapturable);
+            Assert.True(products.Columns.Single(c => c.Name == "expr_default").IsCdcCapturable);
         }
     }
 }

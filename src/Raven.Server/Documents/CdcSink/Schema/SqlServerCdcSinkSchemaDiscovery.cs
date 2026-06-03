@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.CdcSink.Schema
             var tableLookup = new Dictionary<(string Schema, string Table), CdcSinkSourceTable>();
             var columnLookup = new Dictionary<(string Schema, string Table, string Column), CdcSinkSourceColumn>();
 
-            var allowedSchemas = ResolveAllowedSchemas(connectionString, schemas);
+            var allowedSchemas = ResolveAllowedSchemas(schemas);
 
             await ReadColumnsAsync(conn, schema, tableLookup, columnLookup, allowedSchemas, ct);
             await ReadPrimaryKeysAsync(conn, tableLookup, columnLookup, ct);
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.CdcSink.Schema
         /// <see cref="ResolveDefaultSchema"/> and used by the CDC runtime / Studio "Discover" contract),
         /// not the login's actual default schema. System schemas are always excluded.
         /// </summary>
-        private static HashSet<string> ResolveAllowedSchemas(string connectionString, string[] schemas)
+        private static HashSet<string> ResolveAllowedSchemas(string[] schemas)
         {
             var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (schemas is { Length: > 0 })
@@ -66,7 +66,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
             }
             else
             {
-                allowed.Add(ResolveDefaultSchema(MicrosoftDataSqlClientFactory, connectionString));
+                // SQL Server's default is the constant "dbo"; ResolveDefaultSchema ignores the connection string here.
+                allowed.Add(ResolveDefaultSchema(MicrosoftDataSqlClientFactory, connectionString: null));
             }
 
             allowed.ExceptWith(SystemSchemas);

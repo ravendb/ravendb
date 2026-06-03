@@ -90,9 +90,6 @@ namespace Raven.Server.Documents.CdcSink.Schema
         /// well-known JSON / BYTEA cases here so Studio can pre-populate the column-mapping UI;
         /// everything else defaults to <see cref="CdcColumnType.Default"/>.
         /// </summary>
-        private const string GeneratedColumnReason =
-            "Column is generated/computed by the source database and is not emitted by CDC.";
-
         private static CdcColumnType SuggestType(string lowerNativeType)
         {
             return lowerNativeType switch

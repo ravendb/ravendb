@@ -79,6 +79,14 @@ namespace Raven.Server.Documents.CdcSink.Schema
             };
         }
 
+        /// <summary>
+        /// Reason attached to a discovered column that CDC cannot capture because the source
+        /// database computes it (a generated/computed column). Shared by the MySQL and PostgreSQL
+        /// discovery implementations so the wording can't drift.
+        /// </summary>
+        internal const string GeneratedColumnReason =
+            "Column is generated/computed by the source database and is not emitted by CDC.";
+
         internal static string UnsupportedProviderMessage(string factoryName) =>
             $"CDC sink does not support provider '{factoryName}'. " +
             $"Supported providers: {NpgsqlFactory} (PostgreSQL), " +
