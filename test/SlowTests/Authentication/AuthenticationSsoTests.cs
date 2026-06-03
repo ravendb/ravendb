@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Formats.Asn1;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -619,6 +620,103 @@ namespace SlowTests.Authentication
                         Assert.NotNull(doc);
                     }
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task EditSsoUser_SwitchToAllowAny_ClearsAuthorizingServerHashes()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "clear.hashes@example.com";
+            var permissions = new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite };
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                var ssoUserThumbprint = Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
+
+                // The entry starts with a single authorizing server and AllowAnySsoServer = false.
+                var before = (await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(ssoUserId)))
+                    .Single(c => c.Usage == CertificateUsage.SsoClient);
+                Assert.False(before.AllowAnySsoServer);
+                Assert.Equal(1, before.SsoServerPublicKeyPinningHashes.Count);
+                Assert.Equal(1, before.SsoIdentifiers.Count);
+
+                // Switching to "allow any SSO" sends an empty authorizing-server list. It must fully replace (clear)
+                // the stored hashes rather than leaving the stale ones behind.
+                await adminStore.Maintenance.Server.SendAsync(new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                {
+                    Thumbprint = ssoUserThumbprint,
+                    Name = ssoUserId,
+                    Permissions = permissions,
+                    Clearance = SecurityClearance.ValidUser,
+                    AllowAnySsoServer = true,
+                    SsoServerPublicKeyPinningHashes = new List<string>()
+                }));
+
+                var after = (await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(ssoUserId)))
+                    .Single(c => c.Usage == CertificateUsage.SsoClient);
+                Assert.True(after.AllowAnySsoServer);
+                Assert.Empty(after.SsoServerPublicKeyPinningHashes);
+                // Identifiers were not part of the edit, so they must be preserved (no partial wipe).
+                Assert.Equal(1, after.SsoIdentifiers.Count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task EditSsoUser_EmptyAuthorizingList_IsAllowedAndClears()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "no.access@example.com";
+            var permissions = new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite };
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                var ssoUserThumbprint = Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
+
+                // The server is intentionally permissive: clearing the authorizing servers without enabling "allow any"
+                // is allowed (the Studio only surfaces a warning). The edit must not throw and must clear the list.
+                await adminStore.Maintenance.Server.SendAsync(new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                {
+                    Thumbprint = ssoUserThumbprint,
+                    Name = ssoUserId,
+                    Permissions = permissions,
+                    Clearance = SecurityClearance.ValidUser,
+                    AllowAnySsoServer = false,
+                    SsoServerPublicKeyPinningHashes = new List<string>()
+                }));
+
+                var after = (await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(ssoUserId)))
+                    .Single(c => c.Usage == CertificateUsage.SsoClient);
+                Assert.False(after.AllowAnySsoServer);
+                Assert.Empty(after.SsoServerPublicKeyPinningHashes);
             }
         }
 
@@ -1310,9 +1408,58 @@ namespace SlowTests.Authentication
             }
         }
 
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void PutSsoUser_Operator_CannotGrantClusterAdminClearance()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            // An Operator (lower than Cluster Admin) must not be able to escalate by registering an SSO user entry
+            // with ClusterAdmin clearance.
+            var operatorCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate2.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.Operator);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Certificates.RegisterSsoUserEntry(certificates, "escalate@example.com", ssoCerts.SsoServerPublicKeyPinningHash,
+                        allowAnySsoServer: false,
+                        new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                        clearance: SecurityClearance.ClusterAdmin,
+                        clientCertificate: operatorCert);
+                });
+
+                Assert.Contains("lower clearance", ex.ToString(), StringComparison.OrdinalIgnoreCase);
+
+                // A Cluster Admin can register the same ClusterAdmin SSO user entry.
+                Certificates.RegisterSsoUserEntry(certificates, "escalate@example.com", ssoCerts.SsoServerPublicKeyPinningHash,
+                    allowAnySsoServer: false,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    clearance: SecurityClearance.ClusterAdmin);
+            }
+        }
+
         private static X509Certificate2 CreateSsoUserCertificateWithRawExtension(SsoTestCertificates ssoCerts, byte[] rawExtensionData)
         {
-            const string ssoUserIdExtensionOid = "1.3.6.1.4.1.45751.2.2";
+            const string ssoUserIdExtensionOid = Raven.Client.Constants.Certificates.SsoUserIdExtensionOid;
 
             using var userKey = RSA.Create(2048);
             var subjectName = new X500DistinguishedName("CN=SSO User Test");

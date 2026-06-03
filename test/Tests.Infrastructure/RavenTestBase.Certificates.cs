@@ -330,7 +330,7 @@ public partial class RavenTestBase
 
         public X509Certificate2 CreateSsoUserCertificate(SsoTestCertificates ssoCerts, string ssoUserId, SsoProvider provider = SsoProvider.Github, string domain = null)
         {
-            const string ssoUserIdExtensionOid = "1.3.6.1.4.1.45751.2.2";
+            const string ssoUserIdExtensionOid = Raven.Client.Constants.Certificates.SsoUserIdExtensionOid;
 
             using var userKey = RSA.Create(2048);
             var subjectName = new X500DistinguishedName($"CN=SSO User {ssoUserId}");
@@ -428,13 +428,13 @@ public partial class RavenTestBase
 
         public string RegisterSsoUserEntry(TestCertificatesHolder certificates, string ssoUserId, string ssoServerPublicKeyPinningHash,
             bool allowAnySsoServer, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null,
-            SsoProvider provider = SsoProvider.Github, string domain = null)
+            SsoProvider provider = SsoProvider.Github, string domain = null, X509Certificate2 clientCertificate = null)
         {
             using var store = _parent.GetDocumentStore(new Options
             {
                 CreateDatabase = false,
                 Server = server,
-                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = clientCertificate ?? certificates.ServerCertificateForCommunication.Value,
                 AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDocumentStore = s => s.Conventions = new DocumentConventions
                 {

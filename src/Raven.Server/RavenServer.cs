@@ -2190,11 +2190,27 @@ namespace Raven.Server
             object connectionInfo,
             StringBuilder log)
         {
-            var ssoServerDefs = ServerStore.Cluster.GetSsoServerCertificates(ctx).ToList();
-            if (ssoServerDefs.Count == 0)
+            // The SSO user identity is carried in a custom OID extension on the client certificate and does not
+            // depend on which SSO server signed it - read it first, before any table scan. A certificate without
+            // this extension cannot be an SSO client certificate, so we skip the SSO lookup entirely.
+            var ssoUserIdExtension = certificate.Extensions[Raven.Client.Constants.Certificates.SsoUserIdExtensionOid];
+            if (ssoUserIdExtension == null)
                 return;
 
-            foreach (var ssoServerDef in ssoServerDefs)
+            var payload = CertificateUtils.DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
+            if (payload.IsEmpty)
+            {
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {GetRemoteAddress(connectionInfo)} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"has a malformed or unrecognized SSO user ID extension.");
+                return;
+            }
+
+            // Find the single SSO server whose certificate signed this client certificate. There is typically a
+            // single SSO server cert, so iterating and parsing them inline per request is cheap.
+            CertificateDefinition signingSsoServer = null;
+            foreach (var ssoServerDef in ServerStore.Cluster.GetSsoServerCertificates(ctx))
             {
                 if (ssoServerDef.Disabled || string.IsNullOrEmpty(ssoServerDef.Certificate))
                     continue;
@@ -2236,92 +2252,79 @@ namespace Raven.Server
                     continue;
                 }
 
-                // Chain validated - this cert was signed by this SSO server cert.
-                // Extract the SSO user ID from the custom OID extension.
-                var ssoUserIdExtension = certificate.Extensions[Raven.Client.Constants.Certificates.SsoUserIdExtensionOid];
-                if (ssoUserIdExtension == null)
-                {
-                    if (_auditLogger.IsAuditEnabled)
-                        _auditLogger.Audit(
-                            $"Connection from {GetRemoteAddress(connectionInfo)} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
-                            $"which was signed by SSO server '{ssoServerDef.Name}' but does not contain the SSO user ID extension (OID {Raven.Client.Constants.Certificates.SsoUserIdExtensionOid}).");
-                    return;
-                }
+                // Chain validated - this cert was signed by this SSO server cert. A client certificate is signed by
+                // exactly one SSO server, so there is no point in checking the rest.
+                signingSsoServer = ssoServerDef;
+                break;
+            }
 
-                var payload = CertificateUtils.DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
-                if (payload.IsEmpty)
-                {
-                    if (_auditLogger.IsAuditEnabled)
-                        _auditLogger.Audit(
-                            $"Connection from {GetRemoteAddress(connectionInfo)} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
-                            $"which was signed by SSO server '{ssoServerDef.Name}' but has a malformed or unrecognized SSO user ID extension.");
-                    return;
-                }
+            if (signingSsoServer == null)
+                return;
 
-                var ssoUserIdentity = payload.GetDisplayIdentity();
-                var ssoServerPinningHash = ssoServerDef.PublicKeyPinningHash;
+            var ssoUserIdentity = payload.GetDisplayIdentity();
+            var ssoServerPinningHash = signingSsoServer.PublicKeyPinningHash;
 
-                if (string.IsNullOrEmpty(ssoServerPinningHash))
-                    continue;
+            if (string.IsNullOrEmpty(ssoServerPinningHash))
+                return;
 
-                var ssoUserDef = ServerStore.Cluster.GetSsoClientCertificateByIdentity(ctx, payload);
-                if (ssoUserDef == null)
-                {
-                    string remoteAddress = GetRemoteAddress(connectionInfo);
-                    if (_auditLogger.IsAuditEnabled)
-                        _auditLogger.Audit(
-                            $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
-                            $"signed by SSO server '{ssoServerDef.Name}'. SSO identity '{ssoUserIdentity}' is not registered in the cluster - rejecting.");
-
-                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                    authenticationStatus.SsoUserIdentity = ssoUserIdentity;
-                    return;
-                }
-
-                if (ssoUserDef.Disabled)
-                {
-                    string remoteAddress = GetRemoteAddress(connectionInfo);
-                    if (_auditLogger.IsAuditEnabled)
-                        _auditLogger.Audit(
-                            $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
-                            $"signed by SSO server '{ssoServerDef.Name}'. SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) is disabled - rejecting.");
-
-                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                    authenticationStatus.SsoUserIdentity = ssoUserIdentity;
-                    return;
-                }
-
-                if (ssoUserDef.AllowAnySsoServer == false &&
-                    (ssoUserDef.SsoServerPublicKeyPinningHashes == null ||
-                     ssoUserDef.SsoServerPublicKeyPinningHashes.Any(h => CertificateUtils.PinningHashEquals(h, ssoServerPinningHash)) == false))
-                {
-                    string remoteAddress = GetRemoteAddress(connectionInfo);
-                    if (_auditLogger.IsAuditEnabled)
-                        _auditLogger.Audit(
-                            $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
-                            $"signed by SSO server '{ssoServerDef.Name}' (hash '{ssoServerPinningHash}'). " +
-                            $"SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) exists but is not bound to this SSO server - rejecting.");
-
-                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                    authenticationStatus.SsoUserIdentity = ssoUserIdentity;
-                    continue;
-                }
-
-                authenticationStatus.IsSsoAuthenticated = true;
-                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
-                authenticationStatus.SsoServerPublicKeyPinningHash = ssoServerPinningHash;
-
-                cert = ctx.ReadObject(ssoUserDef.ToJson(), "SSO/User/Certificate/Definition");
-
+            // Single client-table lookup. NOTE: GetSsoClientCertificateByIdentity still does a full scan of the
+            // certificates table for SsoClient entries; a usage-typed secondary index is a possible future
+            // optimization if the number of SSO users grows large.
+            var ssoUserDef = ServerStore.Cluster.GetSsoClientCertificateByIdentity(ctx, payload);
+            if (ssoUserDef == null)
+            {
+                string remoteAddress = GetRemoteAddress(connectionInfo);
                 if (_auditLogger.IsAuditEnabled)
                     _auditLogger.Audit(
-                        $"Connection from {GetRemoteAddress(connectionInfo)} with SSO-authenticated certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})'. " +
-                        $"SSO user: '{ssoUserDef.Name}' ({ssoUserIdentity}), SSO server: '{ssoServerDef.Name}' ({ssoServerDef.Thumbprint}). " +
-                        $"Security Clearance: {ssoUserDef.SecurityClearance}, " +
-                        $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, ssoUserDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+                        $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"signed by SSO server '{signingSsoServer.Name}'. SSO identity '{ssoUserIdentity}' is not registered in the cluster - rejecting.");
 
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
                 return;
             }
+
+            if (ssoUserDef.Disabled)
+            {
+                string remoteAddress = GetRemoteAddress(connectionInfo);
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"signed by SSO server '{signingSsoServer.Name}'. SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) is disabled - rejecting.");
+
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
+                return;
+            }
+
+            if (ssoUserDef.AllowAnySsoServer == false &&
+                (ssoUserDef.SsoServerPublicKeyPinningHashes == null ||
+                 ssoUserDef.SsoServerPublicKeyPinningHashes.Any(h => CertificateUtils.PinningHashEquals(h, ssoServerPinningHash)) == false))
+            {
+                string remoteAddress = GetRemoteAddress(connectionInfo);
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"signed by SSO server '{signingSsoServer.Name}' (hash '{ssoServerPinningHash}'). " +
+                        $"SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) exists but is not bound to this SSO server - rejecting.");
+
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
+                return;
+            }
+
+            authenticationStatus.IsSsoAuthenticated = true;
+            authenticationStatus.SsoUserIdentity = ssoUserIdentity;
+            authenticationStatus.SsoServerPublicKeyPinningHash = ssoServerPinningHash;
+
+            cert = ctx.ReadObject(ssoUserDef.ToJson(), "SSO/User/Certificate/Definition");
+
+            if (_auditLogger.IsAuditEnabled)
+                _auditLogger.Audit(
+                    $"Connection from {GetRemoteAddress(connectionInfo)} with SSO-authenticated certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})'. " +
+                    $"SSO user: '{ssoUserDef.Name}' ({ssoUserIdentity}), SSO server: '{signingSsoServer.Name}' ({signingSsoServer.Thumbprint}). " +
+                    $"Security Clearance: {ssoUserDef.SecurityClearance}, " +
+                    $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, ssoUserDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
         }
 
         private static string GetRemoteAddress(object connectionInfo)

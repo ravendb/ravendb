@@ -65,6 +65,11 @@ namespace Raven.Client
             public const string RequestTime = "Request-Time";
 
             /// <summary>
+            /// HTTP header name identifying the originating client IP address through a proxy.
+            /// </summary>
+            public const string XForwardedFor = "X-Forwarded-For";
+
+            /// <summary>
             /// HTTP header name for server startup timestamp.
             /// </summary>
             public const string ServerStartupTime = "Server-Startup-Time";

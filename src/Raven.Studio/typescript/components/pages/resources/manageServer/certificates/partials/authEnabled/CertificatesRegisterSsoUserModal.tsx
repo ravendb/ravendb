@@ -295,6 +295,14 @@ export default function CertificatesRegisterSsoUserModal() {
                                         placeholder="Select one or more SSO servers..."
                                         options={ssoServerOptions}
                                     />
+                                    {(formValues.ssoServerPublicKeyPinningHashes?.length ?? 0) === 0 && (
+                                        <RichAlert variant="warning" className="mt-2">
+                                            This user has no authorizing SSO server selected and{" "}
+                                            <strong>Allow any SSO to authorize</strong> is off — they will not be able
+                                            to authenticate until you select a server or enable{" "}
+                                            <strong>Allow any SSO</strong>.
+                                        </RichAlert>
+                                    )}
                                 </div>
                             </Collapse>
                         </FormGroup>
@@ -435,13 +443,7 @@ const ssoIdentifierSchema = yup.object({
 const schema = yup.object({
     displayName: yup.string().required("Display name is required"),
     ssoIdentifiers: yup.array().of(ssoIdentifierSchema).min(1, "At least one identifier is required").required(),
-    ssoServerPublicKeyPinningHashes: yup
-        .array()
-        .of(yup.string())
-        .when("allowAnySso", {
-            is: false,
-            then: (s) => s.min(1, "Select at least one SSO server"),
-        }),
+    ssoServerPublicKeyPinningHashes: yup.array().of(yup.string()),
     allowAnySso: yup.boolean().required(),
     securityClearance: yup.string<"ValidUser" | "Operator" | "ClusterAdmin">().required(),
     databasePermissions: certificatesUtils.databasePermissionsSchema,

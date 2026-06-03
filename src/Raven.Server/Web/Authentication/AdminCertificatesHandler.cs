@@ -294,6 +294,11 @@ namespace Raven.Server.Web.Authentication
                     (certificateDefinition.SsoServerPublicKeyPinningHashes == null || certificateDefinition.SsoServerPublicKeyPinningHashes.Count == 0))
                     throw new ArgumentException("Either set AllowAnySsoServer = true or provide at least one SSO server public key pinning hash.");
 
+                // Enforce the same clearance-escalation rule as PUT /admin/certificates: only Cluster Admins may
+                // grant ClusterAdmin/ClusterNode clearance
+                if ((certificateDefinition.SecurityClearance == SecurityClearance.ClusterAdmin || certificateDefinition.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
+                    throw new InvalidOperationException($"Cannot save the SSO user entry '{certificateDefinition.Name}' with '{certificateDefinition.SecurityClearance}' security clearance because the current client certificate being used has a lower clearance.");
+
                 using (ctx.OpenReadTransaction())
                 {
                     // Validate that every provided pinning hash matches a registered SSO server cert
@@ -1000,6 +1005,10 @@ namespace Raven.Server.Web.Authentication
                 
                 certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string newTwoFactorAuthenticationKey);
                 var disabledExplicitlySet = certificateJson.TryGet(nameof(CertificateMetadata.Disabled), out bool disabledValue);
+                
+                var ssoHashesExplicitlySet = certificateJson.TryGet(nameof(CertificateMetadata.SsoServerPublicKeyPinningHashes), out BlittableJsonReaderArray _);
+                var allowAnySsoExplicitlySet = certificateJson.TryGet(nameof(CertificateMetadata.AllowAnySsoServer), out bool _);
+                var ssoIdentifiersExplicitlySet = certificateJson.TryGet(nameof(CertificateMetadata.SsoIdentifiers), out BlittableJsonReaderArray _);
 
                 ValidateCertificateDefinition(editedCertificate, ServerStore);
 
@@ -1058,14 +1067,6 @@ namespace Raven.Server.Web.Authentication
                     ServerStore.Cluster.DeleteLocalState(ctx, editedCertificate.Thumbprint);
                 }
 
-                if (RavenLogManager.Instance.IsAuditEnabled)
-                {
-                    var permissions = FormatPermissions(editedCertificate);
-
-                    LogAuditForServer("CHANGE",
-                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Disabled: {effectiveDisabled}.");
-                }
-
                 bool isSsoClient = existingCertificate.Usage == CertificateUsage.SsoClient;
                 List<string> mergedSsoHashes = existingCertificate.SsoServerPublicKeyPinningHashes;
                 bool mergedAllowAnySso = existingCertificate.AllowAnySsoServer;
@@ -1073,11 +1074,34 @@ namespace Raven.Server.Web.Authentication
 
                 if (isSsoClient)
                 {
-                    if (editedCertificate.SsoServerPublicKeyPinningHashes?.Count > 0)
+                    // SSO edits fully replace the stored definition: a field that is present in the request wins,
+                    // even when it is an empty list (which clears it). A field that is absent from the request is
+                    // left untouched, so partial edits (e.g. just toggling Disabled) never wipe the SSO config.
+                    if (ssoHashesExplicitlySet)
                         mergedSsoHashes = editedCertificate.SsoServerPublicKeyPinningHashes;
-                    mergedAllowAnySso = editedCertificate.AllowAnySsoServer;
-                    if (editedCertificate.SsoIdentifiers?.Count > 0)
+                    if (allowAnySsoExplicitlySet)
+                        mergedAllowAnySso = editedCertificate.AllowAnySsoServer;
+                    if (ssoIdentifiersExplicitlySet)
                         mergedSsoIdentifiers = editedCertificate.SsoIdentifiers;
+                }
+
+                if (RavenLogManager.Instance.IsAuditEnabled)
+                {
+                    var permissions = FormatPermissions(editedCertificate);
+
+                    var ssoAuditInfo = string.Empty;
+                    if (isSsoClient)
+                    {
+                        var serverHashes = mergedAllowAnySso
+                            ? "any"
+                            : string.Join(", ", (mergedSsoHashes ?? new List<string>()).Select(h => $"'{h}'"));
+                        var identifiers = string.Join(", ", (mergedSsoIdentifiers ?? new List<SsoIdentifier>())
+                            .Select(id => new SsoExtensionPayload(id.Identifier, id.Provider, id.Domain).GetDisplayIdentity()));
+                        ssoAuditInfo = $" Identifiers: [{identifiers}]. SsoServerHashes: [{serverHashes}]. AllowAnySsoServer: {mergedAllowAnySso}.";
+                    }
+
+                    LogAuditForServer("CHANGE",
+                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Disabled: {effectiveDisabled}.{ssoAuditInfo}");
                 }
 
                 PutCertificateCommand cmd = new PutCertificateCommand(editedCertificate.Thumbprint,

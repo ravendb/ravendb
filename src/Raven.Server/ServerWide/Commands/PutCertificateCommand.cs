@@ -35,9 +35,6 @@ namespace Raven.Server.ServerWide.Commands
                     throw new InvalidOperationException("Cannot store an SSO user entry without a public key pinning hash (should be a generated GUID).");
                 if (string.IsNullOrEmpty(certificateDefinition.Name))
                     throw new InvalidOperationException("Cannot store an SSO user entry without a display name.");
-                if (certificateDefinition.AllowAnySsoServer == false &&
-                    (certificateDefinition.SsoServerPublicKeyPinningHashes == null || certificateDefinition.SsoServerPublicKeyPinningHashes.Count == 0))
-                    throw new InvalidOperationException("Cannot store an SSO user entry without at least one SSO server public key pinning hash (or set AllowAnySsoServer = true).");
                 if (certificateDefinition.SsoIdentifiers == null || certificateDefinition.SsoIdentifiers.Count == 0)
                     throw new InvalidOperationException("Cannot store an SSO user entry without at least one SSO identifier.");
                 foreach (var id in certificateDefinition.SsoIdentifiers)
