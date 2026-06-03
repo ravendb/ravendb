@@ -11,7 +11,6 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.Processors.BulkInsert;
-using Raven.Server.Documents.Handlers.Admin.Processors.Revisions;
 using Raven.Server.Documents.Handlers.Processors.HiLo;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Patch;
@@ -237,9 +236,6 @@ namespace Raven.Server.Documents
 
                 case nameof(IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommand):
                     return jsonSerializer.Deserialize<IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommandDto>(reader);
-
-                case nameof(IncomingPullReplicationHandler.MergedUpdateLastReplicatedEtagFromCommand):
-                    return jsonSerializer.Deserialize<IncomingPullReplicationHandler.MergedUpdateLastReplicatedEtagFromCommandDto>(reader);
 
                 case nameof(RevisionsStorage.DeleteRevisionsByDocumentIdMergedCommand):
                     return jsonSerializer.Deserialize<RevisionsStorage.DeleteRevisionsByDocumentIdMergedCommand.DeleteRevisionsByDocumentIdMergedCommandDto>(reader);

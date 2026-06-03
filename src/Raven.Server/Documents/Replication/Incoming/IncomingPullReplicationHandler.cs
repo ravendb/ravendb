@@ -255,7 +255,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
         {
-            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams);
+            var shouldMergeDatabaseChangeVector = ShouldMergeDatabaseChangeVectorFromHeartbeat();
+            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, shouldMergeDatabaseChangeVector);
         }
 
         protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
@@ -278,8 +279,25 @@ namespace Raven.Server.Documents.Replication.Incoming
             if (_lastDocumentEtag <= lastEtag)
                 return;
 
-            var cmd = new MergedUpdateLastReplicatedEtagFromCommand(ConnectionInfo, _lastDocumentEtag);
+            var cmd = new MergedUpdateDatabaseChangeVectorForHubCommand(
+                changeVector: null,
+                _lastDocumentEtag,
+                ConnectionInfo,
+                _replicationFromAnotherSource,
+                shouldMergeDatabaseChangeVector: false);
+
             EnqueueHeartbeatUpdate(cmd);
+        }
+
+        private bool ShouldMergeDatabaseChangeVectorFromHeartbeat()
+        {
+            if (_incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+                return false;
+
+            if (_canFilterOutSourceItems)
+                return false;
+
+            return true;
         }
 
         private bool CanReceiverFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
@@ -480,16 +498,17 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         internal sealed class MergedUpdateDatabaseChangeVectorForHubCommand : MergedUpdateDatabaseChangeVectorCommand
         {
-            private readonly ReplicationLoader.PullReplicationParams _pullReplicationParams;
+            private readonly bool _shouldMergeDatabaseChangeVector;
 
             public MergedUpdateDatabaseChangeVectorForHubCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger,
-                ReplicationLoader.PullReplicationParams pullReplicationParams) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
+                bool shouldMergeDatabaseChangeVector) : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
             {
-                _pullReplicationParams = pullReplicationParams;
+                _shouldMergeDatabaseChangeVector = shouldMergeDatabaseChangeVector;
             }
+
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+                if (_shouldMergeDatabaseChangeVector == false)
                     return false;
 
                 return base.TryUpdateChangeVector(context);
@@ -500,7 +519,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return new MergedUpdateDatabaseChangeVectorForHubCommandDto
                 {
                     BaseDto = (MergedUpdateDatabaseChangeVectorCommandDto)base.ToDto(context),
-                    PullReplicationParams = _pullReplicationParams
+                    MergeDatabaseChangeVector = _shouldMergeDatabaseChangeVector
                 };
             }
         }
@@ -508,54 +527,12 @@ namespace Raven.Server.Documents.Replication.Incoming
         internal sealed class MergedUpdateDatabaseChangeVectorForHubCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorForHubCommand>
         {
             public MergedUpdateDatabaseChangeVectorCommandDto BaseDto;
-            public ReplicationLoader.PullReplicationParams PullReplicationParams;
+            public bool MergeDatabaseChangeVector = true;
             public MergedUpdateDatabaseChangeVectorForHubCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
                 var command = new MergedUpdateDatabaseChangeVectorForHubCommand(BaseDto.ChangeVector, BaseDto.LastDocumentEtag, BaseDto.IncomingConnectionInfo,
-                    new AsyncManualResetEvent(), PullReplicationParams);
+                    new AsyncManualResetEvent(), MergeDatabaseChangeVector);
                 return command;
-            }
-        }
-
-        internal sealed class MergedUpdateLastReplicatedEtagFromCommand : DocumentMergedTransactionCommand
-        {
-            private readonly IncomingConnectionInfo _connectionInfo;
-            private readonly long _lastDocumentEtag;
-
-            public MergedUpdateLastReplicatedEtagFromCommand(IncomingConnectionInfo connectionInfo, long lastDocumentEtag)
-            {
-                _connectionInfo = connectionInfo;
-                _lastDocumentEtag = lastDocumentEtag;
-            }
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId);
-                if (_lastDocumentEtag <= lastReplicatedEtag)
-                    return 0;
-
-                DocumentsStorage.SetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId, _lastDocumentEtag);
-                return 1;
-            }
-
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
-            {
-                return new MergedUpdateLastReplicatedEtagFromCommandDto
-                {
-                    IncomingConnectionInfo = _connectionInfo,
-                    LastDocumentEtag = _lastDocumentEtag
-                };
-            }
-        }
-
-        internal sealed class MergedUpdateLastReplicatedEtagFromCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateLastReplicatedEtagFromCommand>
-        {
-            public IncomingConnectionInfo IncomingConnectionInfo;
-            public long LastDocumentEtag;
-
-            public MergedUpdateLastReplicatedEtagFromCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-            {
-                return new MergedUpdateLastReplicatedEtagFromCommand(IncomingConnectionInfo, LastDocumentEtag);
             }
         }
     }
