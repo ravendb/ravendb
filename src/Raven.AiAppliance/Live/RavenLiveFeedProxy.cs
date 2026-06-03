@@ -35,7 +35,34 @@ internal static class RavenLiveFeedProxy
         lifetime.CancelAfter(MaxLifetime);
         var token = lifetime.Token;
 
-        await upstream.ConnectAsync(upstreamUri, token);
+        try
+        {
+            await upstream.ConnectAsync(upstreamUri, token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Browser disconnected (or the 12h cap fired) before the upstream
+            // feed opened — nothing to relay, nothing to close gracefully.
+            return;
+        }
+        catch (WebSocketException)
+        {
+            // Upstream handshake failed (RavenDB unavailable, bad database/path).
+            // The browser upgrade is already accepted, so close it cleanly with
+            // an error status instead of letting the socket abort without a
+            // close frame.
+            if (browser.State == WebSocketState.Open)
+            {
+                try
+                {
+                    await browser.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "upstream feed unavailable", ct);
+                }
+                catch (WebSocketException) { /* browser already gone — best effort */ }
+                catch (OperationCanceledException) { /* request aborted mid-close — best effort */ }
+            }
+
+            return;
+        }
 
         // One task pumps upstream -> browser; the other drains the browser so a
         // client-side close is noticed promptly. Whichever finishes first tears

@@ -76,11 +76,14 @@ public static class EmbedEndpoints
         }
 
         // Pin client-supplied conversation IDs to the "chats/" prefix up front
-        // (mirrors /api/chat/stream). AgentRouter.NormalizeConversationId is the
-        // safety net, but validating here returns a clean 400 instead of an
-        // opaque "error" frame after the NDJSON stream has already started.
-        if (string.IsNullOrWhiteSpace(body.ConversationId) == false &&
-            body.ConversationId.StartsWith("chats/", StringComparison.Ordinal) == false)
+        // (mirrors /api/chat/stream). Trim first so a stray-whitespace id like
+        // "chats/1 " isn't forwarded to RavenDB verbatim.
+        // AgentRouter.NormalizeConversationId is the safety net, but validating
+        // here returns a clean 400 instead of an opaque "error" frame after the
+        // NDJSON stream has already started.
+        var conversationId = body.ConversationId?.Trim();
+        if (string.IsNullOrWhiteSpace(conversationId) == false &&
+            conversationId.StartsWith("chats/", StringComparison.Ordinal) == false)
         {
             ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
             await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("conversationId must start with 'chats/'"), ct);
@@ -97,7 +100,7 @@ public static class EmbedEndpoints
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(app.Database, channel.AgentId, body.ConversationId, body.Prompt, Parameters: null),
+                new AgentRequest(app.Database, channel.AgentId, conversationId, body.Prompt, Parameters: null),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ct);
 
