@@ -262,18 +262,18 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         var etag = _database.DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
                         if (etag == _lastSentDocumentEtag)
                         {
-                            SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx), lastSentChangeVector: null);
+                            SendHeartbeat(databaseChangeVector: DocumentsStorage.GetDatabaseChangeVector(ctx), lastSentSourceChangeVector: null);
                             _parent.CompleteDeletionIfNeeded(_cts);
                         }
                         else if (NextReplicateTicks > DateTime.UtcNow.Ticks)
                         {
-                            SendHeartbeat(changeVector: null, lastSentChangeVector: null);
+                            SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: null);
                         }
                         else
                         {
                             //Send a heartbeat first so we will get an updated CV of the destination
                             var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                            SendHeartbeat(changeVector: null, lastSentChangeVector: null);
+                            SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: null);
                             //If our previous CV is already merged to the destination wait a bit more
                             if (ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, currentChangeVector) ==
                                 ConflictStatus.AlreadyMerged)
