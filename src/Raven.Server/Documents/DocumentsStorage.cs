@@ -652,6 +652,16 @@ namespace Raven.Server.Documents
                 tree.Add(LastCompletedClusterTransactionIndexSlice, indexSlice);
         }
 
+        public void ResetLastCompletedClusterTransactionIndex()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                SetLastCompletedClusterTransactionIndex(context, 0);
+                tx.Commit();
+            }
+        }
+
         public static string ReadLastFixedCounterKey(Transaction tx)
         {
             if (tx == null)

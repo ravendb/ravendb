@@ -13,6 +13,7 @@ namespace Sparrow.Utils
         private readonly Stream _inner;
         private readonly bool _compression;
         private readonly bool _leaveOpen;
+        private readonly bool _continueOnCapturedContext;
         private ZstdLib.CompressContext _compressContext;
         private byte[] _tempBuffer = ArrayPool<byte>.Shared.Rent(1024);
         private Memory<byte> _decompressionInput = Memory<byte>.Empty;
@@ -21,12 +22,16 @@ namespace Sparrow.Utils
         private readonly DisposeLock _disposerLock = new(nameof(ZstdStream));
         private bool _disposed;
 
+        internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
+
         private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _compressContext = new ZstdLib.CompressContext(level);
             _compression = compression;
             _leaveOpen = leaveOpen;
+
+            _continueOnCapturedContext = CaptureContextOnAwait.Value;
         }
 
         public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel = CompressionLevel.Optimal, bool leaveOpen = false) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen);
@@ -129,7 +134,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
+            using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
             {
                 while (true)
                 {
@@ -141,7 +146,7 @@ namespace Sparrow.Utils
                     ShiftBufferData();
 
                     read = await _inner.ReadAsync(_tempBuffer, _decompressionInput.Length, _tempBuffer.Length - _decompressionInput.Length, cancellationToken)
-                        .ConfigureAwait(false);
+                        .ConfigureAwait(_continueOnCapturedContext);
                     if (read == 0)
                         return 0; // nothing left to read
 
@@ -179,7 +184,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
+            using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
             {
                 while (buffer.Length > 0)
                 {
@@ -189,7 +194,7 @@ namespace Sparrow.Utils
                     if (outputBytes == 0)
                         continue;
 
-                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
+                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(_continueOnCapturedContext);
                 }
             }
         }
@@ -217,9 +222,9 @@ namespace Sparrow.Utils
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
+            using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
             {
-                await FlushInternalAsync(cancellationToken).ConfigureAwait(false);
+                await FlushInternalAsync(cancellationToken).ConfigureAwait(_continueOnCapturedContext);
             }
         }
 
@@ -231,10 +236,10 @@ namespace Sparrow.Utils
                 if (outputBytes == 0)
                     break;
 
-                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
+                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(_continueOnCapturedContext);
             }
 
-            await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await _inner.FlushAsync(cancellationToken).ConfigureAwait(_continueOnCapturedContext);
         }
 
         public override async ValueTask DisposeAsync()
@@ -252,13 +257,13 @@ namespace Sparrow.Utils
                 if (_compressContext != null)
                 {
                     if (_compression)
-                        await FlushInternalAsync().ConfigureAwait(false);
+                        await FlushInternalAsync().ConfigureAwait(_continueOnCapturedContext);
 
                     while (_compression)
                     {
                         var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
-                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
+                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(_continueOnCapturedContext);
 
                         if (done)
                             break;
@@ -266,7 +271,7 @@ namespace Sparrow.Utils
                 }
 
                 if (_leaveOpen == false)
-                    await _inner.DisposeAsync().ConfigureAwait(false);
+                    await _inner.DisposeAsync().ConfigureAwait(_continueOnCapturedContext);
 
                 ReleaseResources();
             }

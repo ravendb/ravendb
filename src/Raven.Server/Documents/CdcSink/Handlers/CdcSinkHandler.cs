@@ -311,50 +311,6 @@ public class CdcSinkHandler : DatabaseRequestHandler
             inlineFieldName: nameof(TestCdcSinkMappingRequest.Connection),
             namedFieldName: nameof(CdcSinkConfiguration.ConnectionStringName));
 
-    [RavenAction("/databases/*/admin/cdc-sink/verify", "POST", AuthorizationStatus.DatabaseAdmin)]
-    public async Task PostVerifySource()
-    {
-        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        {
-            var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "CdcSinkVerify");
-            var request = JsonDeserializationServer.CdcSinkVerifyRequest(bodyJson);
-
-            if (string.IsNullOrEmpty(request.ConnectionStringName))
-            {
-                ThrowRequiredPropertyNameInRequest(nameof(CdcSinkVerifyRequest.ConnectionStringName));
-            }
-
-            var databaseRecord = Database.ReadDatabaseRecord();
-            if (databaseRecord.SqlConnectionStrings.TryGetValue(request.ConnectionStringName, out var sqlConnectionString) == false)
-            {
-                var notFoundResult = new CdcSinkVerificationResult();
-                notFoundResult.Errors.Add($"SQL connection string '{request.ConnectionStringName}' was not found in the database configuration.");
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, notFoundResult.ToJson());
-                }
-                return;
-            }
-
-            CdcSinkVerificationResult result;
-            try
-            {
-                result = await CdcSinkSourceVerifier.VerifyAsync(sqlConnectionString, request.TableNames);
-            }
-            catch (Exception e)
-            {
-                result = new CdcSinkVerificationResult();
-                result.Errors.Add($"Verification failed: {e}");
-            }
-
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, result.ToJson());
-            }
-        }
-    }
-
     [RavenAction("/databases/*/admin/cdc-sink/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
     public async Task PostSchema()
     {
@@ -406,9 +362,10 @@ public class CdcSinkHandler : DatabaseRequestHandler
             return result;
         }
 
+        CdcSinkSourceSchema schema;
         try
         {
-            return await discovery.DiscoverAsync(connection.ConnectionString, request.Schemas, ct);
+            schema = await discovery.DiscoverAsync(connection.ConnectionString, request.Schemas, ct);
         }
         catch (Exception e)
         {
@@ -420,6 +377,23 @@ public class CdcSinkHandler : DatabaseRequestHandler
                 Logger.Warn("CDC schema discovery failed", e);
             return result;
         }
+
+        // Discovery succeeded — fold connection-level + per-table verification into the same
+        // response so callers don't need a second round-trip. Verification runs only after a
+        // successful discovery; on discovery failure we already returned above with a single
+        // structured error.
+        try
+        {
+            await CdcSinkSourceVerifier.AnnotateAsync(connection, schema, ct);
+        }
+        catch (Exception e)
+        {
+            schema.Errors.Add("Source verification failed: " + e);
+            if (Logger.IsWarnEnabled)
+                Logger.Warn("CDC source verification failed", e);
+        }
+
+        return schema;
     }
 
     /// <summary>
@@ -555,11 +529,5 @@ public class CdcSinkHandler : DatabaseRequestHandler
 
         return sinks;
     }
-}
-
-public class CdcSinkVerifyRequest
-{
-    public string ConnectionStringName { get; set; }
-    public List<string> TableNames { get; set; }
 }
 

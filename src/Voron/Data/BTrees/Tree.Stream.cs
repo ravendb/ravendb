@@ -94,8 +94,11 @@ namespace Voron.Data.BTrees
                 _tag = tag;
             }
 
-            public void Write(Stream stream)
+            public void Write(Stream stream, byte* preReadBuffer = null, int preReadBytes = 0)
             {
+                Debug.Assert(preReadBytes == 0 || (preReadBuffer != null && stream != Stream.Null),
+                    "preReadBytes > 0 implies a real stream and a captured buffer pointer from the inline probe");
+
                 AllocateNextPage();
 
                 ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
@@ -103,46 +106,54 @@ namespace Voron.Data.BTrees
                 var buffer = stream != Stream.Null ? _parent.Llt.Transaction.StreamBuffer : StreamBufferAllocator.Buffer.Null;
                 var localBuffer = buffer.AsSpan();
 
+                if (preReadBytes > 0)
                 {
-                    while (true)
-                    {
-                        var read = stream.Read(localBuffer);
-                        if (read == 0)
-                            break;
+                    WriteFromBuffer(preReadBuffer, preReadBytes);
+                }
 
-                        var toWrite = 0L;
-                        while (true)
-                        {
-                            toWrite += WriteBufferToPage(buffer.Pointer + toWrite, read - toWrite);
-                            if (toWrite == read)
-                                break;
+                while (true)
+                {
+                    var read = stream.Read(localBuffer);
+                    if (read == 0)
+                        break;
 
-                            // run out of room, need to allocate more
-                            RecordChunkPage(_currentPage.PageNumber, (int)(_writePos - _currentPage.DataPointer));
-                            AllocateNextPage();
-                        }
-                    }
+                    WriteFromBuffer(buffer.Pointer, read);
+                }
 
-                    var chunkSize = (int)(_writePos - _currentPage.DataPointer);
+                var chunkSize = (int)(_writePos - _currentPage.DataPointer);
+                RecordChunkPage(_currentPage.PageNumber, chunkSize);
+
+                var remaining = _writePosEnd - _writePos;
+                var infoSize = StreamInfo.SizeOf;
+
+                if (_tag != null)
+                    infoSize += _tag.Value.Size;
+
+                if (remaining < infoSize)
+                {
+                    _numberOfPagesPerChunk = 1;
+                    AllocateNextPage();
+                    chunkSize = 0;
                     RecordChunkPage(_currentPage.PageNumber, chunkSize);
+                }
 
-                    var remaining = _writePosEnd - _writePos;
-                    var infoSize = StreamInfo.SizeOf;
+                RecordStreamInfo();
 
-                    if (_tag != null)
-                        infoSize += _tag.Value.Size;
+                _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State);
+            }
 
-                    if (remaining < infoSize)
-                    {
-                        _numberOfPagesPerChunk = 1;
-                        AllocateNextPage();
-                        chunkSize = 0;
-                        RecordChunkPage(_currentPage.PageNumber, chunkSize);
-                    }
+            private void WriteFromBuffer(byte* pBuffer, int size)
+            {
+                var toWrite = 0L;
+                while (true)
+                {
+                    toWrite += WriteBufferToPage(pBuffer + toWrite, size - toWrite);
+                    if (toWrite == size)
+                        break;
 
-                    RecordStreamInfo();
-
-                    _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State);
+                    // run out of room, need to allocate more
+                    RecordChunkPage(_currentPage.PageNumber, (int)(_writePos - _currentPage.DataPointer));
+                    AllocateNextPage();
                 }
             }
 
@@ -230,24 +241,25 @@ namespace Voron.Data.BTrees
 
         public void AddStream(Slice key, Stream stream, Slice? tag = null, int? initialNumberOfPagesPerChunk = null)
         {
-            Debug.Assert(stream.CanSeek, "Stream must be seekable, we need it to simplify reseting position when stream is too large for inline storage");
-            
             if ((State.Header.Flags & TreeFlags.Streams) != TreeFlags.Streams)
             {
                 ref var state = ref State.Modify();
                 state.Flags |= TreeFlags.Streams;
             }
 
-            if (TryAddInlineStream(key, stream, tag))
+            if (TryAddInlineStream(key, stream, tag, out var preReadBytes, out var preReadBuffer))
                 return;
 
             var writer = new StreamToPageWriter();
             writer.Init(this, key, tag, initialNumberOfPagesPerChunk);
-            writer.Write(stream);
+            writer.Write(stream, preReadBuffer, preReadBytes);
         }
 
-        private bool TryAddInlineStream(Slice key, Stream stream, Slice? tag)
+        private bool TryAddInlineStream(Slice key, Stream stream, Slice? tag, out int preReadBytes, out byte* preReadBuffer)
         {
+            preReadBytes = 0;
+            preReadBuffer = null;
+
             var tagSize = tag?.Size ?? 0;
             // maxInlineSize calculates space available for the value (header + tag + data).
             // Key.Size is not subtracted because DirectAdd(key, len, ...) only accounts for value length.
@@ -270,8 +282,9 @@ namespace Voron.Data.BTrees
 
             if (totalRead > maxInlineSize)
             {
-                // Stream is too large for inline storage, reset and fall back
-                stream.Position = 0;
+                // Stream is too large for inline storage, hand the buffer pointer + count off so the chunked writer can drain them
+                preReadBytes = totalRead;
+                preReadBuffer = buffer.Pointer;
                 return false;
             }
 

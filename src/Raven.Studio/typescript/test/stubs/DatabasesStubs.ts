@@ -506,6 +506,7 @@ export class DatabasesStubs {
                     RabbitMqConnectionSettings: null,
                     AzureQueueStorageConnectionSettings: null,
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "rabbitmq-name": {
                     Type: "Queue",
@@ -517,6 +518,7 @@ export class DatabasesStubs {
                     },
                     AzureQueueStorageConnectionSettings: null,
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "azure-queue-storage-name": {
                     Type: "Queue",
@@ -530,6 +532,7 @@ export class DatabasesStubs {
                         Passwordless: null,
                     },
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "azure-sqs-name": {
                     Type: "Queue",
@@ -545,6 +548,22 @@ export class DatabasesStubs {
                             RegionName: "us-west-2",
                         },
                         Passwordless: false,
+                    },
+                    AzureServiceBusConnectionSettings: null,
+                },
+                "azure-service-bus-name": {
+                    Type: "Queue",
+                    Name: "azure-service-bus-name",
+                    BrokerType: "AzureServiceBus",
+                    KafkaConnectionSettings: null,
+                    RabbitMqConnectionSettings: null,
+                    AzureQueueStorageConnectionSettings: null,
+                    AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: {
+                        ConnectionString:
+                            "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub",
+                        EntraId: null,
+                        Passwordless: null,
                     },
                 },
             },
@@ -1073,6 +1092,7 @@ return docs[0];`,
                     AwsRegionName: "eu-central-1",
                     CustomServerUrl: "",
                     ForcePathStyle: false,
+                    DisableChecksumValidation: false,
                     RemoteFolderName: "",
                 },
                 AzureSettings: {

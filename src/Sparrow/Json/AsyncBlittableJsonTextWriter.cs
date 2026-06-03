@@ -13,28 +13,32 @@ namespace Sparrow.Json
         
         // PERF: Cache the MemoryStream reference to avoid repeated casting
         private readonly MemoryStream _innerStream;
+        private readonly bool _continueOnCapturedContext;
+
+        internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
 
         public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
             _innerStream = _stream as MemoryStream; // Cache the cast since we know it's always MemoryStream
-            
+            _continueOnCapturedContext = CaptureContextOnAwait.Value;
+
             if (_innerStream == null)
                 throw new ArgumentException($"Expected stream to be MemoryStream, but got {(_stream?.GetType() == null ? "null" : _stream.ToString())}.");
         }
 
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
         {
-            await FlushAsync(token).ConfigureAwait(false);
+            await FlushAsync(token).ConfigureAwait(_continueOnCapturedContext);
 
             while (true)
             {
-                _pos = await stream.ReadAsync(_pinnedBuffer.Memory.Memory, token).ConfigureAwait(false);
+                _pos = await stream.ReadAsync(_pinnedBuffer.Memory.Memory, token).ConfigureAwait(_continueOnCapturedContext);
                 if (_pos == 0)
                     break;
 
-                await FlushAsync(token).ConfigureAwait(false);
+                await FlushAsync(token).ConfigureAwait(_continueOnCapturedContext);
             }
         }
 
@@ -78,9 +82,10 @@ namespace Sparrow.Json
             return FlushAsyncSlow(writeTask, _innerStream, bytesCount);
         }
         
-        private static async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
+        private async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
         {
-            await writeTask.ConfigureAwait(false);
+            await writeTask.ConfigureAwait(_continueOnCapturedContext);
+
             innerStream.SetLength(0);
             return bytesCount;
         }
@@ -119,17 +124,17 @@ namespace Sparrow.Json
 
         private async ValueTask DisposeAsyncSlow(ValueTask<int> flushTask)
         {
-            var bytesWritten = await flushTask.ConfigureAwait(false);
+            var bytesWritten = await flushTask.ConfigureAwait(_continueOnCapturedContext);
             if (bytesWritten > 0)
-                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(false);
+                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(_continueOnCapturedContext);
 
-            await DisposeStreamAsync().ConfigureAwait(false);
+            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
         }
 
         private async ValueTask DisposeAsyncSlow(Task outputFlushTask)
         {
-            await outputFlushTask.ConfigureAwait(false);
-            await DisposeStreamAsync().ConfigureAwait(false);
+            await outputFlushTask.ConfigureAwait(_continueOnCapturedContext);
+            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
         }
 
         private ValueTask DisposeStreamAsync()

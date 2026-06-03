@@ -17,7 +17,6 @@ using Raven.Server.Documents.QueueSink.Commands;
 using Raven.Server.Documents.QueueSink.Stats;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
-using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands.QueueSink;
@@ -26,7 +25,6 @@ using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Logging;
@@ -39,8 +37,9 @@ namespace Raven.Server.Documents.QueueSink;
 
 public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 {
-    internal const string KafkaTag = "Kafka Sink"; 
+    internal const string KafkaTag = "Kafka Sink";
     internal const string RabbitMqTag = "RabbitMQ Sink";
+    internal const string AzureServiceBusTag = "Azure Service Bus Sink";
 
     private const int MinBatchSize = 16;
 
@@ -84,6 +83,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                 return new KafkaQueueSink(configuration, script, database, KafkaTag);
             case QueueBrokerType.RabbitMq:
                 return new RabbitMqQueueSink(configuration, script, database, RabbitMqTag);
+            case QueueBrokerType.AzureServiceBus:
+                return new AzureServiceBusQueueSink(configuration, script, database, AzureServiceBusTag);
             default:
                 throw new NotSupportedException($"Unknown broker type: {configuration.BrokerType}");
         }
@@ -170,6 +171,20 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
             if (FallbackTime != null)
             {
+                try
+                {
+                    _consumer?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error($"Failed to dispose consumer for {Name} during fallback mode", e);
+                }
+                finally
+                {
+                    _consumer = null;
+                }
+
                 if (CancellationToken.WaitHandle.WaitOne(FallbackTime.Value))
                     return;
 
@@ -207,7 +222,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                 var statsAggregator = new QueueSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
 
                 using (Statistics.NewBatch())
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (var stats = statsAggregator.CreateScope())
                 {
                     var messages = new List<BlittableJsonReaderObject>();
@@ -220,6 +235,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                         {
                             try
                             {
+                                _forTestingPurposes?.BeforeConsume?.Invoke();
+
                                 var message = batchStarted
                                     ? _consumer.Consume(TimeSpan.Zero)
                                     : _consumer.Consume(CancellationToken);
@@ -268,6 +285,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                                 }
 
                                 Statistics.RecordConsumeError(e.Message);
+                                break;
                             }
                         }
                     }
@@ -291,6 +309,8 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                             catch (JavaScriptParseException e)
                             {
                                 HandleScriptParseException(e);
+                                Stop(e.Message);
+                                return;
                             }
                         }
                     }
@@ -337,11 +357,10 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             catch (Exception e)
             {
                 var msg = $"Unexpected error in {Tag} process: '{Name}'";
-
-                if (Logger.IsErrorEnabled)
-                {
+                if (Logger.IsErrorEnabled) 
                     Logger.Error(msg, e);
-                }
+                
+                EnterFallbackMode();
             }
             finally
             {
@@ -483,8 +502,6 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             details: details);
 
         Database.NotificationCenter.Add(alert);
-
-        Stop(message);
     }
 
     private void EnterFallbackMode()
@@ -522,7 +539,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
         return _lastStats;
     }
 
-    private bool CanContinueBatch(QueueSinkStatsScope stats, int batchSize, DocumentsOperationContext ctx)
+    private bool CanContinueBatch(QueueSinkStatsScope stats, int batchSize, JsonOperationContext ctx)
     {
         if (Database.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
         {
@@ -623,5 +640,20 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
     public void LowMemoryOver()
     {
         _lowMemoryFlag.Lower();
+    }
+
+    internal TestingStuff _forTestingPurposes;
+
+    internal TestingStuff ForTestingPurposesOnly()
+    {
+        if (_forTestingPurposes != null)
+            return _forTestingPurposes;
+
+        return _forTestingPurposes = new TestingStuff();
+    }
+
+    internal sealed class TestingStuff
+    {
+        public Action BeforeConsume;
     }
 }

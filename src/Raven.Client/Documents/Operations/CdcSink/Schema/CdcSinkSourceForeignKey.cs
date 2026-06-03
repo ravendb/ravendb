@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Schema;
 /// CDC schema-discovery endpoint so Studio can suggest linked tables for
 /// the CDC mapping UI.
 /// </summary>
-internal class CdcSinkSourceForeignKey : IDynamicJson
+public class CdcSinkSourceForeignKey : IDynamicJson
 {
     /// <summary>
     /// FK column(s) on the source ("child") table.

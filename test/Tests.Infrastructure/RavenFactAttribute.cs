@@ -89,6 +89,12 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         set => Requires = value ? Requires | RavenServiceRequirement.Azure : Requires & ~RavenServiceRequirement.Azure;
     }
 
+    public bool AzureServiceBusRequired
+    {
+        get => Requires.HasFlag(RavenServiceRequirement.AzureServiceBus);
+        set => Requires = value ? Requires | RavenServiceRequirement.AzureServiceBus : Requires & ~RavenServiceRequirement.AzureServiceBus;
+    }
+
     public bool MySqlRequired
     {
         get => Requires.HasFlag(RavenServiceRequirement.MySql);
@@ -100,7 +106,6 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         get => Requires.HasFlag(RavenServiceRequirement.MsSqlCdc);
         set => Requires = value ? Requires | RavenServiceRequirement.MsSqlCdc : Requires & ~RavenServiceRequirement.MsSqlCdc;
     }
-
     public new string Skip
     {
         get => ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, serviceRequirement: Requires);
@@ -146,9 +151,12 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         if (serviceRequirement.HasFlag(RavenServiceRequirement.Azure) && ShouldSkipAzure(out skip))
             return skip;
 
-        if (serviceRequirement.HasFlag(RavenServiceRequirement.MsSqlCdc) && ShouldSkipMsSqlCdc(out skip))
+        if (serviceRequirement.HasFlag(RavenServiceRequirement.AzureServiceBus) && ShouldSkipAzureServiceBus(out skip))
             return skip;
 
+
+        if (serviceRequirement.HasFlag(RavenServiceRequirement.MsSqlCdc) && ShouldSkipMsSqlCdc(out skip))
+            return skip;
         return null;
     }
 
@@ -277,6 +285,11 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
     private static bool ShouldSkipAzure(out string skipMessage)
     {
         return AzureRetryFactAttribute.ShouldSkip(out skipMessage);
+    }
+
+    private static bool ShouldSkipAzureServiceBus(out string skipMessage)
+    {
+        return AzureServiceBusHelper.ShouldSkip(out skipMessage);
     }
 
     internal static bool ShouldSkipLicense(out string skipMessage)

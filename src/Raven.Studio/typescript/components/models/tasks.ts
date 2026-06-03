@@ -144,6 +144,19 @@ export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
     url: string;
 }
 
+export interface OngoingTaskCdcSinkSharedInfo extends OngoingTaskSharedInfo {
+    connectionStringName: string;
+    factoryName: string;
+    configuration: Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration;
+    lastBatchTime?: string;
+    lastCheckpoint: string;
+    secondsSinceLastBatch?: number;
+    lastActivityTime?: string;
+    secondsSinceLastActivity?: number;
+    healthIssue: string;
+    error: string;
+}
+
 export interface OngoingTaskEmbeddingsGenerationSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
     identifier: string;
@@ -164,6 +177,8 @@ export type OngoingTaskAmazonSqsEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
 export type OngoingTaskKafkaSinkSharedInfo = OngoingTaskQueueSinkSharedInfo;
 
 export type OngoingTaskRabbitMqSinkSharedInfo = OngoingTaskQueueSinkSharedInfo;
+
+export type OngoingTaskAzureServiceBusSinkSharedInfo = OngoingTaskQueueSinkSharedInfo;
 
 export interface OngoingTaskQueueEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
@@ -236,6 +251,10 @@ export type OngoingTaskAiEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 export type OngoingTaskKafkaSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type OngoingTaskRabbitMqSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
+
+export type OngoingTaskAzureServiceBusSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
+
+export type OngoingTaskCdcSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo
@@ -344,6 +363,16 @@ export type OngoingTaskKafkaSinkInfo = OngoingTaskInfo<
 export type OngoingTaskRabbitMqSinkInfo = OngoingTaskInfo<
     OngoingTaskRabbitMqSinkSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskRabbitMqSinkNodeInfoDetails>
+>;
+
+export type OngoingTaskAzureServiceBusSinkInfo = OngoingTaskInfo<
+    OngoingTaskAzureServiceBusSinkSharedInfo,
+    OngoingTaskNodeInfo<OngoingTaskAzureServiceBusSinkNodeInfoDetails>
+>;
+
+export type OngoingTaskCdcSinkInfo = OngoingTaskInfo<
+    OngoingTaskCdcSinkSharedInfo,
+    OngoingTaskNodeInfo<OngoingTaskCdcSinkNodeInfoDetails>
 >;
 
 export type OngoingTaskSubscriptionInfo = OngoingTaskInfo<

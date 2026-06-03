@@ -522,6 +522,86 @@ namespace SlowTests.Issues
                 Assert.Equal(tinyData, fullData);
             }
         }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(64)]          // fits inline
+        [InlineData(2048)]        // fits inline (boundary-ish)
+        [InlineData(8 * 1024)]    // exceeds inline, falls back to chunked - this is the embeddings regression path
+        [InlineData(128 * 1024)]  // far exceeds inline, multiple chunks
+        public void CanAddStream_WithNonSeekableStream(int size)
+        {
+            // Regression: embeddings generator passes a CanSeek=false stream; AddStream
+            // used to assert seekability because the inline-probe fallback reset Position.
+            var data = new byte[size];
+            new Random(size).NextBytes(data);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("Streams");
+                tree.AddStream("stream/1", new NonSeekableStream(data));
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree("Streams");
+                using var stream = tree.ReadStream("stream/1");
+                Assert.NotNull(stream);
+                Assert.Equal(size, stream.Length);
+
+                var readBack = new byte[size];
+                var totalRead = 0;
+                while (totalRead < size)
+                {
+                    var read = stream.Read(readBack, totalRead, size - totalRead);
+                    if (read == 0)
+                        break;
+                    totalRead += read;
+                }
+
+                Assert.Equal(size, totalRead);
+                Assert.Equal(data, readBack);
+            }
+        }
+
+        private sealed class NonSeekableStream : Stream
+        {
+            private readonly byte[] _data;
+            private int _position;
+
+            public NonSeekableStream(byte[] data)
+            {
+                _data = data;
+            }
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => _data.Length;
+
+            public override long Position
+            {
+                get => _position;
+                set => throw new NotSupportedException();
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                var remaining = _data.Length - _position;
+                if (remaining <= 0)
+                    return 0;
+
+                var toRead = Math.Min(count, remaining);
+                Buffer.BlockCopy(_data, _position, buffer, offset, toRead);
+                _position += toRead;
+                return toRead;
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            public override void Flush() { }
+        }
     }
 
     public unsafe class RavenDB_26285_Encrypted : StorageTest

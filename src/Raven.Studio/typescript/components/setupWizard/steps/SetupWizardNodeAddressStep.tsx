@@ -326,7 +326,6 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
             dnsName: securityOption === "ownCertificate" ? formData.dnsName : null,
             nodeUrl: handleNodeUrl(formData),
             httpPort: formData.httpPort == null ? (securityOption === "none" ? 8080 : 443) : formData.httpPort,
-            nodeTag: formData.isPassive ? null : formData.nodeTag,
             isEditing: false,
             isNewlyAdded: false,
         });
@@ -359,7 +358,7 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
         }
     };
 
-    const isPassiveVisible = securityOption === "none" && method !== "createPackage" && nodes.length === 1;
+    const isPassiveVisible = method !== "createPackage" && nodes.length === 1;
 
     return (
         <RichPanelHeader>
@@ -597,7 +596,7 @@ function NodeDetailsPanelEdit({
     const { isExternalRequired } = useHostnameDetectionSideEffects({ editNodeForm, parentControl });
 
     const isDNSVisible = securityOption === "ownCertificate" && !isWildcardCertificate;
-    const isPassiveVisible = securityOption === "none" && setupMethod !== "createPackage" && nodes.length === 1;
+    const isPassiveVisible = setupMethod !== "createPackage" && nodes.length === 1;
 
     const canCustomizeExternalIpsAndPorts = securityOption === "letsEncrypt";
     const canCustomizeExternalTcpPorts = securityOption === "ownCertificate";
@@ -619,9 +618,10 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="When enabled, the node starts in passive mode and does not join a cluster. 
-                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations. 
-                                                It can also be used to isolate the node for testing or debugging."
+                                            description="When enabled, the node starts in passive mode and does not join a cluster.
+                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations.
+                                                It can also be used to isolate the node for testing or debugging.
+                                                The node will leave passive state when a cluster operation is performed on it, such as creating a database or adding it to a cluster."
                                             ravenLinkHash="2WV7N1"
                                         />
                                     }

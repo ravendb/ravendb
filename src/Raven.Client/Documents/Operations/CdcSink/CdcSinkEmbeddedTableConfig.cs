@@ -48,8 +48,11 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
 
     /// <summary>
     /// Optional JavaScript patch that runs on the PARENT document after this embedded operation.
-    /// Available variables: this = parent document, $row = the embedded row data,
-    /// $old = the previous version of this embedded item (for updates, null for inserts).
+    /// (i.e., after the embedded item has already been inserted/updated/removed in the array/map/value).
+    /// Available variables:
+    ///   this = the parent document AFTER the embedded operation has been applied (the item is already inserted/updated/removed),
+    ///   $row = the raw CDC row for the embedded table with all columns as-is from the source database,
+    ///   $old = the embedded item as it existed BEFORE this CDC event modified it (null for inserts).
     /// </summary>
     public string Patch { get; set; }
 

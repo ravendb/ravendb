@@ -36,10 +36,10 @@ public static class SetupWizardUtils
                 serverCertBytes = Convert.FromBase64String(base64);
                 serverCert = CertificateLoaderUtil.CreateCertificate(serverCertBytes, parameters.SetupInfo.Password, CertificateLoaderUtil.FlagsForExport);
 
-                var localNodeTag = parameters.SetupInfo.LocalNodeTag ?? parameters.SetupInfo.NodeSetupInfos.Keys.FirstOrDefault();
+                var localNodeTag = parameters.SetupInfo.LocalNodeTag;
                 if (localNodeTag is null)
                 {
-                    throw new InvalidOperationException($"Could not determine {nameof(localNodeTag)}");
+                    throw new InvalidOperationException($"{nameof(parameters.SetupInfo.LocalNodeTag)} must be set");
                 }
 
                 publicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
@@ -49,7 +49,7 @@ public static class SetupWizardUtils
                     parameters.SetupInfo.NodeSetupInfos[localNodeTag].TcpPort,
                     out _,
                     out domainFromCert);
-                
+
                 domain = (parameters.SetupMode == SetupMode.Secured)
                     ? domainFromCert.ToLower()
                     : parameters.SetupInfo.Domain.ToLower();
@@ -65,18 +65,18 @@ public static class SetupWizardUtils
                     parameters.CertificateValidationKeyUsages,
                     parameters.Progress);
 
-                if (parameters.SetupInfo.ZipOnly == false)
+                if (parameters.SetupInfo.ZipOnly == false && parameters.SetupInfo.StartAsPassive == false)
                 {
                     await ValidateCertificateFileWriteAccess();
-                    
+
                     foreach (var node in parameters.SetupInfo.NodeSetupInfos)
                     {
-                        if (node.Key == parameters.SetupInfo.LocalNodeTag)
+                        if (node.Key == localNodeTag)
                             continue;
 
                         parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
-                        
+
                         parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
                             parameters.SetupInfo, node.Key,
                             node.Value.Port,
@@ -111,7 +111,7 @@ public static class SetupWizardUtils
 
                 Debug.Assert(selfSignedCertificate != null);
 
-                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ZipOnly == false)
+                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ZipOnly == false && parameters.SetupInfo.StartAsPassive == false)
                     await parameters.PutCertificateInCluster(selfSignedCertificate, certificateDefinition);
 
                 clientCert = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
@@ -165,15 +165,19 @@ public static class SetupWizardUtils
 
         foreach ((_, NodeInfo node) in parameters.UnsecuredSetupInfo.NodeSetupInfos)
             node.PublicServerUrl = string.Join(";", node.Addresses.Select(ip => SettingsZipFileHelper.IpAddressToUrl(ip, node.Port, scheme: "http")));
-        
-        (string localNodeTag, NodeInfo nodeInfo) = nodeSetupInfos.First();
+
+        var localNodeTag = parameters.UnsecuredSetupInfo.LocalNodeTag;
+        if (localNodeTag is null)
+            throw new InvalidOperationException($"{nameof(parameters.UnsecuredSetupInfo.LocalNodeTag)} must be set");
+
+        var nodeInfo = nodeSetupInfos[localNodeTag];
 
         try
         {
             if (parameters.OnBeforeAddingNodesToCluster != null && zipOnly == false )
                 await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
-                
-            if (zipOnly == false)
+
+            if (zipOnly == false && parameters.UnsecuredSetupInfo.StartAsPassive == false)
             {
                 foreach (var node in nodeSetupInfos)
                 {
@@ -182,7 +186,7 @@ public static class SetupWizardUtils
 
                     parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
                     parameters.OnProgress?.Invoke(parameters.Progress);
-                        
+
                     if (parameters.AddNodeToCluster != null)
                         await parameters.AddNodeToCluster(node.Key);
                 }

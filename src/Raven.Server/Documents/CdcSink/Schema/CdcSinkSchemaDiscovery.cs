@@ -27,8 +27,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
 
         /// <summary>
         /// Factory keyed on <see cref="Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString.FactoryName"/>.
-        /// The accepted strings mirror <see cref="CdcSinkSourceVerifier.VerifyAsync"/> so the
-        /// two endpoints stay aligned on which providers CDC supports.
+        /// The accepted strings mirror <see cref="CdcSinkSourceVerifier.AnnotateAsync"/> so
+        /// discovery and verification stay aligned on which providers CDC supports.
         /// </summary>
         public static CdcSinkSchemaDiscovery For(string factoryName)
         {

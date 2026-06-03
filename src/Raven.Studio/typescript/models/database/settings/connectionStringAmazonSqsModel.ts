@@ -134,7 +134,8 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
                     RegionName: ""
                 },
                 Passwordless: false,
-            }
+            },
+            AzureServiceBusConnectionSettings: null,
         }, true, []);
     }
     
@@ -161,7 +162,8 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
-            AmazonSqsConnectionSettings: this.authenticationToDto()
+            AmazonSqsConnectionSettings: this.authenticationToDto(),
+            AzureServiceBusConnectionSettings: null,
         };
     }
 

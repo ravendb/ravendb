@@ -800,7 +800,33 @@ namespace Raven.Server.Documents.PeriodicBackup
                         onProgress: _onProgress,
                         token: TaskCancelToken.Token);
 
-                    smuggler.ExecuteAsync().Wait();
+                    var prevWriterCaptureContextOnAwait = AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value;
+                    AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value = true;
+
+                    bool prevZstdCaptureContextOnAwait = false;
+                    if (options.CompressionAlgorithm == ExportCompressionAlgorithm.Zstd)
+                    {
+                        prevZstdCaptureContextOnAwait = ZstdStream.CaptureContextOnAwait.Value;
+                        ZstdStream.CaptureContextOnAwait.Value = true;
+                    }
+
+                    try
+                    {
+                        AsyncHelpers.RunSyncWithSynchronization(() => smuggler.ExecuteAsync());
+                    }
+                    catch (TimeoutException e) when (TaskCancelToken.Token.IsCancellationRequested)
+                    {
+                        // AsyncHelpers.RunSync converts OperationCanceledException to TimeoutException.
+                        // Restore the correct exception type so the backup runner treats this as a clean cancellation.
+                        throw new OperationCanceledException("Backup was canceled.", e);
+                    }
+                    finally
+                    {
+                        AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value = prevWriterCaptureContextOnAwait;
+
+                        if (options.CompressionAlgorithm == ExportCompressionAlgorithm.Zstd)
+                            ZstdStream.CaptureContextOnAwait.Value = prevZstdCaptureContextOnAwait;
+                    }
 
                     FlushToDisk(outputStream);
 

@@ -9,6 +9,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -654,6 +656,102 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 var user = session.Load<User>("users/1");
                 Assert.Null(user);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.BackupExportImport)]
+        public async Task ClusterTransactionAfterSnapshotRestoreOnNewServer()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var db2Name = GetDatabaseName();
+
+            const string userId = "users/1";
+            var user1 = new User { Id = userId, Name = "SingleUser" };
+            var db1Name = GetDatabaseName();
+            using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = _ => db1Name }))
+            {
+                for (int i = 0; i < 16; i++)
+                {
+                    using (var session = store1.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        await session.StoreAsync(new User { Name = $"User{i}" }, $"users/{i}");
+                        await session.SaveChangesAsync();
+                    }
+                }
+            }
+
+            using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = _ => db2Name }))
+            {
+                using (var session = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(user1);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store2);
+            }
+
+            using var newServer = GetNewServer();
+
+            var restoredDbName = GetDatabaseName();
+            var backupLocation = Directory.GetDirectories(backupPath).First();
+
+            using (var newStore = GetDocumentStore(new Options { Server = newServer, CreateDatabase = false, ModifyDatabaseName = _ => db2Name }))
+            using (Backup.RestoreDatabase(newStore, new RestoreBackupConfiguration
+            {
+                BackupLocation = backupLocation,
+                DatabaseName = restoredDbName
+            }))
+
+            using (var restoredStore = GetDocumentStore(new Options { Server = newServer, CreateDatabase = false, ModifyDatabaseName = _ => restoredDbName }))
+            {
+                using (var session = restoredStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(user1);
+                    await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(async () => await session.SaveChangesAsync());
+                }
+
+                var user2 = new User { Id = "users/2", Name = "Grisha" };
+                var user3 = new User { Id = "users/3", Name = "Igal" };
+
+                using (var session = restoredStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(user2);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = restoredStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(user3);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = restoredStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var user = await session.LoadAsync<User>(user2.Id);
+                    Assert.NotNull(user);
+                    Assert.Equal(user2.Name, user.Name);
+
+                    user = await session.LoadAsync<User>("users/3");
+                    Assert.NotNull(user);
+                    Assert.Equal(user3.Name, user.Name);
+                }
+
+                using (var session = restoredStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("SingleUser", user.Name);
+                    user.Name = "Grisha";
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = restoredStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var user = await session.LoadAsync<User>(userId);
+                    Assert.NotNull(user);
+                    Assert.Equal("Grisha", user.Name);
+                }
             }
         }
     }

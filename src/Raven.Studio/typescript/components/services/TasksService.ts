@@ -27,6 +27,7 @@ import { ConnectionStringDto } from "components/pages/database/settings/connecti
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
 import testAzureQueueStorageServerConnectionCommand from "commands/database/cluster/testAzureQueueStorageServerConnectionCommand";
+import testAzureServiceBusServerConnectionCommand from "commands/database/cluster/testAzureServiceBusServerConnectionCommand";
 import replicationProgressCommand from "commands/database/tasks/replicationProgressCommand";
 import internalReplicationProgressCommand from "commands/database/tasks/internalReplicationProgressCommand";
 import testSnowflakeConnectionStringCommand from "commands/database/cluster/testSnowflakeConnectionStringCommand";
@@ -40,6 +41,9 @@ import getEtlErrorsCommand from "commands/database/tasks/getEtlErrorsCommand";
 import getEtlStatsCommand from "commands/database/tasks/getEtlStatsCommand";
 import deleteEtlErrorsCommand from "commands/database/tasks/deleteEtlErrorsCommand";
 import retryBatchEtlCommand from "commands/database/tasks/retryBatchEtlCommand";
+import testCdcSinkCommand from "commands/database/tasks/testCdcSinkCommand";
+import saveCdcSinkTaskCommand from "commands/database/tasks/saveCdcSinkTaskCommand";
+import getCdcSinkTaskSchemaCommand from "commands/database/tasks/getCdcSinkTaskSchemaCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -95,6 +99,10 @@ export default class TasksService {
         return new getManualBackupCommand(databaseName).execute();
     }
 
+    async getCdcSinkTaskInfo(...args: Parameters<typeof getOngoingTaskInfoCommand.forCdcSink>) {
+        return getOngoingTaskInfoCommand.forCdcSink(...args).execute();
+    }
+
     async getSampleDataClasses(databaseName: string): Promise<string> {
         return new createSampleDataClassCommand(databaseName).execute();
     }
@@ -144,6 +152,13 @@ export default class TasksService {
         authentication: Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings
     ) {
         return new testAzureQueueStorageServerConnectionCommand(databaseName, authentication).execute();
+    }
+
+    async testAzureServiceBusServerConnection(
+        databaseName: string,
+        settings: Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings
+    ) {
+        return new testAzureServiceBusServerConnectionCommand(databaseName, settings).execute();
     }
 
     async testAmazonSqsServerConnection(
@@ -223,5 +238,17 @@ export default class TasksService {
 
     async retryBatch(...args: ConstructorParameters<typeof retryBatchEtlCommand>) {
         return new retryBatchEtlCommand(...args).execute();
+    }
+
+    async testCdcSink(...args: ConstructorParameters<typeof testCdcSinkCommand>) {
+        return new testCdcSinkCommand(...args).execute();
+    }
+
+    async saveCdcSinkTask(...args: ConstructorParameters<typeof saveCdcSinkTaskCommand>) {
+        return new saveCdcSinkTaskCommand(...args).execute();
+    }
+
+    async getCdcSinkTaskSchema(...args: ConstructorParameters<typeof getCdcSinkTaskSchemaCommand>) {
+        return new getCdcSinkTaskSchemaCommand(...args).execute();
     }
 }

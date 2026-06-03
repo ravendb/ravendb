@@ -102,6 +102,8 @@ public class QueueSinkConfiguration : IDynamicJson, IDatabaseTask
                 errors.Add($"Script name '{script.Name}' name is already defined. The script names need to be unique");
         }
 
+        ValidateForBroker(errors);
+
         if (Connection != null && BrokerType != Connection.BrokerType)
         {
             errors.Add("Broker type must be the same in the Queue Sink configuration and in Connection string.");
@@ -109,6 +111,22 @@ public class QueueSinkConfiguration : IDynamicJson, IDatabaseTask
         }
 
         return errors.Count == 0;
+    }
+
+    private void ValidateForBroker(List<string> errors)
+    {
+        // Broker-specific validation beyond the common checks above. Only brokers that need extra
+        // semantic validation of their queue entries (e.g. Azure Service Bus topic/subscription
+        // syntax) add a case here; other brokers treat their entries as opaque strings.
+        switch (BrokerType)
+        {
+            case QueueBrokerType.AzureServiceBus:
+                foreach (var script in Scripts)
+                {
+                    AzureServiceBusSinkSource.ValidateScript(script, errors);
+                }
+                break;
+        }
     }
 
     public DynamicJsonValue ToJson()

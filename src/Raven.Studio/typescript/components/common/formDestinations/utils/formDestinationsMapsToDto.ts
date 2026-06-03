@@ -57,11 +57,17 @@ export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.O
     const forcePathStyle =
         !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
 
+    const disableChecksumValidation =
+        !destination.config.isOverrideConfig && destination.isUseCustomHost
+            ? destination.disableChecksumValidation
+            : undefined;
+
     return {
         ...mapBackupSettingsToDto(destination),
         ...mapAmazonToDto(destination),
         CustomServerUrl: customServerUrl,
         ForcePathStyle: forcePathStyle,
+        DisableChecksumValidation: disableChecksumValidation,
         BucketName: destination.bucketName,
     };
 }

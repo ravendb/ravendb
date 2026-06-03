@@ -18,10 +18,11 @@ public abstract class SetupInfoBase
     public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
     public string LocalNodeTag { get; set; }
     public bool ZipOnly { get; set; }
-    
+    public bool StartAsPassive { get; set; }
+
     public abstract Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters);
     public abstract void ValidateInfo(CreateSetupPackageParameters parameters);
-    
+
     public virtual DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
@@ -31,6 +32,7 @@ public abstract class SetupInfoBase
             [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos),
             [nameof(LocalNodeTag)] = LocalNodeTag,
             [nameof(License)] = License?.ToJson(),
+            [nameof(StartAsPassive)] = StartAsPassive,
         };
     }
 }

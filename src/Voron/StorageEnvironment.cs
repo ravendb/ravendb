@@ -119,6 +119,9 @@ namespace Voron
         public DateTime LastWorkTime;
 
         public bool Disposed;
+
+        public bool IsDisposing => _cancellationTokenSource.IsCancellationRequested || _envDispose.IsSet;
+
         private readonly RavenLogger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
         public int TimeToSyncAfterFlushInSec;
@@ -480,11 +483,10 @@ namespace Voron
 
         public void Dispose()
         {
-
             if (_envDispose.IsSet)
                 return; // already disposed
 
-            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.SafeCancel(_log, $"Disposing {Options}");
             try
             {
                 SelfReference.Owner = null;

@@ -66,6 +66,10 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getSubscriptionTaskInfo, dto, TasksStubs.getSubscription());
     }
 
+    withGetCdcSinkTaskInfo(dto?: MockedValue<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskInfo, dto, TasksStubs.getCdcSink());
+    }
+
     withGetSubscriptionConnectionDetails(
         dto?: MockedValue<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails>
     ) {
@@ -104,6 +108,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         );
     }
 
+    withTestCdcSink(dto?: Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult) {
+        return this.mockResolvedValue(this.mocks.testCdcSink, dto, TasksStubs.testCdcSink());
+    }
+
+    withGetCdcSinkTaskSchema(dto?: MockedValue<Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskSchema, dto, TasksStubs.cdcSinkTaskSchema());
+    }
+
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testSqlConnectionString,
@@ -139,6 +151,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
     withTestAmazonSqsServerConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testAmazonSqsServerConnection,
+            dto,
+            SharedStubs.nodeConnectionTestSuccessResult()
+        );
+    }
+
+    withTestAzureServiceBusServerConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
+        return this.mockResolvedValue(
+            this.mocks.testAzureServiceBusServerConnection,
             dto,
             SharedStubs.nodeConnectionTestSuccessResult()
         );

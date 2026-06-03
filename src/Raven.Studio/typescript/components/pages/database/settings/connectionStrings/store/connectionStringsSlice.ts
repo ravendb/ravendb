@@ -14,6 +14,7 @@ import {
     mapSqlConnectionsFromDto,
     mapSnowflakeConnectionsFromDto,
     mapAmazonSqsConnectionsFromDto,
+    mapAzureServiceBusConnectionsFromDto,
     mapAiConnectionsFromDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -42,6 +43,7 @@ const initialState: ConnectionStringsState = {
         RabbitMQ: [],
         AzureQueueStorage: [],
         AmazonSqs: [],
+        AzureServiceBus: [],
         Ai: [],
     },
     urlParameters: {
@@ -130,6 +132,10 @@ export const connectionStringsSlice = createSlice({
                     ongoingTasks
                 );
                 connections.AmazonSqs = mapAmazonSqsConnectionsFromDto(
+                    connectionStringsDto.QueueConnectionStrings,
+                    ongoingTasks
+                );
+                connections.AzureServiceBus = mapAzureServiceBusConnectionsFromDto(
                     connectionStringsDto.QueueConnectionStrings,
                     ongoingTasks
                 );

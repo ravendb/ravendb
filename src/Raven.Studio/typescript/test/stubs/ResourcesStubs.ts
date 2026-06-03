@@ -101,6 +101,7 @@ export class ResourcesStubs {
             Expires: moment().add(2, "hours").toString(),
             CustomServerUrl: null,
             ForcePathStyle: false,
+            DisableChecksumValidation: false,
             Disabled: false,
             GetBackupConfigurationScript: null,
         };

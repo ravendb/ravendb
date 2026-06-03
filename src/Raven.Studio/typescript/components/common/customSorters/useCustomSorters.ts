@@ -17,8 +17,8 @@ export function useCustomSorters() {
         setSorters((prev) => prev.filter((_, i) => i !== idx));
     };
 
-    const markAsSaved = (idx: number) => {
-        setSorters((prev) => prev.map((x, i) => (i === idx ? { ...x, isSaved: true } : x)));
+    const markAsSaved = (idx: number, name: string) => {
+        setSorters((prev) => prev.map((x, i) => (i === idx ? { ...x, name, isSaved: true } : x)));
     };
 
     return {

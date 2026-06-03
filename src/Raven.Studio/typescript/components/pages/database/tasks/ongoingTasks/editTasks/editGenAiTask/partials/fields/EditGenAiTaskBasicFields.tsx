@@ -9,7 +9,6 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { sortBy } from "lodash";
 import { useAsync } from "react-async-hook";
 import { editGenAiTaskActions, editGenAiTaskSelectors } from "../../store/editGenAiTaskSlice";
-import EditGenAiTaskNodeField from "./EditGenAiTaskNodeField";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useServices } from "components/hooks/useServices";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -22,6 +21,7 @@ import Button from "react-bootstrap/Button";
 import { editGenAiTaskUtils } from "../../utils/editGenAiTaskUtils";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import tasksCommonContent from "models/database/tasks/tasksCommonContent";
+import { FormTaskResponsibleNode } from "components/common/formFields/FormTaskResponsibleNode";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
@@ -145,7 +145,12 @@ export default function EditGenAiTaskBasicFields() {
                     </FormGroup>
                 </div>
             )}
-            <EditGenAiTaskNodeField />
+            <FormTaskResponsibleNode
+                control={control}
+                isSetName="isSetResponsibleNode"
+                nodeName="responsibleNode"
+                isPinName="isPinResponsibleNode"
+            />
             <FormGroup>
                 <FormLabel>Connection String</FormLabel>
                 <InputGroup>

@@ -20,6 +20,7 @@ export type StudioConnectionType =
     | "RabbitMQ"
     | "AzureQueueStorage"
     | "AmazonSqs"
+    | "AzureServiceBus"
     | "Ai";
 
 export interface ConnectionStringUsedTask {
@@ -120,6 +121,25 @@ export interface AmazonSqsConnection extends ConnectionBase {
     };
 }
 
+export interface AzureServiceBusConnection extends ConnectionBase {
+    type: Extract<StudioConnectionType, "AzureServiceBus">;
+    authType?: AzureServiceBusAuthenticationType;
+    settings?: {
+        connectionString?: {
+            connectionStringValue?: string;
+        };
+        entraId?: {
+            namespace?: string;
+            tenantId?: string;
+            clientId?: string;
+            clientSecret?: string;
+        };
+        passwordless?: {
+            namespace?: string;
+        };
+    };
+}
+
 export interface AiConnection extends ConnectionBase {
     type: Extract<StudioConnectionType, "Ai">;
     identifier?: string;
@@ -207,6 +227,7 @@ export type Connection =
     | RabbitMqConnection
     | AzureQueueStorageConnection
     | AmazonSqsConnection
+    | AzureServiceBusConnection
     | AiConnection;
 
 export type ConnectionStringDto = Partial<

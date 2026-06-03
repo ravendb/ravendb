@@ -3,6 +3,7 @@ import saveAiAgentCommand from "commands/database/aiAgents/saveAiAgentCommand";
 import getAiAgentCommand from "commands/database/aiAgents/getAiAgentCommand";
 import deleteAiAgentCommand from "commands/database/aiAgents/deleteAiAgentCommand";
 import runAiAgentCommand from "commands/database/aiAgents/runAiAgentCommand";
+import generateCodeAiAgentCommand from "commands/database/aiAgents/generateCodeAiAgentCommand";
 
 export default class AiAgentService {
     async getAiAgents(...args: ConstructorParameters<typeof getAiAgentCommand>) {
@@ -23,5 +24,9 @@ export default class AiAgentService {
 
     async testAiAgent(...args: ConstructorParameters<typeof testAiAgentCommand>) {
         return new testAiAgentCommand(...args).execute();
+    }
+
+    async generateCode(...args: ConstructorParameters<typeof generateCodeAiAgentCommand>) {
+        return new generateCodeAiAgentCommand(...args).execute();
     }
 }
