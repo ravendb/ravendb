@@ -3,6 +3,7 @@ import { Dialog as SheetPrimitive } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/shadcn/ui/button";
+import PortalContainerContext from "@/components/shadcn/ui/portal-container-context";
 import { XIcon } from "lucide-react";
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -44,10 +45,15 @@ function SheetContent({
     side?: "top" | "right" | "bottom" | "left";
     showCloseButton?: boolean;
 }) {
+    // Publish the content node so popups (Autocomplete, Combobox, …) can portal
+    // inside it instead of into `<body>`, which the modal layer makes unclickable.
+    const [container, setContainer] = React.useState<HTMLElement | null>(null);
+
     return (
         <SheetPortal>
             <SheetOverlay />
             <SheetPrimitive.Content
+                ref={setContainer}
                 data-slot="sheet-content"
                 data-side={side}
                 className={cn(
@@ -56,15 +62,17 @@ function SheetContent({
                 )}
                 {...props}
             >
-                {children}
-                {showCloseButton && (
-                    <SheetPrimitive.Close data-slot="sheet-close" asChild>
-                        <Button variant="ghost" className="absolute top-3 right-3" size="icon-sm">
-                            <XIcon />
-                            <span className="sr-only">Close</span>
-                        </Button>
-                    </SheetPrimitive.Close>
-                )}
+                <PortalContainerContext.Provider value={container}>
+                    {children}
+                    {showCloseButton && (
+                        <SheetPrimitive.Close data-slot="sheet-close" asChild>
+                            <Button variant="ghost" className="absolute top-3 right-3" size="icon-sm">
+                                <XIcon />
+                                <span className="sr-only">Close</span>
+                            </Button>
+                        </SheetPrimitive.Close>
+                    )}
+                </PortalContainerContext.Provider>
             </SheetPrimitive.Content>
         </SheetPortal>
     );

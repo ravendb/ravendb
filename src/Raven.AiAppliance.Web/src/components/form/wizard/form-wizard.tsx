@@ -24,6 +24,7 @@ export type WizardFooterComponentProps<StepId extends string> =
           currentStep: WizardStep<StepId>;
           cancel: () => void;
           prevStep: () => void;
+          submitLabel?: React.ReactNode;
       };
 
 export type WizardBodyComponentProps = {
@@ -52,9 +53,16 @@ type FormWizardProps<StepId extends string> = {
     flow: StepId[];
     initialStep?: StepId;
     cancel: () => void;
+    submitLabel?: React.ReactNode;
 };
 
-export function FormWizard<StepId extends string>({ steps, flow, initialStep, cancel }: FormWizardProps<StepId>) {
+export function FormWizard<StepId extends string>({
+    steps,
+    flow,
+    initialStep,
+    submitLabel,
+    cancel,
+}: FormWizardProps<StepId>) {
     const [currentStepId, setCurrentStepId] = useState<StepId>(initialStep ?? flow[0]);
     const currentIndex = flow.indexOf(currentStepId);
     const currentStep = steps[currentStepId];
@@ -72,6 +80,7 @@ export function FormWizard<StepId extends string>({ steps, flow, initialStep, ca
     const footerProps: WizardFooterComponentProps<StepId> = {
         stepPosition: getStepPosition(),
         currentStep,
+        submitLabel,
         nextStep: () => setCurrentStepId(flow[currentIndex + 1]),
         prevStep: () => setCurrentStepId(flow[currentIndex - 1]),
         cancel,
@@ -199,9 +208,9 @@ export function WizardFooterNextButton<T extends string>(props: WizardFooterComp
 
     if (props.stepPosition === "last") {
         return (
-            <Button type="submit" className="ml-auto" disabled={isPending}>
+            <Button type="submit" className="ml-auto" disabled={isPending} key={`${props.currentStep.id}:submit`}>
                 {isPending && <Spinner />}
-                Submit
+                {props.submitLabel ?? "Submit"}
             </Button>
         );
     }
@@ -225,7 +234,7 @@ export function WizardFooterNextButton<T extends string>(props: WizardFooterComp
     };
 
     return (
-        <Button onClick={handleNext} className="ml-auto" disabled={isPending}>
+        <Button onClick={handleNext} className="ml-auto" disabled={isPending} key={`${props.currentStep.id}:next`}>
             {isPending && <Spinner />}
             Next
         </Button>

@@ -84,7 +84,14 @@ function AddCapabilityWizardBody() {
     const navigate = useNavigate();
     const steps = useCapabilitySteps();
 
-    return <FormWizard steps={steps} flow={CAPABILITY_FLOW} cancel={() => navigate(appRoutes.app(slug))} />;
+    return (
+        <FormWizard
+            steps={steps}
+            flow={CAPABILITY_FLOW}
+            cancel={() => navigate(appRoutes.app(slug))}
+            submitLabel="Save agent"
+        />
+    );
 }
 
 function getDefaultValues(): AgentFormData {

@@ -6,6 +6,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/shadcn/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/shadcn/ui/input-group";
+import { usePortalContainer } from "@/components/shadcn/ui/portal-container-context";
 import { ChevronDownIcon, XIcon, CheckIcon } from "lucide-react";
 
 const Combobox = ComboboxPrimitive.Root;
@@ -84,8 +85,12 @@ function ComboboxContent({
     ...props
 }: ComboboxPrimitive.Popup.Props &
     Pick<ComboboxPrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset" | "anchor">) {
+    // `null` tells Base UI to wait for a container; outside a modal we want the
+    // `undefined` default `<body>` portal, so fall back to `undefined`.
+    const container = usePortalContainer() ?? undefined;
+
     return (
-        <ComboboxPrimitive.Portal>
+        <ComboboxPrimitive.Portal container={container}>
             <ComboboxPrimitive.Positioner
                 side={side}
                 sideOffset={sideOffset}

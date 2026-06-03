@@ -2,6 +2,7 @@ import { Autocomplete as AutocompletePrimitive } from "@base-ui/react";
 
 import { cn } from "@/lib/utils";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/shadcn/ui/input-group";
+import { usePortalContainer } from "@/components/shadcn/ui/portal-container-context";
 import { ChevronDownIcon, XIcon } from "lucide-react";
 
 const Autocomplete = AutocompletePrimitive.Root;
@@ -75,8 +76,12 @@ function AutocompleteContent({
     ...props
 }: AutocompletePrimitive.Popup.Props &
     Pick<AutocompletePrimitive.Positioner.Props, "side" | "align" | "sideOffset" | "alignOffset">) {
+    // `null` tells Base UI to wait for a container; outside a modal we want the
+    // default `<body>` portal, so fall back to `undefined`.
+    const container = usePortalContainer() ?? undefined;
+
     return (
-        <AutocompletePrimitive.Portal>
+        <AutocompletePrimitive.Portal container={container}>
             <AutocompletePrimitive.Positioner
                 side={side}
                 sideOffset={sideOffset}
