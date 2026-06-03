@@ -116,7 +116,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
     public sealed class OutgoingPullReplicationHandlerAsSink : OutgoingPullReplicationHandler
     {
         private readonly PullReplicationAsSink _node;
-        private string _lastPersistedSinkCv;
 
         public OutgoingPullReplicationHandlerAsSink(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsSink node, TcpConnectionInfo connectionInfo) :
             base(parent, database, node, connectionInfo)
@@ -137,11 +136,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
             request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = _node.HubName;
             request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = _node.GetTaskName();
 
-            if (_node.Mode == PullReplicationMode.HubToSink && _node.TaskId != 0)
+            if (_node.Mode == PullReplicationMode.HubToSink)
             {
-                var hubCursor = ReadHubCursorFromCluster();
-                if (hubCursor != null)
-                    request[nameof(ReplicationInitialRequest.SinkCanStartFromChangeVector)] = hubCursor;
+                request[nameof(ReplicationInitialRequest.SinkCanStartFromChangeVector)] = ReadHubCursorFromCluster();
             }
 
             return request;
@@ -156,10 +153,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
             };
 
-            if (_node.TaskId == 0)
+            string cursorCv = ReadSinkCursorFromCluster();
+            if (cursorCv == null)
                 return;
 
-            string cursorCv = ReadSinkCursorFromCluster() ?? LastAcceptedChangeVector;
             long startEtag = ChangeVectorUtils.GetEtagById(cursorCv, _database.DbBase64Id);
 
             if (startEtag > _lastSentDocumentEtag)
@@ -169,15 +166,12 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected override void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             base.UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
-            if (_node.TaskId != 0 && string.IsNullOrEmpty(replicationBatchReply.ConfirmedSinkCv) == false)
+            if (string.IsNullOrEmpty(replicationBatchReply.ConfirmedSinkCv) == false)
                 PersistSinkCursor(replicationBatchReply.ConfirmedSinkCv);
         }
 
         private void PersistSinkCursor(string confirmedSinkCv)
         {
-            if (confirmedSinkCv == _lastPersistedSinkCv)
-                return;
-
             var command = new UpdateExternalReplicationStateCommand(_database.Name, RaftIdGenerator.NewId())
             {
                 ExternalReplicationState = new ExternalReplicationState
@@ -188,11 +182,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     Type = ExternalReplicationState.ReplicationStateType.SinkCursor
                 }
             };
-            _parent._server.SendToLeaderAsync(command).ContinueWith(x =>
-            {
-                if (x.IsCompletedSuccessfully)
-                    _lastPersistedSinkCv = confirmedSinkCv;
-            }).IgnoreUnobservedExceptions();
+            _parent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
         private string ReadSinkCursorFromCluster()
