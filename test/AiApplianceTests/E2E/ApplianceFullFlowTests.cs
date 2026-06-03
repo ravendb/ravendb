@@ -39,20 +39,29 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // location via APPLIANCE_E2E_SETUP_PACKAGE_PATH. CI will substitute a synthetic mock zip
         // through the same env var.
         var zipPath = Environment.GetEnvironmentVariable("APPLIANCE_E2E_SETUP_PACKAGE_PATH");
-        Assert.False(string.IsNullOrWhiteSpace(zipPath),
-            "Set APPLIANCE_E2E_SETUP_PACKAGE_PATH to the absolute path of the setup-package zip " +
-            "(the one with your real RavenDB license + cert).");
+        if (string.IsNullOrWhiteSpace(zipPath))
+        {
+            // A missing prerequisite is a "can't run here", not a failure — skip
+            // (matches how the rest of the integration suite gates on env). The
+            // test is already Postgres-gated via NpgSqlRequired.
+            Assert.Skip("Set APPLIANCE_E2E_SETUP_PACKAGE_PATH to the absolute path of the setup-package zip " +
+                "(the one with your real RavenDB license + cert) to run this end-to-end test.");
+        }
+        // A path that IS set but points nowhere is a misconfiguration, not an
+        // absent prerequisite — keep that a hard failure.
         Assert.True(File.Exists(zipPath),
             $"APPLIANCE_E2E_SETUP_PACKAGE_PATH points at '{zipPath}' but no file is there.");
         var zipBytes = await File.ReadAllBytesAsync(zipPath);
 
         // T14 asserts a real streamed agent reply, so the agent's AI connection
         // string (T11a) needs a live OpenAI key. Same env var the rest of the
-        // AI-integration suite uses.
+        // AI-integration suite uses — skip (don't fail) when it's absent.
         var openAiKey = RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey;
-        Assert.False(string.IsNullOrWhiteSpace(openAiKey),
-            "Set RAVEN_AI_INTEGRATION_OPENAI_API_KEY to a real OpenAI key — T11a provisions an OpenAI connection " +
-            "string and T14 asserts a real streamed reply through it.");
+        if (string.IsNullOrWhiteSpace(openAiKey))
+        {
+            Assert.Skip("Set RAVEN_AI_INTEGRATION_OPENAI_API_KEY to a real OpenAI key — T11a provisions an OpenAI " +
+                "connection string and T14 asserts a real streamed reply through it.");
+        }
 
         await using var licenseApi = await MockLicenseApi.StartAsync(HardcodedLicenseKey, zipBytes);
         var setupRoot = NewDataPath(forceCreateDir: true, prefix: "egor-ai-setup");
