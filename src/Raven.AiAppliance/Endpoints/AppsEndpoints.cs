@@ -41,7 +41,9 @@ public static class AppsEndpoints
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
             .Accepts<SetupTryRequest>("application/json")
-            .Produces<string>(StatusCodes.Status200OK, contentType: "application/x-ndjson")
+            // Streams NDJSON frames, not a single string — declare the status +
+            // content type only, without a (misleading) string body schema.
+            .Produces(StatusCodes.Status200OK, contentType: "application/x-ndjson")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapPost("/{slug}/suggest/agent", SuggestAgentAsync)
