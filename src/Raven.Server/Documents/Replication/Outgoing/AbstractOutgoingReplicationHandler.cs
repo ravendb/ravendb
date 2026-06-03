@@ -88,8 +88,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public int MissingAttachmentsRetries;
 
-        internal virtual bool CanFilterOutSourceItems => false;
-
         public readonly ReplicationMetricsCountersManager Metrics;
 
         public string OutgoingReplicationThreadName
@@ -468,9 +466,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
                 [nameof(ReplicationLatestEtagRequest.ReplicationsType)] = GetReplicationType()
             };
-
-            if (CanFilterOutSourceItems)
-                request[nameof(ReplicationLatestEtagRequest.CanFilterOutSourceItems)] = true;
 
             return request;
         }

@@ -214,6 +214,24 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedLegacyPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams);
         }
 
+        private static void HandleExpiredDocuments(DocumentsOperationContext ctx, ReplicationBatchItem item, ReplicationLoader.PullReplicationParams pullReplicationParams)
+        {
+            var isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
+            if (isSink)
+                return;
+
+            if (pullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == false)
+                return;
+
+            if (item is DocumentReplicationItem doc)
+            {
+                if (doc.Data == null)
+                    return;
+
+                RemoveExpiresFromSinkBatchItem(doc, ctx);
+            }
+        }
+
         protected override DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
         {
             return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams);
@@ -236,24 +254,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return true;
 
             return _preventIncomingSinkDeletions;
-        }
-
-        private static void HandleExpiredDocuments(DocumentsOperationContext ctx, ReplicationBatchItem item, ReplicationLoader.PullReplicationParams pullReplicationParams)
-        {
-            var isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
-            if (isSink)
-                return;
-
-            if (pullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == false)
-                return;
-
-            if (item is DocumentReplicationItem doc)
-            {
-                if (doc.Data == null)
-                    return;
-
-                RemoveExpiresFromSinkBatchItem(doc, ctx);
-            }
         }
 
         private sealed class MergedLegacyPullReplicationCommand : MergedDocumentReplicationCommand

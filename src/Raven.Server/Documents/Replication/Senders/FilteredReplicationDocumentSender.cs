@@ -1,10 +1,9 @@
 ﻿using System.IO;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
+using Raven.Server.Utils;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
@@ -13,6 +12,7 @@ namespace Raven.Server.Documents.Replication.Senders
     {
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
         private readonly bool _shouldSkipSendingTombstones;
+        private readonly bool _canFilterOutSourceItems;
 
         public FilteredReplicationDocumentSender(Stream stream, OutgoingPullReplicationHandler parent, RavenLogger log, string[] pathsToSend, string[] destinationAcceptablePaths) : base(stream, parent, log)
         {
@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.Replication.Senders
                 _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
             
             _shouldSkipSendingTombstones = parent.CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
+            _canFilterOutSourceItems = parent.CanFilterOutSourceItems;
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
@@ -54,6 +55,17 @@ namespace Raven.Server.Documents.Replication.Senders
 
                 return true;
             }
+        }
+
+        protected override void SendEmptyBatchHeartbeat(DocumentsOperationContext context, bool wasInterrupted, ChangeVector completedSourceFrontier)
+        {
+            if (wasInterrupted || _canFilterOutSourceItems == false)
+            {
+                base.SendEmptyBatchHeartbeat(context, wasInterrupted, completedSourceFrontier);
+                return;
+            }
+
+            _parent.SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: completedSourceFrontier.AsString());
         }
 
         public override void Dispose()
