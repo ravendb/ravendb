@@ -4,6 +4,7 @@ using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Live;
 using Raven.AiAppliance.Raven;
+using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -294,6 +295,7 @@ public static class AppsEndpoints
         SetupTryRequest body,
         IDocumentStore store,
         IAgentRouter router,
+        IAgentSchemaRegistry schemas,
         ILogger<AppsLogger> logger,
         HttpContext ctx)
     {
@@ -317,7 +319,19 @@ public static class AppsEndpoints
             return;
         }
 
-        var agentId = body.AgentId;
+        // Validate the agent id against the registry up front (mirrors
+        // ProvisionIFrameAsync). Without this an unknown id surfaces as a 200 +
+        // NDJSON error frame after the headers flush; a registry miss is a client
+        // error, so return a clean 400 before the stream starts — and adopt the
+        // registry's canonical casing for the run.
+        if (schemas.TryGet(body.AgentId, out var schema) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"), ct);
+            return;
+        }
+
+        var agentId = schema.Identifier;
 
         NdjsonStream.SetHeaders(ctx);
         try

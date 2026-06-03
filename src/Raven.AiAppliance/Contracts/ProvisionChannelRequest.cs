@@ -9,7 +9,9 @@ namespace Raven.AiAppliance.Contracts;
 /// </summary>
 /// <param name="Type">Channel kind. Bound case-insensitively (e.g. <c>"iframe"</c>
 /// -> <see cref="ChannelType.IFrame"/>); only <see cref="ChannelType.IFrame"/> is
-/// implemented in the 8-week demo (Telegram/WhatsApp -> 501).</param>
+/// implemented in the 8-week demo (Telegram/WhatsApp -> 501). Required: a missing
+/// <c>type</c> binds to <c>null</c> and is rejected with 400 rather than silently
+/// defaulting to <see cref="ChannelType.IFrame"/>.</param>
 /// <param name="AgentId">Identifier of the agent this channel routes to —
 /// must match a registered <see cref="Schema.IAgentSchema.Identifier"/>.</param>
 /// <param name="AllowedOrigins">Allowed origins for the embed page's
@@ -17,7 +19,7 @@ namespace Raven.AiAppliance.Contracts;
 /// <param name="DisplayName">Optional operator-friendly label. Defaults to
 /// <see cref="Type"/> when omitted.</param>
 public sealed record ProvisionChannelRequest(
-    ChannelType Type,
+    ChannelType? Type,
     string AgentId,
     string[] AllowedOrigins,
     string? DisplayName = null);

@@ -544,6 +544,26 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_returns_400_when_type_missing()
+    {
+        // A missing 'type' binds the now-nullable enum to null; the handler must
+        // reject it with 400 rather than silently defaulting to IFrame.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_returns_same_widgetId_under_concurrent_calls()
     {
         // C2 from Copilot review #4362803113: the previous query-then-put
