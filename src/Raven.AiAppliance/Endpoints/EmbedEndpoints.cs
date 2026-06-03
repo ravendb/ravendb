@@ -189,6 +189,12 @@ public static class EmbedEndpoints
         if (channel is null)
             return null;
 
+        // /embed/{widgetId} is the iFrame public surface — never serve a
+        // non-IFrame channel doc (e.g. a future Telegram/WhatsApp channel that
+        // shares the channels/ prefix). Treat it as a miss -> 404.
+        if (channel.Type != ChannelType.IFrame)
+            return null;
+
         return (app, channel);
     }
 

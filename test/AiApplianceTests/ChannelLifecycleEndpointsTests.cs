@@ -264,6 +264,42 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal(HttpStatusCode.NotFound, trimmed.StatusCode);
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Embed_page_returns_404_for_non_iframe_channel()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        // Seed a non-IFrame channel doc + its widget-index pointer directly: the
+        // API can't provision Telegram/WhatsApp (they 501), and /embed is the
+        // iFrame-only surface, so resolving this widget must be treated as a miss.
+        const string widgetId = "wgt_not_iframe";
+        using (var cfg = store.OpenAsyncSession())
+        {
+            await cfg.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = "my-app" });
+            await cfg.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession(perAppDb))
+        {
+            await session.StoreAsync(new Channel
+            {
+                Id = $"channels/{widgetId}",
+                Type = ChannelType.Telegram,
+                AgentId = "demo-agent",
+                Enabled = true,
+            });
+            await session.SaveChangesAsync();
+        }
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.GetAsync($"/embed/{widgetId}");
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
     // ---- cdc/progress WebSocket ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]

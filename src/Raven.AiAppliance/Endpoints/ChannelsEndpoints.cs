@@ -327,7 +327,7 @@ public static class ChannelsEndpoints
 
         return channel.Type switch
         {
-            ChannelType.IFrame => await DeleteIFrameChannelAsync(store, app, channelId, channel.BindingId, logger, ct),
+            ChannelType.IFrame => await DeleteIFrameChannelAsync(store, app, channelId, logger, ct),
             ChannelType.Telegram => DeleteTelegramChannelAsync(),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
@@ -338,7 +338,6 @@ public static class ChannelsEndpoints
         IDocumentStore store,
         App app,
         string channelId,
-        string? bindingId,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -358,9 +357,12 @@ public static class ChannelsEndpoints
             if (channel is not null)
                 session.Delete(channel);
 
-            if (string.IsNullOrEmpty(bindingId) == false)
+            // Use the BindingId from the channel loaded inside THIS cluster-wide
+            // tx (not a value captured by the earlier non-transactional read) so
+            // the binding doc — and its atomic guard — is always cleared.
+            if (channel is not null && string.IsNullOrEmpty(channel.BindingId) == false)
             {
-                var binding = await session.LoadAsync<ChannelBinding>(bindingId, ct);
+                var binding = await session.LoadAsync<ChannelBinding>(channel.BindingId, ct);
                 if (binding is not null)
                     session.Delete(binding);
             }
