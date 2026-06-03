@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Single(salesOnly.Tables);
             Assert.Equal("items", salesOnly.Tables[0].SourceTableName);
 
-            // No schemas hint => defaults to the connection's default schema (dbo).
+            // No schemas hint => defaults to dbo (the SQL Server CDC/Studio default), not the login's actual default schema.
             var defaultOnly = await discovery.DiscoverAsync(connectionString, schemas: null, CancellationToken.None);
             Assert.Single(defaultOnly.Tables);
             Assert.Equal("unrelated", defaultOnly.Tables[0].SourceTableName);
