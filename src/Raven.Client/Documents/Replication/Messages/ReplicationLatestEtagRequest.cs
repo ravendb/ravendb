@@ -18,6 +18,10 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public ReplicationType ReplicationsType { get; set; }
 
+        /// <summary>
+        /// Indicates that the sender can intentionally skip source items before they reach the receiver, for example because of pull replication path filters or deletion policy.
+        /// The receiver cannot infer sender-side filtering from its local incoming pull replication parameters, so the sender declares it during the initial handshake.
+        /// </summary>
         public bool CanFilterOutSourceItems { get; set; }
 
         public long MigrationIndex { get; set; }
