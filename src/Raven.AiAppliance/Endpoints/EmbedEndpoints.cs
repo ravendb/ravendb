@@ -75,6 +75,18 @@ public static class EmbedEndpoints
             return;
         }
 
+        // Pin client-supplied conversation IDs to the "chats/" prefix up front
+        // (mirrors /api/chat/stream). AgentRouter.NormalizeConversationId is the
+        // safety net, but validating here returns a clean 400 instead of an
+        // opaque "error" frame after the NDJSON stream has already started.
+        if (string.IsNullOrWhiteSpace(body.ConversationId) == false &&
+            body.ConversationId.StartsWith("chats/", StringComparison.Ordinal) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("conversationId must start with 'chats/'"), ct);
+            return;
+        }
+
         var resolved = await TryResolveEnabledChannelAsync(ctx, store, widgetId, ct);
         if (resolved is null)
             return;

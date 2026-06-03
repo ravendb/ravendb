@@ -34,8 +34,9 @@ internal static class NdjsonStream
         // Demo answer types use public fields, not properties, so the RavenDB
         // schema generator can read the initializers; STJ needs opt-in. The
         // default JavaScriptEncoder also escapes HTML-sensitive characters
-        // (a literal '<' becomes <, decoded back by JSON.parse), avoiding
-        // XSS exposure if chat output is ever embedded into an HTML context.
+        // (a literal '<' is written as its Unicode escape, which JSON.parse
+        // decodes back to '<'), avoiding XSS exposure if chat output is ever
+        // embedded into an HTML context.
         IncludeFields = true,
     };
 

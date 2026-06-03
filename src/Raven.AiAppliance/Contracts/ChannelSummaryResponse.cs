@@ -7,7 +7,7 @@ namespace Raven.AiAppliance.Contracts;
 /// the channel's binding id, allowed-origins list, or any secret — the
 /// "no secrets" rule for <c>GET /api/apps/{slug}/channels</c>.
 /// </summary>
-/// <param name="WidgetId">The channel id (the part after the <c>@channels/</c>
+/// <param name="WidgetId">The channel id (the part after the <c>channels/</c>
 /// doc-prefix). For an iFrame channel this is the public widgetId.</param>
 public sealed record ChannelSummaryResponse(
     string WidgetId,
