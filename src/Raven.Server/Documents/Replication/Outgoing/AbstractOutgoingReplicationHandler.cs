@@ -554,7 +554,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        internal void SendHeartbeat(string changeVector, string lastSentChangeVector)
+        internal void SendHeartbeat(string databaseChangeVector, string lastSentSourceChangeVector)
         {
             AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
 
@@ -569,17 +569,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
                         [nameof(ReplicationMessageHeader.ItemsCount)] = 0
                     };
-
-                    if (changeVector != null)
+                    if (databaseChangeVector != null)
                     {
-                        LastSentChangeVector = changeVector;
-                        heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
+                        LastSentChangeVector = databaseChangeVector;
+                        heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = databaseChangeVector;
                     }
 
-                    if (string.IsNullOrEmpty(lastSentChangeVector) == false)
+                    if (string.IsNullOrEmpty(lastSentSourceChangeVector) == false)
                     {
-                        LastSentChangeVector = lastSentChangeVector;
-                        heartbeat[nameof(ReplicationMessageHeader.LastSentChangeVector)] = lastSentChangeVector;
+                        LastSentChangeVector = lastSentSourceChangeVector;
+                        heartbeat[nameof(ReplicationMessageHeader.LastSentChangeVector)] = lastSentSourceChangeVector;
                     }
 
                     context.Write(writer, heartbeat);

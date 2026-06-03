@@ -230,20 +230,20 @@ namespace Raven.Server.Documents.Replication.Senders
                         // the last etag they have from us on the other side
                         _parent._lastSentDocumentEtag = _lastEtag;
                         _parent._lastDocumentSentTime = DateTime.UtcNow;
-                        string changeVector;
-                        string lastSentChangeVector = null;
+                        string databaseChangeVector;
+                        string lastSentSourceChangeVector = null;
                         if (wasInterrupted)
                         {
-                            changeVector = null;
+                            databaseChangeVector = null;
                         }
                         else if (_parent.CanFilterOutSourceItems)
                         {
-                            changeVector = null;
-                            lastSentChangeVector = mergedChangeVector.AsString();
+                            databaseChangeVector = null;
+                            lastSentSourceChangeVector = mergedChangeVector.AsString();
                         }
                         else
                         {
-                            changeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                            databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                         }
 
                         if (Log.IsDebugEnabled)
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Replication.Senders
                             Log.Debug($"Sending heartbeat (empty batch, {reason}){skippedInfo}. Last scanned etag: '{_lastEtag}'. WasInterrupted: '{wasInterrupted}'.");
                         }
 
-                        _parent.SendHeartbeat(changeVector, lastSentChangeVector);
+                        _parent.SendHeartbeat(databaseChangeVector, lastSentSourceChangeVector: lastSentSourceChangeVector);
                         return hasModification;
                     }
                     
@@ -796,7 +796,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         if (_parent.Log.IsDebugEnabled)
                              _parent.Log.Debug($"Sending keep-alive heartbeat during active filtering. Current read count: '{ReadCount}'. Last sent etag: '{_parent._lastEtag}'.");
 
-                        _parent._parent.SendHeartbeat(changeVector: null, lastSentChangeVector: null);
+                        _parent._parent.SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: null);
                         _lastHeartbeatTicks = now;
                     }
                 }
