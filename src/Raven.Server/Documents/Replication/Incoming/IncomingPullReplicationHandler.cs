@@ -36,29 +36,33 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         public string CertificateThumbprint;
 
-        public IncomingPullReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationLoader parent, JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLoader.PullReplicationParams pullReplicationParams) : 
-            base(options, replicatedLastEtag, parent, bufferToCopy, replicationType)
+        public IncomingPullReplicationHandler(
+            TcpConnectionOptions options,
+            ReplicationLatestEtagRequest sourceHandshakeRequest,
+            ReplicationLoader parent,
+            JsonOperationContext.MemoryBuffer bufferToCopy,
+            ReplicationLatestEtagRequest.ReplicationType replicationType,
+            ReplicationLoader.PullReplicationParams incomingPullReplicationParams) : base(options, sourceHandshakeRequest, parent, bufferToCopy, replicationType)
         {
-            Debug.Assert(pullReplicationParams != null);
-
-            if (pullReplicationParams.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
-                _allowedPathsValidator = new AllowedPathsValidator(pullReplicationParams.AllowedPaths);
+            if (incomingPullReplicationParams?.AllowedPaths != null && incomingPullReplicationParams.AllowedPaths.Length > 0)
+                _allowedPathsValidator = new AllowedPathsValidator(incomingPullReplicationParams.AllowedPaths);
 
             _incomingPullReplicationParams = new ReplicationLoader.PullReplicationParams
             {
-                AllowedPaths = pullReplicationParams.AllowedPaths,
-                Mode = pullReplicationParams.Mode,
-                Name = pullReplicationParams.Name,
-                SourceDatabaseName = replicatedLastEtag.SourceDatabaseName,
-                PreventDeletionsMode = pullReplicationParams.PreventDeletionsMode,
+                AllowedPaths = incomingPullReplicationParams?.AllowedPaths,
+                Mode = incomingPullReplicationParams?.Mode ?? PullReplicationMode.None,
+                Name = incomingPullReplicationParams?.Name,
+                SourceDatabaseName = sourceHandshakeRequest.SourceDatabaseName,
+                PreventDeletionsMode = incomingPullReplicationParams?.PreventDeletionsMode,
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Incoming,
-                TaskId = pullReplicationParams.TaskId
+                TaskId = incomingPullReplicationParams?.TaskId ?? 0
             };
 
             _preventIncomingSinkDeletions = _incomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                             _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
 
-            _canFilterOutSourceItems = replicatedLastEtag.CanFilterOutSourceItems || CanFilterOutSourceItems(_incomingPullReplicationParams);
+            // Sender-side filtering is declared in the handshake; receiver-side filtering is derived from this side's pull replication rules.
+            _canFilterOutSourceItems = sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(_incomingPullReplicationParams);
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
@@ -237,7 +241,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             EnqueueHeartbeatUpdate(cmd);
         }
 
-        private bool CanFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
+        private bool CanReceiverFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
         {
             if (pullReplicationParams == null)
                 return false;
