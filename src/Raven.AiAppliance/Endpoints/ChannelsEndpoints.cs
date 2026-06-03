@@ -88,6 +88,7 @@ public static class ChannelsEndpoints
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, schemas, store, logger, ct),
             ChannelType.Telegram => ProvisionTelegramAsync(),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
+            null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
     }

@@ -327,6 +327,26 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task SetupTry_returns_400_for_unknown_agentId()
+    {
+        // A non-empty but unregistered agentId is a client error, so the handler
+        // validates it against the agent registry and returns 400 before opening
+        // the NDJSON stream (rather than a 200 + error frame after headers flush).
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/try",
+            new { prompt = "hi", agentId = "does-not-exist" });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task SetupTry_returns_404_for_unknown_slug()
     {
         var store = GetDocumentStore();
