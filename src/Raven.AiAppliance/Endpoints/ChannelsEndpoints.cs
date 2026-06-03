@@ -41,7 +41,7 @@ public static class ChannelsEndpoints
             .Produces<ProvisionChannelResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status501NotImplemented);
+            .ProducesProblem(StatusCodes.Status501NotImplemented);
 
         group.MapGet("/channels", ListChannelsAsync)
             .WithName("channels.list")
@@ -54,13 +54,13 @@ public static class ChannelsEndpoints
             .Produces<ChannelSummaryResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status501NotImplemented);
+            .ProducesProblem(StatusCodes.Status501NotImplemented);
 
         group.MapDelete("/channels/{channelId}", DeleteChannelAsync)
             .WithName("channels.delete")
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status501NotImplemented);
+            .ProducesProblem(StatusCodes.Status501NotImplemented);
     }
 
     // ---- create (dispatch on requested type) ----
