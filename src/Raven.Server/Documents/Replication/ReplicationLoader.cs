@@ -1033,19 +1033,36 @@ namespace Raven.Server.Documents.Replication
             return whoseTaskIsIt == _server.NodeTag;
         }
 
-        public long GetConfirmedMinimalClusterWideReplicatedEtag()
+        /// <summary>
+        /// Returns the minimum etag that has been confirmed as replicated across all sibling nodes in the cluster,
+        /// representing the cluster-wide replication frontier.
+        /// <para>
+        /// Return values:
+        /// <list type="bullet">
+        ///   <item><description><c>long.MaxValue</c> — single-node topology (no siblings). Data is trivially confirmed; callers should use the last batch change vector directly.</description></item>
+        ///   <item><description><c>null</c> — not all siblings have established an active connection yet. Callers should wait before confirming.</description></item>
+        ///   <item><description>Any other value — the minimum etag confirmed by every sibling. Safe to advance the cursor up to this point.</description></item>
+        /// </list>
+        /// </para>
+        /// </summary>
+        public long? GetConfirmedMinimalClusterWideReplicatedEtag()
         {
+            if (_numberOfSiblings == 0)
+                return long.MaxValue; // single-node topology: trivially confirmed, confirm immediately
+
             long min = long.MaxValue;
-            bool hasHandlers = false;
+            int count = 0;
+
             foreach (var handler in OutgoingHandlers)
             {
-                if (handler is OutgoingInternalReplicationHandler)
-                {
-                    hasHandlers = true;
-                    min = Math.Min(min, handler.LastSentDocumentEtag);
-                }
+                if (handler is not OutgoingInternalReplicationHandler)
+                    continue;
+
+                count++;
+                min = Math.Min(min, handler.LastSentDocumentEtag);
             }
-            return hasHandlers ? min : long.MaxValue;
+
+            return count == _numberOfSiblings ? min : null; // null = not all siblings connected yet, wait
         }
 
         public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
