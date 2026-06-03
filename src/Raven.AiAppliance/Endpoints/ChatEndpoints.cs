@@ -42,7 +42,9 @@ public static class ChatEndpoints
         group.MapPost("/stream", HandleStreamAsync)
             .WithName("chat.stream")
             .Accepts<ChatRequest>("application/json")
-            .Produces<string>(StatusCodes.Status200OK, contentType: "application/x-ndjson")
+            // Streams NDJSON frames, not a single string — declare the status +
+            // content type only, without a (misleading) string body schema.
+            .Produces(StatusCodes.Status200OK, contentType: "application/x-ndjson")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
     }
 
