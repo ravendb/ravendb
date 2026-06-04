@@ -247,6 +247,7 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
 
         // The fresh binding hides a fresh random id — never the guessed one.
         var token = first.RootElement.GetProperty("conversationToken").GetString();
+        Assert.NotNull(token);
         using var session = store.OpenAsyncSession(perAppDb);
         var binding = await session.LoadAsync<ConversationBinding>(ConversationBinding.MakeId(widgetId, token));
         Assert.NotNull(binding);
