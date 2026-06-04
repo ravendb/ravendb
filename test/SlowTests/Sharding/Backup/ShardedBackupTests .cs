@@ -18,7 +18,9 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -545,7 +547,15 @@ namespace SlowTests.Sharding.Backup
                 var (backupTaskId, op) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(backupTaskId + 3, TimeSpan.FromSeconds(10));
+
+                // RavenDB-23197 : wait for all the shard backup status commands to be applied on all nodes,
+                // so that any node serving the status request can read all the shard statuses.
+                // the status commands are committed by now (all the backups completed), but other commands
+                // (e.g. UpdateResponsibleNodeForTasksCommand) may have interleaved after the configuration update,
+                // so their indexes are not necessarily backupTaskId + 1 .. backupTaskId + 3
+                var lastStatusCommandIndex = Cluster.GetRaftCommands(cluster.Leader, nameof(UpdatePeriodicBackupStatusCommand))
+                    .Max(entry => long.Parse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString()));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(lastStatusCommandIndex, TimeSpan.FromSeconds(30));
 
                 var dirs = Directory.GetDirectories(backupPath).ToList();
                 Assert.Equal(cluster.Nodes.Count, dirs.Count);
