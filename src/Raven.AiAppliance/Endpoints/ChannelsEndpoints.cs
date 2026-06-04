@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -151,10 +150,10 @@ public static class ChannelsEndpoints
 
         // Slow path. H1 (security review 2026-05-25): widgetId is the public,
         // bearer-style identifier baked into embed snippets and the
-        // /embed/{widgetId} path. 128 bits keeps it unguessable — NOT derived
-        // from the binding tuple (slug + type + agentId are public inputs).
-        var widgetId = "wgt_" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
-            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        // /embed/{widgetId} path. RandomIds' 128 crypto-random bits keep it
+        // unguessable — NOT derived from the binding tuple (slug + type +
+        // agentId are public inputs).
+        var widgetId = RandomIds.NewId("wgt_");
         var channelDocId = Channel.IdPrefix + widgetId;
 
         try
