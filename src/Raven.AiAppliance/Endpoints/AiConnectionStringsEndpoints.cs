@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Raven.AiAppliance.Contracts;
+using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -49,11 +50,7 @@ public static class AiConnectionStringsEndpoints
         ILogger<AiConnectionStringsLogger> logger,
         CancellationToken ct)
     {
-        App? app;
-        using (var session = store.OpenAsyncSession())
-        {
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
-        }
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -97,11 +94,7 @@ public static class AiConnectionStringsEndpoints
         IDocumentStore store,
         CancellationToken ct)
     {
-        App? app;
-        using (var session = store.OpenAsyncSession())
-        {
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
-        }
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -120,11 +113,7 @@ public static class AiConnectionStringsEndpoints
         IDocumentStore store,
         CancellationToken ct)
     {
-        App? app;
-        using (var session = store.OpenAsyncSession())
-        {
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
-        }
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -151,11 +140,7 @@ public static class AiConnectionStringsEndpoints
         ILogger<AiConnectionStringsLogger> logger,
         CancellationToken ct)
     {
-        App? app;
-        using (var session = store.OpenAsyncSession())
-        {
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
-        }
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));

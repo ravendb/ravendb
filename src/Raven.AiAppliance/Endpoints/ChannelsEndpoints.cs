@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
+using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
@@ -28,8 +29,6 @@ public static class ChannelsEndpoints
     private const int MaxAllowedOrigins = 32;
     private const int MaxOriginLength = 256;
     private const int MaxDisplayNameLength = 200;
-
-    private const string ChannelIdPrefix = "channels/";
 
     public static void Map(WebApplication app)
     {
@@ -86,7 +85,7 @@ public static class ChannelsEndpoints
         // L1: load App first so unknown-slug always returns 404 regardless of
         // type/agentId — the 400-vs-404 differential otherwise leaks which
         // agentIds are registered to unauthenticated probers.
-        var app = await LoadAppAsync(store, slug, ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
@@ -149,7 +148,7 @@ public static class ChannelsEndpoints
         // from the binding tuple (slug + type + agentId are public inputs).
         var widgetId = "wgt_" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        var channelDocId = ChannelIdPrefix + widgetId;
+        var channelDocId = Channel.IdPrefix + widgetId;
 
         try
         {
@@ -219,7 +218,7 @@ public static class ChannelsEndpoints
         IDocumentStore store,
         CancellationToken ct)
     {
-        var app = await LoadAppAsync(store, slug, ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
@@ -235,7 +234,7 @@ public static class ChannelsEndpoints
         for (var start = 0; ; start += pageSize)
         {
             var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
-                ChannelIdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
+                Channel.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
             channels.AddRange(page);
             if (page.Length < pageSize)
                 break;
@@ -262,12 +261,12 @@ public static class ChannelsEndpoints
         if (body is null)
             return Results.BadRequest(new ApiErrorResponse("request body is required"));
 
-        var app = await LoadAppAsync(store, slug, ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         using var session = store.OpenAsyncSession(app.Database);
-        var channel = await session.LoadAsync<Channel>(ChannelIdPrefix + channelId, ct);
+        var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + channelId, ct);
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no channel '{channelId}' in app '{slug}'"));
 
@@ -330,13 +329,13 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        var app = await LoadAppAsync(store, slug, ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         Channel? channel;
         using (var session = store.OpenAsyncSession(app.Database))
-            channel = await session.LoadAsync<Channel>(ChannelIdPrefix + channelId, ct);
+            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + channelId, ct);
 
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no channel '{channelId}' in app '{slug}'"));
@@ -357,7 +356,7 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        var channelDocId = ChannelIdPrefix + channelId;
+        var channelDocId = Channel.IdPrefix + channelId;
 
         // Delete the channel AND its binding in one cluster-wide session.
         // Removing the binding doc clears the atomic guard at
@@ -410,14 +409,6 @@ public static class ChannelsEndpoints
         Results.Problem(
             detail: $"{type} channels are not yet supported.",
             statusCode: StatusCodes.Status501NotImplemented);
-
-    private static async Task<App?> LoadAppAsync(IDocumentStore store, string slug, CancellationToken ct)
-    {
-        // LoadAsync (not Query) — the App doc id is slug-keyed (apps/{slug}),
-        // so no index, no staleness race.
-        using var session = store.OpenAsyncSession();
-        return await session.LoadAsync<App>($"apps/{slug}", ct);
-    }
 
     private static async Task UpsertWidgetIndexAsync(IDocumentStore store, string widgetId, string slug, CancellationToken ct)
     {
