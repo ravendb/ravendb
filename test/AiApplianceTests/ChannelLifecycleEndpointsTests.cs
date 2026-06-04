@@ -278,27 +278,12 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal(HttpStatusCode.Gone, resp.StatusCode);
     }
 
-    [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Embed_chat_trims_and_validates_conversationId()
-    {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        // The conversationId guard runs before widget resolution, so these
-        // assertions don't need a provisioned channel. A non-"chats/" id is
-        // rejected with 400...
-        var bad = await client.PostAsJsonAsync("/embed/wgt_nope/chat",
-            new { prompt = "hi", conversationId = "users/admin" });
-        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
-
-        // ...while a "chats/"-prefixed id wrapped in whitespace is trimmed and
-        // accepted, so the request proceeds past validation (here to a 404 for
-        // the unknown widget) rather than being rejected as malformed.
-        var trimmed = await client.PostAsJsonAsync("/embed/wgt_nope/chat",
-            new { prompt = "hi", conversationId = " chats/1 " });
-        Assert.Equal(HttpStatusCode.NotFound, trimmed.StatusCode);
-    }
+    // Embed_chat_trims_and_validates_conversationId was DELETED here
+    // (RavenDB-26700 auth follow-up, review L7): the contract no longer
+    // carries a client-supplied conversationId at all — the field is ignored
+    // and the request proceeds as a fresh conversation. Its successor is
+    // EmbedAuthTests.Legacy_conversationId_field_is_ignored_and_cannot_reach_a_guessed_chat.
+    // Do NOT re-add validation of a field that must not exist.
 
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Embed_page_returns_404_for_non_iframe_channel()
