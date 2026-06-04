@@ -15,7 +15,10 @@ namespace Raven.AiAppliance.Contracts;
 /// <param name="AgentId">Identifier of the agent this channel routes to —
 /// must match a registered <see cref="Schema.IAgentSchema.Identifier"/>.</param>
 /// <param name="AllowedOrigins">Allowed origins for the embed page's
-/// CORS / CSP gating.</param>
+/// CORS / CSP gating; normalized to <c>scheme://authority</c> on persist.
+/// An empty list is an explicit contract (decided 2026-06-04): the embed page
+/// emits no CSP <c>frame-ancestors</c> header and is embeddable from any
+/// site — revisited with the widget-token work.</param>
 /// <param name="DisplayName">Optional operator-friendly label. Defaults to
 /// <see cref="Type"/> when omitted.</param>
 public sealed record ProvisionChannelRequest(

@@ -37,6 +37,11 @@ public static class ChannelsEndpoints
 
         group.MapPost("/setup/channel", ProvisionChannelAsync)
             .WithName("channels.create")
+            .WithDescription(
+                "Registers a channel for the app. allowedOrigins entries are normalized to " +
+                "scheme://authority (max 32). An empty allowedOrigins list is an explicit " +
+                "contract: the embed page emits no CSP frame-ancestors header and is " +
+                "embeddable from any site.")
             .Accepts<ProvisionChannelRequest>("application/json")
             .Produces<ProvisionChannelResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)

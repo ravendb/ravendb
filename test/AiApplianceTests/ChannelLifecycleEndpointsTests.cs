@@ -226,6 +226,40 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Embed_page_csp_reflects_allowed_origins()
+    {
+        var store = GetDocumentStore();
+        var (dbA, cleanupA) = await CreatePerAppDatabaseAsync(store);
+        using var _dbA = cleanupA;
+        var (dbB, cleanupB) = await CreatePerAppDatabaseAsync(store);
+        using var _dbB = cleanupB;
+        await SeedAppAsync(store, slug: "app-a", database: dbA);
+        await SeedAppAsync(store, slug: "app-b", database: dbB);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // Non-empty origins -> frame-ancestors CSP on the embed page.
+        var restrictedWidget = await ProvisionIFrameChannelAsync(client, "app-a");
+        var restricted = await client.GetAsync($"/embed/{restrictedWidget}");
+        Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
+        var csp = Assert.Single(restricted.Headers.GetValues("Content-Security-Policy"));
+        Assert.Equal("frame-ancestors http://localhost", csp);
+
+        // Empty origins -> NO CSP header at all: the embed page is intentionally
+        // embeddable from anywhere (M1 decision 2026-06-04) until the
+        // widget-token work revisits the posture.
+        var openProvision = await client.PostAsJsonAsync("/api/apps/app-b/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
+        Assert.True(openProvision.IsSuccessStatusCode, await openProvision.Content.ReadAsStringAsync());
+        var openWidget = (await openProvision.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("widgetId").GetString();
+        var open = await client.GetAsync($"/embed/{openWidget}");
+        Assert.Equal(HttpStatusCode.OK, open.StatusCode);
+        Assert.False(open.Headers.Contains("Content-Security-Policy"));
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Disabled_channel_embed_returns_410()
     {
         var store = GetDocumentStore();
