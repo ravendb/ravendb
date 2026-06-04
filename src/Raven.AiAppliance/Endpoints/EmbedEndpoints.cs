@@ -51,6 +51,12 @@ public static class EmbedEndpoints
         // Best-effort hardening: constrain who may frame this page to the
         // operator-configured origins. Not a substitute for the (deferred)
         // token; the host page's own CSP still governs actual loading.
+        // Decided 2026-06-04: an EMPTY origins list intentionally emits no
+        // frame-ancestors at all — the widget is embeddable from anywhere. The
+        // /embed/{widgetId}/chat POST likewise does NOT check the Origin header
+        // (spoofable outside browsers, and same-origin POSTs carry the
+        // appliance's own origin, not a customer one). Both are revisited
+        // together with the widget-token work.
         if (channel.AllowedOrigins.Length > 0)
             ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors {string.Join(' ', channel.AllowedOrigins)}";
 
