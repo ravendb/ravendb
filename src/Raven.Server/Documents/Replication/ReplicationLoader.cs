@@ -323,8 +323,51 @@ namespace Raven.Server.Documents.Replication
                 case RegisterReplicationHubAccessCommand reg:
                     DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
                     break;
+
+                case SetPullReplicationCompositeChangeVectorsFeatureCommand:
+                    DisposeAllPullReplication();
+                    break;
             }
             return Task.CompletedTask;
+
+            void DisposeAllPullReplication()
+            {
+                foreach (var (key, repl) in _incoming)
+                {
+                    if (repl is IncomingPullReplicationHandler == false)
+                        continue;
+
+                    try
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Resetting {repl.ConnectionInfo} because pull replication composite change-vector support changed. Will be reconnected.");
+                        repl.Dispose();
+                        _incoming.TryRemove(key, out _);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Failed to reset {repl.ConnectionInfo} after pull replication composite change-vector support changed.", e);
+                    }
+                }
+
+                foreach (var repl in _outgoing)
+                {
+                    if (repl is OutgoingPullReplicationHandler == false)
+                        continue;
+
+                    try
+                    {
+                        repl.Dispose();
+                        _outgoing.TryRemove(repl);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} after pull replication composite change-vector support changed.", e);
+                    }
+                }
+            }
 
             void DisposeRelatedPullReplication(string hub, string certThumbprint, string sourceDatabase = null)
             {
@@ -727,6 +770,8 @@ namespace Raven.Server.Documents.Replication
                 var response = base.GetInitialRequestMessage(getLatestEtagMessage, replParams);
                 response[nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc;
                 response[nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector;
+                if (Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors)
+                    response[nameof(ReplicationMessageReply.SupportsPullReplicationCompositeChangeVectors)] = true;
 
                 return response;
             }

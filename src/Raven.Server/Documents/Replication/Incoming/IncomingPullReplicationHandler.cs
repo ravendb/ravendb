@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -70,7 +69,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
 
             // Sender-side filtering is declared in the handshake; receiver-side filtering is derived from this side's pull replication rules.
-            _useCompositeChangeVectors = sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(_incomingPullReplicationParams);
+            var canFilterOutSourceItems = sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(_incomingPullReplicationParams);
+            var bothSidesSupportCompositeChangeVectors = sourceHandshakeRequest.SupportsPullReplicationCompositeChangeVectors && parent.Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors;
+            _useCompositeChangeVectors = canFilterOutSourceItems && bothSidesSupportCompositeChangeVectors;
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
@@ -349,50 +350,12 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         private static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
         {
-            var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
             var parsedChangeVector = context.GetChangeVector(changeVector);
-            var incomingVersion = parsedChangeVector.Version.AsString();
-            var incoming = incomingVersion.ToChangeVectorList();
             var knownEntries = new List<ChangeVectorEntry>();
-            var newIncoming = new List<ChangeVectorEntry>();
-
-            foreach (var entry in incoming)
-            {
-                if (globalDbIds?.Contains(entry.DbId) == true)
-                {
-                    newIncoming.Add(entry);
-                    knownEntries.Add(entry);
-                }
-                else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
-                {
-                    // TRXN
-                    newIncoming.Add(new ChangeVectorEntry
-                    {
-                        DbId = entry.DbId,
-                        Etag = entry.Etag,
-                        NodeTag = ChangeVectorParser.TrxnInt
-                    });
-
-                    continue;
-                }
-                else
-                {
-                    newIncoming.Add(new ChangeVectorEntry
-                    {
-                        DbId = entry.DbId,
-                        Etag = entry.Etag,
-                        NodeTag = ChangeVectorParser.SinkInt
-                    });
-
-                    context.DbIdsToIgnore ??= new HashSet<string>();
-                    context.DbIdsToIgnore.Add(entry.DbId);
-                }
-            }
-
-            var newVersion = newIncoming.SerializeVector();
+            var newVersion = ChangeVectorUtils.ReplaceUnknownEntriesWithSinkTag(context, parsedChangeVector.Version, context.LastDatabaseChangeVector, knownEntries, trackIgnoredDbIds: true);
             changeVector = parsedChangeVector.IsSingle
                 ? newVersion
-                : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
+                : context.GetChangeVector(newVersion, parsedChangeVector.Order);
 
             return knownEntries.Count > 0 ?
                 knownEntries.SerializeVector() :

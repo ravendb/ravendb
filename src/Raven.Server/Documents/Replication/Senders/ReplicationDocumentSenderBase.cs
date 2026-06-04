@@ -668,12 +668,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             foreach (var item in _orderedReplicaItems)
             {
-                // we will dispose item.Value when we are done with writing the stream in the loop below
-                using (item.Value is AttachmentReplicationItem ? item.Value : null)
-                using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
-                {
-                    item.Value.Write(cv, _stream, _tempBuffer, stats);
-                }
+                WriteReplicationItem(documentsContext, item.Value, stats);
             }
 
             foreach (var item in _replicaAttachmentStreams)
@@ -702,6 +697,21 @@ namespace Raven.Server.Documents.Replication.Senders
             _parent._lastSentDocumentEtag = _lastEtag;
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
+        }
+
+        protected virtual void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        {
+            WriteReplicationItemToStream(documentsContext, item, stats);
+        }
+
+        protected void WriteReplicationItemToStream(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        {
+            // we will dispose item when we are done with writing the stream in the loop below
+            using (item is AttachmentReplicationItem ? item : null)
+            using (Slice.From(documentsContext.Allocator, item.ChangeVector, out var cv))
+            {
+                item.Write(cv, _stream, _tempBuffer, stats);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
