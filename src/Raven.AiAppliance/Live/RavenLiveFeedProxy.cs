@@ -25,7 +25,7 @@ internal static class RavenLiveFeedProxy
         string relativeLivePath,
         CancellationToken ct)
     {
-        var upstreamUri = BuildUpstreamUri(store, database, relativeLivePath);
+        var upstreamUri = await BuildUpstreamUriAsync(store, database, relativeLivePath);
 
         using var upstream = new ClientWebSocket();
         if (store.Certificate is not null)
@@ -128,9 +128,25 @@ internal static class RavenLiveFeedProxy
         catch (WebSocketException) { }
     }
 
-    private static Uri BuildUpstreamUri(IDocumentStore store, string database, string relativeLivePath)
+    private static async Task<Uri> BuildUpstreamUriAsync(IDocumentStore store, string database, string relativeLivePath)
     {
-        var baseUrl = store.Urls[0].TrimEnd('/');
+        // Follow the client's topology selection instead of pinning Urls[0]: in
+        // a cluster the request executor knows which node is healthy/preferred,
+        // so the proxy dials the same node regular client requests use. (The
+        // appliance runs single-node today, where this equals Urls[0].)
+        string baseUrl;
+        try
+        {
+            var (_, node) = await store.GetRequestExecutor(database).GetPreferredNode();
+            baseUrl = node.Url.TrimEnd('/');
+        }
+        catch (Exception)
+        {
+            // Topology not initialized / executor unavailable — fall back to the
+            // configured URL rather than failing the relay outright.
+            baseUrl = store.Urls[0].TrimEnd('/');
+        }
+
         var wsBase = baseUrl.StartsWith("https", StringComparison.OrdinalIgnoreCase)
             ? string.Concat("wss", baseUrl.AsSpan("https".Length))
             : string.Concat("ws", baseUrl.AsSpan("http".Length));
