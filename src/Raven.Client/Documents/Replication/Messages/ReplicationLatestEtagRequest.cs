@@ -24,6 +24,12 @@ namespace Raven.Client.Documents.Replication.Messages
         /// </summary>
         public bool CanFilterOutSourceItems { get; set; }
 
+        /// <summary>
+        /// Indicates that the source database can use composite item change vectors for filtered pull replication.
+        /// Both sides must declare this before filtered pull replication may create order|version item change vectors.
+        /// </summary>
+        public bool SupportsPullReplicationCompositeChangeVectors { get; set; }
+
         public long MigrationIndex { get; set; }
 
         public string ShardedDatabaseId { get; set; }

@@ -45,6 +45,19 @@ namespace FastTests.Server.Cluster
         }
 
         [RavenFact(RavenTestCategory.Cluster)]
+        public void PullReplicationCompositeChangeVectorsFeatureCommandRequires72_001()
+        {
+            Assert.Equal(72_001, ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(SetPullReplicationCompositeChangeVectorsFeatureCommand)]);
+
+            var versionManager = new ClusterCommandsVersionManager();
+            versionManager.SetClusterVersion(72_000);
+            Assert.False(versionManager.CanPutCommand(nameof(SetPullReplicationCompositeChangeVectorsFeatureCommand)));
+
+            versionManager.SetClusterVersion(72_001);
+            Assert.True(versionManager.CanPutCommand(nameof(SetPullReplicationCompositeChangeVectorsFeatureCommand)));
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
         public void AllClusterCommandHasCtor()
         {
             List<Exception> exceptions = new List<Exception>();

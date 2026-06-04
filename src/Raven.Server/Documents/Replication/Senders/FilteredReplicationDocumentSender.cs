@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Replication.Senders
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
         private readonly bool _shouldSkipSendingTombstones;
         private readonly bool _canFilterOutSourceItems;
+        private readonly bool _bothSidesSupportCompositeChangeVectors;
+        private readonly bool _senderIsHub;
 
         public FilteredReplicationDocumentSender(Stream stream, OutgoingPullReplicationHandler parent, RavenLogger log, string[] pathsToSend, string[] destinationAcceptablePaths) : base(stream, parent, log)
         {
@@ -23,6 +25,22 @@ namespace Raven.Server.Documents.Replication.Senders
             
             _shouldSkipSendingTombstones = parent.CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
             _canFilterOutSourceItems = parent.CanFilterOutSourceItems;
+            _bothSidesSupportCompositeChangeVectors = parent.BothSidesSupportCompositeChangeVectors;
+            _senderIsHub = parent is OutgoingPullReplicationHandlerAsHub;
+        }
+
+        protected override void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        {
+            if (_bothSidesSupportCompositeChangeVectors)
+            {
+                WriteReplicationItemToStream(documentsContext, item, stats);
+                return;
+            }
+
+            using (item.UseLegacyCompatibleChangeVectorsForSending(documentsContext, _senderIsHub))
+            {
+                WriteReplicationItemToStream(documentsContext, item, stats);
+            }
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)

@@ -5,6 +5,7 @@ using System.IO;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow;
 using Sparrow.Json;
@@ -145,6 +146,30 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override long AssertChangeVectorSize() => Size;
 
+        internal override IDisposable UseLegacyCompatibleChangeVectorsForSending(DocumentsOperationContext context, bool senderIsHub)
+        {
+            var changeVectorScope = base.UseLegacyCompatibleChangeVectorsForSending(context, senderIsHub);
+            try
+            {
+                if (IncludeDocumentChangeVector == false || ParentDocChangeVector == null)
+                    return changeVectorScope;
+
+                var originalParentDocChangeVector = ParentDocChangeVector;
+                var parentDocChangeVectorForSending = GetLegacyCompatibleChangeVectorForSending(context, originalParentDocChangeVector, senderIsHub);
+                if (parentDocChangeVectorForSending == originalParentDocChangeVector)
+                    return changeVectorScope;
+
+                ParentDocChangeVector = context.GetLazyString(parentDocChangeVectorForSending);
+
+                return new LegacyCompatibleTimeSeriesChangeVectorScope(this, originalParentDocChangeVector, changeVectorScope);
+            }
+            catch
+            {
+                changeVectorScope?.Dispose();
+                throw;
+            }
+        }
+
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
             fixed (byte* pTemp = tempBuffer)
@@ -246,6 +271,28 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Collection?.Dispose();
             Name?.Dispose();
             ParentDocChangeVector?.Dispose();
+        }
+
+        private sealed class LegacyCompatibleTimeSeriesChangeVectorScope : IDisposable
+        {
+            private readonly TimeSeriesReplicationItem _item;
+            private readonly LazyStringValue _originalParentDocChangeVector;
+            private readonly IDisposable _changeVectorScope;
+
+            public LegacyCompatibleTimeSeriesChangeVectorScope(TimeSeriesReplicationItem item, LazyStringValue originalParentDocChangeVector, IDisposable changeVectorScope)
+            {
+                _item = item;
+                _originalParentDocChangeVector = originalParentDocChangeVector;
+                _changeVectorScope = changeVectorScope;
+            }
+
+            public void Dispose()
+            {
+                var parentDocChangeVectorForCompatibilityLane = _item.ParentDocChangeVector;
+                _item.ParentDocChangeVector = _originalParentDocChangeVector;
+                parentDocChangeVectorForCompatibilityLane?.Dispose();
+                _changeVectorScope?.Dispose();
+            }
         }
     }
 }
