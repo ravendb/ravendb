@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Raven.Client.Util;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -188,6 +191,33 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         }
 
         protected abstract void InnerDispose();
+
+        internal virtual IDisposable UseLegacyCompatibleChangeVectorsForSending(DocumentsOperationContext context, bool senderIsHub)
+        {
+            var originalChangeVector = ChangeVector;
+            var changeVectorForSending = GetLegacyCompatibleChangeVectorForSending(context, originalChangeVector, senderIsHub);
+            if (changeVectorForSending == originalChangeVector)
+                return null;
+
+            ChangeVector = changeVectorForSending;
+            return new DisposableAction(() => ChangeVector = originalChangeVector);
+        }
+
+        private protected static string GetLegacyCompatibleChangeVectorForSending(DocumentsOperationContext context, string changeVector, bool senderIsHub)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return changeVector;
+
+            var versionChangeVector = changeVector.IndexOf('|') < 0
+                ? changeVector
+                : context.GetChangeVector(changeVector).Version;
+
+            if (senderIsHub == false)
+                return versionChangeVector;
+
+            var hubDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+            return ChangeVectorUtils.ReplaceUnknownEntriesWithSinkTag(context, versionChangeVector, hubDatabaseChangeVector);
+        }
 
         public void Dispose()
         {

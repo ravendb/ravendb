@@ -23,12 +23,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
     public abstract class OutgoingPullReplicationHandler : DatabaseOutgoingReplicationHandler
     {
         public string[] PathsToSend;
-        private string[] _destinationAcceptablePaths;
         public ReplicationLoader.PullReplicationParams OutgoingPullReplicationParams;
+        private string[] _destinationAcceptablePaths;
+        private bool DestinationSupportsPullReplicationCompositeChangeVectors { get; set; }
 
         public string CertificateThumbprint;
 
-        protected OutgoingPullReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo) : 
+        protected OutgoingPullReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo) :
             base(parent, database, node, connectionInfo)
         {
         }
@@ -45,6 +46,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
             if (CanFilterOutSourceItems)
                 request[nameof(ReplicationLatestEtagRequest.CanFilterOutSourceItems)] = true;
 
+            if (_database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors)
+                request[nameof(ReplicationLatestEtagRequest.SupportsPullReplicationCompositeChangeVectors)] = true;
+
             return request;
         }
 
@@ -54,7 +58,12 @@ namespace Raven.Server.Documents.Replication.Outgoing
             // this is used when the other side lets us know what paths it is going to accept from us
             // it supplements (but does not extend) what we are willing to send out 
             _destinationAcceptablePaths = response.Reply.AcceptablePaths;
+            DestinationSupportsPullReplicationCompositeChangeVectors = response.Reply.SupportsPullReplicationCompositeChangeVectors;
         }
+
+        internal bool BothSidesSupportCompositeChangeVectors =>
+            _database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors &&
+            DestinationSupportsPullReplicationCompositeChangeVectors;
 
         internal bool CanFilterOutSourceItems =>
             PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(PathsToSend) ||
@@ -62,8 +71,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
 
         internal bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions =>
-            Destination is PullReplicationAsSink sink &&
-            sink.Mode == PullReplicationMode.SinkToHub &&
+            Destination is PullReplicationAsSink { Mode: PullReplicationMode.SinkToHub } &&
             OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
             _database.ForTestingPurposes?.ForceSendTombstones != true;
     }
