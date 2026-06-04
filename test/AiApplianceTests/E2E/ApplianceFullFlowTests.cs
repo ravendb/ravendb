@@ -270,10 +270,29 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             $"embed chat returned {chatResp.StatusCode}: {await chatResp.Content.ReadAsStringAsync(chatCts.Token)}");
         Assert.Contains("application/x-ndjson", chatResp.Content.Headers.ContentType?.ToString() ?? "");
 
-        var (replyText, sawDone, error) = await ReadEmbedChatAsync(chatResp, chatCts.Token);
+        var (replyText, sawDone, error, conversationToken) = await ReadEmbedChatAsync(chatResp, chatCts.Token);
         Assert.True(string.IsNullOrEmpty(error), $"embed chat emitted an error frame: {error}");
         Assert.True(sawDone, "embed chat stream did not emit a 'done' frame");
         Assert.False(string.IsNullOrWhiteSpace(replyText), "embed chat produced no reply text");
+
+        // ---------- T14b. Same conversation continues via the opaque token ----------
+        // Turn 2 carries the cnv_ token from turn 1's "conversation" frame —
+        // the raw chats/ id never crosses the wire (RavenDB-26700 A2 fix).
+        Assert.False(string.IsNullOrEmpty(conversationToken), "turn 1 did not mint a conversation token");
+        using var chat2Cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var chat2Req = new HttpRequestMessage(HttpMethod.Post, $"/embed/{widgetId}/chat")
+        {
+            Content = JsonContent.Create(new { prompt = "Repeat your previous greeting in the same words.", conversationToken }),
+        };
+        var chat2Resp = await client.SendAsync(chat2Req, HttpCompletionOption.ResponseHeadersRead, chat2Cts.Token);
+        Assert.True(chat2Resp.IsSuccessStatusCode,
+            $"embed chat turn 2 returned {chat2Resp.StatusCode}: {await chat2Resp.Content.ReadAsStringAsync(chat2Cts.Token)}");
+
+        var (reply2, sawDone2, error2, token2) = await ReadEmbedChatAsync(chat2Resp, chat2Cts.Token);
+        Assert.True(string.IsNullOrEmpty(error2), $"embed chat turn 2 emitted an error frame: {error2}");
+        Assert.True(sawDone2, "embed chat turn 2 did not emit a 'done' frame");
+        Assert.False(string.IsNullOrWhiteSpace(reply2), "embed chat turn 2 produced no reply text");
+        Assert.Null(token2); // continuation resumes — it never re-mints
 
         // ---------- Optional manual park ----------
         if (Environment.GetEnvironmentVariable("APPLIANCE_E2E_HOLD") == "1")
@@ -286,14 +305,17 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
 
     /// <summary>
     /// Reads the embed chat NDJSON stream, accumulating <c>chunk</c> text until
-    /// a <c>done</c> or <c>error</c> frame (or end of stream).
+    /// a <c>done</c> or <c>error</c> frame (or end of stream). Also captures the
+    /// opaque continuation token from a leading <c>conversation</c> frame
+    /// (turn 1 only — continuation turns never re-mint).
     /// </summary>
-    private static async Task<(string Reply, bool SawDone, string? Error)> ReadEmbedChatAsync(
+    private static async Task<(string Reply, bool SawDone, string? Error, string? ConversationToken)> ReadEmbedChatAsync(
         HttpResponseMessage resp, CancellationToken ct)
     {
         var sb = new StringBuilder();
         var sawDone = false;
         string? error = null;
+        string? conversationToken = null;
 
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
@@ -309,6 +331,10 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             if (type == "chunk")
             {
                 sb.Append(doc.RootElement.GetProperty("text").GetString());
+            }
+            else if (type == "conversation")
+            {
+                conversationToken = doc.RootElement.GetProperty("conversationToken").GetString();
             }
             else if (type == "done")
             {
@@ -333,7 +359,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             }
         }
 
-        return (sb.ToString(), sawDone, error);
+        return (sb.ToString(), sawDone, error, conversationToken);
     }
 
     /// <summary>

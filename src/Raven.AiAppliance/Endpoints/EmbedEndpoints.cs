@@ -403,7 +403,11 @@ const widgetId = "__WIDGET_ID__";
 const feed = document.getElementById("ai-chat-feed");
 const form = document.getElementById("ai-chat-form");
 const input = document.getElementById("ai-chat-input");
-let conversationId = null;
+// The opaque continuation token from the first turn's "conversation" frame.
+// Lives in this variable ONLY — never localStorage/sessionStorage: persisting
+// it would outlive the server-side validity window and widen XSS exposure for
+// no gain (a page reload simply starts a fresh conversation).
+let conversationToken = null;
 
 function addRow(cls, text) {
   const div = document.createElement("div");
@@ -425,8 +429,16 @@ form.addEventListener("submit", async (e) => {
     const resp = await fetch(`/embed/${widgetId}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, conversationId })
+      body: JSON.stringify({ prompt, conversationToken })
     });
+    if (resp.status === 401) {
+      // Token expired or invalidated. Inform only — NO auto-resubmit (a retry
+      // loop against a persistent 401 would hammer the server); the user's
+      // next submit starts a fresh conversation.
+      conversationToken = null;
+      agentRow.textContent = "Session expired — starting a new chat. Please send your message again.";
+      return;
+    }
     if (!resp.ok || !resp.body) { agentRow.textContent = "[error] HTTP " + resp.status; return; }
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -442,8 +454,8 @@ form.addEventListener("submit", async (e) => {
         if (!line) continue;
         const msg = JSON.parse(line);
         if (msg.type === "chunk") agentRow.textContent += msg.text;
+        else if (msg.type === "conversation") conversationToken = msg.conversationToken;
         else if (msg.type === "done") {
-          if (msg.conversationId) conversationId = msg.conversationId;
           // If nothing streamed incrementally, fall back to the final answer
           // so the reply is always shown (some models return it in one shot).
           if (!agentRow.textContent && msg.answer && msg.answer.reply) agentRow.textContent = msg.answer.reply;
