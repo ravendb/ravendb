@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Replication
                     break;
 
                 case RegisterReplicationHubAccessCommand reg:
-                    DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint, reg.Database);
+                    DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
                     break;
             }
             return Task.CompletedTask;
@@ -351,8 +351,10 @@ namespace Raven.Server.Documents.Replication
                         repl.Dispose();
                         _incoming.TryRemove(key, out _);
                     }
-                    catch
+                    catch (Exception e)
                     {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Failed to reset {repl.ConnectionInfo} for pull replication hub '{hub}' on certificate '{certThumbprint}' after replication configuration changed.", e);
                     }
                 }
 
@@ -374,8 +376,10 @@ namespace Raven.Server.Documents.Replication
                         repl.Dispose();
                         _outgoing.TryRemove(repl);
                     }
-                    catch
+                    catch (Exception e)
                     {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} for pull replication hub '{hub}' on certificate '{certThumbprint}' after replication configuration changed.", e);
                     }
                 }
             }
