@@ -198,7 +198,7 @@ public static class ChannelsEndpoints
             // Lost the race. The winner's binding is committed through Raft, but
             // a plain read-back can momentarily race ahead of that commit being
             // applied/visible on this node — retry briefly until it appears.
-            var winner = await LoadBindingWithRetryAsync(store, app.Database, bindingId, ct);
+            var winner = await ClusterWideRace.LoadWinnerAsync<ChannelBinding>(store, app.Database, bindingId, ct);
             if (winner is null)
             {
                 throw new InvalidOperationException(
@@ -421,27 +421,6 @@ public static class ChannelsEndpoints
         using var session = store.OpenAsyncSession();
         await session.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = slug }, ct);
         await session.SaveChangesAsync(ct);
-    }
-
-    /// <summary>Loads the winning binding after a cluster-tx conflict, retrying
-    /// until the Raft-committed doc becomes visible on this node. ~500ms budget.</summary>
-    private static async Task<ChannelBinding?> LoadBindingWithRetryAsync(
-        IDocumentStore store, string database, string bindingId, CancellationToken ct)
-    {
-        const int maxAttempts = 10;
-        for (var attempt = 0; attempt < maxAttempts; attempt++)
-        {
-            using (var session = store.OpenAsyncSession(database))
-            {
-                var binding = await session.LoadAsync<ChannelBinding>(bindingId, ct);
-                if (binding is not null)
-                    return binding;
-            }
-
-            await Task.Delay(50, ct);
-        }
-
-        return null;
     }
 
     /// <summary>Validates + normalizes <paramref name="origins"/> in place to the
