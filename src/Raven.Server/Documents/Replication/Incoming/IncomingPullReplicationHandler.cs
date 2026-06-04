@@ -322,10 +322,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return parsedChangeVectorToMerge.IsSingle ? parsedChangeVectorToMerge : parsedChangeVectorToMerge.Order;
             }
 
-            protected override void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+            protected override string HandleRevisionTombstone(DocumentsOperationContext context, string changeVector)
             {
                 ReplaceKnownSinkEntries(context, ref changeVector);
-                base.HandleRevisionTombstone(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
+                return base.HandleRevisionTombstone(context, changeVector);
             }
         }
 
