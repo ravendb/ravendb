@@ -38,8 +38,8 @@ internal sealed class Channel
     public string DisplayName { get; set; } = "";
 
     /// <summary>The <see cref="Schema.IAgentSchema.Identifier"/> this channel
-    /// routes to. One channel binds to exactly one agent for the POC; one
-    /// agent may be exposed by many channels (design §3.4).</summary>
+    /// routes to. A channel routes to exactly one agent by design; one agent
+    /// may be exposed by many channels.</summary>
     public string AgentId { get; set; } = "";
 
     /// <summary>Allowed origins for cross-origin script / CORS gating. Stored
