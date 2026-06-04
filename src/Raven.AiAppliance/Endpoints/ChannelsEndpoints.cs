@@ -41,7 +41,9 @@ public static class ChannelsEndpoints
                 "Registers a channel for the app. allowedOrigins entries are normalized to " +
                 "scheme://authority (max 32). An empty allowedOrigins list is an explicit " +
                 "contract: the embed page emits no CSP frame-ancestors header and is " +
-                "embeddable from any site.")
+                "embeddable from any site. Provision is create-only: when the (type, agent) " +
+                "channel already exists the response carries existing=true and the request's " +
+                "allowedOrigins/displayName are NOT applied — edit via PUT /channels/{id}.")
             .Accepts<ProvisionChannelRequest>("application/json")
             .Produces<ProvisionChannelResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -137,7 +139,7 @@ public static class ChannelsEndpoints
                 logger.LogInformation(
                     "Channel binding already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
                     app.Slug, schema.Identifier, existing.WidgetId);
-                return Results.Ok(new ProvisionChannelResponse(existing.WidgetId));
+                return Results.Ok(new ProvisionChannelResponse(existing.WidgetId, Existing: true));
             }
         }
 
@@ -202,7 +204,7 @@ public static class ChannelsEndpoints
             logger.LogInformation(
                 "Lost race for binding slug={Slug} agentId={AgentId}; returning winner's widgetId={WidgetId}",
                 app.Slug, schema.Identifier, winner.WidgetId);
-            return Results.Ok(new ProvisionChannelResponse(winner.WidgetId));
+            return Results.Ok(new ProvisionChannelResponse(winner.WidgetId, Existing: true));
         }
     }
 
