@@ -336,6 +336,76 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Embed_chat_returns_404_for_unregistered_agent()
+    {
+        // L1 (review 2026-06-04): a channel whose stored AgentId no longer
+        // resolves in the agent registry (cross-version drift) must fail with a
+        // clean 404 before the NDJSON stream opens — not 200 + an error frame.
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        const string widgetId = "wgt_ghost_agent";
+        using (var cfg = store.OpenAsyncSession())
+        {
+            await cfg.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = "my-app" });
+            await cfg.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession(perAppDb))
+        {
+            await session.StoreAsync(new Channel
+            {
+                Id = $"channels/{widgetId}",
+                Type = ChannelType.IFrame,
+                AgentId = "ghost-agent",
+                Enabled = true,
+            });
+            await session.SaveChangesAsync();
+        }
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync($"/embed/{widgetId}/chat", new { prompt = "hi" });
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_lifecycle_provision_update_delete_reprovision()
+    {
+        // L2 (review 2026-06-04): the only flow mixing a node-local PUT with a
+        // later cluster-wide DELETE of the atomic-guarded docs. Pins that the
+        // guard clears and the same (type, agent) tuple re-provisions as a
+        // brand-new channel.
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
+
+        var update = await client.PutAsJsonAsync($"/api/apps/my-app/channels/{widgetId}", new { enabled = false });
+        Assert.True(update.IsSuccessStatusCode, await update.Content.ReadAsStringAsync());
+
+        var delete = await client.DeleteAsync($"/api/apps/my-app/channels/{widgetId}");
+        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+
+        var gone = await client.GetAsync($"/embed/{widgetId}");
+        Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);
+
+        var reResp = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
+        Assert.True(reResp.IsSuccessStatusCode, await reResp.Content.ReadAsStringAsync());
+        var reJson = await reResp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(reJson.GetProperty("existing").GetBoolean());
+        Assert.NotEqual(widgetId, reJson.GetProperty("widgetId").GetString());
+    }
+
     // ---- cdc/progress WebSocket ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]

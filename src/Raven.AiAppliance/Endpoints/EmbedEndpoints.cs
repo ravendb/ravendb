@@ -6,6 +6,7 @@ using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
+using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 
@@ -69,6 +70,7 @@ public static class EmbedEndpoints
         EmbedChatRequest body,
         IDocumentStore store,
         IAgentRouter router,
+        IAgentSchemaRegistry schemas,
         ILogger<EmbedLogger> logger,
         HttpContext ctx)
     {
@@ -102,11 +104,23 @@ public static class EmbedEndpoints
 
         var (app, channel) = resolved.Value;
 
+        // The channel's stored AgentId can drift out of the in-process registry
+        // (agent renamed/removed across versions). Check before the stream opens
+        // so the failure is a clean status instead of 200 + an error frame — and
+        // use 404, not 400: the agent id is server-side state, not client input,
+        // and the public embed surface deliberately collapses all failure modes
+        // into 404 (mirrors ResolveAsync).
+        if (schemas.TryGet(channel.AgentId, out var schema) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
         NdjsonStream.SetHeaders(ctx);
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(app.Database, channel.AgentId, conversationId, body.Prompt, Parameters: null),
+                new AgentRequest(app.Database, schema.Identifier, conversationId, body.Prompt, Parameters: null),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ct);
 
