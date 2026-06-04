@@ -85,6 +85,28 @@ internal static class RavenLiveFeedProxy
         {
             // Either side dropped — nothing actionable.
         }
+
+        // Complete the close handshake on whichever sockets are still open. A
+        // browser-initiated close otherwise ends in disposal aborts: no close
+        // ack to the browser, and the upstream RavenDB socket logs an abort
+        // instead of a graceful close. Best-effort, on a fresh short token —
+        // the linked one is already cancelled by now.
+        using var closeCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await CloseQuietlyAsync(browser, closeCts.Token);
+        await CloseQuietlyAsync(upstream, closeCts.Token);
+    }
+
+    private static async Task CloseQuietlyAsync(WebSocket socket, CancellationToken token)
+    {
+        if (socket.State != WebSocketState.Open && socket.State != WebSocketState.CloseReceived)
+            return;
+
+        try
+        {
+            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "closing", token);
+        }
+        catch (OperationCanceledException) { }
+        catch (WebSocketException) { }
     }
 
     private static async Task PumpAsync(WebSocket upstream, WebSocket browser, CancellationToken token)

@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
@@ -50,12 +49,17 @@ internal static class NdjsonStream
         ctx.Response.Headers["X-Accel-Buffering"] = "no";
     }
 
+    // Shared newline buffer — WriteLineAsync is the per-token hot path of every
+    // chat stream, so serialize straight to UTF-8 bytes instead of paying an
+    // intermediate string + "\n" concat + re-encode per frame.
+    private static readonly byte[] Newline = "\n"u8.ToArray();
+
     /// <summary>Serializes <paramref name="payload"/> as one JSON line and flushes.</summary>
     public static async Task WriteLineAsync(HttpContext ctx, object payload)
     {
-        var json = JsonSerializer.Serialize(payload, JsonOpts);
-        var bytes = Encoding.UTF8.GetBytes(json + "\n");
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(payload, JsonOpts);
         await ctx.Response.Body.WriteAsync(bytes, ctx.RequestAborted);
+        await ctx.Response.Body.WriteAsync(Newline, ctx.RequestAborted);
         await ctx.Response.Body.FlushAsync(ctx.RequestAborted);
     }
 }
