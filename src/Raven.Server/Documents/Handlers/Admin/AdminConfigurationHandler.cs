@@ -1,6 +1,7 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -41,6 +42,15 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (var processor = new AdminConfigurationHandlerProcessorForPutClientConfiguration(this))
                 await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/admin/features/pull-replication-composite-change-vectors", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task SetPullReplicationCompositeChangeVectorsFeature()
+        {
+            bool enabled = GetBoolValueQueryString("enabled") == true;
+            (long index, _) = await ServerStore.SendToLeaderAsync(new SetPullReplicationCompositeChangeVectorsFeatureCommand(DatabaseName, enabled, GetRaftRequestIdFromQuery())).ConfigureAwait(false);
+            await WaitForIndexNotificationAsync(index).ConfigureAwait(false);
+            NoContentStatus();
         }
     }
 }

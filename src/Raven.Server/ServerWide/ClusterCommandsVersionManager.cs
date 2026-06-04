@@ -213,7 +213,8 @@ namespace Raven.Server.ServerWide
             [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
             [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] =  72_000,
 
-            [nameof(UpdateSnmpDatabaseAiTasksMappingCommand)] = 72_000
+            [nameof(UpdateSnmpDatabaseAiTasksMappingCommand)] = 72_000,
+            [nameof(SetPullReplicationCompositeChangeVectorsFeatureCommand)] = 72_001
         };
 
         public bool CanPutCommand(string command)
