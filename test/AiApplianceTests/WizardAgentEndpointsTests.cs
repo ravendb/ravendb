@@ -544,6 +544,26 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_returns_400_when_allowedOrigins_missing()
+    {
+        // "Embeddable from anywhere" must be an explicit opt-in ([]). Omitting
+        // the property is a 400, not a silently-open embed.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_returns_400_when_type_missing()
     {
         // A missing 'type' binds the now-nullable enum to null; the handler must
@@ -607,6 +627,10 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         // Exactly one request actually created the channel; the rest surfaced
         // existing=true (fast path or race-loser).
         Assert.Equal(1, freshCreates);
+
+        // Query<> counts are index-backed and can read stale right after the
+        // concurrent writes — wait for indexing so the asserts can't flake.
+        Indexes.WaitForIndexing(store, perAppDb);
 
         using var session = store.OpenAsyncSession(perAppDb);
         Assert.Equal(1, await session.Query<Channel>().CountAsync());
@@ -711,6 +735,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             "/api/apps/my-app/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { supplied } });
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        Indexes.WaitForIndexing(store, perAppDb);
 
         using var session = store.OpenAsyncSession(perAppDb);
         var channel = await session.Query<Channel>().FirstAsync();
@@ -862,6 +888,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
+        Indexes.WaitForIndexing(store, perAppDb);
+
         using var session = store.OpenAsyncSession(perAppDb);
         var channel = await session.Query<Channel>().FirstAsync();
         Assert.Equal("channel-bindings/my-app/IFrame/demo-agent", channel.BindingId);
@@ -887,6 +915,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             "/api/apps/my-app/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        Indexes.WaitForIndexing(store, perAppDb);
 
         using var session = store.OpenAsyncSession(perAppDb);
         var ch = await session.Query<Channel>().FirstAsync();
@@ -915,6 +945,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             new { type = "iframe", agentId = "Demo-Agent", allowedOrigins = new[] { "http://localhost" } });
 
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        Indexes.WaitForIndexing(store, perAppDb);
 
         using var session = store.OpenAsyncSession(perAppDb);
         var channel = await session.Query<Channel>().FirstAsync();

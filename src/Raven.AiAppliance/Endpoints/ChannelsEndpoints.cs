@@ -37,9 +37,9 @@ public static class ChannelsEndpoints
         group.MapPost("/setup/channel", ProvisionChannelAsync)
             .WithName("channels.create")
             .WithDescription(
-                "Registers a channel for the app. allowedOrigins entries are normalized to " +
-                "scheme://authority (max 32). An empty allowedOrigins list is an explicit " +
-                "contract: the embed page emits no CSP frame-ancestors header and is " +
+                "Registers a channel for the app. allowedOrigins is required; entries are " +
+                "normalized to scheme://authority (max 32). An explicit empty list is the " +
+                "opt-in contract: the embed page emits no CSP frame-ancestors header and is " +
                 "embeddable from any site. Provision is create-only: when the (type, agent) " +
                 "channel already exists the response carries existing=true and the request's " +
                 "allowedOrigins/displayName are NOT applied — edit via PUT /channels/{id}.")
@@ -113,7 +113,14 @@ public static class ChannelsEndpoints
         if (!schemas.TryGet(body.AgentId, out var schema))
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        var origins = body.AllowedOrigins ?? [];
+        // "Embeddable from anywhere" must be an explicit opt-in
+        // (allowedOrigins: []) — an omitted property is rejected rather than
+        // silently provisioning an open embed.
+        if (body.AllowedOrigins is null)
+            return Results.BadRequest(new ApiErrorResponse(
+                "allowedOrigins is required; pass an empty array to make the embed page embeddable from anywhere"));
+
+        var origins = body.AllowedOrigins;
         if (TryNormalizeOrigins(origins, out var originError) == false)
             return Results.BadRequest(new ApiErrorResponse(originError!));
 
