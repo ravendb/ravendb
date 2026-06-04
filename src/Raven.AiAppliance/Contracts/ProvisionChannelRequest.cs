@@ -16,13 +16,14 @@ namespace Raven.AiAppliance.Contracts;
 /// must match a registered <see cref="Schema.IAgentSchema.Identifier"/>.</param>
 /// <param name="AllowedOrigins">Allowed origins for the embed page's
 /// CORS / CSP gating; normalized to <c>scheme://authority</c> on persist.
-/// An empty list is an explicit contract (decided 2026-06-04): the embed page
-/// emits no CSP <c>frame-ancestors</c> header and is embeddable from any
-/// site — revisited with the widget-token work.</param>
+/// Required — omitting the property is rejected with 400 so an open embed is
+/// always an explicit choice. An explicit empty list is that opt-in (decided
+/// 2026-06-04): the embed page emits no CSP <c>frame-ancestors</c> header and
+/// is embeddable from any site — revisited with the widget-token work.</param>
 /// <param name="DisplayName">Optional operator-friendly label. Defaults to
 /// <see cref="Type"/> when omitted.</param>
 public sealed record ProvisionChannelRequest(
     ChannelType? Type,
     string AgentId,
-    string[] AllowedOrigins,
+    string[]? AllowedOrigins,
     string? DisplayName = null);
