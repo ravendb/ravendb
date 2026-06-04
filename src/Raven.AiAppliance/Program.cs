@@ -10,6 +10,7 @@ using Polly.Retry;
 using Polly.Timeout;
 using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.AiHelper;
+using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Endpoints;
 using Raven.AiAppliance.Hosting;
 using Raven.AiAppliance.Infrastructure;
@@ -87,6 +88,10 @@ builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentSchemaRegistry, AgentSchemaRegistry>();
 builder.Services.AddSingleton<IAgentSchema, DemoAgentSchema>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
+// Embed conversation tokens (RavenDB-26700 auth follow-up). TimeProvider is
+// injected (not DateTime.UtcNow) so binding-expiry logic is testable.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ConversationBindings>();
 if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<RavenReadinessService>();
 builder.Services.AddHttpClient();

@@ -14,11 +14,15 @@ namespace Raven.AiAppliance.Endpoints;
 
 /// <summary>
 /// Public customer-facing iFrame channel (design §1.4 / §3.5). Two routes —
-/// the embed page and its chat stream — both keyed only by the public
-/// <c>widgetId</c> (no login; token hardening is a follow-up). Deliberately
-/// mapped OUTSIDE the <c>/api</c> group so the readiness gate and dashboard
-/// auth don't apply; it MUST be registered before the SPA fallback in
-/// <c>Program.cs</c> or the <c>{*path:nonfile}</c> fallback would swallow it.
+/// the embed page and its chat stream — keyed by the public <c>widgetId</c>
+/// (no login). Conversation continuation requires the opaque <c>cnv_</c>
+/// token minted on turn 1 (RavenDB-26700 auth follow-up; closes ayende's A2 —
+/// raw <c>chats/</c> ids are never accepted or exposed), plus the M1b Origin
+/// defense-in-depth check. Turn 1 itself stays ungated (accepted demo
+/// posture; rate limiting deferred). Deliberately mapped OUTSIDE the
+/// <c>/api</c> group so the readiness gate and dashboard auth don't apply; it
+/// MUST be registered before the SPA fallback in <c>Program.cs</c> or the
+/// <c>{*path:nonfile}</c> fallback would swallow it.
 /// </summary>
 public static class EmbedEndpoints
 {
@@ -48,14 +52,13 @@ public static class EmbedEndpoints
         var (_, channel) = resolved.Value;
 
         // Best-effort hardening: constrain who may frame this page to the
-        // operator-configured origins. Not a substitute for the (deferred)
-        // token; the host page's own CSP still governs actual loading.
-        // Decided 2026-06-04: an EMPTY origins list intentionally emits no
-        // frame-ancestors at all — the widget is embeddable from anywhere. The
-        // /embed/{widgetId}/chat POST likewise does NOT check the Origin header
-        // (spoofable outside browsers, and same-origin POSTs carry the
-        // appliance's own origin, not a customer one). Both are revisited
-        // together with the widget-token work.
+        // operator-configured origins; the host page's own CSP still governs
+        // actual loading. Decided 2026-06-04: an EMPTY origins list
+        // intentionally emits no frame-ancestors at all — the widget is
+        // embeddable from anywhere (M1 documented contract). The
+        // /embed/{widgetId}/chat POST additionally runs the M1b Origin
+        // defense-in-depth check (see IsOriginAllowed) and requires the
+        // conversation token for continuation.
         if (channel.AllowedOrigins.Length > 0)
             ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors {string.Join(' ', channel.AllowedOrigins)}";
 
@@ -63,12 +66,20 @@ public static class EmbedEndpoints
         await ctx.Response.WriteAsync(BuildEmbedHtml(widgetId, channel.DisplayName), ct);
     }
 
+    /// <summary>How long a minted conversation token can resume its
+    /// conversation (read-validated on the binding doc). This is TOKEN
+    /// VALIDITY — distinct from session retention (deferred follow-up).</summary>
+    private static readonly TimeSpan ConversationTtl = TimeSpan.FromHours(24);
+
+    private const string ConversationTokenPrefix = "cnv_";
+
     private static async Task StreamEmbedChatAsync(
         string widgetId,
         EmbedChatRequest body,
         IDocumentStore store,
         IAgentRouter router,
         IAgentSchemaRegistry schemas,
+        ConversationBindings bindings,
         ILogger<EmbedLogger> logger,
         HttpContext ctx)
     {
@@ -81,48 +92,101 @@ public static class EmbedEndpoints
             return;
         }
 
-        // Validate + normalize the conversation id up front (the single rule
-        // lives on AgentRouter; mirrors /api/chat/stream) so a bad id is a
-        // clean 400 instead of an opaque "error" frame after the NDJSON stream
-        // has already started. NormalizeConversationId stays the safety net.
-        if (AgentRouter.TryNormalizeConversationId(body.ConversationId, out var conversationId, out var conversationError) == false)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(conversationError!), ct);
-            return;
-        }
-
         var resolved = await TryResolveEnabledChannelAsync(ctx, store, widgetId, ct);
         if (resolved is null)
             return;
 
         var (app, channel) = resolved.Value;
 
+        // M1b origin defense-in-depth — see IsOriginAllowed for the honest
+        // accounting of what this does and does not protect against.
+        if (IsOriginAllowed(ctx.Request, channel.AllowedOrigins) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("origin not allowed", Code: "origin_forbidden"), ct);
+            return;
+        }
+
+        // Continuation: the opaque cnv_ token resolves to the hidden chats/ id
+        // through its conversation-binding doc. The raw conversation id is
+        // never accepted from the client (A2: server-allocated chats/ ids are
+        // sequential/enumerable — a guessed id could read another user's chat).
+        string? conversationId = null;
+        if (string.IsNullOrWhiteSpace(body.ConversationToken) == false)
+        {
+            var token = body.ConversationToken.Trim();
+
+            // L2: only the exact minted shape reaches the doc load — junk and
+            // id-trickery ('/', '|') are rejected before touching doc-id space.
+            if (IsWellFormedToken(token) == false)
+            {
+                await WriteAuthErrorAsync(ctx, ConversationBindings.UnknownCode, ct);
+                return;
+            }
+
+            var (resolvedId, errorCode) = await bindings.TryResolveAsync(
+                app.Database, ConversationBinding.MakeId(widgetId, token), ct);
+            if (resolvedId is null)
+            {
+                await WriteAuthErrorAsync(ctx, errorCode!, ct);
+                return;
+            }
+
+            conversationId = resolvedId;
+        }
+
         // The channel's stored AgentId can drift out of the in-process registry
         // (agent renamed/removed across versions). Check before the stream opens
         // so the failure is a clean status instead of 200 + an error frame — and
         // use 404, not 400: the agent id is server-side state, not client input,
         // and the public embed surface deliberately collapses all failure modes
-        // into 404 (mirrors ResolveAsync).
+        // into 404 (mirrors ResolveAsync). Runs BEFORE minting (M3) so a request
+        // that is about to 404 never writes a binding + compare-exchange guard.
         if (schemas.TryGet(channel.AgentId, out var schema) == false)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
 
+        // Turn 1: mint the conversation server-side — a random hidden chats/
+        // id behind a random public token (both crypto-random, see RandomIds).
+        // The binding is written before the run so the conversation survives a
+        // failed first reply; an orphan from a crash is rejected by the
+        // validity window and is otherwise inert.
+        string? mintedToken = null;
+        if (conversationId is null)
+        {
+            mintedToken = RandomIds.NewId(ConversationTokenPrefix);
+            conversationId = await bindings.GetOrCreateAsync(
+                app.Database,
+                ConversationBinding.MakeId(widgetId, mintedToken),
+                widgetId,
+                static () => RandomIds.NewId("chats/"),
+                ConversationTtl,
+                ct);
+        }
+
         NdjsonStream.SetHeaders(ctx);
         try
         {
+            // The token rides its own leading frame (not the done frame): the
+            // client must keep the conversation even when the reply errors out
+            // mid-stream, and turn 2+ needs no re-send (the client already
+            // holds it).
+            if (mintedToken is not null)
+                await NdjsonStream.WriteLineAsync(ctx, new { type = "conversation", conversationToken = mintedToken });
+
             var result = await router.RunAsync(
                 new AgentRequest(app.Database, schema.Identifier, conversationId, body.Prompt, Parameters: null),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ct);
 
+            // A2: the done frame deliberately does NOT echo the conversation
+            // id — the opaque token is the only continuation handle.
             await NdjsonStream.WriteLineAsync(ctx, new
             {
                 type = "done",
                 answer = result.Answer,
-                conversationId = result.ConversationId,
             });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -131,6 +195,9 @@ public static class EmbedEndpoints
         }
         catch (Exception e)
         {
+            // L1: widgetId is public; the conversation token must never be
+            // logged (the binding id embeds it — exception messages from the
+            // binding path use a redacted prefix form).
             logger.LogError(e, "embed chat failed for widgetId={WidgetId}", widgetId);
             try
             {
@@ -141,6 +208,79 @@ public static class EmbedEndpoints
                 // Response may already be partially flushed.
             }
         }
+    }
+
+    /// <summary>Writes the embed-auth 401: same status for unknown / expired /
+    /// malformed tokens (the widget reacts identically — clear the token and
+    /// let the next submit start fresh); the <see cref="ApiErrorResponse.Code"/>
+    /// distinguishes them for tests and diagnostics. Only the token holder can
+    /// probe the difference, so the code is not an oracle.</summary>
+    private static async Task WriteAuthErrorAsync(HttpContext ctx, string code, CancellationToken ct)
+    {
+        ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        await ctx.Response.WriteAsJsonAsync(
+            new ApiErrorResponse("unknown, expired or malformed conversation token", Code: code), ct);
+    }
+
+    /// <summary>
+    /// L2: accepts exactly the minted token shape — <c>cnv_</c> + 22 base64url
+    /// chars (<see cref="RandomIds.SuffixLength"/> ties the gate to the
+    /// generator). Shape only, not auth: the binding-doc load downstream is the
+    /// authority (and doc-id lookups are case-insensitive — L3 — so a
+    /// case-mangled valid token still resolves; that costs nothing).
+    /// </summary>
+    private static bool IsWellFormedToken(string token)
+    {
+        if (token.Length != ConversationTokenPrefix.Length + RandomIds.SuffixLength)
+            return false;
+
+        if (token.StartsWith(ConversationTokenPrefix, StringComparison.Ordinal) == false)
+            return false;
+
+        for (var i = ConversationTokenPrefix.Length; i < token.Length; i++)
+        {
+            var c = token[i];
+            if (char.IsAsciiLetterOrDigit(c) == false && c != '-' && c != '_')
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// M1b origin defense-in-depth on the chat POST. Honest accounting (M1,
+    /// security review 2026-06-04): this constrains BROWSER-SCRIPT abuse only —
+    /// non-browser bots omit <c>Origin</c> and pass (the token is the real
+    /// control), and cross-origin browser <c>fetch</c> is already dead without
+    /// it (no CORS middleware → the preflight fails). Empty
+    /// <c>AllowedOrigins</c> = the documented open-embed contract (M1): skip.
+    /// The embed page itself POSTs with the appliance's own origin, so that is
+    /// always allowed — compared case-insensitively (M2: <c>Request.Host</c>
+    /// casing is not guaranteed across clients). M2 known limitation: behind a
+    /// TLS-terminating proxy <c>Request.Scheme</c> stays <c>http</c> (Kestrel
+    /// listens plain HTTP; no <c>UseForwardedHeaders</c>), so the self-origin
+    /// compare would 403 the appliance's own widget — the demo posture is
+    /// direct-port access; <c>UseForwardedHeaders</c> is the future fix.
+    /// </summary>
+    private static bool IsOriginAllowed(HttpRequest request, string[] allowedOrigins)
+    {
+        if (allowedOrigins.Length == 0)
+            return true;
+
+        var origin = request.Headers.Origin.ToString();
+        if (string.IsNullOrEmpty(origin))
+            return true;
+
+        // Stored origins are persisted normalized to scheme://authority
+        // (lowercased by Uri at provision time) — ordinal is exact here.
+        foreach (var allowed in allowedOrigins)
+        {
+            if (string.Equals(origin, allowed, StringComparison.Ordinal))
+                return true;
+        }
+
+        var self = $"{request.Scheme}://{request.Host}";
+        return string.Equals(origin, self, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
