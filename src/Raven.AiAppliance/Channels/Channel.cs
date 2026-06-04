@@ -21,6 +21,10 @@ namespace Raven.AiAppliance.Channels;
 /// </summary>
 internal sealed class Channel
 {
+    /// <summary>The shared doc-id prefix — <c>Channel</c> owns the id scheme;
+    /// endpoints and contracts reference this single constant.</summary>
+    internal const string IdPrefix = "channels/";
+
     /// <summary><c>channels/{channelId}</c> (iFrame: <c>channels/{widgetId}</c>).</summary>
     public string? Id { get; set; }
 
@@ -53,11 +57,11 @@ internal sealed class Channel
     public DateTime CreatedAt { get; set; }
 
     /// <summary>Doc id of the corresponding <see cref="ChannelBinding"/>:
-    /// <c>channel-bindings/{slug}/{type}/{agentId}</c>. Stored explicitly
-    /// because the binding id needs the app slug, which lives on the App doc
-    /// in the config DB — not derivable from in-doc fields. Lets the
-    /// delete-channel flow cascade-delete the binding (clearing its atomic
-    /// guard) without a cross-DB lookup. The reverse link (binding -> channel)
+    /// <c>channel-bindings/{slug}/{type}/{agentId}</c>. Stored for
+    /// forward-compat: the delete flow reads it instead of recomputing it from
+    /// slug + type + agent (which it does have in hand), so the binding-id
+    /// format can evolve without breaking deletes of channels provisioned
+    /// under an older format. The reverse link (binding -> channel)
     /// is intentionally NOT stored: <see cref="ChannelBinding.WidgetId"/>
     /// already exists and the channel doc id is <c>channels/{widgetId}</c> —
     /// trivially derivable.</summary>

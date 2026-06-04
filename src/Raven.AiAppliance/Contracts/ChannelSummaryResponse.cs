@@ -17,8 +17,6 @@ public sealed record ChannelSummaryResponse(
     bool Enabled,
     DateTime CreatedAt)
 {
-    private const string IdPrefix = "channels/";
-
     internal static ChannelSummaryResponse From(Channel channel) => new(
         StripPrefix(channel.Id),
         channel.Type,
@@ -28,7 +26,7 @@ public sealed record ChannelSummaryResponse(
         channel.CreatedAt);
 
     private static string StripPrefix(string? id) =>
-        id is not null && id.StartsWith(IdPrefix, StringComparison.Ordinal)
-            ? id[IdPrefix.Length..]
+        id is not null && id.StartsWith(Channel.IdPrefix, StringComparison.Ordinal)
+            ? id[Channel.IdPrefix.Length..]
             : id ?? "";
 }

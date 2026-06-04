@@ -9,10 +9,9 @@ namespace Raven.AiAppliance.Endpoints.Helpers;
 /// Shared NDJSON (newline-delimited JSON) response helper. Each call to
 /// <see cref="WriteLineAsync"/> serializes one self-contained object followed
 /// by a newline and flushes immediately, so the client sees chunks as they
-/// arrive. Used by the embed chat (<c>EmbedEndpoints</c>) and the wizard
-/// <c>/setup/try</c> smoke test (<c>AppsEndpoints</c>). The legacy
-/// <c>/api/chat/stream</c> (<c>ChatEndpoints</c>) predates this helper and
-/// still carries its own copy of the same logic.
+/// arrive. Used by every chat-style streaming endpoint: the embed chat
+/// (<c>EmbedEndpoints</c>), the wizard <c>/setup/try</c> smoke test
+/// (<c>AppsEndpoints</c>), and <c>/api/chat/stream</c> (<c>ChatEndpoints</c>).
 ///
 /// NDJSON over <c>application/x-ndjson</c> rather than SSE because the chat
 /// frames carry a JSON body and the client POSTs the prompt (EventSource is

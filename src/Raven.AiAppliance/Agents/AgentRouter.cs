@@ -92,16 +92,40 @@ internal sealed class AgentRouter(IDocumentStore store, IAgentSchemaRegistry sch
     /// </summary>
     internal static string NormalizeConversationId(string? conversationId)
     {
-        // Trim first so a stray-whitespace id (e.g. "chats/1 ") isn't persisted
-        // verbatim as a distinct RavenDB conversation document.
-        conversationId = conversationId?.Trim();
+        if (TryNormalizeConversationId(conversationId, out var normalized, out var error) == false)
+            throw new ArgumentException(error, nameof(conversationId));
 
-        if (string.IsNullOrWhiteSpace(conversationId))
-            return "chats/";
+        return normalized;
+    }
 
-        if (conversationId.StartsWith("chats/", StringComparison.Ordinal) == false)
-            throw new ArgumentException("conversationId must start with 'chats/'", nameof(conversationId));
+    /// <summary>
+    /// The single definition of the conversation-id rule: trim (so a
+    /// stray-whitespace id like <c>"chats/1 "</c> isn't persisted verbatim);
+    /// null/whitespace normalizes to <c>"chats/"</c> (RavenDB auto-allocates);
+    /// anything else must start with <c>chats/</c>. Endpoints call this for a
+    /// clean 400 before their NDJSON stream opens;
+    /// <see cref="NormalizeConversationId"/> stays as the in-router safety net.
+    /// </summary>
+    internal static bool TryNormalizeConversationId(string? raw, out string normalized, out string? error)
+    {
+        var trimmed = raw?.Trim();
 
-        return conversationId;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            normalized = "chats/";
+            error = null;
+            return true;
+        }
+
+        if (trimmed.StartsWith("chats/", StringComparison.Ordinal) == false)
+        {
+            normalized = "";
+            error = "conversationId must start with 'chats/'";
+            return false;
+        }
+
+        normalized = trimmed;
+        error = null;
+        return true;
     }
 }

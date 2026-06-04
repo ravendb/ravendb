@@ -1,10 +1,9 @@
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.Contracts;
+using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Schema;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
@@ -20,22 +19,6 @@ namespace Raven.AiAppliance.Endpoints;
 /// a JSON body. Each line is a self-contained `{type:chunk|done|error}`.
 public static class ChatEndpoints
 {
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        // Default JavaScriptEncoder escapes HTML-sensitive characters: a
-        // literal '<' is emitted in the JSON output as the six-character
-        // escape sequence backslash-u-0-0-3-C, which JSON.parse decodes back
-        // to '<' transparently on the client. Safe to fall back to default —
-        // no information is lost on the wire; avoids XSS exposure if any
-        // downstream consumer ever embeds chat output into an HTML context.
-        // Demo answer types use public fields, not properties, so the RavenDB
-        // schema generator can read the initializers. System.Text.Json needs
-        // opt-in to serialize them.
-        IncludeFields = true,
-    };
-
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/chat").WithTags("chat");
@@ -85,23 +68,17 @@ public static class ChatEndpoints
             return;
         }
 
-        // Pin client-supplied conversation IDs to the "chats/" prefix.
-        // Without this, a caller could pass `conversationId: "users/admin"`
-        // and overwrite an unrelated document. Empty/missing → "chats/" lets
-        // RavenDB auto-allocate. Otherwise the value must begin with "chats/".
-        var conversationId = body.ConversationId?.Trim();
-        conversationId = string.IsNullOrWhiteSpace(conversationId)
-            ? "chats/"
-            : conversationId;
-        if (!conversationId.StartsWith("chats/", StringComparison.Ordinal))
+        // Validate + normalize the conversation id (the single rule lives on
+        // AgentRouter): empty/missing -> "chats/" lets RavenDB auto-allocate;
+        // otherwise the value must begin with "chats/" so a caller can't pass
+        // e.g. `users/admin` and overwrite an unrelated document.
+        if (AgentRouter.TryNormalizeConversationId(body.ConversationId, out var conversationId, out var conversationError) == false)
         {
-            await WriteBadRequestAsync(ctx, "conversationId must start with 'chats/'");
+            await WriteBadRequestAsync(ctx, conversationError!);
             return;
         }
 
-        ctx.Response.ContentType = "application/x-ndjson; charset=utf-8";
-        ctx.Response.Headers["Cache-Control"] = "no-cache";
-        ctx.Response.Headers["X-Accel-Buffering"] = "no";
+        NdjsonStream.SetHeaders(ctx);
 
         try
         {
@@ -121,10 +98,10 @@ public static class ChatEndpoints
 
             var answer = await schema.RunConversationAsync(
                 conversation,
-                async chunk => await WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
+                async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ctx.RequestAborted);
 
-            await WriteLineAsync(ctx, new
+            await NdjsonStream.WriteLineAsync(ctx, new
             {
                 type           = "done",
                 answer,
@@ -145,7 +122,7 @@ public static class ChatEndpoints
             logger.LogError(e, "Chat stream failed for agentId={AgentId}", body.AgentId);
             try
             {
-                await WriteLineAsync(ctx, new { type = "error", message = "Chat stream failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Chat stream failed. See server logs for details." });
             }
             catch
             {
@@ -161,13 +138,5 @@ public static class ChatEndpoints
     {
         ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
         await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(error));
-    }
-
-    private static async Task WriteLineAsync(HttpContext ctx, object payload)
-    {
-        var json = JsonSerializer.Serialize(payload, JsonOpts);
-        var bytes = Encoding.UTF8.GetBytes(json + "\n");
-        await ctx.Response.Body.WriteAsync(bytes, ctx.RequestAborted);
-        await ctx.Response.Body.FlushAsync(ctx.RequestAborted);
     }
 }

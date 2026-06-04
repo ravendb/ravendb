@@ -22,8 +22,6 @@ namespace Raven.AiAppliance.Endpoints;
 /// </summary>
 public static class EmbedEndpoints
 {
-    private const string ChannelIdPrefix = "channels/";
-
     public static void Map(WebApplication app)
     {
         app.MapGet("/embed/{widgetId}", ServeEmbedPageAsync)
@@ -83,18 +81,14 @@ public static class EmbedEndpoints
             return;
         }
 
-        // Pin client-supplied conversation IDs to the "chats/" prefix up front
-        // (mirrors /api/chat/stream). Trim first so a stray-whitespace id like
-        // "chats/1 " isn't forwarded to RavenDB verbatim.
-        // AgentRouter.NormalizeConversationId is the safety net, but validating
-        // here returns a clean 400 instead of an opaque "error" frame after the
-        // NDJSON stream has already started.
-        var conversationId = body.ConversationId?.Trim();
-        if (string.IsNullOrWhiteSpace(conversationId) == false &&
-            conversationId.StartsWith("chats/", StringComparison.Ordinal) == false)
+        // Validate + normalize the conversation id up front (the single rule
+        // lives on AgentRouter; mirrors /api/chat/stream) so a bad id is a
+        // clean 400 instead of an opaque "error" frame after the NDJSON stream
+        // has already started. NormalizeConversationId stays the safety net.
+        if (AgentRouter.TryNormalizeConversationId(body.ConversationId, out var conversationId, out var conversationError) == false)
         {
             ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("conversationId must start with 'chats/'"), ct);
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(conversationError!), ct);
             return;
         }
 
@@ -204,7 +198,7 @@ public static class EmbedEndpoints
 
         Channel? channel;
         using (var session = store.OpenAsyncSession(app.Database))
-            channel = await session.LoadAsync<Channel>(ChannelIdPrefix + widgetId, ct);
+            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + widgetId, ct);
 
         if (channel is null)
             return null;

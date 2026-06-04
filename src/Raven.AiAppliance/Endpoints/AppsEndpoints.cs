@@ -75,9 +75,7 @@ public static class AppsEndpoints
         ILogger<AppsLogger> logger,
         CancellationToken ct)
     {
-        App? app;
-        using (var session = store.OpenAsyncSession())
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -141,8 +139,7 @@ public static class AppsEndpoints
         IDocumentStore store,
         CancellationToken ct)
     {
-        using var session = store.OpenAsyncSession();
-        var app = await session.LoadAsync<App>($"apps/{slug}", ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         return app is null
             ? Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"))
@@ -156,14 +153,7 @@ public static class AppsEndpoints
         ILogger<AppsLogger> logger,
         CancellationToken ct)
     {
-        App? app;
-        using (var session = store.OpenAsyncSession())
-        {
-            // LoadAsync (not Query) because the App doc id is slug-keyed
-            // (apps/{slug}, set in W6) — no index, no staleness race against
-            // an immediately-prior Provision call in the wizard chain.
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
-        }
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -265,9 +255,7 @@ public static class AppsEndpoints
     {
         var ct = ctx.RequestAborted;
 
-        App? app;
-        using (var session = store.OpenAsyncSession())
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
         {
@@ -311,9 +299,7 @@ public static class AppsEndpoints
             return;
         }
 
-        App? app;
-        using (var session = store.OpenAsyncSession())
-            app = await session.LoadAsync<App>($"apps/{slug}", ct);
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
         if (app is null)
         {
