@@ -61,7 +61,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             // Sender-side filtering is declared in the handshake; receiver-side filtering is derived from this side's pull replication rules.
             var canFilterOutSourceItems = sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(_incomingPullReplicationParams);
-            var bothSidesSupportCompositeChangeVectors = sourceHandshakeRequest.SupportsPullReplicationCompositeChangeVectors && parent.Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors;
+            var sourceSupportsCompositeChangeVectors = sourceHandshakeRequest.SupportsPullReplicationCompositeChangeVectors;
+            var receiverSupportsCompositeChangeVectors = parent.Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors;
+            var bothSidesSupportCompositeChangeVectors = sourceSupportsCompositeChangeVectors && receiverSupportsCompositeChangeVectors;
             _useCompositeChangeVectors = canFilterOutSourceItems && bothSidesSupportCompositeChangeVectors;
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
