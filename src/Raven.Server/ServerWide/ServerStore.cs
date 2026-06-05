@@ -165,6 +165,8 @@ namespace Raven.Server.ServerWide
 
         private readonly List<AlertRaised> _storeAlertForLateRaise;
 
+        private bool _dismissHighReadAheadAlert;
+
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
@@ -814,6 +816,10 @@ namespace Raven.Server.ServerWide
                         else
                             _storeAlertForLateRaise.Add(alert);
                     }
+                    else
+                    {
+                        _dismissHighReadAheadAlert = true;
+                    }
                 }
             }
             catch (Exception e)
@@ -905,6 +911,9 @@ namespace Raven.Server.ServerWide
             {
                 NotificationCenter.Add(alertRaised);
             }
+
+            if (_dismissHighReadAheadAlert)
+                NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.HighReadAheadKb, null), sendNotificationEvenIfDoesntExist: false);
 
             CheckSwapOrPageFileAndRaiseNotification();
             _storeAlertForLateRaise.Clear();
