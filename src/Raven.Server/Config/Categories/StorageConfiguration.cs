@@ -14,12 +14,20 @@ namespace Raven.Server.Config.Categories
             // On Windows, DiscardVirtualMemory can result in high CPU usage due to contention on the
             // PTE entry (in Win Server 2016 and Win Server 2019), we want to avoid it by default.
             DiscardVirtualMemory = PlatformDetails.RunningOnPosix;
+
+            // The sequential read-ahead hint relies on posix_fadvise, which exists on Linux but not macOS.
+            UseSequentialReadAheadHintForJournalRecovery = PlatformDetails.RunningOnLinux;
         }
 
         [Description("You can use this setting to specify whether to disable or enable discard virtual memory. By default, on windows, it will be disabled.")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Storage.DiscardVirtualMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DiscardVirtualMemory { get; set; }
+
+        [Description("On Linux, hint the kernel (posix_fadvise with POSIX_FADV_SEQUENTIAL) to read journal files ahead aggressively during startup recovery, independent of the device's read_ahead_kb. This speeds up recovery when read_ahead_kb has been tuned low for random-access workloads. Has no effect on Windows or macOS. Set to false to opt out.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Storage.UseSequentialReadAheadHintForJournalRecovery", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; }
         
         [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]
         [DefaultValue(null)]

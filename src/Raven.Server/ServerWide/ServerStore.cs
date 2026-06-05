@@ -830,6 +830,7 @@ namespace Raven.Server.ServerWide
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
+            options.UseSequentialReadAheadHintForJournalRecovery = Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
 
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);

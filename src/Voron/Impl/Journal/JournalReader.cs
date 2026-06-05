@@ -219,7 +219,7 @@ namespace Voron.Impl.Journal
 
             LastTransactionHeader = current;
 
-            DropProcessedTxFromPageCache(transactionSizeIn4Kb);
+            DiscardProcessedTransactionPages(transactionSizeIn4Kb);
 
             return true;
         }
@@ -241,22 +241,32 @@ namespace Voron.Impl.Journal
             else
                 _lastSkippedTx = current->TransactionId;
 
-            DropProcessedTxFromPageCache(transactionSizeIn4Kb);
+            DiscardProcessedTransactionPages(transactionSizeIn4Kb);
         }
 
-        // Release the just-processed transaction's pages from the kernel page cache.
-        // Combined with FADV_SEQUENTIAL's adaptive look-ahead this creates a sliding
-        // window that keeps only ~1-2 transactions resident at a time - critical when
-        // many databases recover simultaneously and page cache pressure is a concern.
-        // Applies to both applied and skipped (already-synced) transactions.
-        private void DropProcessedTxFromPageCache(long transactionSizeIn4Kb)
+        // Release each processed tx's fully-contained journal pages via madvise(MADV_DONTNEED)
+        // (DiscardPages): unmaps them so the resident set stays bounded and the unmapped pages
+        // become reclaimable page cache, instead of the whole journal staying mapped while many
+        // DBs recover. (MADV_DONTNEED does not evict the cache outright - it just drops the
+        // mapping; the clean pages are then reclaimed under pressure.) Whole pages only - recovery
+        // is forward-only, so the page shared with the next tx survives. RvnMemoryMapPager only:
+        // it is file-backed, so DONTNEED just re-reads from the file - never zeroes pages the way
+        // it would for an anonymous in-memory pager.
+        private void DiscardProcessedTransactionPages(long transactionSizeIn4Kb)
         {
             if (_journalPager is not RvnMemoryMapPager rvnJournalPager)
                 return;
 
-            var txStartOffset = (_readAt4Kb - transactionSizeIn4Kb) * 4L * Constants.Size.Kilobyte;
-            var txLength = transactionSizeIn4Kb * 4L * Constants.Size.Kilobyte;
-            rvnJournalPager.TryDropFromPageCacheHint(txStartOffset, txLength);
+            const long fourKb = 4L * Constants.Size.Kilobyte;
+            var txStartOffset = (_readAt4Kb - transactionSizeIn4Kb) * fourKb;
+            var txEndOffset = _readAt4Kb * fourKb; // exclusive
+
+            var firstFullPage = (txStartOffset + Constants.Storage.PageSize - 1) / Constants.Storage.PageSize;
+            var lastFullPageExclusive = txEndOffset / Constants.Storage.PageSize;
+            if (lastFullPageExclusive <= firstFullPage)
+                return; // transaction smaller than a page boundary - nothing whole to discard
+
+            rvnJournalPager.DiscardPages(firstFullPage, (int)(lastFullPageExclusive - firstFullPage));
         }
 
         private bool IsAlreadySyncTransaction(TransactionHeader* current)
@@ -785,11 +795,8 @@ namespace Voron.Impl.Journal
             }
             OnDispose?.Invoke(this);
 
-            // Drop the entire journal file from the page cache now that recovery is done.
-            // offset=0, length=0 tells posix_fadvise(FADV_DONTNEED) to apply to the whole file
-            // (the kernel interprets len=0 as "to end of file").
-            if (_journalPager is RvnMemoryMapPager rvnPager)
-                rvnPager.TryDropFromPageCacheHint();
+            // No whole-file discard here: WriteAheadJournal.RecoverDatabase disposes the journal
+            // pager (munmap) before this runs, which already unmaps the whole journal.
         }
 
         private static int GetNumberOfPagesFor(long size)

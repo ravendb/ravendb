@@ -54,6 +54,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = _db.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = _db.Configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = _db.Configuration.Storage.DiscardVirtualMemory;
+            options.UseSequentialReadAheadHintForJournalRecovery = _db.Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
             options.TimeToSyncAfterFlushInSec = (int)_db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.Encryption.MasterKey = _db.MasterKey?.ToArray();
 

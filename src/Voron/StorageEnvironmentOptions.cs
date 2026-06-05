@@ -928,7 +928,8 @@ namespace Voron
                         return new Posix32BitsMemoryMapPager(this, path);
 
                     var posixJournalPager = new RvnMemoryMapPager(this, path);
-                    posixJournalPager.TrySetSequentialScanHint();
+                    if (UseSequentialReadAheadHintForJournalRecovery)
+                        posixJournalPager.TrySetSequentialScanHint();
                     return posixJournalPager;
                 }
 
@@ -1279,6 +1280,7 @@ namespace Voron
 
         public int MaxNumberOfRecyclableJournals { get; set; } = 32;
         public bool DiscardVirtualMemory { get; set; } = true;
+        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
         
         private readonly Logger _log;
 

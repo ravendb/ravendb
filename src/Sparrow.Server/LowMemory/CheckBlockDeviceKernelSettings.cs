@@ -25,16 +25,18 @@ namespace Sparrow.Server.LowMemory
         /// Only meaningful on Linux; callers should guard with
         /// <c>PlatformDetails.RunningOnPosix &amp;&amp; !PlatformDetails.RunningOnMacOsx</c>.
         /// </summary>
-        public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead(int thresholdKb)
+        /// <param name="thresholdKb">Devices with read_ahead_kb above this are returned.</param>
+        /// <param name="sysBlockPath">Root of the sysfs block-device tree. Defaults to /sys/block/; overridable for testing.</param>
+        public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead(int thresholdKb, string sysBlockPath = SysBlockPath)
         {
             try
             {
-                if (Directory.Exists(SysBlockPath) == false)
+                if (Directory.Exists(sysBlockPath) == false)
                     return null;
 
                 List<(string, Size)> result = null;
 
-                foreach (var blockDir in Directory.GetDirectories(SysBlockPath))
+                foreach (var blockDir in Directory.GetDirectories(sysBlockPath))
                 {
                     var deviceName = Path.GetFileName(blockDir);
 

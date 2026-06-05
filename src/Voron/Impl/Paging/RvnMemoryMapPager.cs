@@ -253,29 +253,19 @@ namespace Voron.Impl.Paging
         }
 
         /// <summary>
-        /// Calls posix_fadvise(POSIX_FADV_SEQUENTIAL) on the underlying mmap file descriptor.
-        /// This sets a per-fd, adaptively-growing read-ahead window in the kernel that is
-        /// NOT bounded by the global read_ahead_kb device parameter.  During journal recovery
-        /// (a fully sequential read) the kernel will issue progressively larger I/Os instead
-        /// of being capped at read_ahead_kb bytes per request — reducing IOPS without touching
-        /// any global tuning knobs.
-        ///
-        /// The fd is read directly from the PAL-internal map_file_handle struct:
-        ///     struct map_file_handle { int fd; const char* path; int flags; }
-        /// fd is at offset 0, so *(int*)handle gives the descriptor.
-        ///
-        /// Only meaningful on Linux; macOS lacks posix_fadvise and is not affected by
-        /// read_ahead_kb.  Errors are silently ignored — this is a best-effort hint.
+        /// posix_fadvise(POSIX_FADV_SEQUENTIAL) on the journal's mmap fd raises the per-fd kernel
+        /// read-ahead window independently of the device's read_ahead_kb, so sequential recovery
+        /// isn't throttled when read_ahead_kb is tuned low. Linux only, best-effort.
         /// </summary>
         public void TrySetSequentialScanHint()
         {
-            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
+            if (PlatformDetails.RunningOnLinux == false)
                 return;
 
             if (_handle.IsInvalid || _handle.IsClosed)
                 return;
 
-            // fd is the first field of map_file_handle at offset 0.
+            // fd is field 0 of the PAL's map_file_handle (posix/mapping.c).
             var fd = *(int*)_handle.DangerousGetHandle();
             if (fd < 0)
                 return;
@@ -288,30 +278,5 @@ namespace Voron.Impl.Paging
         private static extern int PosixFadvise(int fd, long offset, long len, int advice);
 
         private const int PosixFadviseSequential = 2; // POSIX_FADV_SEQUENTIAL, same on all Linux arches
-
-        /// <summary>
-        /// Calls posix_fadvise(POSIX_FADV_DONTNEED) on the specified byte range of the file,
-        /// releasing those clean pages from the page cache immediately.
-        /// Pass <paramref name="offset"/>=0 and <paramref name="length"/>=0 to advise the
-        /// entire file (kernel interprets len=0 as "to end of file").
-        /// Journal pages are always clean (read-only from the pager's perspective), so the
-        /// kernel always honours this hint. Errors are silently ignored — best-effort only.
-        /// </summary>
-        public void TryDropFromPageCacheHint(long offset = 0, long length = 0)
-        {
-            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
-                return;
-
-            if (_handle.IsInvalid || _handle.IsClosed)
-                return;
-
-            var fd = *(int*)_handle.DangerousGetHandle();
-            if (fd < 0)
-                return;
-
-            PosixFadvise(fd, offset, length, PosixFadviseDoNotNeed);
-        }
-
-        private const int PosixFadviseDoNotNeed = 4; // POSIX_FADV_DONTNEED, same on all Linux arches
     }
 }
