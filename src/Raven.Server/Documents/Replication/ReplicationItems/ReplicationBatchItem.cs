@@ -208,9 +208,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             if (string.IsNullOrEmpty(changeVector))
                 return changeVector;
 
-            var versionChangeVector = changeVector.IndexOf('|') < 0
-                ? changeVector
-                : context.GetChangeVector(changeVector).Version;
+            string versionChangeVector = context.GetChangeVector(changeVector).Version;
 
             if (senderIsHub == false)
                 return versionChangeVector;
