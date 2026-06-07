@@ -307,6 +307,22 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
     // ---- gate precedence ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Unknown_widget_with_token_returns_404_not_401()
+    {
+        // I2 (impl review 2026-06-07): resolve-before-auth is a contract, not
+        // an accident of statement order — answering 401 for an unknown widget
+        // would tell a prober holding any junk token which widgetIds exist.
+        var store = GetDocumentStore();
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync("/embed/wgt_nope/chat",
+            new { prompt = "hi", conversationToken = RandomIds.NewId("cnv_") });
+
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Disabled_channel_returns_410_before_any_auth_gate()
     {
         var store = GetDocumentStore();

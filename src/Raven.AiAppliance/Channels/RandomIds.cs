@@ -25,4 +25,26 @@ internal static class RandomIds
         return prefix + Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
+
+    /// <summary>
+    /// The validate twin of <see cref="NewId"/> — emit and gate share this one
+    /// alphabet definition so an encoding change can't silently desync the
+    /// embed token check (L2, impl review 2026-06-07). True iff
+    /// <paramref name="suffix"/> is exactly <see cref="SuffixLength"/> unpadded
+    /// base64url chars. Shape only, not auth: the binding-doc load downstream
+    /// is the authority.
+    /// </summary>
+    internal static bool IsValidSuffix(ReadOnlySpan<char> suffix)
+    {
+        if (suffix.Length != SuffixLength)
+            return false;
+
+        foreach (var c in suffix)
+        {
+            if (char.IsAsciiLetterOrDigit(c) == false && c != '-' && c != '_')
+                return false;
+        }
+
+        return true;
+    }
 }
