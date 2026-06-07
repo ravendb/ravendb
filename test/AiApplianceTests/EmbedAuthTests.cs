@@ -279,6 +279,13 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
         var allowed = await SendChatAsync(client, widgetId, new { prompt = "hi" }, cts.Token, origin: "http://customer.example");
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
 
+        // C1 (Copilot review, PR #12): scheme/host are case-insensitive per
+        // RFC 3986, and case can never distinguish two origins — so unusual
+        // casing from a non-browser client must not 403 an allowed origin
+        // (and the loosened compare cannot false-allow).
+        var allowedCased = await SendChatAsync(client, widgetId, new { prompt = "hi" }, cts.Token, origin: "HTTP://CUSTOMER.EXAMPLE");
+        Assert.Equal(HttpStatusCode.OK, allowedCased.StatusCode);
+
         var self = await SendChatAsync(client, widgetId, new { prompt = "hi" }, cts.Token, origin: "http://localhost");
         Assert.Equal(HttpStatusCode.OK, self.StatusCode);
 

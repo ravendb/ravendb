@@ -265,11 +265,16 @@ public static class EmbedEndpoints
         if (string.IsNullOrEmpty(origin))
             return true;
 
-        // Stored origins are persisted normalized to scheme://authority
-        // (lowercased by Uri at provision time) — ordinal is exact here.
+        // Case-insensitive on purpose (C1, Copilot review PR #12): scheme and
+        // host are case-insensitive per RFC 3986, so case can never
+        // distinguish two origins — IgnoreCase removes false-denies for
+        // unusually-cased clients and cannot false-allow. (Stored origins are
+        // already lowercased by Uri at provision; the INCOMING header's casing
+        // is only guaranteed for conformant browsers.) Same rationale as the
+        // self-origin compare below (M2).
         foreach (var allowed in allowedOrigins)
         {
-            if (string.Equals(origin, allowed, StringComparison.Ordinal))
+            if (string.Equals(origin, allowed, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
