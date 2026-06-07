@@ -2147,8 +2147,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.RevisionOutputCount ?? 0) ?? 0) ?? 0;
 
-            Assert.True(revisionsInNewConnection <= 2,
-                $"After hub failover, expected <= 2 revisions sent on new connection but got {revisionsInNewConnection}. " +
+            Assert.True(revisionsInNewConnection == 1,
+                $"After hub failover, expected == 1 revisions sent on new connection but got {revisionsInNewConnection}. " +
                 "Hub is re-sending already-replicated revisions after failing over to a new hub node.");
         }
     }
@@ -3382,21 +3382,21 @@ public class PullReplicationFailoverTests : ReplicationTestBase
 
             Assert.True(WaitForDocument(sinkStore, "hub-docs/marker", 30_000));
             Assert.True(WaitForDocument(hubBStore, "sink-docs/marker", 30_000));
-            
+
             var hubStatsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
             // SinkToHub direction: hub B received from sink — check hub B's incoming
             var sinkDocsInNewConnection = hubStatsAfter.Incoming
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentReadCount ?? 0) ?? 0) ?? 0;
-            Assert.True(sinkDocsInNewConnection <= 2,
-                $"After hub failover (SinkToHub direction), expected <= 2 docs on new connection but got {sinkDocsInNewConnection}.");
+            Assert.True(sinkDocsInNewConnection == 1 || sinkDocsInNewConnection == 2,
+                $"After hub failover (SinkToHub direction), expected == 1 docs on new connection but got {sinkDocsInNewConnection}.");
 
             // HubToSink direction: hub B sent to sink — check hub B's outgoing
             var hubDocsInNewConnection = hubStatsAfter.Outgoing
                 .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
-            Assert.True(hubDocsInNewConnection <= 2,
-                $"After hub failover (HubToSink direction), expected <= 2 docs on new connection but got {hubDocsInNewConnection}.");
+            Assert.True(hubDocsInNewConnection == 1 || hubDocsInNewConnection == 2,
+                $"After hub failover (HubToSink direction), expected == 1 docs on new connection but got {hubDocsInNewConnection}.");
         }
     }
 
