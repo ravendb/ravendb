@@ -120,7 +120,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 // which contains the backup process's start time and whether it's a full backup or not.
                 // Therefore, it's crucial to assign RunningTask only after those fields in runningBackupStatus have been populated.
                 if (backupState != null && task != null)
+                {
                     backupState.RunningTask = new ServerBackupRunner.RunningBackupTask { Id = backupState.OperationId, Task = task };
+                    // Store the live cancellation handle so the disable / delete-task triggers can stop this
+                    // in-flight backup (see DatabaseBackupState.CancelRunningBackup). Cleared in
+                    // ServerBackupRunner.FinishBackup with the same ordering as RunningTask. (db-delete stops
+                    // the backup through the DatabaseShutdown linkage on TaskCancelToken, not via this field.)
+                    backupState.RunningCancel = TaskCancelToken;
+                }
 
                 TaskCompletionSource<object> value = null;
                 if (_forTestingPurposes != null &&
