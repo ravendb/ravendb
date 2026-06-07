@@ -279,6 +279,57 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.NotNull(status.LastFullBackup); // a full backup was performed after re-enabling
         }
 
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task FinishBackup_StaleBackup_NoNextBackupRecompute()
+        {
+            DoNotReuseServer();
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            await StoreSomeDataAsync(store);
+
+            var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath), store);
+
+            var (tcs, state, opId) = StartPinnedBackup(server, db, taskId);
+
+            var unobserved = 0;
+            void OnUnobserved(object _, UnobservedTaskExceptionEventArgs e)
+            {
+                Interlocked.Increment(ref unobserved);
+                e.SetObserved();
+            }
+
+            TaskScheduler.UnobservedTaskException += OnUnobserved;
+            try
+            {
+                // Delete the task to raise Stale before the backup's FinishBackup continuation runs.
+                await store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(taskId, OngoingTaskType.Backup));
+                Assert.True(WaitForDecisionLog(state, "[CANCELLED:task-deleted]"));
+
+                tcs.SetResult(null);
+
+                await AssertOperationCanceledAsync(store, server, opId);
+
+                // FinishBackup ran with Stale raised, so it must have set NextBackup = null instead of
+                // recomputing it (no GetNextBackupDetails call, no exception in the continuation).
+                Assert.True(WaitForValue(() => state.NextBackup == null, expectedVal: true, timeout: 30_000, interval: 100),
+                    "Expected NextBackup to be null after FinishBackup ran for a Stale state.");
+
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+
+                Assert.Equal(0, unobserved);
+            }
+            finally
+            {
+                TaskScheduler.UnobservedTaskException -= OnUnobserved;
+            }
+        }
+
         private static async Task StoreSomeDataAsync(IDocumentStore store)
         {
             // A few hundred documents guarantee the smuggler reaches a token check point when it runs with

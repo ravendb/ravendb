@@ -369,7 +369,16 @@ public class ServerBackupRunner : IDisposable
                 testingStuffInternal.HoldBackupFromFinishing?.WaitOne();
             }
 
-            backupState.NextBackup = backupState.GetNextBackupDetails(out string tag);
+            // Skip the NextBackup recompute when the state is Stale (task disabled, task deleted, or DB
+            // deleted). GetNextBackupDetails reads task config and cluster status — pointless work for a
+            // task that won't run again, and for a deleted DB it can read a cluster record that no longer
+            // exists and throw inside this Task.ContinueWith continuation (an unobserved task fault). Just
+            // clear NextBackup; the rest of the cleanup below still runs.
+            if (databaseBackupState.Stale)
+                backupState.NextBackup = null;
+            else
+                backupState.NextBackup = backupState.GetNextBackupDetails(out string tag);
+
             databaseBackupState.RunningTask = null;
 
             backupState.Running.Lower();
