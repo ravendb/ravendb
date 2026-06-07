@@ -341,7 +341,7 @@ public class RavenDB_26693 : RavenTestBase
             DetailLevel = AiConversationDetailLevel.Detailed
         })).Messages;
         var closedRecentOrder = subMessages.SelectMany(m => m.ToolCalls ?? []).Single(tc => tc.Name == "RecentOrder");
-        Assert.Equal("This was cancelled by the user", closedRecentOrder.Result);
+        Assert.Equal("This action was canceled by the user", closedRecentOrder.Result);
         Assert.True(recentOrderCalled == 1, "the sub-agent's 'RecentOrder' action tool should have been invoked only once");
     }
 

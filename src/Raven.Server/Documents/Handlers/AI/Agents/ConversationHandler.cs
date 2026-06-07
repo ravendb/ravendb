@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -934,56 +935,35 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return database.DocumentsStorage.DocumentPut.BuildDocumentId(id, database.DocumentsStorage.GenerateNextEtag(), out _);
     }
 
-    private async Task<bool> TryCancelPendingActions(JsonOperationContext context, CancellationToken token)
-    {
-        if (_cancelPendingActionTools == false)
-            return false;
-
-        Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> subAgentReqs = null;
-
-        // The caller asked (on the first request of the conversation) to cancel any still-open action-tool
-        // calls instead of answering them, so the conversation can continue (e.g. with a new user prompt).
-        foreach (var (toolCallId, toolCall) in _document.OpenActionCalls.ToList())
-        {
-            if (toolCall.IsInternalToolCall())
-                continue;
-
-            if (toolCall.SubConversationId == null)
-            {
-                // a direct (root-level) action tool: answer it with a cancellation
-                _document.OpenActionCalls.Remove(toolCallId);
-                _document.AddToolResponse(context, toolCallId, "This was cancelled by the user");
-                continue;
-            }
-
-            // a sub-agent call: re-run its sub-conversation with cancelPendingActionTools=true so the sub-agent
-            // cancels its own open calls (recursively across all levels) and bubbles the result back up to us.
-            Debug.Assert(toolCall.Type == AiAgentActionRequestType.SubAgent, "action.Type != AiAgentActionRequestType.SubAgent");
-
-            string subAgentId = toolCall.Name;
-            var call = new AiToolCall(toolCallId, toolCall.Name, toolCall.Arguments);
-            var req = CreateAgentRequest(subAgentId, toolCall.SubConversationId, prompt: null, Array.Empty<object>(),
-                new DynamicJsonValue { [nameof(AiConversationCreationOptions.MaxModelIterationsPerCall)] = _document.RemainingToolIterations },
-                cancelPendingActionTools: true);
-
-            subAgentReqs ??= new Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>>();
-            subAgentReqs.GetOrAdd(toolCall.SubConversationId).Add((call, req));
-        }
-
-        if (subAgentReqs != null)
-            await ExecuteSubAgentAndQueryRequestsAsync(context, subAgentReqs, token);
-
-        return true;
-    }
-
     private async Task<bool> TryHandleActionResponsesAsync(JsonOperationContext context, CancellationToken token)
     {
+        if (_cancelPendingActionTools)
+        {
+            var a = new List<AiAgentActionResponse>();
+            foreach (var actionCall in _document.OpenActionCalls)
+            {
+                var id = actionCall.Key;
+                a.Add(new AiAgentActionResponse
+                {
+                    ToolId = id,
+                    Content = "This action was canceled by the user"
+                });
+            }
+
+            context.ReadObject(new DynamicJsonValue()
+                {
+                    ["array"] = new DynamicJsonArray(a.Select(x => x.ToJson()))
+                }, "ai-agent/action-responses")
+                .TryGet("array", out BlittableJsonReaderArray actionResponses);
+            _request.ActionResponses = actionResponses;
+        }
+
         var hasActionResponse = _request.ActionResponses is { Length: > 0 } ;
         var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) ||
                             _request.ArtificialActions is { Length: > 0 } || // equivalent to user prompt, since it is both tool & response in one shot
                             _request.Attachments is { Count: > 0 }; // Attachments-only request counts as enough "user input" (no text prompt required) to advance with the conversation.
 
-        if (hasActionResponse && hasUserPrompt)
+        if (hasActionResponse && hasUserPrompt && _cancelPendingActionTools == false)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' with open action calls and user prompt.");
 
         Dictionary<string, SubAgentActionResponse> subAgentsActions = null;
@@ -1020,13 +1000,18 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
                 else
                 {
-                    var childToolId = split[1];
-                    Debug.Assert(action.Type == AiAgentActionRequestType.SubAgent, "action.Type != AiAgentActionRequestType.SubAgent");
-
                     subAgentsActions ??= new Dictionary<string, SubAgentActionResponse>();
 
                     // Aggregate sub-agent responses per root tool call (one group per sub-agent call).
                     var subAgent = GetOrAddSubAgentsActionResponses(subAgentsActions, action, rootToolId); // get or add from subAgentsActions
+
+                    if (_cancelPendingActionTools)
+                    {
+                        continue;
+                    }
+
+                    var childToolId = split[1];
+                    Debug.Assert(action.Type == AiAgentActionRequestType.SubAgent, "action.Type != AiAgentActionRequestType.SubAgent");
 
                     subAgent.Responses.Add(new AiAgentActionResponse
                     {
@@ -1073,6 +1058,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         if (hasActionResponse == false && hasUserPrompt == false && _request.Attachments == null)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' without open action calls or user prompt.");
+
+        if (RequestBody.HasUserPrompt(_request.Content))
+        {
+            _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+                [ChatCompletionClient.Constants.ResponseFields.Content] = _request.Content
+            }, "user/msg"), usage: null);
+        }
 
         return true;
     }
@@ -1230,7 +1224,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequestsAsync(JsonOperationContext context, DynamicJsonArray reqs, CancellationToken token)
+    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequestsAsync(JsonOperationContext context, DynamicJsonArray reqs, [EnumeratorCancellation] CancellationToken token)
     {
         var multiGetHandler = new MultiGetHandler();
         multiGetHandler.Init(new RequestHandlerContext
@@ -1277,11 +1271,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     {
         await InitializeDocumentAsync(context, token);
 
-        if (await TryCancelPendingActions(context, token) is false && 
-            await TryHandleActionResponsesAsync(context, token) is false)
+        if (await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
 
-        TryAddUserPromptFromRequest(context);
         return await TalkAsync(context, token: token);
     }
 
@@ -1293,11 +1285,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     {
         await InitializeDocumentAsync(context, token);
 
-        if (await TryCancelPendingActions(context, token) is false && 
-            await TryHandleActionResponsesAsync(context, token) is false)
+        if (await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
         
-        TryAddUserPromptFromRequest(context);
         await using var writer = new AsyncBlittableJsonTextWriter(context, outputStream);
         return await StreamingTalkAsync(context, streamPropertyPath, async (data) =>
         {

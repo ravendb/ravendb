@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             foreach (var (conversationId, subAgent) in subAgentsActions)
             {
                 var call = new AiToolCall(subAgent.ParentId /*Parent call*/, subAgent.Agent, Arguments: null);
-                var r = CreateAgentRequest(subAgent.Agent, conversationId, prompt: null, subAgent.Responses, creationOptions: new DynamicJsonValue());
+                var r = CreateAgentRequest(subAgent.Agent, conversationId, prompt: null, subAgent.Responses, creationOptions: new DynamicJsonValue(), _cancelPendingActionTools);
                 reqs.GetOrAdd(conversationId).Add((call, r));
             }
 
