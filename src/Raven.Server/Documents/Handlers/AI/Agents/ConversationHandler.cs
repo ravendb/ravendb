@@ -56,7 +56,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
     public required RavenServer.AuthenticateConnection Authentication;
-    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null, bool? cancelPendingActionTools = null)
+    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null, bool cancelPendingActionTools = false)
     {
         _conversationId = conversationId;
         _request = body;
@@ -65,7 +65,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         _raftId = raftId;
         _debugOverride = debugOverride;
         _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
-        _cancelPendingActionTools = cancelPendingActionTools == true;
+        _cancelPendingActionTools = cancelPendingActionTools;
     }
 
     protected virtual async Task InitializeDocumentAsync(DocumentsOperationContext context, CancellationToken token)
@@ -498,18 +498,6 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         };
     }
 
-    private void TryAddUserPromptFromRequest(JsonOperationContext context)
-    {
-        if (RequestBody.HasUserPrompt(_request.Content))
-        {
-            _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
-            {
-                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
-                [ChatCompletionClient.Constants.ResponseFields.Content] = _request.Content
-            }, "user/msg"), usage: null);
-        }
-    }
-
     private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
     {
         var attachmentNames = string.Join(", ", _request.AttachmentCommands.ParsedCommands.Select(c => c.Name));
@@ -939,11 +927,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     {
         if (_cancelPendingActionTools)
         {
-            var a = new List<AiAgentActionResponse>();
+            var cancelledActionResponses = new List<AiAgentActionResponse>();
             foreach (var actionCall in _document.OpenActionCalls)
             {
                 var id = actionCall.Key;
-                a.Add(new AiAgentActionResponse
+                cancelledActionResponses.Add(new AiAgentActionResponse
                 {
                     ToolId = id,
                     Content = "This action was canceled by the user"
@@ -952,7 +940,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
             context.ReadObject(new DynamicJsonValue()
                 {
-                    ["array"] = new DynamicJsonArray(a.Select(x => x.ToJson()))
+                    ["array"] = new DynamicJsonArray(cancelledActionResponses.Select(x => x.ToJson()))
                 }, "ai-agent/action-responses")
                 .TryGet("array", out BlittableJsonReaderArray actionResponses);
             _request.ActionResponses = actionResponses;

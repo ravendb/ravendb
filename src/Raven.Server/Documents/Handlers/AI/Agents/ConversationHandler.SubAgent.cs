@@ -39,6 +39,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             await ExecuteSubAgentAndQueryRequestsAsync(context, reqs, token);
 
+            if (_cancelPendingActionTools)
+                return;
+
             if (_childUserCalls.Count > 0)
                 return;
 
@@ -129,8 +132,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             // When the parent is cancelling pending actions, propagate it so the sub-agent cancels
             // its own still-open action calls (recursively across all nesting levels).
-            if (cancelPendingActionTools)
-                queryStringBuilder.Append("&cancelPendingActionTools=true");
+            queryStringBuilder.Append($"&cancelPendingActionTools={cancelPendingActionTools}");
 
             var queryString = queryStringBuilder.ToString();
 

@@ -22,7 +22,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly string _agentId;
     private readonly AiConversationCreationOptions _options;
     private readonly bool? _debug;
-    private bool? _cancelPendingActionTools;
+    private bool _cancelPendingActionTools;
 
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
@@ -60,7 +60,7 @@ internal class AiConversation : IAiConversationOperations
         _debug = debug;
     }
 
-    internal AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, bool? debug, bool? cancelPendingActionTools)
+    internal AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, bool? debug, bool cancelPendingActionTools)
         : this(aiOperations, agentId, conversationId, options, changeVector)
     {
         _debug = debug;

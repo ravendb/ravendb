@@ -39,11 +39,11 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         {
             var input = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "multi_get");
             await ExecuteMultiGetAsync(context, input, 
-                RequestHandler.ResponseBodyStream());
+                RequestHandler.ResponseBodyStream(), HttpContext.RequestAborted);
         }
     }
 
-    public async Task ExecuteMultiGetAsync(JsonOperationContext context, BlittableJsonReaderObject input, Stream responseBodyStream, CancellationToken token = default)
+    public async Task ExecuteMultiGetAsync(JsonOperationContext context, BlittableJsonReaderObject input, Stream responseBodyStream, CancellationToken token)
     {
         if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
             Raven.Server.Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Requests");
