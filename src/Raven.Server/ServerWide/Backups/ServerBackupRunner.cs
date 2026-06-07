@@ -49,6 +49,15 @@ public class ServerBackupRunner : IDisposable
 
     public const int MaxDecisionLogSize = 1024; // was 32; raised for richer history during diagnostics
 
+    // Reason strings recorded as [CANCELLED:<reason>] in the per-task decision log when an in-flight
+    // backup is cancelled by a trigger. These sit alongside the inline [STARTED]/[COMPLETED]/[FAILED]
+    // markers written at the RunBackup call sites below. (db-delete is intentionally absent: that path is
+    // cancelled+awaited by DocumentDatabase.Dispose before RemoveDatabase runs — see RemoveDatabase.)
+    // TODO (future): replace these string markers with a typed decision-log entry shape
+    // (see handoff "what's next" #5 — typed decision log).
+    internal const string CancelReasonDisabled = "disabled";
+    internal const string CancelReasonTaskDeleted = "task-deleted";
+
     private readonly ServerStore _serverStore;
 
     private PoolOfThreads.LongRunningWork _thread;
@@ -366,6 +375,12 @@ public class ServerBackupRunner : IDisposable
             backupState.Running.Lower();
             _serverStore.ConcurrentBackupsCounter.FinishBackup(databaseBackupState.OriginalDatabaseName, databaseBackupState.Configuration.Name, databaseBackupState.RunningBackupStatus, null, _logger);
             databaseBackupState.RunningBackupStatus = null;
+
+            // Null the cancellation handle last — after Running.Lower() and RunningTask = null — so a
+            // trigger calling CancelRunningBackup that races FinishBackup sees either "still running, token
+            // live" or "stopped, token cleared", never a dangling reference to a token we just disposed in
+            // the operation continuation. Mirrors the OnGoingBackup snapshot-guard ordering.
+            databaseBackupState.RunningCancel = null;
         }
     }
 
@@ -658,6 +673,10 @@ public class ServerBackupRunner : IDisposable
                 foreach (var kvp in backupsPerDatabasePerTaskId.ForceEnumerateInThreadSafeManner())
                 {
                     kvp.Value.Stale.Raise();
+                    // The record no longer has any backup tasks — every previously-registered task was
+                    // removed. Cancel any in-flight backup so it does not run to completion and write a
+                    // status row for a task that no longer exists.
+                    kvp.Value.CancelRunningBackup(CancelReasonTaskDeleted);
                 }
 
                 // queue will clear itself
@@ -685,7 +704,10 @@ public class ServerBackupRunner : IDisposable
         foreach (var removedTaskId in backupsPerDatabase.Keys.Except(databaseRecord.PeriodicBackupsTaskIds))
         {
             if (backupsPerDatabase.TryRemove(removedTaskId, out var backupState))
+            {
                 backupState.Stale.Raise();
+                backupState.CancelRunningBackup(CancelReasonTaskDeleted);
+            }
         }
     }
 
@@ -703,6 +725,7 @@ public class ServerBackupRunner : IDisposable
             foreach (var kvp in backupStates.ForceEnumerateInThreadSafeManner())
             {
                 kvp.Value.Stale.Raise();
+                kvp.Value.CancelRunningBackup(CancelReasonTaskDeleted);
             }
             // queue will clear itself
             backupStates.Clear();
@@ -742,6 +765,7 @@ public class ServerBackupRunner : IDisposable
         foreach (var deletedBackupId in deletedBackupTaskIds)
         {
             backupStates[deletedBackupId].Stale.Raise();
+            backupStates[deletedBackupId].CancelRunningBackup(CancelReasonTaskDeleted);
         }
     }
 
@@ -787,6 +811,7 @@ public class ServerBackupRunner : IDisposable
         {
             case TaskStatus.Disabled:
                 existingBackupState.Stale.Raise();
+                existingBackupState.CancelRunningBackup(CancelReasonDisabled);
                 if (_logger.IsDebugEnabled)
                     _logger.Debug($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
 
@@ -1116,6 +1141,16 @@ public class ServerBackupRunner : IDisposable
 
             backupsPerTaskId.Clear();
         }
+
+        // Note: no explicit CancelRunningBackup here. On db-delete the in-flight backup is already
+        // cancelled AND awaited to completion by DocumentDatabase.Dispose before this runs: the backup
+        // token is linked to Database.DatabaseShutdown (BackupTask.cs), and DisposeInternal cancels it
+        // (_databaseShutdown.Cancel()) then disposes the operations registry — Operations.Dispose calls
+        // KillAsync(waitForCompletion: true) on the killable backup operation, which runs BEFORE
+        // DocumentsStorage is disposed. So the backup observes cancellation while storage is still alive
+        // (clean OperationCanceledException, no status row) and has finished by the time RemoveDatabase is
+        // invoked (DatabasesLandlord.DeleteDatabase disposes the database first, then calls this). An
+        // explicit cancel here would be a no-op: RunningCancel is already null (cleared in FinishBackup).
 
         // A5b: drop any test-hook entry tied to this database, so a callback held by a
         // disposed test resource cannot fire if another test re-uses this server. Safe

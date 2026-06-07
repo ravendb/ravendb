@@ -57,6 +57,16 @@ namespace Raven.Server.ServerWide.Backups
 
         public RunningBackupTask RunningTask { get; set; }
 
+        /// <summary>
+        /// The live cancellation handle for the in-flight backup. Set alongside <see cref="RunningTask"/>
+        /// when a backup starts (<see cref="Documents.PeriodicBackup.BackupTask.Run"/>) and cleared in
+        /// <see cref="ServerBackupRunner"/>.<c>FinishBackup</c> after <see cref="Running"/> is lowered and
+        /// <see cref="RunningTask"/> is nulled. This is the same <see cref="OperationCancelToken"/> the
+        /// backup polls at every expensive boundary (and which is already linked to the database shutdown
+        /// token), so a trigger calling <see cref="CancelRunningBackup"/> stops the work in bounded time.
+        /// </summary>
+        public OperationCancelToken RunningCancel { get; internal set; }
+
         internal ServerStore _serverStore;
 
         public DatabaseBackupState([NotNull] string databaseName, [NotNull] PeriodicBackupConfiguration configuration, bool isSharded, ServerStore serverStore)
@@ -194,6 +204,49 @@ namespace Raven.Server.ServerWide.Backups
 
                 if (_decisionLog.Count > MaxDecisionLogSize)
                     _decisionLog.RemoveAt(_decisionLog.Count - 1);
+            }
+        }
+
+        /// <summary>
+        /// Cooperatively cancels the in-flight backup (if any) by cancelling the stored
+        /// <see cref="RunningCancel"/> token, and records a <c>[CANCELLED:&lt;reason&gt;]</c> entry in the
+        /// decision log. Called by the disable and delete-task triggers after they raise
+        /// <see cref="Stale"/>. (db-delete does not call this: that path is cancelled and awaited by
+        /// <see cref="Documents.DocumentDatabase"/>.<c>Dispose</c> before <see cref="ServerBackupRunner"/>.
+        /// <c>RemoveDatabase</c> runs, via the DatabaseShutdown linkage + Operations.Dispose.)
+        /// When no backup is running (<see cref="RunningCancel"/> is null) this is a
+        /// no-op and writes nothing, so the "stale only" case leaves no cancellation marker. Idempotent
+        /// and safe to call repeatedly or after the token has been disposed: the continuation disposes the
+        /// token before FinishBackup nulls it, so a racing trigger can hit a disposed CTS — the
+        /// <see cref="ObjectDisposedException"/> that <see cref="OperationCancelToken.Cancel"/> then throws
+        /// is swallowed (cancellation is moot once the backup is already finishing). Mirrors the v7.2
+        /// <c>PeriodicBackup.CancelFutureTasks</c> behavior at the server level.
+        /// </summary>
+        /// <remarks>
+        /// Known limitation (matches v7.2; tracked as future work): a cancelled remote upload may leave
+        /// orphaned multipart parts on S3/Azure/GCS. Aborting them requires per-provider logic and is out
+        /// of scope here.
+        /// </remarks>
+        internal void CancelRunningBackup(string reason)
+        {
+            // Snapshot once: FinishBackup nulls RunningCancel after lowering Running and clearing
+            // RunningTask, mirroring the OnGoingBackup snapshot guard in ServerBackupRunner. Reading it
+            // into a local means a concurrent FinishBackup that nulls the field cannot turn our null-check
+            // into an NRE.
+            var runningCancel = RunningCancel;
+            if (runningCancel == null)
+                return;
+
+            AddToDecisionLog($"[CANCELLED:{reason}] Backup task {Configuration.TaskId}", DateTime.UtcNow);
+
+            try
+            {
+                runningCancel.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The backup already finished and its token was disposed by the operation continuation
+                // before we got here. Cancellation is moot — nothing to stop.
             }
         }
 
