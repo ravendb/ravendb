@@ -2191,8 +2191,8 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.RevisionOutputCount ?? 0) ?? 0) ?? 0;
 
-            Assert.True(revisionsInNewConnection <= 2,
-                $"After hub failover, expected <= 2 revisions sent on new connection but got {revisionsInNewConnection}. " +
+            Assert.True(revisionsInNewConnection == 1,
+                $"After hub failover, expected == 1 revisions sent on new connection but got {revisionsInNewConnection}. " +
                 "Hub is re-sending already-replicated revisions after failing over to a new hub node.");
         }
     }
@@ -3488,15 +3488,434 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
             // SinkToHub direction: hub B received from sink — check hub B's incoming
             var sinkDocsInNewConnection = hubStatsAfter.Incoming
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentReadCount ?? 0) ?? 0) ?? 0;
-            Assert.True(sinkDocsInNewConnection <= 2,
-                $"After hub failover (SinkToHub direction), expected <= 2 docs on new connection but got {sinkDocsInNewConnection}.");
+            Assert.True(sinkDocsInNewConnection == 1 || sinkDocsInNewConnection == 2,
+                $"After hub failover (SinkToHub direction), expected == 1 docs on new connection but got {sinkDocsInNewConnection}.");
 
             // HubToSink direction: hub B sent to sink — check hub B's outgoing
             var hubDocsInNewConnection = hubStatsAfter.Outgoing
                 .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
-            Assert.True(hubDocsInNewConnection <=2,
-                $"After hub failover (HubToSink direction), expected <= 2 docs on new connection but got {hubDocsInNewConnection}.");
+            Assert.True(hubDocsInNewConnection == 1 || hubDocsInNewConnection == 2,
+                $"After hub failover (HubToSink direction), expected == 1 docs on new connection but got {hubDocsInNewConnection}.");
+        }
+    }
+
+    #endregion
+
+    #region FilteredCursorState
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task SinkToHub_CursorStoresMergedChangeVectorWhenAllDocumentsAreFiltered()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (_, hub, certs) = await CreateRaftClusterWithSsl(1);
+
+        // All three stores on the same SSL server — avoids cross-server certificate issues.
+        // externalStore replicates into sinkStore (same server), giving docs with externalStore's DB ID
+        // in their change vector once they land in the sink.
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var externalStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            // external → sink: docs arrive in sink carrying externalStore's DB ID in their CV
+            await SetupReplicationAsync(externalStore, sinkStore);
+
+            var name = $"pull-replication {GetDatabaseName()}";
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true
+                }));
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedSinkToHubPaths = new[] { "allowed-docs/*" }
+                }));
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, new[] { hub.WebUrl });
+
+            // filtered docs from external source land in sink with externalStore's DB ID in their CV
+            using (var session = externalStore.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                    session.Store(new User { Name = $"External{i}" }, $"filtered-docs/ext-{i}");
+                session.SaveChanges();
+            }
+            Assert.True(WaitForDocument(sinkStore, "filtered-docs/ext-99", 30_000));
+
+            // filtered docs written directly on sink carry sinkStore's own DB ID in their CV
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                    session.Store(new User { Name = $"Local{i}" }, $"filtered-docs/local-{i}");
+                session.SaveChanges();
+            }
+
+            var externalDb = await hub.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(externalStore.Database);
+            Assert.NotNull(externalDb);
+            var sinkDb = await hub.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(sinkStore.Database);
+            Assert.NotNull(sinkDb);
+
+            // SinkCursor is stored in the sink's cluster (hub.ServerStore for this single-node setup)
+            string cursorCv = null;
+            Assert.True(WaitForValue(() =>
+            {
+                using (hub.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable = hub.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    cursorCv = state.SourceChangeVector;
+                    return cursorCv != null
+                        && ChangeVectorUtils.GetEtagById(cursorCv, externalDb.DbBase64Id) > 0
+                        && ChangeVectorUtils.GetEtagById(cursorCv, sinkDb.DbBase64Id) > 0;
+                }
+            }, true, 30_000), "SinkCursor should be saved after scanning filtered-only batch");
+
+            Assert.True(ChangeVectorUtils.GetEtagById(cursorCv, externalDb.DbBase64Id) > 0,
+                $"Cursor '{cursorCv}' must contain external DB '{externalDb.DbBase64Id}' etag (merged CV check)");
+            Assert.True(ChangeVectorUtils.GetEtagById(cursorCv, sinkDb.DbBase64Id) > 0,
+                $"Cursor '{cursorCv}' must contain sink DB '{sinkDb.DbBase64Id}' etag (merged CV check)");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task SinkToHub_CursorStoresMergedChangeVectorWhenSomeDocumentsAreFiltered()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (_, hub, certs) = await CreateRaftClusterWithSsl(1);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var externalStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            await SetupReplicationAsync(externalStore, sinkStore);
+
+            var name = $"pull-replication {GetDatabaseName()}";
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.SinkToHub,
+                    WithFiltering = true
+                }));
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedSinkToHubPaths = new[] { "allowed-docs/*" }
+                }));
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, new[] { hub.WebUrl });
+
+            // 4 allowed docs stored locally in sinkStore — first scan sends them to hub,
+            // establishing an initial cursor that contains only sinkStore's DB ID.
+            using (var session = sinkStore.OpenSession())
+            {
+                for (int i = 0; i < 4; i++)
+                    session.Store(new User { Name = $"Allowed{i}" }, $"allowed-docs/{i}");
+                session.SaveChanges();
+            }
+            Assert.True(WaitForDocument(hubStore, "allowed-docs/3", 30_000));
+
+            // 100 filtered docs from externalStore replicate to sinkStore. The next scanner
+            // iteration sees only these filtered docs (all-filtered empty batch). The fix must
+            // update LastSentChangeVector so the cursor grows to include externalStore's DB ID.
+            using (var session = externalStore.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                    session.Store(new User { Name = $"External{i}" }, $"filtered-docs/ext-{i}");
+                session.SaveChanges();
+            }
+            Assert.True(WaitForDocument(sinkStore, "filtered-docs/ext-99", 30_000));
+
+            var externalDb = await hub.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(externalStore.Database);
+            Assert.NotNull(externalDb);
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (hub.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.SinkCursor);
+                    var blittable = hub.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    if (state.SourceChangeVector == null)
+                        return false;
+                    return ChangeVectorUtils.GetEtagById(state.SourceChangeVector, externalDb.DbBase64Id) > 0;
+                }
+            }, true, 30_000),
+            $"SinkCursor must include external DB '{externalDb.DbBase64Id}' etag after filtered-only batch");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task HubToSink_CursorStoresMergedChangeVectorWhenAllDocumentsAreFiltered()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (_, hub, certs) = await CreateRaftClusterWithSsl(1);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var externalStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            // external → hub: docs arrive in hub carrying externalStore's DB ID in their CV
+            await SetupReplicationAsync(externalStore, hubStore);
+
+            var name = $"pull-replication {GetDatabaseName()}";
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true
+                }));
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedHubToSinkPaths = new[] { "allowed-docs/*" }
+                }));
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, new[] { hub.WebUrl });
+
+            // filtered docs from external source land in hub with externalStore's DB ID in their CV
+            using (var session = externalStore.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                    session.Store(new User { Name = $"External{i}" }, $"filtered-docs/ext-{i}");
+                session.SaveChanges();
+            }
+            Assert.True(WaitForDocument(hubStore, "filtered-docs/ext-99", 30_000));
+
+            // filtered docs written directly on hub carry hubStore's own DB ID in their CV
+            using (var session = hubStore.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                    session.Store(new User { Name = $"Local{i}" }, $"filtered-docs/local-{i}");
+                session.SaveChanges();
+            }
+
+            var externalDb = await hub.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(externalStore.Database);
+            Assert.NotNull(externalDb);
+            var hubDb = await hub.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(hubStore.Database);
+            Assert.NotNull(hubDb);
+
+            // HubCursor is stored in the sink's cluster state (hub.ServerStore for this single-node setup)
+            string cursorCv = null;
+            Assert.True(WaitForValue(() =>
+            {
+                using (hub.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = hub.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    cursorCv = state.SourceChangeVector;
+                    return cursorCv != null
+                        && ChangeVectorUtils.GetEtagById(cursorCv, externalDb.DbBase64Id) > 0
+                        && ChangeVectorUtils.GetEtagById(cursorCv, hubDb.DbBase64Id) > 0;
+                }
+            }, true, 30_000), "HubCursor should be saved after scanning filtered-only batch");
+
+            Assert.True(ChangeVectorUtils.GetEtagById(cursorCv, externalDb.DbBase64Id) > 0,
+                $"Cursor '{cursorCv}' must contain external DB '{externalDb.DbBase64Id}' etag (merged CV check)");
+            Assert.True(ChangeVectorUtils.GetEtagById(cursorCv, hubDb.DbBase64Id) > 0,
+                $"Cursor '{cursorCv}' must contain hub DB '{hubDb.DbBase64Id}' etag (merged CV check)");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task HubToSink_CursorStoresMergedChangeVectorWhenSomeDocumentsAreFiltered()
+    {
+        DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+        var (_, hub, certs) = await CreateRaftClusterWithSsl(1);
+
+        using (var hubStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var externalStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        using (var sinkStore = GetDocumentStore(new Options
+        {
+            Server = hub,
+            ClientCertificate = certs.ServerCertificateForCommunication.Value,
+            AdminCertificate = certs.ServerCertificateForCommunication.Value
+        }))
+        {
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(
+                await File.ReadAllBytesAsync(certs.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            await SetupReplicationAsync(externalStore, hubStore);
+
+            var name = $"pull-replication {GetDatabaseName()}";
+            await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
+                new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    Mode = PullReplicationMode.HubToSink,
+                    WithFiltering = true
+                }));
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = "SinkAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedHubToSinkPaths = new[] { "allowed-docs/*" }
+                }));
+            var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
+            {
+                Mode = PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx))
+            };
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, new[] { hub.WebUrl });
+
+            // 4 allowed docs stored locally in hubStore — hub sends them to sink via pull replication,
+            // establishing an initial HubCursor that contains only hubStore's DB ID.
+            using (var session = hubStore.OpenSession())
+            {
+                for (int i = 0; i < 4; i++)
+                    session.Store(new User { Name = $"Allowed{i}" }, $"allowed-docs/{i}");
+                session.SaveChanges();
+            }
+            Assert.True(WaitForDocument(sinkStore, "allowed-docs/3", 30_000));
+
+            // 100 filtered docs from externalStore replicate to hubStore. The next scanner
+            // iteration sees only these filtered docs (all-filtered empty batch). The fix must
+            // update LastSentChangeVector so the cursor grows to include externalStore's DB ID.
+            using (var session = externalStore.OpenSession())
+            {
+                for (int i = 0; i < 100; i++)
+                    session.Store(new User { Name = $"External{i}" }, $"filtered-docs/ext-{i}");
+                session.SaveChanges();
+            }
+            Assert.True(WaitForDocument(hubStore, "filtered-docs/ext-99", 30_000));
+
+            var externalDb = await hub.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(externalStore.Database);
+            Assert.NotNull(externalDb);
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (hub.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var key = ExternalReplicationState.GenerateItemName(
+                        sinkStore.Database, result.TaskId,
+                        ExternalReplicationState.ReplicationStateType.HubCursor);
+                    var blittable = hub.ServerStore.Cluster.Read(ctx, key);
+                    if (blittable == null)
+                        return false;
+                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+                    if (state.SourceChangeVector == null)
+                        return false;
+                    return ChangeVectorUtils.GetEtagById(state.SourceChangeVector, externalDb.DbBase64Id) > 0;
+                }
+            }, true, 30_000),
+            $"HubCursor must include external DB '{externalDb.DbBase64Id}' etag after filtered-only batch");
         }
     }
 

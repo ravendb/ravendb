@@ -110,14 +110,20 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             if (_incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub)
             {
-                if (handledMessageType == ReplicationMessageType.Documents && _lastBatchChangeVector != null)
+                switch (handledMessageType)
                 {
-                    long hubEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
+                    case ReplicationMessageType.Documents:
+                    case ReplicationMessageType.Heartbeat:
+                        if (string.IsNullOrEmpty(_lastBatchChangeVector) == false)
+                        {
+                            long hubEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
 
-                    if (_batchHistory.Count is MaxBatchHistorySize)
-                        _batchHistory.Dequeue();
+                            if (_batchHistory.Count is MaxBatchHistorySize)
+                                _batchHistory.Dequeue();
 
-                    _batchHistory.Enqueue((hubEtag, _lastBatchChangeVector));
+                            _batchHistory.Enqueue((hubEtag, _lastBatchChangeVector));
+                        }
+                        break;
                 }
 
                 // Here we report to the sink about the last sink change vector that was replicated to aLL the nodes in the hub cluster
@@ -125,13 +131,19 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             else if (_incomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
             {
-                if (handledMessageType == ReplicationMessageType.Documents && _lastBatchChangeVector != null)
+                switch (handledMessageType)
                 {
-                    long sinkEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
-                    if (_hubBatchHistory.Count is MaxBatchHistorySize)
-                        _hubBatchHistory.Dequeue();
+                    case ReplicationMessageType.Documents:
+                    case ReplicationMessageType.Heartbeat:
+                        if (string.IsNullOrEmpty(_lastBatchChangeVector) == false)
+                        {
+                            long sinkEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
+                            if (_hubBatchHistory.Count is MaxBatchHistorySize)
+                                _hubBatchHistory.Dequeue();
 
-                    _hubBatchHistory.Enqueue((sinkEtag, _lastBatchChangeVector));
+                            _hubBatchHistory.Enqueue((sinkEtag, _lastBatchChangeVector));
+                        }
+                        break;
                 }
 
                 // Here we check *locally* in the sink what is the last hub change vector that was replicated to all the nodes in the sink cluster
@@ -155,7 +167,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             while (_batchHistory.TryPeek(out var cur) && cur.HubEtag <= confirmedHubEtag.Value)
             {
                 _batchHistory.Dequeue();
-                sinkCv = cur.SinkCv;
+                sinkCv = ChangeVectorUtils.MergeVectors(sinkCv, cur.SinkCv);
             }
             return sinkCv;
         }
@@ -173,7 +185,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             while (_hubBatchHistory.TryPeek(out var cur) && cur.SinkEtag <= confirmedSinkEtag.Value)
             {
                 _hubBatchHistory.Dequeue();
-                hubCv = cur.HubCv;
+                hubCv = ChangeVectorUtils.MergeVectors(hubCv, cur.HubCv);
             }
             return hubCv;
         }
