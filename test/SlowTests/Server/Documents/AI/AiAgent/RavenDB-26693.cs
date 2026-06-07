@@ -67,7 +67,6 @@ public class RavenDB_26693 : RavenTestBase
 
         var chunksCount = 0;
         var streamedAnswer = new StringBuilder();
-        string stoppedAt = null;
         AiAnswer<OutputSchema> result = null;
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
         {
@@ -77,7 +76,6 @@ public class RavenDB_26693 : RavenTestBase
                 streamedAnswer.Append(chunk);
                 if (chunksCount == 3)
                 {
-                    stoppedAt = streamedAnswer.ToString();
                     cts.Cancel();
                 }
 
@@ -143,7 +141,6 @@ public class RavenDB_26693 : RavenTestBase
         }, AiHandleErrorStrategy.RaiseImmediately);
 
         var streamedAnswer = new StringBuilder();
-        var sw = Stopwatch.StartNew();
         chat.SetUserPrompt("Fetch my recent orders and tell me what I bought.");
 
         // cancellation raised from inside the open action tool call must propagate out of StreamAsync
@@ -362,12 +359,16 @@ public class RavenDB_26693 : RavenTestBase
         using var store = GetDocumentStore();
         var database = await GetDatabase(store.Database);
 
+        using var cts = new CancellationTokenSource();
         var multiGetHandler = new MultiGetHandler();
         multiGetHandler.Init(new RequestHandlerContext
         {
             Database = database,
             RavenServer = Server,
             HttpContext = new DefaultHttpContext()
+            {
+                RequestAborted = cts.Token
+            }
         });
 
         // capture the RequestAborted the executed sub-request sees
@@ -390,11 +391,10 @@ public class RavenDB_26693 : RavenTestBase
                 })
             }, "multi-get/test");
 
-            using var cts = new CancellationTokenSource();
             await cts.CancelAsync();
 
-            // the token passed to ExecuteMultiGetAsync must surface as the executed sub-request's HttpContext.RequestAborted
-            await processor.ExecuteMultiGetAsync(context, input, responseStream, cts.Token);
+            // the handler's HttpContext.RequestAborted must surface as the executed sub-request's HttpContext.RequestAborted
+            await processor.ExecuteMultiGetAsync(context, input, responseStream);
 
             Assert.Equal(cts.Token, capturedRequestAborted);
             Assert.True(capturedRequestAborted.IsCancellationRequested);

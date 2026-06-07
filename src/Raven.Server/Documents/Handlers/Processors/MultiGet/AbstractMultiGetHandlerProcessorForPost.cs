@@ -39,11 +39,11 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         {
             var input = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "multi_get");
             await ExecuteMultiGetAsync(context, input, 
-                RequestHandler.ResponseBodyStream(), HttpContext.RequestAborted);
+                RequestHandler.ResponseBodyStream());
         }
     }
 
-    public async Task ExecuteMultiGetAsync(JsonOperationContext context, BlittableJsonReaderObject input, Stream responseBodyStream, CancellationToken token)
+    public async Task ExecuteMultiGetAsync(JsonOperationContext context, BlittableJsonReaderObject input, Stream responseBodyStream)
     {
         if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
             Raven.Server.Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Requests");
@@ -61,10 +61,12 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
                 var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
 
                 var features = new FeatureCollection(HttpContext.Features);
-                features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
+                features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());  
                 features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(memoryStream));
-                features.Set<IHttpRequestLifetimeFeature>(new MultiGetHttpRequestLifetimeFeature(token));
-                var httpContext = new DefaultHttpContext(features);
+                var httpContext = new DefaultHttpContext(features)
+                {
+                    RequestAborted = HttpContext.RequestAborted
+                };
                 var host = HttpContext.Request.Host;
                 var scheme = HttpContext.Request.Scheme;
                 StringBuilder trafficWatchStringBuilder = null;
@@ -284,20 +286,6 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             }
         }
         writer.WriteEndObject();
-    }
-
-    private sealed class MultiGetHttpRequestLifetimeFeature : IHttpRequestLifetimeFeature
-    {
-        public MultiGetHttpRequestLifetimeFeature(CancellationToken requestAborted)
-        {
-            RequestAborted = requestAborted;
-        }
-
-        public CancellationToken RequestAborted { get; set; }
-
-        public void Abort()
-        {
-        }
     }
 
     private sealed class MultiGetHttpResponseFeature : IHttpResponseFeature

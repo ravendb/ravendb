@@ -365,7 +365,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         JsonOperationContext context,
         string firstStreamPropertyPath,
         Func<Memory<byte>, Task> streaming,
-        CancellationToken token = default)
+        CancellationToken token)
     {
         using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath, streaming);
         return await RunInternalAsync(context, talker, token);
@@ -373,7 +373,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         
     public async Task<AiInternalConversationResult> TalkAsync(
         JsonOperationContext context,
-        CancellationToken token = default)
+        CancellationToken token)
     {
         using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath: null, streaming: null);
         return await RunInternalAsync(context, talker, token);
@@ -1220,6 +1220,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             Database = database,
             RavenServer = server.Server,
             HttpContext = new DefaultHttpContext()
+            {
+                RequestAborted = token
+            }
         });
 
         multiGetHandler.HttpContext.Features.Set<IHttpAuthenticationFeature>(Authentication);
@@ -1229,7 +1232,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             token.ThrowIfCancellationRequested();
-            await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream, token);
+            await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
             memoryStream.Position = 0;
             using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
             if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)
