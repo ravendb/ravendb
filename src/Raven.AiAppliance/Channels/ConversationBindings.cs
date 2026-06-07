@@ -89,17 +89,28 @@ internal sealed class ConversationBindings(IDocumentStore store, TimeProvider ti
     }
 
     /// <summary>
-    /// Resolves a binding to its hidden conversation id. Returns
-    /// <c>(id, null)</c> when live, or <c>(null, code)</c> with
-    /// <see cref="UnknownCode"/> / <see cref="ExpiredCode"/> — the embed chat
-    /// maps both onto 401.
+    /// Resolves a binding to its hidden conversation id with a standalone doc
+    /// load. Returns <c>(id, null)</c> when live, or <c>(null, code)</c> with
+    /// <see cref="UnknownCode"/> / <see cref="ExpiredCode"/>.
     /// </summary>
     internal async Task<(string? ConversationId, string? ErrorCode)> TryResolveAsync(
         string database, string bindingId, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);
         var binding = await session.LoadAsync<ConversationBinding>(bindingId, ct);
+        return Validate(binding);
+    }
 
+    /// <summary>
+    /// The single unknown/expired rule, decoupled from loading: the caller
+    /// supplies the (possibly null) binding doc — loaded standalone by
+    /// <see cref="TryResolveAsync"/>, or batched into another session's round
+    /// trip (the embed chat path does this so a continuation turn pays ONE
+    /// app-DB round trip for channel + binding — I1, impl review 2026-06-07).
+    /// The embed chat maps both error codes onto 401.
+    /// </summary>
+    internal (string? ConversationId, string? ErrorCode) Validate(ConversationBinding? binding)
+    {
         if (binding is null)
             return (null, UnknownCode);
 
@@ -111,11 +122,12 @@ internal sealed class ConversationBindings(IDocumentStore store, TimeProvider ti
 
     /// <summary>L1-safe rendering of a binding id: the public widgetId plus
     /// the first 4 chars of the (secret) key — enough to correlate, useless
-    /// to replay.</summary>
+    /// to replay. (The bound guard covers arbitrary deterministic keys a
+    /// future consumer might use; iFrame keys are always 22 chars.)</summary>
     private static string Describe(string bindingId)
     {
         var keyStart = bindingId.LastIndexOf('/') + 1;
-        var visible = Math.Min(4, bindingId.Length - keyStart);
-        return $"{bindingId[..keyStart]}{bindingId.Substring(keyStart, visible)}…";
+        var end = Math.Min(keyStart + 4, bindingId.Length);
+        return $"{bindingId[..end]}…";
     }
 }

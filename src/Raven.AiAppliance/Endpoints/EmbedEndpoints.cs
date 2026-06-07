@@ -45,11 +45,11 @@ public static class EmbedEndpoints
     {
         var ct = ctx.RequestAborted;
 
-        var resolved = await TryResolveEnabledChannelAsync(ctx, store, widgetId, ct);
+        var resolved = await TryResolveEnabledChannelAsync(ctx, store, widgetId, bindingId: null, ct);
         if (resolved is null)
             return;
 
-        var (_, channel) = resolved.Value;
+        var (_, channel, _) = resolved.Value;
 
         // Best-effort hardening: constrain who may frame this page to the
         // operator-configured origins; the host page's own CSP still governs
@@ -92,11 +92,23 @@ public static class EmbedEndpoints
             return;
         }
 
-        var resolved = await TryResolveEnabledChannelAsync(ctx, store, widgetId, ct);
+        // Shape-check the token up front (pure string work; L2: junk and
+        // id-trickery never reach doc-id space) so a well-formed token's
+        // binding doc can ride the channel load's app-DB round trip — one
+        // round trip per continuation turn instead of two (I1, impl review
+        // 2026-06-07). The RESPONSE order contract is unchanged:
+        // 404/410 resolve -> 403 origin -> 401 token.
+        var token = body.ConversationToken?.Trim();
+        var hasToken = string.IsNullOrEmpty(token) == false;
+        var bindingId = hasToken && IsWellFormedToken(token!)
+            ? ConversationBinding.MakeId(widgetId, token!)
+            : null;
+
+        var resolved = await TryResolveEnabledChannelAsync(ctx, store, widgetId, bindingId, ct);
         if (resolved is null)
             return;
 
-        var (app, channel) = resolved.Value;
+        var (app, channel, binding) = resolved.Value;
 
         // M1b origin defense-in-depth — see IsOriginAllowed for the honest
         // accounting of what this does and does not protect against.
@@ -108,24 +120,17 @@ public static class EmbedEndpoints
         }
 
         // Continuation: the opaque cnv_ token resolves to the hidden chats/ id
-        // through its conversation-binding doc. The raw conversation id is
-        // never accepted from the client (A2: server-allocated chats/ ids are
-        // sequential/enumerable — a guessed id could read another user's chat).
+        // through its (pre-loaded) conversation-binding doc. The raw
+        // conversation id is never accepted from the client (A2:
+        // server-allocated chats/ ids are sequential/enumerable — a guessed id
+        // could read another user's chat).
         string? conversationId = null;
-        if (string.IsNullOrWhiteSpace(body.ConversationToken) == false)
+        if (hasToken)
         {
-            var token = body.ConversationToken.Trim();
-
-            // L2: only the exact minted shape reaches the doc load — junk and
-            // id-trickery ('/', '|') are rejected before touching doc-id space.
-            if (IsWellFormedToken(token) == false)
-            {
-                await WriteAuthErrorAsync(ctx, ConversationBindings.UnknownCode, ct);
-                return;
-            }
-
-            var (resolvedId, errorCode) = await bindings.TryResolveAsync(
-                app.Database, ConversationBinding.MakeId(widgetId, token), ct);
+            // Malformed shape never loaded a binding -> same 401 as a miss.
+            var (resolvedId, errorCode) = bindingId is null
+                ? (null, ConversationBindings.UnknownCode)
+                : bindings.Validate(binding);
             if (resolvedId is null)
             {
                 await WriteAuthErrorAsync(ctx, errorCode!, ct);
@@ -223,28 +228,17 @@ public static class EmbedEndpoints
     }
 
     /// <summary>
-    /// L2: accepts exactly the minted token shape — <c>cnv_</c> + 22 base64url
-    /// chars (<see cref="RandomIds.SuffixLength"/> ties the gate to the
-    /// generator). Shape only, not auth: the binding-doc load downstream is the
-    /// authority (and doc-id lookups are case-insensitive — L3 — so a
-    /// case-mangled valid token still resolves; that costs nothing).
+    /// L2: accepts exactly the minted token shape — <c>cnv_</c> +
+    /// <see cref="RandomIds.IsValidSuffix"/> (the generator's own validate
+    /// twin, so gate and emit can't drift apart). Shape only, not auth: the
+    /// binding-doc load downstream is the authority (and doc-id lookups are
+    /// case-insensitive — L3 — so a case-mangled valid token still resolves;
+    /// that costs nothing).
     /// </summary>
     private static bool IsWellFormedToken(string token)
     {
-        if (token.Length != ConversationTokenPrefix.Length + RandomIds.SuffixLength)
-            return false;
-
-        if (token.StartsWith(ConversationTokenPrefix, StringComparison.Ordinal) == false)
-            return false;
-
-        for (var i = ConversationTokenPrefix.Length; i < token.Length; i++)
-        {
-            var c = token[i];
-            if (char.IsAsciiLetterOrDigit(c) == false && c != '-' && c != '_')
-                return false;
-        }
-
-        return true;
+        return token.StartsWith(ConversationTokenPrefix, StringComparison.Ordinal)
+            && RandomIds.IsValidSuffix(token.AsSpan(ConversationTokenPrefix.Length));
     }
 
     /// <summary>
@@ -287,13 +281,16 @@ public static class EmbedEndpoints
     /// Resolves the widget and enforces the public-route status contract shared
     /// by both embed handlers: writes <c>404</c> when the widget can't be
     /// resolved, <c>410 Gone</c> when it's disabled, and returns the
-    /// <c>(App, Channel)</c> only when the channel is live. Returns null (with
-    /// the status already written) otherwise.
+    /// <c>(App, Channel, ConversationBinding?)</c> only when the channel is
+    /// live. Returns null (with the status already written) otherwise. The
+    /// optional <paramref name="bindingId"/> lets the chat path batch the
+    /// conversation-binding load into the channel's app-DB round trip (I1);
+    /// the page path passes null.
     /// </summary>
-    private static async Task<(App app, Channel channel)?> TryResolveEnabledChannelAsync(
-        HttpContext ctx, IDocumentStore store, string widgetId, CancellationToken ct)
+    private static async Task<(App app, Channel channel, ConversationBinding? binding)?> TryResolveEnabledChannelAsync(
+        HttpContext ctx, IDocumentStore store, string widgetId, string? bindingId, CancellationToken ct)
     {
-        var resolved = await ResolveAsync(store, widgetId, ct);
+        var resolved = await ResolveAsync(store, widgetId, bindingId, ct);
         if (resolved is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -318,8 +315,8 @@ public static class EmbedEndpoints
     /// Returns null on any miss — the public page must not distinguish the
     /// failure modes (all surface as 404).
     /// </summary>
-    private static async Task<(App app, Channel channel)?> ResolveAsync(
-        IDocumentStore store, string widgetId, CancellationToken ct)
+    private static async Task<(App app, Channel channel, ConversationBinding? binding)?> ResolveAsync(
+        IDocumentStore store, string widgetId, string? bindingId, CancellationToken ct)
     {
         App? app;
         using (var cfg = store.OpenAsyncSession())
@@ -337,8 +334,28 @@ public static class EmbedEndpoints
             return null;
 
         Channel? channel;
+        ConversationBinding? binding = null;
         using (var session = store.OpenAsyncSession(app.Database))
-            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + widgetId, ct);
+        {
+            if (bindingId is null)
+            {
+                channel = await session.LoadAsync<Channel>(Channel.IdPrefix + widgetId, ct);
+            }
+            else
+            {
+                // I1 (impl review 2026-06-07): a continuation turn needs the
+                // channel AND the binding from the same app DB — batch both
+                // into ONE server round trip via lazy loads. Loading the
+                // binding speculatively (before the 410/origin gates) is
+                // harmless: same round trip, and the gates still answer in
+                // contract order.
+                var lazyChannel = session.Advanced.Lazily.LoadAsync<Channel>(Channel.IdPrefix + widgetId);
+                var lazyBinding = session.Advanced.Lazily.LoadAsync<ConversationBinding>(bindingId);
+                await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync(ct);
+                channel = await lazyChannel.Value;
+                binding = await lazyBinding.Value;
+            }
+        }
 
         if (channel is null)
             return null;
@@ -349,7 +366,7 @@ public static class EmbedEndpoints
         if (channel.Type != ChannelType.IFrame)
             return null;
 
-        return (app, channel);
+        return (app, channel, binding);
     }
 
     private static string BuildEmbedHtml(string widgetId, string displayName)

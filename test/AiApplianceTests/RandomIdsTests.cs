@@ -41,4 +41,33 @@ public class RandomIdsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
             Assert.True(seen.Add(RandomIds.NewId("cnv_")), $"duplicate id generated on iteration {i}");
         }
     }
+
+    // L2 (impl review 2026-06-07): IsValidSuffix is the validate twin of
+    // NewId — one alphabet definition for emit and gate, so an encoding
+    // change can't silently desync the embed token check.
+
+    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAA", true)]   // 22 chars, plain
+    [InlineData("abc-_09ABCxyzKLMNOPQ-_", true)]   // full base64url alphabet sample
+    [InlineData("AAAAAAAAAAAAAAAAAAAAA", false)]   // 21 — one short
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAA", false)] // 23 — one long
+    [InlineData("AAAAAAAAAAAAAAAAAAAA+A", false)]  // '+' is base64, not base64url
+    [InlineData("AAAAAAAAAAAAAAAAAAAA/A", false)]  // '/' likewise
+    [InlineData("AAAAAAAAAAAAAAAAAAAA=A", false)]  // padding char
+    [InlineData("AAAAAAAAAAAAAAAAAAAA!A", false)]  // junk
+    [InlineData("", false)]
+    public void IsValidSuffix_accepts_exactly_the_emitted_shape(string suffix, bool expected)
+    {
+        Assert.Equal(expected, RandomIds.IsValidSuffix(suffix));
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public void Every_emitted_suffix_validates()
+    {
+        for (int i = 0; i < 256; i++)
+        {
+            string id = RandomIds.NewId("cnv_");
+            Assert.True(RandomIds.IsValidSuffix(id.AsSpan("cnv_".Length)), $"emitted id failed its own gate: {id}");
+        }
+    }
 }
