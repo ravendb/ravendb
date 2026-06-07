@@ -139,12 +139,12 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             return r;
         }
 
-        protected override async Task InitializeDocument(DocumentsOperationContext context, CancellationToken token)
+        protected override async Task InitializeDocumentAsync(DocumentsOperationContext context, CancellationToken token)
         {
             _documentsContext = context;
 
             if (request.Documents == null || request.Documents.TryGetValue(_conversationId, out BlittableJsonReaderObject docBjro) == false)
-                await base.InitializeDocument(context, token);
+                await base.InitializeDocumentAsync(context, token);
             else
                 _document = ConversationDocument.ToDocument(_conversationId, docBjro, _maxModelIterationsPerCall); // document exists, we initialize from it instead of creating a new one
 

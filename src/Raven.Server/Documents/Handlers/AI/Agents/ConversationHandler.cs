@@ -10,7 +10,6 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Ocsp;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Commands.MultiGet;
@@ -68,7 +67,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         _cancelPendingActionTools = cancelPendingActionTools == true;
     }
 
-    protected virtual async Task InitializeDocument(DocumentsOperationContext context, CancellationToken token)
+    protected virtual async Task InitializeDocumentAsync(DocumentsOperationContext context, CancellationToken token)
     {
         var agentId = _configuration.Identifier;
 
@@ -460,7 +459,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     else
                     {
                         //should close the tool calls that were handled internally
-                        HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList(), token);
+                        HandleInternalSystemActionsAsync(context, _document.OpenActionCalls.Values.ToList(), token);
                     }
                 }
 
@@ -498,6 +497,18 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         };
     }
 
+    private void TryAddUserPromptFromRequest(JsonOperationContext context)
+    {
+        if (RequestBody.HasUserPrompt(_request.Content))
+        {
+            _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+                [ChatCompletionClient.Constants.ResponseFields.Content] = _request.Content
+            }, "user/msg"), usage: null);
+        }
+    }
+
     private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
     {
         var attachmentNames = string.Join(", ", _request.AttachmentCommands.ParsedCommands.Select(c => c.Name));
@@ -508,7 +519,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }, "user/attachments-msg"), usage: null); // usage: null
     }
 
-    private void HandleInternalSystemActions(JsonOperationContext context, List<AiAgentActionRequest> toolCalls, CancellationToken token = default)
+    private void HandleInternalSystemActionsAsync(JsonOperationContext context, List<AiAgentActionRequest> toolCalls, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
 
@@ -962,19 +973,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (subAgentReqs != null)
             await ExecuteSubAgentAndQueryRequestsAsync(context, subAgentReqs, token);
 
-        if (RequestBody.HasUserPrompt(_request.Content))
-        {
-            _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
-            {
-                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
-                [ChatCompletionClient.Constants.ResponseFields.Content] = _request.Content
-            }, "user/msg"), usage: null);
-        }
-
         return true;
     }
 
-    private async Task<bool> TryHandleActionResponses(JsonOperationContext context, CancellationToken token)
+    private async Task<bool> TryHandleActionResponsesAsync(JsonOperationContext context, CancellationToken token)
     {
         var hasActionResponse = _request.ActionResponses is { Length: > 0 } ;
         var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) ||
@@ -1034,7 +1036,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
             }
 
-            await HandleSubAgentCalls(context, subAgentsActions, token);
+            await HandleSubAgentCallsAsync(context, subAgentsActions, token);
         }
 
         if (_request.ArtificialActions != null)
@@ -1066,21 +1068,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     return false;
                 }
             }
-            HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList(), token);
+            HandleInternalSystemActionsAsync(context, _document.OpenActionCalls.Values.ToList(), token);
         }
 
         if (hasActionResponse == false && hasUserPrompt == false && _request.Attachments == null)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' without open action calls or user prompt.");
-
-
-        if (RequestBody.HasUserPrompt(_request.Content))
-        {
-            _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
-            {
-                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
-                [ChatCompletionClient.Constants.ResponseFields.Content] = _request.Content
-            }, "user/msg"), usage: null);
-        }
 
         return true;
     }
@@ -1279,31 +1271,33 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    public async Task<AiInternalConversationResult> HandleRequest(
+    public async Task<AiInternalConversationResult> HandleRequestAsync(
         DocumentsOperationContext context,
         CancellationToken token)
     {
-        await InitializeDocument(context, token);
+        await InitializeDocumentAsync(context, token);
 
         if (await TryCancelPendingActions(context, token) is false && 
-            await TryHandleActionResponses(context, token) is false)
+            await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
 
+        TryAddUserPromptFromRequest(context);
         return await TalkAsync(context, token: token);
     }
 
-    public async Task<AiInternalConversationResult> HandleStreamingRequest(
+    public async Task<AiInternalConversationResult> HandleStreamingRequestAsync(
         DocumentsOperationContext context,
         Stream outputStream,
         string streamPropertyPath,
         CancellationToken token)
     {
-        await InitializeDocument(context, token);
+        await InitializeDocumentAsync(context, token);
 
         if (await TryCancelPendingActions(context, token) is false && 
-            await TryHandleActionResponses(context, token) is false)
+            await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
-
+        
+        TryAddUserPromptFromRequest(context);
         await using var writer = new AsyncBlittableJsonTextWriter(context, outputStream);
         return await StreamingTalkAsync(context, streamPropertyPath, async (data) =>
         {

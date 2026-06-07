@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
     {
         private readonly Dictionary<string, AiAgentActionRequest> _childUserCalls = [];
 
-        private async Task HandleSubAgentCalls(JsonOperationContext context, Dictionary<string, SubAgentActionResponse> subAgentsActions, CancellationToken token)
+        private async Task HandleSubAgentCallsAsync(JsonOperationContext context, Dictionary<string, SubAgentActionResponse> subAgentsActions, CancellationToken token)
         {
             if (subAgentsActions?.Count > 0 == false)
                 return;

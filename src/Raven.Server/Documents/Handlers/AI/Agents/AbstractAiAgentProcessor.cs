@@ -62,13 +62,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 HttpContext.Response.Headers.ContentType = "text/event-stream";
                 RequestHandler.DisableResponseBuffering();
 
-                r = await handler.HandleStreamingRequest(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
+                r = await handler.HandleStreamingRequestAsync(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
             }
             else
             {
                 try
                 {
-                    r = await handler.HandleRequest(context, token.Token);
+                    r = await handler.HandleRequestAsync(context, token.Token);
                 }
                 catch (ConcurrencyException)
                 {

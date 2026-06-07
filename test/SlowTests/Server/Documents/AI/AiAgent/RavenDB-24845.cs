@@ -78,7 +78,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = CreateMultiPartPrompt(context, "single string")
                 }, changeVector: null);
 
-                var result = await handler.HandleRequest(context, CancellationToken.None);
+                var result = await handler.HandleRequestAsync(context, CancellationToken.None);
                 Assert.NotNull(result.Response);
 
                 using (var session = store.OpenAsyncSession())
@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = CreateMultiPartPrompt(context, "single string", "second string", "third string")
                 }, changeVector: null);
 
-                var result = await handler.HandleRequest(context, CancellationToken.None);
+                var result = await handler.HandleRequestAsync(context, CancellationToken.None);
                 Assert.NotNull(result.Response);
 
                 using (var session = store.OpenAsyncSession())
@@ -181,7 +181,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = CreateMultiPartPrompt(context)
                 }, changeVector: null);
 
-                var e = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.HandleRequest(context, CancellationToken.None));
+                var e = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.HandleRequestAsync(context, CancellationToken.None));
                 Assert.Contains("without a user prompt", e.Message);
             }
         }
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = CreateMultiPartPrompt(context, ExpectedStrings)
                 }, changeVector: null);
 
-                var result = await handler.HandleRequest(context, CancellationToken.None);
+                var result = await handler.HandleRequestAsync(context, CancellationToken.None);
                 Assert.NotNull(result.Response);
 
                 using (var session = store.OpenAsyncSession())
@@ -239,7 +239,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = CreateMultiPartPrompt(context)
                 }, changeVector: null);
 
-                var e = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.HandleRequest(context, CancellationToken.None));
+                var e = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.HandleRequestAsync(context, CancellationToken.None));
                 Assert.Contains("without a user prompt", e.Message);
             }
         }
@@ -259,7 +259,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = CreateMultiPartPrompt(context, ExpectedStrings)
                 }, changeVector: null);
 
-                var result = await handler.HandleRequest(context, CancellationToken.None);
+                var result = await handler.HandleRequestAsync(context, CancellationToken.None);
                 Assert.NotNull(result.Response);
 
                 using (var session = store.OpenAsyncSession())
