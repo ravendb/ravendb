@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Backups
     /// </summary>
     public class DatabaseBackupState
     {
-        public const int MaxDecisionLogSize = 32;
+        public const int MaxDecisionLogSize = 1024; // was 32; raised for richer history during diagnostics
 
         internal readonly string DatabaseName;
 

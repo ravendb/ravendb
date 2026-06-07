@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.Backups;
 public class ServerBackupRunner : IDisposable
 {
 
-    public const int MaxDecisionLogSize = 32;
+    public const int MaxDecisionLogSize = 1024; // was 32; raised for richer history during diagnostics
 
     private readonly ServerStore _serverStore;
 
@@ -221,12 +221,25 @@ public class ServerBackupRunner : IDisposable
 
         try
         {
-            _serverStore.ConcurrentBackupsCounter.StartBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger); // TODO [ppekrol]
+            _serverStore.ConcurrentBackupsCounter.StartBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
         }
         catch (BackupDelayException e)
         {
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Backup task will be retried in {(int)e.DelayPeriod.TotalSeconds} seconds, Reason: {e.Message}");
+
+            // RavenDB-24994 (Root Cause 2): a manual "Backup Now" caller (StartBackupTask) was handed this
+            // operationId and will poll /operations/state for it. Before this fix the cap-hit returned without
+            // registering the operation, so the poll got 404 forever. Register the operation as Faulted with the
+            // BackupDelayException payload so the poll returns a real Faulted operation carrying the rejection
+            // reason. The polling loop never reaches here when capped (ServerConcurrentBackupPolicy gates it
+            // first), so operationId is always supplied on this path and the database is already loaded.
+            if (operationId.HasValue &&
+                _serverStore.DatabasesLandlord.TryGetDatabaseIfLoaded(backupState.DatabaseName, out var database))
+            {
+                backupState.OperationId = operationId.Value;
+                RegisterFaultedBackupOperation(database, backupState, operationId.Value, e);
+            }
 
             backupState.Running.Lower();
             return;
@@ -354,6 +367,25 @@ public class ServerBackupRunner : IDisposable
             _serverStore.ConcurrentBackupsCounter.FinishBackup(databaseBackupState.OriginalDatabaseName, databaseBackupState.Configuration.Name, databaseBackupState.RunningBackupStatus, null, _logger);
             databaseBackupState.RunningBackupStatus = null;
         }
+    }
+
+    /// <summary>
+    /// Registers <paramref name="operationId"/> in the database's operations registry as an already-Faulted
+    /// operation carrying <paramref name="exception"/>. Used when the concurrent-backup cap rejects a manual
+    /// backup so that the caller polling /operations/state sees a real Faulted operation with the rejection
+    /// reason instead of a 404 (RavenDB-24994, Root Cause 2). The faulted task factory makes the operation
+    /// settle straight to Faulted via the standard operations completion path (no concurrent-backup slot is
+    /// taken, so no matching FinishBackup is required).
+    /// </summary>
+    private static void RegisterFaultedBackupOperation(DocumentDatabase database, DatabaseBackupState backupState, long operationId, BackupDelayException exception)
+    {
+        _ = database.Operations.AddLocalOperation(
+            operationId,
+            OperationType.DatabaseBackup,
+            $"Periodic Backup '{backupState.Configuration.Name} ({backupState.Configuration.TaskId})' for database '{backupState.DatabaseName}'.",
+            detailedDescription: null,
+            taskFactory: _ => Task.FromException<IOperationResult>(exception),
+            token: null);
     }
 
     /// <summary>

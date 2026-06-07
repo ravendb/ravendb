@@ -3640,6 +3640,176 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task BackupAtCapacity_RegistersOperationAsFaulted()
+        {
+            // RavenDB-24994 (Root Cause 2): when the concurrent-backup cap is reached, StartBackupTask used to
+            // return an operationId that was never registered, so callers polling /operations/state got 404 forever.
+            // The cap-hit must now register a real Faulted operation carrying the BackupDelayException reason.
+            DoNotReuseServer();
+
+            var backupPath1 = NewDataPath(suffix: "BackupFolder1");
+            var backupPath2 = NewDataPath(suffix: "BackupFolder2");
+
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Backup.MaxNumberOfConcurrentBackups)] = 1.ToString()
+                }
+            }))
+            using (var store1 = GetDocumentStore(new Options { Server = server }))
+            using (var store2 = GetDocumentStore(new Options { Server = server }))
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "db1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "db2" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var db1 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+
+                // far-future cron so the polling loop never auto-triggers; we trigger manually
+                var taskId1 = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath1), store1);
+                var taskId2 = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath2), store2);
+
+                // pin a backup running on db1 so the single concurrent slot is occupied: HoldBackupFromFinishing
+                // blocks FinishBackup before ConcurrentBackupsCounter.FinishBackup, so the slot stays taken
+                // until we signal the event.
+                var mre = new ManualResetEvent(false);
+                server.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[db1.Name] =
+                    new TestingStuffInternal { HoldBackupFromFinishing = mre };
+
+                try
+                {
+                    server.ServerStore.BackupRunner.StartBackupTask(db1.Name, taskId1, isFullBackup: true, db1.Operations.GetNextOperationId());
+
+                    Assert.Equal(1, WaitForValue(() => server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
+                        expectedVal: 1, timeout: 30_000, interval: 100));
+                    Assert.False(server.ServerStore.ConcurrentBackupsCounter.CanRunBackup(db2.Name));
+
+                    // attempt a manual backup on db2 - the cap is full, so this hits BackupDelayException
+                    var opId2 = server.ServerStore.BackupRunner.StartBackupTask(db2.Name, taskId2, isFullBackup: true, db2.Operations.GetNextOperationId());
+
+                    // a real operationId is still returned (no API shape change)
+                    Assert.True(opId2 > 0, $"Expected a real operationId, got {opId2}");
+
+                    // polling /operations/state must return 200 with a Faulted operation, NOT 404
+                    RavenCommand<OperationState> command = null;
+                    var reached = await WaitForValueAsync(async () =>
+                    {
+                        command = await Backup.ExecuteGetOperationStateCommand(store2, opId2, server.ServerStore.NodeTag);
+                        return command.Result != null &&
+                               command.Result.Status == OperationStatus.Faulted &&
+                               command.StatusCode == System.Net.HttpStatusCode.OK;
+                    }, expectedVal: true, timeout: 30_000, interval: 100);
+
+                    Assert.True(reached, $"operation {opId2} was not observed as Faulted; last HTTP status: {command?.StatusCode.ToString() ?? "null"}, " +
+                                         $"result status: {command?.Result?.Status.ToString() ?? "null"}");
+                    Assert.Equal(System.Net.HttpStatusCode.OK, command.StatusCode);
+                    Assert.NotNull(command.Result);
+                    Assert.Equal(OperationStatus.Faulted, command.Result.Status);
+
+                    // the fault carries the BackupDelayException and the concurrent-cap reason
+                    var operation = db2.Operations.GetOperation(opId2);
+                    Assert.NotNull(operation);
+                    Assert.Equal(OperationStatus.Faulted, operation.State.Status);
+                    var exceptionResult = operation.State.Result as OperationExceptionResult;
+                    Assert.NotNull(exceptionResult);
+                    Assert.Contains(nameof(BackupDelayException), exceptionResult.Type);
+                    Assert.Contains("concurrent backup", exceptionResult.Message, StringComparison.OrdinalIgnoreCase);
+
+                    // the rejected task's backup status was not advanced
+                    var state2 = server.ServerStore.BackupRunner.GetDatabaseStateByTaskId(db2.Name, taskId2);
+                    Assert.Null(state2.BackupStatus?.LastFullBackup);
+                    Assert.Null(state2.BackupStatus?.LastIncrementalBackup);
+                }
+                finally
+                {
+                    mre.Set();
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task BackupAtCapacity_CallerCanRetryAfterDelay()
+        {
+            // RavenDB-24994 (Root Cause 2): once the running backup finishes and frees the concurrent slot,
+            // a subsequent manual backup on the previously-rejected task must succeed normally.
+            DoNotReuseServer();
+
+            var backupPath1 = NewDataPath(suffix: "BackupFolder1");
+            var backupPath2 = NewDataPath(suffix: "BackupFolder2");
+
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Backup.MaxNumberOfConcurrentBackups)] = 1.ToString()
+                }
+            }))
+            using (var store1 = GetDocumentStore(new Options { Server = server }))
+            using (var store2 = GetDocumentStore(new Options { Server = server }))
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "db1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "db2" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var db1 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+
+                var taskId1 = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath1), store1);
+                var taskId2 = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath2), store2);
+
+                var mre = new ManualResetEvent(false);
+                server.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[db1.Name] =
+                    new TestingStuffInternal { HoldBackupFromFinishing = mre };
+
+                long opId2;
+                try
+                {
+                    server.ServerStore.BackupRunner.StartBackupTask(db1.Name, taskId1, isFullBackup: true, db1.Operations.GetNextOperationId());
+
+                    Assert.Equal(1, WaitForValue(() => server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
+                        expectedVal: 1, timeout: 30_000, interval: 100));
+
+                    // first attempt on db2 is rejected (cap full) and registered Faulted
+                    opId2 = server.ServerStore.BackupRunner.StartBackupTask(db2.Name, taskId2, isFullBackup: true, db2.Operations.GetNextOperationId());
+                    var faulted = await WaitForValueAsync(async () =>
+                    {
+                        var command = await Backup.ExecuteGetOperationStateCommand(store2, opId2, server.ServerStore.NodeTag);
+                        return command.Result?.Status;
+                    }, expectedVal: OperationStatus.Faulted, timeout: 30_000, interval: 100);
+                    Assert.Equal(OperationStatus.Faulted, faulted);
+                }
+                finally
+                {
+                    // release the pinned backup so the concurrent slot frees up
+                    mre.Set();
+                }
+
+                // db1's backup finishes and releases the slot
+                Assert.Equal(0, WaitForValue(() => server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
+                    expectedVal: 0, timeout: 60_000, interval: 200));
+
+                // retrying the backup on db2 now succeeds normally
+                await Backup.RunBackupAsync(server, taskId2, store2, isFullBackup: true, opStatus: OperationStatus.Completed);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldRearrangeTheBackupTimer_IfItGot_ActiveByOtherNode_Then_ActiveByCurrentNode_WhileRunning()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
