@@ -34,6 +34,13 @@ namespace Raven.Server.Documents.Replication.Senders
         protected readonly RavenLogger Log;
         private long _lastEtag;
 
+        // Cumulative change vector of everything this sender has scanned on this connection (whether sent,
+        // filtered out, or skipped as already-merged). Reported in empty-batch heartbeats so the durable
+        // pull-replication cursor reflects this sender's real send-frontier and is not overwritten by the
+        // change vector of bounce-back documents we scan but skip. Held as a string because the documents
+        // context (which owns ChangeVector instances) is allocated per ExecuteReplicationOnce call.
+        private string _sentFrontierChangeVector;
+
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new();
         private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new(SliceComparer.Instance);
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
@@ -221,6 +228,14 @@ namespace Raven.Server.Documents.Replication.Senders
                         Log.Debug(msg);
                     }
 
+                    // Fold this pass into the cumulative send-frontier. For bounce-back documents (scanned
+                    // but skipped as already-merged) this adds only foreign change vector entries, leaving our
+                    // own dbId entry intact; for our own documents (sent or filtered) it advances our entry.
+                    var sentFrontier = string.IsNullOrEmpty(_sentFrontierChangeVector)
+                        ? mergedChangeVector
+                        : mergedChangeVector.MergeOrderWith(documentsContext.GetChangeVector(_sentFrontierChangeVector), documentsContext);
+                    _sentFrontierChangeVector = sentFrontier;
+
                     if (_orderedReplicaItems.Count == 0)
                     {
                         var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
@@ -245,7 +260,7 @@ namespace Raven.Server.Documents.Replication.Senders
                             Log.Debug($"Sending heartbeat (empty batch, {reason}){skippedInfo}. Last scanned etag: '{_lastEtag}'. WasInterrupted: '{wasInterrupted}'.");
                         }
 
-                        _parent.SendHeartbeat(changeVector);
+                        _parent.SendHeartbeat(changeVector, _sentFrontierChangeVector);
                         return hasModification;
                     }
                     
