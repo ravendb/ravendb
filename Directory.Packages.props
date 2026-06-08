@@ -9,6 +9,7 @@
     <PackageVersion Include="AWSSDK.S3" Version="4.0.23" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.2" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.28.0" />
     <PackageVersion Include="Azure.Storage.Queues" Version="12.26.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />

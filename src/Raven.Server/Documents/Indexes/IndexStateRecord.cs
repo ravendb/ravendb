@@ -7,7 +7,9 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Logging;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Graphs;
 
 namespace Raven.Server.Documents.Indexes;
 
@@ -18,9 +20,9 @@ public record IndexStateRecord(
     ImmutableDictionary<string, IndexStateRecord.CollectionEtags> Collections,
     ImmutableDictionary<string, IndexStateRecord.LuceneFileLocations> DirectoriesByName,
     LuceneIndexState LuceneIndexState,
-    ImmutableDictionary<string, LuceneIndexState> LuceneSuggestionStates)
+    ImmutableDictionary<string, LuceneIndexState> LuceneSuggestionStates,
+    CoraxVectorState CoraxVectorState)
 {
-
     /// <summary>
     /// Cannot use a shared instance here, since <see cref="HandleReferencesBase.State"/> have a mutable builder, we create a new value each time
     /// </summary>
@@ -31,7 +33,8 @@ public record IndexStateRecord(
         ImmutableDictionary<string, CollectionEtags>.Empty,
         ImmutableDictionary<string, LuceneFileLocations>.Empty,
         new LuceneIndexState(),
-        ImmutableDictionary<string, LuceneIndexState>.Empty);
+        ImmutableDictionary<string, LuceneIndexState>.Empty,
+        CoraxVectorState.Empty);
 
     public sealed record LuceneFileLocations(
         ImmutableDictionary<string, Tree.ChunkDetails[]> Chunks,
@@ -143,7 +146,25 @@ public class LuceneIndexState
                 }
                 Debug.Assert(false, e.ToString());
             }
-            
+
         }
     }
+}
+
+/// <summary>
+/// Holds a Corax index's per-field HNSW vector node caches, keyed by field name. <see cref="Empty"/>
+/// carries no caches and is used for Lucene indexes and Corax indexes without vector fields.
+/// </summary>
+public sealed class CoraxVectorState
+{
+    public static readonly CoraxVectorState Empty = new(ImmutableDictionary.Create<Slice, HnswIndexCache>(SliceComparer.Instance));
+
+    public readonly ImmutableDictionary<Slice, HnswIndexCache> Caches;
+
+    public CoraxVectorState(ImmutableDictionary<Slice, HnswIndexCache> caches)
+    {
+        Caches = caches;
+    }
+
+    public bool HasCaches => Caches is { Count: > 0 };
 }

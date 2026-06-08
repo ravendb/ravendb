@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Corax;
@@ -7,17 +10,19 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Indexing;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Graphs;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -26,10 +31,23 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     private const bool DisableDictionaryTraining = false; // [DEBUG ONLY]: disable training.
     private readonly RavenLogger _logger;
     private readonly CoraxDocumentConverterBase _converter;
+
+    private static readonly ImmutableDictionary<Slice, HnswIndexCache> EmptyCaches = ImmutableDictionary.Create<Slice, HnswIndexCache>(SliceComparer.Instance);
+    private ImmutableDictionary<Slice, HnswIndexCache> _hnswCaches;
+    internal IndexWriter ActiveWriter;
+    internal Dictionary<Slice, HashSet<long>> PendingDirtyVectorSets;
+
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
         _logger = RavenLogManager.Instance.GetLoggerForIndex<CoraxIndexPersistence>(index);
         _converter = CreateConverter(index);
+    }
+
+    private int GetMaxNodesForVectorCache()
+    {
+        var cacheSizeBytes = _index.Configuration.CoraxVectorSearchCacheSize.GetValue(SizeUnit.Bytes);
+        var bytesPerNode = HnswIndexCache.EstimateBytesPerNode(_index.Configuration.CoraxVectorDefaultNumberOfEdges);
+        return (int)Math.Min(cacheSizeBytes / bytesPerNode, int.MaxValue);
     }
 
     private CoraxDocumentConverterBase CreateConverter(Index index)
@@ -100,6 +118,12 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     public override void Dispose()
     {
         _converter?.Dispose();
+        if (_hnswCaches != null)
+        {
+            foreach (var kv in _hnswCaches)
+                kv.Value.Dispose();
+            _hnswCaches = null;
+    }
     }
 
     public override bool RequireOnBeforeExecuteIndexing()
@@ -176,11 +200,98 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void Initialize(StorageEnvironment environment)
     {
+        using (var tx = environment.WriteTransaction())
+        {
+            // Warm the per-field HNSW node caches and publish them on the transaction client state.
+            WarmInitialCaches(tx);
+            tx.LowLevelTransaction.UpdateClientState(UpdateIndexCache(tx));
+
+            // Modify a page so the transaction commits and the client state becomes visible to new transactions.
+            tx.LowLevelTransaction.ModifyPage(0);
+
+            tx.Commit();
+        }
+    }
+
+    public override IndexStateRecord UpdateIndexCache(Transaction tx)
+    {
+        if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec) is false)
+            rec = IndexStateRecord.CreateEmpty();
+
+        var caches = Volatile.Read(ref _hnswCaches);
+        return rec with { CoraxVectorState = caches is null ? CoraxVectorState.Empty : new CoraxVectorState(caches) };
     }
 
     internal override void RecreateSearcher(Transaction asOfTx)
     {
-        //lucene method
+        var dirty = PendingDirtyVectorSets;
+        PendingDirtyVectorSets = null;
+        if (dirty == null)
+            return;
+
+        var maxNodes = GetMaxNodesForVectorCache();
+        if (maxNodes <= 0)
+        {
+            // Cache turned off at runtime (CoraxVectorSearchCacheSize == 0): clear the caches. UpdateIndexCache
+            // publishes the cleared state on commit, so new read transactions resolve vectors from disk.
+            Volatile.Write(ref _hnswCaches, null);
+            return;
+        }
+
+        var llt = asOfTx.LowLevelTransaction;
+        var current = _hnswCaches;
+        ImmutableDictionary<Slice, HnswIndexCache>.Builder freshlyAdded = null;
+        foreach (var kv in dirty)
+        {
+            if (current != null && current.TryGetValue(kv.Key, out var cache))
+            {
+                cache.ApplyCommit(llt, kv.Key, kv.Value);
+                continue;
+            }
+
+            var fresh = HnswIndexCache.WarmFromScratch(llt, kv.Key, maxNodes);
+            if (fresh is null)
+                continue;
+            (freshlyAdded ??= ImmutableDictionary.CreateBuilder<Slice, HnswIndexCache>(SliceComparer.Instance))[kv.Key] = fresh;
+        }
+
+        if (freshlyAdded is null)
+            return;
+
+        // Build a new dictionary that adds the freshly-warmed caches while sharing structure with the
+        // current one, then swap it in. Readers holding the old dictionary keep using it unchanged.
+        var grown = (current ?? EmptyCaches).SetItems(freshlyAdded);
+
+        Volatile.Write(ref _hnswCaches, grown);
+    }
+
+    private void WarmInitialCaches(Transaction tx)
+    {
+        var mapping = _converter?.GetKnownFieldsForQuerying();
+        if (mapping is null)
+            return;
+
+        var maxNodes = GetMaxNodesForVectorCache();
+        if (maxNodes <= 0)
+            return;
+
+        var llt = tx.LowLevelTransaction;
+        ImmutableDictionary<Slice, HnswIndexCache>.Builder builder = null;
+        foreach (var field in mapping)
+        {
+            if (field.VectorOptions is null)
+                continue;
+            var cache = HnswIndexCache.WarmFromScratch(llt, field.FieldName, maxNodes);
+            if (cache is null)
+                continue;
+            builder ??= ImmutableDictionary.CreateBuilder<Slice, HnswIndexCache>(SliceComparer.Instance);
+            Debug.Assert(field.FieldName.HasValue && field.FieldName.Size > 0,
+                "Vector field name must be allocated and non-empty for cache keying");
+            builder[field.FieldName] = cache;
+        }
+
+        if (builder != null)
+            _hnswCaches = builder.ToImmutable();
     }
 
     internal override void RecreateSuggestionsSearchers(Transaction asOfTx)

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
@@ -35,8 +34,9 @@ public struct MultiVectorSearchMatch : IQueryMatch
     private GrowableBuffer<long, Constant<long>> _matches;
     private GrowableBuffer<float, Constant<float>> _distances;
 
-    // Voron VectorSearch Retriever
-    private Hnsw.VectorSearchRetriever[] _vectorsRetrievers;
+    // Reference to the first sub-query's retriever, kept so Score can call its distance-to-score
+    // conversion methods after all retrievers have been disposed.
+    private Hnsw.VectorSearchRetriever _firstRetriever;
     private ContextBoundNativeList<long> _nodesIdsToScan;
     private bool _vectorRetrieverInitialized;
 
@@ -106,25 +106,11 @@ public struct MultiVectorSearchMatch : IQueryMatch
             }
         }
 
-        _vectorsRetrievers = new Hnsw.VectorSearchRetriever[_vectorsToSearch.Length];
-        var llt = _indexSearcher.Transaction.LowLevelTransaction;
-        var allEmpty = true;
-        for (int i = 0; i < _vectorsRetrievers.Length; ++i)
-        {
-            var vector = _vectorsToSearch[i].GetEmbeddingMemory();
-            _vectorsRetrievers[i] = (_isExact) switch
-            {
+        // Obtain the IndexSearcher-scoped SearchState for this field; sub-queries below reuse it
+        // so loaded node data (edges, vectors) is shared across them.
+        var sharedSearchState = _indexSearcher.GetOrCreateVectorSearchState(_metadata.FieldName);
 
-                _ when _scanningQuery => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, false, _nodesIdsToScan),
-                true => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
-                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults!.Value, _random)), 
-                false => Hnsw.ApproximateNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
-            };
-
-            allEmpty &= _vectorsRetrievers[i].IsEmpty;
-        }
-
-        _isEmpty = allEmpty || (_filterQuery != null && _filterResults!.Value.Count == 0);
+        _isEmpty = sharedSearchState.IsEmpty || (_filterQuery != null && _filterResults!.Value.Count == 0);
     }
 
     public int Fill(Span<long> matches)
@@ -155,12 +141,33 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _resultsPersisted = true;
         if (_isEmpty)
             return;
-        
+
+        // Construct and fully consume each retriever before moving to the next; the shared
+        // SearchState has a single pair of priority queues (_candidatesQ, _nearestEdgesQ) that
+        // cannot be interleaved across retrievers.
+        var sharedSearchState = _indexSearcher.GetOrCreateVectorSearchState(_metadata.FieldName);
+
         _matches.Init(_indexSearcher.Allocator, 128);
         _distances.Init(_indexSearcher.Allocator, 128);
-        for (var i = 0; i < _vectorsRetrievers.Length; ++i)
+        for (var i = 0; i < _vectorsToSearch.Length; ++i)
         {
-            ref var vectorSearcher = ref _vectorsRetrievers[i];
+            // Invariant: when a new retriever starts, the shared priority queues on SearchState
+            // must be empty. Violating this causes the new traversal to read leftover entries
+            // from the previous sub-query.
+            sharedSearchState.AssertSharedQueuesClean();
+
+            var vector = _vectorsToSearch[i].GetEmbeddingMemory();
+            var vectorSearcher = (_isExact) switch
+            {
+                _ when _scanningQuery => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, false, _nodesIdsToScan),
+                true => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
+                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults!.Value, _random)),
+                false => Hnsw.ApproximateNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
+            };
+
+            if (i == 0)
+                _firstRetriever = vectorSearcher;
+
             int currentRead = 0;
             do
             {
@@ -168,9 +175,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
                 var distanceBuffer = _distances.GetSpace();
                 Debug.Assert(matchBuffer.Length == distanceBuffer.Length, "matchBuffer.Length == distanceBuffer.Length");
 
-
                 currentRead = vectorSearcher.Fill(matchBuffer, distanceBuffer, _filterResults);
-                
+
                 _matches.AddUsage(currentRead);
                 _distances.AddUsage(currentRead);
                 Count += currentRead;
@@ -234,13 +240,13 @@ public struct MultiVectorSearchMatch : IQueryMatch
                     continue;
 
                 var distance = _distances.Results[pos];
-                scores[i] += boostFactor * _vectorsRetrievers[0].DistanceToScore(distance);
+                scores[i] += boostFactor * _firstRetriever.DistanceToScore(distance);
             }
         }
         else
         {
             _distances.Results[..scores.Length].CopyTo(scores);
-            _vectorsRetrievers[0].DistancesToScores(scores);
+            _firstRetriever.DistancesToScores(scores);
             for (int i = 0; i < scores.Length; ++i)
                 scores[i] *= boostFactor;
         }
@@ -268,7 +274,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             parameters: new Dictionary<string, string>()
             {
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },                
-                { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers.FirstOrDefault().SimilarityMethod?.ToString() ?? "Query not initialized." },
+                { nameof(Hnsw.SimilarityMethod), _firstRetriever.SimilarityMethod?.ToString() ?? "Query not initialized." },
                 { "IsExact", _isExact.ToString() },
                 { "IsScanning", _scanningQuery.ToString() },
                 { "Minimum match", _minimumMatch.ToString(CultureInfo.InvariantCulture) },

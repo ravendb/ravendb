@@ -232,6 +232,7 @@ class connectionStringAzureQueueStorageModel extends connectionStringModel {
                 Passwordless: null,
             },
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         }, true, []);
     }
     
@@ -258,6 +259,7 @@ class connectionStringAzureQueueStorageModel extends connectionStringModel {
             KafkaConnectionSettings: null,
             AzureQueueStorageConnectionSettings: this.authenticationToDto(),
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         };
     }
 

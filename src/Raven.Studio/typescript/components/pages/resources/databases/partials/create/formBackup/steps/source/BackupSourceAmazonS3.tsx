@@ -219,6 +219,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
                 AwsSessionToken: amazonS3Data.sessionToken,
                 CustomServerUrl: amazonS3Data.isUseCustomHost ? amazonS3Data.customHost : null,
                 ForcePathStyle: amazonS3Data.isUseCustomHost && amazonS3Data.isForcePathStyle,
+                DisableChecksumValidation: amazonS3Data.isUseCustomHost && amazonS3Data.isDisableChecksumValidation,
                 Disabled: false,
                 GetBackupConfigurationScript: null,
             },
@@ -236,6 +237,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
         amazonS3Data.isUseCustomHost,
         amazonS3Data.customHost,
         amazonS3Data.isForcePathStyle,
+        amazonS3Data.isDisableChecksumValidation,
         isSharded,
     ]);
 

@@ -27,6 +27,7 @@ import { ConnectionStringDto } from "components/pages/database/settings/connecti
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
 import testAzureQueueStorageServerConnectionCommand from "commands/database/cluster/testAzureQueueStorageServerConnectionCommand";
+import testAzureServiceBusServerConnectionCommand from "commands/database/cluster/testAzureServiceBusServerConnectionCommand";
 import replicationProgressCommand from "commands/database/tasks/replicationProgressCommand";
 import internalReplicationProgressCommand from "commands/database/tasks/internalReplicationProgressCommand";
 import testSnowflakeConnectionStringCommand from "commands/database/cluster/testSnowflakeConnectionStringCommand";
@@ -144,6 +145,13 @@ export default class TasksService {
         authentication: Raven.Client.Documents.Operations.ETL.Queue.AzureQueueStorageConnectionSettings
     ) {
         return new testAzureQueueStorageServerConnectionCommand(databaseName, authentication).execute();
+    }
+
+    async testAzureServiceBusServerConnection(
+        databaseName: string,
+        settings: Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings
+    ) {
+        return new testAzureServiceBusServerConnectionCommand(databaseName, settings).execute();
     }
 
     async testAmazonSqsServerConnection(

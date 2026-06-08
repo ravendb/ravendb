@@ -13,19 +13,19 @@ using Raven.Server.Documents.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
+public partial class ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
 {
     public const string SubAgentUserPromptKey = "subAgentUserPrompt";
 
     public string Agent = agent;
 
     public BlittableJsonReaderObject Parameters = parameters;
-    public List<BlittableJsonReaderObject> Messages = [];
+    public MessagesList Messages { get; private set; } = new();
     public List<string> LinkedConversations = [];
+
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public AiUsage CurrentUsage = new AiUsage();
@@ -229,7 +229,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
-            [nameof(Messages)] = Messages,
+            [nameof(Messages)] = Messages.AsSerializable(),
             [nameof(LinkedConversations)] = LinkedConversations,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
@@ -249,10 +249,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public const string DateProperty = "date";
     public const string UsageProperty = "usage";
+    public const string SummaryProperty = "summary";
 
     public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg, AiUsage usage)
     {
         var currentDate = DateTime.UtcNow;
+        if (currentDate <= LastMessageAt)
+            currentDate = LastMessageAt.AddTicks(1);
+
         msg.Modifications ??= new DynamicJsonValue(msg);
         msg.Modifications[DateProperty] = currentDate;
         if (usage != null)
@@ -261,7 +265,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         LastMessageAt = currentDate;
     }
 
-    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document, int maxModelIterationsPerCall)
+    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document, int maxModelIterationsPerCall, bool cloneMessages = true)
     {
         if (document.TryGet(nameof(Agent), out string agent) == false)
             throw new ArgumentException($"Missing Agent in '{id}' conversation document");
@@ -296,7 +300,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         var conversation = new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
-            Messages = messages.Items.Select(m => ((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
+            Messages = new MessagesList(messages, cloneArray: cloneMessages),
             LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
             OpenActionCalls = openTools,

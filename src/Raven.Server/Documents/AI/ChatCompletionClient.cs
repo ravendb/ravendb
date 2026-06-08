@@ -424,7 +424,7 @@ public class ChatCompletionClient : IDisposable
     protected virtual Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
      public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx,
-        List<BlittableJsonReaderObject> messages,
+        IEnumerable<BlittableJsonReaderObject> messages,
         List<AiAttachment> attachments,
         List<BlittableJsonReaderObject> tools,
         bool useTools,

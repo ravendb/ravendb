@@ -404,10 +404,14 @@ namespace Raven.Server.Dashboard
             long rabbitMqSinkCountOnNode = GetTaskCountOnNode<Client.Documents.Operations.QueueSink.QueueSinkConfiguration>(database, dbRecord, serverStore, database.QueueSinkLoader.Sinks,
                 task => QueueSinkLoader.GetProcessState(task.Scripts, database, task.Name), task => task.BrokerType == QueueBrokerType.RabbitMq);
 
+            var azureServiceBusSinkCount = database.QueueSinkLoader.GetSinkCountByBroker(QueueBrokerType.AzureServiceBus);
+            long azureServiceBusSinkCountOnNode = GetTaskCountOnNode<Client.Documents.Operations.QueueSink.QueueSinkConfiguration>(database, dbRecord, serverStore, database.QueueSinkLoader.Sinks,
+                task => QueueSinkLoader.GetProcessState(task.Scripts, database, task.Name), task => task.BrokerType == QueueBrokerType.AzureServiceBus);
+
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
                                 ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount +
                                 rabbitMqEtlCount + azureQueueStorageEtlCount + amazonSqsEtlCount + periodicBackupCount +
-                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + snowflakeEtlCount + embeddingsGenerationCount + genAiCount;
+                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + azureServiceBusSinkCount + snowflakeEtlCount + embeddingsGenerationCount + genAiCount;
 
             return new DatabaseOngoingTasksInfoItem
             {
@@ -427,6 +431,7 @@ namespace Raven.Server.Dashboard
                 SubscriptionCount = subscriptionCountOnNode,
                 KafkaSinkCount = kafkaSinkCountOnNode,
                 RabbitMqSinkCount = rabbitMqSinkCountOnNode,
+                AzureServiceBusSinkCount = azureServiceBusSinkCountOnNode,
                 SnowflakeEtlCount = snowflakeEtlCountOnNode,
                 EmbeddingsGenerationCount = embeddingsGenerationCountOnNode,
                 GenAiCount = genAiCountOnNode

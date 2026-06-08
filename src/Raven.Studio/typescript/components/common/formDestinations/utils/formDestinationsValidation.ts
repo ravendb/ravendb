@@ -119,6 +119,7 @@ export const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
                     ),
         }),
     forcePathStyle: yup.boolean(),
+    disableChecksumValidation: yup.boolean(),
     isUseCustomHost: yup.boolean(),
     customServerUrl: yup
         .string()

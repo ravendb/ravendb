@@ -91,6 +91,7 @@ namespace FastTests.Issues
                 "Storage.DisableSparseRegions",
                 "Storage.JournalsCompressionAcceleration",
 
+                "Indexing.Corax.VectorSearch.CacheSizeInMb",
                 "Indexing.Corax.VectorSearch.DefaultMinimumSimilarity",
                 "Indexing.Corax.VectorSearch.DefaultNumberOfEdges",
                 "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForIndexing",

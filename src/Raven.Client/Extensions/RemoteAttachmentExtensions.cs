@@ -87,6 +87,7 @@ internal static class RemoteAttachmentExtensions
             BucketName = settings.BucketName,
             CustomServerUrl = settings.CustomServerUrl,
             ForcePathStyle = settings.ForcePathStyle,
+            DisableChecksumValidation = settings.DisableChecksumValidation,
             StorageClass = settings.StorageClass
         };
     }
@@ -129,6 +130,7 @@ internal static class RemoteAttachmentExtensions
             BucketName = settings.BucketName,
             CustomServerUrl = settings.CustomServerUrl,
             ForcePathStyle = settings.ForcePathStyle,
+            DisableChecksumValidation = settings.DisableChecksumValidation,
             StorageClass = settings.StorageClass,
             Disabled = false // ensure enabled for direct upload use-case
         };

@@ -16,6 +16,7 @@ require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
 require("prismjs/components/prism-json");
 require("prismjs/components/prism-sql");
+require("prismjs/components/prism-python");
 
 export const supportedCodeLanguages = [
     "plaintext",
@@ -34,6 +35,7 @@ export const supportedCodeLanguages = [
     "json",
     "sql",
     "rql",
+    "python",
 ] as const;
 
 export type CodeLanguage = (typeof supportedCodeLanguages)[number];
@@ -46,10 +48,11 @@ interface CodeProps {
     whiteSpace?: "pre" | "normal";
     isActionsHidden?: boolean;
     sourceView?: "chatbot";
+    isTitleHidden?: boolean;
 }
 
 export default function Code(props: CodeProps) {
-    const { code, className, codeClassName, whiteSpace, isActionsHidden, sourceView } = props;
+    const { code, className, codeClassName, whiteSpace, isActionsHidden, sourceView, isTitleHidden } = props;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const chatbotDatabaseContext = useAppSelector((state) =>
@@ -114,8 +117,8 @@ export default function Code(props: CodeProps) {
         <div className={classNames("code", className)}>
             {!isActionsHidden && (
                 <div className="code-actions">
-                    {languageTitle && <div>{languageTitle}</div>}
-                    <div className="hstack gap-2">
+                    {!isTitleHidden && languageTitle && <div>{languageTitle}</div>}
+                    <div className="hstack gap-2 ms-auto">
                         <Button
                             variant="link"
                             className="text-emphasis"
@@ -172,4 +175,5 @@ const languageTitles: Record<CodeLanguage, string> = {
     json: "JSON",
     sql: "SQL",
     rql: "RQL",
+    python: "Python",
 };

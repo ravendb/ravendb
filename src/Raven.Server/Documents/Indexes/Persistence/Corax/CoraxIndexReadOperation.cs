@@ -110,6 +110,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes),
             };
 
+            // Attach the per-field HNSW node caches from this transaction's client state to the searcher,
+            // which uses them for vector node lookups instead of reading through Voron.
+            if (readTransaction.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord)
+                && stateRecord.CoraxVectorState is { Caches: { Count: > 0 } vectorCaches })
+            {
+                IndexSearcher.AttachVectorNodeCaches(vectorCaches);
+            }
+
             if (index is { _forTestingPurposes: { CoraxConfiguration: not null } })
                 IndexSearcher.SetTestingConfiguration(index._forTestingPurposes.CoraxConfiguration);
 

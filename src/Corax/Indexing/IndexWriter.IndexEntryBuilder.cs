@@ -306,7 +306,7 @@ public partial class IndexWriter
 
             var vectorWriter = field.GetVectorIndexer(_parent._transaction.LowLevelTransaction, value.Length, random);
             var vectorHash = vectorWriter.Register((long)_entryId, value);
-            
+
             //We're storing the vector hash for removal purposes
             RegisterTerm(field, vectorHash.ToSpan(), StoredFieldType.Raw);
         }

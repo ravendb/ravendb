@@ -91,7 +91,7 @@ namespace Raven.Server.Documents
         
         public Action<LogLevel, string> AddToInitLog => _addToInitLog;
 
-        private readonly RavenLogger _logger;
+        protected readonly RavenLogger _logger;
         private readonly string _name;
 
         private static readonly Slice FixCountersLastKeySlice;

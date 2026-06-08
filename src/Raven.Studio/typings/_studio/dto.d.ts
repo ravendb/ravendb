@@ -917,11 +917,11 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
     "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" |
     "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
-    "KafkaQueueSink" | "RabbitQueueSink" | "EmbeddingsGeneration" | "GenAi";
+    "KafkaQueueSink" | "RabbitQueueSink" | "AzureServiceBusQueueSink" | "EmbeddingsGeneration" | "GenAi";
 
 type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs" | "EmbeddingsGeneration" | "GenAi";
 
-type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink";
+type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink" | "AzureServiceBusQueueSink";
 
 type FilterOngoingTaskType = Raven.Client.Documents.Operations.ETL.EtlType  | Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType | "Subscription" | "Replication";
 
@@ -1112,6 +1112,7 @@ type GetConnectionStringsResult = Omit<Raven.Client.Documents.Operations.Connect
 
 type AzureQueueStorageAuthenticationType = "connectionString" | "entraId" | "passwordless";
 type AmazonSqsAuthenticationType = "basic" | "passwordless";
+type AzureServiceBusAuthenticationType = "connectionString" | "entraId" | "passwordless";
 
 type CertificateDto = Partial<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition> & { HasTwoFactor?: boolean; }
 
