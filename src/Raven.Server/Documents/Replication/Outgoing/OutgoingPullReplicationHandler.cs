@@ -70,10 +70,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(_destinationAcceptablePaths) ||
             CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
 
-        internal bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions =>
-            Destination is PullReplicationAsSink { Mode: PullReplicationMode.SinkToHub } &&
-            OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-            _database.ForTestingPurposes?.ForceSendTombstones != true;
+        internal virtual bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions => false;
     }
 
     internal sealed class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler
@@ -200,5 +197,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
             };
             _parent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
+
+        internal override bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions =>
+            _node.Mode == PullReplicationMode.SinkToHub &&
+            OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
+            _database.ForTestingPurposes?.ForceSendTombstones != true;
     }
 }

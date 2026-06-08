@@ -5,7 +5,6 @@ using System.IO;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow;
 using Sparrow.Json;
@@ -110,7 +109,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Name; // original casing
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
-        public LazyStringValue ParentDocChangeVector;
+        public string ParentDocChangeVector;
         public bool IncludeDocumentChangeVector;
 
         public override long Size => base.Size + // common
@@ -129,7 +128,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                                      (IncludeDocumentChangeVector 
                                         ? sizeof(int) + // size of doc cv
-                                          (ParentDocChangeVector?.Size ?? 0)  // parent doc cv
+                                          (ParentDocChangeVector == null ? 0 : Encodings.Utf8.GetByteCount(ParentDocChangeVector))  // parent doc cv
                                         : 0);
 
 
@@ -139,36 +138,12 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? Constants.Documents.Collections.EmptyCollection;
             djv[nameof(Name)] = Name.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
-            djv[nameof(ParentDocChangeVector)] = ParentDocChangeVector?.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(ParentDocChangeVector)] = ParentDocChangeVector;
 
             return djv;
         }
 
         public override long AssertChangeVectorSize() => Size;
-
-        internal override IDisposable UseLegacyCompatibleChangeVectorsForSending(DocumentsOperationContext context, bool senderIsHub)
-        {
-            var changeVectorScope = base.UseLegacyCompatibleChangeVectorsForSending(context, senderIsHub);
-            try
-            {
-                if (IncludeDocumentChangeVector == false || ParentDocChangeVector == null)
-                    return changeVectorScope;
-
-                var originalParentDocChangeVector = ParentDocChangeVector;
-                var parentDocChangeVectorForSending = GetLegacyCompatibleChangeVectorForSending(context, originalParentDocChangeVector, senderIsHub);
-                if (parentDocChangeVectorForSending == originalParentDocChangeVector)
-                    return changeVectorScope;
-
-                ParentDocChangeVector = context.GetLazyString(parentDocChangeVectorForSending);
-
-                return new LegacyCompatibleTimeSeriesChangeVectorScope(this, originalParentDocChangeVector, changeVectorScope);
-            }
-            catch
-            {
-                changeVectorScope?.Dispose();
-                throw;
-            }
-        }
 
         public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
@@ -201,13 +176,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 if (IncludeDocumentChangeVector)
                 {
-                    *(int*)(pTemp + tempBufferPos) = ParentDocChangeVector?.Size ?? 0;
+                    var parentDocChangeVectorSize = ParentDocChangeVector == null ? 0 : Encodings.Utf8.GetByteCount(ParentDocChangeVector);
+                    *(int*)(pTemp + tempBufferPos) = parentDocChangeVectorSize;
                     tempBufferPos += sizeof(int);
 
-                    if (ParentDocChangeVector != null)
+                    if (parentDocChangeVectorSize != 0)
                     {
-                        Memory.Copy(pTemp + tempBufferPos, ParentDocChangeVector.Buffer, ParentDocChangeVector.Size);
-                        tempBufferPos += ParentDocChangeVector.Size;
+                        tempBufferPos += Encodings.Utf8.GetBytes(ParentDocChangeVector, 0, ParentDocChangeVector.Length, tempBuffer, tempBufferPos);
                     }
                 }
 
@@ -237,8 +212,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 if (IncludeDocumentChangeVector)
                 {
-                    SetLazyStringValueFromString(context, out ParentDocChangeVector);
-                    Debug.Assert(ParentDocChangeVector != null);
+                    ParentDocChangeVector = ReadString();
                 }
 
                 stats.RecordTimeSeriesRead(Size);
@@ -251,7 +225,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             {
                 Collection = Collection.Clone(context),
                 Name = Name.Clone(context),
-                ParentDocChangeVector = ParentDocChangeVector?.Clone(context)
+                ParentDocChangeVector = ParentDocChangeVector
             };
 
             var mem = Segment.Clone(context, out item.Segment);
@@ -270,29 +244,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             Collection?.Dispose();
             Name?.Dispose();
-            ParentDocChangeVector?.Dispose();
-        }
-
-        private sealed class LegacyCompatibleTimeSeriesChangeVectorScope : IDisposable
-        {
-            private readonly TimeSeriesReplicationItem _item;
-            private readonly LazyStringValue _originalParentDocChangeVector;
-            private readonly IDisposable _changeVectorScope;
-
-            public LegacyCompatibleTimeSeriesChangeVectorScope(TimeSeriesReplicationItem item, LazyStringValue originalParentDocChangeVector, IDisposable changeVectorScope)
-            {
-                _item = item;
-                _originalParentDocChangeVector = originalParentDocChangeVector;
-                _changeVectorScope = changeVectorScope;
-            }
-
-            public void Dispose()
-            {
-                var parentDocChangeVectorForCompatibilityLane = _item.ParentDocChangeVector;
-                _item.ParentDocChangeVector = _originalParentDocChangeVector;
-                parentDocChangeVectorForCompatibilityLane?.Dispose();
-                _changeVectorScope?.Dispose();
-            }
         }
     }
 }

@@ -701,11 +701,6 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected virtual void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
-            WriteReplicationItemToStream(documentsContext, item, stats);
-        }
-
-        protected void WriteReplicationItemToStream(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
-        {
             // we will dispose item when we are done with writing the stream in the loop below
             using (item is AttachmentReplicationItem ? item : null)
             using (Slice.From(documentsContext.Allocator, item.ChangeVector, out var cv))
