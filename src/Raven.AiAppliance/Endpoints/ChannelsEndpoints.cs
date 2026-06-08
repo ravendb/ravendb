@@ -150,10 +150,10 @@ public static class ChannelsEndpoints
 
         // Slow path. H1 (security review 2026-05-25): widgetId is the public,
         // bearer-style identifier baked into embed snippets and the
-        // /embed/{widgetId} path. RandomIds' 128 crypto-random bits keep it
-        // unguessable — NOT derived from the binding tuple (slug + type +
-        // agentId are public inputs).
-        var widgetId = RandomIds.NewId("wgt_");
+        // /embed/{widgetId} path. A random GUID keeps it unguessable — NOT
+        // derived from the binding tuple (slug + type + agentId are public
+        // inputs).
+        var widgetId = "wgt_" + Guid.NewGuid().ToString("N");
         var channelDocId = Channel.IdPrefix + widgetId;
 
         try
@@ -196,9 +196,14 @@ public static class ChannelsEndpoints
         catch (ClusterTransactionConcurrencyException)
         {
             // Lost the race. The winner's binding is committed through Raft, but
-            // a plain read-back can momentarily race ahead of that commit being
-            // applied/visible on this node — retry briefly until it appears.
-            var winner = await ClusterWideRace.LoadWinnerAsync<ChannelBinding>(store, app.Database, bindingId, ct);
+            // the document apply lags the commit on this node, so an immediate
+            // read-back can miss it — retry briefly until it appears (~500ms
+            // budget). NOTE (ayende PR review 2026-06-07 challenged this): a
+            // single post-conflict read SHOULD see the winner, but empirically
+            // both a plain and a cluster-wide read flake ~20-30% here, so the
+            // bounded retry stays until the correct wait-for-index read is
+            // confirmed — see the review thread.
+            var winner = await LoadBindingWithRetryAsync(store, app.Database, bindingId, ct);
             if (winner is null)
             {
                 throw new InvalidOperationException(
@@ -421,6 +426,30 @@ public static class ChannelsEndpoints
         using var session = store.OpenAsyncSession();
         await session.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = slug }, ct);
         await session.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Loads the winning binding after a cluster-tx conflict, retrying
+    /// until the Raft-committed doc becomes visible on this node (~500ms budget).
+    /// Single reads (plain or cluster-wide) flake here because the document
+    /// apply lags the commit; this poll is the working safety net pending the
+    /// correct wait-for-index read (ayende PR review thread, 2026-06-07).</summary>
+    private static async Task<ChannelBinding?> LoadBindingWithRetryAsync(
+        IDocumentStore store, string database, string bindingId, CancellationToken ct)
+    {
+        const int maxAttempts = 10;
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            using (var session = store.OpenAsyncSession(database))
+            {
+                var binding = await session.LoadAsync<ChannelBinding>(bindingId, ct);
+                if (binding is not null)
+                    return binding;
+            }
+
+            await Task.Delay(50, ct);
+        }
+
+        return null;
     }
 
     /// <summary>Validates + normalizes <paramref name="origins"/> in place to the
