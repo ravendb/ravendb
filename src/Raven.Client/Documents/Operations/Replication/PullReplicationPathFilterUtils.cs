@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
             foreach (var path in normalizedAllowedPaths)
             {
-                if (string.Equals(path, "*", StringComparison.Ordinal) != false)
+                if (string.Equals(path, "*", StringComparison.Ordinal))
                     return false;
             }
 
