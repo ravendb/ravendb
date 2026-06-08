@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/features/pull-replication-composite-change-vectors", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task SetPullReplicationCompositeChangeVectorsFeature()
         {
-            bool enabled = GetBoolValueQueryString("enabled") == true;
+            bool enabled = GetBoolValueQueryString("enabled", required: true)!.Value;
             (long index, _) = await ServerStore.SendToLeaderAsync(new SetPullReplicationCompositeChangeVectorsFeatureCommand(DatabaseName, enabled, GetRaftRequestIdFromQuery())).ConfigureAwait(false);
             await WaitForIndexNotificationAsync(index).ConfigureAwait(false);
             NoContentStatus();
