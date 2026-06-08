@@ -193,21 +193,34 @@ public static class ChannelsEndpoints
 
             return Results.Ok(new ProvisionChannelResponse(widgetId));
         }
-        catch (ClusterTransactionConcurrencyException)
+        catch (ClusterTransactionConcurrencyException e)
         {
-            // Lost the race. The winner's binding is committed through Raft, but
-            // the document apply lags the commit on this node, so an immediate
-            // read-back can miss it — retry briefly until it appears (~500ms
-            // budget). NOTE (ayende PR review 2026-06-07 challenged this): a
-            // single post-conflict read SHOULD see the winner, but empirically
-            // both a plain and a cluster-wide read flake ~20-30% here, so the
-            // bounded retry stays until the correct wait-for-index read is
-            // confirmed — see the review thread.
-            var winner = await LoadBindingWithRetryAsync(store, app.Database, bindingId, ct);
+            // Lost the race. The winning binding is committed to Raft, but its
+            // document is applied ASYNCHRONOUSLY by the database's cluster-tx
+            // loop, so an immediate read can miss it. RavenDB's read-your-writes
+            // wait covers this — a read carrying the last-cluster-tx index waits
+            // on the per-database ClusterWideTransactionIndexWaiter (set AFTER
+            // the document Put) — but the client only arms that index on a
+            // SUCCESSFUL cluster-tx, not on this conflict path. So arm it from
+            // the conflict's compare-exchange violation (the winner's guard
+            // index == the raft index that waiter reaches), then a SINGLE read
+            // is deterministic — no polling. (ayende PR review 2026-06-07;
+            // WaitForRaftIndexCommand is the wrong lever — it waits on the
+            // cluster state machine, which advances before the document Put.)
+            var winnerIndex = e.ConcurrencyViolations is { Length: > 0 }
+                ? e.ConcurrencyViolations.Max(v => v.Actual)
+                : 0;
+            if (winnerIndex > 0)
+                ((global::Raven.Client.Documents.DocumentStoreBase)store).SetLastTransactionIndex(app.Database, winnerIndex);
+
+            ChannelBinding? winner;
+            using (var session = store.OpenAsyncSession(app.Database))
+                winner = await session.LoadAsync<ChannelBinding>(bindingId, ct);
+
             if (winner is null)
             {
                 throw new InvalidOperationException(
-                    $"ClusterTransactionConcurrencyException fired for '{bindingId}' but the binding doc never became visible after the conflict.");
+                    $"ClusterTransactionConcurrencyException fired for '{bindingId}' but the binding doc never became visible after waiting for cluster-tx index {winnerIndex}.");
             }
 
             await UpsertWidgetIndexAsync(store, winner.WidgetId, app.Slug, ct);
@@ -426,30 +439,6 @@ public static class ChannelsEndpoints
         using var session = store.OpenAsyncSession();
         await session.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = slug }, ct);
         await session.SaveChangesAsync(ct);
-    }
-
-    /// <summary>Loads the winning binding after a cluster-tx conflict, retrying
-    /// until the Raft-committed doc becomes visible on this node (~500ms budget).
-    /// Single reads (plain or cluster-wide) flake here because the document
-    /// apply lags the commit; this poll is the working safety net pending the
-    /// correct wait-for-index read (ayende PR review thread, 2026-06-07).</summary>
-    private static async Task<ChannelBinding?> LoadBindingWithRetryAsync(
-        IDocumentStore store, string database, string bindingId, CancellationToken ct)
-    {
-        const int maxAttempts = 10;
-        for (var attempt = 0; attempt < maxAttempts; attempt++)
-        {
-            using (var session = store.OpenAsyncSession(database))
-            {
-                var binding = await session.LoadAsync<ChannelBinding>(bindingId, ct);
-                if (binding is not null)
-                    return binding;
-            }
-
-            await Task.Delay(50, ct);
-        }
-
-        return null;
     }
 
     /// <summary>Validates + normalizes <paramref name="origins"/> in place to the
