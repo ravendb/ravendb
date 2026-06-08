@@ -278,9 +278,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal(HttpStatusCode.Gone, resp.StatusCode);
     }
 
-    // Embed chat continuation + the conversationId prefix guard live in
-    // EmbedAuthTests (RavenDB-26700): the embed mints a random chats/{guid}
-    // and accepts it back, pinned to the chats/ prefix.
+    // Embed chat continuation + conversationId prefix guard live in EmbedAuthTests.
 
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Embed_page_returns_404_for_non_iframe_channel()

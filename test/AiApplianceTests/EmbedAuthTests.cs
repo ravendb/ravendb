@@ -13,17 +13,10 @@ using Xunit;
 namespace AiApplianceTests;
 
 /// <summary>
-/// RavenDB-26700 — the embed chat continuation contract that closes ayende's
-/// A2 (a client-supplied conversationId over enumerable, server-allocated
-/// sequential ids). The appliance mints a random <c>chats/{guid}</c> id itself
-/// and hands it back in the <c>done</c> frame; a client echo is pinned to the
-/// <c>chats/</c> prefix, and a guessed id is structurally unreachable because
-/// real ids are random. Plus the M1b Origin defense-in-depth gate.
-///
-/// No live LLM here: these prove the request gates (400/403/404/410) and that
-/// the NDJSON stream opens. The real minted-id shape + multi-turn continuation
-/// are asserted in the E2E (<see cref="E2E.ApplianceFullFlowTests"/> T14/T14b),
-/// which has a real agent and so reaches the <c>done</c> frame.
+/// RavenDB-26700 embed chat contract: random chats/{guid} continuation id +
+/// the M1b Origin gate. No live LLM — these cover the request gates
+/// (400/403/404/410) and that the stream opens; real minted-id + continuation
+/// are in the E2E (<see cref="E2E.ApplianceFullFlowTests"/> T14/T14b).
 /// </summary>
 public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
 {
@@ -58,9 +51,7 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Continuation_with_a_chats_id_opens_a_stream()
     {
-        // The continuation contract accepts a chats/-prefixed id (what the
-        // client got back in the previous done frame). Wiring-level: a real
-        // resumed thread is asserted in the E2E.
+        // Continuation accepts a chats/-prefixed id; the real resumed thread is E2E.
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
         using var _db = cleanup;
@@ -81,9 +72,7 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Non_chats_conversation_id_is_rejected()
     {
-        // A2 guard: a conversationId echoed by the client is pinned to the
-        // chats/ prefix, so it can never address an unrelated document. Runs
-        // before the stream opens -> clean 400.
+        // A2 guard: a client conversationId is pinned to the chats/ prefix → clean 400.
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
         using var _db = cleanup;

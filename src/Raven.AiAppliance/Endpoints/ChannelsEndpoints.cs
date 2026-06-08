@@ -148,11 +148,8 @@ public static class ChannelsEndpoints
             }
         }
 
-        // Slow path. H1 (security review 2026-05-25): widgetId is the public,
-        // bearer-style identifier baked into embed snippets and the
-        // /embed/{widgetId} path. A random GUID keeps it unguessable — NOT
-        // derived from the binding tuple (slug + type + agentId are public
-        // inputs).
+        // Slow path. widgetId is the public bearer id in embed snippets; a random
+        // GUID keeps it unguessable (H1, security review 2026-05-25).
         var widgetId = "wgt_" + Guid.NewGuid().ToString("N");
         var channelDocId = Channel.IdPrefix + widgetId;
 
@@ -195,18 +192,10 @@ public static class ChannelsEndpoints
         }
         catch (ClusterTransactionConcurrencyException e)
         {
-            // Lost the race. The winning binding is committed to Raft, but its
-            // document is applied ASYNCHRONOUSLY by the database's cluster-tx
-            // loop, so an immediate read can miss it. RavenDB's read-your-writes
-            // wait covers this — a read carrying the last-cluster-tx index waits
-            // on the per-database ClusterWideTransactionIndexWaiter (set AFTER
-            // the document Put) — but the client only arms that index on a
-            // SUCCESSFUL cluster-tx, not on this conflict path. So arm it from
-            // the conflict's compare-exchange violation (the winner's guard
-            // index == the raft index that waiter reaches), then a SINGLE read
-            // is deterministic — no polling. (ayende PR review 2026-06-07;
-            // WaitForRaftIndexCommand is the wrong lever — it waits on the
-            // cluster state machine, which advances before the document Put.)
+            // Lost the race. The winner's doc is applied async after the guard
+            // commits, so arm the read with the winner's index (from the
+            // violation) — the read then waits for that apply — and read once.
+            // No polling. See ClusterWideConflictReadTests / ayende PR review.
             var winnerIndex = e.ConcurrencyViolations is { Length: > 0 }
                 ? e.ConcurrencyViolations.Max(v => v.Actual)
                 : 0;
