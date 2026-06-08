@@ -88,6 +88,27 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 
+    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData("chats/")]    // bare prefix → server auto-allocates a sequential id
+    [InlineData("chats/x|")]  // trailing | → cluster identity (chats/1, chats/2…)
+    public async Task Conversation_id_that_forces_server_allocation_is_rejected(string conversationId)
+    {
+        // A2: a client must not be able to force RavenDB to mint an enumerable id.
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
+
+        var resp = await client.PostAsJsonAsync($"/embed/{widgetId}/chat",
+            new { prompt = "hi", conversationId });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
     // ---- M1b Origin matrix ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]
