@@ -147,23 +147,19 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         Assert.DoesNotContain("|", beforeToggleChangeVector);
 
         var hubDatabase = await Databases.GetDocumentDatabaseInstanceFor(hub);
-        var sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
 
-        var oldHubOutgoingHandler = await AssertWaitForNotNullAsync(
+        var hubOutgoingHandler = await AssertWaitForNotNullAsync(
             () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().SingleOrDefault()),
             timeout: 30_000);
-        var oldSinkIncomingHandler = await AssertWaitForNotNullAsync(
-            () => Task.FromResult(sinkDatabase.ReplicationLoader.IncomingHandlers.OfType<IncomingPullReplicationHandler>().SingleOrDefault()),
-            timeout: 30_000);
+        Assert.False(hubOutgoingHandler.BothSidesSupportCompositeChangeVectors);
+
+        var sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
 
         await SetPullReplicationCompositeChangeVectorsFeatureAsync(hubDatabase, enabled: true);
         await SetPullReplicationCompositeChangeVectorsFeatureAsync(sinkDatabase, enabled: true);
 
         await AssertWaitForTrueAsync(
-            () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().Any(x => ReferenceEquals(x, oldHubOutgoingHandler) == false)),
-            timeout: 30_000);
-        await AssertWaitForTrueAsync(
-            () => Task.FromResult(sinkDatabase.ReplicationLoader.IncomingHandlers.OfType<IncomingPullReplicationHandler>().Any(x => ReferenceEquals(x, oldSinkIncomingHandler) == false)),
+            () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().Any(x => x.BothSidesSupportCompositeChangeVectors)),
             timeout: 30_000);
 
         await StoreTestItemAsync(hub, "items/include/after-toggle", "after-toggle");
