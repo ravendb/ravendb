@@ -13,18 +13,9 @@ using Raven.Client.Documents;
 namespace Raven.AiAppliance.Endpoints;
 
 /// <summary>
-/// Public customer-facing iFrame channel (design §1.4 / §3.5). Two routes —
-/// the embed page and its chat stream — keyed by the public <c>widgetId</c>
-/// (no login). Conversation continuation carries the <c>conversationId</c> the
-/// server minted on turn 1: a random <c>chats/{guid}</c> id (RavenDB-26700;
-/// closes ayende's A2 — the appliance allocates the id itself instead of
-/// letting RavenDB auto-allocate a sequential, enumerable one, so a visitor
-/// can't walk the sequence into another user's chat). Plus the M1b Origin
-/// defense-in-depth check. Turn 1 itself stays ungated (accepted demo posture;
-/// rate limiting deferred). Deliberately mapped OUTSIDE the <c>/api</c> group
-/// so the readiness gate and dashboard auth don't apply; it MUST be registered
-/// before the SPA fallback in <c>Program.cs</c> or the <c>{*path:nonfile}</c>
-/// fallback would swallow it.
+/// Public iFrame channel (design §1.4 / §3.5): the embed page + its chat stream,
+/// keyed by the public <c>widgetId</c> (no login). Map before the SPA fallback in
+/// <c>Program.cs</c> or <c>{*path:nonfile}</c> swallows it.
 /// </summary>
 public static class EmbedEndpoints
 {
@@ -53,13 +44,8 @@ public static class EmbedEndpoints
 
         var (_, channel) = resolved.Value;
 
-        // Best-effort hardening: constrain who may frame this page to the
-        // operator-configured origins; the host page's own CSP still governs
-        // actual loading. Decided 2026-06-04: an EMPTY origins list
-        // intentionally emits no frame-ancestors at all — the widget is
-        // embeddable from anywhere (M1 documented contract). The
-        // /embed/{widgetId}/chat POST additionally runs the M1b Origin
-        // defense-in-depth check (see IsOriginAllowed).
+        // frame-ancestors from the configured origins; empty list = embeddable
+        // anywhere (M1 contract). The chat POST also runs the Origin check.
         if (channel.AllowedOrigins.Length > 0)
             ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors {string.Join(' ', channel.AllowedOrigins)}";
 
@@ -91,8 +77,7 @@ public static class EmbedEndpoints
 
         var (app, channel) = resolved.Value;
 
-        // M1b origin defense-in-depth — see IsOriginAllowed for the honest
-        // accounting of what this does and does not protect against.
+        // M1b Origin defense-in-depth (see IsOriginAllowed).
         if (IsOriginAllowed(ctx.Request, channel.AllowedOrigins) == false)
         {
             ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -100,12 +85,9 @@ public static class EmbedEndpoints
             return;
         }
 
-        // Conversation id. Turn 1 (none supplied): the appliance MINTS a random
-        // chats/{guid} itself — NOT RavenDB's auto-allocated sequential id,
-        // which would be enumerable (A2). Turn 2+: the client echoes the id it
-        // got in the previous done frame; pin it to the chats/ prefix so it
-        // can't address an unrelated document, and a guessed id (random space)
-        // simply won't exist -> a fresh conversation, never another user's.
+        // Turn 1: mint a random chats/{guid} (not RavenDB's enumerable
+        // sequential id — A2). Turn 2+: take the client's echoed id, pinned to
+        // the chats/ prefix; a guessed id is random-space, so it just misses.
         string conversationId;
         if (string.IsNullOrWhiteSpace(body.ConversationId))
         {
@@ -118,12 +100,8 @@ public static class EmbedEndpoints
             return;
         }
 
-        // The channel's stored AgentId can drift out of the in-process registry
-        // (agent renamed/removed across versions). Check before the stream opens
-        // so the failure is a clean status instead of 200 + an error frame — and
-        // use 404, not 400: the agent id is server-side state, not client input,
-        // and the public embed surface deliberately collapses all failure modes
-        // into 404 (mirrors ResolveAsync).
+        // AgentId can drift out of the registry across versions; fail clean as
+        // 404 before the stream opens (public surface collapses all misses to 404).
         if (schemas.TryGet(channel.AgentId, out var schema) == false)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -138,9 +116,7 @@ public static class EmbedEndpoints
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ct);
 
-            // Echo the conversation id so the client can continue the thread.
-            // It's a random chats/{guid} (unguessable), so handing it back is
-            // safe — there's nothing to hide once the id isn't enumerable.
+            // Echo the (unguessable, random) id so the client can continue.
             await NdjsonStream.WriteLineAsync(ctx, new
             {
                 type = "done",
@@ -167,21 +143,10 @@ public static class EmbedEndpoints
     }
 
     /// <summary>
-    /// M1b origin defense-in-depth on the chat POST. Honest accounting (M1,
-    /// security review 2026-06-04): this constrains BROWSER-SCRIPT abuse only —
-    /// non-browser clients omit <c>Origin</c> and pass (the unguessable
-    /// conversation id is what protects continuation), and cross-origin browser
-    /// <c>fetch</c> is already dead without it (no CORS middleware → the
-    /// preflight fails). Empty <c>AllowedOrigins</c> = the documented open-embed
-    /// contract (M1): skip. The embed page itself POSTs with the appliance's own
-    /// origin, so that is always allowed — compared case-insensitively (scheme
-    /// and host are case-insensitive per RFC 3986, so case can never
-    /// distinguish two origins; stored origins are already lowercased by Uri at
-    /// provision). M2 known limitation: behind a TLS-terminating proxy
-    /// <c>Request.Scheme</c> stays <c>http</c> (Kestrel listens plain HTTP; no
-    /// <c>UseForwardedHeaders</c>), so the self-origin compare would 403 the
-    /// appliance's own widget — the demo posture is direct-port access;
-    /// <c>UseForwardedHeaders</c> is the future fix.
+    /// M1b: 403 a present-but-disallowed Origin. Browser-script defense only —
+    /// non-browser callers omit Origin and pass (the random id is the real guard).
+    /// Empty list skips (M1). The appliance's own origin is always allowed,
+    /// case-insensitively. Known gap: breaks behind a TLS proxy (no UseForwardedHeaders).
     /// </summary>
     private static bool IsOriginAllowed(HttpRequest request, string[] allowedOrigins)
     {
@@ -202,13 +167,8 @@ public static class EmbedEndpoints
         return string.Equals(origin, self, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Resolves the widget and enforces the public-route status contract shared
-    /// by both embed handlers: writes <c>404</c> when the widget can't be
-    /// resolved, <c>410 Gone</c> when it's disabled, and returns the
-    /// <c>(App, Channel)</c> only when the channel is live. Returns null (with
-    /// the status already written) otherwise.
-    /// </summary>
+    /// <summary>Resolves the widget, writing 404 (unresolved) or 410 (disabled)
+    /// and returning null in those cases; otherwise the live (App, Channel).</summary>
     private static async Task<(App app, Channel channel)?> TryResolveEnabledChannelAsync(
         HttpContext ctx, IDocumentStore store, string widgetId, CancellationToken ct)
     {
@@ -229,14 +189,9 @@ public static class EmbedEndpoints
         return resolved;
     }
 
-    /// <summary>
-    /// Resolves a public widgetId to its per-app DB + channel doc. The embed
-    /// routes have only the widgetId, and the bridge's default store targets
-    /// the config DB, so we hop: <c>widget-index/{widgetId}</c> (config) → slug →
-    /// <c>apps/{slug}</c> (config) → <c>channels/{widgetId}</c> (app DB).
-    /// Returns null on any miss — the public page must not distinguish the
-    /// failure modes (all surface as 404).
-    /// </summary>
+    /// <summary>Resolves a widgetId by hopping config DB → app DB:
+    /// <c>widget-index/{widgetId}</c> → <c>apps/{slug}</c> → <c>channels/{widgetId}</c>.
+    /// Null on any miss (callers surface all misses as 404).</summary>
     private static async Task<(App app, Channel channel)?> ResolveAsync(
         IDocumentStore store, string widgetId, CancellationToken ct)
     {
@@ -247,8 +202,7 @@ public static class EmbedEndpoints
             if (string.IsNullOrEmpty(index?.Slug))
                 return null;
 
-            // The apps/{slug} load depends on the widget-index result, so it
-            // can't be batched — but it reuses the same config-DB session.
+            // Depends on the widget-index result; reuses the config-DB session.
             app = await cfg.LoadAsync<App>($"apps/{index.Slug}", ct);
         }
 
@@ -262,9 +216,7 @@ public static class EmbedEndpoints
         if (channel is null)
             return null;
 
-        // /embed/{widgetId} is the iFrame public surface — never serve a
-        // non-IFrame channel doc (e.g. a future Telegram/WhatsApp channel that
-        // shares the channels/ prefix). Treat it as a miss -> 404.
+        // iFrame-only surface — a non-IFrame channel sharing the prefix is a miss.
         if (channel.Type != ChannelType.IFrame)
             return null;
 
@@ -282,10 +234,8 @@ public static class EmbedEndpoints
     /// Logger category marker — keeps the ILogger generic-arg out of the public surface.
     internal sealed class EmbedLogger;
 
-    // Self-contained vanilla page (no framework, no external assets). widgetId
-    // is base64url-safe so it's substituted directly; the title is HTML-encoded
-    // before substitution. Placeholders are replaced (not C# interpolation) so
-    // the JS/CSS braces need no escaping.
+    // Self-contained vanilla page. Placeholders are string-replaced (title is
+    // HTML-encoded; widgetId is base64url-safe) so JS/CSS braces need no escaping.
     private const string EmbedHtmlTemplate = """
 <!DOCTYPE html>
 <html lang="en">
@@ -322,9 +272,7 @@ const widgetId = "__WIDGET_ID__";
 const feed = document.getElementById("ai-chat-feed");
 const form = document.getElementById("ai-chat-form");
 const input = document.getElementById("ai-chat-input");
-// The server-minted conversation id (random chats/{guid}) from the previous
-// turn's done frame. Lives in this variable ONLY — never localStorage: a page
-// reload simply starts a fresh conversation (anonymous-session semantics).
+// Server-minted id from the previous done frame; in-memory only (reload = fresh chat).
 let conversationId = null;
 
 function addRow(cls, text) {

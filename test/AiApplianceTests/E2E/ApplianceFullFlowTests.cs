@@ -275,9 +275,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(sawDone, "embed chat stream did not emit a 'done' frame");
         Assert.False(string.IsNullOrWhiteSpace(replyText), "embed chat produced no reply text");
 
-        // A2: the minted id is a RANDOM chats/{guid} — never RavenDB's
-        // sequential auto-allocated id (chats/000…NN-A), so a visitor can't
-        // enumerate into another user's conversation.
+        // A2: the minted id is a random chats/{guid}, not an enumerable sequential one.
         Assert.False(string.IsNullOrEmpty(conversationId), "turn 1 did not return a conversationId");
         Assert.StartsWith("chats/", conversationId);
         Assert.Matches(@"^chats/[0-9a-f]{32}$", conversationId!);
