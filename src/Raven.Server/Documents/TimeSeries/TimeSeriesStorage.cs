@@ -647,7 +647,7 @@ namespace Raven.Server.Documents.TimeSeries
             ChangeVector changeVector,
             TimeSeriesValuesSegment segment,
             DateTime baseline, 
-            LazyStringValue parentDocCv)
+            string parentDocCv)
         {
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
@@ -855,7 +855,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, ChangeVector changeVector,
-            CollectionName collectionName, TimeSeriesValuesSegment segment, DateTime baseline, LazyStringValue parentDocCv)
+            CollectionName collectionName, TimeSeriesValuesSegment segment, DateTime baseline, string parentDocCv)
         {
             var hash = (long)Hashing.XXHash64.Calculate(changeVector.Version.AsString(), Encoding.UTF8);
             using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
@@ -2417,7 +2417,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (includeDocumentChangeVector)
             {
                 var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector);
-                item.ParentDocChangeVector = context.GetLazyString(doc?.ChangeVector);
+                item.ParentDocChangeVector = doc?.ChangeVector;
             }
 
             return item;

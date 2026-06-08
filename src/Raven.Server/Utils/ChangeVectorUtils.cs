@@ -430,7 +430,7 @@ namespace Raven.Server.Utils
             return stringBuilder.ToString();
         }
 
-        internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, string incomingVersion, ChangeVector globalChangeVector,
+        internal static string MaskUnknownEntriesWithSinkTag(DocumentsOperationContext context, string incomingVersion, ChangeVector globalChangeVector,
             List<ChangeVectorEntry> knownEntries = null, bool trackIgnoredDbIds = false)
         {
             var global = globalChangeVector?.AsString().ToChangeVectorList();

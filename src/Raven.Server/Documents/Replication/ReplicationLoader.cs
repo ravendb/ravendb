@@ -83,6 +83,7 @@ namespace Raven.Server.Documents.Replication
         private bool _replicationDisabledByMarker;
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
         private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination = new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
+        private bool _pullReplicationCompositeChangeVectorsSupported;
 
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
         public IEnumerable<DatabaseOutgoingReplicationHandler> OutgoingHandlers => _outgoing;
@@ -325,51 +326,8 @@ namespace Raven.Server.Documents.Replication
                 case RegisterReplicationHubAccessCommand reg:
                     DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
                     break;
-
-                case SetPullReplicationCompositeChangeVectorsFeatureCommand:
-                    DisposeAllPullReplication();
-                    break;
             }
             return Task.CompletedTask;
-
-            void DisposeAllPullReplication()
-            {
-                foreach (var (key, repl) in _incoming)
-                {
-                    if (repl is IncomingPullReplicationHandler == false)
-                        continue;
-
-                    try
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Resetting {repl.ConnectionInfo} because pull replication composite change-vector support changed. Will be reconnected.");
-                        repl.Dispose();
-                        _incoming.TryRemove(key, out _);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Failed to reset {repl.ConnectionInfo} after pull replication composite change-vector support changed.", e);
-                    }
-                }
-
-                foreach (var repl in _outgoing)
-                {
-                    if (repl is OutgoingPullReplicationHandler == false)
-                        continue;
-
-                    try
-                    {
-                        repl.Dispose();
-                        _outgoing.TryRemove(repl);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} after pull replication composite change-vector support changed.", e);
-                    }
-                }
-            }
 
             void DisposeRelatedPullReplication(string hub, string certThumbprint, string sourceDatabase = null)
             {
@@ -381,9 +339,9 @@ namespace Raven.Server.Documents.Replication
                     if (repl is IncomingPullReplicationHandler pullHandler == false)
                         continue;
 
-                    if (string.Equals(pullHandler._incomingPullReplicationParams.Name, hub, StringComparison.OrdinalIgnoreCase) == false ||
+                    if (string.Equals(pullHandler.IncomingPullReplicationParams.Name, hub, StringComparison.OrdinalIgnoreCase) == false ||
                         (string.IsNullOrEmpty(sourceDatabase) == false &&
-                         string.Equals(pullHandler._incomingPullReplicationParams.SourceDatabaseName, sourceDatabase, StringComparison.OrdinalIgnoreCase) == false))
+                         string.Equals(pullHandler.IncomingPullReplicationParams.SourceDatabaseName, sourceDatabase, StringComparison.OrdinalIgnoreCase) == false))
                         continue;
 
                     if (certThumbprint != null && pullHandler.CertificateThumbprint != certThumbprint)
@@ -428,6 +386,22 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
+        }
+
+        private void QueueOutgoingForImmediateReconnect(DatabaseOutgoingReplicationHandler replicationHandler)
+        {
+            UpdateLastEtag(replicationHandler);
+
+            var shutdownInfo = _outgoingFailureInfo.GetOrAdd(replicationHandler.Node, new ConnectionShutdownInfo
+            {
+                Node = replicationHandler.Node,
+                MaxConnectionTimeout = Database.Configuration.Replication.RetryMaxTimeout.AsTimeSpan.TotalMilliseconds
+            });
+            shutdownInfo.Reset();
+            shutdownInfo.RetryOn = DateTime.MinValue;
+            shutdownInfo.DestinationDbId = replicationHandler.DestinationDbId;
+            shutdownInfo.LastHeartbeatTicks = replicationHandler.LastHeartbeatTicks;
+            _reconnectQueue.Add(shutdownInfo);
         }
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
@@ -737,13 +711,24 @@ namespace Raven.Server.Documents.Replication
                     getLatestEtagMessage.ReplicationsType);
             }
 
-            return new IncomingPullReplicationHandler(
-                tcpConnectionOptions,
-                getLatestEtagMessage,
-                this,
-                buffer,
-                getLatestEtagMessage.ReplicationsType,
-                incomingPullParams);
+            return incomingPullParams.Mode switch
+            {
+                PullReplicationMode.SinkToHub => new IncomingPullReplicationHandlerAsHub(
+                    tcpConnectionOptions,
+                    getLatestEtagMessage,
+                    this,
+                    buffer,
+                    getLatestEtagMessage.ReplicationsType,
+                    incomingPullParams),
+                PullReplicationMode.HubToSink => new IncomingPullReplicationHandlerAsSink(
+                    tcpConnectionOptions,
+                    getLatestEtagMessage,
+                    this,
+                    buffer,
+                    getLatestEtagMessage.ReplicationsType,
+                    incomingPullParams),
+                _ => throw new InvalidOperationException($"Unexpected incoming pull replication mode '{incomingPullParams.Mode}'.")
+            };
         }
 
         internal static readonly TimeSpan MaxInactiveTime = TimeSpan.FromSeconds(60);
@@ -834,6 +819,7 @@ namespace Raven.Server.Documents.Replication
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
 
+            _pullReplicationCompositeChangeVectorsSupported = SupportsPullReplicationCompositeChangeVectors(record);
             ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _logger);
             Task.Run(() => ConflictResolver.RunConflictResolversOnce(record.ConflictSolverConfig, index));
@@ -858,6 +844,64 @@ namespace Raven.Server.Documents.Replication
             HandleConflictResolverChange(newRecord, index);
             HandleTopologyChange(newRecord);
             UpdateConnectionStrings(newRecord);
+            HandlePullReplicationCompositeChangeVectorFeatureChange(newRecord);
+        }
+
+        private void HandlePullReplicationCompositeChangeVectorFeatureChange(DatabaseRecord newRecord)
+        {
+            var supportsPullReplicationCompositeChangeVectors = SupportsPullReplicationCompositeChangeVectors(newRecord);
+            if (newRecord == null ||
+                _pullReplicationCompositeChangeVectorsSupported == supportsPullReplicationCompositeChangeVectors)
+                return;
+
+            _pullReplicationCompositeChangeVectorsSupported = supportsPullReplicationCompositeChangeVectors;
+
+            foreach (var (key, repl) in _incoming)
+            {
+                if (repl is IncomingPullReplicationHandler == false)
+                    continue;
+
+                try
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Resetting {repl.ConnectionInfo} because pull replication composite change-vector support changed. Will be reconnected.");
+                    repl.Dispose();
+                    _incoming.TryRemove(key, out _);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to reset {repl.ConnectionInfo} after pull replication composite change-vector support changed.", e);
+                }
+            }
+
+            var shouldTryReconnect = false;
+            foreach (var repl in _outgoing)
+            {
+                if (repl is OutgoingPullReplicationHandler == false)
+                    continue;
+
+                try
+                {
+                    QueueOutgoingForImmediateReconnect(repl);
+                    shouldTryReconnect = true;
+                    repl.Dispose();
+                    _outgoing.TryRemove(repl);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} after pull replication composite change-vector support changed.", e);
+                }
+            }
+
+            if (shouldTryReconnect)
+                ForceTryReconnectAll();
+        }
+
+        private static bool SupportsPullReplicationCompositeChangeVectors(DatabaseRecord record)
+        {
+            return record?.SupportedFeatures?.Contains(Constants.DatabaseRecord.SupportedFeatures.PullReplicationCompositeChangeVectors) == true;
         }
 
         private void UpdateConnectionStrings(DatabaseRecord newRecord)
@@ -2032,24 +2076,6 @@ namespace Raven.Server.Documents.Replication
             }
 
             return count;
-        }
-
-        public static bool IsOfTypePreventDeletions(ReplicationBatchItem item)
-        {
-            switch (item.Type)
-            {
-                case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
-                case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
-                case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
-                case ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange:
-                    return true;
-                case ReplicationBatchItem.ReplicationItemType.Document:
-                    if (item is DocumentReplicationItem doc && doc.Flags.Contain(DocumentFlags.DeleteRevision))
-                        return true;
-                    break;
-            }
-
-            return false;
         }
 
         internal ReplicationProcessProgress GetOutgoingReplicationProgress(DocumentsOperationContext documentsContext, DatabaseOutgoingReplicationHandler handler)

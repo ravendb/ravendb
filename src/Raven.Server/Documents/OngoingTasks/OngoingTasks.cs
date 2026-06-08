@@ -176,7 +176,7 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
                 foreach (var incoming in handlers)
                 {
                     if (incoming is IncomingPullReplicationHandler pullHandler &&
-                        pullHandler._incomingPullReplicationParams?.Name == sinkReplication.HubName)
+                        pullHandler.IncomingPullReplicationParams?.Name == sinkReplication.HubName)
                     {
                         result = (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);
                         break;

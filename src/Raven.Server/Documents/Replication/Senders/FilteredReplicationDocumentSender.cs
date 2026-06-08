@@ -11,36 +11,40 @@ namespace Raven.Server.Documents.Replication.Senders
     public sealed class FilteredReplicationDocumentSender : ExternalReplicationDocumentSender
     {
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
-        private readonly bool _shouldSkipSendingTombstones;
-        private readonly bool _canFilterOutSourceItems;
-        private readonly bool _bothSidesSupportCompositeChangeVectors;
-        private readonly bool _senderIsHub;
+        private readonly OutgoingPullReplicationHandler _pullReplicationHandler;
 
         public FilteredReplicationDocumentSender(Stream stream, OutgoingPullReplicationHandler parent, RavenLogger log, string[] pathsToSend, string[] destinationAcceptablePaths) : base(stream, parent, log)
         {
+            _pullReplicationHandler = parent;
+
             if (pathsToSend != null && pathsToSend.Length > 0)
                 _pathsToSend = new AllowedPathsValidator(pathsToSend);
+
             if (destinationAcceptablePaths != null && destinationAcceptablePaths.Length > 0)
                 _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
-            
-            _shouldSkipSendingTombstones = parent.CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
-            _canFilterOutSourceItems = parent.CanFilterOutSourceItems;
-            _bothSidesSupportCompositeChangeVectors = parent.BothSidesSupportCompositeChangeVectors;
-            _senderIsHub = parent is OutgoingPullReplicationHandlerAsHub;
         }
 
         protected override void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
-            if (_bothSidesSupportCompositeChangeVectors)
+            if (_pullReplicationHandler.BothSidesSupportCompositeChangeVectors == false)
             {
-                WriteReplicationItemToStream(documentsContext, item, stats);
-                return;
+                item.ChangeVector = documentsContext.GetChangeVector(item.ChangeVector).Version;
+
+                var timeSeriesItem = item as TimeSeriesReplicationItem;
+                if (timeSeriesItem != null)
+                    timeSeriesItem.ParentDocChangeVector = documentsContext.GetChangeVector(timeSeriesItem.ParentDocChangeVector).Version;
+
+                if (_pullReplicationHandler is OutgoingPullReplicationHandlerAsHub)
+                {
+                    var hubDatabaseChangeVector = documentsContext.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                    item.ChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, item.ChangeVector, hubDatabaseChangeVector);
+
+                    if (timeSeriesItem != null)
+                        timeSeriesItem.ParentDocChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, timeSeriesItem.ParentDocChangeVector, hubDatabaseChangeVector);
+                }
             }
 
-            using (item.UseLegacyCompatibleChangeVectorsForSending(documentsContext, _senderIsHub))
-            {
-                WriteReplicationItemToStream(documentsContext, item, stats);
-            }
+            base.WriteReplicationItem(documentsContext, item, stats);
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
@@ -48,7 +52,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
 
-            if (_shouldSkipSendingTombstones && ReplicationLoader.IsOfTypePreventDeletions(item))
+            if (_pullReplicationHandler.CanFilterOutSourceItemsByPreventingSinkToHubDeletions && item.IsPreventableSinkToHubDeletion())
                 return true;
 
             return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
@@ -77,7 +81,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override void SendEmptyBatchHeartbeat(DocumentsOperationContext context, bool wasInterrupted, ChangeVector completedSourceFrontier)
         {
-            if (wasInterrupted || _canFilterOutSourceItems == false)
+            if (wasInterrupted || _pullReplicationHandler.CanFilterOutSourceItems == false)
             {
                 base.SendEmptyBatchHeartbeat(context, wasInterrupted, completedSourceFrontier);
                 return;
