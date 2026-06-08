@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
-using Raven.Client.Util;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -97,11 +94,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public unsafe void ReadChangeVectorAndMarker()
         {
-            var changeVectorSize = *(int*)Reader.ReadExactly(sizeof(int));
-
-            if (changeVectorSize != 0)
-                ChangeVector = Encoding.UTF8.GetString(Reader.ReadExactly(changeVectorSize), changeVectorSize);
-
+            ChangeVector = ReadString();
             TransactionMarker = *(short*)Reader.ReadExactly(sizeof(short));
         }
 
@@ -167,6 +160,34 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             prop = context.GetLazyString(Encoding.UTF8.GetString(Reader.ReadExactly(size), size));
         }
 
+        protected unsafe string ReadString()
+        {
+            var size = *(int*)Reader.ReadExactly(sizeof(int));
+
+            if (size == 0)
+                return string.Empty;
+
+            return Encoding.UTF8.GetString(Reader.ReadExactly(size), size);
+        }
+
+        public bool IsPreventableSinkToHubDeletion()
+        {
+            switch (Type)
+            {
+                case ReplicationItemType.RevisionTombstone:
+                case ReplicationItemType.AttachmentTombstone:
+                case ReplicationItemType.DocumentTombstone:
+                case ReplicationItemType.DeletedTimeSeriesRange:
+                    return true;
+                case ReplicationItemType.Document:
+                    if (this is DocumentReplicationItem doc && doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                        return true;
+                    break;
+            }
+
+            return false;
+        }
+
         public enum ReplicationItemType : byte
         {
             Document = 1,
@@ -191,31 +212,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         }
 
         protected abstract void InnerDispose();
-
-        internal virtual IDisposable UseLegacyCompatibleChangeVectorsForSending(DocumentsOperationContext context, bool senderIsHub)
-        {
-            var originalChangeVector = ChangeVector;
-            var changeVectorForSending = GetLegacyCompatibleChangeVectorForSending(context, originalChangeVector, senderIsHub);
-            if (changeVectorForSending == originalChangeVector)
-                return null;
-
-            ChangeVector = changeVectorForSending;
-            return new DisposableAction(() => ChangeVector = originalChangeVector);
-        }
-
-        private protected static string GetLegacyCompatibleChangeVectorForSending(DocumentsOperationContext context, string changeVector, bool senderIsHub)
-        {
-            if (string.IsNullOrEmpty(changeVector))
-                return changeVector;
-
-            string versionChangeVector = context.GetChangeVector(changeVector).Version;
-
-            if (senderIsHub == false)
-                return versionChangeVector;
-
-            var hubDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-            return ChangeVectorUtils.ReplaceUnknownEntriesWithSinkTag(context, versionChangeVector, hubDatabaseChangeVector);
-        }
 
         public void Dispose()
         {

@@ -32,7 +32,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
-    public class IncomingReplicationHandler : AbstractIncomingReplicationHandler<DocumentsContextPool, DocumentsOperationContext>
+    public partial class IncomingReplicationHandler : AbstractIncomingReplicationHandler<DocumentsContextPool, DocumentsOperationContext>
     {
         private readonly DocumentDatabase _database;
         private readonly ReplicationLoader _parent;
@@ -100,153 +100,55 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override int GetNextReplicationStatsId() => _parent.GetNextReplicationStatsId();
 
-        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
-        {
-            return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, connectionInfo, trigger);
-        }
-
-        protected virtual string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
-        {
-            return changeVector;
-        }
-
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
             return new MergedDocumentReplicationCommand(data, lastDocumentEtag, isInternal: ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal);
         }
 
-        internal class MergedUpdateDatabaseChangeVectorCommand : DocumentMergedTransactionCommand
-        {
-            private readonly string _changeVector;
-            private readonly long _lastDocumentEtag;
-            private readonly IncomingConnectionInfo _connectionInfo;
-            private readonly AsyncManualResetEvent _trigger;
-
-            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
-            {
-                _changeVector = changeVector;
-                _lastDocumentEtag = lastDocumentEtag;
-                _connectionInfo = connectionInfo;
-                _trigger = trigger;
-            }
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                var operationsCount = 0;
-                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId);
-                if (_lastDocumentEtag > lastReplicatedEtag)
-                {
-                    DocumentsStorage.SetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId, _lastDocumentEtag);
-                    operationsCount++;
-                }
-
-                if (TryUpdateChangeVector(context))
-                    operationsCount++;
-
-                return operationsCount;
-            }
-
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
-            {
-                return new MergedUpdateDatabaseChangeVectorCommandDto
-                {
-                    ChangeVector = _changeVector,
-                    LastDocumentEtag = _lastDocumentEtag,
-                    IncomingConnectionInfo = _connectionInfo,
-                };
-            }
-
-            protected virtual bool TryUpdateChangeVector(DocumentsOperationContext context)
-            {
-                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
-                if (conflictStatus != ConflictStatus.Update)
-                {
-                    if (string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false)
-                    {
-                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, _lastDocumentEtag, current);
-                        if (result.IsValid)
-                        {
-                            context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
-                        }
-                    }
-
-                    return false;
-                }
-
-                context.LastDatabaseChangeVector = current.MergeWith(_changeVector, context);
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
-                {
-                    try
-                    {
-                        _trigger.Set();
-                    }
-                    catch
-                    {
-                        //
-                    }
-                };
-
-                return true;
-            }
-        }
-
-        internal sealed class MergedUpdateDatabaseChangeVectorCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorCommand>
-        {
-            public string ChangeVector;
-            public long LastDocumentEtag;
-            public IncomingConnectionInfo IncomingConnectionInfo;
-
-            public MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-            {
-                var command = new MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, IncomingConnectionInfo,
-                    new AsyncManualResetEvent());
-                return command;
-            }
-        }
-
         protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
         {
-            if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
+            if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector) == false)
+                return;
+
+            // saving the change vector and the last received document etag
+            long lastEtag;
+            string lastChangeVector;
+            using (documentsContext.OpenReadTransaction())
             {
-                // saving the change vector and the last received document etag
-                long lastEtag;
-                string lastChangeVector;
-                using (documentsContext.OpenReadTransaction())
+                lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
+                lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+            }
+
+            var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
+            if (status != ConflictStatus.Update && _lastDocumentEtag <= lastEtag)
+                return;
+
+            if (Logger.IsDebugEnabled)
+            {
+                Logger.Debug(
+                    $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
+                    $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
+            }
+
+            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
+            EnqueueUpdateChangeVectorCommand(cmd);
+        }
+
+        protected void EnqueueUpdateChangeVectorCommand(DocumentMergedTransactionCommand cmd)
+        {
+            if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
+            {
+                if (Logger.IsDebugEnabled)
                 {
-                    lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
-                    lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                    Logger.Debug(
+                        $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
+                        "nevertheless we create an additional task.");
                 }
-
-                changeVector = ReplaceUnknownEntriesWithSinkIfNeeded(documentsContext, changeVector);
-
-                var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
-                if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
-                {
-                    if (Logger.IsDebugEnabled)
-                    {
-                        Logger.Debug(
-                            $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
-                            $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
-                    }
-
-                    var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
-
-                    if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
-                    {
-                        if (Logger.IsDebugEnabled)
-                        {
-                            Logger.Debug(
-                                $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
-                                "nevertheless we create an additional task.");
-                        }
-                    }
-                    else
-                    {
-                        _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
-                    }
-                }
+            }
+            else
+            {
+                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
             }
         }
 
