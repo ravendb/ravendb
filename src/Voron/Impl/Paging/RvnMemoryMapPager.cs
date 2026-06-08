@@ -253,9 +253,9 @@ namespace Voron.Impl.Paging
         }
 
         /// <summary>
-        /// posix_fadvise(POSIX_FADV_SEQUENTIAL) on the journal's mmap fd raises the per-fd kernel
-        /// read-ahead window independently of the device's read_ahead_kb, so sequential recovery
-        /// isn't throttled when read_ahead_kb is tuned low. Linux only, best-effort.
+        /// posix_fadvise(POSIX_FADV_SEQUENTIAL) on the journal's mmap fd enlarges the per-fd kernel
+        /// read-ahead window for recovery (on tested kernels ~2x the device's read_ahead_kb), so a low
+        /// read_ahead_kb tuned for the random-access workload throttles recovery less. Linux only, best-effort.
         /// </summary>
         public void TrySetSequentialScanHint()
         {
