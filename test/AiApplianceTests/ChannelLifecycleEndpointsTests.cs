@@ -278,12 +278,9 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal(HttpStatusCode.Gone, resp.StatusCode);
     }
 
-    // Embed_chat_trims_and_validates_conversationId was DELETED here
-    // (RavenDB-26700 auth follow-up, review L7): the contract no longer
-    // carries a client-supplied conversationId at all — the field is ignored
-    // and the request proceeds as a fresh conversation. Its successor is
-    // EmbedAuthTests.Legacy_conversationId_field_is_ignored_and_cannot_reach_a_guessed_chat.
-    // Do NOT re-add validation of a field that must not exist.
+    // Embed chat continuation + the conversationId prefix guard live in
+    // EmbedAuthTests (RavenDB-26700): the embed mints a random chats/{guid}
+    // and accepts it back, pinned to the chats/ prefix.
 
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Embed_page_returns_404_for_non_iframe_channel()
