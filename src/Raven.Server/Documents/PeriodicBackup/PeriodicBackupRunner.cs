@@ -197,6 +197,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public string WhoseTaskIsIt(long taskId)
         {
+            Debug.Assert(_disposed == false, "PeriodicBackupRunner is already disposed");
+
             if (_periodicBackups.TryGetValue(taskId, out var periodicBackup) == false)
             {
                 throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
