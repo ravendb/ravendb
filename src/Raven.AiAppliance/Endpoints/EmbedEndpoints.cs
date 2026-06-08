@@ -99,6 +99,14 @@ public static class EmbedEndpoints
             await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(conversationError!), ct);
             return;
         }
+        else if (conversationId.EndsWith('/') || conversationId.EndsWith('|'))
+        {
+            // A trailing '/' or '|' makes RavenDB auto-allocate a sequential/identity
+            // id (enumerable — A2). A real continuation id never ends that way.
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("conversationId must be a complete id, not an allocation prefix"), ct);
+            return;
+        }
 
         // AgentId can drift out of the registry across versions; fail clean as
         // 404 before the stream opens (public surface collapses all misses to 404).
