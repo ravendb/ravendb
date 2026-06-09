@@ -329,7 +329,7 @@ namespace Raven.Server.ServerWide
             [nameof(EditSchemaValidationConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditSchemaValidationConfigurationCommand>(),
             [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseEtlsMappingCommand>(),
             [nameof(UpdateSnmpDatabaseAiTasksMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseAiTasksMappingCommand>(),
-            [nameof(SetPullReplicationCompositeChangeVectorsFeatureCommand)] = GenerateJsonDeserializationRoutine<SetPullReplicationCompositeChangeVectorsFeatureCommand>(),
+            [nameof(ModifyDatabaseSupportedFeaturesCommand)] = GenerateJsonDeserializationRoutine<ModifyDatabaseSupportedFeaturesCommand>(),
         };
     }
 }
