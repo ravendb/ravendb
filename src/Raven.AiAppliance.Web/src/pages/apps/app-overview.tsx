@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { appRoutes } from "@/lib/app-routes";
 import { cn } from "@/lib/utils";
+import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
 
 const CHANNEL_TYPE_LABELS: Record<NonNullable<ChannelType>, string> = {
     IFrame: "iFrame",
@@ -82,7 +83,7 @@ function ChannelsSection({ slug }: { slug: string }) {
     const channelsQuery = useQuery(api.queries.channels.list(slug));
 
     return (
-        <SectionCard title="Channels" action={<DisabledAddButton label="Add channel" />}>
+        <SectionCard title="Channels" action={<AddChannelMenu slug={slug} />}>
             <ApiState
                 isLoading={channelsQuery.isPending}
                 isError={channelsQuery.isError}
