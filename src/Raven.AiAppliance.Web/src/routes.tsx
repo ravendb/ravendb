@@ -16,6 +16,7 @@ import { AppApiUnavailable } from "@/pages/apps/app-api-unavailable";
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
+import { AppSettings } from "@/pages/apps/app-settings";
 import { AppTasks } from "@/pages/apps/app-tasks";
 import { Login } from "@/pages/auth/login";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
@@ -145,7 +146,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Settings,
             section: "settings",
         },
-        element: <AppApiUnavailable feature="Settings" />,
+        element: <AppSettings />,
     },
 ];
 

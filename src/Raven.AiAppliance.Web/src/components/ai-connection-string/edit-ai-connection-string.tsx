@@ -1,0 +1,65 @@
+import { useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/api/api";
+import type { AiModelType } from "@/api/generated/server-api";
+import { Button } from "@/components/shadcn/ui/button";
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/shadcn/ui/sheet";
+import { AiConnectionStringForm } from "@/components/ai-connection-string/ai-connection-string-form";
+import { mapDtoToFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+
+type EditAiConnectionStringProps = {
+    slug: string;
+    name: string;
+    modelType: AiModelType;
+    trigger: ReactNode;
+    onSaved: (name: string) => void | Promise<void>;
+};
+
+export function EditAiConnectionString({ slug, name, modelType, trigger, onSaved }: EditAiConnectionStringProps) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    // Only fetch the full connection string once the sheet opens.
+    const detailQuery = useQuery({ ...api.queries.aiConnectionStrings.detail(slug, name), enabled: isOpen });
+
+    return (
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>{trigger}</SheetTrigger>
+            <SheetContent className="w-full gap-0 sm:max-w-lg data-[side=right]:sm:max-w-lg">
+                <SheetHeader className="border-b">
+                    <SheetTitle>Edit connection string</SheetTitle>
+                    <SheetDescription>Update the provider details for “{name}”.</SheetDescription>
+                </SheetHeader>
+
+                {detailQuery.isPending ? (
+                    <p className="p-4 text-sm text-muted-foreground">Loading connection string…</p>
+                ) : detailQuery.isError || !detailQuery.data ? (
+                    <div className="space-y-3 p-4">
+                        <p className="text-sm text-muted-foreground">Could not load the connection string.</p>
+                        <Button type="button" variant="outline" size="sm" onClick={() => void detailQuery.refetch()}>
+                            Retry
+                        </Button>
+                    </div>
+                ) : (
+                    <AiConnectionStringForm
+                        slug={slug}
+                        modelType={modelType}
+                        defaultValues={mapDtoToFormData(detailQuery.data)}
+                        isEditing
+                        existingIdentifier={detailQuery.data.identifier ?? undefined}
+                        onSaved={async (savedName) => {
+                            await onSaved(savedName);
+                            setIsOpen(false);
+                        }}
+                    />
+                )}
+            </SheetContent>
+        </Sheet>
+    );
+}

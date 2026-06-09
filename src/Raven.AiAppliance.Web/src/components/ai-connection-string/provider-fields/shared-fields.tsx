@@ -1,6 +1,6 @@
 import { type FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormInput } from "@/components/form/form-input";
-import type { ConnectionStringFormData } from "@/pages/setup/add-capability-wizard/steps/connect/ai-connection-string-utils";
+import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { FormCardSwitch } from "@/components/form/form-card-switch";
 
 type PromptCacheProvider = Extract<

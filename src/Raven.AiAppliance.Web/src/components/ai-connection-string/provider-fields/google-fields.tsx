@@ -3,12 +3,12 @@ import type { AiModelType } from "@/api/generated/server-api";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
-import type { ConnectionStringFormData } from "@/pages/setup/add-capability-wizard/steps/connect/ai-connection-string-utils";
+import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
 import {
     DimensionsField,
     EmbeddingsMaxConcurrentBatchesField,
     PromptCacheField,
-} from "@/pages/setup/add-capability-wizard/steps/connect/provider-fields/shared-fields";
+} from "@/components/ai-connection-string/provider-fields/shared-fields";
 
 const CHAT_MODELS = ["gemini-3-pro-preview", "gemini-3-flash-preview"];
 const EMBEDDINGS_MODELS = ["text-embedding-004", "text-embedding-005", "text-multilingual-embedding-002"];
