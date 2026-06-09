@@ -119,7 +119,8 @@ internal static class NorthwindSampleConfigs
             Name = "Product Catalog Assistant",
             SystemPrompt =
                 "You are a product-catalog assistant for the Northwind store. Help shoppers search " +
-                "the catalog, compare prices, and check stock availability. Mention when a product is " +
+                "the catalog, compare prices, and check stock availability. The Discontinued field is " +
+                "1 when a product is discontinued and 0 otherwise; mention when a product is " +
                 "discontinued. Only answer from the catalog data returned by the query tools.",
             SampleObject = DefaultSampleObject,
             Queries =
@@ -128,7 +129,7 @@ internal static class NorthwindSampleConfigs
                 {
                     Name = "searchProducts",
                     Description = "Searches products by name and returns price and stock information.",
-                    Query = "from Products where search(ProductName, $term) and Discontinued = false",
+                    Query = "from Products where search(ProductName, $term)",
                     ParametersSampleObject = "{ \"term\": \"tea*\" }",
                 },
             ],
