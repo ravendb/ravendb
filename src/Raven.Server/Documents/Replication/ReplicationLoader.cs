@@ -94,6 +94,8 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public List<ReplicationNode> Destinations => _destinations;
 
+        public int NumberOfSiblingsInInternalReplication { get; internal set; }
+
         private sealed class HubInfoForCleaner
         {
             public long LastEtag;
@@ -880,6 +882,8 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
+
+            NumberOfSiblingsInInternalReplication = newRecord.Topology.Count - 1;
             _numberOfSiblings = _destinations.Select(x => x.Url).Intersect(_clusterTopology.AllNodes.Select(x => x.Value)).Count();
 
             DisposeConnections(instancesToDispose);
@@ -1032,39 +1036,7 @@ namespace Raven.Server.Documents.Replication
             var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(Server, topology, task, taskStatus, Database.NotificationCenter);
             return whoseTaskIsIt == _server.NodeTag;
         }
-
-        /// <summary>
-        /// Returns the minimum etag that has been confirmed as replicated across all sibling nodes in the cluster,
-        /// representing the cluster-wide replication frontier.
-        /// <para>
-        /// Return values:
-        /// <list type="bullet">
-        ///   <item><description><c>long.MaxValue</c> — single-node topology (no siblings). Data is trivially confirmed; callers should use the last batch change vector directly.</description></item>
-        ///   <item><description><c>null</c> — not all siblings have established an active connection yet. Callers should wait before confirming.</description></item>
-        ///   <item><description>Any other value — the minimum etag confirmed by every sibling. Safe to advance the cursor up to this point.</description></item>
-        /// </list>
-        /// </para>
-        /// </summary>
-        public long? GetConfirmedMinimalClusterWideReplicatedEtag()
-        {
-            if (_numberOfSiblings == 0)
-                return long.MaxValue; // single-node topology: trivially confirmed, confirm immediately
-
-            long min = long.MaxValue;
-            int count = 0;
-
-            foreach (var handler in OutgoingHandlers)
-            {
-                if (handler is not OutgoingInternalReplicationHandler)
-                    continue;
-
-                count++;
-                min = Math.Min(min, handler.LastSentDocumentEtag);
-            }
-
-            return count == _numberOfSiblings ? min : null; // null = not all siblings connected yet, wait
-        }
-
+        
         public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
         {
             using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
