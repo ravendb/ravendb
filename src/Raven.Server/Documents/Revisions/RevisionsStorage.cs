@@ -2951,34 +2951,6 @@ namespace Raven.Server.Documents.Revisions
             return result;
         }
 
-        public static unsafe Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
-        {
-            var ptr = tvr.Read((int)RevisionsTable.Document, out var size);
-            if (size > expectedSize || size <= 0)
-                throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
-
-            BlittableJsonReaderObject.BlittableValidation(context, ptr, size);
-
-            var result = new Document
-            {
-                StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
-                Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
-                Etag = etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
-                Data = new BlittableJsonReaderObject(ptr, size, context),
-                LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out size),
-                // Voron.Recovery has no transaction; best-effort emits field 0 bytes (rawCv for Legacy rows, hash bytes for Hashed rows).
-                ChangeVector = TableValueToChangeVector(context, (int)RevisionsTable.RevisionPk, ref tvr)
-            };
-
-            if (size != sizeof(short))
-                throw new ArgumentException("TransactionMarker size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
-
-            return result;
-        }
-
         private unsafe ByteStringContext.ExternalScope GetResolvedSlice(DocumentsOperationContext context, DateTime date, out Slice slice)
         {
             var size = sizeof(int) + sizeof(long);
