@@ -244,14 +244,8 @@ namespace Voron.Impl.Journal
             DiscardProcessedTransactionPages(transactionSizeIn4Kb);
         }
 
-        // Release each processed tx's fully-contained journal pages via madvise(MADV_DONTNEED)
-        // (DiscardPages): unmaps them so the resident set stays bounded and the unmapped pages
-        // become reclaimable page cache, instead of the whole journal staying mapped while many
-        // DBs recover. (MADV_DONTNEED does not evict the cache outright - it just drops the
-        // mapping; the clean pages are then reclaimed under pressure.) Whole pages only - recovery
-        // is forward-only, so the page shared with the next tx survives. RvnMemoryMapPager only:
-        // it is file-backed, so DONTNEED just re-reads from the file - never zeroes pages the way
-        // it would for an anonymous in-memory pager.
+        // Release each processed transaction's fully-contained pages via madvise(MADV_DONTNEED) (DiscardPages)
+        // to keep the resident set bounded while many databases do the startup recovery
         private void DiscardProcessedTransactionPages(long transactionSizeIn4Kb)
         {
             if (_journalPager is not RvnMemoryMapPager rvnJournalPager)
@@ -264,7 +258,7 @@ namespace Voron.Impl.Journal
             var firstFullPage = (txStartOffset + Constants.Storage.PageSize - 1) / Constants.Storage.PageSize;
             var lastFullPageExclusive = txEndOffset / Constants.Storage.PageSize;
             if (lastFullPageExclusive <= firstFullPage)
-                return; // transaction smaller than a page boundary - nothing whole to discard
+                return;
 
             rvnJournalPager.DiscardPages(firstFullPage, (int)(lastFullPageExclusive - firstFullPage));
         }
@@ -794,9 +788,6 @@ namespace Voron.Impl.Journal
                 BeforeCommitFinalization?.Invoke(this);
             }
             OnDispose?.Invoke(this);
-
-            // No whole-file discard here: WriteAheadJournal.RecoverDatabase disposes the journal
-            // pager (munmap) before this runs, which already unmaps the whole journal.
         }
 
         private static int GetNumberOfPagesFor(long size)

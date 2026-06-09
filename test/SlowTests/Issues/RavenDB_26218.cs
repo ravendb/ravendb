@@ -38,13 +38,15 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Voron)]
-        public void GetBlockDevicesWithHighReadAhead_ReturnsNull_WhenNothingAboveThreshold()
+        public void GetBlockDevicesWithHighReadAhead_ReturnsEmpty_WhenNothingAboveThreshold()
         {
             var sysBlock = NewDataPath(forceCreateDir: true);
             WriteReadAheadKb(sysBlock, "sda", "128");
             WriteReadAheadKb(sysBlock, "sdb", "64");
 
-            Assert.Null(CheckBlockDeviceKernelSettings.GetBlockDevicesWithHighReadAhead(thresholdKb: 128, sysBlockPath: sysBlock));
+            var result = CheckBlockDeviceKernelSettings.GetBlockDevicesWithHighReadAhead(thresholdKb: 128, sysBlockPath: sysBlock);
+            Assert.NotNull(result);
+            Assert.Empty(result);
         }
 
         [RavenFact(RavenTestCategory.Voron)]

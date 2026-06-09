@@ -800,7 +800,7 @@ namespace Raven.Server.ServerWide
                 if (thresholdKb != null)
                 {
                     var highReadAheadDevices = PlatformSpecific.MemoryInformation.GetBlockDevicesWithHighReadAhead(thresholdKb.Value);
-                    if (highReadAheadDevices != null)
+                    if (highReadAheadDevices is { Count: > 0 })
                     {
                         var deviceList = string.Join(", ", highReadAheadDevices.Select(x => $"{x.DeviceName} ({x.ReadAheadValue})"));
                         var alert = AlertRaised.Create(
@@ -816,7 +816,7 @@ namespace Raven.Server.ServerWide
                         else
                             _storeAlertForLateRaise.Add(alert);
                     }
-                    else
+                    else if (highReadAheadDevices != null)
                     {
                         _dismissHighReadAheadAlert = true;
                     }
@@ -824,7 +824,6 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                // the above should not throw, but we mask it in case it does (as it reads IO parameters) - this alert is just a nice-to-have warning
                 if (Logger.IsInfoEnabled)
                     Logger.Info("An error occurred while trying to check read_ahead_kb values for block devices", e);
             }

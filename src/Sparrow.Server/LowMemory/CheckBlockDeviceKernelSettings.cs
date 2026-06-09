@@ -13,10 +13,10 @@ namespace Sparrow.Server.LowMemory
         private const string SysBlockPath = "/sys/block/";
 
         /// <summary>
-        /// Returns a list of block devices whose read_ahead_kb value exceeds
-        /// <paramref name="thresholdKb"/>, or null if no devices are above the threshold
-        /// or if the check cannot be performed (returns null in both cases — the caller
-        /// only needs to know whether an alert should be raised).
+        /// Returns the block devices whose read_ahead_kb exceeds <paramref name="thresholdKb"/>,
+        /// or an empty list if the check ran but found none. Returns <c>null</c> only when the check
+        /// could not be performed (sysfs tree missing, or an error reading it); callers must treat
+        /// null as "unknown", never as "all clear", so a failed check cannot clear a real warning.
         /// <para>
         /// A high read_ahead_kb causes the kernel to issue large sequential read-ahead
         /// I/Os on every page fault, which wastes I/O bandwidth and can cause 100% IO wait
@@ -34,7 +34,7 @@ namespace Sparrow.Server.LowMemory
                 if (Directory.Exists(sysBlockPath) == false)
                     return null;
 
-                List<(string, Size)> result = null;
+                var result = new List<(string, Size)>();
 
                 foreach (var blockDir in Directory.GetDirectories(sysBlockPath))
                 {
@@ -53,10 +53,7 @@ namespace Sparrow.Server.LowMemory
                         continue;
 
                     if (readAheadKb > thresholdKb)
-                    {
-                        result ??= new List<(string, Size)>();
                         result.Add((deviceName, new Size(readAheadKb, SizeUnit.Kilobytes)));
-                    }
                 }
 
                 return result;

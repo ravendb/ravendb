@@ -252,11 +252,6 @@ namespace Voron.Impl.Paging
                 _logger.Info($"Unable to un-protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Unprotect, errorCode={errorCode}");
         }
 
-        /// <summary>
-        /// posix_fadvise(POSIX_FADV_SEQUENTIAL) on the journal's mmap fd enlarges the per-fd kernel
-        /// read-ahead window for recovery (on tested kernels ~2x the device's read_ahead_kb), so a low
-        /// read_ahead_kb tuned for the random-access workload throttles recovery less. Linux only, best-effort.
-        /// </summary>
         public void TrySetSequentialScanHint()
         {
             if (PlatformDetails.RunningOnLinux == false)
@@ -265,18 +260,16 @@ namespace Voron.Impl.Paging
             if (_handle.IsInvalid || _handle.IsClosed)
                 return;
 
-            // fd is field 0 of the PAL's map_file_handle (posix/mapping.c).
             var fd = *(int*)_handle.DangerousGetHandle();
             if (fd < 0)
                 return;
 
-            PosixFadvise(fd, 0, 0, PosixFadviseSequential);
+            PosixFadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
         }
 
-        // posix_fadvise(2): returns errno directly on error — SetLastError = false is correct.
         [DllImport("libc", EntryPoint = "posix_fadvise", SetLastError = false)]
         private static extern int PosixFadvise(int fd, long offset, long len, int advice);
 
-        private const int PosixFadviseSequential = 2; // POSIX_FADV_SEQUENTIAL, same on all Linux arches
+        private const int POSIX_FADV_SEQUENTIAL = 2;
     }
 }
