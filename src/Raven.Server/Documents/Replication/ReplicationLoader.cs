@@ -356,8 +356,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Failed to reset {repl.ConnectionInfo} for pull replication hub '{hub}' on certificate '{certThumbprint}' after replication configuration changed.", e);
+                        if (_logger.IsWarnEnabled)
+                            _logger.Warn($"Failed to reset {repl.ConnectionInfo} for pull replication hub '{hub}' on certificate '{certThumbprint}' after replication configuration changed.", e);
                     }
                 }
 
@@ -381,8 +381,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} for pull replication hub '{hub}' on certificate '{certThumbprint}' after replication configuration changed.", e);
+                        if (_logger.IsWarnEnabled)
+                            _logger.Warn($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} for pull replication hub '{hub}' on certificate '{certThumbprint}' after replication configuration changed.", e);
                     }
                 }
             }
@@ -870,8 +870,8 @@ namespace Raven.Server.Documents.Replication
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Failed to reset {repl.ConnectionInfo} after pull replication composite change-vector support changed.", e);
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"Failed to reset {repl.ConnectionInfo} after pull replication composite change-vector support changed.", e);
                 }
             }
 
@@ -890,8 +890,8 @@ namespace Raven.Server.Documents.Replication
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} after pull replication composite change-vector support changed.", e);
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} after pull replication composite change-vector support changed.", e);
                 }
             }
 
