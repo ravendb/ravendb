@@ -249,7 +249,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         // Empty origins -> NO CSP header at all: the embed page is intentionally
         // embeddable from anywhere (M1 decision 2026-06-04) until the
         // widget-token work revisits the posture.
-        await SeedMockAgentAsync(client, "app-b", "demo-agent");
+        await ApplianceTestSeed.SeedMockAgentAsync(client, "app-b", "demo-agent");
         var openProvision = await client.PostAsJsonAsync("/api/apps/app-b/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
         Assert.True(openProvision.IsSuccessStatusCode, await openProvision.Content.ReadAsStringAsync());
@@ -439,7 +439,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        await SeedMockAgentAsync(client, "my-app", "demo-agent");
+        await ApplianceTestSeed.SeedMockAgentAsync(client, "my-app", "demo-agent");
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var req = new HttpRequestMessage(HttpMethod.Post, "/api/apps/my-app/setup/try")
@@ -510,7 +510,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
 
     private static async Task<string> ProvisionIFrameChannelAsync(HttpClient client, string slug, string agentId = "demo-agent")
     {
-        await SeedMockAgentAsync(client, slug, agentId);
+        await ApplianceTestSeed.SeedMockAgentAsync(client, slug, agentId);
 
         var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/channel",
             new { type = "iframe", agentId, allowedOrigins = new[] { "http://localhost" } });
@@ -573,37 +573,4 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         await session.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Seeds a mock connection string + agent in the app's per-app DB so the
-    /// channel / embed / setup-try endpoints (which resolve the agent from the
-    /// database, not a compile-time registry) have a real agent to bind to. The
-    /// Ollama CS is stored config only — it is never dialed. Idempotent: the CS
-    /// and agent upsert, so a re-provision flow may call it twice.
-    /// </summary>
-    private static async Task SeedMockAgentAsync(HttpClient client, string slug = "my-app", string agentId = "demo-agent")
-    {
-        var csResp = await client.PostAsJsonAsync(
-            $"/api/apps/{slug}/ai/connection-strings",
-            new
-            {
-                name = "demo-llm",
-                identifier = "demo-llm",
-                modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
-            });
-        Assert.True(csResp.IsSuccessStatusCode,
-            $"seed connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
-
-        var agentResp = await client.PostAsJsonAsync(
-            $"/api/apps/{slug}/setup/agent",
-            new
-            {
-                identifier = agentId,
-                name = "Demo Agent",
-                systemPrompt = "You are a placeholder demo agent.",
-                connectionStringName = "demo-llm",
-            });
-        Assert.True(agentResp.IsSuccessStatusCode,
-            $"seed agent returned {agentResp.StatusCode}: {await agentResp.Content.ReadAsStringAsync()}");
-    }
 }
