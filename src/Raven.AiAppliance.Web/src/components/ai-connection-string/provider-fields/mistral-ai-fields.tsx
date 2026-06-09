@@ -1,8 +1,8 @@
 import { useFormContext } from "react-hook-form";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
-import type { ConnectionStringFormData } from "@/pages/setup/add-capability-wizard/steps/connect/ai-connection-string-utils";
-import { EmbeddingsMaxConcurrentBatchesField } from "@/pages/setup/add-capability-wizard/steps/connect/provider-fields/shared-fields";
+import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { EmbeddingsMaxConcurrentBatchesField } from "@/components/ai-connection-string/provider-fields/shared-fields";
 
 const ENDPOINTS = ["https://api.mistral.ai/v1/"];
 const MODELS = ["mistral-embed"];

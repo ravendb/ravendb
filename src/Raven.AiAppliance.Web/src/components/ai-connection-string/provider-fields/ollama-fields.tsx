@@ -3,11 +3,11 @@ import type { AiModelType } from "@/api/generated/server-api";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
-import type { ConnectionStringFormData } from "@/pages/setup/add-capability-wizard/steps/connect/ai-connection-string-utils";
+import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
 import {
     EmbeddingsMaxConcurrentBatchesField,
     TemperatureField,
-} from "@/pages/setup/add-capability-wizard/steps/connect/provider-fields/shared-fields";
+} from "@/components/ai-connection-string/provider-fields/shared-fields";
 
 const CHAT_MODELS = ["llama3.1", "llama3.2", "qwen2.5", "mistral", "phi3", "gemma2"];
 const EMBEDDINGS_MODELS = ["nomic-embed-text", "mxbai-embed-large", "all-minilm"];

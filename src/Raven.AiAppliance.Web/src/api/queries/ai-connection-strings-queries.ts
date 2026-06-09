@@ -10,6 +10,11 @@ export function createAiConnectionStringsQueries(api: ServerApi["aiConnectionStr
                 queryKey: [baseKey, "list", slug],
                 queryFn: () => api.list(slug),
             }),
+        detail: (slug: string, name: string) =>
+            queryOptions({
+                queryKey: [baseKey, "detail", slug, name],
+                queryFn: () => api.detail(slug, name),
+            }),
     };
 }
 

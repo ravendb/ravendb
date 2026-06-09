@@ -6,7 +6,7 @@ import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
-import { AddAiConnectionString } from "@/pages/setup/add-capability-wizard/steps/connect/add-ai-connection-string";
+import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
 import { FormCombobox } from "@/components/form/form-combobox";
 
 export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {

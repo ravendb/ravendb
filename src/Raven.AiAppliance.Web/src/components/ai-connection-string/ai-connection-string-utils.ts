@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AiConnectionString, AiModelType } from "@/api/generated/server-api";
+import type { AiConnectionString, AiConnectorType, AiModelType } from "@/api/generated/server-api";
 import type { FormSelectOption } from "@/components/form/form-select";
 
 // The form keeps one settings object per provider and switches the active one with `provider`,
@@ -400,4 +400,154 @@ export function mapFormDataToDto(values: ConnectionStringFormData, modelType: Ai
             };
         }
     }
+}
+
+export const CONNECTOR_TYPE_LABELS: Record<AiConnectorType, string> = {
+    None: "—",
+    OpenAi: "OpenAI",
+    AzureOpenAi: "Azure OpenAI",
+    Ollama: "Ollama",
+    Embedded: "Embedded (bge-micro-v2)",
+    Google: "Google AI",
+    HuggingFace: "Hugging Face",
+    MistralAi: "Mistral AI",
+    Vertex: "Vertex AI",
+};
+
+export const MODEL_TYPE_LABELS: Record<AiModelType, string> = {
+    Chat: "Chat",
+    TextEmbeddings: "Text embeddings",
+};
+
+export function mapDtoToFormData(dto: AiConnectionString): ConnectionStringFormData {
+    const base: ConnectionStringFormData = { ...getDefaultValues(), name: dto.name ?? "" };
+    const text = (value: string | null | undefined) => value ?? "";
+
+    if (dto.openAiSettings) {
+        const settings = dto.openAiSettings;
+        return {
+            ...base,
+            provider: "openAiSettings",
+            openAiSettings: {
+                apiKey: text(settings.apiKey),
+                model: text(settings.model),
+                endpoint: text(settings.endpoint),
+                organizationId: text(settings.organizationId),
+                projectId: text(settings.projectId),
+                dimensions: settings.dimensions ?? null,
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+                enablePromptCache: settings.enablePromptCache ?? true,
+                isSetTemperature: settings.temperature != null,
+                temperature: settings.temperature ?? null,
+            },
+        };
+    }
+
+    if (dto.azureOpenAiSettings) {
+        const settings = dto.azureOpenAiSettings;
+        return {
+            ...base,
+            provider: "azureOpenAiSettings",
+            azureOpenAiSettings: {
+                apiKey: text(settings.apiKey),
+                endpoint: text(settings.endpoint),
+                model: text(settings.model),
+                deploymentName: text(settings.deploymentName),
+                dimensions: settings.dimensions ?? null,
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+                enablePromptCache: settings.enablePromptCache ?? true,
+                isSetTemperature: settings.temperature != null,
+                temperature: settings.temperature ?? null,
+            },
+        };
+    }
+
+    if (dto.ollamaSettings) {
+        const settings = dto.ollamaSettings;
+        return {
+            ...base,
+            provider: "ollamaSettings",
+            ollamaSettings: {
+                uri: text(settings.uri),
+                model: text(settings.model),
+                think: settings.think === true ? "enabled" : settings.think === false ? "disabled" : "default",
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+                isSetTemperature: settings.temperature != null,
+                temperature: settings.temperature ?? null,
+            },
+        };
+    }
+
+    if (dto.googleSettings) {
+        const settings = dto.googleSettings;
+        return {
+            ...base,
+            provider: "googleSettings",
+            googleSettings: {
+                aiVersion: settings.aiVersion ?? "",
+                apiKey: text(settings.apiKey),
+                endpoint: text(settings.endpoint),
+                model: text(settings.model),
+                dimensions: settings.dimensions ?? null,
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+                enablePromptCache: settings.enablePromptCache ?? false,
+            },
+        };
+    }
+
+    if (dto.huggingFaceSettings) {
+        const settings = dto.huggingFaceSettings;
+        return {
+            ...base,
+            provider: "huggingFaceSettings",
+            huggingFaceSettings: {
+                apiKey: text(settings.apiKey),
+                endpoint: text(settings.endpoint),
+                model: text(settings.model),
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+            },
+        };
+    }
+
+    if (dto.mistralAiSettings) {
+        const settings = dto.mistralAiSettings;
+        return {
+            ...base,
+            provider: "mistralAiSettings",
+            mistralAiSettings: {
+                apiKey: text(settings.apiKey),
+                endpoint: text(settings.endpoint),
+                model: text(settings.model),
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+            },
+        };
+    }
+
+    if (dto.vertexSettings) {
+        const settings = dto.vertexSettings;
+        return {
+            ...base,
+            provider: "vertexSettings",
+            vertexSettings: {
+                aiVersion: settings.aiVersion ?? "",
+                googleCredentialsJson: text(settings.googleCredentialsJson),
+                model: text(settings.model),
+                location: text(settings.location),
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+            },
+        };
+    }
+
+    if (dto.embeddedSettings) {
+        const settings = dto.embeddedSettings;
+        return {
+            ...base,
+            provider: "embeddedSettings",
+            embeddedSettings: {
+                embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
+            },
+        };
+    }
+
+    return base;
 }
