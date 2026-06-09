@@ -460,7 +460,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     else
                     {
                         //should close the tool calls that were handled internally
-                        HandleInternalSystemActionsAsync(context, _document.OpenActionCalls.Values.ToList(), token);
+                        HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList(), token);
                     }
                 }
 
@@ -508,7 +508,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }, "user/attachments-msg"), usage: null); // usage: null
     }
 
-    private void HandleInternalSystemActionsAsync(JsonOperationContext context, List<AiAgentActionRequest> toolCalls, CancellationToken token)
+    private void HandleInternalSystemActions(JsonOperationContext context, List<AiAgentActionRequest> toolCalls, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
 
@@ -1041,7 +1041,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     return false;
                 }
             }
-            HandleInternalSystemActionsAsync(context, _document.OpenActionCalls.Values.ToList(), token);
+            HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList(), token);
         }
 
         if (hasActionResponse == false && hasUserPrompt == false && _request.Attachments == null)
