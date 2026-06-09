@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -1144,7 +1144,8 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(9308, stats.Size);                    Assert.Equal(4, stats.NumberOfDocuments);
+                    Assert.Equal(9308, stats.Size);
+                    Assert.Equal(4, stats.NumberOfDocuments);
                 }
 
                 await Sharding.Resharding.MoveShardForId(store, id1);
@@ -1215,7 +1216,8 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(10813, stats.Size);                    Assert.Equal(4, stats.NumberOfDocuments);
+                    Assert.Equal(10813, stats.Size);
+                    Assert.Equal(4, stats.NumberOfDocuments);
                 }
 
                 await CheckData(store, database: ShardHelper.ToShardName(store.Database, newLocation), expectedRevisionsCount: 11);
