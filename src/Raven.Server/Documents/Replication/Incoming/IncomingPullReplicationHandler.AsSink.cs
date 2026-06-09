@@ -31,14 +31,16 @@ namespace Raven.Server.Documents.Replication.Incoming
             };
         }
 
-        protected override string GetChangeVectorForHeartbeatUpdate(DocumentsOperationContext context, string changeVector)
+        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
         {
-            return changeVector;
-        }
+            if (PullReplicationChangeVectorShape == ChangeVectorShape.Composite)
+                return;
 
-        protected override DocumentMergedTransactionCommand CreateHeartbeatUpdateCommand(string changeVector)
-        {
-            return new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
+            if (string.IsNullOrEmpty(changeVector))
+                return;
+
+            RestoreKnownSinkEntriesFromLocalChangeVector(documentsContext, ref changeVector);
+            base.HandleHeartbeatMessage(documentsContext, changeVector);
         }
     }
 }
