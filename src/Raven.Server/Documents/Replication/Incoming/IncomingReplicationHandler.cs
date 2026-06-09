@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             if (Logger.IsDebugEnabled)
             {
                 Logger.Debug(
-                    $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
+                    $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status} " +
                     $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
             }
 
