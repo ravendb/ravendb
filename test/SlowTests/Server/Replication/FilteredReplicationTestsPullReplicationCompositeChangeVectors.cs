@@ -1,18 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Client;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
-using Raven.Server.ServerWide.Commands;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -76,22 +80,18 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
     }
 
     [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
-    public async Task ToggleCommandUpdatesPullReplicationCompositeChangeVectorsFeatureState()
+    public async Task GenericFeatureMutatorUpdatesPullReplicationCompositeChangeVectorsFeatureState()
     {
         using var store = GetDocumentStore();
 
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         Assert.True(database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors);
 
-        var disableResult = await database.ServerStore.SendToLeaderAsync(
-            new SetPullReplicationCompositeChangeVectorsFeatureCommand(database.Name, enabled: false, RaftIdGenerator.NewId()));
-        await database.RachisLogIndexNotifications.WaitForIndexNotification(disableResult.Index, database.ServerStore.Engine.OperationTimeout);
+        await SetPullReplicationCompositeChangeVectorsFeatureAsync(store, enabled: false);
 
         Assert.False(database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors);
 
-        var enableResult = await database.ServerStore.SendToLeaderAsync(
-            new SetPullReplicationCompositeChangeVectorsFeatureCommand(database.Name, enabled: true, RaftIdGenerator.NewId()));
-        await database.RachisLogIndexNotifications.WaitForIndexNotification(enableResult.Index, database.ServerStore.Engine.OperationTimeout);
+        await SetPullReplicationCompositeChangeVectorsFeatureAsync(store, enabled: true);
 
         Assert.True(database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors);
     }
@@ -156,8 +156,8 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
 
         var sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
 
-        await SetPullReplicationCompositeChangeVectorsFeatureAsync(hubDatabase, enabled: true);
-        await SetPullReplicationCompositeChangeVectorsFeatureAsync(sinkDatabase, enabled: true);
+        await SetPullReplicationCompositeChangeVectorsFeatureAsync(hub, enabled: true);
+        await SetPullReplicationCompositeChangeVectorsFeatureAsync(sink, enabled: true);
 
         await AssertWaitForTrueAsync(
             () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().Any(x =>
@@ -258,12 +258,19 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         return session.Advanced.GetChangeVectorFor(item);
     }
 
-    private static async Task SetPullReplicationCompositeChangeVectorsFeatureAsync(DocumentDatabase database, bool enabled)
+    private async Task SetPullReplicationCompositeChangeVectorsFeatureAsync(DocumentStore store, bool enabled)
     {
-        var result = await database.ServerStore.SendToLeaderAsync(
-            new SetPullReplicationCompositeChangeVectorsFeatureCommand(database.Name, enabled, RaftIdGenerator.NewId()));
-        await database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, database.ServerStore.Engine.OperationTimeout);
+        var feature = Constants.DatabaseRecord.SupportedFeatures.PullReplicationCompositeChangeVectors;
+        string[] add = enabled ? [feature] : [];
+        string[] remove = enabled ? [] : [feature];
 
+        var requestExecutor = store.GetRequestExecutor(store.Database);
+        using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            await requestExecutor.ExecuteAsync(new ModifyDatabaseSupportedFeaturesTestCommand(store.Conventions, add, remove), context);
+        }
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         Assert.Equal(enabled, database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors);
     }
 
@@ -278,5 +285,28 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
     private sealed class TestItem
     {
         public string Name { get; set; }
+    }
+
+    private sealed class ModifyDatabaseSupportedFeaturesTestCommand(DocumentConventions conventions, string[] add, string[] remove) : RavenCommand
+    {
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/databases/{node.Database}/admin/features";
+
+            return new HttpRequestMessage
+            {
+                Method = HttpMethod.Post,
+                Content = new BlittableJsonContent(async stream =>
+                {
+                    var json = new DynamicJsonValue
+                    {
+                        ["Add"] = add,
+                        ["Remove"] = remove
+                    };
+
+                    await ctx.WriteAsync(stream, ctx.ReadObject(json, "database-features")).ConfigureAwait(false);
+                }, conventions)
+            };
+        }
     }
 }
