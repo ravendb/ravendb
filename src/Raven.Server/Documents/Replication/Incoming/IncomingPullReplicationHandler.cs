@@ -76,14 +76,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         public override string FromToString => base.FromToString +
                                                $"{(IncomingPullReplicationParams?.Name == null ? null : $"(pull definition: {IncomingPullReplicationParams?.Name})")}";
 
-        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
-        {
-            if (PullReplicationChangeVectorShape == ChangeVectorShape.Composite)
-                return;
-
-            HandleFlatHeartbeatMessage(documentsContext, message);
-        }
-
         protected override void DisposeInternal()
         {
             try
@@ -98,10 +90,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
         protected abstract bool PreventIncomingSinkDeletions { get; }
-
-        protected abstract string GetChangeVectorForHeartbeatUpdate(DocumentsOperationContext context, string changeVector);
-
-        protected abstract DocumentMergedTransactionCommand CreateHeartbeatUpdateCommand(string changeVector);
 
         private void ValidateIncomingReplicationItemsPaths(DataForReplicationCommand dataForReplicationCommand)
         {
@@ -201,36 +189,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             };
             ReplicationLoaderParent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
-        }
-
-        private void HandleFlatHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
-        {
-            if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector) == false)
-                return;
-
-            long lastEtag;
-            string lastChangeVector;
-            using (documentsContext.OpenReadTransaction())
-            {
-                lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
-                lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
-            }
-
-            changeVector = GetChangeVectorForHeartbeatUpdate(documentsContext, changeVector);
-
-            var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
-            if (status != ConflictStatus.Update && _lastDocumentEtag <= lastEtag)
-                return;
-
-            if (Logger.IsDebugEnabled)
-            {
-                Logger.Debug(
-                    $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
-                    $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
-            }
-
-            var cmd = CreateHeartbeatUpdateCommand(changeVector);
-            EnqueueUpdateChangeVectorCommand(cmd);
         }
 
         private bool CanReceiverFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)

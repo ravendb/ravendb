@@ -101,27 +101,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal sealed class MergedUpdateDatabaseChangeVectorForHubCommand : MergedUpdateDatabaseChangeVectorCommandBase
-        {
-            public MergedUpdateDatabaseChangeVectorForHubCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
-                : base(changeVector, lastDocumentEtag, connectionInfo, trigger)
-            {
-            }
-
-            protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
-            {
-                return false;
-            }
-
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
-            {
-                return new MergedUpdateDatabaseChangeVectorForHubCommandDto
-                {
-                    BaseDto = CreateDto()
-                };
-            }
-        }
-
         internal sealed class MergedUpdateDatabaseChangeVectorCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorCommand>
         {
             public string ChangeVector;
@@ -131,16 +110,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             public MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
                 return new MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, IncomingConnectionInfo, new AsyncManualResetEvent());
-            }
-        }
-
-        internal sealed class MergedUpdateDatabaseChangeVectorForHubCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorForHubCommand>
-        {
-            public MergedUpdateDatabaseChangeVectorCommandDto BaseDto;
-
-            public MergedUpdateDatabaseChangeVectorForHubCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-            {
-                return new MergedUpdateDatabaseChangeVectorForHubCommand(BaseDto.ChangeVector, BaseDto.LastDocumentEtag, BaseDto.IncomingConnectionInfo, new AsyncManualResetEvent());
             }
         }
     }
