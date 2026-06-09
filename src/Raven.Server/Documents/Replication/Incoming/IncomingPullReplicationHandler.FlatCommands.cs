@@ -21,56 +21,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 base.HandleRevisionTombstone(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
             }
 
-            protected static void RestoreKnownSinkEntriesFromLocalChangeVector(DocumentsOperationContext context, ref string changeVector)
-            {
-                var parsedChangeVector = context.GetChangeVector(changeVector);
-                var incomingVersion = parsedChangeVector.Version.AsString();
-
-                if (incomingVersion.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
-                    return;
-
-                var global = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList();
-                var incoming = incomingVersion.ToChangeVectorList();
-                var newIncoming = new List<ChangeVectorEntry>();
-
-                foreach (var entry in incoming)
-                {
-                    if (entry.NodeTag == ChangeVectorParser.SinkInt)
-                    {
-                        var found = global?.Find(x => x.DbId == entry.DbId) ?? default;
-                        if (found.Etag > 0)
-                        {
-                            newIncoming.Add(new ChangeVectorEntry
-                            {
-                                DbId = entry.DbId,
-                                Etag = entry.Etag,
-                                NodeTag = found.NodeTag
-                            });
-                            continue;
-                        }
-                    }
-
-                    if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
-                    {
-                        // TRXN
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.TrxnInt
-                        });
-
-                        continue;
-                    }
-
-                    newIncoming.Add(entry);
-                }
-
-                var newVersion = newIncoming.SerializeVector();
-                changeVector = parsedChangeVector.IsSingle
-                    ? newVersion
-                    : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
-            }
         }
 
         internal sealed class MergedFlatPullReplicationOnHubCommand : MergedFlatPullReplicationCommand
@@ -122,6 +72,57 @@ namespace Raven.Server.Documents.Replication.Incoming
             return knownEntries.Count > 0 ?
                 knownEntries.SerializeVector() :
                 null;
+        }
+
+        protected static void RestoreKnownSinkEntriesFromLocalChangeVector(DocumentsOperationContext context, ref string changeVector)
+        {
+            var parsedChangeVector = context.GetChangeVector(changeVector);
+            var incomingVersion = parsedChangeVector.Version.AsString();
+
+            if (incomingVersion.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
+                return;
+
+            var global = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList();
+            var incoming = incomingVersion.ToChangeVectorList();
+            var newIncoming = new List<ChangeVectorEntry>();
+
+            foreach (var entry in incoming)
+            {
+                if (entry.NodeTag == ChangeVectorParser.SinkInt)
+                {
+                    var found = global?.Find(x => x.DbId == entry.DbId) ?? default;
+                    if (found.Etag > 0)
+                    {
+                        newIncoming.Add(new ChangeVectorEntry
+                        {
+                            DbId = entry.DbId,
+                            Etag = entry.Etag,
+                            NodeTag = found.NodeTag
+                        });
+                        continue;
+                    }
+                }
+
+                if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
+                {
+                    // TRXN
+                    newIncoming.Add(new ChangeVectorEntry
+                    {
+                        DbId = entry.DbId,
+                        Etag = entry.Etag,
+                        NodeTag = ChangeVectorParser.TrxnInt
+                    });
+
+                    continue;
+                }
+
+                newIncoming.Add(entry);
+            }
+
+            var newVersion = newIncoming.SerializeVector();
+            changeVector = parsedChangeVector.IsSingle
+                ? newVersion
+                : context.GetChangeVector(newVersion, parsedChangeVector.Order.AsString()).AsString();
         }
     }
 }

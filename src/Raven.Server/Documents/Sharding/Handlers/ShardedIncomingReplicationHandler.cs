@@ -98,9 +98,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void InvokeOnFailed(Exception exception) => _parent.InvokeOnFailed(this, exception);
 
-        protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
+        protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, string changeVector)
         {
-            blittableJsonReaderObject.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out _lastAcceptedChangeVectorDuringHeartbeat);
+            _lastAcceptedChangeVectorDuringHeartbeat = changeVector;
 
             using (var replicationBatches = new ReplicationBatches(this))
             {

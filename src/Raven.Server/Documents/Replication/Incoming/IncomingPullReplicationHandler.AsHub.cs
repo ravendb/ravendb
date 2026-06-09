@@ -23,6 +23,12 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected override bool PreventIncomingSinkDeletions =>
             IncomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true;
 
+        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
+        {
+            // TODO RavenDB-26295 / #22885: advance heartbeat progress (LastReplicatedEtagFrom) in the failover-cursor work.
+            // This no-op also covers the flat SinkToHub lane, which previously advanced from heartbeat frames.
+        }
+
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context, DataForReplicationCommand data, long lastDocumentEtag)
         {
             return PullReplicationChangeVectorShape switch
@@ -31,16 +37,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 ChangeVectorShape.Composite => new MergedCompositePullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
                 _ => throw new ArgumentOutOfRangeException(nameof(PullReplicationChangeVectorShape), PullReplicationChangeVectorShape, "Unknown pull replication change-vector shape.")
             };
-        }
-
-        protected override string GetChangeVectorForHeartbeatUpdate(DocumentsOperationContext context, string changeVector)
-        {
-            return MaskUnknownVersionEntriesWithSinkTag(context, ref changeVector);
-        }
-
-        protected override DocumentMergedTransactionCommand CreateHeartbeatUpdateCommand(string changeVector)
-        {
-            return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
         }
     }
 }
