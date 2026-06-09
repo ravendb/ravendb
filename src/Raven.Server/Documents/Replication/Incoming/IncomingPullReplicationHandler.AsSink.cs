@@ -23,18 +23,26 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context, DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return PullReplicationChangeVectorShape switch
+            return ChangeVectorShape switch
             {
-                ChangeVectorShape.Flat => new MergedFlatPullReplicationOnSinkCommand(data, lastDocumentEtag),
-                ChangeVectorShape.Composite => new MergedCompositePullReplicationOnSinkCommand(data, lastDocumentEtag),
-                _ => throw new ArgumentOutOfRangeException(nameof(PullReplicationChangeVectorShape), PullReplicationChangeVectorShape, "Unknown pull replication change-vector shape.")
+                PullReplicationChangeVectorShape.Flat => new MergedFlatPullReplicationOnSinkCommand(data, lastDocumentEtag),
+                PullReplicationChangeVectorShape.Composite => new MergedCompositePullReplicationOnSinkCommand(data, lastDocumentEtag),
+                _ => throw new ArgumentOutOfRangeException(nameof(ChangeVectorShape), ChangeVectorShape, "Unknown pull replication change-vector shape.")
             };
         }
 
         protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
         {
-            if (PullReplicationChangeVectorShape == ChangeVectorShape.Composite)
-                return;
+            switch (ChangeVectorShape)
+            {
+                case PullReplicationChangeVectorShape.Composite:
+                    // TODO RavenDB-26295 / #22885: advance heartbeat progress (LastReplicatedEtagFrom) in the failover-cursor work.
+                    return;
+                case PullReplicationChangeVectorShape.Flat:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(ChangeVectorShape), ChangeVectorShape, "Unknown pull replication change-vector shape.");
+            }
 
             if (string.IsNullOrEmpty(changeVector))
                 return;
