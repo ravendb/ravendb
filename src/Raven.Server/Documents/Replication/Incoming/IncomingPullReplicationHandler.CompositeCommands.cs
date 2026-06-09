@@ -9,12 +9,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         private static ChangeVector CreateReceiverLocalOrderAndApplyIncomingVersion(DocumentsOperationContext context, ReplicationBatchItem item)
         {
             var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
-            var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
-            var receiverLocalOrder = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, etag);
+            var result = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context);
 
             // Store receiver-local order with the incoming version lineage.
-            item.ChangeVector = context.GetChangeVector(incomingChangeVector.Version, receiverLocalOrder);
-            return receiverLocalOrder;
+            item.ChangeVector = context.GetChangeVector(incomingChangeVector.Version, result.ChangeVector);
+            return result.ChangeVector;
         }
 
         internal sealed class MergedCompositePullReplicationOnSinkCommand : MergedDocumentReplicationCommand

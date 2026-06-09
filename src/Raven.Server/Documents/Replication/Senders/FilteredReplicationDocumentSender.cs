@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -26,22 +27,30 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
-            if (_pullReplicationHandler.BothSidesSupportCompositeChangeVectors == false)
+            switch (_pullReplicationHandler.ChangeVectorTransmission)
             {
-                item.ChangeVector = documentsContext.GetChangeVector(item.ChangeVector).Version;
+                case PullReplicationChangeVectorTransmission.SendAsIs:
+                    break;
 
-                var timeSeriesItem = item as TimeSeriesReplicationItem;
-                if (timeSeriesItem != null)
-                    timeSeriesItem.ParentDocChangeVector = documentsContext.GetChangeVector(timeSeriesItem.ParentDocChangeVector).Version;
+                case PullReplicationChangeVectorTransmission.SendVersionOnly:
+                    item.ChangeVector = documentsContext.GetChangeVector(item.ChangeVector).Version;
 
-                if (_pullReplicationHandler is OutgoingPullReplicationHandlerAsHub)
-                {
-                    var hubDatabaseChangeVector = documentsContext.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(documentsContext);
-                    item.ChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, item.ChangeVector, hubDatabaseChangeVector);
-
+                    var timeSeriesItem = item as TimeSeriesReplicationItem;
                     if (timeSeriesItem != null)
-                        timeSeriesItem.ParentDocChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, timeSeriesItem.ParentDocChangeVector, hubDatabaseChangeVector);
-                }
+                        timeSeriesItem.ParentDocChangeVector = documentsContext.GetChangeVector(timeSeriesItem.ParentDocChangeVector).Version;
+
+                    if (_pullReplicationHandler is OutgoingPullReplicationHandlerAsHub)
+                    {
+                        var hubDatabaseChangeVector = documentsContext.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                        item.ChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, item.ChangeVector, hubDatabaseChangeVector);
+
+                        if (timeSeriesItem != null)
+                            timeSeriesItem.ParentDocChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, timeSeriesItem.ParentDocChangeVector, hubDatabaseChangeVector);
+                    }
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_pullReplicationHandler.ChangeVectorTransmission), _pullReplicationHandler.ChangeVectorTransmission, "Unknown pull replication change-vector transmission.");
             }
 
             base.WriteReplicationItem(documentsContext, item, stats);
