@@ -1,89 +1,136 @@
-import { useState, type JSX } from "react";
-import { Button } from "@/components/shadcn/ui/button";
-import { useFormContext } from "react-hook-form";
-import { cn } from "@/lib/utils";
+import { useState, type ReactNode } from "react";
+import {
+    useFormContext,
+    useWatch,
+    type Control,
+    type FieldValues,
+    type Path,
+    type UseFormGetValues,
+} from "react-hook-form";
 import { ArrowRight, Check } from "lucide-react";
+import { Button } from "@/components/shadcn/ui/button";
+import { Alert } from "@/components/shadcn/ui/alert";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { cn } from "@/lib/utils";
 
-export type WizardFooterComponentProps<StepId extends string> =
+export type WizardBeforeNext = () => boolean | void | Promise<boolean | void>;
+export type WizardStepPosition = "first" | "middle" | "last";
+export type WizardValidationTarget<Values extends FieldValues> = Path<Values> | readonly Path<Values>[] | false;
+
+export type WizardBodyComponentProps<StepId extends string = string> = {
+    currentStepId: StepId;
+    isBusy: boolean;
+};
+
+export type WizardBadgeContext<Values extends FieldValues = FieldValues> = {
+    values: Values;
+    isComplete: boolean;
+    isCurrent: boolean;
+};
+
+type WizardStepBadge<Values extends FieldValues> =
     | {
-          stepPosition: "first";
-          currentStep: WizardStep<StepId>;
-          cancel: () => void;
-          nextStep: () => void;
+          badge?: undefined;
+          badgeFields?: undefined;
       }
     | {
-          stepPosition: "middle";
-          currentStep: WizardStep<StepId>;
-          cancel: () => void;
-          nextStep: () => void;
-          prevStep: () => void;
-      }
-    | {
-          stepPosition: "last";
-          currentStep: WizardStep<StepId>;
-          cancel: () => void;
-          prevStep: () => void;
-          submitLabel?: React.ReactNode;
+          badge: (context: WizardBadgeContext<Values>) => ReactNode;
+          badgeFields: readonly Path<Values>[];
       };
 
-export type WizardBodyComponentProps = {
-    title: React.ReactNode;
-    description?: React.ReactNode;
-    status?: "error" | "success" | "idle" | "pending";
+export type WizardStep<StepId extends string, Values extends FieldValues = FieldValues> = {
+    title: ReactNode;
+    description?: ReactNode;
+    bodyComponent: (props: WizardBodyComponentProps<StepId>) => ReactNode;
+    validate: WizardValidationTarget<Values>;
+    beforeNext?: WizardBeforeNext;
+    isPending?: boolean;
     error?: Error | null;
-};
+} & WizardStepBadge<Values>;
 
-export type WizardStep<StepId extends string> = {
-    id: StepId;
-    title: React.ReactNode;
-    bodyComponent: (props: WizardBodyComponentProps) => JSX.Element;
-    description?: React.ReactNode;
-    status?: "error" | "success" | "idle" | "pending";
-    error?: Error | null;
-    skipValidation?: boolean;
-    footerComponent?: (props: WizardFooterComponentProps<StepId>) => JSX.Element;
-    beforeNext?: () => Promise<boolean>;
-};
+export type WizardSteps<StepId extends string, Values extends FieldValues = FieldValues> = Record<
+    StepId,
+    WizardStep<StepId, Values>
+>;
 
-export type WizardSteps<StepId extends string> = Record<StepId, WizardStep<StepId>>;
-
-type FormWizardProps<StepId extends string> = {
-    steps: WizardSteps<StepId>;
+type FormWizardProps<StepId extends string, Values extends FieldValues> = {
+    steps: WizardSteps<StepId, Values>;
     flow: StepId[];
     initialStep?: StepId;
     cancel: () => void;
-    submitLabel?: React.ReactNode;
+    submitLabel?: ReactNode;
 };
 
-export function FormWizard<StepId extends string>({
+export function FormWizard<StepId extends string, Values extends FieldValues>({
     steps,
     flow,
     initialStep,
     submitLabel,
     cancel,
-}: FormWizardProps<StepId>) {
-    const [currentStepId, setCurrentStepId] = useState<StepId>(initialStep ?? flow[0]);
-    const currentIndex = flow.indexOf(currentStepId);
-    const currentStep = steps[currentStepId];
+}: FormWizardProps<StepId, Values>) {
+    const { trigger, control, getValues, formState } = useFormContext<Values>();
 
-    const getStepPosition = (): WizardFooterComponentProps<StepId>["stepPosition"] => {
-        if (currentIndex === 0) {
-            return "first";
-        }
-        if (currentIndex === flow.length - 1) {
-            return "last";
-        }
-        return "middle";
+    if (flow.length === 0) {
+        throw new Error("FormWizard requires at least one step in the flow.");
+    }
+
+    const initialStepId = initialStep ?? flow[0];
+    const [currentStepId, setCurrentStepId] = useState<StepId>(initialStepId);
+    const [lastKnownIndex, setLastKnownIndex] = useState(() => Math.max(flow.indexOf(initialStepId), 0));
+    const [isAdvancing, setIsAdvancing] = useState(false);
+    const [advanceError, setAdvanceError] = useState<Error | null>(null);
+
+    const currentIndexInFlow = flow.indexOf(currentStepId);
+    const currentIndex = currentIndexInFlow >= 0 ? currentIndexInFlow : Math.min(lastKnownIndex, flow.length - 1);
+
+    const currentStepIdInFlow = flow[currentIndex];
+    const currentStep = steps[currentStepIdInFlow];
+    const stepPosition: WizardStepPosition =
+        currentIndex === 0 ? "first" : currentIndex === flow.length - 1 ? "last" : "middle";
+    const isBusy = isAdvancing || Boolean(currentStep.isPending) || formState.isSubmitting;
+    const stepError = advanceError ?? currentStep.error ?? null;
+
+    const setActiveStepIndex = (index: number) => {
+        setLastKnownIndex(index);
+        setCurrentStepId(flow[index]);
     };
 
-    const footerProps: WizardFooterComponentProps<StepId> = {
-        stepPosition: getStepPosition(),
-        currentStep,
-        submitLabel,
-        nextStep: () => setCurrentStepId(flow[currentIndex + 1]),
-        prevStep: () => setCurrentStepId(flow[currentIndex - 1]),
-        cancel,
+    const goPrev = () => {
+        if (currentIndex === 0) {
+            return;
+        }
+
+        setAdvanceError(null);
+        setActiveStepIndex(currentIndex - 1);
+    };
+
+    const handleNext = async () => {
+        if (currentIndex >= flow.length - 1) {
+            return;
+        }
+
+        if (currentStep.validate !== false) {
+            const isValid = await trigger(currentStep.validate);
+            if (!isValid) {
+                return;
+            }
+        }
+
+        setIsAdvancing(true);
+        setAdvanceError(null);
+
+        try {
+            const result = await currentStep.beforeNext?.();
+            if (result === false) {
+                return;
+            }
+
+            setActiveStepIndex(currentIndex + 1);
+        } catch (error) {
+            setAdvanceError(error instanceof Error ? error : new Error(String(error)));
+        } finally {
+            setIsAdvancing(false);
+        }
     };
 
     return (
@@ -95,40 +142,59 @@ export function FormWizard<StepId extends string>({
                     </div>
 
                     <main className="min-h-0 flex-1 overflow-auto px-5 py-12 sm:px-8 lg:px-24 lg:py-20">
-                        <div className="mx-auto w-full max-w-5xl">
-                            {
-                                <currentStep.bodyComponent
-                                    title={currentStep.title}
-                                    description={currentStep.description}
-                                    status={currentStep.status}
-                                    error={currentStep.error}
-                                />
-                            }
-                        </div>
+                        <section key={currentStepIdInFlow} className="mx-auto grid w-full max-w-5xl gap-5">
+                            <div>
+                                <h2 className="text-2xl font-semibold tracking-normal">{currentStep.title}</h2>
+                                {currentStep.description && (
+                                    <p className="mt-3 text-sm text-muted-foreground">{currentStep.description}</p>
+                                )}
+                            </div>
+
+                            <currentStep.bodyComponent currentStepId={currentStepIdInFlow} isBusy={isBusy} />
+                            {stepError && <Alert variant="destructive">{stepError.message}</Alert>}
+                        </section>
                     </main>
 
-                    {currentStep.footerComponent ? (
-                        <currentStep.footerComponent {...footerProps} />
-                    ) : (
-                        <WizardFooter {...footerProps} />
-                    )}
+                    <WizardFooter
+                        stepPosition={stepPosition}
+                        cancel={cancel}
+                        goPrev={goPrev}
+                        handleNext={handleNext}
+                        isBusy={isBusy}
+                        currentStepId={currentStepIdInFlow}
+                        submitLabel={submitLabel}
+                    />
                 </div>
 
                 <aside className="hidden border-l bg-background px-4 py-5 lg:block" aria-label="Setup steps">
-                    <WizardStepper flow={flow} steps={steps} currentIndex={currentIndex} />
+                    <WizardStepper
+                        flow={flow}
+                        steps={steps}
+                        currentIndex={currentIndex}
+                        control={control}
+                        getValues={getValues}
+                    />
                 </aside>
             </div>
         </div>
     );
 }
 
-type WizardStepperProps<StepId extends string> = {
+type WizardStepperProps<StepId extends string, Values extends FieldValues> = {
     flow: StepId[];
     currentIndex: number;
-    steps: WizardSteps<StepId>;
+    steps: WizardSteps<StepId, Values>;
+    control: Control<Values>;
+    getValues: UseFormGetValues<Values>;
 };
 
-function WizardStepper<StepId extends string>({ flow, currentIndex, steps }: WizardStepperProps<StepId>) {
+function WizardStepper<StepId extends string, Values extends FieldValues>({
+    flow,
+    currentIndex,
+    steps,
+    control,
+    getValues,
+}: WizardStepperProps<StepId, Values>) {
     return (
         <ol className="space-y-4">
             {flow.map((stepId, index) => {
@@ -137,21 +203,60 @@ function WizardStepper<StepId extends string>({ flow, currentIndex, steps }: Wiz
                 const isComplete = index < currentIndex;
 
                 return (
-                    <li key={stepId} className="flex items-center gap-3">
+                    <li key={stepId} className="flex items-start gap-3">
                         <StepIndicator isComplete={isComplete} isCurrent={isCurrent} />
-                        <span
-                            className={cn(
-                                "text-sm leading-5 text-muted-foreground",
-                                (isCurrent || isComplete) && "font-semibold text-foreground",
+                        <div className="grid gap-1.5">
+                            <span
+                                className={cn(
+                                    "text-sm leading-5 text-muted-foreground",
+                                    (isCurrent || isComplete) && "font-semibold text-foreground",
+                                )}
+                            >
+                                {step.title}
+                            </span>
+                            {step.badge && (
+                                <WizardStepBadge
+                                    step={step}
+                                    isComplete={isComplete}
+                                    isCurrent={isCurrent}
+                                    control={control}
+                                    getValues={getValues}
+                                />
                             )}
-                        >
-                            {step.title}
-                        </span>
+                        </div>
                     </li>
                 );
             })}
         </ol>
     );
+}
+
+type WizardStepBadgeProps<StepId extends string, Values extends FieldValues> = {
+    step: WizardStep<StepId, Values> & {
+        badge: (context: WizardBadgeContext<Values>) => ReactNode;
+        badgeFields: readonly Path<Values>[];
+    };
+    isComplete: boolean;
+    isCurrent: boolean;
+    control: Control<Values>;
+    getValues: UseFormGetValues<Values>;
+};
+
+function WizardStepBadge<StepId extends string, Values extends FieldValues>({
+    step,
+    isComplete,
+    isCurrent,
+    control,
+    getValues,
+}: WizardStepBadgeProps<StepId, Values>) {
+    useWatch({ control, name: step.badgeFields });
+    const badge = step.badge({ values: getValues(), isComplete, isCurrent });
+
+    if (!badge) {
+        return null;
+    }
+
+    return <div className="flex">{badge}</div>;
 }
 
 function StepIndicator({ isComplete, isCurrent }: { isComplete: boolean; isCurrent: boolean }) {
@@ -174,69 +279,49 @@ function StepIndicator({ isComplete, isCurrent }: { isComplete: boolean; isCurre
     return <span className="size-7 shrink-0 rounded-full bg-muted" />;
 }
 
-export function WizardFooter<T extends string>(props: WizardFooterComponentProps<T>) {
+type WizardFooterProps<StepId extends string> = {
+    stepPosition: WizardStepPosition;
+    currentStepId: StepId;
+    cancel: () => void;
+    goPrev: () => void;
+    handleNext: () => Promise<void>;
+    isBusy: boolean;
+    submitLabel?: ReactNode;
+};
+
+function WizardFooter<StepId extends string>({
+    stepPosition,
+    currentStepId,
+    cancel,
+    goPrev,
+    handleNext,
+    isBusy,
+    submitLabel,
+}: WizardFooterProps<StepId>) {
     return (
         <div className="flex border-t px-4 py-2">
-            <WizardFooterBackButton {...props} />
-            <WizardFooterNextButton {...props} />
-        </div>
-    );
-}
+            <div className="flex gap-2">
+                <Button onClick={cancel} variant="outline">
+                    Cancel
+                </Button>
+                {stepPosition !== "first" && (
+                    <Button onClick={goPrev} variant="secondary" disabled={isBusy}>
+                        Back
+                    </Button>
+                )}
+            </div>
 
-export function WizardFooterBackButton<T extends string>(props: WizardFooterComponentProps<T>) {
-    const { formState } = useFormContext();
-    const isPending = props.currentStep.status === "pending" || formState.isSubmitting;
-
-    return (
-        <div className="flex gap-2">
-            <Button onClick={props.cancel} variant="outline">
-                Cancel
-            </Button>
-            {props.stepPosition !== "first" && (
-                <Button onClick={props.prevStep} variant="secondary" disabled={isPending}>
-                    Back
+            {stepPosition === "last" ? (
+                <Button type="submit" className="ml-auto" disabled={isBusy} key={`${currentStepId}:submit`}>
+                    {isBusy && <Spinner />}
+                    {submitLabel ?? "Submit"}
+                </Button>
+            ) : (
+                <Button onClick={handleNext} className="ml-auto" disabled={isBusy} key={`${currentStepId}:next`}>
+                    {isBusy && <Spinner />}
+                    Next
                 </Button>
             )}
         </div>
-    );
-}
-
-export function WizardFooterNextButton<T extends string>(props: WizardFooterComponentProps<T>) {
-    const { trigger, formState } = useFormContext();
-
-    const isPending = props.currentStep.status === "pending" || formState.isSubmitting;
-
-    if (props.stepPosition === "last") {
-        return (
-            <Button type="submit" className="ml-auto" disabled={isPending} key={`${props.currentStep.id}:submit`}>
-                {isPending && <Spinner />}
-                {props.submitLabel ?? "Submit"}
-            </Button>
-        );
-    }
-
-    const handleNext = async () => {
-        if (!props.currentStep.skipValidation) {
-            const isValid = await trigger([props.currentStep.id]);
-            if (!isValid) {
-                return;
-            }
-        }
-
-        if (props.currentStep.beforeNext) {
-            const ok = await props.currentStep.beforeNext();
-            if (!ok) {
-                return;
-            }
-        }
-
-        props.nextStep();
-    };
-
-    return (
-        <Button onClick={handleNext} className="ml-auto" disabled={isPending} key={`${props.currentStep.id}:next`}>
-            {isPending && <Spinner />}
-            Next
-        </Button>
     );
 }

@@ -3,12 +3,10 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { FormInput } from "@/components/form/form-input";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Alert } from "@/components/shadcn/ui/alert";
-import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
-import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 
-export function ReviewAgentStep(props: WizardBodyComponentProps) {
+export function ReviewAgentStep() {
     const { control } = useFormContext<AgentFormData>();
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const selectedIndex = useWatch({ control, name: "create.selectedIndex" });
@@ -17,11 +15,7 @@ export function ReviewAgentStep(props: WizardBodyComponentProps) {
     const config = suggestions[selectedIndex];
 
     if (!config) {
-        return (
-            <StepSection {...props}>
-                <Alert>Go back and pick an AI-suggested agent first.</Alert>
-            </StepSection>
-        );
+        return <Alert>Go back and pick an AI-suggested agent first.</Alert>;
     }
 
     const queryTools = (config.queries ?? [])
@@ -32,26 +26,24 @@ export function ReviewAgentStep(props: WizardBodyComponentProps) {
         .filter((name): name is string => Boolean(name));
 
     return (
-        <StepSection {...props}>
-            <div className="grid gap-5">
-                <FormInput control={control} name="review.name" label="Agent name" />
+        <div className="grid gap-5">
+            <FormInput control={control} name="review.name" label="Agent name" />
 
-                <div className="grid gap-4 rounded-lg border bg-background p-4">
-                    <SummaryRow label="System prompt">
-                        <p className="text-sm whitespace-pre-wrap text-muted-foreground">{systemPrompt}</p>
-                    </SummaryRow>
-                    <SummaryRow label="Connection string">
-                        <Badge variant="secondary">{connectionStringName}</Badge>
-                    </SummaryRow>
-                    <SummaryRow label="Query tools">
-                        <ChipList items={queryTools} />
-                    </SummaryRow>
-                    <SummaryRow label="Parameters">
-                        <ChipList items={parameters} />
-                    </SummaryRow>
-                </div>
+            <div className="grid gap-4 rounded-lg border bg-background p-4">
+                <SummaryRow label="System prompt">
+                    <p className="text-sm whitespace-pre-wrap text-muted-foreground">{systemPrompt}</p>
+                </SummaryRow>
+                <SummaryRow label="Connection string">
+                    <Badge variant="secondary">{connectionStringName}</Badge>
+                </SummaryRow>
+                <SummaryRow label="Query tools">
+                    <ChipList items={queryTools} />
+                </SummaryRow>
+                <SummaryRow label="Parameters">
+                    <ChipList items={parameters} />
+                </SummaryRow>
             </div>
-        </StepSection>
+        </div>
     );
 }
 

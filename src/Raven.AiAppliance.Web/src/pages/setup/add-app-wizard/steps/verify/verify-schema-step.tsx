@@ -1,8 +1,6 @@
 /* eslint-disable react-hooks/incompatible-library */
 "use no memo";
 
-import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
-import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { getCoreRowModel, getFilteredRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import type { DiscoverTableResponse } from "@/api/generated/server-api";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
@@ -15,15 +13,7 @@ import { useState } from "react";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { Alert } from "@/components/shadcn/ui/alert";
 
-export function VerifySchemaStep(props: WizardBodyComponentProps) {
-    return (
-        <StepSection {...props}>
-            <SchemaTable />
-        </StepSection>
-    );
-}
-
-export function SchemaTable() {
+export function VerifySchemaStep() {
     const { setValue, formState } = useFormContext<AppFormData>();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
     const [rowSelection, setRowSelection] = useState({});

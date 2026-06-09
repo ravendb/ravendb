@@ -4,7 +4,7 @@ import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
-import { useAppSteps, buildAppSchemaForFlow, getAppFlow } from "@/pages/setup/add-app-wizard/app-wizard-flow";
+import { buildAppSchemaForFlow, getAppFlow, useAppSteps } from "@/pages/setup/add-app-wizard/app-wizard-flow";
 import { useNavigate } from "react-router";
 import { appRoutes } from "@/lib/app-routes";
 import { api } from "@/api/api";
