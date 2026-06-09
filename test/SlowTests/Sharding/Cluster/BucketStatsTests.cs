@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -343,7 +343,8 @@ namespace SlowTests.Sharding.Cluster
                     user.Name = "b";
                     await session.SaveChangesAsync();
 
-                    expectedSize = 2644;                }
+                    expectedSize = 2644;
+                }
 
                 AssertStats(db, bucket, expectedSize);
 
@@ -362,7 +363,8 @@ namespace SlowTests.Sharding.Cluster
                     }, id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3762;                }
+                    expectedSize = 3762;
+                }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
 
@@ -378,7 +380,8 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5074;                }
+                    expectedSize = 5074;
+                }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
 
@@ -389,7 +392,8 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5185;                }
+                    expectedSize = 5185;
+                }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
 
@@ -398,7 +402,8 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5194;                }
+                    expectedSize = 5194;
+                }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 2);
 
@@ -407,7 +412,8 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id2);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4412;                }
+                    expectedSize = 4412;
+                }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 1);
 
@@ -416,13 +422,15 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3935;                }
+                    expectedSize = 3935;
+                }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
 
                 await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id, id2, id3 }));
 
-                expectedSize = 2137;                AssertStats(db, bucket, expectedSize, expectedDocs: 0);
+                expectedSize = 2137;
+                AssertStats(db, bucket, expectedSize, expectedDocs: 0);
 
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
@@ -596,7 +604,8 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(3, count.LocalAttachmentsCount); // document attachment + 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104859505, stats.Size);                    Assert.Equal(1, stats.NumberOfDocuments);
+                    Assert.Equal(104859505, stats.Size);
+                    Assert.Equal(1, stats.NumberOfDocuments);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -613,7 +622,8 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(2, count.LocalAttachmentsCount); // 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104859321, stats.Size);                    Assert.Equal(0, stats.NumberOfDocuments);
+                    Assert.Equal(104859321, stats.Size);
+                    Assert.Equal(0, stats.NumberOfDocuments);
                 }
 
                 await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new List<string>() { id }));

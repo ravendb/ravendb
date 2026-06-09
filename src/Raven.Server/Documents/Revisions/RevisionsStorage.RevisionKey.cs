@@ -147,7 +147,15 @@ namespace Raven.Server.Documents.Revisions
 
         internal static RevisionKeyScope BuildRevisionKey(DocumentsOperationContext context, string changeVector, out RevisionKey key, bool strict = true)
         {
-            return BuildRevisionKey(context.Allocator, context.GetChangeVector(changeVector), out key, strict);
+            try
+            {
+                return BuildRevisionKey(context.Allocator, context.GetChangeVector(changeVector), out key, strict);
+            }
+            catch when (strict == false)
+            {
+                key = new RevisionKey(Slices.Empty, Slices.Empty);
+                return default;
+            }
         }
 
         // Constructed fresh on each access -- `_database.SupportedFeatures` is set after RevisionsStorage's ctor.
