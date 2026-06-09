@@ -433,6 +433,7 @@ export interface components {
         ApiErrorResponse: {
             error?: null | string;
             errors?: null | string[];
+            code?: null | string;
         };
         AppResponse: {
             id: string;
