@@ -1,19 +1,18 @@
 import AceEditor from "@/components/ace-editor/ace-editor";
-import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { Alert } from "@/components/shadcn/ui/alert";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 import { useFormContext, useWatch } from "react-hook-form";
 
-export function MapAiSuggestStep(props: WizardBodyComponentProps) {
+export function MapAiSuggestStep() {
     const { control } = useFormContext<AppFormData>();
+
     const tables = useWatch({
         control,
         name: "mapAiSuggest.tables",
     });
 
     return (
-        <StepSection {...props}>
+        <>
             {tables?.length > 0 ? (
                 <AceEditor
                     value={JSON.stringify(tables, null, 2)}
@@ -25,6 +24,6 @@ export function MapAiSuggestStep(props: WizardBodyComponentProps) {
             ) : (
                 <Alert>Go back and run AI Suggest to generate a draft mapping.</Alert>
             )}
-        </StepSection>
+        </>
     );
 }

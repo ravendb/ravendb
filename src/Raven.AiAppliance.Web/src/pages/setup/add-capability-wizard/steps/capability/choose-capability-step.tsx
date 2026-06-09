@@ -1,44 +1,38 @@
 import { MessageSquare, ScanText, Sparkle } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
-import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
-import { StepSection } from "@/pages/setup/add-app-wizard/app-wizard-step-section";
 
-export function ChooseCapabilityStep(props: WizardBodyComponentProps) {
+export function ChooseCapabilityStep() {
     const { control, setValue } = useFormContext<AgentFormData>();
     const selected = useWatch({ control, name: "capability.type" });
 
     return (
-        <StepSection {...props}>
-            <div className="grid gap-3 md:grid-cols-3">
-                {CAPABILITY_OPTIONS.map((option) => {
-                    const isSelected = option.value === selected;
+        <div className="grid gap-3 md:grid-cols-3">
+            {CAPABILITY_OPTIONS.map((option) => {
+                const isSelected = option.value === selected;
 
-                    return (
-                        <button
-                            key={option.value}
-                            type="button"
-                            disabled={option.isDisabled}
-                            aria-pressed={isSelected}
-                            onClick={() => option.value === "agent" && setValue("capability.type", "agent")}
-                            className={cn(
-                                "min-h-28 rounded-lg border bg-background p-4 text-left transition-colors",
-                                "hover:bg-accent hover:text-accent-foreground",
-                                isSelected && "border-foreground bg-accent text-accent-foreground",
-                                option.isDisabled && "cursor-not-allowed opacity-55 hover:bg-background",
-                            )}
-                        >
-                            {option.icon}
-                            <span className="block text-sm font-semibold">{option.label}</span>
-                            <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                                {option.description}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-        </StepSection>
+                return (
+                    <button
+                        key={option.value}
+                        type="button"
+                        disabled={option.isDisabled}
+                        aria-pressed={isSelected}
+                        onClick={() => option.value === "agent" && setValue("capability.type", "agent")}
+                        className={cn(
+                            "min-h-28 rounded-lg border bg-background p-4 text-left transition-colors",
+                            "hover:bg-accent hover:text-accent-foreground",
+                            isSelected && "border-foreground bg-accent text-accent-foreground",
+                            option.isDisabled && "cursor-not-allowed opacity-55 hover:bg-background",
+                        )}
+                    >
+                        {option.icon}
+                        <span className="block text-sm font-semibold">{option.label}</span>
+                        <span className="mt-2 block text-xs leading-5 text-muted-foreground">{option.description}</span>
+                    </button>
+                );
+            })}
+        </div>
     );
 }
 
