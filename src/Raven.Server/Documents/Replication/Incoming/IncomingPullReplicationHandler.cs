@@ -6,7 +6,6 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -20,18 +19,12 @@ namespace Raven.Server.Documents.Replication.Incoming
 {
     public abstract partial class IncomingPullReplicationHandler : IncomingReplicationHandler
     {
-        protected enum ChangeVectorShape
-        {
-            Flat,
-            Composite
-        }
-
         public readonly ReplicationLoader.PullReplicationParams IncomingPullReplicationParams;
         public readonly string CertificateThumbprint;
 
         private readonly PullReplicationBatchHistory _hubBatchHistory;
         private readonly PullReplicationBatchHistory _sinkBatchHistory;
-        protected readonly ChangeVectorShape PullReplicationChangeVectorShape;
+        protected readonly PullReplicationChangeVectorShape ChangeVectorShape;
 
         private readonly AllowedPathsValidator _allowedPathsValidator;
 
@@ -58,12 +51,13 @@ namespace Raven.Server.Documents.Replication.Incoming
             };
 
             // Sender-side filtering is declared in the handshake; receiver-side filtering is derived from this side's pull replication rules.
-            var canFilterOutSourceItems = sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(IncomingPullReplicationParams);
-            var bothSidesSupportCompositeChangeVectors = sourceHandshakeRequest.SupportsPullReplicationCompositeChangeVectors &&
-                                                               parent.Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors;
-            PullReplicationChangeVectorShape = canFilterOutSourceItems && bothSidesSupportCompositeChangeVectors
-                ? ChangeVectorShape.Composite
-                : ChangeVectorShape.Flat;
+            var changeVectorTransmission = PullReplicationChangeVectorModeSelector.GetChangeVectorTransmission(
+                localSupportsCompositeChangeVectors: parent.Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors,
+                remoteSupportsCompositeChangeVectors: sourceHandshakeRequest.SupportsPullReplicationCompositeChangeVectors);
+
+            ChangeVectorShape = PullReplicationChangeVectorModeSelector.GetChangeVectorShape(
+                canFilterOutSourceItems: sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(IncomingPullReplicationParams),
+                transmission: changeVectorTransmission);
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
