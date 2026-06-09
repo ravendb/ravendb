@@ -13,7 +13,7 @@ namespace Raven.AiAppliance.Contracts;
 /// <c>type</c> binds to <c>null</c> and is rejected with 400 rather than silently
 /// defaulting to <see cref="ChannelType.IFrame"/>.</param>
 /// <param name="AgentId">Identifier of the agent this channel routes to —
-/// must match a registered <see cref="Schema.IAgentSchema.Identifier"/>.</param>
+/// must match an agent provisioned in the app's database.</param>
 /// <param name="AllowedOrigins">Allowed origins for the embed page's
 /// CSP <c>frame-ancestors</c> and the chat POST's M1b Origin check;
 /// normalized to <c>scheme://authority</c> on persist. Required — omitting

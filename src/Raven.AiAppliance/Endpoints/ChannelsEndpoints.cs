@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
-using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -74,7 +74,6 @@ public static class ChannelsEndpoints
         string slug,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        IAgentSchemaRegistry schemas,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -90,7 +89,7 @@ public static class ChannelsEndpoints
 
         return body.Type switch
         {
-            ChannelType.IFrame => await ProvisionIFrameAsync(app, body, schemas, store, logger, ct),
+            ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ct),
             ChannelType.Telegram => ProvisionTelegramAsync(),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
@@ -101,15 +100,15 @@ public static class ChannelsEndpoints
     private static async Task<IResult> ProvisionIFrameAsync(
         App app,
         ProvisionChannelRequest body,
-        IAgentSchemaRegistry schemas,
         IDocumentStore store,
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        // L3: validate against the registry AND adopt its canonical casing for
-        // storage (TryGet is case-insensitive but the caller's casing was being
+        // L3: validate against the per-app database AND adopt the persisted
+        // agent's canonical casing for storage (the caller's casing was being
         // persisted, which would trip later case-sensitive queries on AgentId).
-        if (!schemas.TryGet(body.AgentId, out var schema))
+        var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
+        if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
         // "Embeddable from anywhere" must be an explicit opt-in
@@ -132,7 +131,7 @@ public static class ChannelsEndpoints
         // session — RavenDB auto-creates an atomic guard at
         // "rvn-atomic/{bindingId}". Concurrent writers Raft-serialize; the
         // loser reads the winner's binding and returns the same widgetId.
-        var bindingId = $"channel-bindings/{app.Slug}/{ChannelType.IFrame}/{schema.Identifier}";
+        var bindingId = $"channel-bindings/{app.Slug}/{ChannelType.IFrame}/{config.Identifier}";
 
         // Fast path: operator double-click / client retry skips the cluster-wide round trip.
         using (var session = store.OpenAsyncSession(app.Database))
@@ -143,7 +142,7 @@ public static class ChannelsEndpoints
                 await UpsertWidgetIndexAsync(store, existing.WidgetId, app.Slug, ct);
                 logger.LogInformation(
                     "Channel binding already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
-                    app.Slug, schema.Identifier, existing.WidgetId);
+                    app.Slug, config.Identifier, existing.WidgetId);
                 return Results.Ok(new ProvisionChannelResponse(existing.WidgetId, Existing: true));
             }
         }
@@ -173,7 +172,7 @@ public static class ChannelsEndpoints
                 Id = channelDocId,
                 Type = ChannelType.IFrame,
                 DisplayName = body.DisplayName ?? ChannelType.IFrame.ToString(),
-                AgentId = schema.Identifier,
+                AgentId = config.Identifier,
                 AllowedOrigins = origins,
                 Enabled = true,
                 CreatedAt = DateTime.UtcNow,
@@ -186,7 +185,7 @@ public static class ChannelsEndpoints
 
             logger.LogInformation(
                 "Provisioned iFrame channel slug={Slug} widgetId={WidgetId} agentId={AgentId}",
-                app.Slug, widgetId, schema.Identifier);
+                app.Slug, widgetId, config.Identifier);
 
             return Results.Ok(new ProvisionChannelResponse(widgetId));
         }
@@ -215,7 +214,7 @@ public static class ChannelsEndpoints
             await UpsertWidgetIndexAsync(store, winner.WidgetId, app.Slug, ct);
             logger.LogInformation(
                 "Lost race for binding slug={Slug} agentId={AgentId}; returning winner's widgetId={WidgetId}",
-                app.Slug, schema.Identifier, winner.WidgetId);
+                app.Slug, config.Identifier, winner.WidgetId);
             return Results.Ok(new ProvisionChannelResponse(winner.WidgetId, Existing: true));
         }
     }

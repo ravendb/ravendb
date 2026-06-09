@@ -6,7 +6,6 @@ using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
-using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 
@@ -58,7 +57,6 @@ public static class EmbedEndpoints
         EmbedChatRequest body,
         IDocumentStore store,
         IAgentRouter router,
-        IAgentSchemaRegistry schemas,
         ILogger<EmbedLogger> logger,
         HttpContext ctx)
     {
@@ -108,9 +106,10 @@ public static class EmbedEndpoints
             return;
         }
 
-        // AgentId can drift out of the registry across versions; fail clean as
+        // The channel's agent can be deleted out from under it; fail clean as
         // 404 before the stream opens (public surface collapses all misses to 404).
-        if (schemas.TryGet(channel.AgentId, out var schema) == false)
+        var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
+        if (config is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -120,7 +119,7 @@ public static class EmbedEndpoints
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(app.Database, schema.Identifier, conversationId, body.Prompt, Parameters: null),
+                new AgentRequest(app.Database, config.Identifier, conversationId, body.Prompt, Parameters: null),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ct);
 

@@ -4,15 +4,14 @@ using Microsoft.Extensions.Logging;
 using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
-using Raven.AiAppliance.Schema;
 using Raven.Client.Documents;
-using Raven.Client.Documents.AI;
 
 namespace Raven.AiAppliance.Endpoints;
 
 /// Lifted from nopcommerce-demo/cdc-bridge/src/Web/ChatRoutes.cs. Now:
 ///   - resolves dependencies from DI instead of a captured factory lambda;
-///   - dispatches to whichever IAgentSchema the request names;
+///   - resolves the named agent from the config database and runs it through
+///     the shared IAgentRouter (data-driven, no compile-time schema);
 ///   - lives under /api/chat/* per the design doc §1.4 URL convention.
 ///
 /// NDJSON over text/event-stream because EventSource is GET-only and we need
@@ -34,7 +33,7 @@ public static class ChatEndpoints
     private static async Task HandleStreamAsync(
         HttpContext ctx,
         IDocumentStore store,
-        IAgentSchemaRegistry schemas,
+        IAgentRouter router,
         ILogger<ChatStreamLogger> logger)
     {
         ChatRequest? body;
@@ -62,7 +61,11 @@ public static class ChatEndpoints
             return;
         }
 
-        if (!schemas.TryGet(body.AgentId, out var schema))
+        // The legacy chat surface stays bound to the config database (per-app
+        // agents are reached via embed / setup-try). Resolve the agent up front
+        // so an unknown id is a clean 400 before the NDJSON stream opens.
+        var config = await AgentLookup.FindAsync(store, store.Database, body.AgentId, ctx.RequestAborted);
+        if (config is null)
         {
             await WriteBadRequestAsync(ctx, $"unknown agentId '{body.AgentId}'");
             return;
@@ -82,30 +85,16 @@ public static class ChatEndpoints
 
         try
         {
-            var creationOptions = new AiConversationCreationOptions();
-            if (body.Parameters is not null)
-            {
-                foreach (var (key, value) in body.Parameters)
-                    creationOptions.AddParameter(key, value);
-            }
-
-            var conversation = store.AI.Conversation(
-                agentId:         schema.Identifier,
-                conversationId:  conversationId,
-                creationOptions: creationOptions);
-
-            conversation.AddUserPrompt(body.Prompt);
-
-            var answer = await schema.RunConversationAsync(
-                conversation,
+            var result = await router.RunAsync(
+                new AgentRequest(store.Database, body.AgentId, conversationId, body.Prompt, body.Parameters),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ctx.RequestAborted);
 
             await NdjsonStream.WriteLineAsync(ctx, new
             {
                 type           = "done",
-                answer,
-                conversationId = conversation.Id,
+                answer         = result.Answer,
+                conversationId = result.ConversationId,
             });
         }
         catch (OperationCanceledException) when (ctx.RequestAborted.IsCancellationRequested)

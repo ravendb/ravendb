@@ -217,12 +217,11 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             $"ai connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
 
         // ---------- T11b. Provision agent referencing the CS ----------
-        // identifier is pinned to "demo-agent" so the T12 channel step still
-        // resolves it against the compile-time AgentSchemaRegistry. Channel
-        // binding of arbitrary operator-defined agent ids is a follow-up slice.
-        // sampleObject uses PascalCase keys to match the demo agent schema's
-        // stream property path ("Reply", derived from DemoAgentAnswer via the
-        // store conventions) so the reply streams incrementally as chunks.
+        // The T12 channel step and T14 embed chat resolve this agent from the
+        // per-app database (no compile-time registry). sampleObject uses
+        // PascalCase keys so the streamed reply field ("Reply", resolved at
+        // runtime from sampleObject's first property) matches the keys the model
+        // emits and the reply streams incrementally as chunks.
         var agentResp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/agent",
             new
             {
