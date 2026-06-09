@@ -28,15 +28,12 @@ namespace Raven.Server.Documents.Replication.Incoming
         private readonly bool _preventIncomingSinkDeletions;
 
         private AllowedPathsValidator _allowedPathsValidator;
-
-        // SinkToHub: hub-side queue mapping hub local etag → confirmed sink source frontier
-        private const int MaxBatchHistorySize = 128;
-        private readonly Queue<(long HubEtag, string SinkCv)> _batchHistory = [];
-
-        // HubToSink: sink-side queue mapping sink local etag → confirmed hub source frontier
-        private readonly Queue<(long SinkEtag, string HubCv)> _hubBatchHistory = [];
+        
+        private readonly PullReplicationBatchHistory _hubBatchHistory;
+        private readonly PullReplicationBatchHistory _sinkBatchHistory;
 
         public string CertificateThumbprint;
+
         public IncomingPullReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationLoader parent, JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLoader.PullReplicationParams pullReplicationParams) : 
             base(options, replicatedLastEtag, parent, bufferToCopy, replicationType)
         {
@@ -61,6 +58,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
             AfterItemsReadFromStream = ValidateIncomingReplicationItemsPaths;
+
+            _hubBatchHistory = new PullReplicationBatchHistory(parent);
+            _sinkBatchHistory = new PullReplicationBatchHistory(parent);
         }
 
         private void ValidateIncomingReplicationItemsPaths(DataForReplicationCommand dataForReplicationCommand)
@@ -117,17 +117,14 @@ namespace Raven.Server.Documents.Replication.Incoming
                         if (string.IsNullOrEmpty(_lastBatchChangeVector) == false)
                         {
                             long hubEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
-
-                            if (_batchHistory.Count is MaxBatchHistorySize)
-                                _batchHistory.Dequeue();
-
-                            _batchHistory.Enqueue((hubEtag, _lastBatchChangeVector));
+                            _sinkBatchHistory.Add(hubEtag, _lastBatchChangeVector);
+                            
                         }
                         break;
                 }
 
                 // Here we report to the sink about the last sink change vector that was replicated to aLL the nodes in the hub cluster
-                heartbeat[nameof(ReplicationMessageReply.ConfirmedSinkCv)] = ComputeConfirmedSinkCv();
+                heartbeat[nameof(ReplicationMessageReply.ConfirmedSinkCv)] = _sinkBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector);
             }
             else if (_incomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
             {
@@ -138,56 +135,17 @@ namespace Raven.Server.Documents.Replication.Incoming
                         if (string.IsNullOrEmpty(_lastBatchChangeVector) == false)
                         {
                             long sinkEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
-                            if (_hubBatchHistory.Count is MaxBatchHistorySize)
-                                _hubBatchHistory.Dequeue();
-
-                            _hubBatchHistory.Enqueue((sinkEtag, _lastBatchChangeVector));
+                            _hubBatchHistory.Add(sinkEtag, _lastBatchChangeVector);
                         }
                         break;
                 }
 
                 // Here we check *locally* in the sink what is the last hub change vector that was replicated to all the nodes in the sink cluster
-                if (ComputeConfirmedHubCv() is { } confirmedHubCv)
+                if (_hubBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector) is { } confirmedHubCv)
                     PersistHubCursor(confirmedHubCv);
             }
 
             return heartbeat;
-        }
-
-        private string ComputeConfirmedSinkCv()
-        {
-            var confirmedHubEtag = ReplicationLoaderParent.GetConfirmedMinimalClusterWideReplicatedEtag();
-            if (confirmedHubEtag == null)
-                return null; // not all hub siblings connected yet, wait
-
-            if (confirmedHubEtag == long.MaxValue)
-                return _lastBatchChangeVector; // single-node hub: trivially confirmed
-
-            string sinkCv = null;
-            while (_batchHistory.TryPeek(out var cur) && cur.HubEtag <= confirmedHubEtag.Value)
-            {
-                _batchHistory.Dequeue();
-                sinkCv = ChangeVectorUtils.MergeVectors(sinkCv, cur.SinkCv);
-            }
-            return sinkCv;
-        }
-
-        private string ComputeConfirmedHubCv()
-        {
-            var confirmedSinkEtag = ReplicationLoaderParent.GetConfirmedMinimalClusterWideReplicatedEtag();
-            if (confirmedSinkEtag == null)
-                return null; // not all sink siblings connected yet, wait
-
-            if (confirmedSinkEtag == long.MaxValue)
-                return _lastBatchChangeVector; // single-node sink: trivially confirmed
-
-            string hubCv = null;
-            while (_hubBatchHistory.TryPeek(out var cur) && cur.SinkEtag <= confirmedSinkEtag.Value)
-            {
-                _hubBatchHistory.Dequeue();
-                hubCv = ChangeVectorUtils.MergeVectors(hubCv, cur.HubCv);
-            }
-            return hubCv;
         }
 
         private void PersistHubCursor(string confirmedHubCv)
