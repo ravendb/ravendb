@@ -10,7 +10,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
@@ -151,7 +151,8 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         var hubOutgoingHandler = await AssertWaitForNotNullAsync(
             () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().SingleOrDefault()),
             timeout: 30_000);
-        Assert.False(hubOutgoingHandler.BothSidesSupportCompositeChangeVectors);
+        Assert.Equal(PullReplicationChangeVectorShape.Flat, hubOutgoingHandler.ChangeVectorShape);
+        Assert.Equal(PullReplicationChangeVectorTransmission.SendVersionOnly, hubOutgoingHandler.ChangeVectorTransmission);
 
         var sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
 
@@ -159,7 +160,9 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         await SetPullReplicationCompositeChangeVectorsFeatureAsync(sinkDatabase, enabled: true);
 
         await AssertWaitForTrueAsync(
-            () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().Any(x => x.BothSidesSupportCompositeChangeVectors)),
+            () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().Any(x =>
+                x.ChangeVectorShape == PullReplicationChangeVectorShape.Composite &&
+                x.ChangeVectorTransmission == PullReplicationChangeVectorTransmission.SendAsIs)),
             timeout: 30_000);
 
         await StoreTestItemAsync(hub, "items/include/after-toggle", "after-toggle");

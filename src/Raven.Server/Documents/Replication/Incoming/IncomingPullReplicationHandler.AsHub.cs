@@ -31,11 +31,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context, DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return PullReplicationChangeVectorShape switch
+            return ChangeVectorShape switch
             {
-                ChangeVectorShape.Flat => new MergedFlatPullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
-                ChangeVectorShape.Composite => new MergedCompositePullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
-                _ => throw new ArgumentOutOfRangeException(nameof(PullReplicationChangeVectorShape), PullReplicationChangeVectorShape, "Unknown pull replication change-vector shape.")
+                PullReplicationChangeVectorShape.Flat => new MergedFlatPullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
+                PullReplicationChangeVectorShape.Composite => new MergedCompositePullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
+                _ => throw new ArgumentOutOfRangeException(nameof(ChangeVectorShape), ChangeVectorShape, "Unknown pull replication change-vector shape.")
             };
         }
     }
