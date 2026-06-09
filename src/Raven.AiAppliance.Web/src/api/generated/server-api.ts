@@ -84,7 +84,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/setup/channel": {
+    "/api/apps/{slug}/setup/try": {
         parameters: {
             query?: never;
             header?: never;
@@ -93,7 +93,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["apps.provisionChannel"];
+        post: operations["apps.setupTry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -111,6 +111,55 @@ export interface paths {
         put?: never;
         post: operations["apps.suggestAgent"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/setup/channel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Registers a channel for the app. allowedOrigins is required; entries are normalized to scheme://authority (max 32). An explicit empty list is the opt-in contract: the embed page emits no CSP frame-ancestors header and is embeddable from any site. Provision is create-only: when the (type, agent) channel already exists the response carries existing=true and the request's allowedOrigins/displayName are NOT applied — edit via PUT /channels/{id}. */
+        post: operations["channels.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["channels.list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/channels/{channelId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["channels.update"];
+        post?: never;
+        delete: operations["channels.delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -457,6 +506,17 @@ export interface components {
             embeddedTables?: null | components["schemas"]["CdcSinkEmbeddedTableConfig"][];
             linkedTables?: null | components["schemas"]["CdcSinkLinkedTableConfig"][];
         };
+        ChannelSummaryResponse: {
+            widgetId: string;
+            type: components["schemas"]["ChannelType"];
+            agentId: string;
+            displayName: string;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @enum {unknown} */
+        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | null;
         ChatRequest: {
             agentId: string;
             prompt: string;
@@ -578,17 +638,27 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        ProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number;
+            detail?: null | string;
+            instance?: null | string;
+        };
         ProvisionAgentResponse: {
             agentId: string;
         };
         ProvisionChannelRequest: {
-            type: string;
+            type: null | components["schemas"]["ChannelType"];
             agentId: string;
-            allowedOrigins: string[];
+            allowedOrigins: null | string[];
             displayName?: null | string;
         };
         ProvisionChannelResponse: {
             widgetId: string;
+            /** @default false */
+            existing: boolean;
         };
         ProvisionRequest: {
             appName: string;
@@ -599,6 +669,10 @@ export interface components {
         };
         RedeemLicenseRequest: {
             licenseKey: string;
+        };
+        SetupTryRequest: {
+            prompt: string;
+            agentId: string;
         };
         SuggestAgentRequest: {
             intentPrompt: null | string;
@@ -636,6 +710,11 @@ export interface components {
             ignoreDeletes?: boolean;
             debugOutput?: string[];
             error?: null | string;
+        };
+        UpdateChannelRequest: {
+            displayName: null | string;
+            allowedOrigins: null | string[];
+            enabled: null | boolean;
         };
         /** @enum {unknown} */
         VertexAIVersion: "V1" | "V1_Beta" | null;
@@ -813,7 +892,7 @@ export interface operations {
             };
         };
     };
-    "apps.provisionChannel": {
+    "apps.setupTry": {
         parameters: {
             query?: never;
             header?: never;
@@ -824,7 +903,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ProvisionChannelRequest"];
+                "application/json": components["schemas"]["SetupTryRequest"];
             };
         };
         responses: {
@@ -833,9 +912,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["ProvisionChannelResponse"];
-                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {
@@ -906,6 +983,183 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "channels.create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProvisionChannelRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvisionChannelResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    "channels.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelSummaryResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "channels.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                channelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateChannelRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelSummaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    "channels.delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                channelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
@@ -1290,9 +1544,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/x-ndjson": string;
-                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {
@@ -1340,6 +1592,8 @@ export type CdcSinkOnDeleteConfig = components["schemas"]["CdcSinkOnDeleteConfig
 export type CdcSinkPostgresSettings = components["schemas"]["CdcSinkPostgresSettings"];
 export type CdcSinkRelationType = components["schemas"]["CdcSinkRelationType"];
 export type CdcSinkTableConfig = components["schemas"]["CdcSinkTableConfig"];
+export type ChannelSummaryResponse = components["schemas"]["ChannelSummaryResponse"];
+export type ChannelType = components["schemas"]["ChannelType"];
 export type ChatRequest = components["schemas"]["ChatRequest"];
 export type ConnectRequest = components["schemas"]["ConnectRequest"];
 export type ConnectResult = components["schemas"]["ConnectResult"];
@@ -1356,12 +1610,14 @@ export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiReasoningEffort = components["schemas"]["OpenAiReasoningEffort"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
+export type ProblemDetails = components["schemas"]["ProblemDetails"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
 export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelRequest"];
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
 export type ProvisionRequest = components["schemas"]["ProvisionRequest"];
 export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
 export type RedeemLicenseRequest = components["schemas"]["RedeemLicenseRequest"];
+export type SetupTryRequest = components["schemas"]["SetupTryRequest"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
 export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
@@ -1369,6 +1625,7 @@ export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];
 export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];
+export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 
@@ -1383,12 +1640,18 @@ export const API_ENDPOINTS = {
         detail: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
         list: "/apps",
         provisionAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/agent`,
-        provisionChannel: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/channel`,
+        setupTry: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/try`,
         suggestAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/suggest/agent`,
     },
     bootstrap: {
         redeemLicense: "/bootstrap/redeem-license",
         status: "/bootstrap/status",
+    },
+    channels: {
+        create: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/channel`,
+        delete: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/channels/${encodeURIComponent(channelId)}`,
+        list: (slug: string) => `/apps/${encodeURIComponent(slug)}/channels`,
+        update: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/channels/${encodeURIComponent(channelId)}`,
     },
     chat: {
         stream: "/chat/stream",
@@ -1415,15 +1678,21 @@ export function createServerApi(client: ApiClient) {
             detail: (slug: string) => client.get<AppResponse, ApiErrorResponse>(API_ENDPOINTS.apps.detail(slug)),
             list: () => client.get<AppResponse[]>(API_ENDPOINTS.apps.list),
             provisionAgent: (slug: string, request: AiAgentConfiguration) => client.post<ProvisionAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.provisionAgent(slug), request),
-            provisionChannel: (slug: string, request: ProvisionChannelRequest) => client.post<ProvisionChannelResponse, ApiErrorResponse>(API_ENDPOINTS.apps.provisionChannel(slug), request),
+            setupTry: (slug: string, request: SetupTryRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.apps.setupTry(slug), request),
             suggestAgent: (slug: string, request: SuggestAgentRequest) => client.post<SuggestAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.suggestAgent(slug), request),
         },
         bootstrap: {
             redeemLicense: (request: RedeemLicenseRequest) => client.post<BootstrapStatusResponse, ApiErrorResponse | BootstrapRedeemConflictResponse>(API_ENDPOINTS.bootstrap.redeemLicense, request),
             status: () => client.get<BootstrapStatusResponse>(API_ENDPOINTS.bootstrap.status),
         },
+        channels: {
+            create: (slug: string, request: ProvisionChannelRequest) => client.post<ProvisionChannelResponse, ApiErrorResponse>(API_ENDPOINTS.channels.create(slug), request),
+            delete: (slug: string, channelId: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.channels.delete(slug, channelId)),
+            list: (slug: string) => client.get<ChannelSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.channels.list(slug)),
+            update: (slug: string, channelId: string, request: UpdateChannelRequest) => client.put<ChannelSummaryResponse, ApiErrorResponse>(API_ENDPOINTS.channels.update(slug, channelId), request),
+        },
         chat: {
-            stream: (request: ChatRequest) => client.post<Response, ApiErrorResponse>(API_ENDPOINTS.chat.stream, request, { responseType: "response" }),
+            stream: (request: ChatRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.chat.stream, request),
         },
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
