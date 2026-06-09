@@ -323,7 +323,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     case ReplicationMessageType.Heartbeat:
                         AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
 
-                        HandleHeartbeatMessage(context, message);
+                        message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector);
+                        HandleHeartbeatMessage(context, changeVector);
                         break;
 
                     default:
@@ -637,7 +638,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected abstract int GetNextReplicationStatsId();
 
-        protected abstract void HandleHeartbeatMessage(TOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject);
+        protected abstract void HandleHeartbeatMessage(TOperationContext jsonOperationContext, string changeVector);
 
         public abstract LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType();
 

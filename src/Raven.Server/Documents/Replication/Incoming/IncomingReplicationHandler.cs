@@ -106,9 +106,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedDocumentReplicationCommand(data, lastDocumentEtag, isInternal: ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal);
         }
 
-        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
+        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
         {
-            if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector) == false)
+            if (string.IsNullOrEmpty(changeVector))
                 return;
 
             // saving the change vector and the last received document etag
