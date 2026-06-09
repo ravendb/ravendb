@@ -15,7 +15,7 @@ namespace Raven.AiAppliance.Agents;
 /// so deriving the path from the same sample that steers the model keeps the
 /// streamed path and the model's output in lockstep.
 /// </summary>
-internal static class AgentOutputShape
+public static class AgentOutputShape
 {
     public const string DefaultReplyField = "reply";
 

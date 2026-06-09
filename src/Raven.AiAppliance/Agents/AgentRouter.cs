@@ -48,13 +48,13 @@ public sealed class UnknownAgentException(string agentId)
 }
 
 /// <summary>
-/// Default <see cref="IAgentRouter"/>. Resolves the agent from the request's
-/// <em>per-app</em> database via <c>store.AI.ForDatabase(...).GetAgentAsync(...)</c>
-/// — the agent the operator actually provisioned — and streams its reply over a
-/// data-driven answer type, deriving the streamed reply field at runtime from the
-/// persisted output shape (<see cref="AgentOutputShape"/>). The embed chat and
-/// <c>/setup/try</c> feed through here; the legacy <c>/api/chat/stream</c> resolves
-/// against the config database.
+/// Default <see cref="IAgentRouter"/>. Resolves the operator-provisioned agent from the
+/// request's <em>per-app</em> database via <see cref="AgentLookup.FindAsync"/> — which lists
+/// agents (<c>GetAgentsAsync</c>) and matches case-insensitively, deliberately avoiding the
+/// single-id <c>GetAgentAsync</c> (it throws on a miss and is case-sensitive). Streams the reply
+/// over a data-driven answer type, deriving the reply field at runtime from the persisted output
+/// shape (<see cref="AgentOutputShape"/>). The embed chat and <c>/setup/try</c> feed through here;
+/// the legacy <c>/api/chat/stream</c> resolves against the config database.
 /// </summary>
 internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
 {

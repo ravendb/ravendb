@@ -482,7 +482,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -555,7 +555,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -606,7 +606,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
         var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
 
         var tasks = Enumerable.Range(0, 10)
@@ -653,7 +653,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var first = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" }, displayName = "Original" });
@@ -690,7 +690,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
 
@@ -734,7 +734,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -768,7 +768,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -792,7 +792,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -811,7 +811,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         // M2: 33 entries exceeds the 32 cap.
         var tooMany = Enumerable.Range(0, 33)
@@ -837,7 +837,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -862,7 +862,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -892,7 +892,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -921,7 +921,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -950,7 +950,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
-        await SeedMockAgentAsync(client);
+        await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -1097,36 +1097,4 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         await session.SaveChangesAsync();
     }
 
-    /// <summary>
-    /// Seeds a mock connection string + agent in the app's per-app DB so the
-    /// channel endpoints (which resolve the agent from the database, not a
-    /// compile-time registry) have a real agent to bind to. The Ollama CS is
-    /// stored config only — it is never dialed.
-    /// </summary>
-    private static async Task SeedMockAgentAsync(HttpClient client, string slug = "my-app", string agentId = "demo-agent")
-    {
-        var csResp = await client.PostAsJsonAsync(
-            $"/api/apps/{slug}/ai/connection-strings",
-            new
-            {
-                name = "demo-llm",
-                identifier = "demo-llm",
-                modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
-            });
-        Assert.True(csResp.IsSuccessStatusCode,
-            $"seed connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
-
-        var agentResp = await client.PostAsJsonAsync(
-            $"/api/apps/{slug}/setup/agent",
-            new
-            {
-                identifier = agentId,
-                name = "Demo Agent",
-                systemPrompt = "You are a placeholder demo agent.",
-                connectionStringName = "demo-llm",
-            });
-        Assert.True(agentResp.IsSuccessStatusCode,
-            $"seed agent returned {agentResp.StatusCode}: {await agentResp.Content.ReadAsStringAsync()}");
-    }
 }
