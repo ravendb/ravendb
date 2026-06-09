@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Replication;
@@ -37,18 +38,20 @@ namespace Raven.Server.Documents.Replication.Incoming
         public IncomingPullReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ReplicationLoader parent, JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, ReplicationLoader.PullReplicationParams pullReplicationParams) : 
             base(options, replicatedLastEtag, parent, bufferToCopy, replicationType)
         {
-            if (pullReplicationParams?.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
+            Debug.Assert(pullReplicationParams != null);
+
+            if (pullReplicationParams.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
                 _allowedPathsValidator = new AllowedPathsValidator(pullReplicationParams.AllowedPaths);
 
             _incomingPullReplicationParams = new ReplicationLoader.PullReplicationParams
             {
-                AllowedPaths = pullReplicationParams?.AllowedPaths,
-                Mode = pullReplicationParams?.Mode ?? PullReplicationMode.None,
-                Name = pullReplicationParams?.Name,
+                AllowedPaths = pullReplicationParams.AllowedPaths,
+                Mode = pullReplicationParams.Mode,
+                Name = pullReplicationParams.Name,
                 SourceDatabaseName = replicatedLastEtag.SourceDatabaseName,
-                PreventDeletionsMode = pullReplicationParams?.PreventDeletionsMode,
+                PreventDeletionsMode = pullReplicationParams.PreventDeletionsMode,
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Incoming,
-                TaskId = pullReplicationParams?.TaskId ?? 0
+                TaskId = pullReplicationParams.TaskId
             };
 
             _preventIncomingSinkDeletions = _incomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
@@ -123,7 +126,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                         break;
                 }
 
-                // Here we report to the sink about the last sink change vector that was replicated to aLL the nodes in the hub cluster
+                // Here we report to the sink about the last sink change vector that was replicated to all the nodes in the hub cluster
                 heartbeat[nameof(ReplicationMessageReply.ConfirmedSinkCv)] = _sinkBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector);
             }
             else if (_incomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
