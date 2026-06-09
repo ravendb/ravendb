@@ -183,6 +183,7 @@ BootstrapEndpoints.Map(app);
 AppsEndpoints.Map(app);
 ChannelsEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
+AgentsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
 // Must precede MapSpaFallback: /embed/* is a {*path:nonfile} match that the

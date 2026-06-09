@@ -197,6 +197,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/connect": {
         parameters: {
             query?: never;
@@ -313,6 +329,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AgentSummaryResponse: {
+            agentId: string;
+            name: string;
+            model: null | string;
+            disabled: boolean;
+        };
         AiAgentChatTrimmingConfiguration: {
             tokens?: components["schemas"]["AiAgentSummarizationByTokens"];
             history?: components["schemas"]["AiAgentHistoryConfiguration"];
@@ -1310,6 +1332,37 @@ export interface operations {
             };
         };
     };
+    "agents.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSummaryResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.connect": {
         parameters: {
             query?: never;
@@ -1559,6 +1612,7 @@ export interface operations {
     };
 }
 
+export type AgentSummaryResponse = components["schemas"]["AgentSummaryResponse"];
 export type AiAgentChatTrimmingConfiguration = components["schemas"]["AiAgentChatTrimmingConfiguration"];
 export type AiAgentConfiguration = components["schemas"]["AiAgentConfiguration"];
 export type AiAgentHistoryConfiguration = components["schemas"]["AiAgentHistoryConfiguration"];
@@ -1630,6 +1684,9 @@ export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 
 export const API_ENDPOINTS = {
+    agents: {
+        list: (slug: string) => `/apps/${encodeURIComponent(slug)}/agents`,
+    },
     aiConnectionStrings: {
         create: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings`,
         delete: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
@@ -1668,6 +1725,9 @@ export const API_ENDPOINTS = {
 
 export function createServerApi(client: ApiClient) {
     return {
+        agents: {
+            list: (slug: string) => client.get<AgentSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.agents.list(slug)),
+        },
         aiConnectionStrings: {
             create: (slug: string, request: AiConnectionString) => client.post<AiConnectionStringCreatedResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.create(slug), request),
             delete: (slug: string, name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(slug, name)),
