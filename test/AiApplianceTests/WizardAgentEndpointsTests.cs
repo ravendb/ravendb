@@ -217,9 +217,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     public async Task Agent_endpoint_persists_request_name_prompt_and_queries()
     {
         // The core behavioural change: the agent's brain (name, system prompt,
-        // RQL tool queries) now comes from the request, not the hardcoded
-        // DemoAgentSchema. Without the enlarged endpoint the persisted agent
-        // would carry DemoAgentSchema's placeholder prompt and zero queries.
+        // RQL tool queries) comes from the request and is persisted verbatim to
+        // the per-app database — there is no hardcoded placeholder agent.
         var store = GetDocumentStore();
         var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
         using var _ = perAppDbCleanup;
@@ -483,6 +482,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -555,6 +555,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -605,6 +606,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
         var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
 
         var tasks = Enumerable.Range(0, 10)
@@ -651,6 +653,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var first = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" }, displayName = "Original" });
@@ -687,6 +690,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
 
@@ -730,6 +734,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -763,6 +768,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -786,6 +792,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -804,6 +811,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         // M2: 33 entries exceeds the 32 cap.
         var tooMany = Enumerable.Range(0, 33)
@@ -829,6 +837,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -853,6 +862,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -882,6 +892,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -910,6 +921,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -927,11 +939,10 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_persists_canonical_agent_id_casing()
     {
-        // L3: AgentSchemaRegistry resolves case-insensitively, but the
-        // persisted Channel.AgentId must adopt the registry's
-        // canonical casing — otherwise later case-sensitive queries
-        // (e.g. M3's idempotency lookup) break across re-runs that
-        // mix casings.
+        // L3: agent resolution is case-insensitive, but the persisted
+        // Channel.AgentId must adopt the agent's canonical (lowercase)
+        // identifier — otherwise later case-sensitive queries (e.g. M3's
+        // idempotency lookup) break across re-runs that mix casings.
         var store = GetDocumentStore();
         var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
         using var _ = perAppDbCleanup;
@@ -939,6 +950,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
+        await SeedMockAgentAsync(client);
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/my-app/setup/channel",
@@ -951,6 +963,93 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         using var session = store.OpenAsyncSession(perAppDb);
         var channel = await session.Query<Channel>().FirstAsync();
         Assert.Equal("demo-agent", channel.AgentId);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_binds_to_an_operator_defined_non_demo_agent()
+    {
+        // The ticket's core acceptance: an operator-provisioned agent with a
+        // custom identifier + system prompt + RQL query is runnable — a channel
+        // binds to it (resolved from the per-app DB), not just a placeholder.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var agentResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new
+            {
+                identifier = "order-support",
+                name = "Order Support",
+                systemPrompt = "You are the Northwind order-support agent.",
+                connectionStringName = "demo-llm",
+                queries = new[]
+                {
+                    new
+                    {
+                        name = "findOrdersByCustomer",
+                        description = "Find orders for a given customer id.",
+                        query = "from Orders where Customer = $customerId",
+                        parametersSampleObject = """{"customerId":"ALFKI"}""",
+                    },
+                },
+            });
+        Assert.True(agentResp.IsSuccessStatusCode,
+            $"agent returned {agentResp.StatusCode}: {await agentResp.Content.ReadAsStringAsync()}");
+
+        var channelResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "order-support", allowedOrigins = new[] { "http://localhost" } });
+        Assert.True(channelResp.IsSuccessStatusCode,
+            $"channel returned {channelResp.StatusCode}: {await channelResp.Content.ReadAsStringAsync()}");
+
+        Indexes.WaitForIndexing(store, perAppDb);
+
+        using var session = store.OpenAsyncSession(perAppDb);
+        var channel = await session.Query<Channel>().FirstAsync();
+        Assert.Equal("order-support", channel.AgentId);
+
+        // The bound agent carries ITS prompt + query, not a placeholder.
+        var agents = await store.Maintenance.ForDatabase(perAppDb).SendAsync(new GetAiAgentsOperation());
+        var agent = Assert.Single(agents.AiAgents);
+        Assert.Equal("order-support", agent.Identifier);
+        Assert.Equal("You are the Northwind order-support agent.", agent.SystemPrompt);
+        Assert.Equal("findOrdersByCustomer", Assert.Single(agent.Queries).Name);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_returns_400_for_unknown_agent()
+    {
+        // Provision rejects an agentId that doesn't exist in the per-app DB:
+        // resolution goes through the database, not a compile-time registry.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "ghost-agent", allowedOrigins = new[] { "http://localhost" } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 
     // ---- helpers ----
@@ -996,5 +1095,38 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             CreatedAt = DateTime.UtcNow,
         }, id: $"apps/{slug}");
         await session.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Seeds a mock connection string + agent in the app's per-app DB so the
+    /// channel endpoints (which resolve the agent from the database, not a
+    /// compile-time registry) have a real agent to bind to. The Ollama CS is
+    /// stored config only — it is never dialed.
+    /// </summary>
+    private static async Task SeedMockAgentAsync(HttpClient client, string slug = "my-app", string agentId = "demo-agent")
+    {
+        var csResp = await client.PostAsJsonAsync(
+            $"/api/apps/{slug}/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode,
+            $"seed connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
+
+        var agentResp = await client.PostAsJsonAsync(
+            $"/api/apps/{slug}/setup/agent",
+            new
+            {
+                identifier = agentId,
+                name = "Demo Agent",
+                systemPrompt = "You are a placeholder demo agent.",
+                connectionStringName = "demo-llm",
+            });
+        Assert.True(agentResp.IsSuccessStatusCode,
+            $"seed agent returned {agentResp.StatusCode}: {await agentResp.Content.ReadAsStringAsync()}");
     }
 }

@@ -13,8 +13,6 @@ using Raven.AiAppliance.AiHelper;
 using Raven.AiAppliance.Endpoints;
 using Raven.AiAppliance.Hosting;
 using Raven.AiAppliance.Infrastructure;
-using Raven.AiAppliance.Schema;
-using Raven.AiAppliance.Schema.Demo;
 using Raven.Client.Documents;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -84,8 +82,6 @@ builder.Services.AddSingleton<IDocumentStore>(sp =>
 
 builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
-builder.Services.AddSingleton<IAgentSchemaRegistry, AgentSchemaRegistry>();
-builder.Services.AddSingleton<IAgentSchema, DemoAgentSchema>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<RavenReadinessService>();

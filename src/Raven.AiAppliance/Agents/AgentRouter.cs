@@ -1,4 +1,3 @@
-using Raven.AiAppliance.Schema;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 
@@ -39,8 +38,9 @@ public interface IAgentRouter
     Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, CancellationToken ct);
 }
 
-/// <summary>Thrown when a request names an agent the registry doesn't know.
-/// Endpoints map this to a 400 (or 404) instead of leaking a 500.</summary>
+/// <summary>Thrown when a request names an agent that doesn't exist in the
+/// target per-app database. Endpoints map this to a 400 (or 404) instead of
+/// leaking a 500.</summary>
 public sealed class UnknownAgentException(string agentId)
     : Exception($"unknown agentId '{agentId}'")
 {
@@ -48,21 +48,20 @@ public sealed class UnknownAgentException(string agentId)
 }
 
 /// <summary>
-/// Default <see cref="IAgentRouter"/>. Resolves the agent's
-/// <see cref="IAgentSchema"/> from the in-process registry (for the stream
-/// property path + answer type) but opens the conversation against the
-/// request's per-app database via <c>store.AI.ForDatabase(...)</c> — the demo
-/// pins each per-app agent's identifier to a registered schema identifier
-/// (e.g. <c>demo-agent</c>), so the registry schema and the per-app agent line
-/// up. The legacy <c>/api/chat/stream</c> ran against the config DB; this
-/// router is what the embed chat and <c>/setup/try</c> use to reach the agent
-/// the operator actually provisioned.
+/// Default <see cref="IAgentRouter"/>. Resolves the agent from the request's
+/// <em>per-app</em> database via <c>store.AI.ForDatabase(...).GetAgentAsync(...)</c>
+/// — the agent the operator actually provisioned — and streams its reply over a
+/// data-driven answer type, deriving the streamed reply field at runtime from the
+/// persisted output shape (<see cref="AgentOutputShape"/>). The embed chat and
+/// <c>/setup/try</c> feed through here; the legacy <c>/api/chat/stream</c> resolves
+/// against the config database.
 /// </summary>
-internal sealed class AgentRouter(IDocumentStore store, IAgentSchemaRegistry schemas) : IAgentRouter
+internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
 {
     public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, CancellationToken ct)
     {
-        if (schemas.TryGet(request.AgentId, out var schema) == false)
+        var config = await AgentLookup.FindAsync(store, request.Database, request.AgentId, ct);
+        if (config is null)
             throw new UnknownAgentException(request.AgentId);
 
         var conversationId = NormalizeConversationId(request.ConversationId);
@@ -75,14 +74,27 @@ internal sealed class AgentRouter(IDocumentStore store, IAgentSchemaRegistry sch
         }
 
         var conversation = store.AI.ForDatabase(request.Database).Conversation(
-            agentId: schema.Identifier,
+            agentId: config.Identifier,
             conversationId: conversationId,
             creationOptions: creationOptions);
 
         conversation.AddUserPrompt(request.Prompt);
 
-        var answer = await schema.RunConversationAsync(conversation, onChunk, ct);
-        return new AgentRunResult(answer, conversation.Id);
+        var replyField = AgentOutputShape.ResolveReplyField(config);
+
+        // Stream over a generic answer type so there is no compile-time output
+        // shape. The done-frame answer is a controlled { reply } object the
+        // appliance owns: the RavenDB client deserializes the model output via
+        // Newtonsoft, so nested fields would arrive as JArray/JObject the wire
+        // serializer (System.Text.Json) can't render. The streamed chunks remain
+        // the primary reply path; this just gives clients a clean fallback.
+        var result = await conversation.StreamAsync<Dictionary<string, object>>(
+            replyField,
+            async chunk => await onChunk(chunk),
+            ct);
+
+        var reply = AgentOutputShape.ExtractReplyText(result.Answer, replyField);
+        return new AgentRunResult(new { reply }, conversation.Id);
     }
 
     /// <summary>
