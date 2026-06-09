@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             if (_node.Mode == PullReplicationMode.HubToSink)
             {
-                request[nameof(ReplicationInitialRequest.SinkCanStartFromChangeVector)] = ReadHubCursorFromCluster();
+                request[nameof(ReplicationInitialRequest.SinkCanStartFromChangeVector)] = ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType.HubCursor);
             }
 
             return request;
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
             };
 
-            string cursorCv = ReadSinkCursorFromCluster();
+            string cursorCv = ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType.SinkCursor);
             if (cursorCv == null)
                 return;
 
@@ -185,27 +185,12 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _parent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
-        private string ReadSinkCursorFromCluster()
+        private string ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType type)
         {
             using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var key = ExternalReplicationState.GenerateItemName(_database.Name, _node.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor);
-                var stateBlittable = _parent._server.Cluster.Read(context, key);
-                if (stateBlittable == null)
-                    return null;
-
-                var state = JsonDeserializationCluster.ExternalReplicationState(stateBlittable);
-                return state.SourceChangeVector;
-            }
-        }
-
-        private string ReadHubCursorFromCluster()
-        {
-            using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var key = ExternalReplicationState.GenerateItemName(_database.Name, _node.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor);
+                var key = ExternalReplicationState.GenerateItemName(_database.Name, _node.TaskId, type);
                 var stateBlittable = _parent._server.Cluster.Read(context, key);
                 if (stateBlittable == null)
                     return null;
