@@ -22,8 +22,6 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
-using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.Outgoing
@@ -263,18 +261,18 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         var etag = _database.DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
                         if (etag == _lastSentDocumentEtag)
                         {
-                            SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
+                            SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx), lastSentChangeVector: null);
                             _parent.CompleteDeletionIfNeeded(_cts);
                         }
                         else if (NextReplicateTicks > DateTime.UtcNow.Ticks)
                         {
-                            SendHeartbeat(null);
+                            SendHeartbeat(changeVector: null, lastSentChangeVector: null);
                         }
                         else
                         {
                             //Send a heartbeat first so we will get an updated CV of the destination
                             var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                            SendHeartbeat(null);
+                            SendHeartbeat(changeVector: null, lastSentChangeVector: null);
                             //If our previous CV is already merged to the destination wait a bit more
                             if (ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, currentChangeVector) ==
                                 ConflictStatus.AlreadyMerged)
