@@ -62,26 +62,39 @@ function AgentsSection({ slug }: { slug: string }) {
 }
 
 function ChannelsSection({ slug }: { slug: string }) {
+    const agentsQuery = useQuery(api.queries.agents.list(slug));
     const channelsQuery = useQuery(api.queries.channels.list(slug));
+
+    const onRetry = async () => {
+        if (channelsQuery.isError) {
+            await channelsQuery.refetch();
+        }
+        if (agentsQuery.isError) {
+            await agentsQuery.refetch();
+        }
+    };
 
     return (
         <SectionCard title="Channels" action={<AddChannelMenu slug={slug} />}>
             <ApiState
-                isLoading={channelsQuery.isPending}
-                isError={channelsQuery.isError}
+                isLoading={channelsQuery.isPending || agentsQuery.isPending}
+                isError={channelsQuery.isError || agentsQuery.isError}
                 errorTitle="Could not load channels"
-                onRetry={() => void channelsQuery.refetch()}
+                onRetry={onRetry}
                 loadingLabel="Loading channels..."
             >
                 {channelsQuery.data && (
                     <OverviewTable
-                        headers={["Channel name", "Status", "Type", "Created"]}
+                        headers={["Channel name", "Agent name", "Status", "Type", "Created", "Widget ID"]}
                         isEmpty={channelsQuery.data.length === 0}
                         emptyMessage="No channels yet."
                     >
                         {channelsQuery.data.map((channel) => (
                             <TableRow key={channel.widgetId}>
                                 <TableCell className="font-medium">{channel.displayName}</TableCell>
+                                <TableCell className="font-medium">
+                                    {agentsQuery.data?.find((x) => x.agentId === channel.agentId)?.name}
+                                </TableCell>
                                 <TableCell>
                                     <StatusIndicator
                                         tone={channel.enabled ? "positive" : "muted"}
@@ -90,6 +103,7 @@ function ChannelsSection({ slug }: { slug: string }) {
                                 </TableCell>
                                 <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
                                 <TableCell className="text-muted-foreground">{formatDate(channel.createdAt)}</TableCell>
+                                <TableCell className="text-muted-foreground">{channel.widgetId}</TableCell>
                             </TableRow>
                         ))}
                     </OverviewTable>
