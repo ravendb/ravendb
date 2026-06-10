@@ -1,21 +1,24 @@
-import { Link, NavLink, Outlet, useMatches, useParams } from "react-router";
+import { Link, Outlet, useMatches, useParams } from "react-router";
 import { useState } from "react";
-import type { ComponentType, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CircleHelp, Moon, PanelLeftClose, PanelLeftOpen, Sparkles, Sun, Users } from "lucide-react";
-import { appNavigationSections, isAppRouteHandle, navigationItems } from "@/routes";
+import { Sparkles } from "lucide-react";
+import { isAppRouteHandle } from "@/routes";
 import { api } from "@/api/api";
-import { Button } from "@/components/shadcn/ui/button";
-import { useTheme } from "@/components/shadcn/theme-provider";
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 const compactSidebarMediaQuery = "(max-width: 63.999rem)";
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
+
+function readStoredSidebarCollapsed() {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
+}
 
 function App() {
     const { slug } = useParams();
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readStoredSidebarCollapsed);
     const isCompactSidebarViewport = useMediaQuery(compactSidebarMediaQuery);
     const activeRoute = [...useMatches()]
         .reverse()
@@ -32,6 +35,12 @@ function App() {
     const activeAppLabel = activeAppQuery.data?.name ?? slug;
     const breadcrumbLabel = hasActiveApp ? activeAppLabel : activeRoute?.breadcrumb;
     const isSidebarEffectivelyCollapsed = isCompactSidebarViewport || isSidebarCollapsed;
+
+    const toggleSidebarCollapsed = () => {
+        const isCollapsed = !isSidebarCollapsed;
+        setIsSidebarCollapsed(isCollapsed);
+        localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isCollapsed));
+    };
 
     return (
         <div
@@ -81,7 +90,6 @@ function App() {
                     >
                         Docs
                     </a>
-                    <ThemeSwitch />
                     <Link to="/ai" className="text-foreground hover:text-muted-foreground" aria-label="AI assistant">
                         <Sparkles className="size-4" aria-hidden="true" />
                     </Link>
@@ -90,64 +98,13 @@ function App() {
 
             {!isSidebarHidden && (
                 <aside className="app-shell__sidebar border-r border-sidebar-border bg-sidebar">
-                    {!isCompactSidebarViewport && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="w-full px-1"
-                            onClick={() => setIsSidebarCollapsed((value) => !value)}
-                            aria-label={isSidebarEffectivelyCollapsed ? "Expand navigation" : "Collapse navigation"}
-                            title={isSidebarEffectivelyCollapsed ? "Expand navigation" : "Collapse navigation"}
-                        >
-                            {isSidebarEffectivelyCollapsed ? (
-                                <PanelLeftOpen className="size-4" aria-hidden="true" />
-                            ) : (
-                                <PanelLeftClose className="size-4" aria-hidden="true" />
-                            )}
-                        </Button>
-                    )}
-                    <nav className="flex-1 space-y-5 px-3 py-2" aria-label="Apps">
-                        <SidebarSection>
-                            {navigationItems.map((item) => (
-                                <SidebarLink key={item.to} item={item} isCollapsed={isSidebarEffectivelyCollapsed} />
-                            ))}
-                        </SidebarSection>
-
-                        {hasActiveApp &&
-                            appNavigationSections.map((section) => (
-                                <SidebarSection
-                                    key={section.label}
-                                    label={section.label}
-                                    isCollapsed={isSidebarEffectivelyCollapsed}
-                                >
-                                    {section.items.map((item) => (
-                                        <SidebarLink
-                                            key={item.to}
-                                            item={{
-                                                ...item,
-                                                to: getAppNavigationUrl(slug, item.to),
-                                            }}
-                                            isCollapsed={isSidebarEffectivelyCollapsed}
-                                        />
-                                    ))}
-                                </SidebarSection>
-                            ))}
-                    </nav>
-                    <div className="space-y-2 p-3">
-                        <SidebarAction
-                            to="/community"
-                            icon={Users}
-                            label="Community"
-                            isCollapsed={isSidebarEffectivelyCollapsed}
-                        />
-                        <SidebarAction
-                            to="/help"
-                            icon={CircleHelp}
-                            label="Help"
-                            isCollapsed={isSidebarEffectivelyCollapsed}
-                        />
-                    </div>
+                    <AppSidebar
+                        slug={slug}
+                        hasActiveApp={hasActiveApp}
+                        isCollapsed={isSidebarEffectivelyCollapsed}
+                        isToggleVisible={!isCompactSidebarViewport}
+                        onToggleCollapsed={toggleSidebarCollapsed}
+                    />
                 </aside>
             )}
 
@@ -166,109 +123,6 @@ function App() {
                 </div>
             </main>
         </div>
-    );
-}
-
-function SidebarSection({
-    label,
-    isCollapsed = false,
-    children,
-}: {
-    label?: string;
-    isCollapsed?: boolean;
-    children: ReactNode;
-}) {
-    return (
-        <div className="space-y-1">
-            {label && (
-                <p className={cn("px-2 pb-1 text-xs font-medium text-muted-foreground", isCollapsed && "sr-only")}>
-                    {label}
-                </p>
-            )}
-            {children}
-        </div>
-    );
-}
-
-function ThemeSwitch() {
-    const { theme, setTheme } = useTheme();
-    const isDark = theme === "dark";
-
-    return (
-        <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-            aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-            title={isDark ? "Switch to light theme" : "Switch to dark theme"}
-        >
-            {isDark ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
-        </Button>
-    );
-}
-
-function getAppNavigationUrl(appSlug: string | undefined, path: string) {
-    if (!appSlug) {
-        return appRoutes.dashboard();
-    }
-
-    return appRoutes.app(appSlug, path);
-}
-
-type SidebarLinkProps = {
-    item: {
-        label: string;
-        to: string;
-        icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-    };
-    isCollapsed: boolean;
-};
-
-function SidebarLink({ item, isCollapsed }: SidebarLinkProps) {
-    const isExactRoute = item.to === "/" || /^\/apps\/[^/]+$/.test(item.to);
-
-    return (
-        <NavLink
-            to={item.to}
-            end={isExactRoute}
-            className={({ isActive }) =>
-                cn(
-                    "flex h-8 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    isCollapsed && "justify-center",
-                    isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
-                )
-            }
-            aria-label={isCollapsed ? item.label : undefined}
-            title={isCollapsed ? item.label : undefined}
-        >
-            <item.icon className="size-4" aria-hidden />
-            <span className={cn("truncate", isCollapsed && "sr-only")}>{item.label}</span>
-        </NavLink>
-    );
-}
-
-type SidebarActionProps = {
-    to: string;
-    icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-    label: string;
-    isCollapsed: boolean;
-};
-
-function SidebarAction({ to, icon: Icon, label, isCollapsed }: SidebarActionProps) {
-    return (
-        <Link
-            to={to}
-            className={cn(
-                "flex h-8 items-center gap-2 rounded-md px-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                isCollapsed && "justify-center",
-            )}
-            aria-label={label}
-            title={label}
-        >
-            <Icon className="size-4" aria-hidden />
-            <span className={cn(isCollapsed && "sr-only")}>{label}</span>
-        </Link>
     );
 }
 

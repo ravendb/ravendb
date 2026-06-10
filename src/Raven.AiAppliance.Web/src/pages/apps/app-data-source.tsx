@@ -13,16 +13,16 @@ export function AppDataSource() {
         <PagePanel>
             <ApiState
                 isLoading={appQuery.isPending}
+                onRetry={appQuery.refetch}
                 isError={appQuery.isError}
                 errorTitle="Could not load data source"
-                onRetry={() => void appQuery.refetch()}
             >
                 {appQuery.data && (
                     <DetailList
                         items={[
-                            { label: "Source database", value: appQuery.data.database },
                             { label: "Application", value: appQuery.data.name },
-                            { label: "App id", value: appQuery.data.id },
+                            { label: "Source database", value: appQuery.data.database },
+                            { label: "Created at", value: appQuery.data.createdAt },
                         ]}
                     />
                 )}
