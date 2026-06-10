@@ -35,8 +35,8 @@ export type AppRouteHandle = {
     appScoped?: boolean;
     breadcrumb?: string;
     isPageTitleHidden?: boolean;
-    isSidebarHidden?: boolean;
     isBareLayout?: boolean;
+    isSidebarCollapsed?: boolean;
 };
 
 export type NavigationItem = {
@@ -243,7 +243,7 @@ const utilityRoutes: RouteObject[] = [
             breadcrumb: "Add new application",
             isBareLayout: true,
             isPageTitleHidden: true,
-            isSidebarHidden: true,
+            isSidebarCollapsed: true,
         } satisfies AppRouteHandle,
     },
     {
@@ -311,7 +311,7 @@ export const router = createBrowserRouter([
                             appScoped: true,
                             isBareLayout: true,
                             isPageTitleHidden: true,
-                            isSidebarHidden: true,
+                            isSidebarCollapsed: true,
                         } satisfies AppRouteHandle,
                     },
                 ],
