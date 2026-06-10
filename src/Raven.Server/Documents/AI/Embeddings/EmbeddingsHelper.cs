@@ -26,7 +26,7 @@ public static class EmbeddingsHelper
     internal static readonly List<string> ValuesListToVerifyConnection = ["TestValue", "TestValue2"];
 
     [SkipLocalsInit]
-    public static string CalculateInputValueHash(string value)
+    public static unsafe string CalculateInputValueHash(string value)
     {
         // Here we take a string, and we:
         // * convert to upper case
