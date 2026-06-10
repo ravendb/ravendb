@@ -6,7 +6,9 @@ namespace AiApplianceTests;
 /// <summary>
 /// Seeds a mock connection string + agent in an app's per-app DB so the channel / embed / setup-try
 /// endpoints (which resolve the agent from the database, not a compile-time registry) have a real agent to
-/// bind to. The Ollama CS is stored config only — never dialed. Idempotent: the CS and agent upsert.
+/// bind to. This only persists the CS + agent; it does not dial the provider — but a test that then runs a
+/// turn (setup/try, embed chat) will try to contact the Ollama endpoint and surface an error frame, which is
+/// expected. Idempotent: the CS and agent upsert.
 /// </summary>
 internal static class ApplianceTestSeed
 {

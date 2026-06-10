@@ -327,7 +327,8 @@ public static class AppsEndpoints
             var result = await router.RunAsync(
                 new AgentRequest(app.Database, agentId, ConversationId: null, body.Prompt, Parameters: null),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
-                ct);
+                ct,
+                resolved: config);
 
             await NdjsonStream.WriteLineAsync(ctx, new
             {

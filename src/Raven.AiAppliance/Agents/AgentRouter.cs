@@ -1,5 +1,6 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.AiAppliance.Agents;
 
@@ -31,11 +32,12 @@ public sealed record AgentRunResult(object Answer, string ConversationId);
 /// The single funnel every channel feeds into (design §4). Translates an
 /// <see cref="AgentRequest"/> into a RavenDB AI conversation against the
 /// <em>per-app</em> database and streams reply chunks back through
-/// <paramref name="onChunk"/>.
+/// <paramref name="onChunk"/>. Callers that already resolved the agent (for a
+/// pre-stream 4xx) pass it via <c>resolved</c> so the router skips a second lookup.
 /// </summary>
 public interface IAgentRouter
 {
-    Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, CancellationToken ct);
+    Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, CancellationToken ct, AiAgentConfiguration? resolved = null);
 }
 
 /// <summary>Thrown when a request names an agent that doesn't exist in the
@@ -58,9 +60,9 @@ public sealed class UnknownAgentException(string agentId)
 /// </summary>
 internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
 {
-    public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, CancellationToken ct)
+    public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, CancellationToken ct, AiAgentConfiguration? resolved = null)
     {
-        var config = await AgentLookup.FindAsync(store, request.Database, request.AgentId, ct);
+        var config = resolved ?? await AgentLookup.FindAsync(store, request.Database, request.AgentId, ct);
         if (config is null)
             throw new UnknownAgentException(request.AgentId);
 
