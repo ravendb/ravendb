@@ -34,7 +34,7 @@ public static class AgentOutputShape
     /// matching <paramref name="replyField"/> case-insensitively (the dictionary
     /// produced by the RavenDB client uses an ordinal key comparer). Returns the
     /// empty string when the field is absent.</summary>
-    public static string ExtractReplyText(IReadOnlyDictionary<string, object> answer, string replyField)
+    public static string ExtractReplyText(IReadOnlyDictionary<string, object>? answer, string replyField)
     {
         if (answer is null)
             return "";

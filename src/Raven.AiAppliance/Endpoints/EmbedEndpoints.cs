@@ -121,7 +121,8 @@ public static class EmbedEndpoints
             var result = await router.RunAsync(
                 new AgentRequest(app.Database, config.Identifier, conversationId, body.Prompt, Parameters: null),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
-                ct);
+                ct,
+                resolved: config);
 
             // Echo the (unguessable, random) id so the client can continue.
             await NdjsonStream.WriteLineAsync(ctx, new

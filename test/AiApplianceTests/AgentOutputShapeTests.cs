@@ -79,7 +79,7 @@ public class AgentOutputShapeTests(ITestOutputHelper output) : NoDisposalNeeded(
     [RavenFact(RavenTestCategory.AiAppliance)]
     public void ExtractReplyText_returns_empty_for_null_answer()
     {
-        Assert.Equal("", AgentOutputShape.ExtractReplyText(null!, "reply"));
+        Assert.Equal("", AgentOutputShape.ExtractReplyText(null, "reply"));
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]

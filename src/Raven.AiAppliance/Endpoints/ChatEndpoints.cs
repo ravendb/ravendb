@@ -86,9 +86,10 @@ public static class ChatEndpoints
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(store.Database, body.AgentId, conversationId, body.Prompt, body.Parameters),
+                new AgentRequest(store.Database, config.Identifier, conversationId, body.Prompt, body.Parameters),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
-                ctx.RequestAborted);
+                ctx.RequestAborted,
+                resolved: config);
 
             await NdjsonStream.WriteLineAsync(ctx, new
             {
