@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import * as React from "react";
 
-type Theme = "dark" | "light" | "system";
+export type Theme = "dark" | "light" | "system";
 type ResolvedTheme = "dark" | "light";
 
 type ThemeProviderProps = {

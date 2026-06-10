@@ -1,23 +1,26 @@
 import {
-    BarChart3,
+    Bot,
     Cable,
     Database,
-    LayoutDashboard,
-    MessageSquareText,
+    Home,
+    LayoutGrid,
+    LineChart,
+    MessagesSquare,
+    Network,
     Settings,
-    SquareKanban,
+    Sparkles,
     type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { createBrowserRouter, type RouteObject } from "react-router";
 import App from "@/app";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
+import { AppAgents } from "@/pages/apps/app-agents";
 import { AppApiUnavailable } from "@/pages/apps/app-api-unavailable";
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
 import { AppSettings } from "@/pages/apps/app-settings";
-import { AppTasks } from "@/pages/apps/app-tasks";
 import { Login } from "@/pages/auth/login";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
 import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
@@ -40,12 +43,13 @@ export type NavigationItem = {
     label: string;
     to: string;
     icon: LucideIcon;
+    isEnd?: boolean;
 };
 
 type DashboardNavigationDefinition = {
     label: string;
     icon: LucideIcon;
-    section?: "database" | "settings";
+    section?: "database" | "data-prep" | "settings";
 };
 
 type AppRouteDefinitionBase = {
@@ -71,7 +75,7 @@ const dashboardPages: AppRouteDefinition[] = [
         title: "My apps",
         navigation: {
             label: "My apps",
-            icon: LayoutDashboard,
+            icon: LayoutGrid,
         },
         element: <DashboardHome />,
     },
@@ -83,7 +87,7 @@ const appPages: AppRouteDefinition[] = [
         title: "Overview",
         navigation: {
             label: "Overview",
-            icon: LayoutDashboard,
+            icon: Home,
             section: "database",
         },
         element: <AppOverview />,
@@ -99,24 +103,44 @@ const appPages: AppRouteDefinition[] = [
         element: <AppDataSource />,
     },
     {
-        path: "tasks",
-        title: "Tasks",
+        path: "agents",
+        title: "Agents",
         navigation: {
-            label: "Tasks",
-            icon: SquareKanban,
+            label: "Agents",
+            icon: Bot,
             section: "database",
         },
-        element: <AppTasks />,
+        element: <AppAgents />,
     },
     {
         path: "conversations",
         title: "Conversations",
         navigation: {
             label: "Conversations",
-            icon: MessageSquareText,
+            icon: MessagesSquare,
             section: "database",
         },
         element: <AppConversations />,
+    },
+    {
+        path: "gen-ai",
+        title: "GenAI",
+        navigation: {
+            label: "GenAI",
+            icon: Sparkles,
+            section: "data-prep",
+        },
+        element: <AppApiUnavailable feature="GenAI" />,
+    },
+    {
+        path: "embeddings",
+        title: "Embeddings",
+        navigation: {
+            label: "Embeddings",
+            icon: Network,
+            section: "data-prep",
+        },
+        element: <AppApiUnavailable feature="Embeddings" />,
     },
     {
         path: "channels",
@@ -133,7 +157,7 @@ const appPages: AppRouteDefinition[] = [
         title: "Usage",
         navigation: {
             label: "Usage",
-            icon: BarChart3,
+            icon: LineChart,
             section: "settings",
         },
         element: <AppApiUnavailable feature="Usage" />,
@@ -156,39 +180,32 @@ export const navigationItems = dashboardPages.flatMap((page) =>
               {
                   ...page.navigation,
                   to: page.index ? appRouteBuilders.dashboard() : `/${page.path}`,
+                  isEnd: Boolean(page.index),
               },
           ]
         : [],
 ) satisfies NavigationItem[];
 
-export const appNavigationSections = [
-    {
-        label: "Database",
-        items: appPages.flatMap((page) =>
-            page.navigation?.section === "database"
-                ? [
-                      {
-                          ...page.navigation,
-                          to: page.index ? "" : (page.path ?? ""),
-                      },
-                  ]
-                : [],
-        ),
-    },
-    {
-        label: "Settings",
-        items: appPages.flatMap((page) =>
-            page.navigation?.section === "settings"
-                ? [
-                      {
-                          ...page.navigation,
-                          to: page.path ?? "",
-                      },
-                  ]
-                : [],
-        ),
-    },
-] satisfies Array<{ label: string; items: NavigationItem[] }>;
+const appNavigationSectionDefinitions = [
+    { section: "database", label: "Database" },
+    { section: "data-prep", label: "Data prep" },
+    { section: "settings", label: "Settings" },
+] as const;
+
+export const appNavigationSections = appNavigationSectionDefinitions.map(({ section, label }) => ({
+    label,
+    items: appPages.flatMap((page) =>
+        page.navigation?.section === section
+            ? [
+                  {
+                      ...page.navigation,
+                      to: page.index ? "" : (page.path ?? ""),
+                      isEnd: Boolean(page.index),
+                  },
+              ]
+            : [],
+    ),
+})) satisfies Array<{ label: string; items: NavigationItem[] }>;
 
 const dashboardRoutes: RouteObject[] = dashboardPages.map((page) => toRouteObject(page));
 
