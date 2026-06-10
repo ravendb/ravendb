@@ -338,13 +338,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 throw new InvalidOperationException($"The storage with name '{name}' and type '{type}' was not found.");
                     
             var hex = this.GetBoolValueQueryString("hex", false) ?? true;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var rTx = storage.Environment.ReadTransaction())
             {
                 var freeSpaceHandling = storage.Environment.FreeSpaceHandling;
                 await using (var write = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                 {
-                    var json = freeSpaceHandling.FreeSpaceSnapshot(context.Transaction.InnerTransaction.LowLevelTransaction, hex);
+                    var json = freeSpaceHandling.FreeSpaceSnapshot(rTx.LowLevelTransaction, hex);
                     context.Write(write, json);
                 }
             }
