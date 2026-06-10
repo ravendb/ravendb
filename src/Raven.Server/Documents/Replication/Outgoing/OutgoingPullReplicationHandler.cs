@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 return;
 
             // we are on the hub, and we set the last sent change vector to the one that the other side has, so we won't send anything that it already has
-            LastAcceptedChangeVector = response.Reply.LastConfirmedChangeVector;
+            LastAcceptedChangeVector = ChangeVectorUtils.MergeVectors(LastAcceptedChangeVector, response.Reply.LastConfirmedChangeVector);
         }
 
         public override string FromToString => $"{base.FromToString} (pull definition: {PullReplicationDefinitionName})";
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             if (string.IsNullOrEmpty(sinkCursor))
                 return;
 
-            LastAcceptedChangeVector = sinkCursor;
+            LastAcceptedChangeVector = ChangeVectorUtils.MergeVectors(LastAcceptedChangeVector, sinkCursor);
         }
 
         protected override void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
