@@ -17,6 +17,7 @@ using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -466,10 +467,8 @@ public sealed class DualClusterLab : IAsyncDisposable
 
                 using (revisionTombstone)
                 {
-                    RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(
-                        revisionTombstone.Id,
-                        out var tombstoneDocumentId,
-                        out var keyChangeVector);
+                    if (RevisionsStorage.TryExtractDocumentIdFromRevisionTombstoneKey(revisionTombstone.Id, out var tombstoneDocumentId) == false)
+                        continue;
 
                     if (string.Equals(tombstoneDocumentId, documentId, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
@@ -477,7 +476,7 @@ public sealed class DualClusterLab : IAsyncDisposable
                     result.Add(new RevisionTombstoneSnapshot
                     {
                         RawKey = revisionTombstone.Id.ToString(CultureInfo.InvariantCulture),
-                        KeyChangeVector = keyChangeVector,
+                        KeyChangeVector = null,
                         ChangeVector = revisionTombstone.ChangeVector,
                         Etag = revisionTombstone.Etag
                     });
