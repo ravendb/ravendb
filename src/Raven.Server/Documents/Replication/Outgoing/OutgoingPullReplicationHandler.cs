@@ -54,9 +54,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
         // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
 
-        // Durable HubToSink cursor value sent by the Sink in the preliminary request.
-        // The Hub uses it to resume sending from that source frontier rather than from zero.
-        public string SinkCanStartFromChangeVector;
+        // Durable HubToSink cursor value (the confirmed hub cursor) sent by the Sink in the preliminary
+        // request. The Hub uses it to resume sending from that source frontier rather than from zero.
+        public string ConfirmedHubCv;
 
         /// <summary>
         /// The replication scope that should be disposed when the replication is done.
@@ -102,10 +102,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             base.ProcessHandshakeResponse(response);
 
-            if (string.IsNullOrEmpty(SinkCanStartFromChangeVector))
+            if (string.IsNullOrEmpty(ConfirmedHubCv))
                 return;
 
-            long startEtag = ChangeVectorUtils.GetEtagById(SinkCanStartFromChangeVector, _database.DbBase64Id);
+            long startEtag = ChangeVectorUtils.GetEtagById(ConfirmedHubCv, _database.DbBase64Id);
             if (startEtag > _lastSentDocumentEtag)
                 _lastSentDocumentEtag = startEtag;
         }
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             if (_node.Mode == PullReplicationMode.HubToSink)
             {
-                request[nameof(ReplicationInitialRequest.SinkCanStartFromChangeVector)] = ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType.HubCursor);
+                request[nameof(ReplicationInitialRequest.ConfirmedHubCv)] = ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType.HubCursor);
             }
 
             return request;
