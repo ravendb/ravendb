@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
             proxy: {
                 "/api": apiProxyTarget,
                 "/healthz": apiProxyTarget,
+                // Public embed page, iframed by the channel widget preview.
+                "/embed": apiProxyTarget,
             },
         },
     };

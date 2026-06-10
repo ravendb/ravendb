@@ -45,8 +45,10 @@ public static class EmbedEndpoints
 
         // frame-ancestors from the configured origins; empty list = embeddable
         // anywhere (M1 contract). The chat POST also runs the Origin check.
+        // 'self' is always included so the appliance's own UI can preview the
+        // widget — the same self-allow IsOriginAllowed applies to the chat POST.
         if (channel.AllowedOrigins.Length > 0)
-            ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors {string.Join(' ', channel.AllowedOrigins)}";
+            ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors 'self' {string.Join(' ', channel.AllowedOrigins)}";
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(BuildEmbedHtml(widgetId, channel.DisplayName), ct);

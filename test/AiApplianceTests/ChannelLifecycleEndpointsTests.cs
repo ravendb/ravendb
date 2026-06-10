@@ -239,12 +239,13 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        // Non-empty origins -> frame-ancestors CSP on the embed page.
+        // Non-empty origins -> frame-ancestors CSP on the embed page. 'self'
+        // is always present so the appliance's own UI can preview the widget.
         var restrictedWidget = await ProvisionIFrameChannelAsync(client, "app-a");
         var restricted = await client.GetAsync($"/embed/{restrictedWidget}");
         Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
         var csp = Assert.Single(restricted.Headers.GetValues("Content-Security-Policy"));
-        Assert.Equal("frame-ancestors http://localhost", csp);
+        Assert.Equal("frame-ancestors 'self' http://localhost", csp);
 
         // Empty origins -> NO CSP header at all: the embed page is intentionally
         // embeddable from anywhere (M1 decision 2026-06-04) until the
