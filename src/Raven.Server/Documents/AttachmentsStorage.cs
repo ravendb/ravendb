@@ -179,9 +179,10 @@ namespace Raven.Server.Documents
                 {
                     Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
-                    DeleteTombstoneIfNeeded(context, keySlice);
-
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                    ChangeVector changeVector = null;
+                    if (DeleteTombstoneIfNeeded(context, keySlice, out var tombstoneChangeVector))
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, attachmentEtag);
+                    changeVector ??= _documentsStorage.GetNewChangeVector(context, attachmentEtag);
                     Debug.Assert(changeVector != null);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -328,12 +329,14 @@ namespace Raven.Server.Documents
 
             var newEtag = _documentsStorage.GenerateNextEtag();
 
+            var hadTombstone = DeleteTombstoneIfNeeded(context, key, out var tombstoneChangeVector);
             if (string.IsNullOrEmpty(changeVector))
             {
-                changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                changeVector = hadTombstone
+                    ? ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, newEtag).AsString()
+                    : _documentsStorage.GetNewChangeVector(context, newEtag);
             }
             Debug.Assert(changeVector != null);
-            DeleteTombstoneIfNeeded(context, key);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
@@ -1125,10 +1128,16 @@ namespace Raven.Server.Documents
             context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
         }
 
-        private void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
+        private bool DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice, out ChangeVector changeVector)
         {
+            changeVector = null;
             var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
-            table.DeleteByKey(keySlice);
+            if (table.ReadByKey(keySlice, out var existingTombstoneTvr) == false)
+                return false;
+
+            changeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref existingTombstoneTvr);
+            table.Delete(existingTombstoneTvr.Id);
+            return true;
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,
