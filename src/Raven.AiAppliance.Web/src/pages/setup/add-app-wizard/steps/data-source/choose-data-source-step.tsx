@@ -1,6 +1,6 @@
-import { Database, DatabaseZap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-source/data-source-options";
 import { useFormContext, useWatch } from "react-hook-form";
 
 export function ChooseDataSourceStep() {
@@ -37,27 +37,3 @@ export function ChooseDataSourceStep() {
         </div>
     );
 }
-
-type DataSourceOption = {
-    value: AppFormData["dataSource"]["source"];
-    label: string;
-    description: string;
-    icon: React.ReactNode;
-    isDisabled?: boolean;
-};
-
-const DATA_SOURCE_OPTIONS: DataSourceOption[] = [
-    {
-        value: "external",
-        label: "External database",
-        description: "Mirror data from PostgreSQL, SQL Server, or MySQL via Change Data Capture.",
-        icon: <Database className="mb-5 size-5" />,
-    },
-    {
-        value: "ravendb",
-        label: "RavenDB database",
-        description: "Connect to an existing database on your RavenDB server.",
-        isDisabled: true,
-        icon: <DatabaseZap className="mb-5 size-5" />,
-    },
-];
