@@ -220,12 +220,39 @@ namespace Raven.Server.Documents.TimeSeries
             from = EnsureMillisecondsPrecision(from);
             to = EnsureMillisecondsPrecision(to);
 
+            ChangeVector predecessorChangeVector = null;
+            if (remoteChangeVector == null)
+            {
+                using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
+                {
+                    foreach ((_, Table.TableValueHolder tableValueHolder) in table.SeekByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, Slices.Empty, skip: 0))
+                    {
+                        var existingFrom = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, ref tableValueHolder.Reader);
+                        var existingTo = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.To, ref tableValueHolder.Reader);
+
+                        // A local delete-range update continues only existing ranges that touch the same time interval.
+                        if (existingFrom > to || existingTo < from)
+                            continue;
+
+                        ChangeVector currentPredecessorChangeVector = ExtractDeletedRangeChangeVector(context, ref tableValueHolder.Reader);
+                        predecessorChangeVector = predecessorChangeVector == null
+                            ? currentPredecessorChangeVector
+                            : ChangeVector.Merge(predecessorChangeVector, currentPredecessorChangeVector, context);
+                    }
+                }
+            }
+
             long etag;
             ChangeVector changeVector;
             if (remoteChangeVector != null)
             {
                 changeVector = remoteChangeVector;
                 etag = _documentsStorage.GenerateNextEtag();
+            }
+            else if (predecessorChangeVector != null)
+            {
+                etag = _documentsStorage.GenerateNextEtag();
+                changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, predecessorChangeVector, _documentDatabase, etag);
             }
             else
             {
