@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { Eye } from "lucide-react";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { StatusIndicator } from "@/components/data/status-indicator";
+import { Button } from "@/components/shadcn/ui/button";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
+import { ChannelPreviewDialog } from "@/pages/apps/channels/channel-preview-dialog";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
 export function ChannelsSection({ slug }: { slug: string }) {
@@ -31,7 +34,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
             >
                 {channelsQuery.data && (
                     <SectionTable
-                        headers={["Channel name", "Agent name", "Status", "Type", "Created", "Widget ID"]}
+                        headers={["Channel name", "Agent name", "Status", "Type", "Created", "Widget ID", ""]}
                         isEmpty={channelsQuery.data.length === 0}
                         emptyMessage="No channels yet."
                     >
@@ -50,6 +53,19 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                 <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
                                 <TableCell className="text-muted-foreground">{formatDate(channel.createdAt)}</TableCell>
                                 <TableCell className="text-muted-foreground">{channel.widgetId}</TableCell>
+                                <TableCell className="text-right">
+                                    {channel.type === "IFrame" && (
+                                        <ChannelPreviewDialog
+                                            widgetId={channel.widgetId}
+                                            displayName={channel.displayName}
+                                            trigger={
+                                                <Button variant="ghost" size="icon-sm" disabled={!channel.enabled}>
+                                                    <Eye className="size-3.5" />
+                                                </Button>
+                                            }
+                                        />
+                                    )}
+                                </TableCell>
                             </TableRow>
                         ))}
                     </SectionTable>
