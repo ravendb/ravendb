@@ -3,20 +3,14 @@ import { Plus, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
-import type { ChannelType } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { appRoutes } from "@/lib/app-routes";
+import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { cn } from "@/lib/utils";
 import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
-
-const CHANNEL_TYPE_LABELS: Record<NonNullable<ChannelType>, string> = {
-    IFrame: "iFrame",
-    Telegram: "Telegram",
-    WhatsApp: "WhatsApp",
-};
 
 export function AppOverview() {
     const { slug = "" } = useParams();
