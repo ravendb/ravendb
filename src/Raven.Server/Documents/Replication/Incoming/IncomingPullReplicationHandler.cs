@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
 
                 // Here we report to the sink about the last sink change vector that was replicated to all the nodes in the hub cluster
-                heartbeat[nameof(ReplicationMessageReply.ConfirmedSinkCv)] = _sinkBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector);
+                heartbeat[nameof(ReplicationMessageReply.LastConfirmedChangeVector)] = _sinkBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector);
             }
             else if (_incomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
             {

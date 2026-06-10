@@ -31,7 +31,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly string _sourceShardedDatabaseName;
         private readonly bool _shardedSource;
         private readonly Dictionary<int, ShardedOutgoingReplicationHandler> _handlers;
-        private string _lastAcceptedChangeVector;
         private Dictionary<int, long> _lastSentEtagPerDestination;
         private string _lastAcceptedChangeVectorDuringHeartbeat;
 
@@ -128,14 +127,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     cvs.Add(replicationBatch.LastAcceptedChangeVector);
                 }
 
-                _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
+                _lastBatchChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
             }
         }
 
         protected override DynamicJsonValue GetHeartbeatStatusMessage(TransactionOperationContext context, long lastDocumentEtag, string handledMessageType)
         {
             var heartbeat = base.GetHeartbeatStatusMessage(context, lastDocumentEtag, handledMessageType);
-            heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = _lastAcceptedChangeVector;
+            heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = _lastBatchChangeVector;
             return heartbeat;
         }
 
@@ -288,7 +287,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     _lastSentEtagPerDestination[shardNumber] = batch.LastEtagAccepted;
                 }
 
-                _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
+                _lastBatchChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
             }
         }
 

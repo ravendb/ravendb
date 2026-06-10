@@ -782,7 +782,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         if (_parent.Log.IsDebugEnabled)
                              _parent.Log.Debug($"Sending keep-alive heartbeat during active filtering. Current read count: '{ReadCount}'. Last sent etag: '{_parent._lastEtag}'.");
 
-                        _parent._parent.SendHeartbeat(null);
+                        _parent._parent.SendHeartbeat(changeVector: null, lastSentChangeVector: null);
                         _lastHeartbeatTicks = now;
                     }
                 }

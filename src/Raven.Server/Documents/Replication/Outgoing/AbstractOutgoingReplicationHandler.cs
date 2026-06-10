@@ -547,7 +547,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        internal void SendHeartbeat(string changeVector, string lastSentChangeVector = null)
+        internal void SendHeartbeat(string changeVector, string lastSentChangeVector)
         {
             AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
 

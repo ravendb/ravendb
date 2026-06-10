@@ -9,7 +9,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -53,10 +52,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         // In case this is an outgoing pull replication from the hub
         // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
-
-        // Durable HubToSink cursor value (the confirmed hub cursor) sent by the Sink in the preliminary
-        // request. The Hub uses it to resume sending from that source frontier rather than from zero.
-        public string ConfirmedHubCv;
 
         /// <summary>
         /// The replication scope that should be disposed when the replication is done.
@@ -102,12 +97,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             base.ProcessHandshakeResponse(response);
 
-            if (string.IsNullOrEmpty(ConfirmedHubCv))
+            if (string.IsNullOrEmpty(response.Reply.LastConfirmedChangeVector))
                 return;
 
-            long startEtag = ChangeVectorUtils.GetEtagById(ConfirmedHubCv, _database.DbBase64Id);
-            if (startEtag > _lastSentDocumentEtag)
-                _lastSentDocumentEtag = startEtag;
+            // we are on the hub, and we set the last sent change vector to the one that the other side has, so we won't send anything that it already has
+            LastAcceptedChangeVector = response.Reply.LastConfirmedChangeVector;
         }
 
         public override string FromToString => $"{base.FromToString} (pull definition: {PullReplicationDefinitionName})";
@@ -136,11 +130,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
             request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = _node.HubName;
             request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = _node.GetTaskName();
 
-            if (_node.Mode == PullReplicationMode.HubToSink)
-            {
-                request[nameof(ReplicationInitialRequest.ConfirmedHubCv)] = ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType.HubCursor);
-            }
-
             return request;
         }
 
@@ -153,21 +142,19 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
             };
 
-            string cursorCv = ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType.SinkCursor);
-            if (cursorCv == null)
+            // we are on the sink and we set the change vector that we stored in order to continue sending items to the hub.
+            string sinkCursor = ReplicationUtils.ReadCursorFromClusterFor(_parent.Server, _database.Name, _node.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor);
+            if (string.IsNullOrEmpty(sinkCursor))
                 return;
 
-            long startEtag = ChangeVectorUtils.GetEtagById(cursorCv, _database.DbBase64Id);
-
-            if (startEtag > _lastSentDocumentEtag)
-                _lastSentDocumentEtag = startEtag;
+            LastAcceptedChangeVector = sinkCursor;
         }
 
         protected override void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             base.UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
-            if (string.IsNullOrEmpty(replicationBatchReply.ConfirmedSinkCv) == false)
-                PersistSinkCursor(replicationBatchReply.ConfirmedSinkCv);
+            if (string.IsNullOrEmpty(replicationBatchReply.LastConfirmedChangeVector) == false)
+                PersistSinkCursor(replicationBatchReply.LastConfirmedChangeVector);
         }
 
         private void PersistSinkCursor(string confirmedSinkCv)
@@ -183,21 +170,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 }
             };
             _parent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
-        }
-
-        private string ReadCursorFromClusterFor(ExternalReplicationState.ReplicationStateType type)
-        {
-            using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var key = ExternalReplicationState.GenerateItemName(_database.Name, _node.TaskId, type);
-                var stateBlittable = _parent._server.Cluster.Read(context, key);
-                if (stateBlittable == null)
-                    return null;
-
-                var state = JsonDeserializationCluster.ExternalReplicationState(stateBlittable);
-                return state.SourceChangeVector;
-            }
         }
     }
 }
