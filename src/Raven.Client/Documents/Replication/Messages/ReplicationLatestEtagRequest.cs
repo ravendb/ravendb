@@ -46,6 +46,6 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public string DatabaseGroupId { get; set; }
 
-        public string SinkCanStartFromChangeVector { get; set; }
+        public string ConfirmedHubCv { get; set; }
     }
 }
