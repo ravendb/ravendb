@@ -1,12 +1,11 @@
 import { Link, useParams } from "react-router";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { cn } from "@/lib/utils";
@@ -16,21 +15,10 @@ export function AppOverview() {
     const { slug = "" } = useParams();
 
     return (
-        <TooltipProvider>
-            <div className="space-y-5">
-                <div className="flex items-center justify-end">
-                    <Button asChild size="sm">
-                        <Link to={appRoutes.addCapability(slug)}>
-                            <Sparkles className="size-3.5" aria-hidden="true" />
-                            Add AI Capability
-                        </Link>
-                    </Button>
-                </div>
-
-                <AgentsSection slug={slug} />
-                <ChannelsSection slug={slug} />
-            </div>
-        </TooltipProvider>
+        <div className="space-y-5">
+            <AgentsSection slug={slug} />
+            <ChannelsSection slug={slug} />
+        </div>
     );
 }
 
@@ -38,7 +26,7 @@ function AgentsSection({ slug }: { slug: string }) {
     const agentsQuery = useQuery(api.queries.agents.list(slug));
 
     return (
-        <SectionCard title="Agents" action={<DisabledAddButton label="Add agent" />}>
+        <SectionCard title="Agents" action={<AddAgentButton slug={slug} />}>
             <ApiState
                 isLoading={agentsQuery.isPending}
                 isError={agentsQuery.isError}
@@ -184,19 +172,14 @@ function StatusIndicator({ tone, label }: { tone: "positive" | "muted"; label: s
     );
 }
 
-function DisabledAddButton({ label }: { label: string }) {
+function AddAgentButton({ slug }: { slug: string }) {
     return (
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <span tabIndex={0} className="inline-flex cursor-not-allowed">
-                    <Button size="sm" variant="outline" disabled aria-disabled="true">
-                        <Plus className="size-3.5" aria-hidden="true" />
-                        {label}
-                    </Button>
-                </span>
-            </TooltipTrigger>
-            <TooltipContent>Create from the “Add AI Capability” wizard.</TooltipContent>
-        </Tooltip>
+        <Button asChild size="sm" variant="outline">
+            <Link to={appRoutes.addCapability(slug, "agent")}>
+                <Plus className="size-3.5" aria-hidden="true" />
+                Add agent
+            </Link>
+        </Button>
     );
 }
 

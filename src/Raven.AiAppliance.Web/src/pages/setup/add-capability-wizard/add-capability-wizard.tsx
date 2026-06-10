@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/api/api";
@@ -81,13 +81,19 @@ export function AddCapabilityWizard() {
 
 function AddCapabilityWizardBody() {
     const { slug = "" } = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const steps = useCapabilitySteps();
+
+    // "Add agent" links here with ?capability=agent; the capability step is then already
+    // answered (the form defaults to "agent"), so the wizard starts at the connection step.
+    const isAgentPreselected = searchParams.get("capability") === "agent";
 
     return (
         <FormWizard
             steps={steps}
             flow={CAPABILITY_FLOW}
+            initialStep={isAgentPreselected ? "connection" : undefined}
             cancel={() => navigate(appRoutes.app(slug))}
             submitLabel="Save agent"
         />

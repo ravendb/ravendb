@@ -12,5 +12,8 @@ export const appRoutes = {
     },
     dashboard: () => "/",
     addApp: () => `/${ROUTE_PATTERNS.addApp}`,
-    addCapability: (slug: string) => `/apps/${encodeURIComponent(slug)}/${ROUTE_PATTERNS.addCapability}`,
+    addCapability: (slug: string, capability?: "agent") => {
+        const basePath = `/apps/${encodeURIComponent(slug)}/${ROUTE_PATTERNS.addCapability}`;
+        return capability ? `${basePath}?capability=${capability}` : basePath;
+    },
 } as const;
