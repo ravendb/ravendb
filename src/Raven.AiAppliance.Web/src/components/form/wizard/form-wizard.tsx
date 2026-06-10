@@ -13,7 +13,7 @@ import { Alert } from "@/components/shadcn/ui/alert";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { cn } from "@/lib/utils";
 
-export type WizardBeforeNext = () => boolean | void | Promise<boolean | void>;
+export type WizardBeforeNext = () => void | Promise<void>;
 export type WizardStepPosition = "first" | "middle" | "last";
 export type WizardValidationTarget<Values extends FieldValues> = Path<Values> | readonly Path<Values>[] | false;
 
@@ -44,8 +44,6 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     bodyComponent: (props: WizardBodyComponentProps<StepId>) => ReactNode;
     validate: WizardValidationTarget<Values>;
     beforeNext?: WizardBeforeNext;
-    isPending?: boolean;
-    error?: Error | null;
 } & WizardStepBadge<Values>;
 
 export type WizardSteps<StepId extends string, Values extends FieldValues = FieldValues> = Record<
@@ -87,8 +85,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     const currentStep = steps[currentStepIdInFlow];
     const stepPosition: WizardStepPosition =
         currentIndex === 0 ? "first" : currentIndex === flow.length - 1 ? "last" : "middle";
-    const isBusy = isAdvancing || Boolean(currentStep.isPending) || formState.isSubmitting;
-    const stepError = advanceError ?? currentStep.error ?? null;
+    const isBusy = isAdvancing || formState.isSubmitting;
 
     const setActiveStepIndex = (index: number) => {
         setLastKnownIndex(index);
@@ -110,7 +107,11 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         }
 
         if (currentStep.validate !== false) {
-            const isValid = await trigger(currentStep.validate);
+            // The trigger only works correctly when passing an array
+            const isValid = await trigger(
+                Array.isArray(currentStep.validate) ? currentStep.validate : [currentStep.validate],
+            );
+
             if (!isValid) {
                 return;
             }
@@ -120,9 +121,8 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         setAdvanceError(null);
 
         try {
-            const result = await currentStep.beforeNext?.();
-            if (result === false) {
-                return;
+            if (currentStep.beforeNext) {
+                await currentStep.beforeNext();
             }
 
             setActiveStepIndex(currentIndex + 1);
@@ -151,7 +151,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                             </div>
 
                             <currentStep.bodyComponent currentStepId={currentStepIdInFlow} isBusy={isBusy} />
-                            {stepError && <Alert variant="destructive">{stepError.message}</Alert>}
+                            {advanceError && <Alert variant="destructive">{advanceError.message}</Alert>}
                         </section>
                     </main>
 

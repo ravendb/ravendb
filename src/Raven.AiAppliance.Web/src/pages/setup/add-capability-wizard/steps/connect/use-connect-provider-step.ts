@@ -1,4 +1,3 @@
-import { useMutation } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
 import { useParams } from "react-router";
 import { api } from "@/api/api";
@@ -11,33 +10,27 @@ export function useConnectProviderStep() {
     const setSuggestions = useCapabilityWizardStore((state) => state.setSuggestions);
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
 
-    return useMutation({
-        mutationFn: async () => {
-            // Already fetched (e.g. the operator went Back then Next again) — keep their edits
-            // instead of clobbering the form with a fresh suggestion.
-            if (suggestions.length > 0) {
-                return true;
-            }
+    return async () => {
+        // Already fetched (e.g. the operator went Back then Next again) — keep their edits
+        // instead of clobbering the form with a fresh suggestion.
+        if (suggestions.length > 0) {
+            return;
+        }
 
-            const result = await api.services.apps.suggestAgent(slug, {
-                mode: "from-data",
-                intentPrompt: null,
-            });
+        const result = await api.services.apps.suggestAgent(slug, {
+            mode: "from-data",
+            intentPrompt: null,
+        });
 
-            if (result.status !== "Success" || result.configurations.length === 0) {
-                throw new Error(
-                    result.rationale?.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`,
-                );
-            }
+        if (result.status !== "Success" || result.configurations.length === 0) {
+            throw new Error(result.rationale?.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`);
+        }
 
-            setSuggestions(result.configurations);
+        setSuggestions(result.configurations);
 
-            const first = result.configurations[0];
-            setValue("create.selectedIndex", 0);
-            setValue("create.systemPrompt", first.systemPrompt ?? "");
-            setValue("review.name", first.name ?? "");
-
-            return true;
-        },
-    });
+        const first = result.configurations[0];
+        setValue("create.selectedIndex", 0);
+        setValue("create.systemPrompt", first.systemPrompt ?? "");
+        setValue("review.name", first.name ?? "");
+    };
 }

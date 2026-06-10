@@ -4,6 +4,7 @@ import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { cn } from "@/lib/utils";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { AI_SUGGEST_OPTION, MANUAL_OPTION } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 
 export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue } = useFormContext<AppFormData>();
@@ -36,9 +37,9 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                     )}
                 >
                     <Sparkles className="mb-4 size-5" aria-hidden="true" />
-                    <span className="block text-sm font-semibold">AI Suggest</span>
+                    <span className="block text-sm font-semibold">{AI_SUGGEST_OPTION.label}</span>
                     <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                        LLM proposes a draft CDCSinkConfiguration based on schema + your intent prompt.
+                        {AI_SUGGEST_OPTION.description}
                     </span>
                 </button>
                 <div className="px-4 pb-4">
@@ -66,10 +67,8 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                     isManualSelected && "border-foreground bg-accent text-accent-foreground",
                 )}
             >
-                <span className="block text-sm font-semibold">Manual</span>
-                <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                    Empty form scaffolded from the discovered schema. You pick what to flat / embed / link.
-                </span>
+                <span className="block text-sm font-semibold">{MANUAL_OPTION.label}</span>
+                <span className="mt-2 block text-xs leading-5 text-muted-foreground">{MANUAL_OPTION.description}</span>
             </button>
         </div>
     );

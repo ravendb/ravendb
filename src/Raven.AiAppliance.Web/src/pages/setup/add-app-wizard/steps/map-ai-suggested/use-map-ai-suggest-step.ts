@@ -7,33 +7,26 @@ import type {
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { useMutation } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
 
 export function useMapAiSuggestStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
 
-    const connectAndDiscover = useMutation({
-        mutationFn: async () => {
-            const formTables = getValues("mapAiSuggest.tables");
+    return async () => {
+        const formTables = getValues("mapAiSuggest.tables");
 
-            await api.services.setup.map({
-                tables: formTables.map(mapTableToDto),
-            });
+        await api.services.setup.map({
+            tables: formTables.map(mapTableToDto),
+        });
 
-            const firstTable = formTables?.[0];
-            setValue(
-                "preview.table",
-                firstTable.sourceTableSchema
-                    ? `${firstTable.sourceTableSchema}.${firstTable.sourceTableName}`
-                    : firstTable.sourceTableName,
-            );
-
-            return true;
-        },
-    });
-
-    return connectAndDiscover;
+        const firstTable = formTables?.[0];
+        setValue(
+            "preview.table",
+            firstTable.sourceTableSchema
+                ? `${firstTable.sourceTableSchema}.${firstTable.sourceTableName}`
+                : firstTable.sourceTableName,
+        );
+    };
 }
 
 // TODO move mappings to utils file or adjust schema type to match API

@@ -1,8 +1,11 @@
 import z from "zod";
 import type { WizardSteps } from "@/components/form/wizard/form-wizard";
 import { Badge } from "@/components/shadcn/ui/badge";
+import { getOptionLabel } from "@/lib/form-utils";
 import { appSchema, type AppFormData, type AppStepId } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/data-source/choose-data-source-step";
+import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-source/data-source-options";
+import { MAP_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
 import { MapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-suggested/map-ai-suggest-step";
 import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
@@ -13,9 +16,9 @@ import { useMapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-s
 import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
-    const connectSourceStep = useConnectSourceStep();
-    const mapSchemaStep = useMapSchemaStep();
-    const mapAiSuggestStep = useMapAiSuggestStep();
+    const connectSourceBeforeNext = useConnectSourceStep();
+    const mapSchemaBeforeNext = useMapSchemaStep();
+    const mapAiSuggestBeforeNext = useMapAiSuggestStep();
 
     return {
         dataSource: {
@@ -24,26 +27,27 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             bodyComponent: ChooseDataSourceStep,
             validate: "dataSource",
             badgeFields: ["dataSource.source"],
-            badge: ({ values }) => (
-                <Badge variant="secondary">
-                    {values.dataSource?.source === "ravendb" ? "RavenDB database" : "External database"}
-                </Badge>
-            ),
+            badge: ({ isComplete, values }) => {
+                if (!isComplete) {
+                    return null;
+                }
+                return (
+                    <Badge variant="secondary">{getOptionLabel(DATA_SOURCE_OPTIONS, values.dataSource.source)}</Badge>
+                );
+            },
         },
         externalConnection: {
             title: "Connect to your source database",
             bodyComponent: ConnectSourceStep,
             validate: "externalConnection",
-            beforeNext: connectSourceStep.mutateAsync,
-            isPending: connectSourceStep.isPending,
-            error: connectSourceStep.error,
+            beforeNext: connectSourceBeforeNext,
             badgeFields: [],
-            badge: ({ isComplete }) =>
-                isComplete ? (
-                    <Badge className="border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-                        Successfully connected
-                    </Badge>
-                ) : null,
+            badge: ({ isComplete }) => {
+                if (!isComplete) {
+                    return null;
+                }
+                return <Badge variant="success">Successfully connected</Badge>;
+            },
         },
         verifySchema: {
             title: "Verify your schema",
@@ -55,12 +59,10 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             title: "How would you like to map your schema?",
             bodyComponent: MapSchemaStep,
             validate: "map",
-            beforeNext: mapSchemaStep.mutateAsync,
-            isPending: mapSchemaStep.isPending,
-            error: mapSchemaStep.error,
+            beforeNext: mapSchemaBeforeNext,
             badgeFields: ["map.source"],
             badge: ({ values }) => (
-                <Badge variant="secondary">{values.map?.source === "manual" ? "Manual" : "Map with AI"}</Badge>
+                <Badge variant="secondary">{getOptionLabel(MAP_SOURCE_OPTIONS, values.map?.source)}</Badge>
             ),
         },
         mapAiSuggest: {
@@ -68,9 +70,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             description: "Review the draft mapping the AI proposed from your intent and the discovered schema.",
             bodyComponent: MapAiSuggestStep,
             validate: "mapAiSuggest",
-            beforeNext: mapAiSuggestStep.mutateAsync,
-            isPending: mapAiSuggestStep.isPending,
-            error: mapAiSuggestStep.error,
+            beforeNext: mapAiSuggestBeforeNext,
         },
         mapManual: {
             title: "Map schema",

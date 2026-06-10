@@ -1,9 +1,10 @@
 import { useFormContext } from "react-hook-form";
 import { FormInput } from "@/components/form/form-input";
-import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
+import { FormSelect } from "@/components/form/form-select";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 
 export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const { control } = useFormContext<AppFormData>();
@@ -35,18 +36,3 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
         </div>
     );
 }
-
-const PROVIDER_OPTIONS: FormSelectOption<AppFormData["externalConnection"]["provider"]>[] = [
-    {
-        value: "Npgsql",
-        label: "PostgreSQL",
-    },
-    {
-        value: "SqlClient",
-        label: "SQL Server",
-    },
-    {
-        value: "MySqlConnectorFactory",
-        label: "MySQL",
-    },
-];
