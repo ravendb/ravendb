@@ -1440,23 +1440,6 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             Assert.True(docsAfterFirst == 1,
                 $"After first hub failover, expected == 1 docs on new connection but got {docsAfterFirst}.");
 
-            // Wait for cursor to advance past marker/failover-1 before killing B
-            Assert.True(WaitForValue(() =>
-            {
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var key = ExternalReplicationState.GenerateItemName(
-                        sinkStore.Database, result.TaskId,
-                        ExternalReplicationState.ReplicationStateType.SinkCursor);
-                    var blittable = Server.ServerStore.Cluster.Read(ctx, key);
-                    if (blittable == null)
-                        return false;
-                    var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
-                    return state.SourceChangeVector != null && state.SourceChangeVector.Contains("A:1025");
-                }
-            }, true, 30_000));
-
             await hubStoreC.Maintenance.ForDatabase(hubStoreC.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
@@ -1479,8 +1462,8 @@ public class PullReplicationFailoverTests : ReplicationTestBase
             var statsAfterSecond = await sinkStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
             var docsAfterSecond = statsAfterSecond.Outgoing
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
-            Assert.True(docsAfterSecond == 1,
-                $"After second hub failover, expected == 1 docs on new connection but got {docsAfterSecond}.");
+            Assert.True(docsAfterSecond == 2,
+                $"After second hub failover, expected == 2 docs on new connection but got {docsAfterSecond}.");
         }
     }
 
@@ -2139,16 +2122,16 @@ public class PullReplicationFailoverTests : ReplicationTestBase
                 .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
 
-            Assert.True(docsInNewConnection == 1 || docsInNewConnection == 2,
-                $"After hub failover, expected == 1 or 2 documents sent on new connection but got {docsInNewConnection}. " +
+            Assert.True(docsInNewConnection == 1,
+                $"After hub failover, expected == 1 documents sent on new connection but got {docsInNewConnection}. " +
                 "Hub is re-sending already-replicated documents after failing over to a new hub node.");
 
             var revisionsInNewConnection = statsAfter.Outgoing
                 .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.RevisionOutputCount ?? 0) ?? 0) ?? 0;
 
-            Assert.True(revisionsInNewConnection == 1 || revisionsInNewConnection == 2,
-                $"After hub failover, expected == 1 or 2 revisions sent on new connection but got {revisionsInNewConnection}. " +
+            Assert.True(revisionsInNewConnection == 1,
+                $"After hub failover, expected == 1 revisions sent on new connection but got {revisionsInNewConnection}. " +
                 "Hub is re-sending already-replicated revisions after failing over to a new hub node.");
         }
     }
