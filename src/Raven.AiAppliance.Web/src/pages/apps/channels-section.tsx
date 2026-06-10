@@ -38,36 +38,40 @@ export function ChannelsSection({ slug }: { slug: string }) {
                         isEmpty={channelsQuery.data.length === 0}
                         emptyMessage="No channels yet."
                     >
-                        {channelsQuery.data.map((channel) => (
-                            <TableRow key={channel.widgetId}>
-                                <TableCell className="text-right">
-                                    {channel.type === "IFrame" && (
-                                        <ChannelPreviewDialog
-                                            widgetId={channel.widgetId}
-                                            displayName={channel.displayName}
-                                            trigger={
-                                                <Button variant="ghost" size="icon-sm" disabled={!channel.enabled}>
-                                                    <Eye className="size-3.5" />
-                                                </Button>
-                                            }
+                        {channelsQuery.data.map((channel) => {
+                            const agent = agentsQuery.data?.find((x) => x.agentId === channel.agentId);
+                            return (
+                                <TableRow key={channel.widgetId}>
+                                    <TableCell className="text-right">
+                                        {channel.type === "IFrame" && (
+                                            <ChannelPreviewDialog
+                                                widgetId={channel.widgetId}
+                                                displayName={channel.displayName}
+                                                parameterNames={agent?.parameters ?? []}
+                                                trigger={
+                                                    <Button variant="ghost" size="icon-sm" disabled={!channel.enabled}>
+                                                        <Eye className="size-3.5" />
+                                                    </Button>
+                                                }
+                                            />
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="font-medium">{channel.displayName}</TableCell>
+                                    <TableCell className="font-medium">{agent?.name}</TableCell>
+                                    <TableCell>
+                                        <StatusIndicator
+                                            tone={channel.enabled ? "positive" : "muted"}
+                                            label={channel.enabled ? "Connected" : "Disabled"}
                                         />
-                                    )}
-                                </TableCell>
-                                <TableCell className="font-medium">{channel.displayName}</TableCell>
-                                <TableCell className="font-medium">
-                                    {agentsQuery.data?.find((x) => x.agentId === channel.agentId)?.name}
-                                </TableCell>
-                                <TableCell>
-                                    <StatusIndicator
-                                        tone={channel.enabled ? "positive" : "muted"}
-                                        label={channel.enabled ? "Connected" : "Disabled"}
-                                    />
-                                </TableCell>
-                                <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
-                                <TableCell className="text-muted-foreground">{formatDate(channel.createdAt)}</TableCell>
-                                <TableCell className="text-muted-foreground">{channel.widgetId ?? "—"}</TableCell>
-                            </TableRow>
-                        ))}
+                                    </TableCell>
+                                    <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {formatDate(channel.createdAt)}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">{channel.widgetId ?? "—"}</TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </SectionTable>
                 )}
             </ApiState>

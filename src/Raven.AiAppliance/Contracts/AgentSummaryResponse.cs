@@ -12,8 +12,12 @@ namespace Raven.AiAppliance.Contracts;
 /// null when the connection string is missing / carries no model.</param>
 /// <param name="Disabled">Whether the agent is disabled (the dashboard renders
 /// the inverse as an "Active" status).</param>
+/// <param name="Parameters">Names of the agent's declared chat-scoped
+/// parameters — the values a caller must supply to open a conversation. The
+/// channel preview uses this to collect values before loading the widget.</param>
 public sealed record AgentSummaryResponse(
     string AgentId,
     string Name,
     string? Model,
-    bool Disabled);
+    bool Disabled,
+    string[] Parameters);

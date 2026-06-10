@@ -8,6 +8,7 @@ using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.AiAppliance.Endpoints;
 
@@ -117,11 +118,19 @@ public static class EmbedEndpoints
             return;
         }
 
+        if (TryResolveAgentParameters(config, body.Parameters, out var parameters, out var missing) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(
+                new ApiErrorResponse($"missing agent parameter(s): {string.Join(", ", missing)}", Code: "missing_parameters"), ct);
+            return;
+        }
+
         NdjsonStream.SetHeaders(ctx);
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(app.Database, config.Identifier, conversationId, body.Prompt, Parameters: null),
+                new AgentRequest(app.Database, config.Identifier, conversationId, body.Prompt, parameters),
                 async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
                 ct,
                 resolved: config);
@@ -150,6 +159,53 @@ public static class EmbedEndpoints
                 // Response may already be partially flushed.
             }
         }
+    }
+
+    /// <summary>
+    /// Agent-level parameters are chat-scoped and required to open a conversation
+    /// (the chat console collects them the same way). The embed page forwards its
+    /// iframe URL's query string verbatim, so on this public surface only the
+    /// declared names pass through — extras (e.g. a future styling param) are
+    /// dropped, and a missing/blank declared value fails the turn with a clean
+    /// 400 instead of a mid-stream error. Supplied keys match case-insensitively;
+    /// the declared casing is what reaches the agent.
+    /// </summary>
+    private static bool TryResolveAgentParameters(
+        AiAgentConfiguration config,
+        Dictionary<string, string>? supplied,
+        out IReadOnlyDictionary<string, string>? parameters,
+        out List<string> missing)
+    {
+        parameters = null;
+        missing = [];
+
+        var declared = (config.Parameters ?? [])
+            .Select(parameter => parameter.Name)
+            .Where(name => string.IsNullOrWhiteSpace(name) == false)
+            .ToArray();
+        if (declared.Length == 0)
+            return true;
+
+        // Indexer (not the copying ctor) so supplied keys differing only by
+        // case can't throw on this public surface — last one wins.
+        var suppliedByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in supplied ?? new Dictionary<string, string>())
+            suppliedByName[key] = value;
+
+        var resolved = new Dictionary<string, string>();
+        foreach (var name in declared)
+        {
+            if (suppliedByName.TryGetValue(name, out var value) && string.IsNullOrWhiteSpace(value) == false)
+                resolved[name] = value;
+            else
+                missing.Add(name);
+        }
+
+        if (missing.Count > 0)
+            return false;
+
+        parameters = resolved;
+        return true;
     }
 
     /// <summary>
@@ -282,6 +338,11 @@ const widgetId = "__WIDGET_ID__";
 const feed = document.getElementById("ai-chat-feed");
 const form = document.getElementById("ai-chat-form");
 const input = document.getElementById("ai-chat-input");
+// Agent parameters ride in on the iframe URL's query string (e.g.
+// /embed/{widgetId}?customerId=companies/1-A — the embedding site knows its
+// user; this page doesn't). Forwarded on every turn; the server keeps only
+// the agent's declared parameters.
+const parameters = Object.fromEntries(new URLSearchParams(location.search));
 // Server-minted id from the previous done frame; in-memory only (reload = fresh chat).
 let conversationId = null;
 
@@ -305,7 +366,7 @@ form.addEventListener("submit", async (e) => {
     const resp = await fetch(`/embed/${widgetId}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, conversationId })
+      body: JSON.stringify({ prompt, conversationId, parameters })
     });
     if (!resp.ok || !resp.body) { agentRow.textContent = "[error] HTTP " + resp.status; return; }
     const reader = resp.body.getReader();
