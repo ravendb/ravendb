@@ -358,7 +358,7 @@ public partial class RavenTestBase
             {
                 foreach (var task in server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(shardDatabase))
                 {
-                    if(await task == null)
+                    if (await task == null)
                         continue;
 
                     return task.Result;
