@@ -17,6 +17,7 @@ import App from "@/app";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
 import { AppAgents } from "@/pages/apps/app-agents";
 import { AppApiUnavailable } from "@/pages/apps/app-api-unavailable";
+import { AppChannels } from "@/pages/apps/app-channels";
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
@@ -150,7 +151,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Cable,
             section: "settings",
         },
-        element: <AppApiUnavailable feature="Channels" />,
+        element: <AppChannels />,
     },
     {
         path: "usage",
