@@ -349,7 +349,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "document after local recreate replicated from node A", nodeCDbCvAfterLocalChange, nodeCDocumentAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Revisions, Skip = "RavenDB-26295 TODO: enable after the RavenDB-22358 revision schema upgrade lands.")]
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Revisions)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Hub])]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Sink])]
     public async Task RevisionDocument_ShouldNotInflateDatabaseChangeVectorAndShouldReplicateThroughInternalReplication(Options options, ClusterSide filteredPassReceiveSide)
