@@ -334,6 +334,7 @@ export interface components {
             name: string;
             model: null | string;
             disabled: boolean;
+            parameters: string[];
         };
         AiAgentChatTrimmingConfiguration: {
             tokens?: components["schemas"]["AiAgentSummarizationByTokens"];

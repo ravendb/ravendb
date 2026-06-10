@@ -54,7 +54,11 @@ public static class AgentsEndpoints
                 agent.ConnectionStringName is { } name && modelByConnectionString.TryGetValue(name, out var model)
                     ? model
                     : null,
-                agent.Disabled))
+                agent.Disabled,
+                (agent.Parameters ?? [])
+                    .Select(parameter => parameter.Name)
+                    .Where(parameterName => string.IsNullOrWhiteSpace(parameterName) == false)
+                    .ToArray()))
             .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 

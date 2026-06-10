@@ -163,6 +163,45 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 
+    // ---- agent parameters ----
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Declared_agent_parameter_is_required_and_undeclared_names_are_dropped()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+        var widgetId = await ProvisionIFrameChannelWithAgentParameterAsync(client, "my-app");
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
+        // No parameters at all → clean 400 before the stream opens.
+        var missing = await SendChatAsync(client, widgetId, new { prompt = "hi" }, cts.Token);
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+        Assert.Equal("missing_parameters", await ReadErrorCodeAsync(missing));
+
+        // Undeclared names are dropped, so they can't satisfy the declared one.
+        var wrongName = await SendChatAsync(client, widgetId,
+            new { prompt = "hi", parameters = new Dictionary<string, string> { ["other"] = "x" } }, cts.Token);
+        Assert.Equal(HttpStatusCode.BadRequest, wrongName.StatusCode);
+        Assert.Equal("missing_parameters", await ReadErrorCodeAsync(wrongName));
+
+        // A blank value is as good as absent.
+        var blank = await SendChatAsync(client, widgetId,
+            new { prompt = "hi", parameters = new Dictionary<string, string> { ["customerId"] = " " } }, cts.Token);
+        Assert.Equal(HttpStatusCode.BadRequest, blank.StatusCode);
+
+        // Supplying the declared parameter opens the stream (case-insensitive key).
+        var supplied = await SendChatAsync(client, widgetId,
+            new { prompt = "hi", parameters = new Dictionary<string, string> { ["CUSTOMERID"] = "companies/1-A" } }, cts.Token);
+        Assert.Equal(HttpStatusCode.OK, supplied.StatusCode);
+        Assert.Contains("application/x-ndjson", supplied.Content.Headers.ContentType?.ToString() ?? "");
+    }
+
     // ---- gate precedence ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]
@@ -249,6 +288,55 @@ public class EmbedAuthTests(ITestOutputHelper output) : RavenTestBase(output)
 
         var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/channel",
             new { type = "iframe", agentId, allowedOrigins = origins ?? new[] { "http://localhost" } });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        return json.GetProperty("widgetId").GetString()!;
+    }
+
+    /// <summary>Like <see cref="ProvisionIFrameChannelAsync"/>, but the agent
+    /// declares a chat-scoped <c>customerId</c> parameter (used by a query tool,
+    /// mirroring the Northwind sample shape) so the parameter gate can be exercised.</summary>
+    private static async Task<string> ProvisionIFrameChannelWithAgentParameterAsync(
+        HttpClient client, string slug, string agentId = "param-agent")
+    {
+        var csResp = await client.PostAsJsonAsync(
+            $"/api/apps/{slug}/ai/connection-strings",
+            new
+            {
+                name = "param-llm",
+                identifier = "param-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var agentResp = await client.PostAsJsonAsync(
+            $"/api/apps/{slug}/setup/agent",
+            new
+            {
+                identifier = agentId,
+                name = "Param Agent",
+                systemPrompt = "You answer questions for a single customer.",
+                connectionStringName = "param-llm",
+                queries = new[]
+                {
+                    new
+                    {
+                        name = "findOrdersByCustomer",
+                        description = "Returns the orders placed by the customer.",
+                        query = "from Orders where CustomerId = $customerId",
+                        parametersSampleObject = "{}",
+                    },
+                },
+                parameters = new[]
+                {
+                    new { name = "customerId", description = "The id of the customer whose orders to look up." },
+                },
+            });
+        Assert.True(agentResp.IsSuccessStatusCode, await agentResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/channel",
+            new { type = "iframe", agentId, allowedOrigins = Array.Empty<string>() });
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
         return json.GetProperty("widgetId").GetString()!;
