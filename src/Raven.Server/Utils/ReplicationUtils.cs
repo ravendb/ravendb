@@ -7,8 +7,10 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
-using Raven.Client.Util;
+using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils
@@ -76,6 +78,21 @@ namespace Raven.Server.Utils
                     return;
 
                 ThrowInvalidCollectionAfterResolve(collection, null);
+            }
+        }
+
+        public static string ReadCursorFromClusterFor(ServerStore serverStore, string databaseName, long taskId, ExternalReplicationState.ReplicationStateType type)
+        {
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var key = ExternalReplicationState.GenerateItemName(databaseName, taskId, type);
+                var stateBlittable = serverStore.Cluster.Read(context, key);
+                if (stateBlittable == null)
+                    return null;
+
+                var state = JsonDeserializationCluster.ExternalReplicationState(stateBlittable);
+                return state.SourceChangeVector;
             }
         }
 
