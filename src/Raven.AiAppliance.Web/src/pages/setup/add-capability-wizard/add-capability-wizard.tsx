@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/api/api";
 import type { AiAgentConfiguration } from "@/api/generated/server-api";
@@ -17,6 +17,7 @@ export function AddCapabilityWizard() {
     const { slug = "" } = useParams();
     const navigate = useNavigate();
     const resetStore = useCapabilityWizardStore((state) => state.reset);
+    const queryClient = useQueryClient();
 
     const form = useForm<AgentFormData>({
         mode: "onChange",
@@ -51,7 +52,8 @@ export function AddCapabilityWizard() {
             await api.services.apps.provisionAgent(slug, config);
             return config.name;
         },
-        onSuccess: (name) => {
+        onSuccess: async (name) => {
+            await queryClient.invalidateQueries({ queryKey: api.queries.agents.list(slug).queryKey });
             toast.success(`Agent "${name}" created`);
             navigate(appRoutes.app(slug));
         },
