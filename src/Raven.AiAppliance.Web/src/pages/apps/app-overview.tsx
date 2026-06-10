@@ -1,13 +1,6 @@
 import { useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/api/api";
-import { ApiState } from "@/components/data/api-state";
-import { StatusIndicator } from "@/components/data/status-indicator";
-import { TableCell, TableRow } from "@/components/shadcn/ui/table";
-import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { AgentsSection } from "@/pages/apps/agents-section";
-import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
-import { SectionCard, SectionTable } from "@/pages/apps/section-card";
+import { ChannelsSection } from "@/pages/apps/channels-section";
 
 export function AppOverview() {
     const { slug = "" } = useParams();
@@ -18,61 +11,4 @@ export function AppOverview() {
             <ChannelsSection slug={slug} />
         </div>
     );
-}
-
-function ChannelsSection({ slug }: { slug: string }) {
-    const agentsQuery = useQuery(api.queries.agents.list(slug));
-    const channelsQuery = useQuery(api.queries.channels.list(slug));
-
-    const onRetry = async () => {
-        if (channelsQuery.isError) {
-            await channelsQuery.refetch();
-        }
-        if (agentsQuery.isError) {
-            await agentsQuery.refetch();
-        }
-    };
-
-    return (
-        <SectionCard title="Channels" action={<AddChannelMenu slug={slug} />}>
-            <ApiState
-                isLoading={channelsQuery.isPending || agentsQuery.isPending}
-                isError={channelsQuery.isError || agentsQuery.isError}
-                errorTitle="Could not load channels"
-                onRetry={onRetry}
-                loadingLabel="Loading channels..."
-            >
-                {channelsQuery.data && (
-                    <SectionTable
-                        headers={["Channel name", "Agent name", "Status", "Type", "Created", "Widget ID"]}
-                        isEmpty={channelsQuery.data.length === 0}
-                        emptyMessage="No channels yet."
-                    >
-                        {channelsQuery.data.map((channel) => (
-                            <TableRow key={channel.widgetId}>
-                                <TableCell className="font-medium">{channel.displayName}</TableCell>
-                                <TableCell className="font-medium">
-                                    {agentsQuery.data?.find((x) => x.agentId === channel.agentId)?.name}
-                                </TableCell>
-                                <TableCell>
-                                    <StatusIndicator
-                                        tone={channel.enabled ? "positive" : "muted"}
-                                        label={channel.enabled ? "Connected" : "Disabled"}
-                                    />
-                                </TableCell>
-                                <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
-                                <TableCell className="text-muted-foreground">{formatDate(channel.createdAt)}</TableCell>
-                                <TableCell className="text-muted-foreground">{channel.widgetId}</TableCell>
-                            </TableRow>
-                        ))}
-                    </SectionTable>
-                )}
-            </ApiState>
-        </SectionCard>
-    );
-}
-
-function formatDate(value: string) {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
