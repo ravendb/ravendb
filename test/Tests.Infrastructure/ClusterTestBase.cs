@@ -24,6 +24,7 @@ using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -144,18 +145,19 @@ namespace Tests.Infrastructure
             }
         }
 
-        public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst)
+        public async Task WaitForMarkerAsync(IDocumentStore src, IDocumentStore dst)
         {
             var sharding = await Sharding.GetShardingConfigurationAsync(src);
             if (sharding == null)
             {
                 var id = "marker/" + Guid.NewGuid();
-                using (var s = src.OpenSession())
+                using (var s = src.OpenSession(src.Database))
                 {
                     s.Store(new { }, id);
                     s.SaveChanges();
                 }
-                Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000));
+
+                Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, TimeSpan.FromSeconds(30)));
                 return;
             }
 
@@ -163,16 +165,81 @@ namespace Tests.Infrastructure
             {
                 var database = ShardHelper.ToShardName(src.Database, shardNumber);
                 var id = $"marker/{Guid.NewGuid()}${Sharding.GetRandomIdForShard(sharding, shardNumber)}";
-
                 using (var s = src.OpenSession(database))
                 {
                     s.Store(new { }, id);
                     s.SaveChanges();
                 }
 
-                var r = await Replication.WaitForDocumentToReplicateAsync<object>(dst, id, 30 * 1000);
-                Assert.NotNull(r);
+                Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, TimeSpan.FromSeconds(30)));
             }
+        }
+
+        public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst, RavenServer server = null)
+        {
+            var sharding = await Sharding.GetShardingConfigurationAsync(src);
+            if (sharding == null)
+            {
+                var srcDb = await Databases.GetDocumentDatabaseInstanceFor(server, src);
+                await EnsureReplicatingAndAckedAsync(srcDb, src, dst, src.Database, "marker/" + Guid.NewGuid(), timeoutMs: 15 * 1000);
+                return;
+            }
+
+            foreach (var shardNumber in sharding.Shards.Keys)
+            {
+                var srcServers = server == null ? GetServers().Where(s => src.Urls.Contains(s.WebUrl)).ToList() : [server];
+                if (srcServers.Count == 0)
+                    throw new InvalidOperationException("Source server not found, do you use a custom server?");
+
+                var database = ShardHelper.ToShardName(src.Database, shardNumber);
+                var shardDb = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(database, srcServers);
+                var id = $"marker/{Guid.NewGuid()}${Sharding.GetRandomIdForShard(sharding, shardNumber)}";
+                await EnsureReplicatingAndAckedAsync(shardDb, src, dst, database, id, timeoutMs: 30 * 1000);
+            }
+        }
+
+        private async Task EnsureReplicatingAndAckedAsync(DocumentDatabase srcDb, IDocumentStore src, IDocumentStore dst, string database, string markerId, int timeoutMs)
+        {
+            long lastEtagBefore = 0;
+            using (srcDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+                lastEtagBefore = srcDb.DocumentsStorage.ReadLastEtag(ctx.Transaction.InnerTransaction);
+
+            using (var s = src.OpenSession(database))
+            {
+                s.Store(new { }, markerId);
+                s.SaveChanges();
+            }
+
+            Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, markerId, timeoutMs));
+            var r = await WaitForValueAsync(() => GetMinimalEtagForExternalReplication(srcDb) >= lastEtagBefore, true);
+            Assert.True(r, $"'{srcDb.Name}' did not get the replication ack from '{dst.Database}' up to etag {lastEtagBefore} (current: {GetMinimalEtagForExternalReplication(srcDb)}).");
+        }
+
+        private long GetMinimalEtagForExternalReplication(DocumentDatabase database)
+        {
+            var minEtag = long.MaxValue;
+            var server = database.ServerStore;
+            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var dbRecord = server.Cluster.ReadRawDatabaseRecord(ctx, database.Name);
+                var externals = dbRecord.ExternalReplications;
+                if (externals != null)
+                {
+                    foreach (var external in externals)
+                    {
+                        if (external.Disabled)
+                            continue;
+
+                        var state = ReplicationLoader.GetExternalReplicationState(server, database.Name, external.TaskId, ctx);
+                        var myEtag = ChangeVectorUtils.GetEtagById(state.SourceChangeVector, database.DbBase64Id);
+                        minEtag = Math.Min(myEtag, minEtag);
+                    }
+                }
+            }
+
+            return minEtag;
         }
 
         protected static async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, TimeSpan timeout)

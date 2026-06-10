@@ -30,9 +30,19 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
-        public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
+        public async Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
-            return _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database ?? database));
+            var topology = record.Topology;
+            foreach (var server in _parent.GetServers())
+            {
+                if (topology.RelevantFor(server.ServerStore.NodeTag))
+                {
+                    return await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
+                }
+            }
+
+            throw new InvalidOperationException($"Could not find a suitable server for database '{database ?? store.Database}'.");
         }
 
         public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(string node, string database)
@@ -43,6 +53,9 @@ public partial class RavenTestBase
 
         public Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(RavenServer server, IDocumentStore store, string database = null)
         {
+            if (server == null)
+                return GetDocumentDatabaseInstanceFor(store, database);
+
             return server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 

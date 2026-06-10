@@ -910,7 +910,7 @@ namespace Raven.Server.Documents.TimeSeries
             private ChangeVector _currentChangeVector;
             public ChangeVector ChangeVector => _currentChangeVector;
 
-            public bool ResolvedSegment { get; set; }
+            public bool ResolvedSegment;
 
             private AllocatedMemoryData _clonedReadonlySegment;
 
