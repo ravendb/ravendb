@@ -165,6 +165,10 @@ namespace Raven.Server.Documents.Replication
                 using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                 {
                     DynamicJsonValue response = GetInitialRequestMessage(getLatestEtagMessage, replParams);
+
+                    if (replParams != null && replParams.Mode == PullReplicationMode.HubToSink)
+                        response[nameof(ReplicationMessageReply.LastConfirmedChangeVector)] = ReplicationUtils.ReadCursorFromClusterFor(Server, _databaseName, replParams.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor);
+
                     context.Write(writer, response);
                     writer.Flush();
                 }
@@ -297,7 +301,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                 [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
                 [nameof(ReplicationMessageReply.AcceptablePaths)] = replParams?.AllowedPaths,
-                [nameof(ReplicationMessageReply.PreventDeletionsMode)] = replParams?.PreventDeletionsMode
+                [nameof(ReplicationMessageReply.PreventDeletionsMode)] = replParams?.PreventDeletionsMode,
             };
         }
 

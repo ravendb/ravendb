@@ -491,8 +491,7 @@ namespace Raven.Server.Documents.Replication
                 },
 
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName,
-                CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint,
-                ConfirmedHubCv = initialRequest.ConfirmedHubCv
+                CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint
             };
 
             if (header.ReplicationHubAccess != null)

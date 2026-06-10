@@ -45,7 +45,5 @@ namespace Raven.Client.Documents.Replication.Messages
         public string SourceUrl { get; set; }
 
         public string DatabaseGroupId { get; set; }
-
-        public string ConfirmedHubCv { get; set; }
     }
 }
