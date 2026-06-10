@@ -336,14 +336,6 @@
         overflow: hidden;
     }
 
-    .app-shell--no-sidebar {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .app-shell--no-sidebar .app-shell__main {
-        grid-column: 1 / -1;
-    }
-
     @media (min-width: 64rem) {
         .app-shell {
             grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
@@ -351,10 +343,6 @@
 
         .app-shell--collapsed {
             grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr);
-        }
-
-        .app-shell--no-sidebar {
-            grid-template-columns: minmax(0, 1fr);
         }
     }
 }

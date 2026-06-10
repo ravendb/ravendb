@@ -18,14 +18,25 @@ function readStoredSidebarCollapsed() {
 
 function App() {
     const { slug } = useParams();
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readStoredSidebarCollapsed);
     const isCompactSidebarViewport = useMediaQuery(compactSidebarMediaQuery);
     const activeRoute = [...useMatches()]
         .reverse()
         .map((match) => match.handle)
         .find(isAppRouteHandle);
+    const shouldCollapseSidebarForRoute = Boolean(activeRoute?.isSidebarCollapsed);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+        () => shouldCollapseSidebarForRoute || readStoredSidebarCollapsed(),
+    );
+    const [wasSidebarCollapsedForRoute, setWasSidebarCollapsedForRoute] = useState(shouldCollapseSidebarForRoute);
+
+    // Routes like wizards start with a collapsed sidebar, but the user can still
+    // expand it. Restore the stored preference when leaving such a route.
+    if (shouldCollapseSidebarForRoute !== wasSidebarCollapsedForRoute) {
+        setWasSidebarCollapsedForRoute(shouldCollapseSidebarForRoute);
+        setIsSidebarCollapsed(shouldCollapseSidebarForRoute || readStoredSidebarCollapsed());
+    }
+
     const hasActiveApp = Boolean(slug || activeRoute?.appScoped);
-    const isSidebarHidden = Boolean(activeRoute?.isSidebarHidden);
     const isPageTitleHidden = Boolean(activeRoute?.isPageTitleHidden);
     const isBareLayout = Boolean(activeRoute?.isBareLayout);
     const activeAppQuery = useQuery({
@@ -47,7 +58,6 @@ function App() {
             className={cn(
                 "app-shell bg-background text-foreground",
                 isSidebarEffectivelyCollapsed && "app-shell--collapsed",
-                isSidebarHidden && "app-shell--no-sidebar",
             )}
         >
             <header className="app-shell__header border-b bg-background px-3 py-2">
@@ -96,17 +106,15 @@ function App() {
                 </nav>
             </header>
 
-            {!isSidebarHidden && (
-                <aside className="app-shell__sidebar border-r border-sidebar-border bg-sidebar">
-                    <AppSidebar
-                        slug={slug}
-                        hasActiveApp={hasActiveApp}
-                        isCollapsed={isSidebarEffectivelyCollapsed}
-                        isToggleVisible={!isCompactSidebarViewport}
-                        onToggleCollapsed={toggleSidebarCollapsed}
-                    />
-                </aside>
-            )}
+            <aside className="app-shell__sidebar border-r border-sidebar-border bg-sidebar">
+                <AppSidebar
+                    slug={slug}
+                    hasActiveApp={hasActiveApp}
+                    isCollapsed={isSidebarEffectivelyCollapsed}
+                    isToggleVisible={!isCompactSidebarViewport}
+                    onToggleCollapsed={toggleSidebarCollapsed}
+                />
+            </aside>
 
             <main
                 className={cn(
