@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Voron;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
@@ -15,10 +14,10 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
             }
 
-            protected override void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+            protected override string HandleRevisionTombstone(DocumentsOperationContext context, string changeVector)
             {
                 RestoreKnownSinkEntriesFromLocalChangeVector(context, ref changeVector);
-                base.HandleRevisionTombstone(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
+                return base.HandleRevisionTombstone(context, changeVector);
             }
 
         }

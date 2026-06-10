@@ -221,13 +221,6 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                if (item is DocumentReplicationItem doc &&
-                    (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision)))
-                    return context.GetEmptyChangeVector();
-
-                if (item is RevisionTombstoneReplicationItem)
-                    return context.GetEmptyChangeVector();
-
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
