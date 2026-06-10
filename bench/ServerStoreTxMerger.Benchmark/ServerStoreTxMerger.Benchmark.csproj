@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.9</RuntimeFrameworkVersion>
     <AssemblyName>ServerStoreTxMerger.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>ServerStoreTxMerger.Benchmark</PackageId>
