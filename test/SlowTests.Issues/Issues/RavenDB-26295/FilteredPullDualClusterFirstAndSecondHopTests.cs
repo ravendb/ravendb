@@ -501,7 +501,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "revision after local revision replicated from node A", nodeCDbCvAfterLocalChange, nodeCRevisionAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Revisions, Skip = "RavenDB-26295 TODO: enable after the RavenDB-22358 revision schema upgrade lands.")]
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Revisions)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Hub])]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Sink])]
     public async Task RevisionTombstone_ShouldNotInflateDatabaseChangeVectorAndShouldReplicateThroughInternalReplication(Options options, ClusterSide filteredPassReceiveSide)
@@ -1026,7 +1026,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "attachment after local recreate replicated from node A", nodeCDbCvAfterLocalChange, nodeCAttachmentAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Attachments | RavenTestCategory.Revisions, Skip = "RavenDB-26295 TODO: enable after the RavenDB-22358 revision schema upgrade lands.")]
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
     public async Task AttachmentRestoredFromRevisionAfterFilteredTombstone_ShouldPreserveAttachmentTombstoneLineage(Options options)
     {
