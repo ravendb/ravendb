@@ -1085,6 +1085,26 @@ namespace Raven.Server.Web.Authentication
                         mergedSsoIdentifiers = editedCertificate.SsoIdentifiers;
                 }
 
+                if (isSsoClient && mergedSsoIdentifiers != null)
+                {
+                    // Enforce SSO identity uniqueness on edit, mirroring PutSsoUser. Exclude the entry being
+                    // edited by thumbprint so keeping an entry's own identifier is allowed.
+                    using (ctx.OpenReadTransaction())
+                    {
+                        foreach (var id in mergedSsoIdentifiers)
+                        {
+                            var payload = new SsoExtensionPayload(id.Identifier, id.Provider, id.Domain);
+                            var existing = ServerStore.Cluster.GetSsoClientCertificateByIdentity(ctx, payload);
+                            if (existing != null && string.Equals(existing.Thumbprint, editedCertificate.Thumbprint, StringComparison.OrdinalIgnoreCase) == false)
+                            {
+                                throw new InvalidOperationException(
+                                    $"An SSO user entry with identity '{payload.GetDisplayIdentity()}' already exists " +
+                                    $"(name: '{existing.Name}'). Each SSO identity can belong to only one entry.");
+                            }
+                        }
+                    }
+                }
+
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
                     var permissions = FormatPermissions(editedCertificate);

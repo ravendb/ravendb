@@ -106,12 +106,6 @@ namespace Raven.Server.Web
                 else
                     sb.Append($" (SSO user: {userDisplay} ({auth.SsoUserIdentity}))");
             }
-            else if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var xff))
-            {
-                var xffStr = xff.ToString().Trim();
-                if (string.IsNullOrEmpty(xffStr) == false)
-                    sb.Append($" (X-Forwarded-For: {xffStr})");
-            }
             sb.Append(", ");
             if (clientCert != null)
                 sb.Append($"CN={clientCert.GetDisplayName()} [{clientCert.Thumbprint}], ");

@@ -721,6 +721,95 @@ namespace SlowTests.Authentication
         }
 
         [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task EditSsoUser_DuplicateIdentity_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            const string aliceId = "alice@example.com";
+            const string bobId = "bob@example.com";
+            var permissions = new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite };
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, aliceId, ssoCerts.SsoServerPublicKeyPinningHash, permissions, provider: SsoProvider.Github);
+                var bobThumbprint = Certificates.RegisterSsoUserEntry(certificates, bobId, ssoCerts.SsoServerPublicKeyPinningHash, permissions, provider: SsoProvider.Github);
+
+                // Editing bob's identifier to collide with alice's must be rejected, otherwise two entries would
+                // share the same SSO identity and auth-time resolution would be non-deterministic.
+                var ex = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    await adminStore.Maintenance.Server.SendAsync(new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                    {
+                        Thumbprint = bobThumbprint,
+                        Name = bobId,
+                        Permissions = permissions,
+                        Clearance = SecurityClearance.ValidUser,
+                        SsoIdentifiers = new List<SsoIdentifier> { new SsoIdentifier { Provider = SsoProvider.Github, Identifier = aliceId } }
+                    }));
+                });
+
+                Assert.Contains("already exists", ex.ToString(), StringComparison.OrdinalIgnoreCase);
+                Assert.Contains($"{SsoProvider.Github}:{aliceId}", ex.ToString());
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task EditSsoUser_KeepingOwnIdentity_IsAllowed()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            const string ssoUserId = "self@example.com";
+            var permissions = new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite };
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                var ssoUserThumbprint = Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions, provider: SsoProvider.Github);
+
+                // Re-submitting the entry's own identifier must not be treated as a collision (self-match is excluded by thumbprint).
+                await adminStore.Maintenance.Server.SendAsync(new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                {
+                    Thumbprint = ssoUserThumbprint,
+                    Name = ssoUserId,
+                    Permissions = permissions,
+                    Clearance = SecurityClearance.Operator,
+                    SsoIdentifiers = new List<SsoIdentifier> { new SsoIdentifier { Provider = SsoProvider.Github, Identifier = ssoUserId } }
+                }));
+
+                var after = (await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(ssoUserId)))
+                    .Single(c => c.Usage == CertificateUsage.SsoClient);
+                Assert.Equal(SecurityClearance.Operator, after.SecurityClearance);
+                Assert.Equal(1, after.SsoIdentifiers.Count);
+                Assert.Equal(ssoUserId, after.SsoIdentifiers[0].Identifier);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
         public async Task CannotEditSsoServerCertificate()
         {
             var certificates = Certificates.SetupServerAuthentication();

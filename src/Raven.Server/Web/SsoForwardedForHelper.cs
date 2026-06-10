@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 
 namespace Raven.Server.Web;
 
@@ -18,7 +19,7 @@ internal static class SsoForwardedForHelper
         if (auth?.IsSsoAuthenticated != true)
             return (directIp, null);
 
-        if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff))
+        if (context.Request.Headers.TryGetValue(Constants.Headers.XForwardedFor, out var xff))
         {
             if (TrySanitize(xff.ToString(), out var sanitized))
                 return (sanitized, directIp);

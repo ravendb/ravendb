@@ -110,9 +110,11 @@ namespace Raven.Server.Routing
                     // here, because there is a single connection, but better to be safe
                     if (Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
                     {
-                        var xffHeader = context.Request.Headers.TryGetValue(Constants.Headers.XForwardedFor, out var xffVal) ? xffVal.ToString().Trim() : null;
                         var remoteAddr = $"{context.Connection.RemoteIpAddress}:{context.Connection.RemotePort}";
-                        var ipInfo = string.IsNullOrEmpty(xffHeader) ? remoteAddr : $"{remoteAddr}, {Constants.Headers.XForwardedFor}: {xffHeader}";
+                        var ipInfo = remoteAddr;
+                        var (clientIp, proxyIp) = SsoForwardedForHelper.GetIps(context, feature);
+                        if (proxyIp != null) // SSO-authenticated connection with a valid forwarded chain
+                            ipInfo = $"{remoteAddr}, {Constants.Headers.XForwardedFor}: {clientIp}";
 
                         if (feature.WrongProtocolMessage != null)
                         {
