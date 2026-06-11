@@ -37,7 +37,10 @@ public class PullReplicationBatchHistory
             case null:
                 return null; // not all siblings connected yet, wait
             case long.MaxValue:
+            {
+                _batchHistory.Clear(); // no siblings, clear history as it isn't needed anymore
                 return lastBatchChangeVector; // single-node: trivially confirmed
+            }
         }
 
         string sinkCv = null;
