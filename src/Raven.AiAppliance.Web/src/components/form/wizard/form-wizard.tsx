@@ -134,7 +134,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     };
 
     return (
-        <div className="flex h-full min-h-full bg-background text-foreground">
+        <div className="flex h-full min-h-full text-foreground">
             <div className="grid min-h-full w-full lg:grid-cols-[minmax(0,1fr)_13.75rem]">
                 <div className="flex min-h-0 flex-col">
                     <div className="border-b px-5 py-3 lg:hidden">
@@ -166,7 +166,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                     />
                 </div>
 
-                <aside className="hidden border-l bg-background px-4 py-5 lg:block" aria-label="Setup steps">
+                <aside className="hidden border-l bg-sidebar/30 px-4 py-5 lg:block" aria-label="Setup steps">
                     <WizardStepper
                         flow={flow}
                         steps={steps}

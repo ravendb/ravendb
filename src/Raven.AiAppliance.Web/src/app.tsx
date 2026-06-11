@@ -1,4 +1,4 @@
-import { Link, Outlet, useMatches, useParams } from "react-router";
+import { Link, Outlet, useLocation, useMatches, useParams } from "react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
@@ -18,6 +18,7 @@ function readStoredSidebarCollapsed() {
 
 function App() {
     const { slug } = useParams();
+    const { pathname } = useLocation();
     const isCompactSidebarViewport = useMediaQuery(compactSidebarMediaQuery);
     const activeRoute = [...useMatches()]
         .reverse()
@@ -56,11 +57,11 @@ function App() {
     return (
         <div
             className={cn(
-                "app-shell bg-background text-foreground",
+                "app-shell bg-surface2 text-foreground dark:bg-surface1",
                 isSidebarEffectivelyCollapsed && "app-shell--collapsed",
             )}
         >
-            <header className="app-shell__header border-b bg-background px-3 py-2">
+            <header className="app-shell__header px-3 py-2">
                 <div className="flex min-w-0 items-center gap-3">
                     <Link
                         to={appRoutes.dashboard()}
@@ -85,28 +86,37 @@ function App() {
                     )}
                 </div>
 
-                <nav
-                    className="ml-4 flex shrink-0 items-center gap-4 text-xs font-semibold"
-                    aria-label="Top navigation"
-                >
-                    <Link to={appRoutes.dashboard()} className="text-foreground hover:text-muted-foreground">
+                <nav className="ml-4 flex shrink-0 items-center gap-4 text-sm" aria-label="Top navigation">
+                    <Link
+                        to={appRoutes.dashboard()}
+                        className={cn(
+                            "transition-colors",
+                            pathname === appRoutes.dashboard()
+                                ? "font-semibold text-foreground"
+                                : "text-muted-foreground hover:text-foreground",
+                        )}
+                    >
                         Dashboard
                     </Link>
                     <a
                         href="https://docs.ravendb.net/"
                         target="_blank"
                         rel="noreferrer"
-                        className="text-foreground hover:text-muted-foreground"
+                        className="text-muted-foreground transition-colors hover:text-foreground"
                     >
                         Docs
                     </a>
-                    <Link to="/ai" className="text-foreground hover:text-muted-foreground" aria-label="AI assistant">
+                    <Link
+                        to="/ai"
+                        className="text-primary [filter:drop-shadow(0_0_6px_var(--brand-400))] transition-colors hover:text-primary/80"
+                        aria-label="AI assistant"
+                    >
                         <Sparkles className="size-4" aria-hidden="true" />
                     </Link>
                 </nav>
             </header>
 
-            <aside className="app-shell__sidebar border-r border-sidebar-border bg-sidebar">
+            <aside className="app-shell__sidebar">
                 <AppSidebar
                     slug={slug}
                     hasActiveApp={hasActiveApp}
@@ -118,13 +128,13 @@ function App() {
 
             <main
                 className={cn(
-                    "app-shell__main",
+                    "app-shell__main me-2 mb-2 rounded-lg border bg-surface1 dark:bg-surface2",
                     isBareLayout ? "gap-0 p-0" : "gap-3 px-4 py-5 lg:px-5",
                     isPageTitleHidden && "grid-rows-[minmax(0,1fr)]",
                 )}
             >
                 {!isPageTitleHidden && (
-                    <h1 className="text-xl font-semibold tracking-normal">{activeRoute?.title ?? "My apps"}</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">{activeRoute?.title ?? "My apps"}</h1>
                 )}
                 <div className="min-h-0 overflow-auto">
                     <Outlet />
