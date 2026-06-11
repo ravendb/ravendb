@@ -182,8 +182,6 @@ namespace Raven.Server.Documents
                     ChangeVector changeVector = null;
                     if (DeleteTombstoneIfNeeded(context, keySlice, out var tombstoneChangeVector))
                         changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, attachmentEtag);
-                    changeVector ??= _documentsStorage.GetNewChangeVector(context, attachmentEtag);
-                    Debug.Assert(changeVector != null);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     void SetTableValue(TableValueBuilder tvb, Slice cv)
@@ -202,12 +200,12 @@ namespace Raven.Server.Documents
                         // This is an update to the attachment with the same stream and content type
                         // Just updating the etag and casing of the name and the content type.
 
-                        if (expectedChangeVector != null)
-                        {
-                            var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
-                            if (ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
-                                ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
-                        }
+                        var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
+                        if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
+                            ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
+
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
+                        Debug.Assert(changeVector != null);
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
@@ -227,12 +225,12 @@ namespace Raven.Server.Documents
                             if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
                             {
                                 attachmentExists = true;
-                                if (expectedChangeVector != null)
-                                {
-                                    var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
-                                    if (ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
-                                        ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
-                                }
+
+                                var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
+                                if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
+                                    ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
+
+                                changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
 
                                 if (fromSmuggler == false)
                                 {
@@ -279,6 +277,9 @@ namespace Raven.Server.Documents
                         {
                             PutAttachmentStream(context, keySlice, base64Hash, stream);
                         }
+
+                        changeVector ??= _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                        Debug.Assert(changeVector != null);
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
