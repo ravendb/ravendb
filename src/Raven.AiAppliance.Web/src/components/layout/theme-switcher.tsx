@@ -1,4 +1,3 @@
-import { Monitor, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useTheme, type Theme } from "@/components/shadcn/theme-provider";
 import {
     DropdownMenu,
@@ -8,13 +7,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/shadcn/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
+import { THEME_OPTIONS } from "@/lib/theme-options";
 import { cn } from "@/lib/utils";
-
-const THEME_OPTIONS: { value: Theme; label: string; icon: LucideIcon }[] = [
-    { value: "light", label: "Light", icon: Sun },
-    { value: "system", label: "System", icon: Monitor },
-    { value: "dark", label: "Dark", icon: Moon },
-];
 
 /**
  * Theme control with two layouts:
