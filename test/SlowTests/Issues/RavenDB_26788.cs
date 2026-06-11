@@ -89,25 +89,13 @@ namespace SlowTests.Issues
             }
         }
 
-        // Production scenario: a bucket migration source shard has two replicas. The node that owns the
-        // migration dies in the window after ownership was transferred to the destination but before the
-        // source cleanup removed the bucket data. The surviving source replica takes over the migration
-        // task and re-sends the whole bucket: the migration replication type persists no per-source
-        // checkpoint (IncomingMigrationReplicationHandler.SaveSourceEtag is a no-op), so the surviving
-        // replica's fresh outgoing handler re-scans from etag 0. Every re-sent item is re-processed on the
-        // destination with a freshly assigned 'order' part (IncomingMigrationReplicationHandler.PreProcessItem
-        // keeps the 'version', assigns a new receiver-local 'order'), so the only causal link between the
-        // re-sent stale items and the destination's current state is the 'version' part of the change vector.
+        // Simulate a source-replica failover after bucket ownership moved to shard 1 but before shard 0
+        // cleaned up its bucket data. The surviving replica re-sends the bucket from scratch, so stale
+        // time-series segments reach the destination with a fresh receiver-local order in their change vector.
         //
-        // A time series that was migrated into the destination and then deleted there in full must stay
-        // deleted when the stale segment is re-sent. That requires both:
-        //   1. the locally created deleted-range to carry the version lineage of the overlapping
-        //      deleted-ranges it supersedes (otherwise its change vector has no causal relation to the
-        //      migrated segment at all) - RavenDB-26788, and
-        //   2. SegmentAlreadyDeleted to compare the incoming segment against the stored deleted-ranges
-        //      by version (the flattened string comparison is defeated by the freshly assigned order of
-        //      the re-sent segment, which no stored deleted-range can ever dominate) - RavenDB-26790.
-        // If either is missing, the re-sent stale segment resurrects the deleted series.
+        // The series must remain deleted after that resend. This verifies that the destination deleted-range
+        // preserves predecessor version lineage, and that stale incoming segments are checked against deleted
+        // ranges by version instead of by the flattened change-vector order.
         [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Replication | RavenTestCategory.TimeSeries)]
         public async Task DeletedTimeSeriesShouldStayDeletedAfterBucketResendAfterMigrationSourceFailover()
         {
