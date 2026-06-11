@@ -161,10 +161,7 @@ export const appSchema = z.object({
                 });
             }
         }),
-    mapAiSuggest: z.object({
-        tables: tablesSchema,
-    }),
-    mapManual: z.object({
+    mapTables: z.object({
         tables: tablesSchema,
     }),
     preview: z.object({

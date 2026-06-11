@@ -23,37 +23,26 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                 className={cn(
                     "rounded-lg border bg-background transition-colors",
                     isAiSelected && "border-foreground bg-accent text-accent-foreground",
+                    !isAiSelected && "hover:bg-accent hover:text-accent-foreground",
+                    isBusy ? "cursor-not-allowed" : "cursor-pointer",
                 )}
+                onClick={isBusy ? undefined : () => setValue("map.source", "ai-suggested")}
             >
-                <button
-                    type="button"
-                    aria-pressed={isAiSelected}
-                    disabled={isBusy}
-                    onClick={() => setValue("map.source", "ai-suggested")}
-                    className={cn(
-                        "block w-full rounded-t-lg p-4 text-left transition-colors",
-                        !isAiSelected && "hover:bg-accent hover:text-accent-foreground",
-                        isBusy && "cursor-not-allowed",
-                    )}
-                >
+                <div className="block w-full rounded-t-lg p-4 text-left transition-colors">
                     <Sparkles className="mb-4 size-5" aria-hidden="true" />
                     <span className="block text-sm font-semibold">{AI_SUGGEST_OPTION.label}</span>
                     <span className="mt-2 block text-xs leading-5 text-muted-foreground">
                         {AI_SUGGEST_OPTION.description}
                     </span>
-                </button>
+                </div>
                 <div className="px-4 pb-4">
                     <FormTextarea
                         control={control}
                         name="map.aiPrompt"
-                        label={
-                            <>
-                                Intent prompt <span className="font-normal text-muted-foreground">(optional)</span>
-                            </>
-                        }
+                        label="Intent prompt"
                         placeholder='e.g. "Embed line items in each order, link customers by id, flatten addresses."'
                         rows={4}
-                        disabled={!isAiSelected || isBusy}
+                        disabled={isBusy}
                     />
                 </div>
             </div>
@@ -61,10 +50,13 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
             <button
                 type="button"
                 aria-pressed={isManualSelected}
-                disabled
+                disabled={isBusy}
+                onClick={() => setValue("map.source", "manual")}
                 className={cn(
-                    "min-h-24 cursor-not-allowed rounded-lg border bg-background p-4 text-left opacity-55 transition-colors",
+                    "min-h-24 rounded-lg border bg-background p-4 text-left transition-colors",
                     isManualSelected && "border-foreground bg-accent text-accent-foreground",
+                    !isManualSelected && "hover:bg-accent hover:text-accent-foreground",
+                    isBusy && "cursor-not-allowed",
                 )}
             >
                 <span className="block text-sm font-semibold">{MANUAL_OPTION.label}</span>

@@ -6,32 +6,32 @@ import type {
     CdcSinkOnDeleteConfig,
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
+import type {
+    FormColumnMapping,
+    FormEmbeddedTable,
+    FormLinkedTable,
+    FormRootTable,
+} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
+import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { useFormContext } from "react-hook-form";
 
-export function useMapAiSuggestStep() {
+export function useMapTablesStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
 
     return async () => {
-        const formTables = getValues("mapAiSuggest.tables");
+        const formTables = getValues("mapTables.tables");
 
         await api.services.setup.map({
             tables: formTables.map(mapTableToDto),
         });
 
-        const firstTable = formTables?.[0];
-        setValue(
-            "preview.table",
-            firstTable.sourceTableSchema
-                ? `${firstTable.sourceTableSchema}.${firstTable.sourceTableName}`
-                : firstTable.sourceTableName,
-        );
+        const firstTable = formTables[0];
+        setValue("preview.table", getSourceTableLabel(firstTable) ?? "");
     };
 }
 
-// TODO move mappings to utils file or adjust schema type to match API
-
-function mapTableToDto(table: AppFormData["mapAiSuggest"]["tables"][0]): CdcSinkTableConfig {
+function mapTableToDto(table: FormRootTable): CdcSinkTableConfig {
     return {
         collectionName: table.collectionName,
         columns: (table.columns ?? []).map(mapColumnToDto),
@@ -39,16 +39,14 @@ function mapTableToDto(table: AppFormData["mapAiSuggest"]["tables"][0]): CdcSink
         embeddedTables: (table.embeddedTables ?? []).map(mapEmbeddedTableToDto),
         linkedTables: (table.linkedTables ?? []).map(mapLinkedTableToDto),
         onDelete: mapOnDeleteToDto(table.onDelete),
-        patch: table.patch,
+        patch: table.patch || null,
         primaryKeyColumns: table.primaryKeyColumns,
         sourceTableName: table.sourceTableName,
         sourceTableSchema: table.sourceTableSchema,
     };
 }
 
-function mapEmbeddedTableToDto(
-    table: AppFormData["mapAiSuggest"]["tables"][0]["embeddedTables"][0],
-): CdcSinkEmbeddedTableConfig {
+function mapEmbeddedTableToDto(table: FormEmbeddedTable): CdcSinkEmbeddedTableConfig {
     return {
         caseSensitiveKeys: table.caseSensitiveKeys,
         columns: (table.columns ?? []).map(mapColumnToDto),
@@ -56,7 +54,7 @@ function mapEmbeddedTableToDto(
         joinColumns: table.joinColumns,
         linkedTables: (table.linkedTables ?? []).map(mapLinkedTableToDto),
         onDelete: mapOnDeleteToDto(table.onDelete),
-        patch: table.patch,
+        patch: table.patch || null,
         primaryKeyColumns: table.primaryKeyColumns,
         propertyName: table.propertyName,
         sourceTableName: table.sourceTableName,
@@ -65,9 +63,7 @@ function mapEmbeddedTableToDto(
     };
 }
 
-function mapLinkedTableToDto(
-    table: AppFormData["mapAiSuggest"]["tables"][0]["linkedTables"][0],
-): CdcSinkLinkedTableConfig {
+function mapLinkedTableToDto(table: FormLinkedTable): CdcSinkLinkedTableConfig {
     return {
         joinColumns: table.joinColumns,
         linkedCollectionName: table.linkedCollectionName,
@@ -77,7 +73,7 @@ function mapLinkedTableToDto(
     };
 }
 
-function mapColumnToDto(column: AppFormData["mapAiSuggest"]["tables"][0]["columns"][0]): CdcColumnMapping {
+function mapColumnToDto(column: FormColumnMapping): CdcColumnMapping {
     return {
         column: column.column,
         name: column.name,
@@ -85,7 +81,7 @@ function mapColumnToDto(column: AppFormData["mapAiSuggest"]["tables"][0]["column
     };
 }
 
-function mapOnDeleteToDto(onDelete: AppFormData["mapAiSuggest"]["tables"][0]["onDelete"]): CdcSinkOnDeleteConfig {
+function mapOnDeleteToDto(onDelete: FormRootTable["onDelete"]): CdcSinkOnDeleteConfig {
     return {
         ignoreDeletes: onDelete?.ignoreDeletes ?? false,
         patch: onDelete?.patch || null,
