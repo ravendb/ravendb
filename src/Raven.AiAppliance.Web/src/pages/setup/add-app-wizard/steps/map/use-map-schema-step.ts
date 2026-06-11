@@ -1,5 +1,13 @@
 import { api } from "@/api/api";
+import type { DiscoverResponse } from "@/api/generated/server-api";
+import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import {
+    createEmptyRootTable,
+    findDiscoveredTable,
+    pascalCase,
+    scaffoldRootTable,
+} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { useFormContext } from "react-hook-form";
 
 export function useMapSchemaStep() {
@@ -7,19 +15,59 @@ export function useMapSchemaStep() {
 
     return async () => {
         const { source, aiPrompt } = getValues("map");
+        const selectedTables = getValues("verifySchema.tables");
+        const store = useSetupWizardStore.getState();
 
-        if (source !== "ai-suggested") {
+        const appliedMapKey = JSON.stringify({
+            source,
+            aiPrompt: source === "ai-suggested" ? aiPrompt.trim() : "",
+            selectedTables,
+        });
+
+        // Same inputs as the last generation - keep the (possibly edited) tables.
+        if (appliedMapKey === store.appliedMapKey && getValues("mapTables.tables").length > 0) {
             return;
         }
 
-        const result = await api.services.setup.suggestCdc({
-            intentPrompt: aiPrompt.trim(),
-        });
+        const tables =
+            source === "ai-suggested"
+                ? await suggestTables(aiPrompt)
+                : scaffoldTables(selectedTables, store.discoverResult);
 
-        if (result.status !== "Success" || !result.configuration) {
-            throw new Error(result.rationale.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`);
-        }
-        const tables = tablesSchema.parse(result.configuration.tables);
-        setValue("mapAiSuggest.tables", tables);
+        setValue("mapTables.tables", tables);
+        store.setAppliedMapKey(appliedMapKey);
+        store.resetMapTablesUiState();
     };
+}
+
+async function suggestTables(aiPrompt: string): Promise<AppFormData["mapTables"]["tables"]> {
+    const result = await api.services.setup.suggestCdc({
+        intentPrompt: aiPrompt.trim(),
+    });
+
+    if (result.status !== "Success" || !result.configuration) {
+        throw new Error(result.rationale.filter(Boolean).join("\n") || `AI suggestion failed (${result.status}).`);
+    }
+
+    return tablesSchema.parse(result.configuration.tables);
+}
+
+function scaffoldTables(
+    selectedTables: AppFormData["verifySchema"]["tables"],
+    discoverResult: DiscoverResponse | null,
+): AppFormData["mapTables"]["tables"] {
+    return selectedTables.map((selected) => {
+        const discovered = findDiscoveredTable(discoverResult, selected.sourceTableSchema, selected.sourceTableName);
+
+        if (discovered) {
+            return scaffoldRootTable(discovered);
+        }
+
+        return {
+            ...createEmptyRootTable(),
+            collectionName: pascalCase(selected.sourceTableName),
+            sourceTableSchema: selected.sourceTableSchema ?? null,
+            sourceTableName: selected.sourceTableName,
+        };
+    });
 }

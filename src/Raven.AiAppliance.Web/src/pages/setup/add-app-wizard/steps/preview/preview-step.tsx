@@ -12,10 +12,9 @@ import { MessageSquareWarningIcon } from "lucide-react";
 export function PreviewStep() {
     const { control } = useFormContext<AppFormData>();
 
-    // TODO handle manual. Or move manual and ai suggested to single step
     const tables = useWatch({
         control,
-        name: "mapAiSuggest.tables",
+        name: "mapTables.tables",
     });
 
     return (
@@ -38,10 +37,9 @@ export function PreviewStep() {
 function PreviewResult() {
     const { control } = useFormContext<AppFormData>();
 
-    // TODO handle manual. Or move manual and ai suggested to single step
     const tables = useWatch({
         control,
-        name: "mapAiSuggest.tables",
+        name: "mapTables.tables",
     });
 
     const selectedTableLabel = useWatch({
@@ -94,7 +92,7 @@ function PreviewResult() {
 
     return (
         <div className="grid gap-4">
-            {testMappingQuery.data.warnings?.length && (
+            {testMappingQuery.data.warnings?.length > 0 && (
                 <Alert className="grid gap-2">
                     <MessageSquareWarningIcon color="orange" />
                     {testMappingQuery.data.warnings.map((warning, index) => (
@@ -115,6 +113,6 @@ function PreviewResult() {
     );
 }
 
-function getTableLabel(table: AppFormData["mapAiSuggest"]["tables"][0]) {
+function getTableLabel(table: AppFormData["mapTables"]["tables"][0]) {
     return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 }

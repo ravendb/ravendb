@@ -7,18 +7,18 @@ import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/data-so
 import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-source/data-source-options";
 import { MAP_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
-import { MapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-suggested/map-ai-suggest-step";
 import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
+import { MapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-step";
 import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-step";
 import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-step";
 import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
-import { useMapAiSuggestStep } from "@/pages/setup/add-app-wizard/steps/map-ai-suggested/use-map-ai-suggest-step";
 import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
+import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const connectSourceBeforeNext = useConnectSourceStep();
     const mapSchemaBeforeNext = useMapSchemaStep();
-    const mapAiSuggestBeforeNext = useMapAiSuggestStep();
+    const mapTablesBeforeNext = useMapTablesStep();
 
     return {
         dataSource: {
@@ -65,17 +65,12 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
                 <Badge variant="secondary">{getOptionLabel(MAP_SOURCE_OPTIONS, values.map?.source)}</Badge>
             ),
         },
-        mapAiSuggest: {
+        mapTables: {
             title: "Map schema",
-            description: "Review the draft mapping the AI proposed from your intent and the discovered schema.",
-            bodyComponent: MapAiSuggestStep,
-            validate: "mapAiSuggest",
-            beforeNext: mapAiSuggestBeforeNext,
-        },
-        mapManual: {
-            title: "Map schema",
-            bodyComponent: () => <div>Map schema manual</div>,
-            validate: "mapManual",
+            description: "Configure how source tables are mapped to target collections.",
+            bodyComponent: MapTablesStep,
+            validate: "mapTables",
+            beforeNext: mapTablesBeforeNext,
         },
         preview: {
             title: "Preview before full ingest",
@@ -87,19 +82,12 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     };
 };
 
-export const getAppFlow = ({ dataSource, mapSource }: { dataSource: string; mapSource: string }): AppStepId[] => {
+export const getAppFlow = ({ dataSource }: { dataSource: string }): AppStepId[] => {
     if (dataSource === "ravendb") {
         return ["dataSource", "preview"];
     }
 
-    return [
-        "dataSource",
-        "externalConnection",
-        "verifySchema",
-        "map",
-        mapSource === "ai-suggested" ? "mapAiSuggest" : "mapManual",
-        "preview",
-    ];
+    return ["dataSource", "externalConnection", "verifySchema", "map", "mapTables", "preview"];
 };
 
 export const buildAppSchemaForFlow = (flow: AppStepId[]) => {

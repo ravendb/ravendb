@@ -24,6 +24,7 @@ type FormAutocompleteProps<
     /** Suggested values. The field stays free-text, so any typed value is kept. */
     options: readonly string[];
     placeholder?: string;
+    afterChange?: (value: string) => void;
 };
 
 /**
@@ -43,6 +44,7 @@ export function FormAutocomplete<TFieldValues extends FieldValues, TName extends
     name,
     options,
     placeholder,
+    afterChange,
 }: FormAutocompleteProps<TFieldValues, TName>) {
     const generatedId = useId();
     const {
@@ -63,7 +65,10 @@ export function FormAutocomplete<TFieldValues extends FieldValues, TName extends
             <Autocomplete
                 items={options}
                 value={value ?? ""}
-                onValueChange={onChange}
+                onValueChange={(next: string) => {
+                    onChange(next);
+                    afterChange?.(next);
+                }}
                 disabled={isDisabled}
                 openOnInputClick
             >

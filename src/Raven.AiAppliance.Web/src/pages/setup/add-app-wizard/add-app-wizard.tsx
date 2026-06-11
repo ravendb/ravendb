@@ -8,12 +8,14 @@ import { buildAppSchemaForFlow, getAppFlow, useAppSteps } from "@/pages/setup/ad
 import { useNavigate } from "react-router";
 import { appRoutes } from "@/lib/app-routes";
 import { api } from "@/api/api";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
+import { toast } from "sonner";
 
 export function AddAppWizard() {
     const resetStore = useSetupWizardStore((state) => state.reset);
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     const form = useForm<AppFormData>({
         mode: "onChange",
@@ -21,7 +23,6 @@ export function AddAppWizard() {
         resolver: async (values, context, options) => {
             const flow = getAppFlow({
                 dataSource: values.dataSource?.source,
-                mapSource: values.map?.source,
             });
             return zodResolver(buildAppSchemaForFlow(flow))(values, context, options);
         },
@@ -34,11 +35,18 @@ export function AddAppWizard() {
 
     const provisionMutation = useMutation({
         mutationFn: async (formValues: AppFormData) => {
-            const result = await api.services.setup.provision({
+            return await api.services.setup.provision({
                 appName: formValues.externalConnection.appName,
             });
-
+        },
+        onSuccess: async (result) => {
+            await queryClient.invalidateQueries({ queryKey: api.queries.apps.list().queryKey });
+            toast.success(`App ${result.slug} created`);
             navigate(appRoutes.app(result.slug));
+        },
+        onError: (error) => {
+            const message = error instanceof Error ? error.message.split("\n")[0] : "Could not create app.";
+            toast.error(message);
         },
     });
 
@@ -65,14 +73,8 @@ function AddAppWizardBody() {
         name: "dataSource.source",
     });
 
-    const mapSource = useWatch({
-        control,
-        name: "map.source",
-    });
-
     const flow = getAppFlow({
         dataSource,
-        mapSource,
     });
 
     return (
@@ -103,10 +105,7 @@ function getDefaultValues(): AppFormData {
             source: "ai-suggested",
             aiPrompt: "",
         },
-        mapAiSuggest: {
-            tables: [],
-        },
-        mapManual: {
+        mapTables: {
             tables: [],
         },
         preview: {
