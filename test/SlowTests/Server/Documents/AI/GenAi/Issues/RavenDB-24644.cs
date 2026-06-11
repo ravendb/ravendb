@@ -12,6 +12,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Json;
+using Raven.Server.Documents.ETL;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -134,6 +136,9 @@ ai.genContext({}).withPdf(pdf);
                     }
                 }
                 sb.Append("]");
+                sb.AppendLine().AppendLine("Logs:").AppendLine(await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+                sb.AppendLine().AppendLine("GenAI batch errors (which item failed + the actual exception):")
+                    .AppendLine(await GetGenAiBatchErrorsAsync(store));
                 throw new AggregateException("Conversation Docs: " + Environment.NewLine + sb, e);
             }
         }
@@ -173,8 +178,8 @@ ai.genContext({}).withPdf(pdf);
             else
                 Assert.Null(oldHash2);
 
-            // Change + add attachments
-            var etl = Etl.WaitForEtlToComplete(store);
+            var etl = await GetEtlMre(store);
+
             using (var session = store.OpenAsyncSession())
             {
                 await using var file1 = GetEmbeddedPdfStream("Hibernating.pdf");
@@ -185,7 +190,7 @@ ai.genContext({}).withPdf(pdf);
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+            await EtlWait(etl);
 
             // Wait until hashes reflect the change
             string hash1 = string.Empty, hash2 = string.Empty;
@@ -198,17 +203,18 @@ ai.genContext({}).withPdf(pdf);
                 Assert.False(hash2 == null, $"oldHash1={oldHash1}, oldHash2={oldHash2}, hash1={hash1}, hash2={hash2}");
                 Assert.NotEqual(oldHash1, hash1);
                 Assert.NotEqual(oldHash2, hash1);
-            });
+            }, Debugger.IsAttached ? 1200 : 120);
 
-            // Delete attachment from items/1
-            etl = Etl.WaitForEtlToComplete(store);
+
+            etl = await GetEtlMre(store);
+
             using (var session = store.OpenAsyncSession())
             {
                 session.Advanced.Attachments.Delete(FirstItemId, AttachmentName);
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+            await EtlWait(etl);
 
             await WaitForAssertionAsync(async () =>
             {
@@ -217,7 +223,55 @@ ai.genContext({}).withPdf(pdf);
                     Assert.NotEqual(hash1, newHash1);
                 else
                     Assert.Null(newHash1); // doc1 produces no context objects now - metadata hashes gets cleared
-            });
+            }, Debugger.IsAttached ? 1200 : 120);
+        }
+
+        private async Task EtlWait(AsyncManualResetEvent etl)
+        {
+            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        }
+
+        private async Task<AsyncManualResetEvent> GetEtlMre(DocumentStore store)
+        {
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            var baselineEtag = db.EtlLoader.Processes.Single().Statistics.LastProcessedEtag;
+            var etl = Etl.WaitForEtlToComplete(store, predicate: (_, statistics) => statistics.LastProcessedEtag > baselineEtag);
+            return etl;
+        }
+
+        // Debug helper: surfaces, per GenAI task, exactly which request/item failed in the batch and the actual
+        // exception. The GenAI ETL records this in TaskErrorsStorage:
+        //  - item load errors  (GenAiTask: "Model call failed for context in document '<id>' (<ExType>). Context was: ... <full exception>")
+        //  - process/batch load errors (the whole-batch AggregateException + fallback message)
+        // We also dump the per-task counters so it's clear whether nothing was sent, something errored, or it stalled.
+        private async Task<string> GetGenAiBatchErrorsAsync(DocumentStore store)
+        {
+            var sb = new StringBuilder();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+            foreach (var process in db.EtlLoader.Processes)
+            {
+                var stats = process.Statistics;
+                sb.AppendLine(
+                    $"Task '{process.Name}' [{process.TaskCategory}] - " +
+                    $"LoadSuccesses={stats.LoadSuccesses}, LoadErrors={stats.LoadErrors}, " +
+                    $"TransformationErrors={stats.TransformationErrors}, LastProcessedEtag={stats.LastProcessedEtag}");
+
+                var itemErrors = db.TaskErrorsStorage.ReadItemErrorsOfTask(process.TaskCategory, process.Name);
+                foreach (var err in itemErrors)
+                    sb.AppendLine($"  ITEM  [{err.CreatedAt:O}] step={(TaskErrorStep)err.Step} doc='{err.DocumentId}'" +
+                                  $"{Environment.NewLine}        {err.Error}");
+
+                var processErrors = db.TaskErrorsStorage.ReadProcessErrorsOfTask(process.TaskCategory, process.Name);
+                foreach (var err in processErrors)
+                    sb.AppendLine($"  BATCH [{err.CreatedAt:O}] step={(TaskErrorStep)err.Step} affected={err.AffectedDocumentsCount}" +
+                                  $"{Environment.NewLine}        {err.Error}");
+
+                if (itemErrors.Count == 0 && processErrors.Count == 0)
+                    sb.AppendLine("  (no stored load/transformation errors)");
+            }
+
+            return sb.ToString();
         }
 
         private static Stream GetEmbeddedPdfStream(string fileName)
