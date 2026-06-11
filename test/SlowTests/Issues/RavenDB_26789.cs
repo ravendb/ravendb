@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -18,6 +19,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -88,22 +90,84 @@ namespace SlowTests.Issues
             }
         }
 
-        // Production scenario: a bucket migration source shard has two replicas. The node that owns the
-        // migration dies in the window after ownership was transferred to the destination but before the
-        // source cleanup removed the bucket data. The surviving source replica takes over the migration
-        // task and re-sends the whole bucket: the migration replication type persists no per-source
-        // checkpoint (IncomingMigrationReplicationHandler.SaveSourceEtag is a no-op), so the surviving
-        // replica's fresh outgoing handler re-scans from etag 0. Every re-sent item is re-processed on the
-        // destination with a freshly assigned 'order' part (IncomingMigrationReplicationHandler.PreProcessItem
-        // keeps the 'version', assigns a new receiver-local 'order'), so the only causal link between the
-        // re-sent stale items and the destination's current state is the 'version' part of the change vector.
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Attachments)]
+        public async Task PutDirectOverMigratedTombstoneShouldPreserveTombstoneChangeVector()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                const string id = "users/1";
+                const string name = "a1";
+                const string contentType = "image/png";
+                var attachmentBytes = new byte[] { 1, 2, 3 };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "1" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                AttachmentDetails putResult;
+                using (var stream = new MemoryStream(attachmentBytes))
+                {
+                    putResult = await store.Operations.SendAsync(new PutAttachmentOperation(id, name, stream, contentType));
+                }
+
+                await store.Operations.SendAsync(new DeleteAttachmentOperation(id, name));
+
+                var bucket = await Sharding.GetBucketAsync(store, id);
+                await Sharding.Resharding.MoveShardForId(store, id);
+
+                var newLocation = await Sharding.GetShardNumberForAsync(store, id);
+                var newShard = ShardedDocumentDatabase.CastToShardedDocumentDatabase(
+                    await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, newLocation)));
+
+                var tombstone = GetAttachmentTombstone(newShard, bucket);
+                Assert.NotNull(tombstone.ChangeVector);
+                Assert.NotNull(tombstone.Key);
+                Assert.Contains("|", tombstone.ChangeVector);
+
+                var storage = newShard.DocumentsStorage;
+                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, name, out _, out Slice nameSlice))
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out _, out Slice contentTypeSlice))
+                using (Slice.From(context.Allocator, putResult.Hash, out Slice base64Hash))
+                using (Slice.From(context.Allocator, tombstone.Key, out Slice keySlice))
+                using (var stream = new MemoryStream(attachmentBytes))
+                {
+                    storage.AttachmentsStorage.PutAttachmentStream(context, keySlice, base64Hash, stream);
+                    storage.AttachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
+
+                    tx.Commit();
+                }
+
+                Assert.Null(GetAttachmentTombstoneChangeVector(newShard, bucket));
+
+                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var attachment = storage.AttachmentsStorage.GetAttachment(context, id, name, AttachmentType.Document, null,
+                        putResult.Hash, contentType, usePartialKey: false);
+                    Assert.NotNull(attachment);
+
+                    var status = ChangeVector.GetConflictStatus(context, tombstone.ChangeVector, attachment.ChangeVector);
+                    Assert.Equal(ConflictStatus.AlreadyMerged, status);
+                }
+            }
+        }
+
+        // Regression setup: after bucket ownership is transferred, source cleanup can still be pending.
+        // If the migration owner dies in that window, another source replica can take over and resend
+        // stale bucket data from scratch.
         //
-        // An attachment that was deleted on the source before the migration and re-created on the
-        // destination after the migration must therefore carry the migrated tombstone's version lineage
-        // in its own change vector. If PutAttachment loses that lineage (creates a plain new change
-        // vector instead of a successor of the tombstone it just replaced), the re-sent stale tombstone
-        // compares as Conflict against the re-created attachment and deletes it - the user's newer write
-        // is silently destroyed by an older delete.
+        // Migration replication rewrites the receiver-local 'order' but keeps the original 'version'
+        // lineage. Therefore, when the destination re-creates an attachment over a migrated tombstone,
+        // the new attachment CV must inherit the tombstone's version lineage; otherwise a re-sent stale
+        // tombstone compares as Conflict and can delete the newer write.
+        //
+        // Relevant internals:
+        // - IncomingMigrationReplicationHandler.SaveSourceEtag intentionally does not checkpoint.
+        // - IncomingMigrationReplicationHandler.PreProcessItem keeps version and assigns new order.
         [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Replication | RavenTestCategory.Attachments)]
         public async Task ReputAttachmentShouldSurviveBucketResendAfterMigrationSourceFailover()
         {
@@ -301,6 +365,11 @@ namespace SlowTests.Issues
 
         private static string GetAttachmentTombstoneChangeVector(ShardedDocumentDatabase shardDatabase, int bucket)
         {
+            return GetAttachmentTombstone(shardDatabase, bucket).ChangeVector;
+        }
+
+        private static (string ChangeVector, string Key) GetAttachmentTombstone(ShardedDocumentDatabase shardDatabase, int bucket)
+        {
             var storage = (ShardedDocumentsStorage)shardDatabase.DocumentsStorage;
             using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -308,11 +377,11 @@ namespace SlowTests.Issues
                 foreach (var tombstone in storage.RetrieveTombstonesByBucketFrom(context, bucket, 0))
                 {
                     if (tombstone.Type == Tombstone.TombstoneType.Attachment)
-                        return tombstone.ChangeVector;
+                        return (tombstone.ChangeVector, tombstone.LowerId.ToString());
                 }
             }
 
-            return null;
+            return (null, null);
         }
 
         private static async Task<byte[]> ReadAll(Stream stream)
