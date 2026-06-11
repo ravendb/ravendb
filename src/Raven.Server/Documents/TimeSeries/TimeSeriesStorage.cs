@@ -864,10 +864,15 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, string changeVector, 
+        private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, ChangeVector changeVector,
             CollectionName collectionName, TimeSeriesValuesSegment segment, DateTime baseline)
         {
-            var hash = (long)Hashing.XXHash64.Calculate(changeVector, Encoding.UTF8);
+            // Hash and compare on the version part only. An incoming segment may carry a composite
+            // 'order|version' change vector (e.g. after a bucket migration), and the string overload of
+            // GetConflictStatus flattens the composite into a single list: the freshly assigned order part
+            // can never be dominated by a stored deleted-range change vector, so the comparison would never
+            // return AlreadyMerged and the deleted series would be resurrected.
+            var hash = (long)Hashing.XXHash64.Calculate(changeVector.Version.AsString(), Encoding.UTF8);
             using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
             {
                 var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
@@ -877,11 +882,12 @@ namespace Raven.Server.Documents.TimeSeries
                 foreach (var (_, tableValueHolder) in table.SeekByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, Slices.Empty, skip: 0))
                 {
                     var item = CreateDeletedRangeItem(context, ref tableValueHolder.Reader);
-                    
+
                     if (item.From > baseline || item.To < segment.GetLastTimestamp(baseline))
                         continue;
 
-                    if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
+                    var deletedRangeChangeVector = context.GetChangeVector(item.ChangeVector);
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, deletedRangeChangeVector) == ConflictStatus.AlreadyMerged)
                         return true;
                 }
 
