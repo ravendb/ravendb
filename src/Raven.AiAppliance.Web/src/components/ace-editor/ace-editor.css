@@ -94,6 +94,10 @@
     height: calc(100vh - 2rem) !important;
 }
 
+.ace-editor .ace_editor {
+    border-radius: calc(var(--radius) - 2px);
+}
+
 .ace-editor .ace_editor,
 .ace-editor .ace-tm {
     background: var(--color-background);

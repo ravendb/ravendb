@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { useParams } from "react-router";
 import { api } from "@/api/api";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import { applySuggestionToForm } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 
 export function useConnectProviderStep() {
@@ -27,10 +28,6 @@ export function useConnectProviderStep() {
         }
 
         setSuggestions(result.configurations);
-
-        const first = result.configurations[0];
-        setValue("create.selectedIndex", 0);
-        setValue("create.systemPrompt", first.systemPrompt ?? "");
-        setValue("review.name", first.name ?? "");
+        applySuggestionToForm(setValue, result.configurations[0], 0);
     };
 }

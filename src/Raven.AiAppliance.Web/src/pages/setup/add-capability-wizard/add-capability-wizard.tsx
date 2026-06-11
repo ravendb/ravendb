@@ -9,6 +9,10 @@ import type { AiAgentConfiguration } from "@/api/generated/server-api";
 import { appRoutes } from "@/lib/app-routes";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { agentSchema, type AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import {
+    buildAgentConfigurationPayload,
+    emptyAgentConfiguration,
+} from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { CAPABILITY_FLOW, useCapabilitySteps } from "@/pages/setup/add-capability-wizard/capability-wizard-flow";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
@@ -32,21 +36,20 @@ export function AddCapabilityWizard() {
 
     const provisionMutation = useMutation({
         mutationFn: async (values: AgentFormData) => {
-            const base = useCapabilityWizardStore.getState().suggestions[values.create.selectedIndex];
+            const isAiMode = values.create.mode === "ai";
+            const base = isAiMode
+                ? useCapabilityWizardStore.getState().suggestions[values.create.selectedIndex]
+                : undefined;
 
-            if (!base) {
+            if (isAiMode && !base) {
                 throw new Error("No agent suggestion selected.");
             }
 
             const config: AiAgentConfiguration = {
+                // In AI mode, keep fields the form does not edit (e.g. chatTrimming)
+                // from the selected suggestion; everything editable is overridden below.
                 ...base,
-                name: values.review.name.trim(),
-                systemPrompt: values.create.systemPrompt.trim(),
-                connectionStringName: values.connection.connectionStringName,
-                // Actions / sub-agents aren't supported by the provision endpoint in this preview.
-                actions: [],
-                subAgents: [],
-                disabled: false,
+                ...buildAgentConfigurationPayload(values),
             };
 
             await api.services.apps.provisionAgent(slug, config);
@@ -106,7 +109,7 @@ function getDefaultValues(): AgentFormData {
     return {
         capability: { type: "agent" },
         connection: { connectionStringName: "" },
-        create: { selectedIndex: 0, systemPrompt: "" },
-        review: { name: "" },
+        create: { mode: "ai", selectedIndex: 0 },
+        review: emptyAgentConfiguration(),
     };
 }

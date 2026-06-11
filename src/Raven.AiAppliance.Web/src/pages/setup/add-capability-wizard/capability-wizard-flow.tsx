@@ -5,12 +5,11 @@ import { ConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/c
 import { useConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/connect/use-connect-provider-step";
 import { CreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/create-agent-step";
 import { ReviewAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/review-agent-step";
-import { BindChannelsStep } from "@/pages/setup/add-capability-wizard/steps/channels/bind-channels-step";
 import { CAPABILITY_OPTIONS } from "@/pages/setup/add-capability-wizard/steps/capability/capability-options";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { getOptionLabel } from "@/lib/form-utils";
 
-export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "create", "review", "channels"];
+export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "create", "review"];
 
 export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> => {
     const connectProviderBeforeNext = useConnectProviderStep();
@@ -44,7 +43,7 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
         },
         create: {
             title: "Create your Agent with AI",
-            description: "We analyzed your collections and propose a few framings. Pick one to edit.",
+            description: "We analyzed your collections and propose a few agents. Pick one to edit, or set up manually.",
             bodyComponent: CreateAgentStep,
             validate: "create",
         },
@@ -52,11 +51,6 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             title: "Review & edit your agent",
             bodyComponent: ReviewAgentStep,
             validate: "review",
-        },
-        channels: {
-            title: "Bind your agent to channels",
-            bodyComponent: BindChannelsStep,
-            validate: false,
         },
     };
 };
