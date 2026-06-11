@@ -24,17 +24,21 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                     "rounded-lg border bg-background transition-colors",
                     isAiSelected && "border-foreground bg-accent text-accent-foreground",
                     !isAiSelected && "hover:bg-accent hover:text-accent-foreground",
-                    isBusy ? "cursor-not-allowed" : "cursor-pointer",
                 )}
-                onClick={isBusy ? undefined : () => setValue("map.source", "ai-suggested")}
             >
-                <div className="block w-full rounded-t-lg p-4 text-left transition-colors">
+                <button
+                    type="button"
+                    aria-pressed={isAiSelected}
+                    disabled={isBusy}
+                    onClick={() => setValue("map.source", "ai-suggested")}
+                    className={cn("block w-full rounded-t-lg p-4 text-left", isBusy && "cursor-not-allowed")}
+                >
                     <Sparkles className="mb-4 size-5" aria-hidden="true" />
                     <span className="block text-sm font-semibold">{AI_SUGGEST_OPTION.label}</span>
                     <span className="mt-2 block text-xs leading-5 text-muted-foreground">
                         {AI_SUGGEST_OPTION.description}
                     </span>
-                </div>
+                </button>
                 <div className="px-4 pb-4">
                     <FormTextarea
                         control={control}
@@ -43,6 +47,7 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                         placeholder='e.g. "Embed line items in each order, link customers by id, flatten addresses."'
                         rows={4}
                         disabled={isBusy}
+                        onFocus={() => setValue("map.source", "ai-suggested")}
                     />
                 </div>
             </div>
