@@ -316,16 +316,16 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             return request;
         }
 
-        public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context, CancellationToken token)
+        public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
             using var streamReader = new StreamReader(stream);
             while (true)
             {
 #if NETSTANDARD2_0 || NETSTANDARD2_1
                 var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
-                token.ThrowIfCancellationRequested();
+                CancellationToken.ThrowIfCancellationRequested();
 #else
-                var line = await streamReader.ReadLineAsync(token).ConfigureAwait(false);
+                var line = await streamReader.ReadLineAsync(CancellationToken).ConfigureAwait(false);
 #endif
                 if (line is null)
                     break;

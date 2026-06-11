@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
@@ -33,7 +32,7 @@ namespace Tests.Infrastructure.Operations
                 };
             }
 
-            public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
+            public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 var contentDisposition = response.Content.Headers.TryGetValues(Constants.Headers.ContentDisposition, out var values) ? values.First() : null;
                 var fileName = GetFileNameFromContentDisposition(contentDisposition);

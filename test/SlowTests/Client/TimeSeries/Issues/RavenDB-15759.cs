@@ -81,7 +81,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         request.RequestUri = new UriBuilder(url).Uri;
 
                         var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-                        await queryCommand.ProcessResponse(ctx, re.Cache, response, url, CancellationToken.None);
+                        await queryCommand.ProcessResponse(ctx, re.Cache, response, url);
 
                         // assert
 

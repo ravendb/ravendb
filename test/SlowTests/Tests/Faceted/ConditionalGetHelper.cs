@@ -1,12 +1,11 @@
 using System.Net;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow.Json;
+using Raven.Client;
 
 namespace SlowTests.Tests.Faceted
 {
@@ -97,7 +96,7 @@ namespace SlowTests.Tests.Faceted
                 };
             }
 
-            public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url, CancellationToken token)
+            public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
                 Result = new StatusCodeAndEtag
                 {
