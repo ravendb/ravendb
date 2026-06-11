@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Replication
         private readonly HashSet<ExternalReplicationBase> _externalDestinations = new HashSet<ExternalReplicationBase>();
         private List<ReplicationNode> _destinations = new List<ReplicationNode>();
         protected ClusterTopology _clusterTopology = new ClusterTopology();
-        private int _numberOfSiblings;
+        public int NumberOfSiblingsInInternalReplication;
         public ConflictSolver ConflictSolverConfig;
         private readonly CancellationToken _shutdownToken;
         private HubInfoForCleaner _hubInfoForCleaner;
@@ -877,7 +877,7 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
-            _numberOfSiblings = _destinations.Select(x => x.Url).Intersect(_clusterTopology.AllNodes.Select(x => x.Value)).Count();
+            NumberOfSiblingsInInternalReplication = newRecord.Topology.Count - 1;
 
             DisposeConnections(instancesToDispose);
         }
@@ -1907,7 +1907,7 @@ namespace Raven.Server.Documents.Replication
 
         public int GetMinNumberOfReplicas()
         {
-            return (_numberOfSiblings + 1) / 2; // not "(_numberOfSiblings + 1) / 2 + 1" because 1 node already have got the data and only need to replicate
+            return (NumberOfSiblingsInInternalReplication + 1) / 2; // not "(NumberOfSiblingsInInternalReplication + 1) / 2 + 1" because 1 node already have got the data and only need to replicate
         }
 
         public async Task<int> WaitForReplicationAsync(DocumentsOperationContext context, int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, ChangeVector lastChangeVector)

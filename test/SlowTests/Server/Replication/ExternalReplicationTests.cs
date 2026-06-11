@@ -6,8 +6,10 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -77,6 +79,163 @@ namespace SlowTests.Server.Replication
                 Assert.True(WaitForDocument(store2, "foo/bar"));
                 var elapsed = DateTime.UtcNow - date;
                 Assert.True(elapsed >= delay, $" only {elapsed}/{delay} ticks elapsed");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task ExternalReplicationShouldNotBeCountedAsSiblingInWaitForReplicationWithMajority()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                // once the document arrived, the external replication connection was established
+                // and the destination Url was resolved to this server's own url
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+
+                // any database record change will cause ReplicationLoader.HandleTopologyChange
+                // to recompute the number of siblings, this time with the resolved external destination url
+                await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = "dummy",
+                    Database = "dummy",
+                    TopologyDiscoveryUrls = store1.Urls
+                }));
+
+                var database = await GetDocumentDatabaseInstanceFor(store1);
+
+                // the database group has a single node, so there are no siblings
+                // and a majority write-assurance requires 0 replicas
+                var minReplicas = WaitForValue(() => database.ReplicationLoader.GetMinNumberOfReplicas(), 1, timeout: 5000);
+                Assert.Equal(0, minReplicas);
+                Assert.Equal(0, database.ReplicationLoader.NumberOfSiblingsInInternalReplication);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), majority: true);
+                    s1.Store(new User(), "foo/bar/2");
+                    s1.SaveChanges();
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        public async Task WaitForReplicationWithMajorityShouldTimeoutWhenMajorityOfDatabaseGroupIsDown()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 3,
+                DeleteDatabaseOnDispose = false // after we take down 2 of 3 nodes there is no cluster quorum to delete the database
+            }))
+            {
+                // make sure the replication connections to both siblings are up and the data is everywhere
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: 2);
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                Assert.Equal(2, database.ReplicationLoader.NumberOfSiblingsInInternalReplication);
+
+                // take down both siblings, leaving only the node we are writing to
+                foreach (var node in nodes.Where(n => n != leader))
+                {
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                }
+
+
+                // the outgoing connections to the dead nodes are dropped
+                Assert.Equal(0, WaitForValue(() => database.ReplicationLoader.OutgoingConnections.Count(), 0, timeout: 60_000));
+
+                // the dead nodes are NOT removed from the destinations: moving them to rehab requires
+                // a committed database record change, and with 2 of 3 cluster nodes down there is no quorum
+                Assert.Equal(2, database.ReplicationLoader.Destinations.Count);
+
+                // they are still part of the database group, so they are still counted as siblings
+                Assert.Equal(2, database.ReplicationLoader.NumberOfSiblingsInInternalReplication);
+
+                // only 1 of the 3 copies can be written, so a majority write-assurance must fail
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), majority: true);
+                    session.Store(new User(), "users/2");
+                    Assert.Throws<RavenTimeoutException>(() => session.SaveChanges());
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        public async Task WaitForReplicationWithMajorityShouldWaitForMajorityOfTheDatabaseGroup()
+        {
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5"
+            };
+
+            var (nodes, leader) = await CreateRaftCluster(5, customSettings: customSettings);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 5
+            }))
+            {
+                // make sure the replication connections to all 4 siblings are up
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(60), replicas: 4);
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                // take down 2 of the 5 nodes, the cluster keeps its quorum (3 of 5)
+                // so the observer will move both to rehab and commit the topology change
+                var killed = nodes.Where(n => n != leader).Take(2).ToList();
+                foreach (var node in killed)
+                {
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                }
+
+                var rehabs = await WaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Topology.Rehabs.Count;
+                }, 2, timeout: 60_000);
+                Assert.Equal(2, rehabs);
+
+                // a majority of a 5-node database group is 3 copies, so every node must wait for 2 replicas.
+                // however, a rehab node stays in the internal destinations only of its mentor, so on a node
+                // that mentors no rehab _numberOfSiblings drops to 2 and the majority is computed as 1
+                foreach (var node in nodes.Where(n => killed.Contains(n) == false))
+                {
+                    var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                    // the rehab nodes are still part of the database group, so every node has 4 siblings
+                    Assert.Equal(4, database.ReplicationLoader.NumberOfSiblingsInInternalReplication);
+
+                    var minReplicas = WaitForValue(() => database.ReplicationLoader.GetMinNumberOfReplicas(), 2, timeout: 30_000);
+                    Assert.Equal(2, minReplicas);
+                }
+
+                // 3 nodes are still up, so writing a majority (3 copies) is achievable and must succeed
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), majority: true);
+                    session.Store(new User(), "users/2");
+                    session.SaveChanges();
+                }
             }
         }
 
