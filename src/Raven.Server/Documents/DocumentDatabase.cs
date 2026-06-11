@@ -2201,6 +2201,8 @@ namespace Raven.Server.Documents
 
             internal AsyncManualResetEvent DelayQueryByPatch;
 
+            internal AsyncManualResetEvent DelayDeleteBucket;
+
             internal bool EnableWritesToTheWrongShard = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
