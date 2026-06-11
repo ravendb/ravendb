@@ -96,15 +96,21 @@ namespace Raven.Server.Web
             var auth = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
             var sb = new StringBuilder();
-            sb.Append(GetRequestIp(httpContext));
             if (auth?.IsSsoAuthenticated == true)
             {
-                var (_, proxyIp) = SsoForwardedForHelper.GetIps(httpContext, auth);
+                // Resolve client and proxy IPs in a single pass - GetIps parses and validates X-Forwarded-For,
+                // so calling it once (instead of GetRequestIp + a second GetIps) avoids re-doing that work.
+                var (clientIp, proxyIp) = SsoForwardedForHelper.GetIps(httpContext, auth);
+                sb.Append(clientIp);
                 string userDisplay = auth.Definition?.Name ?? auth.SsoUserIdentity;
                 if (proxyIp != null)
                     sb.Append($" (via SSO proxy {proxyIp}, user: {userDisplay} ({auth.SsoUserIdentity}))");
                 else
                     sb.Append($" (SSO user: {userDisplay} ({auth.SsoUserIdentity}))");
+            }
+            else
+            {
+                sb.Append(GetRequestIp(httpContext));
             }
             sb.Append(", ");
             if (clientCert != null)

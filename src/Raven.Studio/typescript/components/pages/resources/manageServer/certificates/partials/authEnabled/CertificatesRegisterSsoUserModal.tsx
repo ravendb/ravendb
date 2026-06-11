@@ -21,7 +21,7 @@ import {
     SsoProvider,
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { tryHandleSubmit } from "components/utils/common";
+import { exhaustiveStringTuple, tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -30,7 +30,8 @@ import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import * as yup from "yup";
 
-const ssoProviders: SsoProvider[] = ["Github", "Google", "Microsoft", "Windows"];
+// exhaustiveStringTuple makes the compiler enforce that every SsoProvider is listed here.
+const ssoProviders = exhaustiveStringTuple<SsoProvider>()("Github", "Google", "Microsoft", "Windows");
 
 const ssoProviderOptions: SelectOption[] = ssoProviders.map((p) => ({ value: p, label: p }));
 
@@ -40,6 +41,16 @@ const identifierPlaceholderByProvider: Record<SsoProvider, string> = {
     Github: "Username or email",
     Microsoft: "Username or email",
 };
+
+type SsoUserFormClearance = "ValidUser" | "Operator" | "ClusterAdmin";
+
+// Narrow the server's broad SecurityClearance union down to the three values the SSO user form supports,
+// defaulting anything else (or nothing) to "ValidUser" - avoids an unchecked `as` cast.
+function toFormSecurityClearance(
+    clearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance | undefined
+): SsoUserFormClearance {
+    return clearance === "Operator" || clearance === "ClusterAdmin" ? clearance : "ValidUser";
+}
 
 export default function CertificatesRegisterSsoUserModal() {
     const dispatch = useAppDispatch();
@@ -65,15 +76,14 @@ export default function CertificatesRegisterSsoUserModal() {
             ssoIdentifiers:
                 sourceForDefaults?.SsoIdentifiers?.length > 0
                     ? sourceForDefaults.SsoIdentifiers.map((id) => ({
-                          provider: id.Provider as SsoProvider,
+                          provider: id.Provider,
                           domain: id.Domain ?? "",
                           identifier: id.Identifier,
                       }))
-                    : [{ provider: "Github" as SsoProvider, domain: "", identifier: "" }],
+                    : [{ provider: "Github", domain: "", identifier: "" }],
             ssoServerPublicKeyPinningHashes: sourceForDefaults?.SsoServerPublicKeyPinningHashes ?? [],
             allowAnySso: sourceForDefaults?.AllowAnySsoServer ?? false,
-            securityClearance:
-                (sourceForDefaults?.SecurityClearance as "ValidUser" | "Operator" | "ClusterAdmin") ?? "ValidUser",
+            securityClearance: toFormSecurityClearance(sourceForDefaults?.SecurityClearance),
             databasePermissions:
                 sourceForDefaults != null ? certificatesUtils.mapDatabasePermissionsFromDto(sourceForDefaults) : [],
         },
@@ -277,6 +287,18 @@ export default function CertificatesRegisterSsoUserModal() {
                                     ] satisfies SelectOption[]
                                 }
                             />
+                            {(formValues.securityClearance === "Operator" ||
+                                formValues.securityClearance === "ClusterAdmin") && (
+                                <RichAlert variant="warning" className="mt-2">
+                                    SSO logins bypass RavenDB&apos;s two-factor authentication — RavenDB cannot enforce
+                                    a second factor on the identity provider&apos;s side. Make sure your SSO provider
+                                    requires MFA for identities granted{" "}
+                                    <strong>
+                                        {formValues.securityClearance === "ClusterAdmin" ? "Cluster Admin" : "Operator"}
+                                    </strong>{" "}
+                                    clearance.
+                                </RichAlert>
+                            )}
                         </FormGroup>
                         <hr />
                         <FormGroup>
@@ -295,14 +317,6 @@ export default function CertificatesRegisterSsoUserModal() {
                                         placeholder="Select one or more SSO servers..."
                                         options={ssoServerOptions}
                                     />
-                                    {(formValues.ssoServerPublicKeyPinningHashes?.length ?? 0) === 0 && (
-                                        <RichAlert variant="warning" className="mt-2">
-                                            This user has no authorizing SSO server selected and{" "}
-                                            <strong>Allow any SSO to authorize</strong> is off — they will not be able
-                                            to authenticate until you select a server or enable{" "}
-                                            <strong>Allow any SSO</strong>.
-                                        </RichAlert>
-                                    )}
                                 </div>
                             </Collapse>
                         </FormGroup>
@@ -443,7 +457,14 @@ const ssoIdentifierSchema = yup.object({
 const schema = yup.object({
     displayName: yup.string().required("Display name is required"),
     ssoIdentifiers: yup.array().of(ssoIdentifierSchema).min(1, "At least one identifier is required").required(),
-    ssoServerPublicKeyPinningHashes: yup.array().of(yup.string()),
+    ssoServerPublicKeyPinningHashes: yup
+        .array()
+        .of(yup.string())
+        .when("allowAnySso", {
+            is: false,
+            then: (s) => s.min(1, "Select at least one authorizing SSO server, or enable 'Allow any SSO to authorize'"),
+            otherwise: (s) => s.optional(),
+        }),
     allowAnySso: yup.boolean().required(),
     securityClearance: yup.string<"ValidUser" | "Operator" | "ClusterAdmin">().required(),
     databasePermissions: certificatesUtils.databasePermissionsSchema,

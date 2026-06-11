@@ -71,11 +71,9 @@ export interface RegisterSsoServerCertDto {
 
 export type SsoProvider = Raven.Client.ServerWide.Operations.Certificates.SsoProvider;
 
-export interface SsoIdentifierDto {
-    Provider: SsoProvider;
-    Domain?: string;
-    Identifier: string;
-}
+// Generated from the server's Raven.Client.ServerWide.Operations.Certificates.SsoIdentifier - kept as an alias
+// (rather than a hand-written mirror) so the shape stays in sync with the server type automatically.
+export type SsoIdentifierDto = Raven.Client.ServerWide.Operations.Certificates.SsoIdentifier;
 
 export interface RegisterSsoUserEntryDto {
     Name: string;

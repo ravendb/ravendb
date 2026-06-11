@@ -31,6 +31,7 @@ import deleteCertificateCommand = require("commands/auth/deleteCertificateComman
 import updateCertificateCommand = require("commands/auth/updateCertificateCommand");
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
 import registerSsoServerCertCommand = require("commands/auth/registerSsoServerCertCommand");
+import fetchSsoServerCertCommand = require("commands/auth/fetchSsoServerCertCommand");
 import registerSsoUserEntryCommand = require("commands/auth/registerSsoUserEntryCommand");
 import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
@@ -167,6 +168,10 @@ export default class ManageServerService {
 
     async registerSsoServerCert(...args: ConstructorParameters<typeof registerSsoServerCertCommand>) {
         return new registerSsoServerCertCommand(...args).execute();
+    }
+
+    async fetchSsoServerCert(...args: ConstructorParameters<typeof fetchSsoServerCertCommand>) {
+        return new fetchSsoServerCertCommand(...args).execute();
     }
 
     async registerSsoUserEntry(...args: ConstructorParameters<typeof registerSsoUserEntryCommand>) {

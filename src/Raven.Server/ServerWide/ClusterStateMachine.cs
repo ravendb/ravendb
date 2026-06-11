@@ -3611,6 +3611,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<CertificateDefinition> GetSsoClientCertificates<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage == CertificateUsage.SsoClient)
+                    yield return def;
+            }
+        }
+
         public CertificateDefinition GetSsoClientCertificateByIdentity<TTransaction>(TransactionOperationContext<TTransaction> context, SsoExtensionPayload payload)
             where TTransaction : RavenTransaction
         {

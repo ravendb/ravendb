@@ -17,7 +17,7 @@ import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
 import InputGroupText from "react-bootstrap/InputGroupText";
-import fetchSsoServerCertCommand = require("commands/auth/fetchSsoServerCertCommand");
+import { useAsyncCallback } from "react-async-hook";
 
 export default function CertificatesRegisterSsoServerModal() {
     const dispatch = useAppDispatch();
@@ -36,9 +36,24 @@ export default function CertificatesRegisterSsoServerModal() {
 
     const [importedFileName, setImportedFileName] = useState<string>(null);
     const [urlInput, setUrlInput] = useState("");
-    const [urlFetching, setUrlFetching] = useState(false);
-    const [urlError, setUrlError] = useState<string>(null);
     const [urlLoaded, setUrlLoaded] = useState<string>(null);
+
+    const asyncFetchCert = useAsyncCallback(async (url: string) => {
+        try {
+            const result = await manageServerService.fetchSsoServerCert(url);
+            setValue("certificateAsBase64", result.Base64, { shouldValidate: true });
+            setImportedFileName(null);
+            setUrlLoaded(url);
+        } catch (e) {
+            // Normalize the jqXHR error into a plain Error here (where the caught value is untyped) so the UI can
+            // read asyncFetchCert.error.message without casting the typed Error to JQueryXHR.
+            throw new Error(
+                e?.responseJSON?.Error ?? "Failed to fetch certificate from URL. Use the file upload below."
+            );
+        }
+    });
+
+    const urlError = asyncFetchCert.error?.message ?? null;
 
     const selectFile = (event: ChangeEvent<HTMLInputElement>) => {
         fileImporter.readAsDataURL(event.currentTarget, (dataUrl, fileName) => {
@@ -49,23 +64,13 @@ export default function CertificatesRegisterSsoServerModal() {
         });
     };
 
-    const fetchFromUrl = async () => {
-        if (!urlInput.trim()) {
+    const fetchFromUrl = () => {
+        const trimmed = urlInput.trim();
+        if (!trimmed) {
             return;
         }
-        setUrlFetching(true);
-        setUrlError(null);
         setUrlLoaded(null);
-        try {
-            const result = await new fetchSsoServerCertCommand(urlInput.trim()).execute();
-            setValue("certificateAsBase64", result.Base64, { shouldValidate: true });
-            setImportedFileName(null);
-            setUrlLoaded(urlInput.trim());
-        } catch (e) {
-            setUrlError(e?.responseJSON?.Error ?? "Failed to fetch certificate from URL. Use the file upload below.");
-        } finally {
-            setUrlFetching(false);
-        }
+        asyncFetchCert.execute(trimmed);
     };
 
     const handleRegister: SubmitHandler<FormData> = async (formData) => {
@@ -135,16 +140,16 @@ export default function CertificatesRegisterSsoServerModal() {
                                     value={urlInput}
                                     onChange={(e) => {
                                         setUrlInput(e.target.value);
-                                        setUrlError(null);
+                                        asyncFetchCert.reset();
                                         setUrlLoaded(null);
                                     }}
-                                    disabled={urlFetching}
+                                    disabled={asyncFetchCert.loading}
                                 />
                                 <ButtonWithSpinner
                                     variant="secondary"
                                     onClick={fetchFromUrl}
-                                    isSpinning={urlFetching}
-                                    disabled={!urlInput.trim() || urlFetching}
+                                    isSpinning={asyncFetchCert.loading}
+                                    disabled={!urlInput.trim() || asyncFetchCert.loading}
                                 >
                                     Fetch
                                 </ButtonWithSpinner>

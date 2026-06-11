@@ -677,7 +677,7 @@ namespace SlowTests.Authentication
         }
 
         [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
-        public async Task EditSsoUser_EmptyAuthorizingList_IsAllowedAndClears()
+        public async Task EditSsoUser_EmptyAuthorizingList_WithoutAllowAny_IsRejected()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -701,22 +701,29 @@ namespace SlowTests.Authentication
                 Certificates.RegisterSsoServerCert(certificates, ssoCerts);
                 var ssoUserThumbprint = Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
 
-                // The server is intentionally permissive: clearing the authorizing servers without enabling "allow any"
-                // is allowed (the Studio only surfaces a warning). The edit must not throw and must clear the list.
-                await adminStore.Maintenance.Server.SendAsync(new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                // Clearing the authorizing servers without enabling "allow any" produces an entry that can never
+                // authenticate. The edit must be rejected up front (mirroring PutSsoUser) rather than silently saved -
+                // an API/CLI caller would otherwise get no signal that the entry is now permanently locked out.
+                var ex = await Assert.ThrowsAnyAsync<RavenException>(async () =>
                 {
-                    Thumbprint = ssoUserThumbprint,
-                    Name = ssoUserId,
-                    Permissions = permissions,
-                    Clearance = SecurityClearance.ValidUser,
-                    AllowAnySsoServer = false,
-                    SsoServerPublicKeyPinningHashes = new List<string>()
-                }));
+                    await adminStore.Maintenance.Server.SendAsync(new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                    {
+                        Thumbprint = ssoUserThumbprint,
+                        Name = ssoUserId,
+                        Permissions = permissions,
+                        Clearance = SecurityClearance.ValidUser,
+                        AllowAnySsoServer = false,
+                        SsoServerPublicKeyPinningHashes = new List<string>()
+                    }));
+                });
 
+                Assert.Contains("locked out", ex.ToString(), StringComparison.OrdinalIgnoreCase);
+
+                // The stored entry must be unchanged: still bound to its original authorizing server.
                 var after = (await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(ssoUserId)))
                     .Single(c => c.Usage == CertificateUsage.SsoClient);
                 Assert.False(after.AllowAnySsoServer);
-                Assert.Empty(after.SsoServerPublicKeyPinningHashes);
+                Assert.Equal(1, after.SsoServerPublicKeyPinningHashes.Count);
             }
         }
 
@@ -1543,6 +1550,147 @@ namespace SlowTests.Authentication
                     allowAnySsoServer: false,
                     new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
                     clearance: SecurityClearance.ClusterAdmin);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void SsoUserCertSignedByDifferentCa_IsRejected_EvenWithAllowAnySsoServer()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "victim@example.com";
+
+            // The SSO user exists and trusts *any* registered SSO server - the most permissive configuration.
+            // An attacker presents a certificate carrying this user's valid SSO OID but signed by a CA the attacker
+            // controls (not the registered SSO server). It must be rejected: a client certificate is only accepted
+            // when its issuer is actually the registered SSO server, never merely because it carries a valid SSO OID
+            // or chains to some trusted root.
+            var attackerCert = Certificates.CreateSsoUserCertificateSignedByUnknownCa(ssoUserId);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoServerPublicKeyPinningHash: null,
+                    allowAnySsoServer: true,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = attackerCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false }
+                }.Initialize())
+                {
+                    Assert.Throws<AuthorizationException>(() =>
+                    {
+                        using (var session = ssoStore.OpenSession())
+                        {
+                            session.Store(new { Name = "Test" }, "test/1");
+                            session.SaveChanges();
+                        }
+                    });
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void SsoUserId_WithOversizedUsername_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            // A crafted certificate carrying a multi-KB username in its SSO extension must be rejected at decode time
+            // (the username is capped), not carried around on the connection / written into audit lines.
+            var oversizedUserId = new string('a', 5000);
+            var ssoUserCert = Certificates.CreateSsoUserCertificate(ssoCerts, oversizedUserId);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false }
+                }.Initialize())
+                {
+                    Assert.Throws<AuthorizationException>(() =>
+                    {
+                        using (var session = ssoStore.OpenSession())
+                        {
+                            session.Store(new { Name = "Test" }, "test/1");
+                            session.SaveChanges();
+                        }
+                    });
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task DeleteSsoServerCert_WithBoundUsers_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var boundUserId = "bound.user@example.com";
+            var permissions = new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite };
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, boundUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
+
+                // Deleting the SSO server certificate while an SSO user is bound only to it would orphan that user
+                // (they could never authenticate again, and the entry would never be purged). It must be rejected
+                // and name the affected user so the operator knows what to fix first.
+                var ex = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    await adminStore.Maintenance.Server.SendAsync(new DeleteCertificateOperation(ssoCerts.SsoServerCert.Thumbprint));
+                });
+
+                Assert.Contains(boundUserId, ex.ToString());
+
+                // The SSO server certificate must still be present after the rejected delete.
+                var serverCerts = await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation());
+                Assert.Contains(serverCerts, c => c.Usage == CertificateUsage.SsoServer);
             }
         }
 

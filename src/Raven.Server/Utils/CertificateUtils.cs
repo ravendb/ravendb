@@ -902,21 +902,22 @@ namespace Raven.Server.Utils
         }
 
         /// <summary>
-        /// Compares two public-key pinning hashes using a fixed-time algorithm to avoid timing side-channels.
-        /// Both inputs must be non-null and non-empty, and have equal byte lengths — otherwise returns false.
+        /// Compares two public-key pinning hashes. These are base64-encoded public-key hashes, not secrets, so a
+        /// plain ordinal comparison is used (no constant-time requirement) - this also avoids allocating byte
+        /// arrays on the SSO auth path, which runs this once per registered server hash.
+        /// Both inputs must be non-null and non-empty - otherwise returns false.
         /// </summary>
         internal static bool PinningHashEquals(string a, string b)
         {
             if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
                 return false;
 
-            byte[] aBytes = Encoding.UTF8.GetBytes(a);
-            byte[] bBytes = Encoding.UTF8.GetBytes(b);
-            if (aBytes.Length != bBytes.Length)
-                return false;
-
-            return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
+            return string.Equals(a, b, StringComparison.Ordinal);
         }
+
+        // Upper bound on the length of identity fields (username/domain) parsed from a client-presented SSO
+        // certificate extension. Any real provider identity is far shorter; this guards against a crafted cert.
+        private const int MaxSsoIdentityFieldLength = 1024;
 
         /// <summary>
         /// Decodes the SSO user payload from a custom X.509 extension's RawData.
@@ -950,35 +951,21 @@ namespace Raven.Server.Utils
                 if (root.TryGetProperty("domain", out var domainEl))
                     domain = domainEl.GetString();
 
+                // The values come straight out of a client-presented certificate extension whose RawData can be tens
+                // of KB. Cap them: a crafted cert could otherwise carry a multi-MB identity that lives on the
+                // connection for its lifetime, is written into every audit line, and is string-compared against every
+                // SsoClient entry on each connection. No real provider identity needs anywhere near this.
+                if (username != null && username.Length > MaxSsoIdentityFieldLength)
+                    return default;
+                if (domain != null && domain.Length > MaxSsoIdentityFieldLength)
+                    return default;
+
                 return new SsoExtensionPayload(username, provider, domain);
             }
             catch (Exception e) when (e is AsnContentException or JsonException or DecoderFallbackException or ArgumentException)
             {
                 return default;
             }
-        }
-    }
-
-    public readonly struct SsoExtensionPayload
-    {
-        public readonly string Username;
-        public readonly SsoProvider Provider;
-        public readonly string Domain;
-
-        public SsoExtensionPayload(string username, SsoProvider provider, string domain = null)
-        {
-            Username = username;
-            Provider = provider;
-            Domain = domain;
-        }
-
-        public bool IsEmpty => string.IsNullOrEmpty(Username);
-
-        public string GetDisplayIdentity()
-        {
-            if (Provider == SsoProvider.Windows && string.IsNullOrEmpty(Domain) == false)
-                return $"Windows\\{Domain}:{Username}";
-            return $"{Provider}:{Username}";
         }
     }
 }

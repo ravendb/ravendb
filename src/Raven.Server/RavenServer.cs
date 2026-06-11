@@ -2077,7 +2077,11 @@ namespace Raven.Server
 
                         var hasTwoFactorKey = cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
 
-                        // SSO-authenticated connections skip 2FA - the SSO server handles its own authentication
+                        // SSO-authenticated connections skip RavenDB's 2FA by design: RavenDB cannot enforce a
+                        // second factor on the identity provider's side, so multi-factor enforcement is the SSO
+                        // server's responsibility. This means a high-clearance (Operator/ClusterAdmin) SSO user gets
+                        // that access with no RavenDB-side second factor, so the SSO provider MUST be configured to
+                        // require MFA for those identities. The Studio surfaces a warning when creating such a user.
                         authenticationStatus.RequiresTwoFactor = hasTwoFactorKey && authenticationStatus.IsSsoAuthenticated == false;
 
                         if (authenticationStatus.RequiresTwoFactor && TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint) == false)
@@ -2249,6 +2253,19 @@ namespace Raven.Server
 
                         log?.AppendLine($"Chain status: {chainStatus.Status} - {chainStatus.StatusInformation}");
                     }
+                    continue;
+                }
+
+                // A successful Build() only proves the client cert chains to *some* issuer - because
+                // AllowUnknownCertificateAuthority suppresses the untrusted-root error, any certificate signed by a
+                // CA the host trusts builds a chain of length >= 2 even though it never went through this SSO server.
+                // Pin the immediate issuer to the registered SSO server's public key so only certificates actually
+                // signed by it are accepted.
+                var issuer = chain.ChainElements[1].Certificate;
+                if (CertificateUtils.PinningHashEquals(issuer.GetPublicKeyPinningHash(), ssoServerDef.PublicKeyPinningHash) == false)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Client certificate '{certificate.Thumbprint}' chained successfully but its issuer does not match SSO server '{ssoServerDef.Name}' - skipping.");
                     continue;
                 }
 

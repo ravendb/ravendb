@@ -48,7 +48,7 @@ namespace Raven.Server.Web.Authentication
         public const string TwoFactorExpirationDate = "TwoFactorExpirationDate";
 
         private const string SsoServerCertificatePath = "/api/certificate";
-        private const long MaxFetchedCertBytes = 1 * 1024 * 1024;
+        private const long MaxFetchedCertBytes = 64 * 1024;
         private static readonly TimeSpan SsoCertFetchTimeout = TimeSpan.FromSeconds(10);
 
         private static readonly RavenHttpClient SsoCertFetchClient = new RavenHttpClient(new HttpClientHandler { AllowAutoRedirect = false })
@@ -376,12 +376,14 @@ namespace Raven.Server.Web.Authentication
                 (baseUri.Scheme != Uri.UriSchemeHttps && baseUri.Scheme != Uri.UriSchemeHttp))
                 throw new ArgumentException("The URL must be an absolute http or https URL.");
 
+            // Contract: the caller provides the SSO server's base URL; we always fetch from the well-known
+            // '/api/certificate' path on that host. Any path in the supplied URL is intentionally ignored.
             Uri fetchUri = new UriBuilder(baseUri.Scheme, baseUri.Host, baseUri.Port)
             {
                 Path = SsoServerCertificatePath
             }.Uri;
 
-            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown, HttpContext.RequestAborted);
             cts.CancelAfter(SsoCertFetchTimeout);
 
             byte[] certBytes;
@@ -391,7 +393,7 @@ namespace Raven.Server.Web.Authentication
             }
             catch (Exception e)
             {
-                await WriteJsonErrorAsync(HttpStatusCode.BadGateway, $"Failed to fetch certificate from '{url}': {e.Message}");
+                await WriteJsonErrorAsync(HttpStatusCode.BadGateway, $"Failed to fetch certificate from '{fetchUri}' (the '{SsoServerCertificatePath}' path is appended to the SSO server base URL you provided): {e.Message}");
                 return;
             }
 
@@ -591,6 +593,34 @@ namespace Raven.Server.Web.Authentication
                 if (string.IsNullOrEmpty(definition?.CollectionPrimaryKey) == false)
                     throw new InvalidOperationException(
                         $"Cannot delete the certificate '{definition.Name}' with thumbprint '{definition.Thumbprint}'. You need to delete the primary certificate of the collection: {definition.CollectionPrimaryKey}");
+
+                // Deleting an SSO server certificate would orphan every SSO user left with no registered SSO server
+                // to bind to: at auth time such a user (AllowAnySsoServer == false, none of its hashes matching a
+                // remaining SSO server) can never be accepted, and because SSO client entries have no expiry they
+                // are never purged. Block the delete and list them so the caller (API/CLI included) knows what to
+                // fix first. Users that still have another registered SSO server are left untouched.
+                if (definition != null && definition.Usage == CertificateUsage.SsoServer && string.IsNullOrEmpty(definition.PublicKeyPinningHash) == false)
+                {
+                    var remainingSsoHashes = new HashSet<string>(
+                        ServerStore.Cluster.GetSsoServerCertificates(ctx)
+                            .Where(c => CertificateUtils.PinningHashEquals(c.PublicKeyPinningHash, definition.PublicKeyPinningHash) == false)
+                            .Select(c => c.PublicKeyPinningHash),
+                        StringComparer.Ordinal);
+
+                    var orphanedUsers = ServerStore.Cluster.GetSsoClientCertificates(ctx)
+                        .Where(c => c.AllowAnySsoServer == false &&
+                                    (c.SsoServerPublicKeyPinningHashes == null ||
+                                     c.SsoServerPublicKeyPinningHashes.Any(h => remainingSsoHashes.Contains(h)) == false) &&
+                                    c.SsoServerPublicKeyPinningHashes != null &&
+                                    c.SsoServerPublicKeyPinningHashes.Any(h => CertificateUtils.PinningHashEquals(h, definition.PublicKeyPinningHash)))
+                        .Select(c => c.Name)
+                        .ToList();
+
+                    if (orphanedUsers.Count > 0)
+                        throw new InvalidOperationException(
+                            $"Cannot delete the SSO server certificate '{definition.Name}'. The following SSO user entries are bound only to this SSO server and would be left unable to authenticate: " +
+                            $"{string.Join(", ", orphanedUsers)}. Update or remove these entries (or enable 'Allow any SSO server' on them) before deleting the SSO server certificate.");
+                }
 
                 var keysToDelete = new List<string>
                 {
@@ -1100,6 +1130,36 @@ namespace Raven.Server.Web.Authentication
                                 throw new InvalidOperationException(
                                     $"An SSO user entry with identity '{payload.GetDisplayIdentity()}' already exists " +
                                     $"(name: '{existing.Name}'). Each SSO identity can belong to only one entry.");
+                            }
+                        }
+                    }
+                }
+
+                if (isSsoClient)
+                {
+                    // Mirror the PutSsoUser guards so an edit can't leave an entry that can never authenticate.
+                    // Now that an explicit empty list clears the hashes, AllowAnySsoServer == false with no allowed
+                    // SSO servers is reachable here - reject it (a Studio-only warning wouldn't help API/CLI callers).
+                    if (mergedAllowAnySso == false && (mergedSsoHashes == null || mergedSsoHashes.Count == 0))
+                        throw new InvalidOperationException(
+                            $"Cannot save the SSO user entry '{editedCertificate.Name}': it would be permanently locked out. " +
+                            "An entry with 'Allow any SSO server' disabled and no allowed SSO server pinning hashes can never authenticate.");
+
+                    // And require every retained/added hash to reference a registered SSO server, mirroring create.
+                    if (mergedAllowAnySso == false)
+                    {
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var allSsoHashes = new HashSet<string>(
+                                ServerStore.Cluster.GetSsoServerCertificates(ctx).Select(c => c.PublicKeyPinningHash),
+                                StringComparer.Ordinal);
+
+                            foreach (var hash in mergedSsoHashes)
+                            {
+                                if (allSsoHashes.Contains(hash) == false)
+                                    throw new InvalidOperationException(
+                                        $"No SSO server certificate found with public key pinning hash '{hash}'. " +
+                                        "Register the SSO server certificate first using PUT /admin/certificates with Usage=SsoServer.");
                             }
                         }
                     }

@@ -9,9 +9,9 @@ class fetchSsoServerCertCommand extends commandBase {
     }
 
     execute(): JQueryPromise<certificatesTypes.FetchSsoServerCertResult> {
-        const endpointUrl = endpoints.global.adminCertificates.adminCertificatesSsoServerFetch + this.urlEncodeArgs({ url: this.url });
+        const url = endpoints.global.adminCertificates.adminCertificatesSsoServerFetch;
 
-        return this.ajax<certificatesTypes.FetchSsoServerCertResult>(endpointUrl, null, "GET")
+        return this.query<certificatesTypes.FetchSsoServerCertResult>(url, { url: this.url })
             .fail((response: JQueryXHR) => this.reportError("Unable to fetch certificate from URL", response.responseText, response.statusText));
     }
 }

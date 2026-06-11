@@ -330,6 +330,36 @@ public partial class RavenTestBase
 
         public X509Certificate2 CreateSsoUserCertificate(SsoTestCertificates ssoCerts, string ssoUserId, SsoProvider provider = SsoProvider.Github, string domain = null)
         {
+            return CreateSsoUserCertificateCore(ssoCerts.SsoServerCert.SubjectName, (RSA)ssoCerts.SsoServerPrivateKey, ssoUserId, provider, domain);
+        }
+
+        /// <summary>
+        /// Creates an SSO user certificate carrying a valid SSO user ID extension but signed by a freshly generated,
+        /// unregistered CA (not any registered SSO server). Used to verify the server rejects such certificates
+        /// even though they may chain to a trusted root.
+        /// </summary>
+        public X509Certificate2 CreateSsoUserCertificateSignedByUnknownCa(string ssoUserId, SsoProvider provider = SsoProvider.Github, string domain = null)
+        {
+            using var rogueCaKey = RSA.Create(2048);
+            const string rogueCaName = "Rogue SSO CA";
+            var rogueCaSubject = new X500DistinguishedName($"CN={rogueCaName}");
+
+            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+                commonNameValue: rogueCaName,
+                issuerCN: rogueCaSubject,
+                issuerKeyPair: (rogueCaKey, rogueCaKey),
+                isClientCertificate: false,
+                isCaCertificate: true,
+                notAfter: DateTime.UtcNow.AddMonths(3),
+                certBytes: out _,
+                subjectPrivateKey: rogueCaKey,
+                with2Eku: false);
+
+            return CreateSsoUserCertificateCore(rogueCaSubject, rogueCaKey, ssoUserId, provider, domain);
+        }
+
+        private X509Certificate2 CreateSsoUserCertificateCore(X500DistinguishedName issuerName, RSA issuerKey, string ssoUserId, SsoProvider provider, string domain)
+        {
             const string ssoUserIdExtensionOid = Raven.Client.Constants.Certificates.SsoUserIdExtensionOid;
 
             using var userKey = RSA.Create(2048);
@@ -356,10 +386,10 @@ public partial class RavenTestBase
             serialNumber[0] &= 0x7F;
 
             var signatureGenerator = X509SignatureGenerator.CreateForRSA(
-                (RSA)ssoCerts.SsoServerPrivateKey, RSASignaturePadding.Pkcs1);
+                issuerKey, RSASignaturePadding.Pkcs1);
 
             var cert = request.Create(
-                ssoCerts.SsoServerCert.SubjectName,
+                issuerName,
                 signatureGenerator,
                 DateTimeOffset.UtcNow.AddDays(-1),
                 DateTimeOffset.UtcNow.AddYears(1),
