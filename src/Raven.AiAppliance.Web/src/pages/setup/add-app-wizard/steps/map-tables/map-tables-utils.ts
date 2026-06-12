@@ -1,4 +1,6 @@
 import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
+import { toStringValueItems } from "@/lib/form-utils";
+import { isColumnSupported, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import type {
     FormColumnMapping,
     FormEmbeddedTable,
@@ -65,9 +67,12 @@ export function createEmptyLinkedTable(): FormLinkedTable {
     };
 }
 
-export function mapDiscoveredColumns(table: DiscoverTableResponse): FormColumnMapping[] {
+export function mapDiscoveredColumns(
+    discoverResult: DiscoverResponse | null,
+    table: DiscoverTableResponse,
+): FormColumnMapping[] {
     return table.columns
-        .filter((column) => column.isCdcCapturable)
+        .filter((column) => isColumnSupported(discoverResult, table, column))
         .map((column) => ({
             column: column.name,
             name: pascalCase(column.name),
@@ -77,14 +82,17 @@ export function mapDiscoveredColumns(table: DiscoverTableResponse): FormColumnMa
 
 /** Scaffolds a root table from the discovered schema: columns and primary keys are
  * pre-filled, while embedding/linking decisions are left to the user. */
-export function scaffoldRootTable(table: DiscoverTableResponse): FormRootTable {
+export function scaffoldRootTable(
+    discoverResult: DiscoverResponse | null,
+    table: DiscoverTableResponse,
+): FormRootTable {
     return {
         ...createEmptyRootTable(),
         collectionName: pascalCase(table.sourceTableName),
         sourceTableSchema: table.sourceTableSchema ?? null,
         sourceTableName: table.sourceTableName,
-        columns: mapDiscoveredColumns(table),
-        primaryKeyColumns: [...table.primaryKeyColumns],
+        columns: mapDiscoveredColumns(discoverResult, table),
+        primaryKeyColumns: toStringValueItems(table.primaryKeyColumns),
     };
 }
 
@@ -102,6 +110,7 @@ export function findDiscoveredTable(
 export function getDiscoveredSchemaNames(discoverResult: DiscoverResponse | null): string[] {
     const schemas = new Set(
         (discoverResult?.tables ?? [])
+            .filter((table) => isTableSupported(discoverResult, table))
             .map((table) => table.sourceTableSchema)
             .filter((schema): schema is string => Boolean(schema)),
     );
@@ -116,6 +125,7 @@ export function getDiscoveredTableNames(
     const schemaFilter = sourceTableSchema?.trim();
 
     return (discoverResult?.tables ?? [])
+        .filter((table) => isTableSupported(discoverResult, table))
         .filter((table) => !schemaFilter || table.sourceTableSchema === schemaFilter)
         .map((table) => table.sourceTableName)
         .sort();

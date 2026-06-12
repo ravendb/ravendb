@@ -5,7 +5,9 @@ import type { MapActiveTable } from "@/pages/setup/add-app-wizard/steps/map-tabl
 export type SetupWizardState = {
     reset: () => void;
     discoverResult: DiscoverResponse | null;
-    setDiscoverResult: (x: DiscoverResponse) => void;
+    /** Schemas used for the last discovery. Empty means the connection's default schema. */
+    discoverSchemas: string[];
+    setDiscoverResult: (result: DiscoverResponse, discoverSchemas: string[]) => void;
     /** Fingerprint of the inputs used to generate mapTables.tables, so re-entering the map step keeps user edits. */
     appliedMapKey: string | null;
     setAppliedMapKey: (key: string) => void;
@@ -19,20 +21,24 @@ export type SetupWizardState = {
     resetMapTablesUiState: () => void;
 };
 
-const initialState: Pick<SetupWizardState, "discoverResult" | "appliedMapKey" | "mapActiveTable" | "mapExpandedPaths"> =
-    {
-        discoverResult: null,
-        appliedMapKey: null,
-        mapActiveTable: null,
-        mapExpandedPaths: {},
-    };
+const initialState: Pick<
+    SetupWizardState,
+    "discoverResult" | "discoverSchemas" | "appliedMapKey" | "mapActiveTable" | "mapExpandedPaths"
+> = {
+    discoverResult: null,
+    discoverSchemas: [],
+    appliedMapKey: null,
+    mapActiveTable: null,
+    mapExpandedPaths: {},
+};
 
 export const useSetupWizardStore = create<SetupWizardState>((set) => ({
     ...initialState,
     reset: () => set(initialState),
-    setDiscoverResult: (result) =>
+    setDiscoverResult: (result, discoverSchemas) =>
         set({
             discoverResult: result,
+            discoverSchemas,
         }),
     setAppliedMapKey: (key) => set({ appliedMapKey: key }),
     setMapActiveTable: (table) => set({ mapActiveTable: table }),

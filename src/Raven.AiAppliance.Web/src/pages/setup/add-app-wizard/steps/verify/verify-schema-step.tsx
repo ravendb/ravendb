@@ -1,137 +1,186 @@
-/* eslint-disable react-hooks/incompatible-library */
-"use no memo";
-
-import { getCoreRowModel, getFilteredRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import type { DiscoverTableResponse } from "@/api/generated/server-api";
-import { VirtualDataTable } from "@/components/table/virtual-data-table";
-import { Input } from "@/components/shadcn/ui/input";
-import { cn } from "@/lib/utils";
-import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { Checkbox } from "@/components/shadcn/ui/checkbox";
+import { useMemo, useState } from "react";
+import type { RowSelectionState } from "@tanstack/react-table";
 import { useFormContext } from "react-hook-form";
-import { useState } from "react";
-import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { CheckIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
+import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
+import { Badge } from "@/components/shadcn/ui/badge";
+import { Button } from "@/components/shadcn/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
+import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
+import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
+import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
+import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
+import { VerifiedTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/verified-tables-table";
+import {
+    DiscoverLoadingSkeleton,
+    MessageList,
+    NoTablesFound,
+} from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-states";
+
+type VerifyTab = "verified" | "needs-configuration";
 
 export function VerifySchemaStep() {
-    const { setValue, formState } = useFormContext<AppFormData>();
+    const { setValue, getValues, formState } = useFormContext<AppFormData>();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
-    const [rowSelection, setRowSelection] = useState({});
+    const discoverSchemas = useSetupWizardStore((state) => state.discoverSchemas);
+    const discoverMutation = useDiscoverTablesMutation();
 
-    const allTables = discoverResult?.tables ?? [];
+    const [activeTab, setActiveTab] = useState<VerifyTab>("verified");
+    const [search, setSearch] = useState("");
+    const [isSchemasSheetOpen, setIsSchemasSheetOpen] = useState(false);
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>(() =>
+        Object.fromEntries(getValues("verifySchema.tables").map((table) => [getTableKey(table), true])),
+    );
 
-    const columns: ColumnDef<DiscoverTableResponse>[] = [
-        {
-            id: "select",
-            header: ({ table }) => (
-                <Checkbox
-                    checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                    aria-label="Select all"
-                />
-            ),
-            cell: ({ row }) => (
-                <Checkbox
-                    checked={row.getIsSelected()}
-                    onCheckedChange={(value) => row.toggleSelected(!!value)}
-                    aria-label="Select row"
-                />
-            ),
-            enableSorting: false,
-            enableHiding: false,
-            size: 32,
-        },
-        {
-            accessorFn: (table) => getTableLabel(table),
-            header: "Table name",
-            id: "tableName",
-        },
-        {
-            accessorFn: (table) => table.primaryKeyColumns.join(", "),
-            header: "Primary key",
-            id: "primaryKey",
-        },
-        {
-            accessorFn: (table) => table.columns.length,
-            header: "Columns count",
-            id: "columnsCount",
-        },
-    ];
+    // These lists are passed to the table components as react-table `data`; memoizing keeps a
+    // stable reference between renders so react-table does not recompute its row models endlessly.
+    const allTables = useMemo(() => discoverResult?.tables ?? [], [discoverResult]);
+    const verifiedTables = useMemo(
+        () => allTables.filter((table) => isTableSupported(discoverResult, table)),
+        [allTables, discoverResult],
+    );
+    // When discovery failed, neither list shows tables - only the errors above.
+    const needsConfigTables = useMemo(
+        () => allTables.filter((table) => discoverResult?.success && !isTableSupported(discoverResult, table)),
+        [allTables, discoverResult],
+    );
 
-    const table = useReactTable({
-        columns,
-        data: allTables,
-        enableRowSelection: (row) => isTableUsable(row.original),
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        onRowSelectionChange: (updaterOrValue) => {
-            const value = typeof updaterOrValue === "function" ? updaterOrValue(rowSelection) : updaterOrValue;
-            setRowSelection(updaterOrValue);
-
-            const ids = Object.keys(value);
-            const selectedTables = table
-                .getRowModel()
-                .rows.filter((row) => ids.includes(row.id))
-                .map((row) => row.original);
-
-            setValue(
-                "verifySchema.tables",
-                selectedTables.map((table) => ({
+    const syncSelectionToForm = (selection: RowSelectionState, tables: DiscoverTableResponse[]) => {
+        setValue(
+            "verifySchema.tables",
+            tables
+                .filter((table) => selection[getTableKey(table)])
+                .map((table) => ({
                     sourceTableName: table.sourceTableName,
                     sourceTableSchema: table.sourceTableSchema,
                 })),
-                { shouldValidate: true },
-            );
-        },
-        globalFilterFn: "includesString",
-        state: {
-            rowSelection,
-        },
-    });
+            { shouldValidate: true },
+        );
+    };
+
+    const handleRowSelectionChange = (selection: RowSelectionState) => {
+        setRowSelection(selection);
+        syncSelectionToForm(selection, verifiedTables);
+    };
+
+    const handleSchemasSave = async (schemas: string[]) => {
+        let result: DiscoverResponse;
+        try {
+            result = await discoverMutation.mutateAsync(schemas);
+        } catch {
+            // The mutation already surfaced the error as a toast; keep the sheet open.
+            return;
+        }
+
+        // Keep only selections that still exist in the re-discovered schema.
+        const nextVerifiedTables = result.tables.filter((table) => isTableSupported(result, table));
+        const nextSelection: RowSelectionState = Object.fromEntries(
+            nextVerifiedTables
+                .filter((table) => rowSelection[getTableKey(table)])
+                .map((table) => [getTableKey(table), true]),
+        );
+        setRowSelection(nextSelection);
+        syncSelectionToForm(nextSelection, nextVerifiedTables);
+        setIsSchemasSheetOpen(false);
+    };
+
+    // The tabs are hidden when every table is verified, so fall back to the verified tab
+    // even if "needs-configuration" was active before (e.g. after a re-discovery).
+    const currentTab: VerifyTab = needsConfigTables.length > 0 ? activeTab : "verified";
 
     return (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
             <MessageList messages={discoverResult?.errors} tone="destructive" />
-            <Input
-                value={table.getColumn("tableName")?.getFilterValue() as string}
-                onChange={(event) => table.getColumn("tableName")?.setFilterValue(event.target.value)}
-                placeholder="Search by table name"
-                className="max-w-sm"
-                type="search"
-            />
-            <VirtualDataTable
-                table={table}
-                columnCount={columns.length}
-                emptyMessage="No tables match the current filter."
-                heightInPx={300}
-            />
+            <MessageList messages={discoverResult?.warnings} tone="warning" />
+
+            {discoverMutation.isPending ? (
+                <DiscoverLoadingSkeleton />
+            ) : allTables.length === 0 ? (
+                <NoTablesFound schemas={discoverSchemas} onCustomizeSchemas={() => setIsSchemasSheetOpen(true)} />
+            ) : (
+                <>
+                    <div className="flex items-center gap-2">
+                        <InputGroup className="max-w-sm">
+                            <InputGroupAddon>
+                                <SearchIcon aria-hidden="true" />
+                            </InputGroupAddon>
+                            <InputGroupInput
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search by table name..."
+                                type="search"
+                            />
+                        </InputGroup>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="ml-auto"
+                            onClick={() => setIsSchemasSheetOpen(true)}
+                        >
+                            <PlusIcon aria-hidden="true" />
+                            Customize schemas
+                        </Button>
+                    </div>
+
+                    {needsConfigTables.length > 0 && (
+                        <Tabs value={currentTab} onValueChange={(value) => setActiveTab(value as VerifyTab)}>
+                            <TabsList>
+                                <TabsTrigger value="verified">
+                                    <CheckIcon className="size-3.5" aria-hidden="true" />
+                                    Verified
+                                    <Badge variant="secondary" className="rounded-full font-mono tabular-nums">
+                                        {verifiedTables.length}
+                                    </Badge>
+                                </TabsTrigger>
+                                <TabsTrigger value="needs-configuration">
+                                    <TriangleAlertIcon className="size-3.5" aria-hidden="true" />
+                                    Needs configuration
+                                    <Badge variant="secondary" className="rounded-full font-mono tabular-nums">
+                                        {needsConfigTables.length}
+                                    </Badge>
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    )}
+
+                    {currentTab === "needs-configuration" && (
+                        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+                            <TriangleAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+                            {needsConfigTables.length === 1
+                                ? "1 discovered table needs configuration before it can be selected."
+                                : `${needsConfigTables.length} discovered tables need configuration before they can be selected.`}
+                        </div>
+                    )}
+
+                    {currentTab === "verified" ? (
+                        <VerifiedTablesTable
+                            tables={verifiedTables}
+                            totalTableCount={allTables.length}
+                            search={search}
+                            rowSelection={rowSelection}
+                            onRowSelectionChange={handleRowSelectionChange}
+                        />
+                    ) : (
+                        <NeedsConfigTablesTable tables={needsConfigTables} search={search} />
+                    )}
+                </>
+            )}
+
             {formState.errors?.verifySchema?.tables && (
                 <Alert variant="destructive">{formState.errors.verifySchema.tables.message}</Alert>
             )}
+
+            <DefineSchemasSheet
+                isOpen={isSchemasSheetOpen}
+                onOpenChange={setIsSchemasSheetOpen}
+                initialSchemas={discoverSchemas}
+                isDiscovering={discoverMutation.isPending}
+                onSave={handleSchemasSave}
+            />
         </div>
     );
-}
-
-export function MessageList({ messages, tone = "muted" }: { messages?: string[]; tone?: "destructive" | "muted" }) {
-    const visibleMessages = messages?.filter(Boolean) ?? [];
-
-    if (visibleMessages.length === 0) {
-        return null;
-    }
-
-    return (
-        <ul className={cn("grid gap-1 text-sm", tone === "destructive" ? "text-destructive" : "text-muted-foreground")}>
-            {visibleMessages.map((message, index) => (
-                <li key={index}>{message}</li>
-            ))}
-        </ul>
-    );
-}
-
-function isTableUsable(table: DiscoverTableResponse) {
-    return table.isCdcEnabled && !table.unsupportedReason;
-}
-
-function getTableLabel(table: DiscoverTableResponse) {
-    return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 }

@@ -1,3 +1,15 @@
+/** Form item shape used by FormStringList. Plain string arrays are not supported by
+ * react-hook-form's useFieldArray, so string lists are stored as objects in form data. */
+export type StringValueItem = { value: string };
+
+export function toStringValueItems(values: readonly string[] | null | undefined): StringValueItem[] {
+    return (values ?? []).map((value) => ({ value }));
+}
+
+export function toStringValues(items: readonly StringValueItem[] | null | undefined): string[] {
+    return (items ?? []).map((item) => item.value.trim()).filter(Boolean);
+}
+
 export function withNestedSubmit<T>(action: (...args: T[]) => void) {
     return (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();

@@ -1,4 +1,5 @@
 import type { DiscoverForeignKeyResponse, DiscoverTableResponse } from "@/api/generated/server-api";
+import { toStringValueItems } from "@/lib/form-utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import type { MapTablePath } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
@@ -86,19 +87,19 @@ export function useSourceTableAutofill(path: MapTablePath, mode: AutofillMode) {
 
     const fillRootTable = (selectedTable: DiscoverTableResponse) => {
         setStringIfEmpty(`${path}.collectionName`, pascalCase(selectedTable.sourceTableName));
-        setListIfEmpty(`${path}.primaryKeyColumns`, [...selectedTable.primaryKeyColumns]);
-        setListIfEmpty(`${path}.columns`, mapDiscoveredColumns(selectedTable));
+        setListIfEmpty(`${path}.primaryKeyColumns`, toStringValueItems(selectedTable.primaryKeyColumns));
+        setListIfEmpty(`${path}.columns`, mapDiscoveredColumns(discoverResult, selectedTable));
     };
 
     const fillEmbeddedTable = (selectedTable: DiscoverTableResponse) => {
         const relation = getSingleRelation(selectedTable);
 
         setStringIfEmpty(`${path}.propertyName`, getEmbeddedPropertyName(selectedTable, relation));
-        setListIfEmpty(`${path}.primaryKeyColumns`, [...selectedTable.primaryKeyColumns]);
-        setListIfEmpty(`${path}.columns`, mapDiscoveredColumns(selectedTable));
+        setListIfEmpty(`${path}.primaryKeyColumns`, toStringValueItems(selectedTable.primaryKeyColumns));
+        setListIfEmpty(`${path}.columns`, mapDiscoveredColumns(discoverResult, selectedTable));
 
         if (relation) {
-            setListIfEmpty(`${path}.joinColumns`, [...relation.foreignKey.columns]);
+            setListIfEmpty(`${path}.joinColumns`, toStringValueItems(relation.foreignKey.columns));
         }
     };
 
@@ -111,7 +112,7 @@ export function useSourceTableAutofill(path: MapTablePath, mode: AutofillMode) {
 
         if (relation) {
             setStringIfEmpty(`${path}.propertyName`, relation.columns.map(propertyNameFromJoinColumn).join("And"));
-            setListIfEmpty(`${path}.joinColumns`, [...relation.columns]);
+            setListIfEmpty(`${path}.joinColumns`, toStringValueItems(relation.columns));
         }
     };
 

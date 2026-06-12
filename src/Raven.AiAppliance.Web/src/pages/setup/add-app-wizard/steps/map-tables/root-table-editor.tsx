@@ -5,7 +5,7 @@ import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-valida
 import { AdvancedSettings } from "@/pages/setup/add-app-wizard/steps/map-tables/advanced-settings";
 import { FieldMappingEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/field-mapping-editor";
 import type { RootTablePath } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
-import { StringListEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/string-list-editor";
+import { FormStringList } from "@/components/form/form-string-list";
 import { useSourceTableAutofill } from "@/pages/setup/add-app-wizard/steps/map-tables/use-source-table-autofill";
 
 export function RootTableEditor({ path }: { path: RootTablePath }) {
@@ -37,8 +37,11 @@ export function RootTableEditor({ path }: { path: RootTablePath }) {
                     description="The RavenDB collection where documents generated from this table are stored."
                 />
             </div>
-            <StringListEditor
+            <FormStringList
+                control={control}
                 name={`${path}.primaryKeyColumns`}
+                fieldName={(index) => `${path}.primaryKeyColumns.${index}.value`}
+                defaultValue={{ value: "" }}
                 label="Primary key columns"
                 addButtonLabel="Add primary key column"
                 description="Columns that uniquely identify each source row. Their values derive the document ID."
