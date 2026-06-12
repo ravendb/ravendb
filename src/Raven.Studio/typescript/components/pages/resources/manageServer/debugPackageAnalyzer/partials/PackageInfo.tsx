@@ -1,6 +1,5 @@
 import React from "react";
 import Button from "react-bootstrap/Button";
-import { Icon } from "components/common/Icon";
 
 interface PackageInfoProps {
     fileName: string;
@@ -11,17 +10,14 @@ export default function PackageInfo({ fileName, onReset }: PackageInfoProps) {
     const created = parseCreatedDate(fileName);
 
     return (
-        <div className="package-info d-flex align-items-center gap-2">
-            <Icon icon="document" margin="m-0" className="fs-3 text-muted flex-shrink-0" />
-            <div className="d-flex flex-column overflow-hidden">
-                <small className="text-muted">Selected package{created ? ` (created: ${created})` : ""}</small>
-                <span className="fw-bold text-truncate" title={fileName}>
-                    {fileName}
-                </span>
+        <div className="package-info">
+            <div className="d-flex align-items-center justify-content-between gap-3 mb-1">
+                <small>Selected package{created ? ` (created: ${created})` : ""}</small>
+                <Button variant="link" size="sm" className="p-0 flex-shrink-0" onClick={onReset}>
+                    Reset
+                </Button>
             </div>
-            <Button variant="link" size="sm" className="p-0 ms-1 flex-shrink-0" onClick={onReset}>
-                Reset
-            </Button>
+            <input type="text" readOnly className="form-control" value={fileName ?? ""} onChange={() => undefined} />
         </div>
     );
 }

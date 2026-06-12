@@ -1,30 +1,98 @@
-import React, { useMemo } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+﻿import React, { useMemo } from "react";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
 import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
 import { formatUpTime, osIcon, parseUpTimeSeconds } from "./analyzerUtils";
-import { SortableHeader, useSortableData } from "./sortableTable";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { analyzerConstants } from "./analyzerConstants";
+import SizeGetter from "components/common/SizeGetter";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
-type ClusterNodeInfo = DebugPackageAnalysisSummary["SummaryPerNode"][string]["ClusterNodeInfo"];
+type NodeSummary = DebugPackageAnalysisSummary["SummaryPerNode"][string];
+type ClusterNodeInfo = NodeSummary["ClusterNodeInfo"];
 
 interface ClusterOverviewProps {
     summary: DebugPackageAnalysisSummary;
 }
 
-const clusterNodeSortAccessors: Record<string, (node: ClusterNodeInfo) => number | string> = {
-    nodeTag: (node) => node.NodeTag,
-    state: (node) => node.NodeState,
-    type: (node) => node.NodeType,
-    os: (node) => node.OsName ?? "",
-    version: (node) => node.ServerVersion ?? "",
-    uptime: (node) => parseUpTimeSeconds(node.UpTime),
-};
+interface ClusterOverviewWithSizeProps extends ClusterOverviewProps {
+    width: number;
+}
+
+function useClusterOverviewColumns(availableWidth: number) {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
+
+    const clusterColumns: ColumnDef<ClusterNodeInfo>[] = useMemo(
+        () => [
+            {
+                header: "Node tag",
+                accessorKey: "NodeTag",
+                cell: ({ getValue }) => <NodeTagPill tag={getValue<string>()} />,
+                size: getSize(8),
+                enableSorting: true,
+            },
+            {
+                header: "Role",
+                accessorKey: "NodeState",
+                cell: clusterRoleCell,
+                size: getSize(10),
+                enableSorting: true,
+            },
+            {
+                header: "Type",
+                accessorKey: "NodeType",
+                size: getSize(10),
+                enableSorting: true,
+            },
+            {
+                header: "OS",
+                accessorKey: "OsName",
+                cell: clusterOsCell,
+                size: getSize(18),
+                enableSorting: true,
+            },
+            {
+                header: "Server version",
+                accessorKey: "ServerVersion",
+                size: getSize(14),
+                enableSorting: true,
+            },
+            {
+                header: "Uptime",
+                id: "uptime",
+                accessorFn: (row) => parseUpTimeSeconds(row.UpTime),
+                cell: ({ row }) => formatUpTime(row.original.UpTime),
+                size: getSize(12),
+                enableSorting: true,
+            },
+            {
+                header: "URL",
+                accessorKey: "NodeUrl",
+                cell: clusterUrlCell,
+                size: getSize(28),
+            },
+        ],
+        [getSize]
+    );
+
+    return { clusterColumns };
+}
 
 export default function ClusterOverview({ summary }: ClusterOverviewProps) {
-    const nodes = useMemo(() => Object.values(summary.SummaryPerNode ?? {}), [summary]);
+    return <SizeGetter render={({ width }) => <ClusterOverviewWithSize summary={summary} width={width} />} />;
+}
+
+function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProps) {
+    const nodes = useMemo(() => Object.values(summary.SummaryPerNode ?? {}) as NodeSummary[], [summary]);
     const nodeInfos = useMemo(() => nodes.map((n) => n.ClusterNodeInfo).filter(Boolean), [nodes]);
 
     const leader = nodeInfos.find((n) => n.NodeState === "Leader");
@@ -35,12 +103,10 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
         return names.size;
     }, [nodes]);
 
-    // a static package has no live online/offline flag - every captured node is treated as online
     const nodeCount = nodeInfos.length;
 
-    // closest proxy for "cluster uptime" available in the summary: the longest-running node
     const clusterUpTime = useMemo(() => {
-        let best: string = null;
+        let best: string | null = null;
         let bestSeconds = -1;
         nodeInfos.forEach((n) => {
             const seconds = parseUpTimeSeconds(n.UpTime);
@@ -52,20 +118,30 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
         return best;
     }, [nodeInfos]);
 
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
-        nodeInfos,
-        clusterNodeSortAccessors,
-        "nodeTag",
-        "asc"
-    );
-    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+    const { clusterColumns } = useClusterOverviewColumns(width);
+
+    const table = useReactTable({
+        data: nodeInfos,
+        columns: clusterColumns,
+        enableSorting: nodeInfos.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: nodeInfos.length > analyzerConstants.minRowsForControls,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        initialState: {
+            sorting: [{ id: "NodeTag", desc: false }],
+        },
+        getRowId: (row) => row.NodeTag,
+    });
+
+    const heightInPx = virtualTableUtils.getHeightInPx(nodeInfos.length, 300);
 
     return (
         <div className="cluster-overview">
-            <h3 className="mb-3">Cluster Overview</h3>
-            <Card>
-                <Card.Body className="vstack gap-3">
-                    <div className="overview-stats d-flex gap-3 flex-wrap">
+            <div className="panel-bg-1 rounded">
+                <div className="p-4 vstack">
+                    <h3 className="mb-3">Cluster Overview</h3>
+                    <div className="overview-stats gap-3 mb-3">
                         <StatTile
                             label="Nodes status"
                             icon="check"
@@ -73,47 +149,70 @@ export default function ClusterOverview({ summary }: ClusterOverviewProps) {
                             value={`${nodeCount}/${nodeCount} online`}
                         />
                         <StatTile label="Leader node" icon="cluster-member" value={leader?.NodeTag ?? "-"} />
-                        <StatTile label="Cluster uptime" icon="clock" value={formatUpTime(clusterUpTime)} />
+                        <StatTile
+                            label="Cluster uptime"
+                            icon="clock"
+                            value={clusterUpTime != null ? formatUpTime(clusterUpTime) : "-"}
+                        />
                         <StatTile label="Total databases" icon="database" value={String(totalDatabases)} />
                         <StatTile label="License tier" icon="license" value="n/a" />
                     </div>
 
-                    <Table responsive className="m-0 align-middle">
-                        <thead>
-                            <tr>
-                                <SortableHeader label="Node tag" columnKey="nodeTag" {...sortProps} />
-                                <SortableHeader label="State" columnKey="state" {...sortProps} />
-                                <SortableHeader label="Type" columnKey="type" {...sortProps} />
-                                <SortableHeader label="OS" columnKey="os" {...sortProps} />
-                                <SortableHeader label="Server version" columnKey="version" {...sortProps} />
-                                <SortableHeader label="Uptime" columnKey="uptime" {...sortProps} />
-                                <th>URL</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sorted.map((node) => (
-                                <tr key={node.NodeTag}>
-                                    <td>
-                                        <NodeTagPill tag={node.NodeTag} />
-                                    </td>
-                                    <td>{node.NodeState}</td>
-                                    <td>{node.NodeType}</td>
-                                    <td>
-                                        <Icon icon={osIcon(node.OsType)} /> {node.OsName}
-                                    </td>
-                                    <td>{node.ServerVersion}</td>
-                                    <td>{formatUpTime(node.UpTime)}</td>
-                                    <td>
-                                        <a href={node.NodeUrl} target="_blank" rel="noreferrer">
-                                            {node.NodeUrl}
-                                        </a>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </Table>
-                </Card.Body>
-            </Card>
+                    <VirtualTable table={table} heightInPx={heightInPx} />
+                </div>
+            </div>
         </div>
+    );
+}
+
+function clusterRoleCell({ getValue }: { getValue: () => unknown }) {
+    const state = getValue() as string;
+    if (!state) {
+        return null;
+    }
+    switch (state) {
+        case "Leader":
+            return (
+                <span className="hstack gap-1">
+                    <Icon icon="node-leader" margin="m-0" /> Leader
+                </span>
+            );
+        case "Follower":
+            return (
+                <span className="hstack gap-1">
+                    <Icon icon="cluster-member" margin="m-0" /> Follower
+                </span>
+            );
+        case "Candidate":
+            return (
+                <span className="hstack gap-1">
+                    <Icon icon="question" margin="m-0" /> Candidate
+                </span>
+            );
+        case "Passive":
+            return (
+                <span className="hstack gap-1">
+                    <Icon icon="node" margin="m-0" /> Passive
+                </span>
+            );
+        default:
+            return <span>{state}</span>;
+    }
+}
+
+function clusterOsCell({ row }: { row: { original: ClusterNodeInfo } }) {
+    return (
+        <>
+            <Icon icon={osIcon(row.original.OsType)} /> {row.original.OsName}
+        </>
+    );
+}
+
+function clusterUrlCell({ getValue }: { getValue: () => unknown }) {
+    const url = getValue() as string;
+    return (
+        <a href={url} target="_blank" rel="noreferrer">
+            {url}
+        </a>
     );
 }

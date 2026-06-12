@@ -1,8 +1,6 @@
-import React, { useMemo } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+import React, { memo, useEffect, useMemo, useState } from "react";
+import Badge from "react-bootstrap/Badge";
 import { EmptySet } from "components/common/EmptySet";
-import { StatePill } from "components/common/StatePill";
 import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
@@ -14,13 +12,13 @@ import DatabaseIndexDefinitions from "./DatabaseIndexDefinitions";
 import DatabaseIndexErrors from "./DatabaseIndexErrors";
 import DatabaseSettings from "./DatabaseSettings";
 import genUtils from "common/generalUtils";
-import { SortableHeader, useSortableData } from "./sortableTable";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
 interface DatabaseContextViewProps {
     summary: DebugPackageAnalysisSummary;
     database: string;
+    selectedNode: string;
 }
 
 interface OverviewRow {
@@ -43,43 +41,19 @@ interface StorageRow {
     temp: number;
 }
 
-const overviewSortAccessors: Record<string, (row: OverviewRow) => number | string> = {
-    node: (row) => row.node,
-    state: (row) => (row.disabled ? 1 : 0),
-    documents: (row) => row.documents ?? 0,
-    indexes: (row) => row.indexes ?? 0,
-    indexingErrors: (row) => row.indexingErrors ?? 0,
-    ongoingTasks: (row) => row.ongoingTasks ?? 0,
-    alerts: (row) => row.alerts ?? 0,
-    perfHints: (row) => row.performanceHints ?? 0,
-};
-
-const storageSortAccessors: Record<string, (row: StorageRow) => number | string> = {
-    node: (row) => row.node,
-    data: (row) => row.data,
-    temp: (row) => row.temp,
-    total: (row) => row.data + row.temp,
-};
-
 // Per-node view of a single database. Documents/indexes/storage are reported per node, so this
 // surfaces divergence between nodes (replication lag, node-local indexing errors, uneven storage).
-// Per-task-type and per-database indexing speed are not in the summary (node-scoped only).
-export default function DatabaseContextView({ summary, database }: DatabaseContextViewProps) {
+export default memo(function DatabaseContextView({ summary, database, selectedNode }: DatabaseContextViewProps) {
     const overviewRows = useMemo(() => collectOverviewRows(summary, database), [summary, database]);
     const storageRows = useMemo(() => collectStorageRows(summary, database), [summary, database]);
+    const overviewNodeTags = useMemo(() => overviewRows.map((row) => row.node), [overviewRows]);
 
-    const overviewSort = useSortableData(overviewRows, overviewSortAccessors, "node", "asc");
-    const overviewSortProps = {
-        sortKey: overviewSort.sortKey,
-        sortDirection: overviewSort.sortDirection,
-        onSort: overviewSort.requestSort,
-    };
-    const storageSort = useSortableData(storageRows, storageSortAccessors, "node", "asc");
-    const storageSortProps = {
-        sortKey: storageSort.sortKey,
-        sortDirection: storageSort.sortDirection,
-        onSort: storageSort.requestSort,
-    };
+    // defer mounting the heavy async panels until after the overview sections have painted
+    const [panelsMounted, setPanelsMounted] = useState(false);
+    useEffect(() => {
+        const id = requestAnimationFrame(() => setPanelsMounted(true));
+        return () => cancelAnimationFrame(id);
+    }, []);
 
     const totalData = storageRows.reduce((sum, row) => sum + row.data, 0);
     const totalTemp = storageRows.reduce((sum, row) => sum + row.temp, 0);
@@ -90,175 +64,167 @@ export default function DatabaseContextView({ summary, database }: DatabaseConte
 
     return (
         <div className="database-context vstack gap-4">
-            <div>
-                <h3 className="mb-3">Database Overview</h3>
-                <Card>
-                    <Card.Body>
-                        {overviewRows.length === 0 ? (
-                            <EmptySet compact>No database overview data in the package</EmptySet>
-                        ) : (
-                            <Table responsive className="m-0 align-middle">
-                                <thead>
-                                    <tr>
-                                        <SortableHeader label="Node" columnKey="node" {...overviewSortProps} />
-                                        <SortableHeader label="State" columnKey="state" {...overviewSortProps} />
-                                        <SortableHeader
+            <div className="panel-bg-1 rounded">
+                <div className="p-4 vstack gap-3">
+                    <h3 className="mb-0">Database Overview</h3>
+                    {overviewRows.length === 0 ? (
+                        <EmptySet compact className="justify-content-center">
+                            No database overview data in the package
+                        </EmptySet>
+                    ) : (
+                        <div className="vstack gap-3">
+                            {overviewRows.map((row) => (
+                                <div key={row.node}>
+                                    <div className="hstack gap-2 align-items-center mb-2">
+                                        Node <NodeTagPill tag={row.node} />
+                                    </div>
+                                    <div className="overview-stats gap-2">
+                                        <StatTile
+                                            label="Node status"
+                                            icon={row.disabled ? "cancel" : "check"}
+                                            iconColor={row.disabled ? "warning" : "success"}
+                                            value={row.disabled ? "Disabled" : "Online"}
+                                        />
+                                        <StatTile
                                             label="Documents"
-                                            columnKey="documents"
-                                            {...overviewSortProps}
+                                            icon="documents"
+                                            value={formatCount(row.documents)}
                                         />
-                                        <SortableHeader label="Indexes" columnKey="indexes" {...overviewSortProps} />
-                                        <SortableHeader
-                                            label="Indexing errors"
-                                            columnKey="indexingErrors"
-                                            {...overviewSortProps}
-                                        />
-                                        <SortableHeader
-                                            label="Ongoing tasks"
-                                            columnKey="ongoingTasks"
-                                            {...overviewSortProps}
-                                        />
-                                        <SortableHeader label="Alerts" columnKey="alerts" {...overviewSortProps} />
-                                        <SortableHeader
-                                            label="Perf. hints"
-                                            columnKey="perfHints"
-                                            {...overviewSortProps}
-                                        />
-                                        <th>Last backup</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {overviewSort.sorted.map((row) => (
-                                        <tr key={row.node}>
-                                            <td>
-                                                <NodeTagPill tag={row.node} />
-                                            </td>
-                                            <td>
-                                                {row.disabled ? (
-                                                    <StatePill bg="warning">Disabled</StatePill>
+                                        <StatTile
+                                            label="Indexes"
+                                            icon="indexing"
+                                            value={
+                                                row.erroredIndexes > 0 ? (
+                                                    <>
+                                                        {formatCount(row.indexes)}{" "}
+                                                        <Badge bg="danger">
+                                                            <Icon icon="danger" margin="m-0" /> {row.erroredIndexes}
+                                                        </Badge>
+                                                    </>
                                                 ) : (
-                                                    <StatePill bg="success">Online</StatePill>
-                                                )}
-                                            </td>
-                                            <td>{formatCount(row.documents)}</td>
-                                            <td>
-                                                {formatCount(row.indexes)}
-                                                {row.erroredIndexes > 0 && (
-                                                    <span className="text-danger ms-1">
-                                                        <Icon icon="danger" margin="m-0" /> {row.erroredIndexes}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className={row.indexingErrors > 0 ? "text-danger" : ""}>
-                                                {formatCount(row.indexingErrors)}
-                                            </td>
-                                            <td>{formatCount(row.ongoingTasks)}</td>
-                                            <td className={row.alerts > 0 ? "text-warning" : ""}>
-                                                {formatCount(row.alerts)}
-                                            </td>
-                                            <td>{formatCount(row.performanceHints)}</td>
-                                            <td>{row.lastBackup}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        )}
-                    </Card.Body>
-                </Card>
-            </div>
-
-            <DatabaseStats
-                packageId={summary.PackageId}
-                database={database}
-                nodes={overviewRows.map((row) => row.node)}
-            />
-
-            <div>
-                <h3 className="mb-3">Storage Overview</h3>
-                <Card>
-                    <Card.Body className="vstack gap-3">
-                        <div className="overview-stats d-flex gap-3 flex-wrap">
-                            <StatTile
-                                label="Data size"
-                                icon="storage"
-                                iconColor="info"
-                                value={genUtils.formatBytesToSize(totalData)}
-                            />
-                            <StatTile label="Temp size" icon="storage" value={genUtils.formatBytesToSize(totalTemp)} />
-                            <StatTile
-                                label="Total size"
-                                icon="storage"
-                                value={genUtils.formatBytesToSize(totalData + totalTemp)}
-                            />
+                                                    formatCount(row.indexes)
+                                                )
+                                            }
+                                        />
+                                        <StatTile
+                                            label="Indexing errors"
+                                            icon="indexing"
+                                            iconColor={row.indexingErrors > 0 ? "danger" : undefined}
+                                            valueColor={row.indexingErrors > 0 ? "danger" : undefined}
+                                            value={formatCount(row.indexingErrors)}
+                                        />
+                                        <StatTile
+                                            label="Ongoing tasks"
+                                            icon="ongoing-tasks"
+                                            value={formatCount(row.ongoingTasks)}
+                                        />
+                                        <StatTile
+                                            label="Alerts"
+                                            icon="alerts"
+                                            iconColor={row.alerts > 0 ? "warning" : undefined}
+                                            valueColor={row.alerts > 0 ? "warning" : undefined}
+                                            value={formatCount(row.alerts)}
+                                        />
+                                        <StatTile
+                                            label="Perf. hints"
+                                            icon="performance"
+                                            value={formatCount(row.performanceHints)}
+                                        />
+                                        <StatTile label="Last backup" icon="backup" value={row.lastBackup} />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                        {storageRows.length === 0 ? (
-                            <EmptySet compact>No storage data in the package</EmptySet>
-                        ) : (
-                            <Table responsive className="m-0 align-middle">
-                                <thead>
-                                    <tr>
-                                        <SortableHeader label="Node" columnKey="node" {...storageSortProps} />
-                                        <SortableHeader label="Data" columnKey="data" {...storageSortProps} />
-                                        <SortableHeader label="Temp" columnKey="temp" {...storageSortProps} />
-                                        <SortableHeader label="Total" columnKey="total" {...storageSortProps} />
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {storageSort.sorted.map((row) => (
-                                        <tr key={row.node}>
-                                            <td>
-                                                <NodeTagPill tag={row.node} />
-                                            </td>
-                                            <td>{genUtils.formatBytesToSize(row.data)}</td>
-                                            <td>{genUtils.formatBytesToSize(row.temp)}</td>
-                                            <td>{genUtils.formatBytesToSize(row.data + row.temp)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        )}
-                    </Card.Body>
-                </Card>
+                    )}
+                </div>
             </div>
 
-            <DatabaseIndexStats
-                packageId={summary.PackageId}
-                database={database}
-                nodes={overviewRows.map((row) => row.node)}
-            />
+            {panelsMounted && (
+                <>
+                    <DatabaseStats packageId={summary.PackageId} database={database} node={selectedNode} />
 
-            <DatabaseIndexPerformanceLink
-                packageId={summary.PackageId}
-                database={database}
-                nodes={overviewRows.map((row) => row.node)}
-            />
+                    <div className="panel-bg-1 rounded">
+                        <div className="p-4 vstack gap-3">
+                            <h3 className="mb-0">Storage Overview</h3>
+                            <div className="overview-stats gap-2">
+                                <StatTile
+                                    label="Data size"
+                                    icon="storage"
+                                    iconColor="info"
+                                    value={genUtils.formatBytesToSize(totalData)}
+                                />
+                                <StatTile
+                                    label="Temp size"
+                                    icon="storage"
+                                    value={genUtils.formatBytesToSize(totalTemp)}
+                                />
+                                <StatTile
+                                    label="Total size"
+                                    icon="storage"
+                                    value={genUtils.formatBytesToSize(totalData + totalTemp)}
+                                />
+                            </div>
+                            {storageRows.length === 0 ? (
+                                <EmptySet compact className="justify-content-center">
+                                    No storage data in the package
+                                </EmptySet>
+                            ) : (
+                                <div className="vstack gap-3">
+                                    {storageRows.map((row) => (
+                                        <div key={row.node}>
+                                            <div className="hstack gap-2 align-items-center mb-2">
+                                                Node <NodeTagPill tag={row.node} />
+                                            </div>
+                                            <div className="overview-stats gap-2">
+                                                <StatTile
+                                                    label="Data size"
+                                                    icon="storage"
+                                                    iconColor="info"
+                                                    value={genUtils.formatBytesToSize(row.data)}
+                                                />
+                                                <StatTile
+                                                    label="Temp size"
+                                                    icon="storage"
+                                                    value={genUtils.formatBytesToSize(row.temp)}
+                                                />
+                                                <StatTile
+                                                    label="Total size"
+                                                    icon="storage"
+                                                    value={genUtils.formatBytesToSize(row.data + row.temp)}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-            <DatabaseIndexDefinitions
-                packageId={summary.PackageId}
-                database={database}
-                nodes={overviewRows.map((row) => row.node)}
-            />
+                    <DatabaseIndexStats packageId={summary.PackageId} database={database} node={selectedNode} />
 
-            <DatabaseIndexErrors
-                packageId={summary.PackageId}
-                database={database}
-                nodes={overviewRows.map((row) => row.node)}
-            />
+                    <DatabaseIndexPerformanceLink
+                        packageId={summary.PackageId}
+                        database={database}
+                        node={selectedNode}
+                    />
 
-            <DatabaseOngoingTasks
-                packageId={summary.PackageId}
-                database={database}
-                nodes={overviewRows.map((row) => row.node)}
-            />
+                    <DatabaseIndexDefinitions packageId={summary.PackageId} database={database} node={selectedNode} />
 
-            <DatabaseSettings
-                packageId={summary.PackageId}
-                database={database}
-                nodes={overviewRows.map((row) => row.node)}
-            />
+                    <DatabaseIndexErrors packageId={summary.PackageId} database={database} node={selectedNode} />
+
+                    <DatabaseOngoingTasks
+                        packageId={summary.PackageId}
+                        database={database}
+                        nodes={overviewNodeTags}
+                        selectedNode={selectedNode}
+                    />
+
+                    <DatabaseSettings packageId={summary.PackageId} database={database} node={selectedNode} />
+                </>
+            )}
         </div>
     );
-}
+});
 
 function formatCount(value: number): string {
     if (value == null || value < 0) {

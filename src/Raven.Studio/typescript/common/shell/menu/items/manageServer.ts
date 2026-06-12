@@ -6,6 +6,7 @@ import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import AdminJsConsole = require("components/pages/resources/manageServer/adminJsConsole/AdminJsConsole");
 import ClientGlobalConfiguration = require("components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration");
 import StudioGlobalConfiguration = require("components/pages/resources/manageServer/studioConfiguration/StudioGlobalConfiguration");
+import GatherDebugInfo = require("components/pages/resources/manageServer/gatherDebugInfo/GatherDebugInfo");
 import DebugPackage = require("components/pages/resources/manageServer/debugPackageAnalyzer/DebugPackage");
 import ServerWideCustomAnalyzers = require("components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers");
 import ServerWideCustomSorters = require("components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSorters");
@@ -218,18 +219,33 @@ function getManageServerMenuItem() {
             },
         }),
         new leafMenuItem({
-            route: ['admin/settings/debugPackage', 'admin/settings/debugInfo', 'admin/settings/debugPackageAnalyzer'],
-            moduleId: reactUtils.bridgeToReact(DebugPackage.default, "nonShardedView"),
+            route: ['admin/settings/debugPackage', 'admin/settings/debugInfo'],
+            moduleId: reactUtils.bridgeToReact(GatherDebugInfo.default, "nonShardedView"),
             title: 'Debug Package',
             nav: true,
             css: 'icon-gather-debug-information',
             dynamicHash: appUrl.forDebugPackage,
             requiredAccess: "Operator",
             search: {
-                alternativeTitles: ["Create Debug Package", "Analyze Debug Package", "Gather Debug Info"],
+                alternativeTitles: ["Create Debug Package", "Gather Debug Info"],
                 innerActions: [
                     { name: "Create Debug Package" },
                     { name: "Download Debug Package" },
+                ],
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debugPackageAnalyzer',
+            moduleId: reactUtils.bridgeToReact(DebugPackage.default, "nonShardedView"),
+            title: 'Debug Package Analyzer',
+            nav: false,
+            css: 'icon-gather-debug-information',
+            dynamicHash: appUrl.forDebugPackageAnalyzer,
+            itemRouteToHighlight: 'admin/settings/debugPackage',
+            requiredAccess: "Operator",
+            search: {
+                alternativeTitles: ["Analyze Debug Package"],
+                innerActions: [
                     { name: "Analyze Debug Package" },
                     { name: "Upload Debug Package" },
                 ],

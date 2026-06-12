@@ -1,7 +1,4 @@
-import { FormCheckboxesOption } from "components/common/Form";
-import { GatherDebugInfoFormData, allGatherDebugInfoPackageDataTypes } from "./GatherDebugInfoValidation";
-import assertUnreachable from "components/utils/assertUnreachable";
-import DebugInfoPackageContentType = Raven.Server.Documents.Handlers.Debugging.ServerWideDebugInfoPackageHandler.DebugInfoPackageContentType;
+import { GatherDebugInfoFormData } from "./GatherDebugInfoValidation";
 import messagePublisher = require("common/messagePublisher");
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
@@ -17,6 +14,8 @@ import endpoints = require("endpoints");
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useAsyncCallback } from "react-async-hook";
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import { FormCheckboxesOption } from "components/common/Form";
+import DebugInfoPackageContentType = Raven.Server.Documents.Handlers.Debugging.ServerWideDebugInfoPackageHandler.DebugInfoPackageContentType;
 
 const adminDebugInfoPackage = endpoints.global.serverWideDebugInfoPackage.adminDebugInfoPackage;
 const adminDebugClusterInfoPackage = endpoints.global.serverWideDebugInfoPackage.adminDebugClusterInfoPackage;
@@ -44,16 +43,21 @@ export function useGatherDebugInfoHelpers() {
     });
 
     const asyncKillOperation = useAsyncCallback(() =>
-        databasesService.killOperation(null, asyncGetNextOperationId.result)
+        databasesService.killOperation(null, asyncGetNextOperationId.result!)
     );
 
     const startDownload = async (formData: GatherDebugInfoFormData, url: string) => {
         setIsDownloading(true);
         const operationId = await asyncGetNextOperationId.execute();
 
+        const dataTypes: DebugInfoPackageContentType[] = [];
+        if (formData.includeServer) dataTypes.push("ServerWide");
+        if (formData.includeDatabases) dataTypes.push("Databases");
+        if (formData.includeLogs) dataTypes.push("LogFile");
+
         const urlParams: DownloadPackageRequestDto = {
             operationId,
-            type: formData.dataTypes.join(","),
+            type: dataTypes.join(","),
             database: formData.isSelectAllDatabases ? undefined : formData.selectedDatabases,
         };
 
@@ -67,22 +71,17 @@ export function useGatherDebugInfoHelpers() {
         });
     };
 
-    const onSave: SubmitHandler<GatherDebugInfoFormData> = async (formData) => {
+    const onClusterDownload: SubmitHandler<GatherDebugInfoFormData> = async (formData) => {
         tryHandleSubmit(async () => {
-            switch (formData.packageScope) {
-                case "cluster": {
-                    reportEvent("info-package", "cluster-wide");
-                    await startDownload(formData, adminDebugClusterInfoPackage);
-                    break;
-                }
-                case "server": {
-                    reportEvent("info-package", "server-wide");
-                    await startDownload(formData, adminDebugInfoPackage);
-                    break;
-                }
-                default:
-                    assertUnreachable(formData.packageScope);
-            }
+            reportEvent("info-package", "cluster-wide");
+            await startDownload(formData, adminDebugClusterInfoPackage);
+        });
+    };
+
+    const onServerDownload: SubmitHandler<GatherDebugInfoFormData> = async (formData) => {
+        tryHandleSubmit(async () => {
+            reportEvent("info-package", "server-wide");
+            await startDownload(formData, adminDebugInfoPackage);
         });
     };
 
@@ -91,9 +90,10 @@ export function useGatherDebugInfoHelpers() {
     return {
         isDownloading,
         defaultValues,
+        allDatabaseNames,
         databaseOptions,
-        dataTypesOptions,
-        onSave,
+        onClusterDownload,
+        onServerDownload,
         abortData: {
             isConfirmVisible: isAbortConfirmVisible,
             toggleIsConfirmVisible: toggleIsAbortConfirmVisible,
@@ -103,26 +103,12 @@ export function useGatherDebugInfoHelpers() {
     };
 }
 
-const dataTypesOptions: FormCheckboxesOption<DebugInfoPackageContentType>[] = allGatherDebugInfoPackageDataTypes.map(
-    (dataType) => {
-        switch (dataType) {
-            case "Databases":
-                return { label: "Databases", value: dataType };
-            case "ServerWide":
-                return { label: "Server", value: dataType };
-            case "LogFile":
-                return { label: "Logs", value: dataType };
-            default:
-                assertUnreachable(dataType);
-        }
-    }
-);
-
-const defaultValues: Required<GatherDebugInfoFormData> = {
-    dataTypes: allGatherDebugInfoPackageDataTypes,
+const defaultValues: GatherDebugInfoFormData = {
+    includeServer: true,
+    includeDatabases: true,
+    includeLogs: true,
     isSelectAllDatabases: true,
     selectedDatabases: [],
-    packageScope: null,
 };
 
 function confirmLeavingPage(): JQueryDeferred<confirmDialogResult> {

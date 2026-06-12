@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import Card from "react-bootstrap/Card";
+﻿import React, { memo, useCallback, useState } from "react";
 import Table from "react-bootstrap/Table";
 import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
@@ -8,18 +7,20 @@ import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { EmptySet } from "components/common/EmptySet";
 import { RichAlert } from "components/common/RichAlert";
-import { StatePill } from "components/common/StatePill";
+import Badge from "react-bootstrap/Badge";
 import {
     RichPanel,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelName,
+    RichPanelActions,
     RichPanelDetails,
     RichPanelDetailItem,
 } from "components/common/RichPanel";
 import { Icon } from "components/common/Icon";
 import Code, { CodeLanguage } from "components/common/Code";
-import Select, { SelectOption } from "components/common/select/Select";
+import IndexUtils from "components/utils/IndexUtils";
+import IconName from "typings/server/icons";
 
 type IndexDefinition = Raven.Client.Documents.Indexes.IndexDefinition;
 type IndexFieldOptions = Raven.Client.Documents.Indexes.IndexFieldOptions;
@@ -27,108 +28,106 @@ type IndexFieldOptions = Raven.Client.Documents.Indexes.IndexFieldOptions;
 interface DatabaseIndexDefinitionsProps {
     packageId: string;
     database: string;
-    nodes: string[];
+    node: string;
 }
 
 // On-demand per-node index definitions from the analyzer databases/indexes endpoint. The map/reduce
 // functions render through the shared Code component (read-only counterpart of the live index editor).
-export default function DatabaseIndexDefinitions({ packageId, database, nodes }: DatabaseIndexDefinitionsProps) {
+export default memo(function DatabaseIndexDefinitions({ packageId, database, node }: DatabaseIndexDefinitionsProps) {
     const { manageServerService } = useServices();
-    const [selectedNode, setSelectedNode] = useState<string>(nodes[0] ?? null);
     // collapsed by default - map/reduce bodies can be large; expand selectively or all at once
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
     const definitions = useAsync(async () => {
-        if (!selectedNode) {
+        if (!node) {
             return [] as IndexDefinition[];
         }
-        return manageServerService.getDebugPackageDatabaseIndexDefinitions(packageId, selectedNode, database);
-    }, [packageId, selectedNode, database]);
+        return manageServerService.getDebugPackageDatabaseIndexDefinitions(packageId, node, database);
+    }, [packageId, node, database]);
 
-    const nodeOptions: SelectOption<string>[] = nodes.map((tag) => ({ value: tag, label: `Node ${tag}` }));
     const indexes = definitions.result ?? [];
     const allExpanded = indexes.length > 0 && indexes.every((index) => expanded.has(index.Name));
 
-    const toggleIndex = (name: string) =>
-        setExpanded((prev) => {
-            const next = new Set(prev);
-            if (next.has(name)) {
-                next.delete(name);
-            } else {
-                next.add(name);
-            }
-            return next;
-        });
+    const toggleIndex = useCallback(
+        (name: string) =>
+            setExpanded((prev) => {
+                const next = new Set(prev);
+                if (next.has(name)) {
+                    next.delete(name);
+                } else {
+                    next.add(name);
+                }
+                return next;
+            }),
+        []
+    );
 
     const toggleAll = () => setExpanded(allExpanded ? new Set() : new Set(indexes.map((index) => index.Name)));
 
     return (
         <div className="database-index-definitions">
-            <div className="hstack gap-3 align-items-center mb-3 flex-wrap">
-                <h3 className="m-0">Index Definitions</h3>
-                {nodes.length > 1 && (
-                    <div className="node-select">
-                        <Select
-                            options={nodeOptions}
-                            value={nodeOptions.find((o) => o.value === selectedNode)}
-                            onChange={(option) => option && setSelectedNode(option.value)}
-                            isSearchable={false}
-                            isRoundedPill
-                        />
+            <div className="panel-bg-1 rounded">
+                <div className="p-4">
+                    <div className="hstack gap-3 align-items-center mb-3 flex-wrap">
+                        <h3 className="m-0">Index Definitions</h3>
+                        {indexes.length > 0 && (
+                            <Button variant="link" size="sm" className="ms-auto" onClick={toggleAll}>
+                                <Icon icon={allExpanded ? "collapse" : "expand"} />
+                                {allExpanded ? "Collapse all" : "Expand all"}
+                            </Button>
+                        )}
                     </div>
-                )}
-                {indexes.length > 0 && (
-                    <Button variant="link" size="sm" className="ms-auto" onClick={toggleAll}>
-                        <Icon icon={allExpanded ? "collapse" : "expand"} />
-                        {allExpanded ? "Collapse all" : "Expand all"}
-                    </Button>
-                )}
-            </div>
 
-            {definitions.loading ? (
-                <Card>
-                    <Card.Body>
-                        <div className="hstack gap-2 justify-content-center text-muted py-3">
-                            <Spinner size="sm" /> Loading index definitions for node {selectedNode}...
+                    {definitions.loading ? (
+                        <div className="panel-bg-1 rounded">
+                            <div className="p-4">
+                                <div className="hstack gap-2 justify-content-center text-muted py-3">
+                                    <Spinner size="sm" /> Loading index definitions for node {node}...
+                                </div>
+                            </div>
                         </div>
-                    </Card.Body>
-                </Card>
-            ) : definitions.error ? (
-                <RichAlert variant="danger">
-                    Could not load index definitions for node {selectedNode}. The package may not contain index
-                    definitions for this database, or the report expired.
-                </RichAlert>
-            ) : indexes.length === 0 ? (
-                <Card>
-                    <Card.Body>
-                        <EmptySet compact>
-                            No index definitions for {database} on node {selectedNode}
-                        </EmptySet>
-                    </Card.Body>
-                </Card>
-            ) : (
-                <div className="vstack gap-2">
-                    {indexes.map((index) => (
-                        <IndexDefinitionPanel
-                            key={index.Name}
-                            index={index}
-                            expanded={expanded.has(index.Name)}
-                            onToggle={() => toggleIndex(index.Name)}
-                        />
-                    ))}
+                    ) : definitions.error ? (
+                        <RichAlert variant="danger">
+                            Could not load index definitions for node {node}. The package may not contain index
+                            definitions for this database, or the report expired.
+                        </RichAlert>
+                    ) : indexes.length === 0 ? (
+                        <div className="panel-bg-1 rounded">
+                            <div className="p-4">
+                                <EmptySet compact className="justify-content-center">
+                                    No index definitions for {database} on node {node}
+                                </EmptySet>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="vstack">
+                            {indexes.map((index) => (
+                                <IndexDefinitionPanel
+                                    key={index.Name}
+                                    index={index}
+                                    expanded={expanded.has(index.Name)}
+                                    onToggle={toggleIndex}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
-}
+});
 
 interface IndexDefinitionPanelProps {
     index: IndexDefinition;
     expanded: boolean;
-    onToggle: () => void;
+    onToggle: (name: string) => void;
 }
 
-function IndexDefinitionPanel({ index, expanded, onToggle }: IndexDefinitionPanelProps) {
+const IndexDefinitionPanel = memo(function IndexDefinitionPanel({
+    index,
+    expanded,
+    onToggle,
+}: IndexDefinitionPanelProps) {
     const language: CodeLanguage = index.Type?.startsWith("JavaScript") ? "javascript" : "csharp";
     const maps = index.Maps ?? [];
     const fields = Object.entries(index.Fields ?? {});
@@ -138,29 +137,48 @@ function IndexDefinitionPanel({ index, expanded, onToggle }: IndexDefinitionPane
 
     return (
         <RichPanel>
-            <RichPanelHeader onClick={onToggle} style={{ cursor: "pointer" }}>
+            <RichPanelHeader>
                 <RichPanelInfo>
-                    <RichPanelName>
-                        <Icon icon={expanded ? "chevron-down" : "chevron-right"} margin="m-0 me-1" />
-                        {index.Name}
-                    </RichPanelName>
+                    <RichPanelName>{index.Name}</RichPanelName>
                 </RichPanelInfo>
-                <div className="hstack gap-1 flex-wrap align-items-center">
-                    <StatePill bg="info">{index.Type}</StatePill>
-                    <StatePill bg="secondary">{index.SourceType}</StatePill>
-                    {index.State && index.State !== "Normal" && <StatePill bg="warning">{index.State}</StatePill>}
+                <div className="hstack gap-3 flex-wrap align-items-center ms-auto">
+                    <span className="hstack gap-1" title={indexTypeDescription(index.Type)}>
+                        <Icon icon={IndexUtils.indexTypeIcon(index.Type) ?? "index"} margin="m-0" />
+                        {IndexUtils.formatType(index.Type)}
+                    </span>
+                    <span className="hstack gap-1" title={sourceTypeDescription(index.SourceType)}>
+                        <Icon icon={sourceTypeIcon(index.SourceType)} margin="m-0" />
+                        {index.SourceType === "TimeSeries" ? "Time Series" : index.SourceType}
+                    </span>
+                    {index.State && index.State !== "Normal" && <Badge bg="warning">{index.State}</Badge>}
                     {index.OutputReduceToCollection && (
-                        <StatePill bg="success">
+                        <Badge bg="success">
                             <Icon icon="documents" margin="m-0" /> Output to {index.OutputReduceToCollection}
-                        </StatePill>
+                        </Badge>
                     )}
-                    <span className="small-label">
-                        Priority: {index.Priority ?? "Normal"} · Lock: {index.LockMode ?? "Unlock"}
+                    <span className="hstack gap-1" title="Index scheduling priority">
+                        <Icon icon={priorityIcon(index.Priority)} margin="m-0" />
+                        {index.Priority ?? "Normal"}
+                    </span>
+                    <span className="hstack gap-1" title="Index lock mode">
+                        <Icon icon={lockIcon(index.LockMode)} margin="m-0" />
+                        {lockLabel(index.LockMode)}
                     </span>
                 </div>
+                <RichPanelActions>
+                    <Button
+                        variant="secondary"
+                        active={expanded}
+                        onClick={() => onToggle(index.Name)}
+                        title={expanded ? "Collapse" : "Expand"}
+                        className="btn-toggle-panel"
+                    >
+                        <Icon icon={expanded ? "fold" : "unfold"} margin="m-0" />
+                    </Button>
+                </RichPanelActions>
             </RichPanelHeader>
-            <Collapse in={expanded}>
-                <div>
+            <Collapse in={expanded} unmountOnExit>
+                <div className="index-definition-body">
                     {extraDetails.length > 0 && (
                         <RichPanelDetails>
                             {extraDetails.map((detail) => (
@@ -170,7 +188,7 @@ function IndexDefinitionPanel({ index, expanded, onToggle }: IndexDefinitionPane
                             ))}
                         </RichPanelDetails>
                     )}
-                    <div className="p-3 vstack gap-3">
+                    <div className="p-4 vstack gap-3">
                         {maps.map((map, i) => (
                             <div key={i}>
                                 <div className="small-label mb-1">{maps.length > 1 ? `Map ${i + 1}` : "Map"}</div>
@@ -189,9 +207,9 @@ function IndexDefinitionPanel({ index, expanded, onToggle }: IndexDefinitionPane
                                 <div className="small-label mb-1">Additional sources</div>
                                 <div className="hstack gap-1 flex-wrap">
                                     {sources.map((name) => (
-                                        <StatePill key={name} bg="secondary">
+                                        <Badge key={name} bg="secondary">
                                             {name}
-                                        </StatePill>
+                                        </Badge>
                                     ))}
                                 </div>
                             </div>
@@ -213,6 +231,84 @@ function IndexDefinitionPanel({ index, expanded, onToggle }: IndexDefinitionPane
             </Collapse>
         </RichPanel>
     );
+});
+
+function indexTypeDescription(type: IndexDefinition["Type"]): string {
+    switch (type) {
+        case "Map":
+            return "Index type: Map";
+        case "MapReduce":
+            return "Index type: Map-Reduce";
+        case "AutoMap":
+            return "Index type: Auto Map (automatically created by RavenDB)";
+        case "AutoMapReduce":
+            return "Index type: Auto Map-Reduce (automatically created by RavenDB)";
+        case "JavaScriptMap":
+            return "Index type: Map (JavaScript)";
+        case "JavaScriptMapReduce":
+            return "Index type: Map-Reduce (JavaScript)";
+        case "Faulty":
+            return "Index type: Faulty — the index is in an error state";
+        default:
+            return null;
+    }
+}
+
+function priorityIcon(priority: IndexDefinition["Priority"]): IconName {
+    switch (priority) {
+        case "Low":
+            return "coffee";
+        case "High":
+            return "force";
+        default:
+            return "check";
+    }
+}
+
+function lockIcon(lockMode: IndexDefinition["LockMode"]): IconName {
+    switch (lockMode) {
+        case "LockedIgnore":
+            return "lock";
+        case "LockedError":
+            return "lock-error";
+        default:
+            return "unlock";
+    }
+}
+
+function lockLabel(lockMode: IndexDefinition["LockMode"]): string {
+    switch (lockMode) {
+        case "LockedIgnore":
+            return "Locked (Ignore)";
+        case "LockedError":
+            return "Locked (Error)";
+        default:
+            return "Unlocked";
+    }
+}
+
+function sourceTypeIcon(sourceType: IndexDefinition["SourceType"]): IconName {
+    switch (sourceType) {
+        case "TimeSeries":
+            return "timeseries";
+        case "Counters":
+            return "new-counter";
+        default:
+            return "documents";
+    }
+}
+
+function sourceTypeDescription(sourceType: IndexDefinition["SourceType"]): string {
+    switch (sourceType) {
+        case "Documents":
+            return "Source type: Documents";
+        case "TimeSeries":
+            return "Source type: Time Series";
+        case "Counters":
+            return "Source type: Counters";
+        default:
+            return null;
+    }
 }
 
 function FieldsTable({ fields }: { fields: { [key: string]: IndexFieldOptions } }) {

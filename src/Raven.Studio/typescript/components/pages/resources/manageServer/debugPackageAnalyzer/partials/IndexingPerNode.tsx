@@ -1,9 +1,17 @@
 import React, { useMemo } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
 import NodeTagPill from "./NodeTagPill";
 import { EmptySet } from "components/common/EmptySet";
-import { SortableHeader, useSortableData } from "./sortableTable";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { analyzerConstants } from "./analyzerConstants";
+import SizeGetter from "components/common/SizeGetter";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -19,53 +27,94 @@ interface IndexingPerNodeProps {
     nodeTag?: string;
 }
 
-const indexingSortAccessors: Record<string, (row: IndexingRow) => number | string> = {
-    node: (row) => row.node,
-    indexed: (row) => row.indexed ?? 0,
-    mapped: (row) => row.mapped ?? 0,
-    reduced: (row) => row.reduced ?? 0,
-};
+interface IndexingPerNodeWithSizeProps extends IndexingPerNodeProps {
+    width: number;
+}
 
-// the summary exposes indexing speed as a per-node aggregate (no per-database breakdown),
-// so this shows one row per node rather than per database
+function useIndexingPerNodeColumns(availableWidth: number) {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+
+    const indexingColumns: ColumnDef<IndexingRow>[] = useMemo(
+        () => [
+            {
+                header: "Node",
+                accessorKey: "node",
+                cell: ({ getValue }) => <NodeTagPill tag={getValue<string>()} />,
+                size: getSize(18),
+                enableSorting: true,
+            },
+            {
+                header: "Indexed/s",
+                accessorKey: "indexed",
+                cell: ({ getValue }) => formatRate(getValue<number>()),
+                size: getSize(27),
+                enableSorting: true,
+            },
+            {
+                header: "Mapped/s",
+                accessorKey: "mapped",
+                cell: ({ getValue }) => formatRate(getValue<number>()),
+                size: getSize(27),
+                enableSorting: true,
+            },
+            {
+                header: "Reduced/s",
+                accessorKey: "reduced",
+                cell: ({ getValue }) => formatRate(getValue<number>()),
+                size: getSize(28),
+                enableSorting: true,
+            },
+        ],
+        [getSize]
+    );
+
+    return { indexingColumns };
+}
+
 export default function IndexingPerNode({ summary, nodeTag }: IndexingPerNodeProps) {
+    return (
+        <SizeGetter
+            render={({ width }) => <IndexingPerNodeWithSize summary={summary} nodeTag={nodeTag} width={width} />}
+        />
+    );
+}
+
+function IndexingPerNodeWithSize({ summary, nodeTag, width }: IndexingPerNodeWithSizeProps) {
     const rows = useMemo(() => collectIndexingRows(summary, nodeTag), [summary, nodeTag]);
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, indexingSortAccessors, "node", "asc");
-    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+
+    const { indexingColumns } = useIndexingPerNodeColumns(width);
+
+    const table = useReactTable({
+        data: rows,
+        columns: indexingColumns,
+        enableSorting: rows.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        initialState: {
+            sorting: [{ id: "node", desc: false }],
+        },
+        getRowId: (row) => row.node,
+    });
+
+    const heightInPx = virtualTableUtils.getHeightInPx(rows.length, 400);
 
     return (
         <div className="indexing-per-node flex-grow-1">
-            <h3 className="mb-3">Indexing per Node</h3>
-            <Card>
-                <Card.Body>
+            <div className="panel-bg-1 rounded">
+                <div className="p-4">
+                    <h3 className="mb-3">Indexing per Node</h3>
                     {rows.length === 0 ? (
-                        <EmptySet compact>No indexing data in the package</EmptySet>
+                        <EmptySet compact className="justify-content-center">
+                            No indexing data in the package
+                        </EmptySet>
                     ) : (
-                        <Table responsive className="m-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <SortableHeader label="Node" columnKey="node" {...sortProps} />
-                                    <SortableHeader label="Indexed/s" columnKey="indexed" {...sortProps} />
-                                    <SortableHeader label="Mapped/s" columnKey="mapped" {...sortProps} />
-                                    <SortableHeader label="Reduced/s" columnKey="reduced" {...sortProps} />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sorted.map((row) => (
-                                    <tr key={row.node}>
-                                        <td>
-                                            <NodeTagPill tag={row.node} />
-                                        </td>
-                                        <td>{formatRate(row.indexed)}</td>
-                                        <td>{formatRate(row.mapped)}</td>
-                                        <td>{formatRate(row.reduced)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
+                        <VirtualTable table={table} heightInPx={heightInPx} />
                     )}
-                </Card.Body>
-            </Card>
+                </div>
+            </div>
         </div>
     );
 }

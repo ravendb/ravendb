@@ -1,0 +1,434 @@
+.debug-package-analyzer {
+    .file-dropzone {
+        body[data-theme="blue"] & {
+            color: var(--bs-secondary-color);
+
+            .text-muted {
+                color: var(--bs-secondary-color) !important;
+            }
+        }
+    }
+
+    body[data-theme="dark"] &,
+    body[data-theme="classic"] & {
+        .database-index-definitions {
+            .rich-panel-item {
+                --bs-card-bg: var(--panel-bg-2);
+            }
+
+            .index-definition-body {
+                background: var(--well-bg);
+
+                .code,
+                .code .code-classes {
+                    background-color: var(--panel-bg-1);
+                }
+            }
+        }
+    }
+
+    // light mode: panel-header-bg equals panel-bg-1 so summary bars are invisible;
+    // drop one step to panel-bg-2 to restore the distinction.
+    // rich-panel-item cards also share panel-bg-1 with their container – bump them
+    // to panel-bg-2 so individual index/task rows read as distinct surfaces.
+    body[data-theme="light"] & {
+        .panel-header-bg {
+            background-color: var(--panel-bg-2) !important;
+        }
+
+        .database-index-definitions .rich-panel-item {
+            background-color: var(--panel-bg-2);
+
+            .card-header {
+                background-color: var(--panel-bg-2);
+            }
+
+            .index-definition-body {
+                background: var(--pre-bg);
+            }
+        }
+    }
+
+    // blue mode: apply the same light-zone variable overrides that .virtual-grid
+    // gets globally, scoped to this view only so no global styles are touched.
+    body[data-theme="blue"] & {
+        .virtual-table {
+            --text-color: #232e45;
+            --text-muted: #2f3a52;
+            --text-emphasis: #172138;
+            --panel-header-bg: #f4f5fb;
+            --panel-bg-1: #e1e3ef;
+            --panel-bg-2: #c8ccdf;
+            --panel-bg-3: #a9b0c6;
+            --well-bg: #c8ccdf;
+            --border-color-light: #c5c8d4;
+            --row-bg: #ffffff;
+            --row-even-bg: #f0f1f6;
+            color: var(--text-color);
+        }
+    }
+
+    // blue mode: --bs-body-color and --bs-secondary-color resolve to dark navy
+    // because Bootstrap compiles them against the light colour scale, but all panel
+    // backgrounds are dark in blue mode – flip those tokens to the light variants.
+    body[data-theme="blue"] & {
+        .small-label,
+        .issue-group-header {
+            color: var(--text-muted);
+        }
+
+        .analysis-results,
+        .cluster-observer-decisions {
+            .severity-cards .severity-card {
+                color: var(--text-color);
+            }
+        }
+
+        .react-select-container {
+            .react-select__control--is-disabled {
+                background-color: var(--input-bg) !important;
+            }
+
+            .react-select__value-container * {
+                color: var(--bs-body-color) !important;
+            }
+
+            .react-select__placeholder {
+                color: var(--bs-secondary-color) !important;
+            }
+
+            .react-select__dropdown-indicator {
+                color: var(--bs-body-color);
+            }
+        }
+    }
+
+    .debug-package-exception-details {
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 12px;
+    }
+
+    .package-info {
+        min-width: 280px;
+    }
+
+    .context-toggle {
+        .context-toggle-label {
+            font-size: 0.875rem;
+            color: var(--text-emphasis);
+        }
+
+        .context-toggle-container {
+            background: var(--well-bg);
+            border: 1px solid var(--border-color-light);
+            border-radius: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+
+            &.w-100 {
+                display: flex;
+            }
+        }
+
+        .context-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            transition:
+                background-color 0.15s,
+                color 0.15s;
+
+            &:hover:not(.active) {
+                color: var(--text-emphasis);
+            }
+
+            &.active {
+                background-color: var(--bs-secondary);
+                color: var(--bs-white);
+
+                .context-toggle-badge {
+                    background: var(--bs-white);
+                    color: var(--bs-secondary);
+                }
+
+                body[data-theme="light"] & {
+                    background-color: var(--faded-primary);
+                    color: var(--text-faded-primary);
+
+                    .context-toggle-badge {
+                        background: var(--text-faded-primary);
+                        color: var(--faded-primary);
+                    }
+                }
+            }
+
+            .context-toggle-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 1.4em;
+                padding: 1px 6px;
+                border-radius: 100px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                background: var(--bs-secondary);
+                color: var(--bs-white);
+            }
+        }
+    }
+
+    h2 .icon-addon-search::after {
+        right: -5%;
+        bottom: -7%;
+    }
+
+    .debug-package-analyze-icon {
+        font-size: 6rem;
+        line-height: 1;
+    }
+
+    .small-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--bs-secondary-color);
+    }
+
+    .group-by-control {
+        min-width: 200px;
+    }
+
+    .node-select {
+        min-width: 220px;
+    }
+
+    // circular node avatar matching the cluster dashboard node icons (.node-label):
+    // the letter uses the panel background (--well-bg) so it reads as a cut-out on every node color
+    .node-tag-circle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.4rem;
+        height: 1.4rem;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        font-weight: 800;
+        line-height: 1;
+        flex-shrink: 0;
+        text-transform: uppercase;
+        color: var(--well-bg);
+    }
+
+    .stat-tile-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // truncate long text inside stat-tile (flex container prevents auto-truncation)
+    .stat-tile-value {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .stat-tile-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+
+    // truncate long node URLs inside stat-tile (flex container prevents auto-truncation)
+    .node-url-link {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: block;
+        min-width: 0;
+        max-width: 260px;
+    }
+
+    .storage-per-database,
+    .indexing-per-node {
+        min-width: 360px;
+    }
+
+    // long auto-index names would otherwise stretch the table and push columns off-screen
+    .database-index-stats .index-name {
+        max-width: 360px;
+    }
+
+    .sortable-header {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+
+        // the active column always shows its sort arrow solid; inactive columns reveal a faint
+        // arrow on hover as a "click to sort" affordance (no theme-color change, which read as black)
+        .sortable-header-arrow-inactive {
+            opacity: 0;
+        }
+
+        &:hover .sortable-header-arrow-inactive {
+            opacity: 0.4;
+        }
+    }
+
+    .analysis-results,
+    .cluster-observer-decisions {
+        .small-label {
+            font-size: 0.875em;
+            text-transform: none;
+            letter-spacing: normal;
+            margin-left: 0 !important;
+        }
+
+        .severity-cards {
+            // split-button: colored-icon + inline count+label on the left, arrow tab on the right
+            .severity-card {
+                flex: 1 1 0;
+                display: flex;
+                align-items: stretch;
+                padding: 0;
+                border: 1px solid var(--border-color-light);
+                border-radius: var(--bs-border-radius);
+                overflow: hidden;
+                cursor: pointer;
+                transition: box-shadow 0.15s ease;
+                background: transparent;
+                color: var(--bs-body-color);
+                text-align: left;
+
+                .severity-card-content {
+                    flex: 1 0 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.875rem 1rem;
+                    background: var(--panel-bg-2);
+                    min-width: 0;
+                }
+
+                .severity-card-text {
+                    font-size: 1rem;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .severity-card-arrow {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.75rem;
+                    min-width: 46px;
+                    flex-shrink: 0;
+                    background: var(--panel-bg-3);
+                    border-left: 1px solid var(--border-color-light);
+                }
+
+                &:disabled,
+                &.severity-card--empty {
+                    opacity: 0.4;
+                    cursor: default;
+                }
+
+                // active ring uses the severity color
+                &.severity-card--danger.active {
+                    box-shadow:
+                        0 0 0 2px var(--bs-danger),
+                        0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
+                }
+
+                &.severity-card--warning.active {
+                    box-shadow:
+                        0 0 0 2px var(--bs-warning),
+                        0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
+                }
+
+                &.severity-card--info.active {
+                    box-shadow:
+                        0 0 0 2px var(--bs-info),
+                        0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
+                }
+
+                &:not(:disabled):not(.severity-card--empty):not(.active):hover {
+                    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
+
+                    .severity-card-arrow {
+                        filter: brightness(1.3);
+                    }
+                }
+            }
+        }
+
+        .issue-group-header {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--bs-secondary-color);
+            padding: 0.5rem 0.25rem 0.375rem;
+        }
+
+        .issue-row {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color-light);
+            border-radius: var(--bs-border-radius);
+            background: var(--panel-bg-2);
+            margin-bottom: 0.375rem;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+
+        .issue-description {
+            &.clamped {
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            &.expanded {
+                max-height: 320px;
+                overflow: auto;
+                // keep the same font/size as the collapsed preview - only reveal the full text
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+        }
+    }
+
+    .overview-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+
+        .stat-tile {
+            min-width: 0;
+
+            &.w-100 {
+                grid-column: 1 / -1;
+            }
+        }
+
+        .stat-tile-value {
+            font-weight: 600;
+        }
+    }
+}

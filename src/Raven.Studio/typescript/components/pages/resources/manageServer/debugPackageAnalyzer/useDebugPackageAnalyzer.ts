@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServices } from "hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 
@@ -13,6 +13,19 @@ export function useDebugPackageAnalyzer() {
     const [summary, setSummary] = useState<DebugPackageAnalysisSummary>(null);
     const [fileName, setFileName] = useState<string>(null);
     const [error, setError] = useState<any>(null);
+
+    const packageIdRef = useRef<string>(null);
+    useEffect(() => {
+        packageIdRef.current = summary?.PackageId ?? null;
+    }, [summary]);
+
+    useEffect(() => {
+        return () => {
+            if (packageIdRef.current) {
+                manageServerService.removeDebugPackageAnalysis(packageIdRef.current).catch(() => {});
+            }
+        };
+    }, [manageServerService]);
 
     const analyzeAsync = useAsyncCallback((file: File) => manageServerService.uploadDebugPackageForAnalysis(file), {
         onSuccess: (result) => {

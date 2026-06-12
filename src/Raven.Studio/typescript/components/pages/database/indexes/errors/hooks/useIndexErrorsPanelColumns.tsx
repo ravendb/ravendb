@@ -1,6 +1,7 @@
 import { useAppSelector } from "components/store";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { CellContext, ColumnDef, Row, Table as TanstackTable } from "@tanstack/react-table";
+import { useMemo } from "react";
 import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -42,49 +43,51 @@ const defaultCellSize = 95 / 5;
 
 export function useIndexErrorsPanelColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
-    const indexErrorsPanelColumns: ColumnDef<IndexErrorPerDocument>[] = [
-        {
-            header: "Show",
-            cell: CellValueButtonWrapper,
-            size: 70,
-        },
-        {
-            header: "Index Name",
-            accessorKey: "IndexName",
-            cell: HyperlinkIndexCellValue,
-            size: getSize(defaultCellSize),
-            filterFn: "arrIncludesSome",
-            enableColumnFilter: false,
-        },
-        {
-            header: "Document ID",
-            accessorKey: "Document",
-            cell: HyperLinkDocumentCellValue,
-            size: getSize(defaultCellSize),
-        },
-        {
-            header: "Date",
-            accessorKey: "LocalTime",
-            cell: CellValueRelativeTimeWrapper,
-            size: getSize(defaultCellSize),
-        },
-        {
-            header: "Action",
-            accessorKey: "Action",
-            cell: CellValueWrapper,
-            size: getSize(defaultCellSize / 2),
-            filterFn: "arrIncludesSome",
-            enableColumnFilter: false,
-        },
-        {
-            header: "Error",
-            accessorKey: "Error",
-            cell: IndexErrorsCellWithCopyWrapper,
-            size: getSize(defaultCellSize * 1.5),
-        },
-    ];
+    const indexErrorsPanelColumns = useMemo((): ColumnDef<IndexErrorPerDocument>[] => {
+        const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+        return [
+            {
+                header: "Show",
+                cell: CellValueButtonWrapper,
+                size: 70,
+            },
+            {
+                header: "Index Name",
+                accessorKey: "IndexName",
+                cell: HyperlinkIndexCellValue,
+                size: getSize(defaultCellSize),
+                filterFn: "arrIncludesSome",
+                enableColumnFilter: false,
+            },
+            {
+                header: "Document ID",
+                accessorKey: "Document",
+                cell: HyperLinkDocumentCellValue,
+                size: getSize(defaultCellSize),
+            },
+            {
+                header: "Date",
+                accessorKey: "LocalTime",
+                cell: CellValueRelativeTimeWrapper,
+                size: getSize(defaultCellSize),
+            },
+            {
+                header: "Action",
+                accessorKey: "Action",
+                cell: CellValueWrapper,
+                size: getSize(defaultCellSize / 2),
+                filterFn: "arrIncludesSome",
+                enableColumnFilter: false,
+            },
+            {
+                header: "Error",
+                accessorKey: "Error",
+                cell: IndexErrorsCellWithCopyWrapper,
+                size: getSize(defaultCellSize * 1.5),
+            },
+        ];
+    }, [bodyWidth]);
 
     return { indexErrorsPanelColumns };
 }

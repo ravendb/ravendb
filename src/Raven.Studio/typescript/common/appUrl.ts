@@ -204,6 +204,10 @@ class appUrl {
         return "#admin/settings/debugPackage";
     }
 
+    static forDebugPackageAnalyzer(): string {
+        return "#admin/settings/debugPackageAnalyzer";
+    }
+
     static forSystemStorageReport(): string {
         return "#admin/settings/storageReport"
     }

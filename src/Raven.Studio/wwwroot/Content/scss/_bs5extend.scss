@@ -8,6 +8,10 @@
     color: $text-color;
 }
 
+.panel-header-bg {
+    background: var(--panel-header-bg);
+}
+
 .small-label {
     font-size: 0.6rem;
     color: $text-muted-var;

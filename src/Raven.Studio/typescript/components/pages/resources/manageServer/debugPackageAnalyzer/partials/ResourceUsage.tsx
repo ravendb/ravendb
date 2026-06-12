@@ -1,10 +1,18 @@
 import React, { useMemo } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
 import { EmptySet } from "components/common/EmptySet";
 import NodeTagPill from "./NodeTagPill";
 import { formatNumber, formatPercentage } from "./analyzerUtils";
-import { SortableHeader, useSortableData } from "./sortableTable";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { analyzerConstants } from "./analyzerConstants";
+import SizeGetter from "components/common/SizeGetter";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -25,70 +33,129 @@ interface ResourceUsageProps {
     summary: DebugPackageAnalysisSummary;
 }
 
-// memory columns are server-formatted strings ("1.2 GB"), so only the numeric columns are sortable
-const resourceSortAccessors: Record<string, (row: ResourceRow) => number | string> = {
-    node: (row) => row.node,
-    processCpu: (row) => row.processCpu ?? 0,
-    machineCpu: (row) => row.machineCpu ?? 0,
-    cores: (row) => row.cores ?? 0,
-    lastGc: (row) => row.gcGeneration ?? -1,
-    gcPause: (row) => row.gcPause ?? 0,
-};
+interface ResourceUsageWithSizeProps extends ResourceUsageProps {
+    width: number;
+}
 
-// Per-node CPU / Memory / GC comparison for the Cluster context - the triage view for spotting a hot
-// or struggling node at a glance. PerformanceMetrics (Node context) has the per-node detail.
+function useResourceUsageColumns(availableWidth: number) {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+
+    const resourceColumns: ColumnDef<ResourceRow>[] = useMemo(
+        () => [
+            {
+                header: "Node",
+                accessorKey: "node",
+                cell: ({ getValue }) => <NodeTagPill tag={getValue<string>()} />,
+                size: getSize(7),
+                enableSorting: true,
+            },
+            {
+                header: "Process CPU",
+                accessorKey: "processCpu",
+                cell: ({ getValue }) => formatPercentage(getValue<number>()),
+                size: getSize(12),
+                enableSorting: true,
+            },
+            {
+                header: "Machine CPU",
+                accessorKey: "machineCpu",
+                cell: ({ getValue }) => formatPercentage(getValue<number>()),
+                size: getSize(12),
+                enableSorting: true,
+            },
+            {
+                header: "Cores",
+                accessorKey: "cores",
+                cell: ({ getValue }) => formatNumber(getValue<number>()),
+                size: getSize(8),
+                enableSorting: true,
+            },
+            {
+                header: "Working set",
+                accessorKey: "workingSet",
+                cell: ({ getValue }) => getValue<string>() ?? "-",
+                size: getSize(13),
+            },
+            {
+                header: "Available memory",
+                accessorKey: "availableMemory",
+                cell: ({ getValue }) => getValue<string>() ?? "-",
+                size: getSize(16),
+            },
+            {
+                header: "Dirty memory",
+                accessorKey: "dirtyMemory",
+                cell: resourceDirtyMemoryCell,
+                size: getSize(13),
+            },
+            {
+                header: "Last GC",
+                id: "lastGc",
+                accessorFn: (row) => row.gcGeneration ?? -1,
+                cell: ({ row }) => (row.original.gcGeneration != null ? `Gen ${row.original.gcGeneration}` : "-"),
+                size: getSize(9),
+                enableSorting: true,
+            },
+            {
+                header: "GC pause",
+                accessorKey: "gcPause",
+                cell: ({ getValue }) => formatPercentage(getValue<number>()),
+                size: getSize(10),
+                enableSorting: true,
+            },
+        ],
+        [getSize]
+    );
+
+    return { resourceColumns };
+}
+
 export default function ResourceUsage({ summary }: ResourceUsageProps) {
+    return <SizeGetter render={({ width }) => <ResourceUsageWithSize summary={summary} width={width} />} />;
+}
+
+function ResourceUsageWithSize({ summary, width }: ResourceUsageWithSizeProps) {
     const rows = useMemo(() => collectResourceRows(summary), [summary]);
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(rows, resourceSortAccessors, "node", "asc");
-    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+
+    const { resourceColumns } = useResourceUsageColumns(width);
+
+    const table = useReactTable({
+        data: rows,
+        columns: resourceColumns,
+        enableSorting: rows.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        initialState: {
+            sorting: [{ id: "node", desc: false }],
+        },
+        getRowId: (row) => row.node,
+    });
+
+    const heightInPx = virtualTableUtils.getHeightInPx(rows.length, 300);
 
     return (
         <div className="resource-usage">
-            <h3 className="mb-3">Resource Usage</h3>
-            <Card>
-                <Card.Body>
+            <div className="panel-bg-1 rounded">
+                <div className="p-4">
+                    <h3 className="mb-3">Resource Usage</h3>
                     {rows.length === 0 ? (
-                        <EmptySet compact>No resource data in the package</EmptySet>
+                        <EmptySet compact className="justify-content-center">
+                            No resource data in the package
+                        </EmptySet>
                     ) : (
-                        <Table responsive className="m-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <SortableHeader label="Node" columnKey="node" {...sortProps} />
-                                    <SortableHeader label="Process CPU" columnKey="processCpu" {...sortProps} />
-                                    <SortableHeader label="Machine CPU" columnKey="machineCpu" {...sortProps} />
-                                    <SortableHeader label="Cores" columnKey="cores" {...sortProps} />
-                                    <th>Working set</th>
-                                    <th>Available memory</th>
-                                    <th>Dirty memory</th>
-                                    <SortableHeader label="Last GC" columnKey="lastGc" {...sortProps} />
-                                    <SortableHeader label="GC pause" columnKey="gcPause" {...sortProps} />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sorted.map((row) => (
-                                    <tr key={row.node}>
-                                        <td>
-                                            <NodeTagPill tag={row.node} />
-                                        </td>
-                                        <td>{formatPercentage(row.processCpu)}</td>
-                                        <td>{formatPercentage(row.machineCpu)}</td>
-                                        <td>{formatNumber(row.cores)}</td>
-                                        <td>{row.workingSet ?? "-"}</td>
-                                        <td>{row.availableMemory ?? "-"}</td>
-                                        <td className={row.isHighDirty ? "text-warning" : ""}>
-                                            {row.dirtyMemory ?? "-"}
-                                        </td>
-                                        <td>{row.gcGeneration != null ? `Gen ${row.gcGeneration}` : "-"}</td>
-                                        <td>{formatPercentage(row.gcPause)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
+                        <VirtualTable table={table} heightInPx={heightInPx} />
                     )}
-                </Card.Body>
-            </Card>
+                </div>
+            </div>
         </div>
     );
+}
+
+function resourceDirtyMemoryCell({ row }: { row: { original: ResourceRow } }) {
+    return <span className={row.original.isHighDirty ? "text-warning" : ""}>{row.original.dirtyMemory ?? "-"}</span>;
 }
 
 function collectResourceRows(summary: DebugPackageAnalysisSummary): ResourceRow[] {

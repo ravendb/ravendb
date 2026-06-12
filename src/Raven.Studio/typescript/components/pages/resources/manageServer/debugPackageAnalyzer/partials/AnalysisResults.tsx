@@ -1,12 +1,10 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import { StatePill } from "components/common/StatePill";
+import Badge from "react-bootstrap/Badge";
 import NodeTagPill from "./NodeTagPill";
-import { RichAlert } from "components/common/RichAlert";
 import { EmptySet } from "components/common/EmptySet";
 import Button from "react-bootstrap/Button";
-import Alert from "react-bootstrap/Alert";
 import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
 import Select, { SelectOption } from "components/common/select/Select";
 import { InputItem } from "components/models/common";
@@ -34,7 +32,7 @@ export default function AnalysisResults({ issues }: AnalysisResultsProps) {
     const [category, setCategory] = useState<string>("all");
     const [scope, setScope] = useState<string>("all");
     const [groupBy, setGroupBy] = useState<GroupBy>("severity");
-    const [expandedSeverity, setExpandedSeverity] = useState<IssueSeverity>(null);
+    const [expandedSeverity, setExpandedSeverity] = useState<IssueSeverity | null>(null);
 
     const filtered = useMemo(
         () =>
@@ -61,47 +59,51 @@ export default function AnalysisResults({ issues }: AnalysisResultsProps) {
 
     return (
         <div className="analysis-results">
-            <h3 className="mb-3">Analysis Results</h3>
+            <div className="panel-bg-1 rounded">
+                <div className="p-4 vstack">
+                    <h3 className="mb-3">Analysis Results</h3>
 
-            <div className="d-flex gap-4 flex-wrap align-items-end mb-3">
-                <MultiRadioToggle<string>
-                    label="Filter by issue category"
-                    inputItems={categoryItems}
-                    selectedItem={category}
-                    setSelectedItem={setCategory}
-                />
-                <MultiRadioToggle<string>
-                    label="Filter by scope"
-                    inputItems={scopeItems}
-                    selectedItem={scope}
-                    setSelectedItem={setScope}
-                />
-                <div className="group-by-control">
-                    <div className="small-label ms-1 mb-1">Group by</div>
-                    <Select
-                        options={groupByOptions}
-                        value={groupByOptions.find((o) => o.value === groupBy)}
-                        onChange={(option) => option && setGroupBy(option.value)}
-                        isSearchable={false}
-                        isRoundedPill
-                    />
+                    <div className="d-flex gap-2 flex-wrap align-items-end mb-3">
+                        <MultiRadioToggle<string>
+                            label="Filter by issue category"
+                            inputItems={categoryItems}
+                            selectedItem={category}
+                            setSelectedItem={setCategory}
+                        />
+                        <MultiRadioToggle<string>
+                            label="Filter by scope"
+                            inputItems={scopeItems}
+                            selectedItem={scope}
+                            setSelectedItem={setScope}
+                        />
+                        <div className="group-by-control">
+                            <div className="small-label ms-1 mb-1">Group by</div>
+                            <Select
+                                options={groupByOptions}
+                                value={groupByOptions.find((o) => o.value === groupBy)}
+                                onChange={(option) => option && setGroupBy(option.value)}
+                                isSearchable={false}
+                                isRoundedPill
+                            />
+                        </div>
+                    </div>
+
+                    {filtered.length === 0 ? (
+                        <EmptySet>No analysis results match the selected filters</EmptySet>
+                    ) : groupBy === "severity" ? (
+                        <SeverityView
+                            issues={filtered}
+                            severityCounts={severityCounts}
+                            expandedSeverity={expandedSeverity}
+                            setExpandedSeverity={setExpandedSeverity}
+                        />
+                    ) : groupBy === "category" ? (
+                        <CategoryView issues={filtered} />
+                    ) : (
+                        <IssueList issues={sortBySeverity(filtered)} />
+                    )}
                 </div>
             </div>
-
-            {filtered.length === 0 ? (
-                <EmptySet>No analysis results match the selected filters</EmptySet>
-            ) : groupBy === "severity" ? (
-                <SeverityView
-                    issues={filtered}
-                    severityCounts={severityCounts}
-                    expandedSeverity={expandedSeverity}
-                    setExpandedSeverity={setExpandedSeverity}
-                />
-            ) : groupBy === "category" ? (
-                <CategoryView issues={filtered} />
-            ) : (
-                <IssueList issues={sortBySeverity(filtered)} />
-            )}
         </div>
     );
 }
@@ -109,8 +111,8 @@ export default function AnalysisResults({ issues }: AnalysisResultsProps) {
 interface SeverityViewProps {
     issues: FlatIssue[];
     severityCounts: Record<string, number>;
-    expandedSeverity: IssueSeverity;
-    setExpandedSeverity: (severity: IssueSeverity) => void;
+    expandedSeverity: IssueSeverity | null;
+    setExpandedSeverity: (severity: IssueSeverity | null) => void;
 }
 
 function SeverityView({ issues, severityCounts, expandedSeverity, setExpandedSeverity }: SeverityViewProps) {
@@ -127,13 +129,13 @@ function SeverityView({ issues, severityCounts, expandedSeverity, setExpandedSev
                     />
                 ))}
             </div>
-            {expandedSeverity && <IssueList issues={issues.filter((i) => i.severity === expandedSeverity)} />}
+            {expandedSeverity && <GroupedIssueList issues={issues.filter((i) => i.severity === expandedSeverity)} />}
         </div>
     );
 }
 
 function CategoryView({ issues }: { issues: FlatIssue[] }) {
-    const [expandedCategory, setExpandedCategory] = useState<string>(null);
+    const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
     const categories = issueCategories.filter((c) => issues.some((i) => i.category === c));
     const otherCategories = Array.from(new Set(issues.map((i) => i.category))).filter(
@@ -173,22 +175,9 @@ interface CategoryCardProps {
     onClick: () => void;
 }
 
-// neutral (gray) box with the leading icon colored by the worst severity in the group
 function CategoryCard({ category, count, severity, active, onClick }: CategoryCardProps) {
     const meta = severityMeta(severity);
-
-    return (
-        <Alert
-            variant="secondary"
-            className={classNames("severity-card d-flex align-items-center", { active })}
-            onClick={onClick}
-        >
-            <Icon icon={meta.icon} color={meta.color} margin="m-0 me-2" className="fs-3" />
-            <span className="severity-card-count me-2">{count}</span>
-            <span>{category}</span>
-            <Icon icon={active ? "chevron-down" : "chevron-right"} margin="m-0" className="ms-auto" />
-        </Alert>
-    );
+    return <SeverityCardBase meta={meta} count={count} label={category} active={active} onClick={onClick} />;
 }
 
 function highestSeverity(issues: FlatIssue[]): IssueSeverity {
@@ -196,6 +185,27 @@ function highestSeverity(issues: FlatIssue[]): IssueSeverity {
         (worst, issue) =>
             severityOrder.indexOf(issue.severity) < severityOrder.indexOf(worst) ? issue.severity : worst,
         "None"
+    );
+}
+
+function GroupedIssueList({ issues }: { issues: FlatIssue[] }) {
+    const known = issueCategories.filter((c) => issues.some((i) => i.category === c));
+    const other = Array.from(new Set(issues.map((i) => i.category))).filter((c) => !issueCategories.includes(c));
+    const allCategories = [...known, ...other];
+
+    if (allCategories.length <= 1) {
+        return <IssueList issues={issues} />;
+    }
+
+    return (
+        <div className="vstack gap-2">
+            {allCategories.map((cat) => (
+                <div key={cat}>
+                    <div className="issue-group-header">{cat}</div>
+                    <IssueList issues={issues.filter((i) => i.category === cat)} />
+                </div>
+            ))}
+        </div>
     );
 }
 
@@ -213,7 +223,7 @@ function IssueRow({ issue }: { issue: FlatIssue }) {
     const meta = severityMeta(issue.severity);
 
     return (
-        <div className="issue-row d-flex gap-3 align-items-start py-2">
+        <div className="issue-row d-flex gap-3 align-items-start">
             <Icon icon={meta.icon} color={meta.color} className="fs-4 mt-1" margin="m-0" />
             <div className="vstack flex-grow-1">
                 <div className="fw-bold">{issue.title}</div>
@@ -263,7 +273,11 @@ function IssueDescription({ text }: { text: string }) {
 
 function ScopeBadges({ issue }: { issue: FlatIssue }) {
     if (issue.scope === "cluster-wide") {
-        return <StatePill bg="info">Cluster-Wide</StatePill>;
+        return (
+            <Badge bg="light">
+                <Icon icon="cluster" /> Cluster-Wide
+            </Badge>
+        );
     }
 
     const nodePills = issue.nodeTags.map((tag) => <NodeTagPill key={tag} tag={tag} />);
@@ -275,7 +289,9 @@ function ScopeBadges({ issue }: { issue: FlatIssue }) {
     return (
         <div className="hstack gap-1 align-items-center flex-wrap justify-content-end">
             {nodePills}
-            <StatePill bg="orchestrator">Database {issue.database}</StatePill>
+            <Badge bg="secondary">
+                <Icon icon="database" /> {issue.database}
+            </Badge>
         </div>
     );
 }
@@ -289,18 +305,48 @@ interface SeverityCardProps {
 
 function SeverityCard({ severity, count, active, onClick }: SeverityCardProps) {
     const meta = severityMeta(severity);
+    return (
+        <SeverityCardBase
+            meta={meta}
+            count={count}
+            label={count === 1 ? meta.label : meta.plural}
+            active={active}
+            onClick={onClick}
+        />
+    );
+}
+
+interface SeverityCardBaseProps {
+    meta: SeverityMeta;
+    count: number;
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}
+
+function SeverityCardBase({ meta, count, label, active, onClick }: SeverityCardBaseProps) {
+    const isEmpty = count === 0;
 
     return (
-        <RichAlert
-            variant={meta.variant}
-            className={classNames("severity-card", { active })}
-            childrenClassName="d-flex align-items-center"
-            onClick={onClick}
+        <button
+            type="button"
+            className={classNames("severity-card", `severity-card--${meta.variant}`, {
+                active,
+                "severity-card--empty": isEmpty,
+            })}
+            onClick={isEmpty ? undefined : onClick}
+            disabled={isEmpty}
         >
-            <span className="severity-card-count me-2">{count}</span>
-            <span>{count === 1 ? meta.label : meta.plural}</span>
-            <Icon icon={active ? "chevron-down" : "chevron-right"} margin="m-0" className="ms-auto" />
-        </RichAlert>
+            <div className="severity-card-content">
+                <Icon icon={meta.icon} color={meta.color} margin="m-0" className="flex-shrink-0" />
+                <span className="severity-card-text">
+                    <strong>{count}</strong> {label}
+                </span>
+            </div>
+            <div className="severity-card-arrow">
+                <Icon icon={active ? "chevron-down" : "chevron-right"} margin="m-0" />
+            </div>
+        </button>
     );
 }
 
@@ -319,7 +365,7 @@ function severityMeta(severity: IssueSeverity): SeverityMeta {
         case "Warning":
             return { icon: "warning", color: "warning", variant: "warning", label: "Warning", plural: "Warnings" };
         case "Info":
-            return { icon: "info", color: "info", variant: "info", label: "Info", plural: "Info" };
+            return { icon: "info", color: "info", variant: "info", label: "Info alert", plural: "Info alerts" };
         default:
             return { icon: "info", color: "muted", variant: "secondary", label: "Other", plural: "Other" };
     }

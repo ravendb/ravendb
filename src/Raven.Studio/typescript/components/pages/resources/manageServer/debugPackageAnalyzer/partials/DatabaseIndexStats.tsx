@@ -1,129 +1,182 @@
-import React, { useState } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+import React, { memo, useMemo } from "react";
 import Spinner from "react-bootstrap/Spinner";
+import { Icon } from "components/common/Icon";
 import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { EmptySet } from "components/common/EmptySet";
 import { RichAlert } from "components/common/RichAlert";
-import { StatePill } from "components/common/StatePill";
-import Select, { SelectOption } from "components/common/select/Select";
-import { SortableHeader, useSortableData } from "./sortableTable";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { analyzerConstants } from "./analyzerConstants";
+import SizeGetter from "components/common/SizeGetter";
 
 type IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 type IndexState = Raven.Client.Documents.Indexes.IndexState;
 
+const EMPTY_INDEX_STATS: IndexStats[] = [];
+
 interface DatabaseIndexStatsProps {
     packageId: string;
     database: string;
-    nodes: string[];
+    node: string;
 }
 
-const indexStatsSortAccessors: Record<string, (index: IndexStats) => number | string> = {
-    index: (index) => index.Name,
-    state: (index) => index.State,
-    priority: (index) => index.Priority,
-    type: (index) => index.Type,
-    entries: (index) => index.EntriesCount ?? 0,
-    errors: (index) => index.ErrorsCount ?? 0,
-    stale: (index) => (index.IsStale ? 1 : 0),
-    lock: (index) => index.LockMode,
-};
+interface DatabaseIndexStatsWithSizeProps extends DatabaseIndexStatsProps {
+    width: number;
+}
+
+function useIndexStatsColumns(availableWidth: number) {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+
+    const indexStatsColumns: ColumnDef<IndexStats>[] = useMemo(() => {
+        const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+        return [
+            {
+                header: "Index",
+                accessorKey: "Name",
+                cell: indexNameCell,
+                size: getSize(28),
+            },
+            {
+                header: "State",
+                accessorKey: "State",
+                cell: ({ getValue }) => stateCell(getValue<IndexState>()),
+                size: getSize(10),
+            },
+            {
+                header: "Priority",
+                accessorKey: "Priority",
+                size: getSize(10),
+            },
+            {
+                header: "Type",
+                accessorKey: "Type",
+                size: getSize(13),
+            },
+            {
+                header: "Entries",
+                accessorKey: "EntriesCount",
+                cell: ({ getValue }) => formatCount(getValue<number>()),
+                size: getSize(9),
+            },
+            {
+                header: "Errors",
+                accessorKey: "ErrorsCount",
+                cell: indexErrorsCell,
+                size: getSize(9),
+            },
+            {
+                header: "Stale",
+                id: "stale",
+                accessorFn: (index) => index.IsStale,
+                cell: indexStaleCell,
+                size: getSize(10),
+            },
+            {
+                header: "Lock mode",
+                accessorKey: "LockMode",
+                size: getSize(11),
+            },
+        ];
+    }, [bodyWidth]);
+
+    return { indexStatsColumns };
+}
 
 // On-demand per-node index stats for the selected database, from the analyzer
 // databases/indexes/stats endpoint (the summary only has aggregate indexing speed).
-export default function DatabaseIndexStats({ packageId, database, nodes }: DatabaseIndexStatsProps) {
+export default memo(function DatabaseIndexStats({ packageId, database, node }: DatabaseIndexStatsProps) {
+    return (
+        <SizeGetter
+            render={({ width }) => (
+                <DatabaseIndexStatsWithSize packageId={packageId} database={database} node={node} width={width} />
+            )}
+        />
+    );
+});
+
+function DatabaseIndexStatsWithSize({ packageId, database, node, width }: DatabaseIndexStatsWithSizeProps) {
     const { manageServerService } = useServices();
-    const [selectedNode, setSelectedNode] = useState<string>(nodes[0] ?? null);
 
     const stats = useAsync(async () => {
-        if (!selectedNode) {
+        if (!node) {
             return [] as IndexStats[];
         }
-        return manageServerService.getDebugPackageDatabaseIndexStats(packageId, selectedNode, database);
-    }, [packageId, selectedNode, database]);
+        return manageServerService.getDebugPackageDatabaseIndexStats(packageId, node, database);
+    }, [packageId, node, database]);
 
-    const nodeOptions: SelectOption<string>[] = nodes.map((tag) => ({ value: tag, label: `Node ${tag}` }));
-    const indexes = stats.result ?? [];
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
-        indexes,
-        indexStatsSortAccessors,
-        "entries"
-    );
-    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+    const indexes = stats.result ?? EMPTY_INDEX_STATS;
+
+    const { indexStatsColumns } = useIndexStatsColumns(width);
+
+    const table = useReactTable({
+        data: indexes,
+        columns: indexStatsColumns,
+        enableSorting: indexes.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: indexes.length > analyzerConstants.minRowsForControls,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getRowId: (row) => row.Name,
+    });
+
+    const heightInPx = virtualTableUtils.getHeightInPx(indexes.length, 400);
 
     return (
         <div className="database-index-stats">
-            <div className="hstack gap-3 align-items-center mb-3 flex-wrap">
-                <h3 className="m-0">Indexes</h3>
-                {nodes.length > 1 && (
-                    <div className="node-select">
-                        <Select
-                            options={nodeOptions}
-                            value={nodeOptions.find((o) => o.value === selectedNode)}
-                            onChange={(option) => option && setSelectedNode(option.value)}
-                            isSearchable={false}
-                            isRoundedPill
-                        />
-                    </div>
-                )}
-            </div>
-            <Card>
-                <Card.Body>
+            <div className="panel-bg-1 rounded">
+                <div className="p-4 vstack gap-3">
+                    <h3 className="m-0">Indexes</h3>
                     {stats.loading ? (
                         <div className="hstack gap-2 justify-content-center text-muted py-3">
-                            <Spinner size="sm" /> Loading indexes for node {selectedNode}...
+                            <Spinner size="sm" /> Loading indexes for node {node}...
                         </div>
                     ) : stats.error ? (
                         <RichAlert variant="danger">
-                            Could not load index stats for node {selectedNode}. The package may not contain index data
-                            for this database, or the report expired.
+                            Could not load index stats for node {node}. The package may not contain index data for this
+                            database, or the report expired.
                         </RichAlert>
                     ) : indexes.length === 0 ? (
-                        <EmptySet compact>
-                            No indexes for {database} on node {selectedNode}
+                        <EmptySet compact className="justify-content-center">
+                            No indexes for {database} on node {node}
                         </EmptySet>
                     ) : (
-                        <Table responsive className="m-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <SortableHeader label="Index" columnKey="index" {...sortProps} />
-                                    <SortableHeader label="State" columnKey="state" {...sortProps} />
-                                    <SortableHeader label="Priority" columnKey="priority" {...sortProps} />
-                                    <SortableHeader label="Type" columnKey="type" {...sortProps} />
-                                    <SortableHeader label="Entries" columnKey="entries" {...sortProps} />
-                                    <SortableHeader label="Errors" columnKey="errors" {...sortProps} />
-                                    <SortableHeader label="Stale" columnKey="stale" {...sortProps} />
-                                    <SortableHeader label="Lock mode" columnKey="lock" {...sortProps} />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sorted.map((index) => (
-                                    <tr key={index.Name}>
-                                        <td className="fw-bold">
-                                            <div className="text-truncate index-name" title={index.Name}>
-                                                {index.Name}
-                                            </div>
-                                        </td>
-                                        <td>{statePill(index.State)}</td>
-                                        <td>{index.Priority}</td>
-                                        <td>{index.Type}</td>
-                                        <td>{formatCount(index.EntriesCount)}</td>
-                                        <td className={index.ErrorsCount > 0 ? "text-danger" : ""}>
-                                            {formatCount(index.ErrorsCount)}
-                                        </td>
-                                        <td>
-                                            {index.IsStale ? <StatePill bg="warning">Stale</StatePill> : "Up to date"}
-                                        </td>
-                                        <td>{index.LockMode}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
+                        <VirtualTable table={table} heightInPx={heightInPx} />
                     )}
-                </Card.Body>
-            </Card>
+                </div>
+            </div>
         </div>
+    );
+}
+
+function indexNameCell({ getValue }: { getValue: () => unknown }) {
+    const name = getValue() as string;
+    return (
+        <div className="text-truncate fw-bold" title={name}>
+            {name}
+        </div>
+    );
+}
+
+function indexErrorsCell({ row }: { row: { original: IndexStats } }) {
+    const count = row.original.ErrorsCount ?? 0;
+    return <span className={count > 0 ? "text-danger" : ""}>{formatCount(count)}</span>;
+}
+
+function indexStaleCell({ getValue }: { getValue: () => unknown }) {
+    return getValue() ? (
+        <span className="hstack gap-1 text-warning">
+            <Icon icon="warning" margin="m-0" /> Stale
+        </span>
+    ) : (
+        "Up to date"
     );
 }
 
@@ -131,15 +184,31 @@ function formatCount(value: number): string {
     return value == null ? "-" : value.toLocaleString();
 }
 
-function statePill(state: IndexState) {
+function stateCell(state: IndexState) {
     switch (state) {
         case "Error":
-            return <StatePill bg="danger">Error</StatePill>;
+            return (
+                <span className="hstack gap-1 text-danger">
+                    <Icon icon="danger" margin="m-0" /> Error
+                </span>
+            );
         case "Disabled":
-            return <StatePill bg="warning">Disabled</StatePill>;
+            return (
+                <span className="hstack gap-1 text-warning">
+                    <Icon icon="cancel" margin="m-0" /> Disabled
+                </span>
+            );
         case "Idle":
-            return <StatePill bg="secondary">Idle</StatePill>;
+            return (
+                <span className="hstack gap-1 text-muted">
+                    <Icon icon="clock" margin="m-0" /> Idle
+                </span>
+            );
         default:
-            return <StatePill bg="success">Normal</StatePill>;
+            return (
+                <span className="hstack gap-1 text-success">
+                    <Icon icon="check" margin="m-0" /> Normal
+                </span>
+            );
     }
 }

@@ -1,25 +1,40 @@
-import React, { useMemo, useState } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+﻿import React, { useMemo, useState } from "react";
 import Spinner from "react-bootstrap/Spinner";
+import Table from "react-bootstrap/Table";
 import ProgressBar from "react-bootstrap/ProgressBar";
+import classNames from "classnames";
 import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { EmptySet } from "components/common/EmptySet";
 import { StatePill } from "components/common/StatePill";
 import { Icon } from "components/common/Icon";
-import Select, { SelectOption } from "components/common/select/Select";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import genUtils from "common/generalUtils";
-import { nodeAwareLoadableData } from "components/models/common";
+import moment from "moment";
 import {
     ClusterDebugNodeInfo,
     mapRaftDebugView,
 } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
 import ClusterDebugGlobalInfo from "components/pages/resources/manageServer/advanced/clusterDebug/partials/ClusterDebugGlobalInfo";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { analyzerConstants } from "./analyzerConstants";
+import SizeGetter from "components/common/SizeGetter";
+import "../../advanced/clusterDebug/partials/ClusterDebugSummary.scss";
+import "../../advanced/clusterDebug/partials/ClusterDebugEntries.scss";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type RaftDebugView = Raven.Server.Rachis.RaftDebugView;
 type PeerConnection = Raven.Server.Rachis.RaftDebugView.PeerConnection;
+type LogEntry = Raven.Server.Rachis.RachisConsensus.RachisDebugLogEntry;
 
 interface NodeRaftResult {
     nodeTag: string;
@@ -55,39 +70,38 @@ export default function ClusterRaftDebug({ summary }: ClusterRaftDebugProps) {
         });
     }, [packageId, nodeTags]);
 
+    const loadableNodes = useMemo(
+        () =>
+            (raft.result ?? []).map((result) => ({
+                nodeTag: result.nodeTag,
+                data: result.info,
+                status: result.status,
+            })),
+        [raft.result]
+    );
     const results = raft.result ?? [];
-    const loadableNodes: nodeAwareLoadableData<ClusterDebugNodeInfo>[] = results.map((result) => ({
-        nodeTag: result.nodeTag,
-        data: result.info,
-        status: result.status,
-    }));
 
     return (
         <div className="cluster-raft-debug">
             <h3 className="mb-3">Cluster Debug</h3>
             {raft.loading ? (
-                <Card>
-                    <Card.Body>
-                        <div className="hstack gap-2 justify-content-center text-muted py-3">
-                            <Spinner size="sm" /> Loading cluster raft log...
-                        </div>
-                    </Card.Body>
-                </Card>
+                <div className="hstack gap-2 justify-content-center text-muted py-3">
+                    <Spinner size="sm" /> Loading cluster raft log...
+                </div>
             ) : results.length === 0 ? (
-                <Card>
-                    <Card.Body>
-                        <EmptySet compact>No cluster raft log in the package</EmptySet>
-                    </Card.Body>
-                </Card>
+                <EmptySet compact className="justify-content-center">
+                    No cluster raft log in the package
+                </EmptySet>
             ) : (
                 <div className="vstack gap-3">
                     <ClusterDebugGlobalInfo nodes={loadableNodes} />
-                    <Card>
-                        <Card.Body className="vstack gap-3">
+                    <div className="panel-bg-1 rounded">
+                        <div className="p-4">
+                            <h4>Summary</h4>
                             <RaftSummaryTable results={results} />
-                        </Card.Body>
-                    </Card>
-                    <LogEntries results={results} />
+                        </div>
+                    </div>
+                    <LogEntriesCard results={results} />
                 </div>
             )}
         </div>
@@ -95,119 +109,260 @@ export default function ClusterRaftDebug({ summary }: ClusterRaftDebugProps) {
 }
 
 function RaftSummaryTable({ results }: { results: NodeRaftResult[] }) {
+    const hasAnyCriticalError = results.some((r) => !!r.info?.criticalError);
+
     return (
-        <Table responsive className="m-0 align-middle">
+        <Table bordered responsive className="mb-1 rounded-1 overflow-hidden cluster-debug-summary">
             <thead>
                 <tr>
                     <th></th>
                     {results.map((result) => (
                         <th key={result.nodeTag}>
-                            <span className="hstack gap-1 align-items-center">
-                                <Icon
-                                    icon={result.info?.role === "Leader" ? "node-leader" : "cluster-member"}
-                                    color="node"
-                                    margin="m-0"
-                                />
-                                Node {result.nodeTag}
-                            </span>
+                            <div className="d-flex gap-1 align-items-center">
+                                <span>
+                                    <Icon
+                                        icon={result.info?.role === "Leader" ? "node-leader" : "cluster-member"}
+                                        color="node"
+                                    />
+                                    <span className="text-nowrap">Node {result.nodeTag}</span>
+                                </span>
+                            </div>
                         </th>
                     ))}
                 </tr>
             </thead>
             <tbody>
-                <SummaryRow label="Role" results={results} render={(info) => info.role} />
-                <SummaryRow label="Term" results={results} render={(info) => info.term.toLocaleString()} />
                 <tr>
-                    <th>Progress</th>
+                    <th>
+                        Role / Phase
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    <ul>
+                                        <li>
+                                            The node&apos;s role:
+                                            <br />(<i>Leader, Follower, Candidate, or Passive</i>).
+                                        </li>
+                                        <li>
+                                            Followers also indicate their current phase:
+                                            <br />(<i>Initial, Negotiation, Snapshot, or Steady</i>).
+                                        </li>
+                                    </ul>
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </th>
                     {results.map((result) => (
-                        <td key={result.nodeTag}>
+                        <td className="align-content-center" key={result.nodeTag}>
+                            {result.info ? <>{result.info.role}</> : <Unavailable />}
+                        </td>
+                    ))}
+                </tr>
+                <tr>
+                    <th>
+                        Progress
+                        <PopoverWithHoverWrapper message="Percentage of Raft commands committed on the node out of the total in the log.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </th>
+                    {results.map((result) => (
+                        <td className="align-content-center" key={result.nodeTag}>
                             {result.info ? (
-                                <ProgressBar
-                                    now={result.info.progress}
-                                    label={`${result.info.progress}%`}
-                                    variant={result.info.progress === 100 ? "success" : "primary"}
-                                />
+                                <PopoverWithHoverWrapper
+                                    inline={false}
+                                    message={
+                                        <>
+                                            First entry index:{" "}
+                                            <strong>{result.info.firstEntryIndex.toLocaleString()}</strong>
+                                            <br />
+                                            Last commit index:{" "}
+                                            <strong>{result.info.commitIndex.toLocaleString()}</strong>
+                                            <br />
+                                            Last log entry index:{" "}
+                                            <strong>{result.info.lastLogEntryIndex.toLocaleString()}</strong>
+                                        </>
+                                    }
+                                >
+                                    <ProgressBar
+                                        variant={result.info.progress === 100 ? "success" : "progress"}
+                                        striped={result.info.progress < 100}
+                                        now={result.info.progress}
+                                        animated={result.info.progress < 100}
+                                        label={`${result.info.progress}%`}
+                                    />
+                                </PopoverWithHoverWrapper>
                             ) : (
                                 <Unavailable />
                             )}
                         </td>
                     ))}
                 </tr>
-                <SummaryRow label="Queue size" results={results} render={(info) => info.queueSize.toLocaleString()} />
-                <SummaryRow
-                    label="Commit index"
-                    results={results}
-                    render={(info) => info.commitIndex.toLocaleString()}
-                />
-                <SummaryRow
-                    label="Last log entry index"
-                    results={results}
-                    render={(info) => info.lastLogEntryIndex.toLocaleString()}
-                />
-                <SummaryRow
-                    label="Last committed"
-                    results={results}
-                    render={(info) =>
-                        info.lastCommitedTime ? genUtils.formatUtcDateAsLocal(info.lastCommitedTime) : "n/a"
-                    }
-                />
-                <SummaryRow
-                    label="Last appended"
-                    results={results}
-                    render={(info) =>
-                        info.lastAppendedTime ? genUtils.formatUtcDateAsLocal(info.lastAppendedTime) : "n/a"
-                    }
-                />
-                <SummaryRow
-                    label="Local version"
-                    results={results}
-                    render={(info) => info.localVersion.toLocaleString()}
-                />
                 <tr>
-                    <th>Connections</th>
+                    <th>
+                        Queue size
+                        <PopoverWithHoverWrapper message="Number of Raft commands left to be committed on the node.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </th>
                     {results.map((result) => (
-                        <td key={result.nodeTag}>
+                        <td className="align-content-center" key={result.nodeTag}>
+                            {result.info ? <>{result.info.queueSize.toLocaleString()}</> : <Unavailable />}
+                        </td>
+                    ))}
+                </tr>
+                <tr>
+                    <th>
+                        Last commit index
+                        <PopoverWithHoverWrapper message="The index of the last Raft command that was committed on the node.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </th>
+                    {results.map((result) => (
+                        <td
+                            key={result.nodeTag}
+                            className={classNames(
+                                "align-content-center",
+                                result.info?.chocked && "bg-faded-warning text-warning"
+                            )}
+                        >
+                            {result.info ? (
+                                <>
+                                    {result.info.commitIndex.toLocaleString()}
+                                    {result.info.chocked && (
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
+                                                    <span className="text-warning">
+                                                        <Icon icon="warning" />
+                                                        Warning:
+                                                    </span>
+                                                    <span> No commits for over 2 minutes</span>
+                                                </>
+                                            }
+                                        >
+                                            <Icon icon="warning" margin="ms-1" />
+                                        </PopoverWithHoverWrapper>
+                                    )}
+                                </>
+                            ) : (
+                                <Unavailable />
+                            )}
+                        </td>
+                    ))}
+                </tr>
+                <tr>
+                    <th>
+                        Last committed date
+                        <PopoverWithHoverWrapper message="The time the last Raft command was committed on the node.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </th>
+                    {results.map((result) => {
+                        const asAgo = result.info?.lastCommitedTime
+                            ? genUtils.formatDurationByDate(moment.utc(result.info.lastCommitedTime), true)
+                            : null;
+                        return (
+                            <td className="align-content-center" key={result.nodeTag}>
+                                {result.info ? (
+                                    <PopoverWithHoverWrapper
+                                        message={asAgo ? <>{result.info.lastCommitedTime}</> : null}
+                                    >
+                                        <div>{asAgo ?? "n/a"}</div>
+                                    </PopoverWithHoverWrapper>
+                                ) : (
+                                    <Unavailable />
+                                )}
+                            </td>
+                        );
+                    })}
+                </tr>
+                <tr>
+                    <th>
+                        Last append date
+                        <PopoverWithHoverWrapper message="The time the last command was appended to the Raft log.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </th>
+                    {results.map((result) => {
+                        const asAgo = result.info?.lastAppendedTime
+                            ? genUtils.formatDurationByDate(moment.utc(result.info.lastAppendedTime), true)
+                            : null;
+                        return (
+                            <td className="align-content-center" key={result.nodeTag}>
+                                {result.info ? (
+                                    <PopoverWithHoverWrapper message={asAgo ? result.info.lastAppendedTime : null}>
+                                        <div>{asAgo ?? "n/a"}</div>
+                                    </PopoverWithHoverWrapper>
+                                ) : (
+                                    <Unavailable />
+                                )}
+                            </td>
+                        );
+                    })}
+                </tr>
+                <tr>
+                    <th>
+                        Local version
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    <ul>
+                                        <li>
+                                            Each Raft command has an ID number associated with it (not the log index).
+                                            Newer RavenDB versions may introduce commands with higher version numbers
+                                            that are unknown to nodes running older versions.
+                                        </li>
+                                        <li>
+                                            This value shows the highest Raft command version number known to the node.
+                                        </li>
+                                    </ul>
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" id="localVersionTooltip" />
+                        </PopoverWithHoverWrapper>
+                    </th>
+                    {results.map((result) => (
+                        <td className="align-content-center" key={result.nodeTag}>
+                            {result.info ? <>{result.info.localVersion}</> : <Unavailable />}
+                        </td>
+                    ))}
+                </tr>
+                <tr>
+                    <th>
+                        Connection
+                        <PopoverWithHoverWrapper message="The node's connection state to other nodes in the cluster.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </th>
+                    {results.map((result) => (
+                        <td className="align-content-center" key={result.nodeTag}>
                             {result.info ? <Connections connections={result.info.connections} /> : <Unavailable />}
                         </td>
                     ))}
                 </tr>
-                <tr>
-                    <th>Critical error</th>
-                    {results.map((result) => (
-                        <td key={result.nodeTag}>
-                            {result.info ? (
-                                result.info.criticalError ? (
-                                    <StatePill bg="danger">Critical error</StatePill>
+                {hasAnyCriticalError && (
+                    <tr>
+                        <th>Cluster Critical Error</th>
+                        {results.map((result) => (
+                            <td className="align-content-center" key={result.nodeTag}>
+                                {result.info ? (
+                                    result.info.criticalError ? (
+                                        <StatePill bg="danger">Critical error</StatePill>
+                                    ) : (
+                                        <>-</>
+                                    )
                                 ) : (
-                                    "-"
-                                )
-                            ) : (
-                                <Unavailable />
-                            )}
-                        </td>
-                    ))}
-                </tr>
+                                    <Unavailable />
+                                )}
+                            </td>
+                        ))}
+                    </tr>
+                )}
             </tbody>
         </Table>
-    );
-}
-
-function SummaryRow({
-    label,
-    results,
-    render,
-}: {
-    label: string;
-    results: NodeRaftResult[];
-    render: (info: ClusterDebugNodeInfo) => React.ReactNode;
-}) {
-    return (
-        <tr>
-            <th>{label}</th>
-            {results.map((result) => (
-                <td key={result.nodeTag}>{result.info ? render(result.info) : <Unavailable />}</td>
-            ))}
-        </tr>
     );
 }
 
@@ -231,75 +386,132 @@ function Connections({ connections }: { connections: PeerConnection[] }) {
     );
 }
 
-function LogEntries({ results }: { results: NodeRaftResult[] }) {
-    const withLogs = results.filter((result) => result.view);
-    const [selectedNode, setSelectedNode] = useState<string>(withLogs[0]?.nodeTag ?? null);
+function LogEntriesCard({ results }: { results: NodeRaftResult[] }) {
+    const withLogs = useMemo(() => results.filter((r) => r.view), [results]);
+    const [selectedNodeTag, setSelectedNodeTag] = useState<string | null>(null);
 
-    const selected = withLogs.find((result) => result.nodeTag === selectedNode) ?? withLogs[0];
+    const activeNodeTag = selectedNodeTag ?? withLogs[0]?.nodeTag ?? null;
+    const selected = withLogs.find((r) => r.nodeTag === activeNodeTag);
+
     const log = selected?.view?.Log;
     const entries = log?.Logs ?? [];
-    const shown = entries.slice(-maxEntriesShown);
-
-    const nodeOptions: SelectOption<string>[] = withLogs.map((result) => ({
-        value: result.nodeTag,
-        label: `Node ${result.nodeTag}`,
-    }));
+    const shown = useMemo(() => entries.slice(-maxEntriesShown), [entries]);
+    const commitIndex = log?.CommitIndex ?? 0;
 
     return (
-        <Card>
-            <Card.Body className="vstack gap-3">
-                <div className="hstack gap-3 align-items-center flex-wrap">
-                    <h4 className="m-0">Log entries</h4>
-                    {nodeOptions.length > 1 && (
-                        <div className="node-select">
-                            <Select
-                                options={nodeOptions}
-                                value={nodeOptions.find((o) => o.value === selected?.nodeTag)}
-                                onChange={(option) => option && setSelectedNode(option.value)}
-                                isSearchable={false}
-                                isRoundedPill
-                            />
-                        </div>
-                    )}
-                    {log && (
-                        <span className="small-label">
-                            {entries.length.toLocaleString()} captured / {log.TotalEntries.toLocaleString()} total
-                            {entries.length > maxEntriesShown ? ` (showing last ${maxEntriesShown})` : ""}
-                        </span>
+        <div className="panel-bg-1 rounded">
+            <div className="p-4">
+                <h4 className="hstack align-items-center">Log Entries</h4>
+                <div className="cluster-debug-entries">
+                    {withLogs.length === 0 ? (
+                        <EmptySet compact className="justify-content-center">
+                            No log entries captured for this node
+                        </EmptySet>
+                    ) : (
+                        <>
+                            <ul className="nav nav-tabs mb-2">
+                                {withLogs.map((result) => (
+                                    <li key={result.nodeTag} className="nav-item">
+                                        <button
+                                            type="button"
+                                            className={classNames("nav-link no-decor", {
+                                                active: result.nodeTag === activeNodeTag,
+                                            })}
+                                            onClick={() => setSelectedNodeTag(result.nodeTag)}
+                                        >
+                                            <div className="d-flex gap-1 align-items-center">
+                                                <Icon
+                                                    icon={
+                                                        result.info?.role === "Leader"
+                                                            ? "node-leader"
+                                                            : "cluster-member"
+                                                    }
+                                                    color="node"
+                                                />
+                                                <span className="text-nowrap">Node {result.nodeTag}</span>
+                                            </div>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                            {entries.length === 0 ? (
+                                <EmptySet compact className="justify-content-center">
+                                    No log entries captured for this node
+                                </EmptySet>
+                            ) : (
+                                <>
+                                    {log && (
+                                        <div className="px-1 py-2 small text-muted">
+                                            {entries.length.toLocaleString()} captured /{" "}
+                                            {log.TotalEntries.toLocaleString()} total
+                                            {entries.length > maxEntriesShown
+                                                ? ` (showing last ${maxEntriesShown})`
+                                                : ""}
+                                        </div>
+                                    )}
+                                    <SizeGetter
+                                        render={({ width }) => (
+                                            <LogEntriesTable shown={shown} commitIndex={commitIndex} width={width} />
+                                        )}
+                                    />
+                                </>
+                            )}
+                        </>
                     )}
                 </div>
-
-                {entries.length === 0 ? (
-                    <EmptySet compact>No log entries captured for this node</EmptySet>
-                ) : (
-                    <div style={{ maxHeight: "480px", overflow: "auto" }}>
-                        <Table responsive className="m-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Index</th>
-                                    <th>Term</th>
-                                    <th>Command type</th>
-                                    <th>Flags</th>
-                                    <th>Size</th>
-                                    <th>Created at</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {shown.map((entry) => (
-                                    <tr key={entry.Index}>
-                                        <td>{entry.Index.toLocaleString()}</td>
-                                        <td>{entry.Term}</td>
-                                        <td className="fw-bold">{entry.CommandType}</td>
-                                        <td>{entry.Flags}</td>
-                                        <td>{genUtils.formatBytesToSize(entry.SizeInBytes)}</td>
-                                        <td>{entry.CreateAt ? genUtils.formatUtcDateAsLocal(entry.CreateAt) : "-"}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
-                    </div>
-                )}
-            </Card.Body>
-        </Card>
+            </div>
+        </div>
     );
+}
+
+function useLogEntryColumns(availableWidth: number, commitIndex: number) {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
+
+    const columns = useMemo<ColumnDef<LogEntry>[]>(
+        () => [
+            { header: "Index", accessorKey: "Index", cell: CellWithCopyWrapper, size: getSize(10) },
+            {
+                id: "commandType",
+                header: "Command Type",
+                accessorKey: "CommandType",
+                cell: CellWithCopyWrapper,
+                size: getSize(30),
+            },
+            { header: "Created", accessorKey: "CreateAt", cell: CellWithCopyWrapper, size: getSize(25) },
+            {
+                header: "Size",
+                accessorFn: (row) => genUtils.formatBytesToSize(row.SizeInBytes),
+                cell: CellWithCopyWrapper,
+                size: getSize(10),
+            },
+            { header: "Term", accessorKey: "Term", cell: CellWithCopyWrapper, size: getSize(7) },
+            {
+                header: "Status",
+                accessorFn: (row) => (row.Index <= commitIndex ? "Committed" : "Appended"),
+                cell: CellWithCopyWrapper,
+                size: getSize(18),
+            },
+        ],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [getSize, commitIndex]
+    );
+
+    return { columns };
+}
+
+function LogEntriesTable({ shown, commitIndex, width }: { shown: LogEntry[]; commitIndex: number; width: number }) {
+    const { columns } = useLogEntryColumns(width, commitIndex);
+
+    const table = useReactTable({
+        data: shown,
+        columns,
+        enableSorting: shown.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: shown.length > analyzerConstants.minRowsForControls,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+    });
+
+    return <VirtualTable table={table} heightInPx={500} />;
 }

@@ -1,15 +1,22 @@
-import React, { useMemo, useState } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+import React, { memo, useMemo, useState } from "react";
+import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { EmptySet } from "components/common/EmptySet";
 import { RichAlert } from "components/common/RichAlert";
-import { StatePill } from "components/common/StatePill";
-import Select, { SelectOption } from "components/common/select/Select";
-import { SortableHeader, useSortableData } from "./sortableTable";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { analyzerConstants } from "./analyzerConstants";
+import SizeGetter from "components/common/SizeGetter";
 
 type SettingsResult = Raven.Server.Config.SettingsResult;
 type ConfigurationEntryDatabaseValue = Raven.Server.Config.ConfigurationEntryDatabaseValue;
@@ -28,32 +35,83 @@ interface SettingRow {
 interface DatabaseSettingsProps {
     packageId: string;
     database: string;
-    nodes: string[];
+    node: string;
 }
 
-const settingsSortAccessors: Record<string, (row: SettingRow) => number | string> = {
-    key: (row) => row.key,
-    category: (row) => row.category,
-    origin: (row) => row.origin,
-    value: (row) => row.value ?? "",
-};
+interface DatabaseSettingsWithSizeProps extends DatabaseSettingsProps {
+    width: number;
+}
+
+function useDatabaseSettingsColumns(availableWidth: number) {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+
+    const settingsColumns: ColumnDef<SettingRow>[] = useMemo(() => {
+        const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+        return [
+            {
+                header: "Key",
+                accessorKey: "key",
+                cell: settingKeyCell,
+                size: getSize(33),
+            },
+            {
+                header: "Category",
+                accessorKey: "category",
+                size: getSize(19),
+            },
+            {
+                header: "Origin",
+                accessorKey: "origin",
+                cell: ({ getValue }) => <OriginBadge origin={getValue<SettingOrigin>()} />,
+                size: getSize(13),
+            },
+            {
+                header: "Effective value",
+                accessorKey: "value",
+                cell: settingValueCell,
+                size: getSize(35),
+            },
+        ];
+    }, [bodyWidth]);
+
+    return { settingsColumns };
+}
+
+function OriginBadge({ origin }: { origin: SettingOrigin }) {
+    if (origin === "Database") {
+        return <Badge bg="warning">Database</Badge>;
+    }
+    if (origin === "Server") {
+        return <Badge bg="info">Server</Badge>;
+    }
+    return <span className="text-muted">Default</span>;
+}
 
 // On-demand per-node database configuration from the analyzer databases/configuration/settings
 // endpoint (a raw SettingsResult). Parsed into a searchable, sortable key/value table - the
 // effective value resolves Database override -> Server value -> Default, with secured values masked.
-export default function DatabaseSettings({ packageId, database, nodes }: DatabaseSettingsProps) {
+export default memo(function DatabaseSettings({ packageId, database, node }: DatabaseSettingsProps) {
+    return (
+        <SizeGetter
+            render={({ width }) => (
+                <DatabaseSettingsWithSize packageId={packageId} database={database} node={node} width={width} />
+            )}
+        />
+    );
+});
+
+function DatabaseSettingsWithSize({ packageId, database, node, width }: DatabaseSettingsWithSizeProps) {
     const { manageServerService } = useServices();
-    const [selectedNode, setSelectedNode] = useState<string>(nodes[0] ?? null);
     const [search, setSearch] = useState<string>("");
     // default to the actionable subset: settings actually customized away from their default
     const [showDefaults, setShowDefaults] = useState<boolean>(false);
 
     const settings = useAsync(async () => {
-        if (!selectedNode) {
+        if (!node) {
             return null as SettingsResult | null;
         }
-        return manageServerService.getDebugPackageDatabaseSettings(packageId, selectedNode, database);
-    }, [packageId, selectedNode, database]);
+        return manageServerService.getDebugPackageDatabaseSettings(packageId, node, database);
+    }, [packageId, node, database]);
 
     const rows = useMemo(() => parseSettings(settings.result), [settings.result]);
     const filtered = useMemo(() => {
@@ -73,50 +131,42 @@ export default function DatabaseSettings({ packageId, database, nodes }: Databas
         });
     }, [rows, search, showDefaults]);
 
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
-        filtered,
-        settingsSortAccessors,
-        "key",
-        "asc"
-    );
-    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+    const { settingsColumns } = useDatabaseSettingsColumns(width);
 
-    const nodeOptions: SelectOption<string>[] = nodes.map((tag) => ({ value: tag, label: `Node ${tag}` }));
+    const table = useReactTable({
+        data: filtered,
+        columns: settingsColumns,
+        enableSorting: filtered.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: filtered.length > analyzerConstants.minRowsForControls,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getRowId: (row) => row.key,
+    });
+
+    const heightInPx = virtualTableUtils.getHeightInPx(filtered.length, 500);
 
     return (
         <div className="database-settings">
-            <div className="hstack gap-3 align-items-center mb-3 flex-wrap">
-                <h3 className="m-0">Configuration</h3>
-                {nodes.length > 1 && (
-                    <div className="node-select">
-                        <Select
-                            options={nodeOptions}
-                            value={nodeOptions.find((o) => o.value === selectedNode)}
-                            onChange={(option) => option && setSelectedNode(option.value)}
-                            isSearchable={false}
-                            isRoundedPill
-                        />
-                    </div>
-                )}
-            </div>
-            <Card>
-                <Card.Body className="vstack gap-3">
+            <div className="panel-bg-1 rounded">
+                <div className="p-4 vstack gap-3">
+                    <h3 className="m-0">Configuration</h3>
                     {settings.loading ? (
                         <div className="hstack gap-2 justify-content-center text-muted py-3">
-                            <Spinner size="sm" /> Loading configuration for node {selectedNode}...
+                            <Spinner size="sm" /> Loading configuration for node {node}...
                         </div>
                     ) : settings.error ? (
                         <RichAlert variant="danger">
-                            Could not load configuration for node {selectedNode}. The package may not contain settings
-                            for this database, or the report expired.
+                            Could not load configuration for node {node}. The package may not contain settings for this
+                            database, or the report expired.
                         </RichAlert>
                     ) : rows.length === 0 ? (
-                        <EmptySet compact>
-                            No configuration settings for {database} on node {selectedNode}
+                        <EmptySet compact className="justify-content-center">
+                            No configuration settings for {database} on node {node}
                         </EmptySet>
                     ) : (
                         <>
-                            <div className="hstack gap-3 align-items-center flex-wrap">
+                            <div className="hstack justify-content-between flex-wrap">
                                 <Form.Control
                                     type="text"
                                     style={{ maxWidth: "360px" }}
@@ -124,65 +174,47 @@ export default function DatabaseSettings({ packageId, database, nodes }: Databas
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
-                                <Form.Check
-                                    type="switch"
-                                    id="debug-package-settings-show-defaults"
-                                    label="Show default values"
-                                    checked={showDefaults}
-                                    onChange={(e) => setShowDefaults(e.target.checked)}
-                                />
-                                <span className="small-label">
-                                    {filtered.length} of {rows.length}
-                                </span>
+                                <div className="hstack gap-3">
+                                    <Form.Check
+                                        type="switch"
+                                        id="debug-package-settings-show-defaults"
+                                        label="Show default values"
+                                        checked={showDefaults}
+                                        onChange={(e) => setShowDefaults(e.target.checked)}
+                                    />
+                                    <span className="small-label">
+                                        {filtered.length} of {rows.length}
+                                    </span>
+                                </div>
                             </div>
                             {filtered.length === 0 ? (
-                                <EmptySet compact>
+                                <EmptySet compact className="justify-content-center">
                                     {search.trim()
                                         ? "No settings match the filter"
                                         : "No customized settings - all are at their default values"}
                                 </EmptySet>
                             ) : (
-                                <Table responsive className="m-0 align-middle">
-                                    <thead>
-                                        <tr>
-                                            <SortableHeader label="Key" columnKey="key" {...sortProps} />
-                                            <SortableHeader label="Category" columnKey="category" {...sortProps} />
-                                            <SortableHeader label="Origin" columnKey="origin" {...sortProps} />
-                                            <SortableHeader label="Effective value" columnKey="value" {...sortProps} />
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sorted.map((row) => (
-                                            <tr key={row.key}>
-                                                <td className="fw-bold text-break" title={row.description}>
-                                                    {row.key}
-                                                </td>
-                                                <td>{row.category}</td>
-                                                <td>
-                                                    <OriginPill origin={row.origin} />
-                                                </td>
-                                                <td className="text-break">{row.value ?? "-"}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
+                                <VirtualTable table={table} heightInPx={heightInPx} />
                             )}
                         </>
                     )}
-                </Card.Body>
-            </Card>
+                </div>
+            </div>
         </div>
     );
 }
 
-function OriginPill({ origin }: { origin: SettingOrigin }) {
-    if (origin === "Database") {
-        return <StatePill bg="warning">Database</StatePill>;
-    }
-    if (origin === "Server") {
-        return <StatePill bg="info">Server</StatePill>;
-    }
-    return <span className="text-muted">Default</span>;
+function settingKeyCell({ row }: { row: { original: SettingRow } }) {
+    return (
+        <span className="fw-bold" title={row.original.description}>
+            {row.original.key}
+        </span>
+    );
+}
+
+function settingValueCell({ getValue }: { getValue: () => unknown }) {
+    const v = getValue() as string;
+    return <span title={v ?? undefined}>{v ?? "-"}</span>;
 }
 
 // Effective value resolution mirrors the live settings model: a database override wins over the

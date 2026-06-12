@@ -1,10 +1,18 @@
 import React, { useMemo } from "react";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
 import { Icon } from "components/common/Icon";
-import { StatePill } from "components/common/StatePill";
 import NodeTagPill from "./NodeTagPill";
-import { SortableHeader, useSortableData } from "./sortableTable";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { analyzerConstants } from "./analyzerConstants";
+import SummaryBar from "./SummaryBar";
+import SizeGetter from "components/common/SizeGetter";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -12,117 +20,204 @@ interface DatabasesOverviewProps {
     summary: DebugPackageAnalysisSummary;
 }
 
-interface AggregatedDatabase {
-    database: string;
-    documentsCount: number;
-    indexesCount: number;
-    erroredIndexesCount: number;
-    indexingErrorsCount: number;
-    ongoingTasksCount: number;
-    replicationFactor: number;
-    disabled: boolean;
-    nodes: string[];
+interface DatabasesOverviewWithSizeProps extends DatabasesOverviewProps {
+    width: number;
 }
 
-const databasesSortAccessors: Record<string, (db: AggregatedDatabase) => number | string> = {
-    database: (db) => db.database,
-    documents: (db) => db.documentsCount ?? 0,
-    indexes: (db) => db.indexesCount ?? 0,
-    indexingErrors: (db) => db.indexingErrorsCount ?? 0,
-    ongoingTasks: (db) => db.ongoingTasksCount ?? 0,
-    replicationFactor: (db) => db.replicationFactor ?? 0,
-    state: (db) => (db.disabled ? 1 : 0),
-};
+interface TableRow {
+    rowKind: "database" | "node";
+    database: string;
+    nodeTag?: string;
+    documentsCount?: number;
+    indexesCount?: number;
+    erroredIndexesCount?: number;
+    indexingErrorsCount?: number;
+    ongoingTasksCount?: number;
+    replicationFactor?: number;
+    disabled?: boolean;
+}
+
+function useDatabasesOverviewColumns(availableWidth: number) {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+
+    const databasesColumns: ColumnDef<TableRow>[] = useMemo(
+        () => [
+            {
+                header: "Database",
+                accessorKey: "database",
+                cell: dbNameCell,
+                size: getSize(20),
+            },
+            {
+                header: "Node",
+                accessorKey: "nodeTag",
+                cell: dbNodeTagCell,
+                size: getSize(8),
+            },
+            {
+                header: "Documents",
+                accessorKey: "documentsCount",
+                cell: dbDocumentsCell,
+                size: getSize(12),
+            },
+            {
+                header: "Indexes",
+                accessorKey: "indexesCount",
+                cell: dbIndexesCell,
+                size: getSize(11),
+            },
+            {
+                header: "Indexing errors",
+                accessorKey: "indexingErrorsCount",
+                cell: dbIndexingErrorsCell,
+                size: getSize(14),
+            },
+            {
+                header: "Ongoing tasks",
+                accessorKey: "ongoingTasksCount",
+                cell: dbOngoingTasksCell,
+                size: getSize(14),
+            },
+            {
+                header: "Replication factor",
+                accessorKey: "replicationFactor",
+                cell: dbReplicationFactorCell,
+                size: getSize(14),
+            },
+            {
+                header: "State",
+                id: "state",
+                accessorFn: (row) => row.disabled,
+                cell: dbStateCell,
+                size: getSize(7),
+            },
+        ],
+        [getSize]
+    );
+
+    return { databasesColumns };
+}
 
 export default function DatabasesOverview({ summary }: DatabasesOverviewProps) {
-    const databases = useMemo(() => aggregateDatabases(summary), [summary]);
-    const { sorted, sortKey, sortDirection, requestSort } = useSortableData(
-        databases,
-        databasesSortAccessors,
-        "documents"
-    );
-    const sortProps = { sortKey, sortDirection, onSort: requestSort };
+    return <SizeGetter render={({ width }) => <DatabasesOverviewWithSize summary={summary} width={width} />} />;
+}
 
-    const disabledCount = databases.filter((d) => d.disabled).length;
-    const onlineCount = databases.length - disabledCount;
+function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSizeProps) {
+    const rows = useMemo(() => buildTableRows(summary), [summary]);
+
+    const databaseRows = rows.filter((r) => r.rowKind === "database");
+    const disabledCount = databaseRows.filter((r) => r.disabled).length;
+    const onlineCount = databaseRows.length - disabledCount;
+
+    const { databasesColumns } = useDatabasesOverviewColumns(width);
+
+    const table = useReactTable({
+        data: rows,
+        columns: databasesColumns,
+        enableSorting: rows.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getRowId: (row) => (row.nodeTag ? `${row.database}/${row.nodeTag}` : row.database),
+    });
+
+    const heightInPx = virtualTableUtils.getHeightInPx(rows.length, 400);
 
     return (
         <div className="databases-overview">
-            <h3 className="mb-3">Databases Overview</h3>
-            <Card>
-                <Card.Body className="vstack gap-3">
-                    <div className="hstack gap-4 flex-wrap">
-                        <span className="hstack gap-1">
-                            <Icon icon="database" margin="m-0" /> {databases.length} total
-                        </span>
-                        <span className="hstack gap-1 text-success">
-                            <Icon icon="database" addon="check" margin="m-0" /> {onlineCount} online
-                        </span>
-                        <span className="hstack gap-1 text-warning">
-                            <Icon icon="database" addon="cancel" margin="m-0" /> {disabledCount} disabled
-                        </span>
-                    </div>
+            <div className="panel-bg-1 rounded">
+                <div className="p-4 vstack gap-3">
+                    <h3 className="mb-0">Databases Overview</h3>
+                    <SummaryBar
+                        items={[
+                            { icon: "database", count: databaseRows.length, label: "total" },
+                            {
+                                icon: "database",
+                                iconAddon: "check",
+                                count: onlineCount,
+                                label: "online",
+                                colorClass: "text-success",
+                            },
+                            {
+                                icon: "database",
+                                iconAddon: "cancel",
+                                count: disabledCount,
+                                label: "disabled",
+                                colorClass: "text-warning",
+                            },
+                        ]}
+                    />
 
-                    {databases.length === 0 ? (
-                        <div className="text-muted">No databases found in the package</div>
+                    {databaseRows.length === 0 ? (
+                        <div className="text-muted text-center w-100">No databases found in the package</div>
                     ) : (
-                        <Table responsive className="m-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <SortableHeader label="Database" columnKey="database" {...sortProps} />
-                                    <SortableHeader label="Documents" columnKey="documents" {...sortProps} />
-                                    <SortableHeader label="Indexes" columnKey="indexes" {...sortProps} />
-                                    <SortableHeader label="Indexing errors" columnKey="indexingErrors" {...sortProps} />
-                                    <SortableHeader label="Ongoing tasks" columnKey="ongoingTasks" {...sortProps} />
-                                    <SortableHeader
-                                        label="Replication factor"
-                                        columnKey="replicationFactor"
-                                        {...sortProps}
-                                    />
-                                    <th>Nodes</th>
-                                    <SortableHeader label="State" columnKey="state" {...sortProps} />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sorted.map((db) => (
-                                    <tr key={db.database}>
-                                        <td className="fw-bold">{db.database}</td>
-                                        <td>{formatCount(db.documentsCount)}</td>
-                                        <td>
-                                            {formatCount(db.indexesCount)}
-                                            {db.erroredIndexesCount > 0 && (
-                                                <span className="text-danger ms-1">
-                                                    <Icon icon="danger" margin="m-0" /> {db.erroredIndexesCount}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className={db.indexingErrorsCount > 0 ? "text-danger" : ""}>
-                                            {formatCount(db.indexingErrorsCount)}
-                                        </td>
-                                        <td>{formatCount(db.ongoingTasksCount)}</td>
-                                        <td>{formatCount(db.replicationFactor)}</td>
-                                        <td>
-                                            <div className="hstack gap-1 flex-wrap">
-                                                {db.nodes.map((nodeTag) => (
-                                                    <NodeTagPill key={nodeTag} tag={nodeTag} />
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {db.disabled ? (
-                                                <StatePill bg="warning">Disabled</StatePill>
-                                            ) : (
-                                                <StatePill bg="success">Online</StatePill>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
+                        <VirtualTable table={table} heightInPx={heightInPx} />
                     )}
-                </Card.Body>
-            </Card>
+                </div>
+            </div>
         </div>
+    );
+}
+
+function dbNameCell({ row }: { row: { original: TableRow } }) {
+    return row.original.rowKind === "database" ? <span className="fw-bold">{row.original.database}</span> : null;
+}
+
+function dbNodeTagCell({ row }: { row: { original: TableRow } }) {
+    return row.original.rowKind === "node" ? <NodeTagPill tag={row.original.nodeTag!} /> : null;
+}
+
+function dbDocumentsCell({ row }: { row: { original: TableRow } }) {
+    return row.original.rowKind === "database" ? formatCount(row.original.documentsCount ?? -1) : null;
+}
+
+function dbIndexesCell({ row }: { row: { original: TableRow } }) {
+    if (row.original.rowKind !== "database") {
+        return null;
+    }
+    const errored = row.original.erroredIndexesCount ?? 0;
+    return (
+        <>
+            {formatCount(row.original.indexesCount ?? -1)}
+            {errored > 0 && (
+                <span className="text-danger ms-1">
+                    <Icon icon="danger" margin="m-0" /> {errored}
+                </span>
+            )}
+        </>
+    );
+}
+
+function dbIndexingErrorsCell({ row }: { row: { original: TableRow } }) {
+    if (row.original.rowKind !== "database") {
+        return null;
+    }
+    const count = row.original.indexingErrorsCount ?? 0;
+    return <span className={count > 0 ? "text-danger" : ""}>{formatCount(count)}</span>;
+}
+
+function dbOngoingTasksCell({ row }: { row: { original: TableRow } }) {
+    return row.original.rowKind === "database" ? formatCount(row.original.ongoingTasksCount ?? -1) : null;
+}
+
+function dbReplicationFactorCell({ row }: { row: { original: TableRow } }) {
+    return row.original.rowKind === "database" ? formatCount(row.original.replicationFactor ?? -1) : null;
+}
+
+function dbStateCell({ row }: { row: { original: TableRow } }) {
+    if (row.original.rowKind !== "node") {
+        return null;
+    }
+    return row.original.disabled ? (
+        <span className="hstack gap-1 text-warning">
+            <Icon icon="database" addon="cancel" margin="m-0" /> Disabled
+        </span>
+    ) : (
+        <span className="hstack gap-1 text-success">
+            <Icon icon="database" addon="check" margin="m-0" /> Online
+        </span>
     );
 }
 
@@ -133,21 +228,28 @@ function formatCount(value: number): string {
     return value.toLocaleString();
 }
 
-// the package reports each database per node; merge into one row per database with the representative
-// (largest, to tolerate replication lag / unavailable -1 values) counts and the set of nodes hosting it
-function aggregateDatabases(summary: DebugPackageAnalysisSummary): AggregatedDatabase[] {
-    const map = new Map<string, AggregatedDatabase>();
+function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
+    const dbMap = new Map<
+        string,
+        {
+            documentsCount: number;
+            indexesCount: number;
+            erroredIndexesCount: number;
+            indexingErrorsCount: number;
+            ongoingTasksCount: number;
+            replicationFactor: number;
+            disabled: boolean;
+            nodes: { nodeTag: string; disabled: boolean }[];
+        }
+    >();
 
     Object.entries(summary.SummaryPerNode ?? {}).forEach(([nodeTag, node]) => {
         (node.DatabasesOverview?.Items ?? []).forEach((item) => {
-            if (item.Irrelevant) {
-                return;
-            }
+            if (item.Irrelevant) return;
 
-            let agg = map.get(item.Database);
+            let agg = dbMap.get(item.Database);
             if (!agg) {
                 agg = {
-                    database: item.Database,
                     documentsCount: item.DocumentsCount,
                     indexesCount: item.IndexesCount,
                     erroredIndexesCount: item.ErroredIndexesCount,
@@ -157,7 +259,7 @@ function aggregateDatabases(summary: DebugPackageAnalysisSummary): AggregatedDat
                     disabled: item.Disabled,
                     nodes: [],
                 };
-                map.set(item.Database, agg);
+                dbMap.set(item.Database, agg);
             } else {
                 agg.documentsCount = Math.max(agg.documentsCount, item.DocumentsCount);
                 agg.indexesCount = Math.max(agg.indexesCount, item.IndexesCount);
@@ -167,13 +269,37 @@ function aggregateDatabases(summary: DebugPackageAnalysisSummary): AggregatedDat
                 agg.replicationFactor = Math.max(agg.replicationFactor, item.ReplicationFactor);
             }
 
-            if (!agg.nodes.includes(nodeTag)) {
-                agg.nodes.push(nodeTag);
+            if (!agg.nodes.some((n) => n.nodeTag === nodeTag)) {
+                agg.nodes.push({ nodeTag, disabled: item.Disabled });
             }
         });
     });
 
-    const databases = Array.from(map.values());
-    databases.forEach((database) => database.nodes.sort());
-    return databases.sort((a, b) => a.database.localeCompare(b.database));
+    const result: TableRow[] = [];
+
+    [...dbMap.keys()]
+        .sort((a, b) => a.localeCompare(b))
+        .forEach((database) => {
+            const agg = dbMap.get(database)!;
+
+            result.push({
+                rowKind: "database",
+                database,
+                documentsCount: agg.documentsCount,
+                indexesCount: agg.indexesCount,
+                erroredIndexesCount: agg.erroredIndexesCount,
+                indexingErrorsCount: agg.indexingErrorsCount,
+                ongoingTasksCount: agg.ongoingTasksCount,
+                replicationFactor: agg.replicationFactor,
+                disabled: agg.disabled,
+            });
+
+            agg.nodes
+                .sort((a, b) => a.nodeTag.localeCompare(b.nodeTag))
+                .forEach(({ nodeTag, disabled }) => {
+                    result.push({ rowKind: "node", database, nodeTag, disabled });
+                });
+        });
+
+    return result;
 }

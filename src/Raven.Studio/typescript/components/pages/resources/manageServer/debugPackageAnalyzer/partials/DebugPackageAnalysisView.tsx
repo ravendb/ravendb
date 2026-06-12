@@ -1,12 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useDeferredValue, useMemo, useState } from "react";
+import classNames from "classnames";
 import PackageInfo from "./PackageInfo";
-import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
-import { InputItem } from "components/models/common";
-import { FlexGrow } from "components/common/FlexGrow";
+import { Icon } from "components/common/Icon";
 import { EmptySet } from "components/common/EmptySet";
-import Select, { SelectOption } from "components/common/select/Select";
+import IconName from "typings/server/icons";
 import AnalysisResults from "./AnalysisResults";
 import AnalysisErrors from "./AnalysisErrors";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import ClusterOverview from "./ClusterOverview";
 import ClusterObserverDecisions from "./ClusterObserverDecisions";
 import ClusterRaftDebug from "./ClusterRaftDebug";
@@ -19,6 +19,7 @@ import IndexingPerNode from "./IndexingPerNode";
 import OngoingTasks from "./OngoingTasks";
 import DatabaseContextView from "./DatabaseContextView";
 import { flattenIssues } from "./analyzerUtils";
+import Select, { SelectOption } from "components/common/select/Select";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type AnalysisContext = "cluster" | "node" | "database";
@@ -29,12 +30,26 @@ interface DebugPackageAnalysisViewProps {
     onReset: () => void;
 }
 
+interface ContextItem {
+    value: AnalysisContext;
+    label: string;
+    icon: IconName;
+    count: number;
+}
+
 export default function DebugPackageAnalysisView({ summary, fileName, onReset }: DebugPackageAnalysisViewProps) {
     const nodeTags = useMemo(() => Object.keys(summary.SummaryPerNode ?? {}).sort(), [summary]);
     const databaseNames = useMemo(() => collectDatabaseNames(summary), [summary]);
     const [context, setContext] = useState<AnalysisContext>("cluster");
     const [selectedNode, setSelectedNode] = useState<string>(() => defaultNode(summary, nodeTags));
     const [selectedDatabase, setSelectedDatabase] = useState<string>(() => databaseNames[0] ?? null);
+    const deferredDatabase = useDeferredValue(selectedDatabase);
+    const [selectedDatabaseNode, setSelectedDatabaseNode] = useState<string>(() => defaultNode(summary, nodeTags));
+    const databaseNodes = useMemo(() => collectDatabaseNodes(summary, deferredDatabase), [summary, deferredDatabase]);
+    const databaseOptions = useMemo(
+        () => databaseNames.map((name): SelectOption<string> => ({ value: name, label: name })),
+        [databaseNames]
+    );
 
     const allIssues = useMemo(() => flattenIssues(summary), [summary]);
 
@@ -43,58 +58,86 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
             return allIssues.filter((issue) => issue.nodeTags.includes(selectedNode));
         }
         if (context === "database") {
-            return allIssues.filter((issue) => issue.scope === "database" && issue.database === selectedDatabase);
+            return allIssues.filter((issue) => issue.scope === "database" && issue.database === deferredDatabase);
         }
         return allIssues;
-    }, [allIssues, context, selectedNode, selectedDatabase]);
+    }, [allIssues, context, selectedNode, deferredDatabase]);
 
-    const contextItems: InputItem<AnalysisContext>[] = [
-        { label: "Cluster", value: "cluster", count: allIssues.length },
-        { label: "Node", value: "node", count: allIssues.filter((i) => i.nodeTags.includes(selectedNode)).length },
-        {
-            label: "Database",
-            value: "database",
-            count: allIssues.filter((i) => i.scope === "database" && i.database === selectedDatabase).length,
-        },
-    ];
-
-    const nodeOptions: SelectOption<string>[] = nodeTags.map((tag) => ({ value: tag, label: `Node ${tag}` }));
-    const databaseOptions: SelectOption<string>[] = databaseNames.map((name) => ({ value: name, label: name }));
+    const contextItems = useMemo<ContextItem[]>(
+        () => [
+            { label: "Cluster", value: "cluster", icon: "cluster", count: allIssues.length },
+            {
+                label: "Node",
+                value: "node",
+                icon: "node",
+                count: allIssues.filter((i) => i.nodeTags.includes(selectedNode)).length,
+            },
+            {
+                label: "Database",
+                value: "database",
+                icon: "database",
+                count: allIssues.filter((i) => i.scope === "database" && i.database === deferredDatabase).length,
+            },
+        ],
+        [allIssues, selectedNode, deferredDatabase]
+    );
 
     return (
         <div className="debug-package-analysis vstack gap-4">
-            <div className="hstack gap-3 align-items-end flex-wrap">
-                <MultiRadioToggle<AnalysisContext>
-                    inputItems={contextItems}
-                    selectedItem={context}
-                    setSelectedItem={setContext}
-                    label="Select analysis context"
-                />
-                {context === "node" && nodeTags.length > 0 && (
-                    <div className="node-select">
-                        <div className="small-label ms-1 mb-1">Select node</div>
-                        <Select
-                            options={nodeOptions}
-                            value={nodeOptions.find((o) => o.value === selectedNode)}
-                            onChange={(option) => option && setSelectedNode(option.value)}
-                            isSearchable={false}
-                            isRoundedPill
-                        />
-                    </div>
-                )}
-                {context === "database" && databaseNames.length > 0 && (
-                    <div className="node-select">
-                        <div className="small-label ms-1 mb-1">Select database</div>
-                        <Select
-                            options={databaseOptions}
-                            value={databaseOptions.find((o) => o.value === selectedDatabase)}
-                            onChange={(option) => option && setSelectedDatabase(option.value)}
-                            isSearchable
-                            isRoundedPill
-                        />
-                    </div>
-                )}
-                <FlexGrow />
+            <div className="d-flex align-items-center justify-content-between gap-4 flex-wrap">
+                <div className="d-flex align-items-center gap-3 flex-wrap">
+                    <ContextToggle items={contextItems} selected={context} onSelect={setContext} />
+                    {context === "node" && nodeTags.length > 0 && (
+                        <div className="node-select">
+                            <div className="context-toggle-label mb-1">Select node</div>
+                            <Select<SelectOption<string>>
+                                options={nodeTags.map(
+                                    (tag): SelectOption<string> => ({ value: tag, label: `Node ${tag}` })
+                                )}
+                                value={{ value: selectedNode, label: `Node ${selectedNode}` }}
+                                onChange={(option) => option && setSelectedNode(option.value)}
+                                isSearchable={false}
+                            />
+                        </div>
+                    )}
+                    {context === "database" && databaseNames.length > 0 && (
+                        <div className="node-select">
+                            <div className="context-toggle-label mb-1">Select database</div>
+                            <Select<SelectOption<string>>
+                                options={databaseOptions}
+                                value={selectedDatabase ? { value: selectedDatabase, label: selectedDatabase } : null}
+                                onChange={(option) => option && setSelectedDatabase(option.value)}
+                                isSearchable={false}
+                                isLoading={deferredDatabase !== selectedDatabase}
+                            />
+                        </div>
+                    )}
+                    {context === "database" && nodeTags.length > 1 && (
+                        <PopoverWithHoverWrapper
+                            message={databaseNodes.length <= 1 ? "This database has data on one node only" : null}
+                            placement="top"
+                            overlayProps={{
+                                popperConfig: {
+                                    modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
+                                },
+                            }}
+                            inline={false}
+                        >
+                            <div className="node-select">
+                                <div className="context-toggle-label mb-1">Select node</div>
+                                <Select<SelectOption<string>>
+                                    options={nodeTags.map(
+                                        (tag): SelectOption<string> => ({ value: tag, label: `Node ${tag}` })
+                                    )}
+                                    value={{ value: selectedDatabaseNode, label: `Node ${selectedDatabaseNode}` }}
+                                    onChange={(option) => option && setSelectedDatabaseNode(option.value)}
+                                    isSearchable={false}
+                                    isDisabled={databaseNodes.length <= 1}
+                                />
+                            </div>
+                        </PopoverWithHoverWrapper>
+                    )}
+                </div>
                 <PackageInfo fileName={fileName} onReset={onReset} />
             </div>
 
@@ -128,8 +171,12 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                 </>
             )}
             {context === "database" &&
-                (selectedDatabase ? (
-                    <DatabaseContextView summary={summary} database={selectedDatabase} />
+                (deferredDatabase ? (
+                    <DatabaseContextView
+                        summary={summary}
+                        database={deferredDatabase}
+                        selectedNode={selectedDatabaseNode}
+                    />
                 ) : (
                     <EmptySet>No databases found in the package</EmptySet>
                 ))}
@@ -142,6 +189,22 @@ function defaultNode(summary: DebugPackageAnalysisSummary, nodeTags: string[]): 
     return leader ?? nodeTags[0] ?? null;
 }
 
+function collectDatabaseNodes(summary: DebugPackageAnalysisSummary, database: string | null): string[] {
+    if (!database) {
+        return [];
+    }
+    const nodes: string[] = [];
+    Object.entries(summary.SummaryPerNode ?? {}).forEach(([nodeTag, node]) => {
+        const hasDb = (node.DatabasesOverview?.Items ?? []).some(
+            (item) => item.Database === database && !item.Irrelevant
+        );
+        if (hasDb) {
+            nodes.push(nodeTag);
+        }
+    });
+    return nodes.sort();
+}
+
 function collectDatabaseNames(summary: DebugPackageAnalysisSummary): string[] {
     const names = new Set<string>();
     Object.values(summary.SummaryPerNode ?? {}).forEach((node) => {
@@ -152,4 +215,32 @@ function collectDatabaseNames(summary: DebugPackageAnalysisSummary): string[] {
         });
     });
     return Array.from(names).sort();
+}
+
+interface ContextToggleProps {
+    items: ContextItem[];
+    selected: AnalysisContext;
+    onSelect: (value: AnalysisContext) => void;
+}
+
+function ContextToggle({ items, selected, onSelect }: ContextToggleProps) {
+    return (
+        <div className="context-toggle">
+            <div className="context-toggle-label mb-1">Select analysis context</div>
+            <div className="context-toggle-container">
+                {items.map((item) => (
+                    <button
+                        key={item.value}
+                        type="button"
+                        className={classNames("context-toggle-btn", { active: selected === item.value })}
+                        onClick={() => onSelect(item.value)}
+                    >
+                        <Icon icon={item.icon} margin="m-0" />
+                        <span>{item.label}</span>
+                        <span className="context-toggle-badge">{item.count}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
 }
