@@ -28,7 +28,6 @@ using Sparrow;
 using Sparrow.Global;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
-using ServerLoggingConstants = Sparrow.Server.Global.Constants.Logging;
 using LogLevel = NLog.LogLevel;
 using Size = Sparrow.Size;
 
@@ -43,8 +42,6 @@ internal static class RavenLogManagerServerExtensions
     private static readonly NullTarget NullTarget = new(nameof(NullTarget));
 
     private static readonly ConcurrentDictionary<string, Assembly> LoadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
-
-    private static readonly bool _rendererRegistered = RegisterRenderers();
 
     internal static LoggingRule DefaultRule;
 
@@ -102,12 +99,6 @@ internal static class RavenLogManagerServerExtensions
 
     private static readonly ConcurrentDictionary<string, RavenAuditLogger> AuditLoggers = new(StringComparer.OrdinalIgnoreCase);
 #endif
-
-    private static bool RegisterRenderers()
-    {
-        LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<RvnLayoutRenderer>("rvn"));
-        return true;
-    }
 
     public static RavenLogger CreateNullLogger(this RavenLogManager logManager) => new(LogManager.CreateNullLogger());
 
@@ -350,7 +341,7 @@ internal static class RavenLogManagerServerExtensions
             FileName = configuration.Logs.Path.Combine(configuration.Logs.FileName).FullPath,
             ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
             Header = Constants.Logging.DefaultHeaderAndFooterLayout,
-            Layout = ServerLoggingConstants.DefaultServerLayout,
+            Layout = Constants.Logging.DefaultLayout,
             Footer = Constants.Logging.DefaultHeaderAndFooterLayout,
             ConcurrentWrites = false,
             WriteFooterOnArchivingOnly = true,
@@ -516,7 +507,7 @@ internal static class RavenLogManagerServerExtensions
             FileName = configuration.Security.AuditLogPath.Combine(configuration.Security.AuditLogFileName).FullPath,
             ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
             Header = Constants.Logging.DefaultHeaderAndFooterLayout,
-            Layout = ServerLoggingConstants.DefaultServerLayout,
+            Layout = Constants.Logging.DefaultLayout,
             Footer = Constants.Logging.DefaultHeaderAndFooterLayout,
             ConcurrentWrites = false,
             WriteFooterOnArchivingOnly = true,

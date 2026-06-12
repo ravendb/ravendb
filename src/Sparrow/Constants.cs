@@ -20,7 +20,7 @@ namespace Sparrow.Global
 
             internal const string DefaultHeaderAndFooterLayout = "Date|NodeTag|Level|ThreadID|Resource|Component|Logger|Message|Data";
 
-            internal const string DefaultLayout = "${longdate:universalTime=true}|${event-properties:item=NodeTag}|${level:uppercase=true}|${threadid}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
+            internal const string DefaultLayout = "${longdate:universalTime=true}|${rvn:NodeTag}|${level:uppercase=true}|${threadid}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
 
             internal class Properties
             {

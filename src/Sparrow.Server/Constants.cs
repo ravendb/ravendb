@@ -18,8 +18,6 @@ namespace Sparrow.Server.Global
             {
             }
 
-            internal const string DefaultServerLayout = "${longdate:universalTime=true}|${rvn:NodeTag}|${level:uppercase=true}|${threadid}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
-
             internal static List<JsonAttribute> DefaultAdminLogsJsonAttributes = new()
             {
                 new JsonAttribute("Date", "${longdate}"),
