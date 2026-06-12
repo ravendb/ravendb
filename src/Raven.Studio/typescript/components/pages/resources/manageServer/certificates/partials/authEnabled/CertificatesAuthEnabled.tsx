@@ -3,8 +3,7 @@ import CertificatesServerList from "components/pages/resources/manageServer/cert
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { useCallback, useEffect, useRef } from "react";
-import endpoints from "endpoints";
+import { useCallback, useEffect } from "react";
 import CertificatesGenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import CertificatesUploadModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesUploadModal";
 import CertificatesReplaceServerModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReplaceServerModal";
@@ -20,7 +19,6 @@ import CertificatesManageDropdown from "components/pages/resources/manageServer/
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
-    const exportServerCertFormRef = useRef<HTMLFormElement>(null);
     const isInitialLoad = useAppSelector(certificatesSelectors.isInitialLoad);
     const loadStatus = useAppSelector(certificatesSelectors.loadStatus);
     const isGenerateModalOpen = useAppSelector(certificatesSelectors.isGenerateModalOpen);
@@ -86,13 +84,6 @@ export default function CertificatesAuthEnabled() {
             {isReplaceServerModalOpen && <CertificatesReplaceServerModal />}
             {certificateToClone && <CertificatesCloneModal />}
             {certificateToEdit && <CertificatesEditModal />}
-
-            {/* This form is used to export server certificate */}
-            <form
-                ref={exportServerCertFormRef}
-                action={endpoints.global.adminCertificates.adminCertificatesExport}
-                className="d-none"
-            />
         </div>
     );
 }
