@@ -43,14 +43,14 @@ public class PullReplicationBatchHistory
             }
         }
 
-        string sinkCv = null;
+        string changeVector = null;
         while (_batchHistory.TryPeek(out (long Etag, string ChangeVector) current) && current.Etag <= confirmedEtag.Value)
         {
             _batchHistory.Dequeue();
-            sinkCv = ChangeVectorUtils.MergeVectors(sinkCv, current.ChangeVector);
+            changeVector = ChangeVectorUtils.MergeVectors(changeVector, current.ChangeVector);
         }
 
-        return sinkCv;
+        return changeVector;
     }
 
     /// <summary>
