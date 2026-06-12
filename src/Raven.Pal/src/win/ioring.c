@@ -210,8 +210,16 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
                     }
                     else
                     {
+                        int32_t error_code = cqe.ResultCode;
+                       
+                        if (HRESULT_FACILITY(error_code) == FACILITY_WIN32) 
+                        {
+                            // We need translate HRESULT code into Win32 error code to have correct handling inside RavenDB.
+                            error_code = HRESULT_CODE(error_code);
+                        }
+
                         cur->submittion->error = true;
-                        cur->submittion->result = cqe.ResultCode;
+                        cur->submittion->result = error_code;
                     }
                     break;
 
