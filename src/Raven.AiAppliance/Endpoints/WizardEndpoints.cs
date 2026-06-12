@@ -37,7 +37,7 @@ public static class WizardEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/discover", DiscoverAsync)
             .WithName("setup.discover")
-            .Accepts<ConnectRequest>("application/json")
+            .Accepts<DiscoverRequest>("application/json")
             .Produces<DiscoverResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/map", MapAsync)
@@ -70,14 +70,14 @@ public static class WizardEndpoints
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (TryRejectInvalidRequest(body, out var factoryName, out var error))
+        if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, out var factoryName, out var error))
             return error;
 
         var sqlConnectionString = new SqlConnectionString
         {
             Name             = WizardSourceProbeName,
             FactoryName      = factoryName,
-            ConnectionString = body.ConnectionString,
+            ConnectionString = body!.ConnectionString,
         };
         await store.Maintenance.ForDatabase(store.Database).SendAsync(
             new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString), ct);
@@ -109,26 +109,34 @@ public static class WizardEndpoints
     }
 
     private static async Task<IResult> DiscoverAsync(
-        ConnectRequest body,
+        DiscoverRequest body,
         IDocumentStore store,
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (TryRejectInvalidRequest(body, out var factoryName, out var error))
+        if (TryRejectInvalidRequest(body?.Provider, body?.ConnectionString, out var factoryName, out var error))
             return error;
 
         var sqlConnectionString = new SqlConnectionString
         {
             Name             = WizardSourceProbeName,
             FactoryName      = factoryName,
-            ConnectionString = body.ConnectionString,
+            ConnectionString = body!.ConnectionString,
         };
+
+        // Empty / null -> default schema of the connection (same contract as
+        // the Studio schema explorer's /admin/cdc-sink/schema call).
+        var schemas = body.Schemas?
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         CdcSinkSourceSchema schema;
         try
         {
             schema = await store.Maintenance.ForDatabase(store.Database).SendAsync(
-                new GetCdcSinkSchemaOperation(sqlConnectionString), ct);
+                new GetCdcSinkSchemaOperation(sqlConnectionString, schemas is { Length: > 0 } ? schemas : null), ct);
         }
         catch (Exception ex)
         {
@@ -403,17 +411,17 @@ public static class WizardEndpoints
         return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
     }
 
-    private static bool TryRejectInvalidRequest(ConnectRequest? body, out string factoryName, out IResult error)
+    private static bool TryRejectInvalidRequest(string? provider, string? connectionString, out string factoryName, out IResult error)
     {
         factoryName = string.Empty;
 
-        if (body is null || string.IsNullOrWhiteSpace(body.Provider) || string.IsNullOrWhiteSpace(body.ConnectionString))
+        if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(connectionString))
         {
             error = Results.BadRequest(new ApiErrorResponse("provider and connectionString are required"));
             return true;
         }
 
-        if (!SqlConnectionStringValidation.TryNormalizeCdcProvider(body.Provider, out factoryName, out var providerError))
+        if (!SqlConnectionStringValidation.TryNormalizeCdcProvider(provider, out factoryName, out var providerError))
         {
             error = Results.BadRequest(providerError);
             return true;

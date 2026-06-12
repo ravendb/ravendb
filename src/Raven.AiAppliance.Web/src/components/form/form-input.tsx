@@ -56,7 +56,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
 
     return (
         <Field className={className} data-invalid={invalid}>
-            <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+            {label != null && <FieldLabel htmlFor={inputId}>{label}</FieldLabel>}
             <InputGroup>
                 <InputGroupInput
                     id={inputId}

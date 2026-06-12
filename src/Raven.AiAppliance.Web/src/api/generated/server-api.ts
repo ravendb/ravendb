@@ -571,6 +571,11 @@ export interface components {
             referencedTable: string;
             referencedColumns: string[];
         };
+        DiscoverRequest: {
+            provider: string;
+            connectionString: string;
+            schemas?: null | string[];
+        };
         DiscoverResponse: {
             catalogName?: null | string;
             tables: components["schemas"]["DiscoverTableResponse"][];
@@ -1407,7 +1412,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ConnectRequest"];
+                "application/json": components["schemas"]["DiscoverRequest"];
             };
         };
         responses: {
@@ -1655,6 +1660,7 @@ export type ConnectRequest = components["schemas"]["ConnectRequest"];
 export type ConnectResult = components["schemas"]["ConnectResult"];
 export type DiscoverColumnResponse = components["schemas"]["DiscoverColumnResponse"];
 export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignKeyResponse"];
+export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
 export type DiscoverResponse = components["schemas"]["DiscoverResponse"];
 export type DiscoverTableResponse = components["schemas"]["DiscoverTableResponse"];
 export type EmbeddedSettings = components["schemas"]["EmbeddedSettings"];
@@ -1758,7 +1764,7 @@ export function createServerApi(client: ApiClient) {
         },
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
-            discover: (request: ConnectRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
+            discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
             suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),

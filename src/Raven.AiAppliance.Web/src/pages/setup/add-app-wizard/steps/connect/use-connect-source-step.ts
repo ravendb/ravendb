@@ -1,6 +1,7 @@
 import { api } from "@/api/api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { useFormContext } from "react-hook-form";
 
 export function useConnectSourceStep() {
@@ -19,11 +20,10 @@ export function useConnectSourceStep() {
             throw Error(connectResult.errors?.join("\n") || "Connection failed.");
         }
 
-        const discoverResult = await api.services.setup.discover({
-            connectionString: formValues.connectionString,
-            provider: formValues.provider,
-        });
+        // The first discovery always uses the connection's default schema. Custom
+        // schemas can be picked later on the verify step.
+        const discoverResult = await discoverTables(formValues, []);
 
-        setDiscoverResult(discoverResult);
+        setDiscoverResult(discoverResult, []);
     };
 }

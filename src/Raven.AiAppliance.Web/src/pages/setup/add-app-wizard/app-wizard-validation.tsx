@@ -24,11 +24,12 @@ const getSourceTableKey = (table: { sourceTableSchema?: string | null; sourceTab
 const getSourceTableLabel = (table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) =>
     table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 
+/** String list in the FormStringList shape: useFieldArray needs object items, not plain strings. */
 const requiredUniqueStringsSchema = (requiredMessage: string, uniqueMessage: string) =>
     z
-        .array(z.string())
+        .array(z.object({ value: z.string().trim().min(1, "Value is required") }))
         .min(1, requiredMessage)
-        .refine((values) => hasUniqueValues(values), { message: uniqueMessage });
+        .refine((items) => hasUniqueValues(items.map((item) => item.value)), { message: uniqueMessage });
 
 const columnMappingSchema = z.object({
     column: z.string().min(1, "Source column is required"),

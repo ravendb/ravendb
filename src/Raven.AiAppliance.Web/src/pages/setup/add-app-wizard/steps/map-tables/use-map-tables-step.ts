@@ -12,6 +12,7 @@ import type {
     FormLinkedTable,
     FormRootTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
+import { toStringValues } from "@/lib/form-utils";
 import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { useFormContext } from "react-hook-form";
@@ -40,7 +41,7 @@ function mapTableToDto(table: FormRootTable): CdcSinkTableConfig {
         linkedTables: (table.linkedTables ?? []).map(mapLinkedTableToDto),
         onDelete: mapOnDeleteToDto(table.onDelete),
         patch: table.patch || null,
-        primaryKeyColumns: table.primaryKeyColumns,
+        primaryKeyColumns: toStringValues(table.primaryKeyColumns),
         sourceTableName: table.sourceTableName,
         sourceTableSchema: table.sourceTableSchema,
     };
@@ -51,11 +52,11 @@ function mapEmbeddedTableToDto(table: FormEmbeddedTable): CdcSinkEmbeddedTableCo
         caseSensitiveKeys: table.caseSensitiveKeys,
         columns: (table.columns ?? []).map(mapColumnToDto),
         embeddedTables: (table.embeddedTables ?? []).map(mapEmbeddedTableToDto),
-        joinColumns: table.joinColumns,
+        joinColumns: toStringValues(table.joinColumns),
         linkedTables: (table.linkedTables ?? []).map(mapLinkedTableToDto),
         onDelete: mapOnDeleteToDto(table.onDelete),
         patch: table.patch || null,
-        primaryKeyColumns: table.primaryKeyColumns,
+        primaryKeyColumns: toStringValues(table.primaryKeyColumns),
         propertyName: table.propertyName,
         sourceTableName: table.sourceTableName,
         sourceTableSchema: table.sourceTableSchema,
@@ -65,7 +66,7 @@ function mapEmbeddedTableToDto(table: FormEmbeddedTable): CdcSinkEmbeddedTableCo
 
 function mapLinkedTableToDto(table: FormLinkedTable): CdcSinkLinkedTableConfig {
     return {
-        joinColumns: table.joinColumns,
+        joinColumns: toStringValues(table.joinColumns),
         linkedCollectionName: table.linkedCollectionName,
         propertyName: table.propertyName,
         sourceTableName: table.sourceTableName,
