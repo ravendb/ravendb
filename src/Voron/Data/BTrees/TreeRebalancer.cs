@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Compression;
+using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
 using Constants = Voron.Global.Constants;
@@ -15,6 +17,8 @@ namespace Voron.Data.BTrees
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
         private readonly TreeCursor _cursor;
+
+        private bool _ancestorsChanged;
 
         public TreeRebalancer(LowLevelTransaction tx, Tree tree, TreeCursor cursor)
         {
@@ -48,17 +52,57 @@ namespace Voron.Data.BTrees
                 var parentPage = _tree.ModifyPage(_cursor.CurrentPage);
                 _cursor.Update(_cursor.Pages, parentPage);
 
+                // when an earlier iteration of this cascade re-added a separator into a full ancestor page,
+                // that page got split. A split can move pages under different parents and change node
+                // positions, so the cursor built during the descent may no longer match the tree.
+                // An empty page is possible only on the first iteration, before any split could happen.
+                if (_ancestorsChanged && page.NumberOfEntries > 0)
+                {
+                    RebuildCursorAbovePage(page);
+
+                    // we could reset the flag here, but it is safer to keep rebuilding until the rebalancing ends - the
+                    // extra cost is a few page reads per level and is only paid when an ancestor was already split
+                    //_ancestorsChanged = false;
+
+                    parentPage = _tree.ModifyPage(_cursor.CurrentPage);
+                    _cursor.Update(_cursor.Pages, parentPage);
+                }
+
+                int positionInParent = -1;
+                for (int i = 0; i < parentPage.NumberOfEntries; i++)
+                {
+                    if (parentPage.GetNode(i)->PageNumber == page.PageNumber)
+                    {
+                        positionInParent = i;
+                        break;
+                    }
+                }
+
+                if (positionInParent == -1)
+                    VoronUnrecoverableErrorException.Raise(_tx,
+                        $"The page {page.PageNumber} being rebalanced is not referenced by its cursor parent page {parentPage.PageNumber}, tree: {_tree.Name}");
+
+                parentPage.LastSearchPosition = positionInParent;
+
                 if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
                 {
                     // need to change the implicit left page
                     if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
                     {
+                        if (parentPage.GetNode(0)->PageNumber != page.PageNumber)
+                            VoronUnrecoverableErrorException.Raise(_tx,
+                                $"About to remove the wrong node from parent page {parentPage.PageNumber} (node 0 references {parentPage.GetNode(0)->PageNumber} instead of the emptied page {page.PageNumber}), tree: {_tree.Name}");
+
                         var newImplicit = parentPage.GetNode(1)->PageNumber;
                         parentPage.RemoveNode(0);
                         parentPage.ChangeImplicitRefPageNode(newImplicit);
                     }
                     else // will be set to rights by the next rebalance call
                     {
+                        if (parentPage.GetNode(parentPage.LastSearchPositionOrLastEntry)->PageNumber != page.PageNumber)
+                            VoronUnrecoverableErrorException.Raise(_tx,
+                                $"About to remove the wrong node from parent page {parentPage.PageNumber} (node {parentPage.LastSearchPositionOrLastEntry} references {parentPage.GetNode(parentPage.LastSearchPositionOrLastEntry)->PageNumber} instead of the emptied page {page.PageNumber}), tree: {_tree.Name}");
+
                         parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
                     }
 
@@ -177,10 +221,41 @@ namespace Voron.Data.BTrees
                 Memory.Copy(left.Base, mergedPage.Base, left.PageSize);
             }
 
+            if (parentPage.GetNode(parentPage.LastSearchPositionOrLastEntry)->PageNumber != right.PageNumber)
+                VoronUnrecoverableErrorException.Raise(_tx,
+                    $"About to unlink the wrong node from parent page {parentPage.PageNumber} (node {parentPage.LastSearchPositionOrLastEntry} references {parentPage.GetNode(parentPage.LastSearchPositionOrLastEntry)->PageNumber} instead of the merged right page {right.PageNumber}), tree: {_tree.Name}");
+
             parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
             _tree.FreePage(right);
 
             return true;
+        }
+
+        private void RebuildCursorAbovePage(TreePage page)
+        {
+            using (GetActualKey(page, 0, out Slice key))
+            {
+                _tree.FindPageFor(key, node: out TreeNodeHeader* _, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
+
+                using (TreeCursor fresh = cursorConstructor.Build(key))
+                {
+                    var path = new List<TreePage>();
+                    while (fresh.PageCount > 0)
+                        path.Add(fresh.Pop()); // leaf .. root order
+
+                    int pageIndex = path.FindIndex(p => p.PageNumber == page.PageNumber);
+
+                    if (pageIndex == -1)
+                        VoronUnrecoverableErrorException.Raise(_tx,
+                            $"Could not rebuild the cursor for rebalanced page {page.PageNumber}: descending by its first key does not reach the page, tree: {_tree.Name}");
+
+                    while (_cursor.PageCount > 0)
+                        _cursor.Pop();
+
+                    for (int i = path.Count - 1; i > pageIndex; i--)
+                        _cursor.Push(path[i]);
+                }
+            }
         }
 
         private TreePage SetupMoveOrMerge(TreePage page, TreePage parentPage)
@@ -246,6 +321,11 @@ namespace Voron.Data.BTrees
                 from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
                 var pos = parentPage.LastSearchPositionOrLastEntry;
+
+                if (parentPage.GetNode(pos)->PageNumber != to.PageNumber && parentPage.GetNode(pos)->PageNumber != from.PageNumber)
+                    VoronUnrecoverableErrorException.Raise(_tx,
+                        $"About to remove the wrong separator from parent page {parentPage.PageNumber} (node {pos} references {parentPage.GetNode(pos)->PageNumber} while moving a leaf node between {from.PageNumber} and {to.PageNumber}), tree: {_tree.Name}");
+
                 parentPage.RemoveNode(pos);
 
                 Slice newSeparatorKey;
@@ -274,6 +354,9 @@ namespace Voron.Data.BTrees
             var parent = new ParentPageAction(parentPage, childPage, _tree, _cursor, _tx);
 
             parent.AddSeparator(seperatorKey, pageNumber, separatorKeyPosition);
+
+            if (parent.PerformedSplit)
+                _ancestorsChanged = true;
         }
 
         private void MoveBranchNode(TreePage parentPage, TreePage from, TreePage to)
@@ -339,6 +422,11 @@ namespace Voron.Data.BTrees
             }
 
             var pos = parentPage.LastSearchPositionOrLastEntry;
+
+            if (parentPage.GetNode(pos)->PageNumber != to.PageNumber && parentPage.GetNode(pos)->PageNumber != from.PageNumber)
+                VoronUnrecoverableErrorException.Raise(_tx,
+                    $"About to remove the wrong separator from parent page {parentPage.PageNumber} (node {pos} references {parentPage.GetNode(pos)->PageNumber} while moving a branch node between {from.PageNumber} and {to.PageNumber}), tree: {_tree.Name}");
+
             parentPage.RemoveNode(pos);
             Slice newSeparatorKey;
             var scope = GetActualKey(to, 0, out newSeparatorKey); // get the next smallest key it has now
