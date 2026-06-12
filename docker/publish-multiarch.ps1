@@ -1,5 +1,6 @@
 param(
     $Repo = "ravendb/ravendb",
+    [Parameter(Mandatory = $true)][string]$Version,
     [switch]$DryRun = $False)
 
 $ErrorActionPreference = "Stop"
@@ -51,7 +52,7 @@ function PushDockerManifests {
 }
 
 $tags = GetImageTagsForManifest $Repo
-$manifestTags = GetManifestTags $Repo
+$manifestTags = GetManifestTags $Repo $Version
 
 CreateDockerManifests $Repo $manifestTags $tags
 PushDockerManifests $manifestTags
