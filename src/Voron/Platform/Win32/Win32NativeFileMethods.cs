@@ -115,9 +115,7 @@ namespace Voron.Platform.Win32
                 var lastError = Marshal.GetLastWin32Error();
                 if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
                 {
-                    var directoryPath = Path.GetDirectoryName(filePath);
-                    // disk space info is expecting the directory path and not the file path
-                    var driveInfo = DiskUtils.GetDiskSpaceInfo(directoryPath);
+                    var driveInfo = DiskUtils.GetDiskSpaceInfoForFile(filePath);
                     throw new DiskFullException(filePath, length, driveInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes), new Win32Exception(lastError).Message);
                 }
 
