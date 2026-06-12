@@ -114,7 +114,7 @@ public unsafe partial class Pager : IDisposable
         }
         catch (DiskFullException dfEx)
         {
-            var diskSpaceResult = DiskUtils.GetDiskSpaceInfo(filename);
+            var diskSpaceResult = DiskUtils.GetDiskSpaceInfoForFile(filename);
             throw new DiskFullException(filename, initialFileSize, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
         }
     }

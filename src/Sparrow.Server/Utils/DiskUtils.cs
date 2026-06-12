@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Logging;
@@ -20,6 +19,14 @@ namespace Sparrow.Server.Utils
         public const short WindowsMaxPath = short.MaxValue;
 
         public const int LinuxMaxPath = 4096;
+
+        public static DiskSpaceResult GetDiskSpaceInfoForFile(string fileName, DriveInfoBase driveInfoBase = null)
+        {
+            if (Path.GetDirectoryName(fileName) is { Length: > 0 } parent)
+                return GetDiskSpaceInfo(parent, driveInfoBase);
+
+            return GetDiskSpaceInfo(fileName, driveInfoBase);
+        }
 
         public static DiskSpaceResult GetDiskSpaceInfo(string pathToCheck, DriveInfoBase driveInfoBase = null)
         {

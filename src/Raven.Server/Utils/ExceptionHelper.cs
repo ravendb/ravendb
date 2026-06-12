@@ -63,12 +63,11 @@ namespace Raven.Server.Utils
         [DoesNotReturn]
         public static void ThrowDiskFullException(string path) // Can be the folder path of the fole absolute path
         {
-            var folderPath = Path.GetDirectoryName(path); // file Absolute Path
-            var driveInfo = DiskUtils.GetDiskSpaceInfo(folderPath);
+            var driveInfo = DiskUtils.GetDiskSpaceInfoForFile(path);
             var freeSpace = driveInfo != null ? driveInfo.TotalFreeSpace.ToString() : "N/A";
             var totalSize = driveInfo != null ? driveInfo.TotalSize.ToString() : "N/A";
 
-            throw new DiskFullException($"There isn't enough space to flush the buffer in: {folderPath}. " +
+            throw new DiskFullException($"There isn't enough space to flush the buffer in: {path}. " +
                                         $"Currently available space: {freeSpace}/{totalSize}");
         }
     }
