@@ -351,6 +351,8 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var item in items)
                 {
+                    Database.ForTestingPurposes?.OnEtlItemExtracted?.Invoke(this, item, _statsId); // _statsId == current batch's EtlPerformanceStats.Id
+
                     extractedItemsSize++;
                     var changeVector = context.GetChangeVector(item.ChangeVector);
 
