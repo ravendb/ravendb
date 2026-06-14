@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedIncomingMigrationCommand(_shardedDatabase, data, lastDocumentEtag, _currentMigrationIndex);
         }
 
-        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
+        protected override void MergeSourceChangeVectorFromHeartbeat(DocumentsOperationContext documentsContext, string changeVector)
         {
             // do nothing
         }

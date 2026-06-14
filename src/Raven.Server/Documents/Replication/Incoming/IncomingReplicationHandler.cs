@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedDocumentReplicationCommand(data, lastDocumentEtag, isInternal: ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal);
         }
 
-        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
+        protected override void MergeSourceChangeVectorFromHeartbeat(DocumentsOperationContext documentsContext, string changeVector)
         {
             if (string.IsNullOrEmpty(changeVector))
                 return;
