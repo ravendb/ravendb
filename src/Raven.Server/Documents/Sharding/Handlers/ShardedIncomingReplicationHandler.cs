@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void InvokeOnFailed(Exception exception) => _parent.InvokeOnFailed(this, exception);
 
-        protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, string changeVector)
+        protected override void MergeSourceChangeVectorFromHeartbeat(TransactionOperationContext jsonOperationContext, string changeVector)
         {
             _lastAcceptedChangeVectorDuringHeartbeat = changeVector;
 
