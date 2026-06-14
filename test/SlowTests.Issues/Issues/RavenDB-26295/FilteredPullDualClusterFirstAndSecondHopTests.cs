@@ -45,6 +45,10 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered document pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeADocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered document pass", nodeADbCvAfterPass, nodeADocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
 
+        await lab.WaitForFilteredRoundTripFirstHopHeartbeatAsync();
+        var nodeADbCvAfterIdleHeartbeat = lab.GetDatabaseChangeVector(LabNode.A);
+        AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered document idle heartbeat", nodeADbCvAfterIdleHeartbeat, nodeADocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
+
         // Verify the filtered item can still move from node A to node C through ordinary internal replication.
         await lab.WaitForExpectedFilteredRoundTripItemAsync(LabNode.C);
 
@@ -749,6 +753,121 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "counter after local increment replicated from node A", nodeCCounterAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "counter after local increment replicated from node A", nodeCCounterAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "counter after local increment replicated from node A", nodeCDbCvAfterLocalChange, nodeCCounterAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
+    }
+
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Counters)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Hub])]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Sink])]
+    public async Task CounterDeletion_ShouldNotInflateDatabaseChangeVectorAcrossFilteredFirstAndSecondHops(Options options, ClusterSide filteredPassReceiveSide)
+    {
+        const string itemName = "counter-deletion";
+        const string counterName = "views";
+        const string retainedCounterName = "likes";
+        const long expectedCounterValue = 1;
+
+        await using var lab = await CreateDualClusterLabAsync(options, filteredPassReceiveSide, itemName);
+
+        await lab.StoreFilteredRoundTripTicketAsync(LabNode.B);
+        await lab.IncrementFilteredRoundTripCounterAsync(LabNode.B, counterName);
+        await lab.IncrementFilteredRoundTripCounterAsync(LabNode.B, retainedCounterName);
+        var nodeBCounterBeforeDelete = lab.GetFilteredRoundTripCounter(LabNode.B, counterName);
+        var nodeBRetainedCounterBeforeDelete = lab.GetFilteredRoundTripCounter(LabNode.B, retainedCounterName);
+
+        await lab.WaitForFilteredRoundTripDocumentNameAsync(LabNode.A);
+        await lab.WaitForFilteredRoundTripDocumentNameAsync(LabNode.C);
+        await lab.WaitForFilteredRoundTripCounterAsync(LabNode.A, counterName, expectedCounterValue);
+        await lab.WaitForFilteredRoundTripCounterAsync(LabNode.C, counterName, expectedCounterValue);
+        await lab.WaitForFilteredRoundTripCounterAsync(LabNode.A, retainedCounterName, expectedCounterValue);
+        await lab.WaitForFilteredRoundTripCounterAsync(LabNode.C, retainedCounterName, expectedCounterValue);
+
+        await lab.BlockInternalReplicationUntilBlockedAsync(from: LabNode.B, to: [LabNode.A, LabNode.C]);
+        await lab.StoreAllowedTicketThenFilteredOutUserAsync(LabNode.B);
+        await lab.DeleteFilteredRoundTripCounterAsync(LabNode.B, counterName);
+
+        var nodeBDatabaseId = lab.GetDatabaseIdFor(LabNode.B);
+        var nodeBDeletedCounterAfterDelete = lab.GetFilteredRoundTripCounter(LabNode.B, counterName);
+        var nodeBRetainedCounterAfterDelete = lab.GetFilteredRoundTripCounter(LabNode.B, retainedCounterName);
+        var nodeBDbCvAfterCounterDeletion = lab.GetDatabaseChangeVector(LabNode.B);
+        var originalIncomingChangeVector = nodeBRetainedCounterAfterDelete.ChangeVector;
+        var nodeBEtagInPassedChangeCv = GetEtag(originalIncomingChangeVector, nodeBDatabaseId);
+
+        var nodeADbCvBeforePass = lab.GetDatabaseChangeVector(LabNode.A);
+        var nodeBEtagInNodeADbCvBeforePass = GetEtag(nodeADbCvBeforePass, nodeBDatabaseId);
+        var nodeCDbCvBeforePass = lab.GetDatabaseChangeVector(LabNode.C);
+
+        Assert.True(
+            nodeBCounterBeforeDelete.Exists,
+            $"Expected counter '{counterName}' on '{lab.FilteredRoundTripTicketId}' to exist on {NodeTag(filteredPassReceiveSide, LabNode.B)} before deleting it. " +
+            $"nodeBCounterExists={nodeBCounterBeforeDelete.Exists}, nodeBCounterValue={nodeBCounterBeforeDelete.Value}, nodeBCounterCV='{nodeBCounterBeforeDelete.ChangeVector ?? "<null>"}'.");
+        Assert.True(
+            nodeBCounterBeforeDelete.Value == expectedCounterValue,
+            $"Expected counter '{counterName}' on {NodeTag(filteredPassReceiveSide, LabNode.B)} to have value {expectedCounterValue} before deleting it. " +
+            $"actualValue={nodeBCounterBeforeDelete.Value}, CV='{nodeBCounterBeforeDelete.ChangeVector ?? "<null>"}'.");
+        Assert.True(
+            nodeBRetainedCounterBeforeDelete.Exists,
+            $"Expected retained counter '{retainedCounterName}' on '{lab.FilteredRoundTripTicketId}' to keep the counter group alive on {NodeTag(filteredPassReceiveSide, LabNode.B)} while deleting '{counterName}'. " +
+            $"nodeBRetainedCounterExists={nodeBRetainedCounterBeforeDelete.Exists}, nodeBRetainedCounterValue={nodeBRetainedCounterBeforeDelete.Value}, nodeBRetainedCounterCV='{nodeBRetainedCounterBeforeDelete.ChangeVector ?? "<null>"}'.");
+        Assert.False(
+            nodeBDeletedCounterAfterDelete.Exists,
+            $"Expected counter '{counterName}' on '{lab.FilteredRoundTripTicketId}' to be deleted on {NodeTag(filteredPassReceiveSide, LabNode.B)} before filtered pass. " +
+            $"nodeBDeletedCounterAfterDeleteExists={nodeBDeletedCounterAfterDelete.Exists}, nodeBDeletedCounterAfterDeleteValue={nodeBDeletedCounterAfterDelete.Value}, CV='{nodeBDeletedCounterAfterDelete.ChangeVector ?? "<null>"}'.");
+        Assert.True(
+            nodeBRetainedCounterAfterDelete.Exists,
+            $"Expected retained counter '{retainedCounterName}' on '{lab.FilteredRoundTripTicketId}' to still exist on {NodeTag(filteredPassReceiveSide, LabNode.B)} after deleting '{counterName}'. " +
+            $"nodeBRetainedCounterAfterDeleteExists={nodeBRetainedCounterAfterDelete.Exists}, nodeBRetainedCounterAfterDeleteValue={nodeBRetainedCounterAfterDelete.Value}, CV='{nodeBRetainedCounterAfterDelete.ChangeVector ?? "<null>"}'.");
+        Assert.True(
+            nodeBEtagInPassedChangeCv > nodeBEtagInNodeADbCvBeforePass,
+            $"Expected counter deletion change on {NodeTag(filteredPassReceiveSide, LabNode.B)} to carry a newer etag than {NodeTag(filteredPassReceiveSide, LabNode.A)} had before the filtered pass. " +
+            $"nodeADbCvBefore='{nodeADbCvBeforePass}', nodeBRetainedCounterAfterDeleteCV='{nodeBRetainedCounterAfterDelete.ChangeVector}', nodeBDbCvAfterCounterDeletion='{nodeBDbCvAfterCounterDeletion}', " +
+            $"nodeBEtagInNodeADbCvBeforePass={nodeBEtagInNodeADbCvBeforePass}, nodeBEtagInPassedChangeCv={nodeBEtagInPassedChangeCv}.");
+
+        lab.ExpectPassedCounterDeletion(counterName, retainedCounterName, expectedCounterValue);
+        await lab.PassThroughFilteredReplicationAsync();
+
+        var nodeADocument = lab.GetFilteredRoundTripDocument(LabNode.A);
+        var nodeACounter = lab.GetFilteredRoundTripCounter(LabNode.A, counterName);
+        var nodeARetainedCounter = lab.GetFilteredRoundTripCounter(LabNode.A, retainedCounterName);
+        var nodeADbCvAfterPass = lab.GetDatabaseChangeVector(LabNode.A);
+
+        Assert.True(nodeADocument.Exists, $"Expected counter owner document '{lab.FilteredRoundTripTicketId}' to remain on {NodeTag(filteredPassReceiveSide, LabNode.A)}.");
+        Assert.True(
+            nodeARetainedCounter.Exists,
+            $"Expected retained counter '{retainedCounterName}' to remain on {NodeTag(filteredPassReceiveSide, LabNode.A)} while counter '{counterName}' is tombstoned. " +
+            $"nodeARetainedCounterExists={nodeARetainedCounter.Exists}, nodeARetainedCounterValue={nodeARetainedCounter.Value}, nodeARetainedCounterCV='{nodeARetainedCounter.ChangeVector ?? "<null>"}'.");
+        Assert.False(
+            nodeACounter.Exists,
+            $"Expected counter deletion '{counterName}' on '{lab.FilteredRoundTripTicketId}' to reach {NodeTag(filteredPassReceiveSide, LabNode.A)} and remove the live counter. " +
+            $"nodeACounterExists={nodeACounter.Exists}, nodeARetainedCounterCV='{nodeARetainedCounter.ChangeVector ?? "<null>"}'.");
+
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered counter deletion pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeARetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered counter deletion after pass", nodeARetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
+        AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered counter deletion after pass", nodeARetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
+        AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered counter deletion pass", nodeADbCvAfterPass, nodeARetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
+
+        await lab.WaitForExpectedFilteredRoundTripItemAsync(LabNode.C);
+
+        var nodeCDocument = lab.GetFilteredRoundTripDocument(LabNode.C);
+        var nodeCCounter = lab.GetFilteredRoundTripCounter(LabNode.C, counterName);
+        var nodeCRetainedCounter = lab.GetFilteredRoundTripCounter(LabNode.C, retainedCounterName);
+        var nodeCDbCvAfterPass = lab.GetDatabaseChangeVector(LabNode.C);
+
+        Assert.True(
+            nodeCRetainedCounter.Exists,
+            $"Expected retained counter '{retainedCounterName}' to remain on {NodeTag(filteredPassReceiveSide, LabNode.C)} after internal hop while counter '{counterName}' is tombstoned. " +
+            $"nodeCRetainedCounterExists={nodeCRetainedCounter.Exists}, nodeCRetainedCounterValue={nodeCRetainedCounter.Value}, nodeCRetainedCounterCV='{nodeCRetainedCounter.ChangeVector ?? "<null>"}'.");
+        Assert.False(
+            nodeCCounter.Exists,
+            $"Expected filtered counter deletion pass on '{lab.FilteredRoundTripTicketId}' to propagate from {NodeTag(filteredPassReceiveSide, LabNode.A)} to {NodeTag(filteredPassReceiveSide, LabNode.C)} " +
+            $"through ordinary internal replication while direct {NodeTag(filteredPassReceiveSide, LabNode.B)}->{NodeTag(filteredPassReceiveSide, LabNode.C)} is blocked. " +
+            $"nodeCDocument: exists={nodeCDocument.Exists}, name='{nodeCDocument.Name ?? "<null>"}', CV='{nodeCDocument.ChangeVector ?? "<null>"}'. " +
+            $"nodeCCounter: exists={nodeCCounter.Exists}, value={nodeCCounter.Value}, CV='{nodeCCounter.ChangeVector ?? "<null>"}'. " +
+            $"nodeCRetainedCounter: exists={nodeCRetainedCounter.Exists}, value={nodeCRetainedCounter.Value}, CV='{nodeCRetainedCounter.ChangeVector ?? "<null>"}'. " +
+            $"nodeARetainedCounterCV='{nodeARetainedCounter.ChangeVector ?? "<null>"}', nodeBRetainedCounterAfterDeleteCV='{nodeBRetainedCounterAfterDelete.ChangeVector ?? "<null>"}'.");
+
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered counter deletion internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCRetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered counter deletion after internal hop", nodeCRetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
+        AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered counter deletion after internal hop", nodeCRetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
+        AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered counter deletion internal hop", nodeCDbCvAfterPass, nodeCRetainedCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
     }
 
     [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.Attachments)]
