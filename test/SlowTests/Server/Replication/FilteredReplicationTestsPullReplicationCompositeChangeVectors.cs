@@ -175,8 +175,8 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
 
         var lastSentChangeVector = await AssertWaitForNotNullAsync(() => Task.FromResult(legacyHandler.LastSentChangeVector), timeout: 30_000);
         Assert.DoesNotContain("|", lastSentChangeVector);
-        // This source-frontier field is emitted ahead of RavenDB-26295 package 2.2 and is not consumed on the incoming side yet;
-        // it must stay order-only while the legacy peer receives Version-only item CVs.
+        // This source-frontier field feeds the pull failover cursor and must stay order-only
+        // while the legacy peer receives Version-only item CVs.
     }
 
     [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates | RavenTestCategory.TimeSeries)]

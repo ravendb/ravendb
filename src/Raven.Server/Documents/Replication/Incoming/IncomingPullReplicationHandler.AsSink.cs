@@ -31,24 +31,16 @@ namespace Raven.Server.Documents.Replication.Incoming
             };
         }
 
-        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
+        protected override void MergeSourceChangeVectorFromHeartbeat(DocumentsOperationContext documentsContext, string changeVector)
         {
-            switch (ChangeVectorShape)
-            {
-                case PullReplicationChangeVectorShape.Composite:
-                    // TODO RavenDB-26295 / #22885: advance heartbeat progress (LastReplicatedEtagFrom) in the failover-cursor work.
-                    return;
-                case PullReplicationChangeVectorShape.Flat:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(ChangeVectorShape), ChangeVectorShape, "Unknown pull replication change-vector shape.");
-            }
+            if (ChangeVectorShape == PullReplicationChangeVectorShape.Composite)
+                return;
 
             if (string.IsNullOrEmpty(changeVector))
                 return;
 
             RestoreKnownSinkEntriesFromLocalChangeVector(documentsContext, ref changeVector);
-            base.HandleHeartbeatMessage(documentsContext, changeVector);
+            base.MergeSourceChangeVectorFromHeartbeat(documentsContext, changeVector);
         }
     }
 }
