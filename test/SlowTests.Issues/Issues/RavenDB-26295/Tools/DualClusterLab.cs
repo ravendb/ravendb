@@ -820,6 +820,13 @@ public sealed class DualClusterLab : IAsyncDisposable
         }
     }
 
+    public async Task DeleteFilteredRoundTripCounterAsync(LabNode node, string counterName)
+    {
+        using var session = Store(RequiredFilteredPassReceiveSide, node).OpenAsyncSession();
+        session.CountersFor(RequiredFilteredRoundTripTicketId).Delete(counterName);
+        await session.SaveChangesAsync();
+    }
+
     public async Task PutFilteredRoundTripAttachmentAsync(LabNode node, string attachmentName, byte[] content, string contentType)
     {
         using var stream = new MemoryStream(content);
@@ -1026,6 +1033,25 @@ public sealed class DualClusterLab : IAsyncDisposable
     public Task WaitForFilteredRoundTripCounterAsync(LabNode node, string counterName, long expectedValue, TimeSpan? timeout = null) =>
         WaitForFilteredRoundTripCounterAsync(RequiredFilteredPassReceiveSide, node, counterName, expectedValue, timeout);
 
+    private async Task WaitForFilteredRoundTripCounterDeletionAsync(ClusterSide side, LabNode node, string counterName, TimeSpan? timeout = null)
+    {
+        var reached = await WaitForValueAsync(
+            () => GetCounter(side, node, RequiredFilteredRoundTripTicketId, counterName).Exists == false,
+            expectedVal: true,
+            timeout: (int)(timeout ?? DefaultReplicationWaitTimeout).TotalMilliseconds,
+            interval: 100);
+
+        var counter = GetCounter(side, node, RequiredFilteredRoundTripTicketId, counterName);
+
+        Assert.True(
+            reached,
+            $"Expected counter '{counterName}' on '{RequiredFilteredRoundTripTicketId}' to be deleted on {NodeTag(side, node)}. " +
+            $"exists={counter.Exists}, value={counter.Value}, CV='{counter.ChangeVector ?? "<null>"}'.");
+    }
+
+    public Task WaitForFilteredRoundTripCounterDeletionAsync(LabNode node, string counterName, TimeSpan? timeout = null) =>
+        WaitForFilteredRoundTripCounterDeletionAsync(RequiredFilteredPassReceiveSide, node, counterName, timeout);
+
     public async Task WaitForFilteredRoundTripCounterOrConflictAsync(LabNode node, string counterName, long expectedValue, TimeSpan? timeout = null)
     {
         var side = RequiredFilteredPassReceiveSide;
@@ -1229,6 +1255,16 @@ public sealed class DualClusterLab : IAsyncDisposable
         };
     }
 
+    public void ExpectPassedCounterDeletion(string deletedCounterName, string retainedCounterName, long retainedCounterValue)
+    {
+        _waitForExpectedFilteredRoundTripItemAsync = async (side, node) =>
+        {
+            await WaitForDocumentNameByIdAsync(side, node, RequiredFilteredRoundTripTicketId, RequiredFilteredRoundTripItemName);
+            await WaitForFilteredRoundTripCounterDeletionAsync(side, node, deletedCounterName);
+            await WaitForFilteredRoundTripCounterAsync(side, node, retainedCounterName, retainedCounterValue);
+        };
+    }
+
     public void ExpectPassedAttachment(string attachmentName, string expectedHash, long expectedSize)
     {
         _waitForExpectedFilteredRoundTripItemAsync = async (side, node) =>
@@ -1360,6 +1396,33 @@ public sealed class DualClusterLab : IAsyncDisposable
             $"Actual blocker count: {nodeBToNodeABlockers.Count}.");
 
         AssertFilteredOutUserDidNotReach(RequiredFilteredPassReceiveSide, LabNode.A);
+    }
+
+    public async Task WaitForFilteredRoundTripFirstHopHeartbeatAsync(TimeSpan? timeout = null)
+    {
+        var initialHandler = GetFilteredRoundTripFirstHopHandler();
+
+        Assert.NotNull(initialHandler);
+
+        var initialHeartbeatTicks = initialHandler.LastHeartbeatTicks;
+        var observed = await WaitForValueAsync(
+            () =>
+            {
+                var currentHandler = GetFilteredRoundTripFirstHopHandler();
+                return currentHandler != null &&
+                       currentHandler.IsConnectionDisposed == false &&
+                       currentHandler.LastHeartbeatTicks > initialHeartbeatTicks;
+            },
+            expectedVal: true,
+            timeout: (int)(timeout ?? DefaultReplicationWaitTimeout).TotalMilliseconds,
+            interval: 100);
+
+        var latestHandler = GetFilteredRoundTripFirstHopHandler();
+        Assert.True(
+            observed,
+            $"Expected filtered first-hop pull handler '{GetFilteredRoundTripFirstHopDescription(RequiredFilteredPassReceiveSide)}' to send an idle heartbeat after the filtered pass. " +
+            $"initialHeartbeatTicks={initialHeartbeatTicks}, latestHeartbeatTicks={latestHandler?.LastHeartbeatTicks.ToString(CultureInfo.InvariantCulture) ?? "<missing>"}, " +
+            $"handlerDisposed={latestHandler?.IsConnectionDisposed.ToString() ?? "<missing>"}.");
     }
 
     private async Task CreateFilteredRoundTripHubTaskAsync()
@@ -1514,6 +1577,34 @@ public sealed class DualClusterLab : IAsyncDisposable
                                     sink.Mode == PullReplicationMode.SinkToHub,
                 description: "SB->HA filtered round trip"),
 
+            _ => throw new ArgumentOutOfRangeException(nameof(receiveSide), receiveSide, null)
+        };
+    }
+
+    private DatabaseOutgoingReplicationHandler GetFilteredRoundTripFirstHopHandler()
+    {
+        return RequiredFilteredPassReceiveSide switch
+        {
+            ClusterSide.Hub => Database(ClusterSide.Hub, LabNode.B).ReplicationLoader.OutgoingHandlers
+                .FirstOrDefault(handler => handler is OutgoingPullReplicationHandlerAsHub asHub &&
+                                           string.Equals(asHub.PullReplicationDefinitionName, FilteredRoundTripHubName, StringComparison.OrdinalIgnoreCase)),
+
+            ClusterSide.Sink => Database(ClusterSide.Sink, LabNode.B).ReplicationLoader.OutgoingHandlers
+                .FirstOrDefault(handler => handler is OutgoingPullReplicationHandlerAsSink &&
+                                           handler.Destination is PullReplicationAsSink sink &&
+                                           IsFilteredRoundTripSinkTask(sink) &&
+                                           sink.Mode == PullReplicationMode.SinkToHub),
+
+            _ => throw new ArgumentOutOfRangeException(nameof(FilteredPassReceiveSide), FilteredPassReceiveSide, null)
+        };
+    }
+
+    private static string GetFilteredRoundTripFirstHopDescription(ClusterSide receiveSide)
+    {
+        return receiveSide switch
+        {
+            ClusterSide.Hub => "HB->SA filtered round trip",
+            ClusterSide.Sink => "SB->HA filtered round trip",
             _ => throw new ArgumentOutOfRangeException(nameof(receiveSide), receiveSide, null)
         };
     }
