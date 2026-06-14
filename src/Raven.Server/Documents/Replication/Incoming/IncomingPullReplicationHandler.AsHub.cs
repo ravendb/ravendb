@@ -23,10 +23,9 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected override bool PreventIncomingSinkDeletions =>
             IncomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true;
 
-        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, string changeVector)
+        protected override void MergeSourceChangeVectorFromHeartbeat(DocumentsOperationContext documentsContext, string changeVector)
         {
-            // TODO RavenDB-26295 / #22885: advance heartbeat progress (LastReplicatedEtagFrom) in the failover-cursor work.
-            // This no-op also covers the flat SinkToHub lane, which previously advanced from heartbeat frames.
+            // do nothing
         }
 
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context, DataForReplicationCommand data, long lastDocumentEtag)
