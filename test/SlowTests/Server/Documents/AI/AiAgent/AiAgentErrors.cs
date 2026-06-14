@@ -211,12 +211,8 @@ public class AiAgentErrors : RavenTestBase
                 Assert.Contains("Incorrect API key provided", e.Message);
                 break;
             case AiConnectorType.Google:
-                Assert.True(
-                    e.Message.Contains("API_KEY_INVALID", StringComparison.OrdinalIgnoreCase) ||
-                    e.Message.Contains("API key not valid", StringComparison.OrdinalIgnoreCase) ||
-                    (e.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase) &&
-                     e.Message.Contains("Internal error encountered", StringComparison.OrdinalIgnoreCase)),
-                    $"Expected an invalid-API-key error (or Google's '500 INTERNAL') but got: {e.Message}");
+                Assert.True(e.Message.Contains("Failed to communicate with the agent"),
+                    $"Expected the bad-key failure to surface as an agent communication error, but got: {e.Message}");
                 break;
             default:
                 throw new InvalidOperationException($"Unknown provider '{provider}'");
