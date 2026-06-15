@@ -167,10 +167,6 @@ namespace Raven.Server.Documents.Replication
                 using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                 {
                     DynamicJsonValue response = GetInitialRequestMessage(getLatestEtagMessage, replParams);
-
-                    if (replParams != null && replParams.Mode == PullReplicationMode.HubToSink)
-                        response[nameof(ReplicationMessageReply.LastConfirmedChangeVector)] = ReplicationUtils.ReadCursorFromClusterFor(Server, _databaseName, replParams.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor);
-
                     context.Write(writer, response);
                     writer.Flush();
                 }
