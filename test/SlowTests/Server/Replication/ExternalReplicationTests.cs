@@ -111,7 +111,7 @@ namespace SlowTests.Server.Replication
 
                 // the database group has a single node, so there are no siblings
                 // and a majority write-assurance requires 0 replicas
-                var minReplicas = WaitForValue(() => database.ReplicationLoader.GetMinNumberOfReplicas(), 1, timeout: 5000);
+                var minReplicas = WaitForValue(() => database.ReplicationLoader.GetMinNumberOfReplicas(), 0, timeout: 5000);
                 Assert.Equal(0, minReplicas);
                 Assert.Equal(0, database.ReplicationLoader.NumberOfSiblingsInInternalReplication);
 
