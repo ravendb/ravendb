@@ -1,106 +1,105 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/shadcn/ui/badge";
+import { Button } from "@/components/shadcn/ui/button";
+import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
+import { FormTextarea } from "@/components/form/form-textarea";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { SuggestionPicker } from "@/pages/setup/add-capability-wizard/suggestion-picker";
+import { useRegenerateAgentFromPromptMutation } from "@/pages/setup/add-capability-wizard/steps/review/use-regenerate-agent-from-prompt";
 
-type AgentSuggestionTabProps = {
-    // Jumps to the "Agent configuration" tab, where the prompt is edited.
-    showConfiguration: () => void;
-};
-
-// Read-only overview of the AI-suggested agent: pick a candidate, see its summary and
-// the full system prompt. All values come from the editable configuration, so edits
-// made in the "Agent configuration" tab are reflected here.
-export function AgentSuggestionTab({ showConfiguration }: AgentSuggestionTabProps) {
+// Overview of the AI-generated agent: choose a data candidate ("ai" mode) or edit the prompt
+// and regenerate ("prompt" mode), then preview the resulting configuration. All summary values
+// come from the editable configuration, so edits made in the "Agent configuration" tab show here.
+export function AgentSuggestionTab() {
     const { control } = useFormContext<AgentFormData>();
+    const mode = useWatch({ control, name: "create.mode" });
     const config = useWatch({ control, name: "review" });
     const connectionStringName = useWatch({ control, name: "connection.connectionStringName" });
-    const [isPromptHidden, setIsPromptHidden] = useState(false);
 
     const systemPrompt = config.systemPrompt?.trim() ?? "";
-    const isPromptPanelVisible = Boolean(systemPrompt) && !isPromptHidden;
     const parameterNames = (config.parameters ?? []).map((parameter) => parameter.name).filter(Boolean);
     const queryToolNames = (config.queries ?? []).map((query) => query.name).filter(Boolean);
 
     return (
         <div className="grid gap-5">
-            <SuggestionPicker />
+            {mode === "prompt" ? <PromptEditor /> : <SuggestionPicker />}
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="grid gap-2">
                 <div className="flex items-center gap-2 text-sm font-medium">
                     <Sparkles className="size-4" />
-                    AI Suggest
+                    Agent summary
                 </div>
-                {systemPrompt && (
-                    <button
-                        type="button"
-                        onClick={() => setIsPromptHidden((isHidden) => !isHidden)}
-                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                        {isPromptHidden ? "Show prompt" : "Hide prompt"}
-                        {isPromptHidden ? (
-                            <PanelRightOpen className="size-4" />
+                <div className="flex flex-col divide-y rounded-lg border bg-background px-4">
+                    <SummaryRow label="Agent name">{config.name || "—"}</SummaryRow>
+                    <SummaryRow label="System prompt">
+                        {systemPrompt ? (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="block max-w-md cursor-default">{systemPrompt}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm whitespace-normal">
+                                        {systemPrompt}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         ) : (
-                            <PanelRightClose className="size-4" />
+                            "—"
                         )}
-                    </button>
-                )}
-            </div>
-
-            <div className={cn("grid items-start gap-4", isPromptPanelVisible && "lg:grid-cols-[2fr_minmax(0,1fr)]")}>
-                <div className="grid min-w-0 gap-2">
-                    <span className="text-sm font-medium">Agent summary</span>
-                    <div className="flex flex-col divide-y rounded-lg border bg-background px-4">
-                        <SummaryRow label="Agent name">{config.name || "—"}</SummaryRow>
-                        <SummaryRow label="System prompt">
-                            {systemPrompt ? (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span className="block max-w-md cursor-default">{systemPrompt}</span>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="max-w-sm whitespace-normal">
-                                            {systemPrompt}
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            ) : (
-                                "—"
-                            )}
-                        </SummaryRow>
-                        <SummaryRow label="Connection string">{connectionStringName || "—"}</SummaryRow>
-                        <SummaryRow label="Parameters">
-                            <ChipList items={parameterNames} />
-                        </SummaryRow>
-                        <SummaryRow label="Query tools">
-                            <ChipList items={queryToolNames} />
-                        </SummaryRow>
-                        <SummaryRow label="Action tools">—</SummaryRow>
-                    </div>
+                    </SummaryRow>
+                    <SummaryRow label="Connection string">{connectionStringName || "—"}</SummaryRow>
+                    <SummaryRow label="Parameters">
+                        <ChipList items={parameterNames} />
+                    </SummaryRow>
+                    <SummaryRow label="Query tools">
+                        <ChipList items={queryToolNames} />
+                    </SummaryRow>
                 </div>
-
-                {isPromptPanelVisible && (
-                    <div className="grid min-w-0 gap-2">
-                        <div className="flex items-center justify-between gap-3">
-                            <span className="text-sm font-medium">Your prompt (TODO)</span>
-                            <button
-                                type="button"
-                                onClick={showConfiguration}
-                                className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                            >
-                                Edit your prompt (TODO)
-                            </button>
-                        </div>
-                        <div className="rounded-lg border bg-background p-3 text-sm whitespace-pre-wrap">
-                            {systemPrompt}
-                        </div>
-                    </div>
-                )}
             </div>
+        </div>
+    );
+}
+
+// Editable copy of the prompt that produced this agent. Regenerating replaces the
+// configuration with a fresh candidate built from the edited text.
+function PromptEditor() {
+    const { control } = useFormContext<AgentFormData>();
+    const promptInput = useWatch({ control, name: "create.promptInput" });
+    const regenerate = useRegenerateAgentFromPromptMutation();
+
+    const trimmedPrompt = (promptInput ?? "").trim();
+
+    const regenerateFromPrompt = () => {
+        if (!trimmedPrompt || regenerate.isPending) {
+            return;
+        }
+
+        regenerate.mutate(trimmedPrompt);
+    };
+
+    return (
+        <div className="grid gap-3 rounded-lg border bg-background p-4">
+            <FormTextarea
+                control={control}
+                name="create.promptInput"
+                label="Your prompt"
+                description="Edit your description and regenerate to get an updated agent configuration."
+                rows={4}
+                disabled={regenerate.isPending}
+            />
+            <Button
+                type="button"
+                variant="secondary"
+                className="justify-self-start"
+                onClick={regenerateFromPrompt}
+                disabled={!trimmedPrompt || regenerate.isPending}
+            >
+                {regenerate.isPending ? <Spinner /> : <Sparkles className="size-4" />}
+                Regenerate
+            </Button>
         </div>
     );
 }

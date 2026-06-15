@@ -31,7 +31,7 @@ export function ReviewAgentStep() {
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="suggestion" className="mt-3">
-                <AgentSuggestionTab showConfiguration={() => setActiveTab("configuration")} />
+                <AgentSuggestionTab />
             </TabsContent>
             <TabsContent value="configuration" className="mt-3">
                 <AgentConfigurationTab />

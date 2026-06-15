@@ -37,7 +37,7 @@ export const Default: Story = {};
 const SEED: AgentFormData = {
     capability: { type: "agent" },
     connection: { connectionStringName: "openai-chat" },
-    create: { mode: "ai", selectedIndex: 0 },
+    create: { mode: "ai", selectedIndex: 0, promptInput: "" },
     review: suggestionToAgentConfiguration(sampleAgentSuggestion.configurations[0]),
 };
 
