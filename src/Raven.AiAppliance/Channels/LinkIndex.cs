@@ -4,7 +4,7 @@ namespace Raven.AiAppliance.Channels;
 /// Config-DB pointer that resolves a public embed-link <c>token</c> to the
 /// per-app slug. Stored at <c>link-index/{token}</c> in the appliance config DB.
 ///
-/// Mirrors <see cref="WidgetIndex"/> and exists for the same reason: the public
+/// A routing pointer (like the legacy widget-index) and exists for the same reason: the public
 /// <c>/embed/{token}</c> URL is unauthenticated and the bridge's default
 /// <see cref="Raven.Client.Documents.IDocumentStore"/> targets the config DB,
 /// but the <see cref="EmbedLink"/> doc lives in the *app's* database and the URL

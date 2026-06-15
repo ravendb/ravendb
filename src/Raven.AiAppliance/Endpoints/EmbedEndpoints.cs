@@ -125,12 +125,17 @@ public static class EmbedEndpoints
         }
 
         NdjsonStream.SetHeaders(ctx);
+        var streamedAny = false;
         try
         {
             var result = await router.RunAsync(
                 // Parameters come from the link (bound at mint), never the request body.
                 new AgentRequest(app.Database, config.Identifier, gate.ConversationId, body.Prompt, link.Parameters),
-                async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
+                async chunk =>
+                {
+                    streamedAny = true;
+                    await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk });
+                },
                 ct,
                 resolved: config);
 
@@ -142,11 +147,20 @@ public static class EmbedEndpoints
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // End-user closed the widget mid-stream.
+            // End-user closed the widget mid-stream — the invocation stays consumed
+            // (a client-driven abort must not become a free retry / cost-without-count).
         }
         catch (Exception e)
         {
             logger.LogError(e, "embed chat failed for token={Token}", token);
+
+            // Pre-stream failure (LLM 401/5xx, timeout, agent error): nothing was
+            // streamed, so the conversation never advanced — refund the reserved
+            // invocation so a transient upstream failure doesn't permanently burn the
+            // grant. A mid-stream failure (streamedAny) stays consumed.
+            if (streamedAny == false)
+                await RefundInvocationAsync(store, app.Database, token, logger);
+
             try
             {
                 await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Chat failed. See server logs for details." });
@@ -208,6 +222,48 @@ public static class EmbedEndpoints
 
         // Sustained contention on a single link is itself abuse-shaped — shed it.
         return InvocationGate.Exhausted;
+    }
+
+    /// <summary>
+    /// Best-effort refund of one reserved invocation after a pre-stream failure (the
+    /// turn never advanced the conversation). Decrements under optimistic concurrency
+    /// and retries on a clash; any error is swallowed (over-counting on a rare race is
+    /// fine, and a refund failure must never escape into the chat error path). Uses
+    /// <see cref="CancellationToken.None"/> so the compensating write still lands even
+    /// if the request was aborted.
+    /// </summary>
+    private static async Task RefundInvocationAsync(
+        IDocumentStore store, string database, string token, ILogger<EmbedLogger> logger)
+    {
+        const int maxAttempts = 4;
+        try
+        {
+            for (var attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                using var session = store.OpenAsyncSession(database);
+                session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
+
+                var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token, CancellationToken.None);
+                if (link is null || link.InvocationCount <= 0)
+                    return;
+
+                link.InvocationCount--;
+
+                try
+                {
+                    await session.SaveChangesAsync(CancellationToken.None);
+                    return;
+                }
+                catch (ConcurrencyException)
+                {
+                    // A concurrent turn moved the count; reload and retry.
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "failed to refund invocation for token={Token}", token);
+        }
     }
 
     /// <summary>
@@ -381,7 +437,8 @@ form.addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt })
     });
-    if (resp.status === 410) { agentRow.textContent = "[this link is no longer active]"; return; }
+    // 410 = expired/revoked; 404 = link already swept/unknown. Same UX either way.
+    if (resp.status === 410 || resp.status === 404) { agentRow.textContent = "[this link is no longer active]"; return; }
     if (resp.status === 429) { agentRow.textContent = "[this link has reached its usage limit]"; return; }
     if (!resp.ok || !resp.body) { agentRow.textContent = "[error] HTTP " + resp.status; return; }
     const reader = resp.body.getReader();

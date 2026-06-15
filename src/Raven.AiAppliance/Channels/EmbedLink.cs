@@ -11,7 +11,7 @@ namespace Raven.AiAppliance.Channels;
 /// (<c>Guid.NewGuid().ToString("N")</c>) and IS the doc-id suffix
 /// (<c>embed-links/{token}</c>), stored raw — 122 random bits, unguessable, and
 /// the app DB is encrypted at rest. A sibling <see cref="LinkIndex"/> pointer in
-/// the config DB resolves the token to this app (mirroring <see cref="WidgetIndex"/>).
+/// the config DB resolves the token to this app (a routing pointer like the legacy widget-index).
 ///
 /// The grant closes the three holes of the static model: agent
 /// <see cref="Parameters"/> are bound here at mint time (never client-supplied,
