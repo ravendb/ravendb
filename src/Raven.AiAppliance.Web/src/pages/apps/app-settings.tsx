@@ -41,7 +41,7 @@ function AiConnectionStringsSection({ slug }: { slug: string }) {
                     modelType="Chat"
                     onCreated={refetch}
                     trigger={
-                        <Button size="sm">
+                        <Button size="sm" variant="outline">
                             <Plus className="size-3.5" aria-hidden="true" />
                             Add connection string
                         </Button>
