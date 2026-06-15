@@ -877,7 +877,8 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
-            NumberOfSiblingsInInternalReplication = newRecord.Topology.Count - 1;
+            // a promotable node isn't counted as a sibling, it is a new node that was added and doesn't hold all the data yet
+            NumberOfSiblingsInInternalReplication = newRecord.Topology.Members.Count + newRecord.Topology.Rehabs.Count - 1;
 
             DisposeConnections(instancesToDispose);
         }

@@ -216,8 +216,8 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(2, rehabs);
 
                 // a majority of a 5-node database group is 3 copies, so every node must wait for 2 replicas.
-                // however, a rehab node stays in the internal destinations only of its mentor, so on a node
-                // that mentors no rehab _numberOfSiblings drops to 2 and the majority is computed as 1
+                // the rehab nodes are still part of the database group and hold the data, so they are counted as siblings
+                // regardless of which node mentors them
                 foreach (var node in nodes.Where(n => killed.Contains(n) == false))
                 {
                     var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -233,6 +233,56 @@ namespace SlowTests.Server.Replication
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), majority: true);
+                    session.Store(new User(), "users/2");
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        public async Task PromotableNodeShouldNotBeCountedAsSiblingInWaitForReplicationWithMajority()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+
+            // suspend the observer (it only runs on the leader) so the added node stays in promotable state and is never promoted to member
+            Cluster.SuspendObserver(leader);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 1
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+                    session.SaveChanges();
+                }
+
+                // find the single member node that holds the database
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.Topology.Members.Count);
+                var memberServer = nodes.Single(n => n.ServerStore.NodeTag == record.Topology.Members[0]);
+
+                // add a second node, it enters the topology as a promotable and stays there (the observer is suspended)
+                var addResult = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record.Topology.Members.Count);
+                Assert.Equal(1, record.Topology.Promotables.Count);
+
+                var database = await memberServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                // the only other node is a promotable, it is a new node that doesn't hold the data yet so it isn't a sibling
+                var siblings = WaitForValue(() => database.ReplicationLoader.NumberOfSiblingsInInternalReplication, 0, timeout: 15_000);
+                Assert.Equal(0, siblings);
+                Assert.Equal(0, database.ReplicationLoader.GetMinNumberOfReplicas());
+
+                // there are no siblings that hold the data, so a majority write-assurance requires 0 replicas and completes immediately
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), majority: true);
                     session.Store(new User(), "users/2");
                     session.SaveChanges();
                 }
