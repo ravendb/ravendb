@@ -120,6 +120,10 @@ public static class EmbedEndpoints
         var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
         if (config is null)
         {
+            // The gate already reserved an invocation, but the turn never runs —
+            // refund it, same as a pre-stream failure (don't burn the grant on a
+            // server-side agent-deletion the caller can't see or control).
+            await RefundInvocationAsync(store, app.Database, token, logger);
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }

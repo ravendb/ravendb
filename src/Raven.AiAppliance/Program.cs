@@ -157,7 +157,10 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy(EmbedEndpoints.ChatRateLimitPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            // Fall back to the per-connection id (not a shared "unknown" bucket) when
+            // the remote IP is unavailable — e.g. in-memory TestServer — so requests
+            // aren't all collapsed into one partition.
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Connection.Id,
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 60,

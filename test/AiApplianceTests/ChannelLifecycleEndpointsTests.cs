@@ -326,6 +326,14 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
 
         var resp = await client.PostAsJsonAsync($"/embed/{token}/chat", new { prompt = "hi" });
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+
+        // The gate reserves an invocation before the agent lookup; a deleted agent
+        // must refund it (Copilot review C2) so the 404 doesn't permanently burn one.
+        using (var session = store.OpenAsyncSession(perAppDb))
+        {
+            var link = await session.LoadAsync<EmbedLink>($"embed-links/{token}");
+            Assert.Equal(0, link.InvocationCount);
+        }
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
