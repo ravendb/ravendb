@@ -83,7 +83,7 @@ namespace Raven.Server.Utils
 
         public static string ReadCursorFromClusterFor(ServerStore serverStore, string databaseName, long taskId, ExternalReplicationState.ReplicationStateType type)
         {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var key = ExternalReplicationState.GenerateItemName(databaseName, taskId, type);
