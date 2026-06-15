@@ -12,6 +12,12 @@ export function CreateAgentStep() {
     const suggestions = useCapabilityWizardStore((state) => state.suggestions);
     const mode = useWatch({ control, name: "create.mode" });
 
+    const choosePromptMode = () => {
+        if (mode !== "prompt") {
+            setValue("create.mode", "prompt");
+        }
+    };
+
     const chooseManualSetup = () => {
         // Re-clicking must not wipe a manual configuration in progress.
         if (mode === "manual") {
@@ -33,14 +39,22 @@ export function CreateAgentStep() {
                 )}
             </div>
 
-            {mode === "ai" && (
+            <div
+                className={cn(
+                    "grid gap-3 rounded-lg border bg-background p-4 transition-colors",
+                    mode === "prompt" && "border-foreground",
+                )}
+            >
                 <FormTextarea
                     control={control}
-                    name="review.systemPrompt"
-                    label="What would you like your agent to do?"
-                    rows={6}
+                    name="create.promptInput"
+                    label="Or describe what you'd like your agent to do"
+                    description="When you click Next, AI generates an agent configuration from your description that you can review and edit."
+                    placeholder="e.g. Help customers track their orders and answer questions about products."
+                    rows={4}
+                    onFocus={choosePromptMode}
                 />
-            )}
+            </div>
 
             <div className="grid gap-3">
                 <p className="text-center text-xs text-muted-foreground">or</p>

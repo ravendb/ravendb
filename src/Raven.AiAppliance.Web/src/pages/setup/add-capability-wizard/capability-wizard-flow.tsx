@@ -4,6 +4,7 @@ import { ChooseCapabilityStep } from "@/pages/setup/add-capability-wizard/steps/
 import { ConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/connect/connect-provider-step";
 import { useConnectProviderStep } from "@/pages/setup/add-capability-wizard/steps/connect/use-connect-provider-step";
 import { CreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/create-agent-step";
+import { useCreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/use-create-agent-step";
 import { ReviewAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/review-agent-step";
 import { CAPABILITY_OPTIONS } from "@/pages/setup/add-capability-wizard/steps/capability/capability-options";
 import { Badge } from "@/components/shadcn/ui/badge";
@@ -13,6 +14,7 @@ export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "crea
 
 export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> => {
     const connectProviderBeforeNext = useConnectProviderStep();
+    const createAgentBeforeNext = useCreateAgentStep();
 
     return {
         capability: {
@@ -43,9 +45,11 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
         },
         create: {
             title: "Create your Agent with AI",
-            description: "We analyzed your collections and propose a few agents. Pick one to edit, or set up manually.",
+            description:
+                "We analyzed your collections and propose a few agents. Pick one, describe your own for AI to generate, or set up manually.",
             bodyComponent: CreateAgentStep,
             validate: "create",
+            beforeNext: createAgentBeforeNext,
         },
         review: {
             title: "Review & edit your agent",

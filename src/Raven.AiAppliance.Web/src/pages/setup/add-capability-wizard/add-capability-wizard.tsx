@@ -36,18 +36,11 @@ export function AddCapabilityWizard() {
 
     const provisionMutation = useMutation({
         mutationFn: async (values: AgentFormData) => {
-            const isAiMode = values.create.mode === "ai";
-            const base = isAiMode
-                ? useCapabilityWizardStore.getState().suggestions[values.create.selectedIndex]
-                : undefined;
-
-            if (isAiMode && !base) {
-                throw new Error("No agent suggestion selected.");
-            }
+            // The base carries fields the form does not edit (e.g. chatTrimming) from the AI
+            // candidate; manual setup has none. Everything editable is overridden below.
+            const base = resolveAgentBase(values);
 
             const config: AiAgentConfiguration = {
-                // In AI mode, keep fields the form does not edit (e.g. chatTrimming)
-                // from the selected suggestion; everything editable is overridden below.
                 ...base,
                 ...buildAgentConfigurationPayload(values),
             };
@@ -105,11 +98,36 @@ function AddCapabilityWizardBody() {
     );
 }
 
+// The AI candidate a provisioned agent builds on: the selected data suggestion ("ai"), the
+// prompt-generated config ("prompt"), or none ("manual"). Throws when the expected candidate
+// is missing so we never silently provision an empty agent.
+function resolveAgentBase(values: AgentFormData): AiAgentConfiguration | undefined {
+    const store = useCapabilityWizardStore.getState();
+
+    if (values.create.mode === "ai") {
+        const base = store.suggestions[values.create.selectedIndex];
+        if (!base) {
+            throw new Error("No agent suggestion selected.");
+        }
+        return base;
+    }
+
+    if (values.create.mode === "prompt") {
+        const base = store.promptResult?.config;
+        if (!base) {
+            throw new Error("No generated agent. Go back and generate one from your prompt.");
+        }
+        return base;
+    }
+
+    return undefined;
+}
+
 function getDefaultValues(): AgentFormData {
     return {
         capability: { type: "agent" },
         connection: { connectionStringName: "" },
-        create: { mode: "ai", selectedIndex: 0 },
+        create: { mode: "ai", selectedIndex: 0, promptInput: "" },
         review: emptyAgentConfiguration(),
     };
 }

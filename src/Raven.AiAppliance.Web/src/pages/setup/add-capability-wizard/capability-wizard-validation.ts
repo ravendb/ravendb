@@ -83,12 +83,26 @@ export const agentSchema = z.object({
     connection: z.object({
         connectionStringName: z.string().min(1, "Select an AI provider connection string"),
     }),
-    create: z.object({
-        // "ai": start from an AI-suggested candidate; "manual": build the configuration from scratch.
-        mode: z.enum(["ai", "manual"]),
-        // Index into the AI-suggested candidates held in the wizard store.
-        selectedIndex: z.number().int().min(0),
-    }),
+    create: z
+        .object({
+            // "ai": start from an AI-suggested data candidate; "prompt": generate one from a
+            // free-text description; "manual": build the configuration from scratch.
+            mode: z.enum(["ai", "prompt", "manual"]),
+            // Index into the AI-suggested candidates held in the wizard store.
+            selectedIndex: z.number().int().min(0),
+            // Free-text intent that drives the "from-prompt" suggest mode. UI-only: it is the
+            // input to generation, not part of the provisioned configuration.
+            promptInput: z.string(),
+        })
+        .superRefine((value, ctx) => {
+            if (value.mode === "prompt" && value.promptInput.trim().length === 0) {
+                ctx.addIssue({
+                    code: "custom",
+                    message: "Describe what you'd like your agent to do",
+                    path: ["promptInput"],
+                });
+            }
+        }),
     review: agentConfigurationSchema,
 });
 
