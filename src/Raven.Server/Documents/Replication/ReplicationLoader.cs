@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public List<ReplicationNode> Destinations => _destinations;
 
-        public int NumberOfSiblingsInInternalReplication { get; internal set; }
+        public int NumberOfSiblingsInInternalReplication { get; private set; }
 
         private sealed class HubInfoForCleaner
         {
@@ -978,7 +978,7 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
 
-            NumberOfSiblingsInInternalReplication = newRecord.Topology.Count - 1;
+            NumberOfSiblingsInInternalReplication = Math.Max(newRecord.Topology.Members.Count + newRecord.Topology.Rehabs.Count - 1, 0);
             _numberOfSiblings = _destinations.Select(x => x.Url).Intersect(_clusterTopology.AllNodes.Select(x => x.Value)).Count();
 
             DisposeConnections(instancesToDispose);
