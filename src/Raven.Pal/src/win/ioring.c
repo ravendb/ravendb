@@ -72,6 +72,18 @@ struct IoRingSetup
 
 struct IoRingSetup IoRing;
 
+int32_t hresult_to_detailed_error(HRESULT hr)
+{
+    // We need translate HRESULT code into Win32 error code to have correct handling inside RavenDB.
+    // If we do not have possibility to convert it into Win32 then return the original value.
+    if (HRESULT_FACILITY(hr) == FACILITY_WIN32)
+    {
+        return HRESULT_CODE(hr);
+    }
+
+    return hr;
+}
+
 bool FillIoRingFunctions(struct IoRingSetup *s)
 {
     memset(s, 0, sizeof(struct IoRingSetup));
@@ -122,7 +134,7 @@ void close_ring_with_error(HRESULT hr)
     while (SUCCEEDED(IoRing.PopIoRingCompletion(IoRing.io_ring, &cqe)))
     {
         struct workitem *work = (struct workitem *)cqe.UserData;
-        work->submittion->result = hr;
+        work->submittion->result = hresult_to_detailed_error(hr);        
         work->submittion->error = true;
         if (--work->submittion->count == 0)
         {
@@ -210,16 +222,8 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
                     }
                     else
                     {
-                        int32_t error_code = cqe.ResultCode;
-                       
-                        if (HRESULT_FACILITY(error_code) == FACILITY_WIN32) 
-                        {
-                            // We need translate HRESULT code into Win32 error code to have correct handling inside RavenDB.
-                            error_code = HRESULT_CODE(error_code);
-                        }
-
                         cur->submittion->error = true;
-                        cur->submittion->result = error_code;
+                        cur->submittion->result = hresult_to_detailed_error(cqe.ResultCode);
                     }
                     break;
 
@@ -385,7 +389,7 @@ rvn_io_ring_init(int32_t *detailed_error_code)
     HRESULT hr = IoRing.CreateIoRing(IORING_VERSION_3, flags, g_cfg.io_ring_queue_size, g_cfg.io_ring_queue_size * 2, &IoRing.io_ring);
     if (FAILED(hr))
     {
-        *detailed_error_code = GetLastError();
+        *detailed_error_code = hresult_to_detailed_error(hr);
         rc = FAIL_CREATE_IO_RING;
         goto error;
     }
@@ -406,7 +410,7 @@ rvn_io_ring_init(int32_t *detailed_error_code)
     hr = IoRing.SetIoRingCompletionEvent(IoRing.io_ring, IoRing.event);
     if (FAILED(hr))
     {
-        *detailed_error_code = hr;
+        *detailed_error_code = hresult_to_detailed_error(hr);
         rc = FAIL_IO_RING_REG_EVENTFD;
         goto error;
     }
@@ -436,3 +440,4 @@ int io_ring_setup_successful()
 {
     return IoRing.io_ring != NULL;
 }
+

@@ -71,18 +71,17 @@ _sync_directory_maybe_symblink(char *dir_path, int32_t *detailed_error_code)
     if (real_path == NULL)
     {
         rc = FAIL_GET_REAL_PATH;
-        goto error_cleanup;
+        *detailed_error_code = errno;
+        goto cleanup;
     }
+
 
     rc = _sync_directory_for_internal(real_path, detailed_error_code);
     if (rc != SUCCESS)
-        goto error_cleanup;
+        goto cleanup;
 
     rc = SUCCESS;
-    goto cleanup;
-
-error_cleanup:
-    *detailed_error_code = errno;
+    
 cleanup:
     if (real_path != NULL)
         free(real_path);
