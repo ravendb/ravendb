@@ -116,25 +116,26 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
 
         switch (result)
         {
-        case EBADF: /* aufs do not support fallocate (azure shares) */
-        case EINVAL:
-        case EFBIG: /* can occure on >4GB allocation on fs such as ntfs-3g, W95 FAT32, etc.*/
-            /* fallocate is not supported, we'll use lseek instead */
-            {
-                char b = 0;
-                return _pwrite(fd, &b, 1UL, (uint64_t)size - 1UL, detailed_error_code);
-            }
-            break;
-        case EINTR:
-            *detailed_error_code = errno;
-            continue; /* retry */
+            case EBADF: /* aufs do not support fallocate (azure shares) */
+            case EINVAL:
+            case EFBIG: /* can occure on >4GB allocation on fs such as ntfs-3g, W95 FAT32, etc.*/
+                /* fallocate is not supported, we'll use lseek instead */
+                {
+                    char b = 0;
+                    return _pwrite(fd, &b, 1UL, (uint64_t)size - 1UL, detailed_error_code);
+                }
+                break;
+            case EINTR:
+                // _rvn_fallocate on linux is posix_fallocate64, which is not setting errno. Pass correct result.
+                *detailed_error_code = EINTR;
+                continue; /* retry */
 
-        case SUCCESS:
-            return SUCCESS;
+            case SUCCESS:
+                return SUCCESS;
 
-        default:
-            *detailed_error_code = result;
-            return FAIL_ALLOC_FILE;
+            default:
+                *detailed_error_code = result;
+                return FAIL_ALLOC_FILE;
         }
     }
     return result; /* return EINTR */

@@ -67,6 +67,7 @@ int32_t _open_pager_file(int fd,
                          int64_t *memory_size,
                          int32_t *detailed_error_code)
 {
+    int8_t errno_available = true;
     int32_t rc = SUCCESS;
     struct handle *handle_ptr = NULL;
     void *mem = NULL;
@@ -96,12 +97,22 @@ int32_t _open_pager_file(int fd,
         st.st_size = min_file_size;
         rc = _allocate_file_space(fd, st.st_size, detailed_error_code);
         if (rc != SUCCESS)
+        {
+            // Errno is not supported by _allocate_file_space; the correct value is already set.
+            errno_available = false;
             goto Error;
+        }
+         
         if (_sync_directory_allowed(fd) == SYNC_DIR_ALLOWED)
         {
             rc = _sync_directory_for(global_state->file_path, detailed_error_code);
             if (rc != SUCCESS)
+            {
+                // _sync_directory_for sets the actual detailed_error_code. 
+                // The errno for this case might be the exception we received for closing the file descriptor (overriding the original issue).                
+                errno_available = false;
                 goto Error;
+            }
         }
     }
     else if (st.st_size == 0 && (global_state->open_flags & OPEN_FILE_READ_ONLY))
@@ -161,7 +172,10 @@ int32_t _open_pager_file(int fd,
     return SUCCESS;
 
 Error:
-    *detailed_error_code = errno;
+    if (errno_available)
+    {
+        *detailed_error_code = errno;
+    }
     if (mem != NULL)
     {
         munmap(mem, st.st_size);
