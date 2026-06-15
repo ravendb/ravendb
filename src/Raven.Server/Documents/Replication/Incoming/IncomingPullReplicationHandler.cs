@@ -3,14 +3,9 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
-using Raven.Client.Extensions;
-using Raven.Client.Util;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -22,8 +17,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         public readonly ReplicationLoader.PullReplicationParams IncomingPullReplicationParams;
         public readonly string CertificateThumbprint;
 
-        private readonly PullReplicationBatchHistory _hubBatchHistory;
-        private readonly PullReplicationBatchHistory _sinkBatchHistory;
         protected readonly PullReplicationChangeVectorShape ChangeVectorShape;
 
         private readonly AllowedPathsValidator _allowedPathsValidator;
@@ -62,9 +55,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
             AfterItemsReadFromStream = ValidateIncomingReplicationItemsPaths;
-
-            _hubBatchHistory = new PullReplicationBatchHistory(parent);
-            _sinkBatchHistory = new PullReplicationBatchHistory(parent);
         }
 
         public override string FromToString => base.FromToString +
@@ -124,65 +114,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     }
                 }
             }
-        }
-
-        protected override DynamicJsonValue GetHeartbeatStatusMessage(DocumentsOperationContext documentsContext, long lastDocumentEtag, string handledMessageType)
-        {
-            var heartbeat = base.GetHeartbeatStatusMessage(documentsContext, lastDocumentEtag, handledMessageType);
-
-            if (IncomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub)
-            {
-                switch (handledMessageType)
-                {
-                    case ReplicationMessageType.Documents:
-                    case ReplicationMessageType.Heartbeat:
-                        if (string.IsNullOrEmpty(_lastBatchChangeVector) == false)
-                        {
-                            long hubEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
-                            _sinkBatchHistory.Add(hubEtag, _lastBatchChangeVector);
-                            
-                        }
-                        break;
-                }
-
-                // Here we report to the sink about the last sink change vector that was replicated to all the nodes in the hub cluster
-                heartbeat[nameof(ReplicationMessageReply.LastConfirmedChangeVector)] = _sinkBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector);
-            }
-            else if (IncomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
-            {
-                switch (handledMessageType)
-                {
-                    case ReplicationMessageType.Documents:
-                    case ReplicationMessageType.Heartbeat:
-                        if (string.IsNullOrEmpty(_lastBatchChangeVector) == false)
-                        {
-                            long sinkEtag = (long)heartbeat[nameof(ReplicationMessageReply.CurrentEtag)];
-                            _hubBatchHistory.Add(sinkEtag, _lastBatchChangeVector);
-                        }
-                        break;
-                }
-
-                // Here we check *locally* in the sink what is the last hub change vector that was replicated to all the nodes in the sink cluster
-                if (_hubBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector) is { } confirmedHubCv)
-                    PersistHubCursor(confirmedHubCv);
-            }
-
-            return heartbeat;
-        }
-
-        private void PersistHubCursor(string confirmedHubCv)
-        {
-            var command = new UpdateExternalReplicationStateCommand(ReplicationLoaderParent.Database.Name, RaftIdGenerator.NewId())
-            {
-                ExternalReplicationState = new ExternalReplicationState
-                {
-                    TaskId = IncomingPullReplicationParams.TaskId,
-                    NodeTag = ReplicationLoaderParent._server.NodeTag,
-                    SourceChangeVector = confirmedHubCv,
-                    Type = ExternalReplicationState.ReplicationStateType.HubCursor
-                }
-            };
-            ReplicationLoaderParent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
         private bool CanReceiverFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
