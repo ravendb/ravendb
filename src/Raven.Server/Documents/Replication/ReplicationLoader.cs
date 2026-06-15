@@ -1909,7 +1909,7 @@ namespace Raven.Server.Documents.Replication
 
         public int GetMinNumberOfReplicas()
         {
-            return (NumberOfSiblingsInInternalReplication + 1) / 2; // not "(NumberOfSiblingsInInternalReplication + 1) / 2 + 1" because 1 node already have got the data and only need to replicate
+            return (NumberOfSiblingsInInternalReplication + 1) / 2; // not "(NumberOfSiblingsInInternalReplication + 1) / 2 + 1" because the local node already has the data - we only need to replicate to additional nodes
         }
 
         public async Task<int> WaitForReplicationAsync(DocumentsOperationContext context, int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, ChangeVector lastChangeVector)
