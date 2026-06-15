@@ -76,7 +76,6 @@ namespace Raven.Server.Documents.Replication
         private readonly HashSet<ExternalReplicationBase> _externalDestinations = new HashSet<ExternalReplicationBase>();
         private List<ReplicationNode> _destinations = new List<ReplicationNode>();
         protected ClusterTopology _clusterTopology = new ClusterTopology();
-        public int NumberOfSiblingsInInternalReplication;
         public ConflictSolver ConflictSolverConfig;
         private readonly CancellationToken _shutdownToken;
         private HubInfoForCleaner _hubInfoForCleaner;
@@ -93,6 +92,7 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public List<ReplicationNode> Destinations => _destinations;
+        public int NumberOfSiblingsInInternalReplication { get; private set; }
 
         private sealed class HubInfoForCleaner
         {
@@ -877,8 +877,9 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
+
             // a promotable node isn't counted as a sibling, it is a new node that was added and doesn't hold all the data yet
-            NumberOfSiblingsInInternalReplication = newRecord.Topology.Members.Count + newRecord.Topology.Rehabs.Count - 1;
+            NumberOfSiblingsInInternalReplication = Math.Max(newRecord.Topology.Members.Count + newRecord.Topology.Rehabs.Count - 1, 0);
 
             DisposeConnections(instancesToDispose);
         }
