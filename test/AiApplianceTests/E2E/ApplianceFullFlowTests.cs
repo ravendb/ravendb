@@ -246,21 +246,34 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         var widgetId = channelJson.GetProperty("widgetId").GetString();
         Assert.False(string.IsNullOrEmpty(widgetId));
 
+        // ---------- T12b. Mint a per-user embed link (RavenDB-26775) ----------
+        // The widgetId is the durable config anchor; the customer's backend mints a
+        // short-lived, invocation-capped token link per end-user. The token is the
+        // bearer credential in the iframe URL — there is no static public widget URL.
+        var linkResp = await client.PostAsJsonAsync($"/api/apps/{slug}/embed-links",
+            new { agentId, ttlSeconds = 3600, maxInvocations = 10 });
+        Assert.True(linkResp.IsSuccessStatusCode,
+            $"mint embed-link returned {linkResp.StatusCode}: {await linkResp.Content.ReadAsStringAsync()}");
+        var linkJson = await linkResp.Content.ReadFromJsonAsync<JsonElement>();
+        var token = linkJson.GetProperty("token").GetString();
+        Assert.Matches("^[a-f0-9]{32}$", token!);
+        Assert.EndsWith($"/embed/{token}", linkJson.GetProperty("url").GetString());
+
         // ---------- T13. Embed page renders ----------
-        var embedResp = await client.GetAsync($"/embed/{widgetId}");
+        var embedResp = await client.GetAsync($"/embed/{token}");
         Assert.Equal(HttpStatusCode.OK, embedResp.StatusCode);
         Assert.Contains("text/html", embedResp.Content.Headers.ContentType?.ToString() ?? "");
         var embedHtml = await embedResp.Content.ReadAsStringAsync();
         Assert.False(string.IsNullOrWhiteSpace(embedHtml), "embed page body was empty");
-        Assert.Contains(widgetId!, embedHtml);
+        Assert.Contains(token!, embedHtml);
 
         // ---------- T14. Embed chat streams a real agent reply ----------
-        // Goes through the public embed route -> AgentRouter -> the per-app
-        // "demo-agent" registered in T11b -> the OpenAI CS from T11a. Proves the
-        // demo's closing moment: a browser chatting with the agent over the
-        // CDC-mirrored Postgres data.
+        // Public token route -> AgentRouter -> the per-app "demo-agent" registered
+        // in T11b -> the OpenAI CS from T11a. The demo's closing moment: a browser
+        // chatting with the agent over the CDC-mirrored Postgres data. Parameters
+        // and the conversation are owned by the minted link; the body is just the prompt.
         using var chatCts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-        var chatReq = new HttpRequestMessage(HttpMethod.Post, $"/embed/{widgetId}/chat")
+        var chatReq = new HttpRequestMessage(HttpMethod.Post, $"/embed/{token}/chat")
         {
             Content = JsonContent.Create(new { prompt = "Say hello in one short sentence." }),
         };
@@ -269,37 +282,32 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
             $"embed chat returned {chatResp.StatusCode}: {await chatResp.Content.ReadAsStringAsync(chatCts.Token)}");
         Assert.Contains("application/x-ndjson", chatResp.Content.Headers.ContentType?.ToString() ?? "");
 
-        var (replyText, sawDone, error, conversationId) = await ReadEmbedChatAsync(chatResp, chatCts.Token);
+        var (replyText, sawDone, error, _) = await ReadEmbedChatAsync(chatResp, chatCts.Token);
         Assert.True(string.IsNullOrEmpty(error), $"embed chat emitted an error frame: {error}");
         Assert.True(sawDone, "embed chat stream did not emit a 'done' frame");
         Assert.False(string.IsNullOrWhiteSpace(replyText), "embed chat produced no reply text");
 
-        // A2: the minted id is a random chats/{guid}, not an enumerable sequential one.
-        Assert.False(string.IsNullOrEmpty(conversationId), "turn 1 did not return a conversationId");
-        Assert.StartsWith("chats/", conversationId);
-        Assert.Matches(@"^chats/[0-9a-f]{32}$", conversationId!);
-
-        // ---------- T14b. Same conversation continues via the returned id ----------
-        // Turn 2 echoes the conversationId from turn 1's done frame.
+        // ---------- T14b. The link owns the conversation across turns ----------
+        // Turn 2 reuses the same token; the server binds it to the same conversation
+        // (the public surface no longer accepts a client-supplied conversation id).
         using var chat2Cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-        var chat2Req = new HttpRequestMessage(HttpMethod.Post, $"/embed/{widgetId}/chat")
+        var chat2Req = new HttpRequestMessage(HttpMethod.Post, $"/embed/{token}/chat")
         {
-            Content = JsonContent.Create(new { prompt = "Repeat your previous greeting in the same words.", conversationId }),
+            Content = JsonContent.Create(new { prompt = "Repeat your previous greeting in the same words." }),
         };
         var chat2Resp = await client.SendAsync(chat2Req, HttpCompletionOption.ResponseHeadersRead, chat2Cts.Token);
         Assert.True(chat2Resp.IsSuccessStatusCode,
             $"embed chat turn 2 returned {chat2Resp.StatusCode}: {await chat2Resp.Content.ReadAsStringAsync(chat2Cts.Token)}");
 
-        var (reply2, sawDone2, error2, conversationId2) = await ReadEmbedChatAsync(chat2Resp, chat2Cts.Token);
+        var (reply2, sawDone2, error2, _) = await ReadEmbedChatAsync(chat2Resp, chat2Cts.Token);
         Assert.True(string.IsNullOrEmpty(error2), $"embed chat turn 2 emitted an error frame: {error2}");
         Assert.True(sawDone2, "embed chat turn 2 did not emit a 'done' frame");
         Assert.False(string.IsNullOrWhiteSpace(reply2), "embed chat turn 2 produced no reply text");
-        Assert.Equal(conversationId, conversationId2); // continuation runs under the same id
 
         // ---------- Optional manual park ----------
         if (Environment.GetEnvironmentVariable("APPLIANCE_E2E_HOLD") == "1")
         {
-            Console.WriteLine($"Embed URL: {client.BaseAddress}embed/{widgetId}");
+            Console.WriteLine($"Embed URL: {client.BaseAddress}embed/{token}");
             Console.WriteLine("Test parked. Ctrl+C to exit.");
             await Task.Delay(Timeout.Infinite);
         }

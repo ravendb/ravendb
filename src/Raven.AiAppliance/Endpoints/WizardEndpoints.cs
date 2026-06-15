@@ -380,6 +380,11 @@ public static class WizardEndpoints
         cdcConfig.Name = $"{slug}-cdc";
         await store.Maintenance.ForDatabase(slug).SendAsync(new AddCdcSinkOperation(cdcConfig), ct);
 
+        // Enable Expiration (so minted embed-links self-delete at TTL) + Revisions
+        // on the EmbedLinks collection (so an expired link leaves an audit trail) —
+        // RavenDB-26775.
+        await AppDatabaseFeatures.ConfigureAsync(store, slug, ct);
+
         // Register the App on the config DB. Id is auto-assigned via HiLo
         // (apps/1-A, apps/2-A, ...). OCC.Writes is harmless for inserts — HiLo
         // guarantees the id is fresh — but keeps the convention consistent with
