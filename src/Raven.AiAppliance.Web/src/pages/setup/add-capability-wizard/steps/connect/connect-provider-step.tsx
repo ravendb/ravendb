@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -12,29 +11,9 @@ import { FormCombobox } from "@/components/form/form-combobox";
 export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
     const { slug = "" } = useParams();
     const { control, setValue } = useFormContext<AgentFormData>();
-    const createdConnectionStringNameRef = useRef<string>(undefined);
 
     const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list(slug));
     const items = connectionStringsQuery.data?.items ?? [];
-
-    // TODO fixme
-    // Workaround for now to select the newly added connection string
-    useEffect(() => {
-        const createdConnectionStringName = createdConnectionStringNameRef.current;
-
-        if (
-            !createdConnectionStringName ||
-            !connectionStringsQuery.data?.items.some((item) => item.name === createdConnectionStringName)
-        ) {
-            return;
-        }
-
-        setValue("connection.connectionStringName", createdConnectionStringName, {
-            shouldValidate: true,
-            shouldDirty: true,
-        });
-        createdConnectionStringNameRef.current = undefined;
-    }, [connectionStringsQuery.data?.items, setValue]);
 
     return (
         <ApiState
@@ -60,10 +39,12 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
                         <AddAiConnectionString
                             slug={slug}
                             modelType="Chat"
-                            onCreated={async (name) => {
-                                createdConnectionStringNameRef.current = name;
-                                await connectionStringsQuery.refetch();
-                            }}
+                            onCreated={(name) =>
+                                setValue("connection.connectionStringName", name, {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                })
+                            }
                         />
                     }
                 />
