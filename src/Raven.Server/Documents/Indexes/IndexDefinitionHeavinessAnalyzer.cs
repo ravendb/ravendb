@@ -463,6 +463,9 @@ namespace Raven.Server.Documents.Indexes
             if (definition.Maps == null || definition.Maps.Count == 0)
                 return null;
 
+            if (definition.Type.IsJavaScript())
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Constants.Documents.Collections.AllDocumentsCollection };
+
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (string map in definition.Maps)

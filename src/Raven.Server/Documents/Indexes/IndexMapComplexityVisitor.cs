@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -20,6 +21,11 @@ namespace Raven.Server.Documents.Indexes
         public bool HasWhereClause { get; private set; }
         public bool HasRecurse { get; private set; }
 
+        private const string MethodLoadDocument = "LoadDocument";
+        private const string MethodSelectMany = nameof(Enumerable.SelectMany);
+        private const string MethodWhere = nameof(Enumerable.Where);
+        private const string MethodRecurse = "Recurse";
+
         private readonly HashSet<SyntaxNode> _visitedFanoutNodes = new();
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -35,19 +41,19 @@ namespace Raven.Server.Documents.Indexes
 
             switch (methodName)
             {
-                case "LoadDocument":
+                case MethodLoadDocument:
                     LoadDocumentCount++;
                     break;
 
-                case "SelectMany":
+                case MethodSelectMany:
                     TrackFanout(node);
                     break;
 
-                case "Where":
+                case MethodWhere:
                     HasWhereClause = true;
                     break;
 
-                case "Recurse":
+                case MethodRecurse:
                     HasRecurse = true;
                     break;
             }
