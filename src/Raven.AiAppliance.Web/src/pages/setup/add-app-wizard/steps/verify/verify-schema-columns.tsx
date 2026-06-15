@@ -5,6 +5,7 @@ import type { DiscoverTableResponse } from "@/api/generated/server-api";
 import { Checkbox } from "@/components/shadcn/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
+import { Button } from "@/components/shadcn/ui/button";
 
 const TABLE_NAME_COLUMN: ColumnDef<DiscoverTableResponse> = {
     accessorFn: (table) => getTableLabel(table),
@@ -17,10 +18,12 @@ const TABLE_NAME_COLUMN: ColumnDef<DiscoverTableResponse> = {
             {row.original.warnings.length > 0 && (
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <TriangleAlertIcon
-                            className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
-                            aria-label="Table warnings"
-                        />
+                        <Button variant="link" aria-label="Table warnings">
+                            <TriangleAlertIcon
+                                className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
+                                aria-hidden="true"
+                            />
+                        </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                         <MessageTooltipBody messages={row.original.warnings} />
@@ -84,10 +87,12 @@ export const NEEDS_CONFIG_COLUMNS: ColumnDef<DiscoverTableResponse>[] = [
         cell: ({ row }) => (
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <TriangleAlertIcon
-                        className="size-4 shrink-0 text-amber-600 dark:text-amber-400"
-                        aria-label="Why this table needs configuration"
-                    />
+                    <Button variant="link" aria-label="Why this table needs configuration">
+                        <TriangleAlertIcon
+                            className="size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                            aria-hidden="true"
+                        />
+                    </Button>
                 </TooltipTrigger>
                 <TooltipContent>{getNeedsConfigurationReason(row.original)}</TooltipContent>
             </Tooltip>

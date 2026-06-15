@@ -99,9 +99,7 @@ export function VerifySchemaStep() {
 
             {discoverMutation.isPending ? (
                 <DiscoverLoadingSkeleton />
-            ) : allTables.length === 0 ? (
-                <NoTablesFound schemas={discoverSchemas} onCustomizeSchemas={() => setIsSchemasSheetOpen(true)} />
-            ) : (
+            ) : allTables.length > 0 ? (
                 <>
                     <div className="flex items-center gap-2">
                         <InputGroup className="max-w-sm">
@@ -168,7 +166,9 @@ export function VerifySchemaStep() {
                         <NeedsConfigTablesTable tables={needsConfigTables} search={search} />
                     )}
                 </>
-            )}
+            ) : discoverResult?.success ? (
+                <NoTablesFound schemas={discoverSchemas} onCustomizeSchemas={() => setIsSchemasSheetOpen(true)} />
+            ) : null}
 
             {formState.errors?.verifySchema?.tables && (
                 <Alert variant="destructive">{formState.errors.verifySchema.tables.message}</Alert>
