@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Json;
@@ -146,6 +147,25 @@ builder.Services.AddResiliencePipeline(RavenReadinessService.PipelineName, (pipe
 builder.Services.AddHealthChecks()
     .AddCheck<RavenHealthCheck>("ravendb", failureStatus: HealthStatus.Unhealthy);
 
+// RavenDB-26775 backstop: a coarse per-IP cap on the public embed chat route.
+// The minted link's invocation cap + TTL is the PRIMARY control; this only
+// blunts token-brute-forcing the 410/404 path and high-N "public" tokens.
+// Caveat: no UseForwardedHeaders today (M2) — behind a TLS proxy the partition
+// key is the proxy's IP, so the per-link cap remains the real guarantee.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(EmbedEndpoints.ChatRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -176,12 +196,14 @@ if (app.Environment.IsDevelopment())
 app.UseWebSockets();
 
 app.UseReadinessGate();
+app.UseRateLimiter();
 
 StaticAssetEndpoints.Map(app);
 HealthEndpoints.Map(app);
 BootstrapEndpoints.Map(app);
 AppsEndpoints.Map(app);
 ChannelsEndpoints.Map(app);
+EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
 AgentsEndpoints.Map(app);
 WizardEndpoints.Map(app);

@@ -47,6 +47,11 @@ public sealed class RavenReadinessService(
                 "RavenDB ready at {Url}; config database {Database} {Action}.",
                 opts.RavenUrl, opts.ConfigDatabase, created ? "created" : "already present");
 
+            // The config DB holds the link-index/{token} routing pointers, which
+            // carry @expires; enable Expiration so they self-clean once the link's
+            // TTL elapses (idempotent on every startup). RavenDB-26775.
+            await AppDatabaseFeatures.EnableExpirationAsync(store, opts.ConfigDatabase, stoppingToken);
+
             ready.MarkReady();
 
             // Bootstrap only flips to Ready once activation has produced a setup

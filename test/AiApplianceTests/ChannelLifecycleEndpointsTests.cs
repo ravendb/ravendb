@@ -16,11 +16,13 @@ namespace AiApplianceTests;
 
 /// <summary>
 /// RavenDB-26700 (T-6) channel lifecycle + wizard read-side coverage:
-/// list / edit / delete channels, the public <c>/embed/{widgetId}</c> page +
-/// its 410-when-disabled behaviour, the <c>/cdc/progress</c> WebSocket, and the
-/// <c>/setup/try</c> smoke stream. The real-LLM reply path is asserted in the
-/// E2E (<see cref="E2E.ApplianceFullFlowTests"/> T14); here we only prove the
-/// stream wiring opens with valid NDJSON, so these run without a live LLM.
+/// list / edit / delete channels, the <c>/cdc/progress</c> WebSocket, and the
+/// <c>/setup/try</c> smoke stream, plus the two channel-adjacent embed gates
+/// (CSP header + agent-deleted 404). The minted-token embed lifecycle lives in
+/// <see cref="EmbedLinksTests"/> (RavenDB-26775). The real-LLM reply path is
+/// asserted in the E2E (<see cref="E2E.ApplianceFullFlowTests"/> T14); here we
+/// only prove the stream wiring opens with valid NDJSON, so these run without a
+/// live LLM.
 /// </summary>
 public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTestBase(output)
 {
@@ -191,39 +193,11 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
-    // ---- embed page ----
-
-    [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Embed_page_returns_html_for_enabled_channel()
-    {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
-
-        var resp = await client.GetAsync($"/embed/{widgetId}");
-        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-        Assert.Contains("text/html", resp.Content.Headers.ContentType?.ToString() ?? "");
-        var html = await resp.Content.ReadAsStringAsync();
-        Assert.Contains(widgetId, html);
-        // The chat input must expose an accessible name for screen readers.
-        Assert.Contains("aria-label", html);
-    }
-
-    [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Embed_page_returns_404_for_unknown_widget()
-    {
-        var store = GetDocumentStore();
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/embed/wgt_nope");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
-    }
+    // ---- embed page (RavenDB-26775: minted token links) ----
+    // The page/chat-by-token lifecycle (renders, malformed-token 404, cap,
+    // expiry, revoke, origin matrix, conversation binding) lives in
+    // EmbedLinksTests. Here we keep the two channel-adjacent gates: the exact
+    // CSP header derived from the channel, and the agent-deleted 404.
 
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Embed_page_csp_reflects_allowed_origins()
@@ -241,99 +215,42 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
 
         // Non-empty origins -> frame-ancestors CSP on the embed page. 'self'
         // is always present so the appliance's own UI can preview the widget.
-        var restrictedWidget = await ProvisionIFrameChannelAsync(client, "app-a");
-        var restricted = await client.GetAsync($"/embed/{restrictedWidget}");
+        await ProvisionIFrameChannelAsync(client, "app-a");
+        var restrictedToken = await MintLinkAsync(client, "app-a");
+        var restricted = await client.GetAsync($"/embed/{restrictedToken}");
         Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
         var csp = Assert.Single(restricted.Headers.GetValues("Content-Security-Policy"));
         Assert.Equal("frame-ancestors 'self' http://localhost", csp);
 
         // Empty origins -> NO CSP header at all: the embed page is intentionally
-        // embeddable from anywhere (M1 decision 2026-06-04) until the
-        // widget-token work revisits the posture.
+        // embeddable from anywhere (M1 decision 2026-06-04).
         await ApplianceTestSeed.SeedMockAgentAsync(client, "app-b", "demo-agent");
         var openProvision = await client.PostAsJsonAsync("/api/apps/app-b/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
         Assert.True(openProvision.IsSuccessStatusCode, await openProvision.Content.ReadAsStringAsync());
-        var openWidget = (await openProvision.Content.ReadFromJsonAsync<JsonElement>())
-            .GetProperty("widgetId").GetString();
-        var open = await client.GetAsync($"/embed/{openWidget}");
+        var openToken = await MintLinkAsync(client, "app-b");
+        var open = await client.GetAsync($"/embed/{openToken}");
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
         Assert.False(open.Headers.Contains("Content-Security-Policy"));
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Disabled_channel_embed_returns_410()
-    {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
-
-        var disable = await client.PutAsJsonAsync($"/api/apps/my-app/channels/{widgetId}", new { enabled = false });
-        Assert.True(disable.IsSuccessStatusCode, await disable.Content.ReadAsStringAsync());
-
-        var resp = await client.GetAsync($"/embed/{widgetId}");
-        Assert.Equal(HttpStatusCode.Gone, resp.StatusCode);
-    }
-
-    // Embed chat continuation + conversationId prefix guard live in EmbedAuthTests.
-
-    [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Embed_page_returns_404_for_non_iframe_channel()
-    {
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        // Seed a non-IFrame channel doc + its widget-index pointer directly: the
-        // API can't provision Telegram/WhatsApp (they 501), and /embed is the
-        // iFrame-only surface, so resolving this widget must be treated as a miss.
-        const string widgetId = "wgt_not_iframe";
-        using (var cfg = store.OpenAsyncSession())
-        {
-            await cfg.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = "my-app" });
-            await cfg.SaveChangesAsync();
-        }
-        using (var session = store.OpenAsyncSession(perAppDb))
-        {
-            await session.StoreAsync(new Channel
-            {
-                Id = $"channels/{widgetId}",
-                Type = ChannelType.Telegram,
-                AgentId = "demo-agent",
-                Enabled = true,
-            });
-            await session.SaveChangesAsync();
-        }
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync($"/embed/{widgetId}");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Embed_chat_returns_404_for_unregistered_agent()
     {
-        // L1 (review 2026-06-04): a channel whose stored AgentId no longer
+        // L1 (review 2026-06-04): a link whose channel's AgentId no longer
         // resolves to a persisted agent (e.g. the agent was deleted) must fail
         // with a clean 404 before the NDJSON stream opens — not 200 + an error
-        // frame.
+        // frame. Seed the link + channel directly with a ghost agent.
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
         using var _db = cleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
+        var token = Guid.NewGuid().ToString("N");
         const string widgetId = "wgt_ghost_agent";
         using (var cfg = store.OpenAsyncSession())
         {
-            await cfg.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = "my-app" });
+            await cfg.StoreAsync(new LinkIndex { Id = $"link-index/{token}", Slug = "my-app" });
             await cfg.SaveChangesAsync();
         }
         using (var session = store.OpenAsyncSession(perAppDb))
@@ -345,13 +262,22 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
                 AgentId = "ghost-agent",
                 Enabled = true,
             });
+            await session.StoreAsync(new EmbedLink
+            {
+                Id = $"embed-links/{token}",
+                WidgetId = widgetId,
+                AgentId = "ghost-agent",
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                MaxInvocations = 10,
+                CreatedAt = DateTime.UtcNow,
+            });
             await session.SaveChangesAsync();
         }
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.PostAsJsonAsync($"/embed/{widgetId}/chat", new { prompt = "hi" });
+        var resp = await client.PostAsJsonAsync($"/embed/{token}/chat", new { prompt = "hi" });
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
@@ -377,9 +303,6 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
 
         var delete = await client.DeleteAsync($"/api/apps/my-app/channels/{widgetId}");
         Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
-
-        var gone = await client.GetAsync($"/embed/{widgetId}");
-        Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);
 
         var reResp = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
@@ -518,6 +441,15 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
         return json.GetProperty("widgetId").GetString()!;
+    }
+
+    private static async Task<string> MintLinkAsync(HttpClient client, string slug, string agentId = "demo-agent")
+    {
+        var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/embed-links",
+            new { agentId, ttlSeconds = 3600, maxInvocations = 50 });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        return json.GetProperty("token").GetString()!;
     }
 
     /// <summary>Reads the streamed response line by line and returns the first
