@@ -17,10 +17,14 @@ namespace Raven.AiAppliance.Endpoints;
 /// old static <c>widgetId</c> as the bearer credential; the public consume-side
 /// lives in <see cref="EmbedEndpoints"/>.
 ///
-/// These are authenticated <c>/api/*</c> endpoints (dashboard API key). The
-/// per-agent <see cref="Channel"/> remains the durable config anchor (origins,
-/// theme, enabled); a link is an ephemeral grant minted against it, resolved via
-/// the existing <see cref="ChannelBinding"/> for <c>(slug, IFrame, agentId)</c>.
+/// These map onto the shared <c>/api/apps/{slug}</c> surface. NOTE: like the rest
+/// of <c>/api/*</c> in the appliance, they carry <b>no in-process authentication</b>
+/// — auth is expected at the fronting layer (the <c>AiAppliance.Web</c>/edge proxy);
+/// the instance-wide dashboard API-key gate is deferred (design §3.3). Mint can
+/// drive LLM spend, so the fronting layer must guard it. The per-agent
+/// <see cref="Channel"/> remains the durable config anchor (origins, theme,
+/// enabled); a link is an ephemeral grant minted against it, resolved via the
+/// existing <see cref="ChannelBinding"/> for <c>(slug, IFrame, agentId)</c>.
 /// </summary>
 public static class EmbedLinksEndpoints
 {

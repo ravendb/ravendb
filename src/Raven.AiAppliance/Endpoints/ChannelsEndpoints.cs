@@ -139,7 +139,6 @@ public static class ChannelsEndpoints
             var existing = await session.LoadAsync<ChannelBinding>(bindingId, ct);
             if (existing is not null)
             {
-                await UpsertWidgetIndexAsync(store, existing.WidgetId, app.Slug, ct);
                 logger.LogInformation(
                     "Channel binding already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
                     app.Slug, config.Identifier, existing.WidgetId);
@@ -181,8 +180,6 @@ public static class ChannelsEndpoints
 
             await session.SaveChangesAsync(ct);
 
-            await UpsertWidgetIndexAsync(store, widgetId, app.Slug, ct);
-
             logger.LogInformation(
                 "Provisioned iFrame channel slug={Slug} widgetId={WidgetId} agentId={AgentId}",
                 app.Slug, widgetId, config.Identifier);
@@ -211,7 +208,6 @@ public static class ChannelsEndpoints
                     $"ClusterTransactionConcurrencyException fired for '{bindingId}' but the binding doc never became visible after waiting for cluster-tx index {winnerIndex}.");
             }
 
-            await UpsertWidgetIndexAsync(store, winner.WidgetId, app.Slug, ct);
             logger.LogInformation(
                 "Lost race for binding slug={Slug} agentId={AgentId}; returning winner's widgetId={WidgetId}",
                 app.Slug, config.Identifier, winner.WidgetId);
@@ -397,16 +393,6 @@ public static class ChannelsEndpoints
             await session.SaveChangesAsync(ct);
         }
 
-        // The widget-index pointer lives in the config DB and can't join the
-        // per-app cluster-wide tx above. Delete it separately; a brief orphan
-        // (crash between the two) is harmless — re-provision overwrites it and
-        // the embed page re-validates the channel doc exists.
-        using (var cfg = store.OpenAsyncSession())
-        {
-            cfg.Delete($"widget-index/{channelId}");
-            await cfg.SaveChangesAsync(ct);
-        }
-
         logger.LogInformation("Deleted iFrame channel slug={Slug} channelId={ChannelId}", app.Slug, channelId);
         return Results.NoContent();
     }
@@ -421,13 +407,6 @@ public static class ChannelsEndpoints
         Results.Problem(
             detail: $"{type} channels are not yet supported.",
             statusCode: StatusCodes.Status501NotImplemented);
-
-    private static async Task UpsertWidgetIndexAsync(IDocumentStore store, string widgetId, string slug, CancellationToken ct)
-    {
-        using var session = store.OpenAsyncSession();
-        await session.StoreAsync(new WidgetIndex { Id = $"widget-index/{widgetId}", Slug = slug }, ct);
-        await session.SaveChangesAsync(ct);
-    }
 
     /// <summary>Validates + normalizes <paramref name="origins"/> in place to the
     /// canonical <c>scheme://authority</c> form. Returns false with an error on

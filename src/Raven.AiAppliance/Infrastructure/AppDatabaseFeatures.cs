@@ -15,15 +15,18 @@ namespace Raven.AiAppliance.Infrastructure;
 ///   <item><b>Revisions on the EmbedLinks collection</b> — with
 ///   <c>PurgeOnDelete=false</c>, so when an expired link is deleted it leaves a
 ///   delete-revision: an audit trail of who was issued which link (bound params,
-///   TTL, cap, agent) that survives the cleanup. Bounded
-///   (<c>MinimumRevisionsToKeep=10</c> + 90-day age) so the per-turn
-///   <c>InvocationCount</c> churn and long-term growth stay in check.</item>
+///   TTL, cap, agent) that survives the cleanup. <c>MinimumRevisionsToKeep=10</c>
+///   with <b>no age floor</b> keeps only the newest ~10 revisions per link, so the
+///   per-turn <c>InvocationCount++</c> churn is bounded regardless of the link's
+///   invocation cap. (A <c>MinimumRevisionAgeToKeep</c> was deliberately NOT set:
+///   RavenDB keeps every revision younger than the age floor, so with a floor above
+///   the max TTL nothing would purge during a link's life and a high-cap link could
+///   accumulate ~1 revision per turn — see <c>RevisionsStorage</c> purge logic.)</item>
 /// </list>
 /// </summary>
 internal static class AppDatabaseFeatures
 {
     private const int MinimumRevisionsToKeep = 10;
-    private static readonly TimeSpan MinimumRevisionAge = TimeSpan.FromDays(90);
 
     /// <summary>Per-app DB: Expiration + Revisions on the EmbedLinks collection.</summary>
     public static async Task ConfigureAsync(IDocumentStore store, string database, CancellationToken ct)
@@ -44,7 +47,6 @@ internal static class AppDatabaseFeatures
                     Disabled = false,
                     PurgeOnDelete = false,
                     MinimumRevisionsToKeep = MinimumRevisionsToKeep,
-                    MinimumRevisionAgeToKeep = MinimumRevisionAge,
                 },
             },
         };

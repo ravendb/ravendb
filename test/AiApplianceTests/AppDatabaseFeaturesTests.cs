@@ -37,7 +37,9 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
         Assert.False(coll.Disabled);
         Assert.False(coll.PurgeOnDelete);
         Assert.Equal(10L, coll.MinimumRevisionsToKeep);
-        Assert.Equal(TimeSpan.FromDays(90), coll.MinimumRevisionAgeToKeep);
+        // No age floor: with one, RavenDB keeps every revision younger than it, so a
+        // high-cap link would accumulate ~1 revision/turn. Keep-newest-10 bounds it.
+        Assert.Null(coll.MinimumRevisionAgeToKeep);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]

@@ -128,12 +128,43 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
         using var h = await HarnessAsync();
         var token = await MintAsync(h.Client, h.Slug, "demo-agent", maxInvocations: 1);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var first = await SendChatAsync(h.Client, token, new { prompt = "one" }, cts.Token);
-        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        // Drive the link to its cap directly. (A real successful turn would consume
+        // it, but there's no LLM in a unit run and a failed turn is refunded — see
+        // Pre_stream_agent_failure_refunds_the_invocation — so set the count here.)
+        using (var session = h.Store.OpenAsyncSession(h.Database))
+        {
+            var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+            link.InvocationCount = 1;
+            await session.SaveChangesAsync();
+        }
 
-        var second = await h.Client.PostAsJsonAsync($"/embed/{token}/chat", new { prompt = "two" });
-        Assert.Equal(HttpStatusCode.TooManyRequests, second.StatusCode);
+        var resp = await h.Client.PostAsJsonAsync($"/embed/{token}/chat", new { prompt = "over the cap" });
+        Assert.Equal(HttpStatusCode.TooManyRequests, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Pre_stream_agent_failure_refunds_the_invocation()
+    {
+        using var h = await HarnessAsync();
+        var token = await MintAsync(h.Client, h.Slug, "demo-agent", maxInvocations: 1);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
+        // No LLM in a unit run -> the agent run fails before any chunk streams -> the
+        // reserved invocation is refunded. Draining the response ensures the refund
+        // (awaited in the catch before the error frame) has completed.
+        var first = await SendChatAsync(h.Client, token, new { prompt = "one" }, cts.Token);
+        await first.Content.ReadAsStringAsync(cts.Token);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode); // 200 + error frame, not 429
+
+        // Cap is 1; without the refund this second turn would be 429. It isn't.
+        var second = await SendChatAsync(h.Client, token, new { prompt = "two" }, cts.Token);
+        await second.Content.ReadAsStringAsync(cts.Token);
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, second.StatusCode);
+
+        using var session = h.Store.OpenAsyncSession(h.Database);
+        var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
+        Assert.Equal(0, link.InvocationCount); // both failed turns were refunded
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
@@ -254,7 +285,11 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
 
         using var session = h.Store.OpenAsyncSession(h.Database);
         var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token);
-        Assert.Equal(2, link.InvocationCount);
+        // The link owns its conversation: minted server-side on the first turn and
+        // pinned thereafter (the refund of a failed turn decrements the count but
+        // never clears the bound conversation id). InvocationCount isn't asserted —
+        // there's no LLM in a unit run, so the turns fail pre-stream and refund; the
+        // cap itself is covered by Chat_enforces_the_invocation_cap.
         Assert.StartsWith("chats/", link.ConversationId);
     }
 

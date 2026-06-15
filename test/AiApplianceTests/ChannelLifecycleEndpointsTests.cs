@@ -169,9 +169,6 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
             Assert.Null(await session.LoadAsync<ChannelBinding>(bindingId));
         }
 
-        using (var cfg = store.OpenAsyncSession())
-            Assert.Null(await cfg.LoadAsync<WidgetIndex>($"widget-index/{widgetId}"));
-
         // Atomic guard cleared with the binding: the same (slug, type, agentId)
         // tuple provisions cleanly again.
         var reWidgetId = await ProvisionIFrameChannelAsync(client, "my-app");
@@ -232,6 +229,56 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         var open = await client.GetAsync($"/embed/{openToken}");
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
         Assert.False(open.Headers.Contains("Content-Security-Policy"));
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Embed_returns_404_when_token_resolves_to_a_non_iframe_channel()
+    {
+        // The embed surface is iFrame-only: a token whose channel is a non-IFrame
+        // type (e.g. Telegram) must be a miss. Covers the channel.Type != IFrame
+        // guard in EmbedEndpoints.ResolveAsync. Seed the link + channel directly
+        // (the API can't provision a Telegram channel — it 501s).
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        var token = Guid.NewGuid().ToString("N");
+        const string widgetId = "wgt_telegram_x";
+        using (var cfg = store.OpenAsyncSession())
+        {
+            await cfg.StoreAsync(new LinkIndex { Id = $"link-index/{token}", Slug = "my-app" });
+            await cfg.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession(perAppDb))
+        {
+            await session.StoreAsync(new Channel
+            {
+                Id = $"channels/{widgetId}",
+                Type = ChannelType.Telegram,
+                AgentId = "demo-agent",
+                Enabled = true,
+            });
+            await session.StoreAsync(new EmbedLink
+            {
+                Id = $"embed-links/{token}",
+                WidgetId = widgetId,
+                AgentId = "demo-agent",
+                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                MaxInvocations = 10,
+                CreatedAt = DateTime.UtcNow,
+            });
+            await session.SaveChangesAsync();
+        }
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var page = await client.GetAsync($"/embed/{token}");
+        Assert.Equal(HttpStatusCode.NotFound, page.StatusCode);
+
+        var chat = await client.PostAsJsonAsync($"/embed/{token}/chat", new { prompt = "hi" });
+        Assert.Equal(HttpStatusCode.NotFound, chat.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
