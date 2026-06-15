@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             // Here we check *locally* in the sink what is the last hub change vector that was replicated to all the nodes in the sink cluster
             // and persist it as the hub cursor for failover.
+            // _lastBatchChangeVector is filled only when we send a batch of items OR we are skipping items through a heartbeat
             if (_hubBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector) is { } confirmedHubCv)
             {
                 var command = new UpdateExternalReplicationStateCommand(ReplicationLoaderParent.Database.Name, RaftIdGenerator.NewId())
