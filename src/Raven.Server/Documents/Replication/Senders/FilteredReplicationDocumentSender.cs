@@ -66,7 +66,6 @@ namespace Raven.Server.Documents.Replication.Senders
 
             return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
 
-            
             bool ValidatorSaysToSkip(AllowedPathsValidator validator)
             {
                 if (validator == null)
