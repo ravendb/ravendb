@@ -525,6 +525,15 @@ namespace Raven.Server.SqlMigration
 
         protected abstract string QuoteTable(string schema, string tableName);
         protected abstract string QuoteColumn(string columnName);
+
+        // Identifier quoting for the CDC test-mapping row-fetch path (BuildSelectFirstRowsQuery /
+        // BuildSelectByPrimaryKeyQuery). Defaults to QuoteTable/QuoteColumn, which already quote
+        // correctly for SQL Server ([..]) and MySQL (`..`). Postgres overrides these because its
+        // QuoteTable/QuoteColumn deliberately emit RAW identifiers for the long-standing SQL-import
+        // path; the test-mapping path needs exact-case double-quoting instead.
+        protected virtual string QuoteTableForRowFetch(string schema, string tableName) => QuoteTable(schema, tableName);
+        protected virtual string QuoteColumnForRowFetch(string columnName) => QuoteColumn(columnName);
+
         protected abstract string FactoryName { get; }
 
         protected IDataProvider<string> CreateObjectLinkDataProvider(ReferenceInformation refInfo)
@@ -786,9 +795,9 @@ namespace Raven.Server.SqlMigration
             // SQL Server rejects ORDER BY inside an un-TOP'd subquery, so ORDER BY has to live
             // at the same level as the row-limit. Build the dialect-aware shape via BuildLimitedSelectQuery.
             var orderBy = orderByColumns != null && orderByColumns.Count > 0
-                ? " order by " + string.Join(", ", orderByColumns.Select(QuoteColumn))
+                ? " order by " + string.Join(", ", orderByColumns.Select(QuoteColumnForRowFetch))
                 : string.Empty;
-            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), whereClause: string.Empty, orderBy, maxRows);
+            return BuildLimitedSelectQuery(QuoteTableForRowFetch(tableSchema, tableName), whereClause: string.Empty, orderBy, maxRows);
         }
 
         /// <summary>
@@ -820,7 +829,7 @@ namespace Raven.Server.SqlMigration
                 parameter.ParameterName = $"p{idx}";
                 parameter.Value = ValueAsObject(typedTableSchema, column, pkValueArray, idx) ?? DBNull.Value;
                 cmd.Parameters.Add(parameter);
-                return $"{QuoteColumn(column)} = @p{idx}";
+                return $"{QuoteColumnForRowFetch(column)} = @p{idx}";
             }));
 
             // Apply the dialect-aware row cap even though the handler only accepts maxRows=1 for
@@ -828,7 +837,7 @@ namespace Raven.Server.SqlMigration
             // on the source (mis-configured CDC task, or a source table without a true PK), in
             // which case the WHERE alone could still match multiple rows. The server-side cap
             // must hold regardless of source metadata quality.
-            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), whereClause, orderByClause: string.Empty, maxRows);
+            return BuildLimitedSelectQuery(QuoteTableForRowFetch(tableSchema, tableName), whereClause, orderByClause: string.Empty, maxRows);
         }
     }
 }
