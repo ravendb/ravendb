@@ -49,9 +49,6 @@ namespace Voron.Data.BTrees
 
                 _cursor.Pop();
 
-                var parentPage = _tree.ModifyPage(_cursor.CurrentPage);
-                _cursor.Update(_cursor.Pages, parentPage);
-
                 // when an earlier iteration of this cascade re-added a separator into a full ancestor page,
                 // that page got split. A split can move pages under different parents and change node
                 // positions, so the cursor built during the descent may no longer match the tree.
@@ -63,10 +60,10 @@ namespace Voron.Data.BTrees
                     // we could reset the flag here, but it is safer to keep rebuilding until the rebalancing ends - the
                     // extra cost is a few page reads per level and is only paid when an ancestor was already split
                     //_ancestorsChanged = false;
-
-                    parentPage = _tree.ModifyPage(_cursor.CurrentPage);
-                    _cursor.Update(_cursor.Pages, parentPage);
                 }
+
+                var parentPage = _tree.ModifyPage(_cursor.CurrentPage);
+                _cursor.Update(_cursor.Pages, parentPage);
 
                 int positionInParent = -1;
                 for (int i = 0; i < parentPage.NumberOfEntries; i++)
