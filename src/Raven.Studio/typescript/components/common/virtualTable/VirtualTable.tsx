@@ -18,6 +18,8 @@ interface VirtualTableProps<T> extends Omit<VirtualTableBodyWrapperProps<T>, "ta
     overscan?: number;
     rowHeightInPx?: number;
     tableContainerRef?: React.RefObject<HTMLDivElement>;
+    onRowClick?: (row: Row<T>) => void;
+    getRowClassName?: (row: Row<T>) => string;
 }
 
 export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameProps) {
@@ -31,6 +33,8 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
         isCompact,
         isRoundingDisabled,
         isPaddingDisabled,
+        onRowClick,
+        getRowClassName,
     } = props;
 
     const innerTableContainerRef = useRef<HTMLDivElement>(null);
@@ -84,11 +88,12 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
                             data-index={virtualRow.index}
                             ref={(node) => rowVirtualizer.measureElement(node)}
                             key={row.id}
+                            onClick={onRowClick ? () => onRowClick(row) : undefined}
                             style={{
                                 transform: `translateY(${virtualRow.start}px)`,
                                 height: `${virtualRow.size}px`,
                             }}
-                            className={classNames({ "is-odd": virtualRow.index % 2 !== 0 })}
+                            className={classNames({ "is-odd": virtualRow.index % 2 !== 0 }, getRowClassName?.(row))}
                         >
                             {row.getVisibleCells().map((cell) => {
                                 const isPinned = cell.column.getIsPinned();

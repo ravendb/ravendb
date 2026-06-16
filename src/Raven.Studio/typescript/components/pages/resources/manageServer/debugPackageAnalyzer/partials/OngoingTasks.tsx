@@ -1,12 +1,16 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
     ColumnDef,
+    ExpandedState,
+    Row,
     getCoreRowModel,
+    getExpandedRowModel,
     getFilteredRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import NodeTagPill from "./NodeTagPill";
+import { ExpandIndicator, NodeTagPillStack, expandableRowProps } from "./nodeStackTable";
 import { EmptySet } from "components/common/EmptySet";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
@@ -45,6 +49,8 @@ interface TaskTableRow {
     label?: string;
     nodeTag?: string;
     count: number;
+    nodeTags?: string[];
+    subRows?: TaskTableRow[];
 }
 
 interface OngoingTasksProps {
@@ -97,23 +103,28 @@ export default function OngoingTasks({ summary, nodeTag }: OngoingTasksProps) {
 
 function OngoingTasksWithSize({ summary, nodeTag, width }: OngoingTasksWithSizeProps) {
     const rows = useMemo(() => buildTaskRows(summary, nodeTag), [summary, nodeTag]);
-    const taskRows = rows.filter((r) => r.rowKind === "task");
-    const total = taskRows.reduce((sum, r) => sum + r.count, 0);
+    const [expanded, setExpanded] = useState<ExpandedState>({});
+    const total = rows.reduce((sum, r) => sum + r.count, 0);
 
     const { taskColumns } = useOngoingTasksColumns(width);
 
     const table = useReactTable({
         data: rows,
         columns: taskColumns,
+        state: { expanded },
+        onExpandedChange: setExpanded,
+        getSubRows: (row) => row.subRows,
+        getRowCanExpand: (row) => (row.original.subRows?.length ?? 0) > 0,
         enableSorting: rows.length > analyzerConstants.minRowsForControls,
         enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
         getRowId: (row) => row.key,
     });
 
-    const heightInPx = virtualTableUtils.getHeightInPx(rows.length, 500);
+    const heightInPx = virtualTableUtils.getHeightInPx(table.getRowModel().rows.length, 500);
 
     return (
         <div className="ongoing-tasks">
@@ -121,12 +132,12 @@ function OngoingTasksWithSize({ summary, nodeTag, width }: OngoingTasksWithSizeP
                 <div className="p-4 vstack gap-3">
                     <h3 className="mb-0">Ongoing Tasks</h3>
                     <SummaryBar items={[{ icon: "ongoing-tasks", count: total, label: "total" }]} />
-                    {taskRows.length === 0 ? (
+                    {rows.length === 0 ? (
                         <EmptySet compact className="justify-content-center">
                             No ongoing tasks in the package
                         </EmptySet>
                     ) : (
-                        <VirtualTable table={table} heightInPx={heightInPx} />
+                        <VirtualTable table={table} heightInPx={heightInPx} {...expandableRowProps<TaskTableRow>()} />
                     )}
                 </div>
             </div>
@@ -134,12 +145,24 @@ function OngoingTasksWithSize({ summary, nodeTag, width }: OngoingTasksWithSizeP
     );
 }
 
-function OngoingTaskLabelCell({ row }: { row: { original: TaskTableRow } }) {
-    return row.original.rowKind === "task" ? <span className="fw-bold">{row.original.label}</span> : null;
+function OngoingTaskLabelCell({ row }: { row: Row<TaskTableRow> }) {
+    if (row.original.rowKind !== "task") {
+        return null;
+    }
+    return (
+        <span className="hstack gap-1 fw-bold">
+            {row.getCanExpand() && <ExpandIndicator expanded={row.getIsExpanded()} />}
+            {row.original.label}
+        </span>
+    );
 }
 
-function OngoingTaskNodeTagCell({ row }: { row: { original: TaskTableRow } }) {
-    return row.original.rowKind === "node" ? <NodeTagPill tag={row.original.nodeTag!} /> : null;
+function OngoingTaskNodeTagCell({ row }: { row: Row<TaskTableRow> }) {
+    if (row.original.rowKind === "node") {
+        return <NodeTagPill tag={row.original.nodeTag!} />;
+    }
+    const tags = row.original.nodeTags ?? [];
+    return tags.length > 0 ? <NodeTagPillStack tags={tags} /> : null;
 }
 
 function buildTaskRows(summary: DebugPackageAnalysisSummary, nodeTag?: string): TaskTableRow[] {
@@ -184,23 +207,23 @@ function buildTaskRows(summary: DebugPackageAnalysisSummary, nodeTag?: string): 
         .forEach((label) => {
             const agg = byType.get(label)!;
 
+            const sortedNodes = [...agg.nodes].sort((a, b) => a.nodeTag.localeCompare(b.nodeTag));
+
             result.push({
                 rowKind: "task",
                 key: label,
                 label,
                 count: agg.totalCount,
-            });
-
-            agg.nodes
-                .sort((a, b) => a.nodeTag.localeCompare(b.nodeTag))
-                .forEach(({ nodeTag: tag, count }) => {
-                    result.push({
+                nodeTags: sortedNodes.map((n) => n.nodeTag),
+                subRows: sortedNodes.map(
+                    ({ nodeTag: tag, count }): TaskTableRow => ({
                         rowKind: "node",
                         key: `${label}/${tag}`,
                         nodeTag: tag,
                         count,
-                    });
-                });
+                    })
+                ),
+            });
         });
 
     return result;

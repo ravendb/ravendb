@@ -1,3 +1,7 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
 .flex-window.debug-package-window-fill {
     height: 100%;
     flex-grow: 1;
@@ -274,8 +278,8 @@
                 border-radius: 100px;
                 font-size: 0.75rem;
                 font-weight: 600;
-                background: var(--bs-secondary);
-                color: var(--bs-white);
+                background: colors.$secondary-var;
+                color: colors.$white;
             }
         }
     }
@@ -294,7 +298,6 @@
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        color: var(--bs-secondary-color);
     }
 
     .group-by-control {
@@ -305,21 +308,69 @@
         min-width: 220px;
     }
 
-    // circular node avatar matching the cluster dashboard node icons (.node-label):
-    // the letter uses the panel background (--well-bg) so it reads as a cut-out on every node color
     .node-tag-circle {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 1.4rem;
-        height: 1.4rem;
+        width: 21px;
+        height: 21px;
         border-radius: 50%;
-        font-size: 0.7rem;
+        font-size: 0.6rem;
         font-weight: 800;
-        line-height: 1;
         flex-shrink: 0;
         text-transform: uppercase;
-        color: var(--well-bg);
+        color: colors.$well-bg-var;
+    }
+
+    // collapsed parent row: node avatars overlap like a shadcn-style avatar group, with a ring in the
+    // row color so each circle reads as separate. The first node is rendered on top (z-index set inline).
+    .node-tag-stack {
+        display: inline-flex;
+        align-items: center;
+
+        .node-tag-stack-item {
+            position: relative;
+            display: inline-flex;
+
+            &:not(:first-child) {
+                margin-left: -0.45rem;
+            }
+        }
+
+        // ring matches the row background; rows alternate, so even rows use row-even-bg and .is-odd
+        // rows are overridden to row-bg below (see VirtualTable.scss striping).
+        // content-box keeps the coloured disc at the base 21px and puts the ring outside it, so a
+        // stacked (ringed) circle reads at the same size as a plain circle in the expanded rows.
+        .node-tag-circle {
+            box-sizing: content-box;
+            border: 2px solid colors.$row-even-bg-var;
+        }
+    }
+
+    tr.is-odd .node-tag-stack .node-tag-circle {
+        border-color: colors.$row-bg-var;
+    }
+
+    // parent rows can be expanded/collapsed by clicking anywhere on the row; brighten on hover so the
+    // affordance matches the rest of the Studio (shared --hover-filter)
+    tr.clickable-row {
+        cursor: pointer;
+        transition: none;
+
+        &:hover {
+            filter: colors.$hover-filter-var;
+            transition: bs5variables.$transition-base;
+        }
+    }
+
+    // small, muted expand/collapse chevron that rotates when its row is expanded
+    .node-table-chevron {
+        transition: transform 0.15s ease;
+        color: colors.$border-color-light-var;
+
+        &.expanded {
+            transform: rotate(90deg);
+        }
     }
 
     .stat-tile-label {

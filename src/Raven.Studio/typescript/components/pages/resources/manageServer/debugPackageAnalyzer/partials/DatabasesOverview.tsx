@@ -1,13 +1,17 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
     ColumnDef,
+    ExpandedState,
+    Row,
     getCoreRowModel,
+    getExpandedRowModel,
     getFilteredRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
+import { ExpandIndicator, NodeTagPillStack, expandableRowProps } from "./nodeStackTable";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { analyzerConstants } from "./analyzerConstants";
@@ -35,6 +39,8 @@ interface TableRow {
     ongoingTasksCount?: number;
     replicationFactor?: number;
     disabled?: boolean;
+    nodes?: { nodeTag: string; disabled: boolean }[];
+    subRows?: TableRow[];
 }
 
 function useDatabasesOverviewColumns(availableWidth: number) {
@@ -105,25 +111,31 @@ export default function DatabasesOverview({ summary }: DatabasesOverviewProps) {
 
 function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSizeProps) {
     const rows = useMemo(() => buildTableRows(summary), [summary]);
+    const [expanded, setExpanded] = useState<ExpandedState>({});
 
-    const databaseRows = rows.filter((r) => r.rowKind === "database");
-    const disabledCount = databaseRows.filter((r) => r.disabled).length;
-    const onlineCount = databaseRows.length - disabledCount;
+    // every top-level row is a database; its nodes live in subRows and are revealed on expand
+    const disabledCount = rows.filter((r) => r.disabled).length;
+    const onlineCount = rows.length - disabledCount;
 
     const { databasesColumns } = useDatabasesOverviewColumns(width);
 
     const table = useReactTable({
         data: rows,
         columns: databasesColumns,
+        state: { expanded },
+        onExpandedChange: setExpanded,
+        getSubRows: (row) => row.subRows,
+        getRowCanExpand: (row) => (row.original.subRows?.length ?? 0) > 0,
         enableSorting: rows.length > analyzerConstants.minRowsForControls,
         enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
         getRowId: (row) => (row.nodeTag ? `${row.database}/${row.nodeTag}` : row.database),
     });
 
-    const heightInPx = virtualTableUtils.getHeightInPx(rows.length, 400);
+    const heightInPx = virtualTableUtils.getHeightInPx(table.getRowModel().rows.length, 400);
 
     return (
         <div className="databases-overview">
@@ -132,7 +144,7 @@ function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSize
                     <h3 className="mb-0">Databases Overview</h3>
                     <SummaryBar
                         items={[
-                            { icon: "database", count: databaseRows.length, label: "total" },
+                            { icon: "database", count: rows.length, label: "total" },
                             {
                                 icon: "database",
                                 iconAddon: "check",
@@ -150,10 +162,10 @@ function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSize
                         ]}
                     />
 
-                    {databaseRows.length === 0 ? (
+                    {rows.length === 0 ? (
                         <div className="text-muted text-center w-100">No databases found in the package</div>
                     ) : (
-                        <VirtualTable table={table} heightInPx={heightInPx} />
+                        <VirtualTable table={table} heightInPx={heightInPx} {...expandableRowProps<TableRow>()} />
                     )}
                 </div>
             </div>
@@ -161,12 +173,29 @@ function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSize
     );
 }
 
-function DbNameCell({ row }: { row: { original: TableRow } }) {
-    return row.original.rowKind === "database" ? <span className="fw-bold">{row.original.database}</span> : null;
+function DbNameCell({ row }: { row: Row<TableRow> }) {
+    if (row.original.rowKind !== "database") {
+        return null;
+    }
+    return (
+        <span className="hstack gap-1 fw-bold">
+            {row.getCanExpand() && <ExpandIndicator expanded={row.getIsExpanded()} />}
+            {row.original.database}
+        </span>
+    );
 }
 
-function DbNodeTagCell({ row }: { row: { original: TableRow } }) {
-    return row.original.rowKind === "node" ? <NodeTagPill tag={row.original.nodeTag!} /> : null;
+function DbNodeTagCell({ row }: { row: Row<TableRow> }) {
+    if (row.original.rowKind === "node") {
+        return <NodeTagPill tag={row.original.nodeTag!} />;
+    }
+
+    const nodes = row.original.nodes ?? [];
+    if (nodes.length === 0) {
+        return null;
+    }
+
+    return <NodeTagPillStack tags={nodes.map((node) => node.nodeTag)} />;
 }
 
 function DbDocumentsCell({ row }: { row: { original: TableRow } }) {
@@ -206,11 +235,28 @@ function DbReplicationFactorCell({ row }: { row: { original: TableRow } }) {
     return row.original.rowKind === "database" ? formatCount(row.original.replicationFactor ?? -1) : null;
 }
 
-function DbStateCell({ row }: { row: { original: TableRow } }) {
-    if (row.original.rowKind !== "node") {
-        return null;
+function DbStateCell({ row }: { row: Row<TableRow> }) {
+    if (row.original.rowKind === "node") {
+        return <StateLabel disabled={row.original.disabled} />;
     }
-    return row.original.disabled ? (
+
+    // collapsed database row: summarize the per-node state so it isn't blank when collapsed
+    const nodes = row.original.nodes ?? [];
+    const disabledCount = nodes.filter((node) => node.disabled).length;
+
+    if (disabledCount === 0 || disabledCount === nodes.length) {
+        return <StateLabel disabled={disabledCount > 0} />;
+    }
+
+    return (
+        <span className="hstack gap-1 text-warning">
+            <Icon icon="database" addon="cancel" margin="m-0" /> {nodes.length - disabledCount}/{nodes.length} online
+        </span>
+    );
+}
+
+function StateLabel({ disabled }: { disabled: boolean }) {
+    return disabled ? (
         <span className="hstack gap-1 text-warning">
             <Icon icon="database" addon="cancel" margin="m-0" /> Disabled
         </span>
@@ -283,6 +329,7 @@ function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
         .sort((a, b) => a.localeCompare(b))
         .forEach((database) => {
             const agg = dbMap.get(database)!;
+            const sortedNodes = [...agg.nodes].sort((a, b) => a.nodeTag.localeCompare(b.nodeTag));
 
             result.push({
                 rowKind: "database",
@@ -294,13 +341,11 @@ function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
                 ongoingTasksCount: agg.ongoingTasksCount,
                 replicationFactor: agg.replicationFactor,
                 disabled: agg.disabled,
+                nodes: sortedNodes,
+                subRows: sortedNodes.map(
+                    ({ nodeTag, disabled }): TableRow => ({ rowKind: "node", database, nodeTag, disabled })
+                ),
             });
-
-            agg.nodes
-                .sort((a, b) => a.nodeTag.localeCompare(b.nodeTag))
-                .forEach(({ nodeTag, disabled }) => {
-                    result.push({ rowKind: "node", database, nodeTag, disabled });
-                });
         });
 
     return result;
