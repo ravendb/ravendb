@@ -4,6 +4,7 @@ import { createChatService } from "@/api/custom-services/chat-service";
 import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createAgentsQueries } from "@/api/queries/agents-queries";
 import { createChannelsQueries } from "@/api/queries/channels-queries";
+import { createEmbedLinksQueries } from "@/api/queries/embed-links-queries";
 import { createBootstrapQueries } from "@/api/queries/bootstrap-queries";
 import { createSetupQueries } from "@/api/queries/setup-queries";
 import { createAiConnectionStringsQueries } from "@/api/queries/ai-connection-strings-queries";
@@ -17,6 +18,7 @@ export type ApiQueries = {
     apps: ReturnType<typeof createAppsQueries>;
     agents: ReturnType<typeof createAgentsQueries>;
     channels: ReturnType<typeof createChannelsQueries>;
+    embedLinks: ReturnType<typeof createEmbedLinksQueries>;
     setup: ReturnType<typeof createSetupQueries>;
     aiConnectionStrings: ReturnType<typeof createAiConnectionStringsQueries>;
 };
@@ -43,6 +45,7 @@ export function createApi(options?: ApiClientOptions): Api {
             apps: createAppsQueries(services.apps),
             agents: createAgentsQueries(services.agents),
             channels: createChannelsQueries(services.channels),
+            embedLinks: createEmbedLinksQueries(services.embedLinks),
             setup: createSetupQueries(services.setup),
             aiConnectionStrings: createAiConnectionStringsQueries(services.aiConnectionStrings),
         },

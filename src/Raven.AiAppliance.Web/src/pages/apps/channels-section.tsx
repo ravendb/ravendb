@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Link2, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { StatusIndicator } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
+import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
+import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
+import { formatDateTime } from "@/lib/utils";
 import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
-import { ChannelPreviewDialog } from "@/pages/apps/channels/channel-preview-dialog";
+import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { EditChannelSheet } from "@/pages/apps/channels/edit-channel-sheet";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
@@ -15,6 +19,14 @@ import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 export function ChannelsSection({ slug }: { slug: string }) {
     const agentsQuery = useQuery(api.queries.agents.list(slug));
     const channelsQuery = useQuery(api.queries.channels.list(slug));
+    // Active-link counts are supplementary — kept out of the ApiState gate so a
+    // links hiccup never blocks the channels table.
+    const embedLinksQuery = useQuery(api.queries.embedLinks.list(slug));
+
+    const activeLinkCounts = new Map<string, number>();
+    for (const link of embedLinksQuery.data ?? []) {
+        activeLinkCounts.set(link.widgetId, (activeLinkCounts.get(link.widgetId) ?? 0) + 1);
+    }
 
     const onRetry = async () => {
         if (channelsQuery.isError) {
@@ -36,7 +48,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
             >
                 {channelsQuery.data && (
                     <SectionTable
-                        headers={["Channel name", "Agent name", "Status", "Type", "Created", "Widget ID", ""]}
+                        headers={["Channel name", "Agent name", "Status", "Type", "Active links", "Created", ""]}
                         isEmpty={channelsQuery.data.length === 0}
                         emptyMessage="No channels yet."
                     >
@@ -44,7 +56,15 @@ export function ChannelsSection({ slug }: { slug: string }) {
                             const agent = agentsQuery.data?.find((x) => x.agentId === channel.agentId);
                             return (
                                 <TableRow key={channel.widgetId}>
-                                    <TableCell className="font-medium">{channel.displayName}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <Link
+                                            to={appRoutes.app(slug, `channels/${channel.widgetId}`)}
+                                            className="hover:underline"
+                                            title="Open details"
+                                        >
+                                            {channel.displayName}
+                                        </Link>
+                                    </TableCell>
                                     <TableCell className="font-medium">{agent?.name}</TableCell>
                                     <TableCell>
                                         <StatusIndicator
@@ -53,25 +73,42 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                         />
                                     </TableCell>
                                     <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {formatDate(channel.createdAt)}
+                                    <TableCell className="text-muted-foreground tabular-nums">
+                                        {channel.type !== "IFrame" ? (
+                                            "—"
+                                        ) : embedLinksQuery.isPending ? (
+                                            <Skeleton className="h-4 w-6" />
+                                        ) : (
+                                            (activeLinkCounts.get(channel.widgetId) ?? 0).toLocaleString()
+                                        )}
                                     </TableCell>
-                                    <TableCell className="text-muted-foreground">{channel.widgetId ?? "—"}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {formatDateTime(channel.createdAt)}
+                                    </TableCell>
                                     <TableCell className="text-right">
-                                        <div className="flex justify-end gap-1">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Link
+                                                to={appRoutes.app(slug, `channels/${channel.widgetId}`)}
+                                                title="Open details"
+                                                className="mx-1"
+                                            >
+                                                <Eye className="size-3.5" aria-hidden="true" />
+                                            </Link>
                                             {channel.type === "IFrame" && (
-                                                <ChannelPreviewDialog
-                                                    widgetId={channel.widgetId}
+                                                <GenerateEmbedLinkDialog
+                                                    slug={slug}
+                                                    agentId={channel.agentId}
                                                     displayName={channel.displayName}
                                                     parameterNames={agent?.parameters ?? []}
                                                     trigger={
                                                         <Button
                                                             variant="ghost"
                                                             size="icon-sm"
-                                                            aria-label={`Preview ${channel.displayName}`}
+                                                            aria-label={`Generate embed link for ${channel.displayName}`}
                                                             disabled={!channel.enabled}
+                                                            title="Generate link"
                                                         >
-                                                            <Eye className="size-3.5" aria-hidden="true" />
+                                                            <Link2 className="size-3.5" aria-hidden="true" />
                                                         </Button>
                                                     }
                                                 />
@@ -84,6 +121,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                                         variant="ghost"
                                                         size="icon-sm"
                                                         aria-label={`Edit ${channel.displayName}`}
+                                                        title="Edit channel"
                                                     >
                                                         <Pencil className="size-3.5" aria-hidden="true" />
                                                     </Button>
@@ -97,6 +135,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                                         variant="ghost"
                                                         size="icon-sm"
                                                         aria-label={`Delete ${channel.displayName}`}
+                                                        title="Delete channel"
                                                     >
                                                         <Trash2 className="size-3.5" aria-hidden="true" />
                                                     </Button>
@@ -112,9 +151,4 @@ export function ChannelsSection({ slug }: { slug: string }) {
             </ApiState>
         </SectionCard>
     );
-}
-
-function formatDate(value: string) {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }

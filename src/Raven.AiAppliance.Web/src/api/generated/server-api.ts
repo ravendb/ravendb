@@ -165,6 +165,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/embed-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Lists the app's active embed links (non-expired, non-revoked), most recent first. Each item carries its token, the channel + agent it targets, the bound parameters, the TTL/cap, and how many turns it has consumed — so the operator can audit and revoke links. */
+        get: operations["embedLinks.list"];
+        put?: never;
+        /** @description Mints a per-user embed link for an agent's iFrame channel. Parameters are validated against the agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready /embed/{token} URL. */
+        post: operations["embedLinks.mint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/embed-links/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Revokes a minted link; the public embed surface then returns 410 Gone. Idempotent. */
+        delete: operations["embedLinks.revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/ai/connection-strings": {
         parameters: {
             query?: never;
@@ -598,6 +633,22 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        EmbedLinkSummaryResponse: {
+            token: string;
+            widgetId: string;
+            agentId: string;
+            parameters: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: int32 */
+            maxInvocations: number;
+            /** Format: int32 */
+            invocationCount: number;
+        };
         /** @enum {unknown} */
         GoogleAIVersion: "V1" | "V1_Beta" | null;
         GoogleSettings: {
@@ -631,6 +682,24 @@ export interface components {
             tables: components["schemas"]["CdcSinkTableConfig"][];
             postgres?: null | components["schemas"]["CdcSinkPostgresSettings"];
             skipInitialLoad?: null | boolean;
+        };
+        MintEmbedLinkRequest: {
+            agentId: string;
+            parameters?: null | {
+                [key: string]: string;
+            };
+            /** Format: int32 */
+            ttlSeconds?: null | number;
+            /** Format: int32 */
+            maxInvocations?: null | number;
+        };
+        MintEmbedLinkResponse: {
+            token: string;
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: int32 */
+            maxInvocations: number;
         };
         MistralAiSettings: {
             model?: null | string;
@@ -1193,6 +1262,111 @@ export interface operations {
             };
         };
     };
+    "embedLinks.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedLinkSummaryResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "embedLinks.mint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MintEmbedLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MintEmbedLinkResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "embedLinks.revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "aiConnectionStrings.list": {
         parameters: {
             query?: never;
@@ -1664,10 +1838,13 @@ export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
 export type DiscoverResponse = components["schemas"]["DiscoverResponse"];
 export type DiscoverTableResponse = components["schemas"]["DiscoverTableResponse"];
 export type EmbeddedSettings = components["schemas"]["EmbeddedSettings"];
+export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryResponse"];
 export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
 export type MapRequest = components["schemas"]["MapRequest"];
+export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
+export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiReasoningEffort = components["schemas"]["OpenAiReasoningEffort"];
@@ -1721,6 +1898,11 @@ export const API_ENDPOINTS = {
     chat: {
         stream: "/chat/stream",
     },
+    embedLinks: {
+        list: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
+        mint: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
+        revoke: (slug: string, token: string) => `/apps/${encodeURIComponent(slug)}/embed-links/${encodeURIComponent(token)}`,
+    },
     setup: {
         connect: "/setup/connect",
         discover: "/setup/discover",
@@ -1761,6 +1943,11 @@ export function createServerApi(client: ApiClient) {
         },
         chat: {
             stream: (request: ChatRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.chat.stream, request),
+        },
+        embedLinks: {
+            list: (slug: string) => client.get<EmbedLinkSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.embedLinks.list(slug)),
+            mint: (slug: string, request: MintEmbedLinkRequest) => client.post<MintEmbedLinkResponse, ApiErrorResponse>(API_ENDPOINTS.embedLinks.mint(slug), request),
+            revoke: (slug: string, token: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.embedLinks.revoke(slug, token)),
         },
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
