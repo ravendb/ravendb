@@ -232,6 +232,8 @@ namespace Voron
 
         public abstract JournalWriter CreateJournalWriterForBranchEnvironment(long journalNumber, string fileName, JournalFile journalFile);
 
+        public abstract void DeleteJournalsBelow(long journalNumber);
+
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
 
         public virtual bool IsJournalHardLinked(long journalNumber) => false;
@@ -598,6 +600,18 @@ namespace Voron
                     return null;
                 
                 return long.Parse(Path.GetFileNameWithoutExtension(latestJournalName));
+            }
+
+            public override void DeleteJournalsBelow(long journalNumber)
+            {
+                if (Directory.Exists(JournalPath.FullPath) == false)
+                    return;
+
+                foreach (string file in Directory.GetFiles(JournalPath.FullPath, "*.journal"))
+                {
+                    if (long.TryParse(Path.GetFileNameWithoutExtension(file), out var number) && number < journalNumber)
+                        TryDeleteJournal(number);
+                }
             }
 
             public override bool JournalExists(long number)
@@ -1053,6 +1067,15 @@ namespace Voron
                     return false;
                 value.Dispose();
                 return true;
+            }
+
+            public override void DeleteJournalsBelow(long journalNumber)
+            {
+                foreach (var name in _logs.Keys.ToArray())
+                {
+                    if (long.TryParse(Path.GetFileNameWithoutExtension(name), out var number) && number < journalNumber)
+                        TryDeleteJournal(number);
+                }
             }
 
             public override bool ReadValidMetadata(string filename, out MetadataFile metadata)

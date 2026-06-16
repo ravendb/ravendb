@@ -115,6 +115,8 @@ namespace Voron.Impl.Journal
         /// </summary>
         public long Write(long posBy4Kb, Span<Pal.journal_entry> entries)
         {
+            Debug.Assert(DoneWriting is null || DoneWriting.IsRaised() == false, $"Journal {Number} was written after DoneWriting was raised.");
+
             long totalNumberOf4Kbs = 0;
             for (int i = 0; i < entries.Length; i++)
             {
