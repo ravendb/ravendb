@@ -191,7 +191,10 @@ public static class EmbedLinksEndpoints
             await cfg.SaveChangesAsync(ct);
         }
 
-        var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}/embed/{token}";
+        // Include PathBase so the URL is correct when the appliance is hosted under
+        // a sub-path. (Scheme/Host behind a TLS proxy is the separate, deferred M2
+        // limitation — no UseForwardedHeaders today.)
+        var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}{ctx.Request.PathBase}/embed/{token}";
         logger.LogInformation(
             "Minted embed link slug={Slug} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
             app.Slug, config.Identifier, ttlSeconds, maxInvocations);
@@ -227,7 +230,7 @@ public static class EmbedLinksEndpoints
             {
                 link.Revoked = true;
                 await session.SaveChangesAsync(ct);
-                logger.LogInformation("Revoked embed link slug={Slug} token={Token}", app.Slug, token);
+                logger.LogInformation("Revoked embed link slug={Slug} tokenPrefix={TokenPrefix}", app.Slug, EmbedLink.RedactToken(token));
             }
         }
 
