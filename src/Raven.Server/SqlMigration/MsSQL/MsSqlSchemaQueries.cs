@@ -25,7 +25,14 @@ namespace Raven.Server.SqlMigration.MsSQL
             "SELECT TC.TABLE_SCHEMA, TC.TABLE_NAME, COLUMN_NAME " +
             "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC " +
             "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU " +
-            "ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' AND TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME" +
+            // SQL Server constraint names are not database-wide unique; joining on CONSTRAINT_NAME
+            // alone cross-joins identically-named PKs across schemas and attaches the wrong PK columns.
+            // Qualify by schema + table.
+            "ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' " +
+            "AND TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME " +
+            "AND TC.CONSTRAINT_SCHEMA = KU.CONSTRAINT_SCHEMA " +
+            "AND TC.TABLE_SCHEMA = KU.TABLE_SCHEMA " +
+            "AND TC.TABLE_NAME = KU.TABLE_NAME" +
             " ORDER BY ORDINAL_POSITION";
 
         public override string SelectReferentialConstraintsQuery { get; } =
