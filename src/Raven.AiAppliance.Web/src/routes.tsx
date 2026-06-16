@@ -17,6 +17,7 @@ import App from "@/app";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
 import { AppAgents } from "@/pages/apps/app-agents";
 import { AppApiUnavailable } from "@/pages/apps/app-api-unavailable";
+import { AppChannelDetail } from "@/pages/apps/app-channel-detail";
 import { AppChannels } from "@/pages/apps/app-channels";
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
@@ -152,6 +153,13 @@ const appPages: AppRouteDefinition[] = [
             section: "settings",
         },
         element: <AppChannels />,
+    },
+    {
+        // Channel detail — active embed links for one channel. No navigation entry:
+        // reached by opening a channel from the Channels list.
+        path: "channels/:widgetId",
+        title: "Channel",
+        element: <AppChannelDetail />,
     },
     {
         path: "usage",

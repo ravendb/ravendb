@@ -32,6 +32,15 @@ public static class EmbedLinksEndpoints
     {
         var group = app.MapGroup("/api/apps/{slug}").WithTags("embed-links");
 
+        group.MapGet("/embed-links", ListAsync)
+            .WithName("embedLinks.list")
+            .WithDescription(
+                "Lists the app's active embed links (non-expired, non-revoked), most recent first. " +
+                "Each item carries its token, the channel + agent it targets, the bound parameters, " +
+                "the TTL/cap, and how many turns it has consumed — so the operator can audit and revoke links.")
+            .Produces<EmbedLinkSummaryResponse[]>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
         group.MapPost("/embed-links", MintAsync)
             .WithName("embedLinks.mint")
             .WithDescription(
@@ -49,6 +58,45 @@ public static class EmbedLinksEndpoints
             .WithDescription("Revokes a minted link; the public embed surface then returns 410 Gone. Idempotent.")
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> ListAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        using var session = store.OpenAsyncSession(app.Database);
+
+        // LoadStartingWith on the shared "embed-links/" id prefix (same rationale
+        // as ListChannelsAsync): immediately consistent and the natural fit since
+        // every link doc shares the prefix. Page until a short page returns so a
+        // large link set is never silently truncated.
+        const int pageSize = 1024;
+        var now = DateTime.UtcNow;
+        var links = new List<EmbedLink>();
+        for (var start = 0; ; start += pageSize)
+        {
+            var page = (await session.Advanced.LoadStartingWithAsync<EmbedLink>(
+                EmbedLink.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
+            links.AddRange(page);
+            if (page.Length < pageSize)
+                break;
+        }
+
+        // Only the live links the operator can still act on. The @expires sweep is
+        // eventual, so a spent link may still be present briefly — filter it out
+        // here; the runtime check at the embed surface stays authoritative.
+        var items = links
+            .Where(l => l.Revoked == false && l.ExpiresAt > now)
+            .OrderByDescending(l => l.CreatedAt)
+            .Select(EmbedLinkSummaryResponse.From)
+            .ToArray();
+
+        return Results.Ok(items);
     }
 
     private static async Task<IResult> MintAsync(

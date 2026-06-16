@@ -1,0 +1,252 @@
+import { useState, type ReactNode } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, useWatch } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { api } from "@/api/api";
+import { cn } from "@/lib/utils";
+import type { MintEmbedLinkRequest, MintEmbedLinkResponse } from "@/api/generated/server-api";
+import { Alert } from "@/components/shadcn/ui/alert";
+import { Button } from "@/components/shadcn/ui/button";
+import { Spinner } from "@/components/shadcn/ui/spinner";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/shadcn/ui/dialog";
+import { FormInput } from "@/components/form/form-input";
+import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
+import { EmbedLinkPreview } from "@/pages/apps/channels/embed-link-preview";
+
+type GenerateEmbedLinkDialogProps = {
+    slug: string;
+    /** The agent the channel is bound to; the backend resolves its iFrame channel. */
+    agentId: string;
+    displayName: string;
+    /** The agent's declared parameter names — one value is bound per name at mint time. */
+    parameterNames: string[];
+    trigger: ReactNode;
+};
+
+// Server-enforced bounds (see the embed-links mint contract). Mirrored here so the
+// form surfaces range errors before the request rather than after a 400.
+const MIN_TTL_SECONDS = 60;
+const MAX_TTL_SECONDS = 2_592_000;
+const MIN_INVOCATIONS = 1;
+const MAX_INVOCATIONS = 1_000_000;
+const DEFAULT_MAX_INVOCATIONS = 100;
+const DEFAULT_TTL_PRESET = "3600";
+
+const ttlPresetSchema = z.enum(["3600", "14400", "86400", "604800", "custom"]);
+
+const TTL_PRESET_OPTIONS: readonly FormSelectOption<z.infer<typeof ttlPresetSchema>>[] = [
+    { value: "3600", label: "1 hour" },
+    { value: "14400", label: "4 hours" },
+    { value: "86400", label: "24 hours" },
+    { value: "604800", label: "7 days" },
+    { value: "custom", label: "Custom" },
+];
+
+const generateEmbedLinkSchema = z
+    .object({
+        parameters: z.array(z.object({ name: z.string(), value: z.string().trim().min(1, "Required") })),
+        ttlPreset: ttlPresetSchema,
+        customTtlSeconds: z.number().int().nullable(),
+        maxInvocations: z
+            .number({ message: "Enter a number" })
+            .int()
+            .min(MIN_INVOCATIONS, `Minimum is ${MIN_INVOCATIONS}`)
+            .max(MAX_INVOCATIONS, `Maximum is ${MAX_INVOCATIONS.toLocaleString()}`),
+    })
+    .superRefine((values, ctx) => {
+        if (values.ttlPreset !== "custom") {
+            return;
+        }
+        if (values.customTtlSeconds == null) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["customTtlSeconds"],
+                message: "Enter a duration in seconds",
+            });
+        } else if (values.customTtlSeconds < MIN_TTL_SECONDS || values.customTtlSeconds > MAX_TTL_SECONDS) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["customTtlSeconds"],
+                message: `Enter ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} seconds`,
+            });
+        }
+    });
+
+type GenerateEmbedLinkFormData = z.infer<typeof generateEmbedLinkSchema>;
+
+export function GenerateEmbedLinkDialog({
+    slug,
+    agentId,
+    displayName,
+    parameterNames,
+    trigger,
+}: GenerateEmbedLinkDialogProps) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const form = useForm<GenerateEmbedLinkFormData>({
+        resolver: zodResolver(generateEmbedLinkSchema),
+        defaultValues: {
+            parameters: parameterNames.map((name) => ({ name, value: "" })),
+            ttlPreset: DEFAULT_TTL_PRESET,
+            customTtlSeconds: null,
+            maxInvocations: DEFAULT_MAX_INVOCATIONS,
+        },
+    });
+
+    const ttlPreset = useWatch({ control: form.control, name: "ttlPreset" });
+    const queryClient = useQueryClient();
+
+    const mintMutation = useMutation({
+        mutationFn: (request: MintEmbedLinkRequest) => api.services.embedLinks.mint(slug, request),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey });
+        },
+    });
+
+    const result = mintMutation.data;
+
+    const submit = form.handleSubmit((values) => {
+        const ttlSeconds =
+            values.ttlPreset === "custom" && values.customTtlSeconds != null
+                ? values.customTtlSeconds
+                : Number(values.ttlPreset);
+        const parameters = Object.fromEntries(values.parameters.map(({ name, value }) => [name, value.trim()]));
+
+        mintMutation.mutate({
+            agentId,
+            parameters: values.parameters.length > 0 ? parameters : undefined,
+            ttlSeconds,
+            maxInvocations: values.maxInvocations,
+        });
+    });
+
+    const handleOpenChange = (open: boolean) => {
+        setIsOpen(open);
+        if (!open) {
+            // The minted link's preview iframe spends real invocations (see embed-link-preview.tsx),
+            // so refresh the list on close to reflect any chats sent in the preview after minting.
+            if (mintMutation.data) {
+                queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey });
+            }
+            form.reset();
+            mintMutation.reset();
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <DialogContent className={cn("sm:max-w-md", result && "max-h-[90vh] overflow-y-auto sm:max-w-lg")}>
+                <DialogHeader>
+                    <DialogTitle>Generate embed link</DialogTitle>
+                    <DialogDescription>
+                        Mint a per-user link for “{displayName}”. Parameters are bound into the link and can’t be
+                        changed by the end user.
+                    </DialogDescription>
+                </DialogHeader>
+
+                {result ? (
+                    <MintedLink result={result} onGenerateAnother={() => mintMutation.reset()} />
+                ) : (
+                    <form className="grid gap-4" onSubmit={submit}>
+                        {parameterNames.length > 0 && (
+                            <div className="grid gap-3">
+                                {parameterNames.map((name, index) => (
+                                    <FormInput
+                                        key={name}
+                                        control={form.control}
+                                        name={`parameters.${index}.value`}
+                                        label={name}
+                                        placeholder="e.g. users/1"
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        <FormSelect
+                            control={form.control}
+                            name="ttlPreset"
+                            label="Link expires after"
+                            options={TTL_PRESET_OPTIONS}
+                        />
+                        {ttlPreset === "custom" && (
+                            <FormInput
+                                control={form.control}
+                                name="customTtlSeconds"
+                                type="number"
+                                label="Custom duration (seconds)"
+                                placeholder="e.g. 7200"
+                                min={MIN_TTL_SECONDS}
+                                max={MAX_TTL_SECONDS}
+                            />
+                        )}
+
+                        <FormInput
+                            control={form.control}
+                            name="maxInvocations"
+                            type="number"
+                            label="Max invocations"
+                            description="How many chats this link allows before it stops working."
+                            min={MIN_INVOCATIONS}
+                            max={MAX_INVOCATIONS}
+                        />
+
+                        {mintMutation.isError && (
+                            <Alert variant="destructive">
+                                {mintMutation.error instanceof Error
+                                    ? mintMutation.error.message
+                                    : "Could not generate link."}
+                            </Alert>
+                        )}
+
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline">
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={mintMutation.isPending}>
+                                {mintMutation.isPending && <Spinner />}
+                                Generate link
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function MintedLink({ result, onGenerateAnother }: { result: MintEmbedLinkResponse; onGenerateAnother: () => void }) {
+    return (
+        <>
+            <EmbedLinkPreview
+                url={result.url}
+                token={result.token}
+                expiresAt={result.expiresAt}
+                maxInvocations={result.maxInvocations}
+            />
+
+            <DialogFooter>
+                <Button type="button" variant="secondary" onClick={onGenerateAnother}>
+                    Generate another
+                </Button>
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                        Done
+                    </Button>
+                </DialogClose>
+            </DialogFooter>
+        </>
+    );
+}

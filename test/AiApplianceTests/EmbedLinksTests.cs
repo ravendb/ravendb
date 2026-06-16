@@ -92,6 +92,63 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
         Assert.True(ok.IsSuccessStatusCode, await ok.Content.ReadAsStringAsync());
     }
 
+    // ---- list ----
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task List_returns_live_links_newest_first_and_excludes_revoked_and_expired()
+    {
+        using var h = await HarnessAsync(provisionChannel: false);
+        await ProvisionParamAgentChannelAsync(h.Client, h.Slug);
+
+        // Four links on the same channel: two stay live, one is revoked, one is expired.
+        var older = await MintAsync(h.Client, h.Slug, "param-agent",
+            parameters: new Dictionary<string, string> { ["customerId"] = "companies/1-A" });
+        var newer = await MintAsync(h.Client, h.Slug, "param-agent",
+            parameters: new Dictionary<string, string> { ["customerId"] = "companies/2-A" });
+        var expired = await MintAsync(h.Client, h.Slug, "param-agent",
+            parameters: new Dictionary<string, string> { ["customerId"] = "companies/3-A" });
+        var revoked = await MintAsync(h.Client, h.Slug, "param-agent",
+            parameters: new Dictionary<string, string> { ["customerId"] = "companies/4-A" });
+
+        // Pin distinct CreatedAt on the live pair (so the ordering assertion doesn't
+        // ride on clock resolution) and push one link past its TTL.
+        using (var session = h.Store.OpenAsyncSession(h.Database))
+        {
+            (await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + older)).CreatedAt = DateTime.UtcNow.AddHours(-2);
+            (await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + newer)).CreatedAt = DateTime.UtcNow.AddHours(-1);
+            (await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + expired)).ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            await session.SaveChangesAsync();
+        }
+
+        var revoke = await h.Client.DeleteAsync($"/api/apps/{h.Slug}/embed-links/{revoked}");
+        Assert.True(revoke.IsSuccessStatusCode, await revoke.Content.ReadAsStringAsync());
+
+        var resp = await h.Client.GetAsync($"/api/apps/{h.Slug}/embed-links");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var items = await resp.Content.ReadFromJsonAsync<JsonElement>();
+
+        // Only the live links, newest first; revoked + expired are filtered out.
+        var tokens = items.EnumerateArray().Select(x => x.GetProperty("token").GetString()).ToArray();
+        Assert.Equal(new[] { newer, older }, tokens);
+
+        // The summary carries the bound parameters, the routed agent, and a zeroed usage counter.
+        var first = items[0];
+        Assert.Equal("param-agent", first.GetProperty("agentId").GetString());
+        Assert.Equal("companies/2-A", first.GetProperty("parameters").GetProperty("customerId").GetString());
+        Assert.Equal(0, first.GetProperty("invocationCount").GetInt32());
+        Assert.Equal(50, first.GetProperty("maxInvocations").GetInt32());
+        Assert.False(string.IsNullOrEmpty(first.GetProperty("widgetId").GetString()));
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task List_for_unknown_app_returns_404()
+    {
+        using var h = await HarnessAsync(provisionChannel: false);
+
+        var resp = await h.Client.GetAsync("/api/apps/no-such-app/embed-links");
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
     // ---- public token lifecycle ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]

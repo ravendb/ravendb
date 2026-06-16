@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { channelsMocks } from "@/mocks/channels-mocks";
+import { embedLinksMocks } from "@/mocks/embed-links-mocks";
 import { AppChannels } from "./app-channels";
 
 const meta = {
@@ -22,6 +23,18 @@ export const Empty: Story = {
         msw: {
             handlers: {
                 channels: [channelsMocks.list([])],
+            },
+        },
+    },
+};
+
+// Open "Generate embed link" on the Website widget row and submit to see the
+// server's inline error surfaced (e.g. a required parameter left blank server-side).
+export const LinkMintError: Story = {
+    parameters: {
+        msw: {
+            handlers: {
+                embedLinks: [embedLinksMocks.mintError()],
             },
         },
     },
