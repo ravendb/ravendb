@@ -42,6 +42,12 @@ internal sealed class EmbedLink
         return true;
     }
 
+    /// <summary>A log-safe rendering of a token: just the first 8 chars — enough to
+    /// correlate log lines, but not the credential. The token is a bearer secret
+    /// (until revoked/expired), so it must never be logged in full.</summary>
+    internal static string RedactToken(string? token) =>
+        token is { Length: > 8 } ? token[..8] : (token ?? "");
+
     /// <summary><c>embed-links/{token}</c>.</summary>
     public string? Id { get; set; }
 

@@ -156,7 +156,7 @@ public static class EmbedEndpoints
         }
         catch (Exception e)
         {
-            logger.LogError(e, "embed chat failed for token={Token}", token);
+            logger.LogError(e, "embed chat failed for tokenPrefix={TokenPrefix}", EmbedLink.RedactToken(token));
 
             // Pre-stream failure (LLM 401/5xx, timeout, agent error): nothing was
             // streamed, so the conversation never advanced — refund the reserved
@@ -266,7 +266,7 @@ public static class EmbedEndpoints
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "failed to refund invocation for token={Token}", token);
+            logger.LogWarning(e, "failed to refund invocation for tokenPrefix={TokenPrefix}", EmbedLink.RedactToken(token));
         }
     }
 
