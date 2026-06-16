@@ -146,19 +146,33 @@ public unsafe partial class Hnsw
 
         public int CreatedNodes => _newNodes.Count;
 
-        /// <summary>
-        /// Pre-size the underlying <see cref="_nodes"/> NativeList so that no
-        /// AllocateNodeIndex call during the build can trigger a Grow → Release of
-        /// the old storage. Needed by the parallel placement runner when worker
-        /// threads hold <c>ref Node</c> values into <see cref="_nodes"/> across
-        /// LLT-side dispatch — without this, a Grow would invalidate those refs.
-        /// </summary>
-        public void EnsureNodesCapacity(int totalCapacity)
+        private List<NativeList<Node>> _retiredNodeStores;
+
+        // Grow the node array by copying into a fresh buffer and keeping the old one alive (released on
+        // dispose) instead of freeing it, so a parallel-placement worker dereferencing a ref into the
+        // array never observes a buffer freed by a grow mid-dispatch (RavenDB-26809).
+        private void GrowNodesRetainingOldBuffer()
         {
-            if (_nodes.Capacity >= totalCapacity)
-                return;
-            _nodes.EnsureCapacityFor(Llt.Allocator, totalCapacity - _nodes.Count);
+            var grown = new NativeList<Node>();
+            grown.Initialize(Llt.Allocator, Math.Max(InitialNodesCapacityWithCache, _nodes.Capacity * 2));
+            grown.AddRangeUnsafe(_nodes.ToSpan());
+            (_retiredNodeStores ??= []).Add(_nodes);
+            // Publish the copied buffer before the new pointer becomes observable, so a concurrent
+            // reader that sees the new pointer also sees the copied contents (weak-memory archs).
+            Thread.MemoryBarrier();
+            _nodes = grown;
         }
+
+        // Force a grow of the node array backing store; returns true if the buffer moved. Test-only.
+        internal bool ForceGrowNodesForTesting()
+        {
+            var before = (nint)_nodes.RawItems;
+            GrowNodesRetainingOldBuffer();
+            return (nint)_nodes.RawItems != before;
+        }
+
+        // Number of grown-from node buffers kept alive (un-disposed) until dispose.
+        internal int RetiredNodeStorageCountForTesting => _retiredNodeStores?.Count ?? 0;
 
         public int GetCreatedNodeIndex(int index) => _newNodes[index];
 
@@ -293,8 +307,10 @@ public unsafe partial class Hnsw
 
         private int AllocateNodeIndex(long nodeId)
         {
+            if (_nodes.HasCapacityFor(1) == false)
+                GrowNodesRetainingOldBuffer();
             int nodeIndex = _nodes.Count;
-            _nodes.Add(Llt.Allocator, new Node { NodeId = nodeId });
+            _nodes.AddUnsafe(new Node { NodeId = nodeId });
             return nodeIndex;
         }
 
@@ -892,6 +908,15 @@ public unsafe partial class Hnsw
            _newNodes.Dispose(Llt.Allocator);
 
            _nodes.Dispose(Llt.Allocator);
+
+           if (_retiredNodeStores is not null)
+           {
+               foreach (var store in _retiredNodeStores)
+               {
+                   var retired = store;
+                   retired.Dispose(Llt.Allocator);
+               }
+           }
 
            if (_queryNormalizationScope is { } scope)
            {

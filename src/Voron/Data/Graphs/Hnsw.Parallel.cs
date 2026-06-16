@@ -150,6 +150,15 @@ public partial class Hnsw
             private readonly List<int> _indexes = [];
             private readonly List<int> _requiresEdgeFiltering = [];
             private readonly List<UnmanagedSpan> _vectors = [];
+
+            // Per-task, point-in-time copy of the current (node, level) edge indexes. Filled on the
+            // LLT thread in PrepareEdgesOnLLT and read by the worker in PopulateWorkListsOnWorker.
+            // This decouples the worker from the shared, growable EdgesIndexesPerLevel native buffer,
+            // whose backing store the LLT thread can free/realloc in a later dispatch round while the
+            // worker still runs (the PopulateWorkListsOnWorker use-after-free, RavenDB-26809). One
+            // WorkItem per task is in flight at a time (WorkItem.Execute re-enqueues the iterator only
+            // after the worker finishes), so this buffer is safe to clear+refill on every dispatch.
+            private readonly List<int> _edgeIndexSnapshot = [];
             private readonly PriorityQueue<int, float> _candidatesQ = new();
             private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
             private ulong[] _visitedBitmap = [];
@@ -648,6 +657,14 @@ public partial class Hnsw
                     }
                 }
 
+                // Snapshot the now-in-sync edge indexes into the per-task buffer ON THE LLT THREAD.
+                // The worker reads this private copy in PopulateWorkListsOnWorker instead of the shared
+                // EdgesIndexesPerLevel native buffer, so the LLT thread is free to grow/realloc that
+                // buffer in later rounds without racing the worker (RavenDB-26809). The copy is a
+                // consistent point-in-time view, so the worker never observes a torn read.
+                _edgeIndexSnapshot.Clear();
+                _edgeIndexSnapshot.AddRange(edgesIndexes.ToSpan());
+
                 return true; // always dispatch; worker decides via _indexes.Count after fill
             }
 
@@ -676,8 +693,11 @@ public partial class Hnsw
                     _vectors.Add(n.GetVectorUnmanagedSpan(_searchState));
                 }
 
-                ref var edgesIndexes = ref n.EdgesIndexesPerLevel[level];
-                foreach (var idx in edgesIndexes)
+                // Read the per-task snapshot captured on the LLT thread in PrepareEdgesOnLLT, NOT the
+                // shared EdgesIndexesPerLevel native buffer: that buffer's storage can be freed and
+                // reallocated by the LLT thread in a later round while this worker is still running
+                // (use-after-free, RavenDB-26809).
+                foreach (var idx in _edgeIndexSnapshot)
                 {
                     if (MarkVisited(idx) is false)
                         continue;
@@ -737,14 +757,6 @@ public partial class Hnsw
                 _mainCts = CancellationTokenSource.CreateLinkedTokenSource(token, _errorCts.Token);
                 _activeTasksCount = activeTasksCount;
                 _searchState = parent._searchState;
-
-                // Pre-size SearchState._nodes so that AllocateNodeIndex calls during the
-                // build never reallocate the underlying ByteString. Workers in
-                // PopulateWorkListsOnWorker hold ref Node values into that storage across
-                // LLT-side dispatch; a Grow → Release between dispatch and worker access
-                // would invalidate those refs. Headroom of 16 K covers edge nodes that get
-                // lazily loaded on top of CreatedNodes.
-                _searchState.EnsureNodesCapacity(_searchState.CreatedNodes + 16 * 1024);
 
                 for (int i = 0; i < activeTasksCount; i++)
                 {
