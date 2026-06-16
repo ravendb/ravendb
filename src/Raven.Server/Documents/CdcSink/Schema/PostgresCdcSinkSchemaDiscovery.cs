@@ -22,8 +22,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
             var columnLookup = new Dictionary<(string Schema, string Table, string Column), CdcSinkSourceColumn>();
 
             await using (var cmd = new NpgsqlCommand(queries.SelectColumnsQuery, conn))
-            await using (var reader = await cmd.ExecuteReaderAsync(ct))
             {
+                queries.AddSchemaParameter(cmd, conn);
+                await using var reader = await cmd.ExecuteReaderAsync(ct);
                 while (await reader.ReadAsync(ct))
                 {
                     var schemaName = reader["TABLE_SCHEMA"].ToString();

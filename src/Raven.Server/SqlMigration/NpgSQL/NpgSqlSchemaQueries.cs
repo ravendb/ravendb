@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,12 +21,31 @@ namespace Raven.Server.SqlMigration.NpgSQL
             " ON C.TABLE_CATALOG = T.TABLE_CATALOG AND C.TABLE_SCHEMA = T.TABLE_SCHEMA AND C.TABLE_NAME = T.TABLE_NAME " +
             " WHERE T.TABLE_TYPE <> 'VIEW' AND T.TABLE_SCHEMA IN ({0})";
 
+        private readonly string[] _schemas;
+
         public NpgSqlSchemaQueries(string[] schemas)
         {
-            const string defaultSchema = "'public'";
-            var schemasString = schemas == null || schemas.Length == 0 ? defaultSchema : string.Join(',', schemas.Select(x => $"'{x}'"));
+            // Bind the schema filter as @s0, @s1, ... parameters (defense-in-depth against injection);
+            // AddSchemaParameter supplies the values. Default to "public" when no schemas are requested.
+            _schemas = schemas is { Length: > 0 } ? schemas : new[] { "public" };
+            var placeholders = string.Join(", ", _schemas.Select((_, i) => $"@s{i}"));
+            SelectColumnsQuery = string.Format(SelectColumnsTemplate, placeholders);
+        }
 
-            SelectColumnsQuery = string.Format(SelectColumnsTemplate, schemasString);
+        protected internal override void AddSchemaParameter(DbCommand cmd, DbConnection connection)
+        {
+            // Only SelectColumnsQuery carries the @s0.. schema filter; the other queries scan across
+            // schemas (constrained by their join predicates / reader), so don't bind unused parameters.
+            if (cmd.CommandText != SelectColumnsQuery)
+                return;
+
+            for (var i = 0; i < _schemas.Length; i++)
+            {
+                var p = cmd.CreateParameter();
+                p.ParameterName = $"s{i}";
+                p.Value = _schemas[i];
+                cmd.Parameters.Add(p);
+            }
         }
 
         public override string SelectColumnsQuery { get; }
