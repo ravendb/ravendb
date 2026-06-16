@@ -171,6 +171,24 @@ public unsafe partial class Hnsw
             return (nint)_nodes.RawItems != before;
         }
 
+        // Test-only: grow the node array, then claim a buffer of the vacated capacity and fill it with a
+        // poison pattern. If the grow freed the old buffer (the RavenDB-26809 bug) the allocator reuses
+        // that same memory and a dangling reader sees poison; if it was retained (the fix) the reader is
+        // unaffected. The poison buffer is retained so it occupies the region past the reader's resume.
+        internal bool GrowNodesAndPoisonVacatedForTesting()
+        {
+            var before = (nint)_nodes.RawItems;
+            int vacatedCapacity = _nodes.Capacity;
+            GrowNodesRetainingOldBuffer();
+
+            var poison = new NativeList<Node>();
+            poison.Initialize(Llt.Allocator, vacatedCapacity);
+            poison.ToFullCapacitySpan().Fill(new Node { NodeId = -1, VectorId = -1 });
+            (_retiredNodeStores ??= []).Add(poison);
+
+            return (nint)_nodes.RawItems != before;
+        }
+
         // Number of grown-from node buffers kept alive (un-disposed) until dispose.
         internal int RetiredNodeStorageCountForTesting => _retiredNodeStores?.Count ?? 0;
 
@@ -954,6 +972,91 @@ public unsafe partial class Hnsw
         public int AmountOfModifiedVectorsInTransaction => _vectorHashCache.Count;
 
         public Options Options => _searchState.Options;
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly() => _forTestingPurposes ??= new TestingStuff();
+
+        // Deterministically reproduces the RavenDB-26809 interleaving for tests: parks a placement worker
+        // while it holds a reference into a node's edges, then has the LLT thread move both that edge
+        // buffer and the node array before the worker resumes. With the fix in place the worker reads a
+        // private edge snapshot and the grown-from node buffer is retained, so the build completes and the
+        // graph stays queryable; reverting either guard turns this into a use-after-free.
+        internal sealed class TestingStuff
+        {
+            internal bool SimulateConcurrentRealloc;
+
+            // Latched once the matching buffer was actually moved while the worker was parked, so a test
+            // can fail loudly if the race window was never exercised.
+            internal volatile bool VictimSelected;
+            internal volatile bool InnerEdgeBufferMovedWhileWorkerParked;
+            internal volatile bool NodesArrayMovedWhileWorkerParked;
+
+            // False if a node reference captured before the move read poisoned/freed data after it — i.e.
+            // the node array was not retained across the grow (the RavenDB-26809 bug).
+            internal volatile bool StaleNodeReferenceStillValid = true;
+
+            // Set by the runner so the parked worker can wake the dispatch loop; without it the loop may
+            // not iterate again when the only outstanding work is the parked worker itself.
+            internal Action WakeLltLoop;
+
+            private int _victim = -1;
+            private int _victimLevel;
+            private nint _victimEdgeBufferBeforeMove;
+            private nint _victimNodePtr;
+            private long _victimNodeIdExpected;
+            private readonly ManualResetEventSlim _workerParked = new(false);
+            private readonly ManualResetEventSlim _lltMoved = new(false);
+
+            // Worker thread: the first worker about to consume a node's edges at a level with real storage
+            // parks here until the LLT thread has moved that storage and the node array.
+            internal void OnWorkerCapturedEdgeListRef(SearchState searchState, int nodeIndex, int level)
+            {
+                if (SimulateConcurrentRealloc == false || Volatile.Read(ref _victim) >= 0)
+                    return;
+
+                ref var candidate = ref searchState.GetNodeByIndex(nodeIndex);
+                if (candidate.EdgesIndexesPerLevel.Count <= level || candidate.EdgesIndexesPerLevel[level].Count == 0)
+                    return;
+                if (Interlocked.CompareExchange(ref _victim, nodeIndex, -1) != -1)
+                    return;
+
+                _victimLevel = level;
+                _victimEdgeBufferBeforeMove = (nint)candidate.EdgesIndexesPerLevel[level].RawItems;
+                _victimNodePtr = (nint)Unsafe.AsPointer(ref candidate);
+                _victimNodeIdExpected = candidate.NodeId;
+                VictimSelected = true;
+                _workerParked.Set();
+                WakeLltLoop?.Invoke();
+                _lltMoved.Wait(TimeSpan.FromMinutes(2));
+
+                // Read through the reference captured before the move, exactly as a racing worker would.
+                // Retaining the grown-from buffer keeps this valid; freeing it (the bug) reads poison.
+                if (((Node*)_victimNodePtr)->NodeId != _victimNodeIdExpected)
+                    StaleNodeReferenceStillValid = false;
+            }
+
+            // LLT thread, at the top of each dispatch round: once the victim worker has parked, move its
+            // edge buffer (restoring contents) and the node array, then release the worker.
+            internal void OnLltRunRound(SearchState searchState)
+            {
+                if (SimulateConcurrentRealloc == false || _lltMoved.IsSet || _workerParked.IsSet == false)
+                    return;
+
+                ref var inner = ref searchState.GetNodeByIndex(_victim).EdgesIndexesPerLevel[_victimLevel];
+                var saved = inner.ToSpan().ToArray();
+                inner.ResetAndEnsureCapacity(searchState.Llt.Allocator, Math.Max(inner.Capacity * 2, saved.Length + 1));
+                foreach (var v in saved)
+                    inner.AddUnsafe(v);
+                if ((nint)inner.RawItems != _victimEdgeBufferBeforeMove)
+                    InnerEdgeBufferMovedWhileWorkerParked = true;
+
+                if (searchState.GrowNodesAndPoisonVacatedForTesting())
+                    NodesArrayMovedWhileWorkerParked = true;
+
+                _lltMoved.Set();
+            }
+        }
 
         public Registration(LowLevelTransaction llt, Slice name, Random random = null)
         {

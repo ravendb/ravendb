@@ -693,6 +693,7 @@ public partial class Hnsw
                     _vectors.Add(n.GetVectorUnmanagedSpan(_searchState));
                 }
 
+                parent._forTestingPurposes?.OnWorkerCapturedEdgeListRef(_searchState, currentNodeIndex, level);
                 // Read the per-task snapshot captured on the LLT thread in PrepareEdgesOnLLT, NOT the
                 // shared EdgesIndexesPerLevel native buffer: that buffer's storage can be freed and
                 // reallocated by the LLT thread in a later round while this worker is still running
@@ -730,6 +731,7 @@ public partial class Hnsw
             private readonly CancellationTokenSource _mainCts;
             private readonly List<Exception> _errors = [];
             private readonly LinkedList<int> _inFlightIndexes = [];
+            private readonly Registration.TestingStuff _forTestingPurposes;
 
             // Latches to true once an iteration completes with nothing left to preload, meaning
             // every node touched so far is resident. From that point we skip the RegisterForPreloading
@@ -758,6 +760,10 @@ public partial class Hnsw
                 _activeTasksCount = activeTasksCount;
                 _searchState = parent._searchState;
 
+                _forTestingPurposes = parent._forTestingPurposes;
+                if (_forTestingPurposes is { SimulateConcurrentRealloc: true })
+                    _forTestingPurposes.WakeLltLoop = () => _ready.Set();
+
                 for (int i = 0; i < activeTasksCount; i++)
                 {
                     Enqueue(new NodePlacement(parent, this).Process().GetEnumerator());
@@ -772,7 +778,9 @@ public partial class Hnsw
                 {
                     _ready.Wait();
                     _ready.Reset();
-                    
+
+                    _forTestingPurposes?.OnLltRunRound(_searchState);
+
                     while(_placementTasks.TryDequeue(out var it))
                     {
                         if (it.MoveNext())
