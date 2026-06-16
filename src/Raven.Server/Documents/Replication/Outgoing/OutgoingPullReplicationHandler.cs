@@ -200,7 +200,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     TaskId = _node.TaskId,
                     NodeTag = _parent._server.NodeTag,
                     SourceChangeVector = confirmedSinkCv,
-                    Type = ExternalReplicationState.ReplicationStateType.SinkCursor
+                    Type = ExternalReplicationState.ReplicationStateType.SinkCursor,
+                    FromToString = FromToString
                 }
             };
             _parent.Server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
