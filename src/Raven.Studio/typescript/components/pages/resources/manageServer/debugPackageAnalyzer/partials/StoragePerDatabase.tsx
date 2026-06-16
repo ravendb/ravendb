@@ -43,13 +43,13 @@ function useStorageColumns(availableWidth: number) {
             {
                 header: "Database",
                 accessorKey: "database",
-                cell: storageDbNameCell,
+                cell: StorageDbNameCell,
                 size: getSize(36),
             },
             {
                 header: "Node",
                 accessorKey: "nodeTag",
-                cell: storageNodeTagCell,
+                cell: StorageNodeTagCell,
                 size: getSize(14),
             },
             {
@@ -123,11 +123,11 @@ function StoragePerDatabaseWithSize({ summary, nodeTag, width }: StoragePerDatab
     );
 }
 
-function storageDbNameCell({ row }: { row: { original: StorageTableRow } }) {
+function StorageDbNameCell({ row }: { row: { original: StorageTableRow } }) {
     return row.original.rowKind === "database" ? <span className="fw-bold">{row.original.database}</span> : null;
 }
 
-function storageNodeTagCell({ row }: { row: { original: StorageTableRow } }) {
+function StorageNodeTagCell({ row }: { row: { original: StorageTableRow } }) {
     return row.original.rowKind === "node" ? <NodeTagPill tag={row.original.nodeTag!} /> : null;
 }
 
@@ -142,7 +142,9 @@ function buildStorageRows(summary: DebugPackageAnalysisSummary, nodeTag?: string
     >();
 
     Object.entries(summary.SummaryPerNode ?? {}).forEach(([tag, node]) => {
-        if (nodeTag && tag !== nodeTag) return;
+        if (nodeTag && tag !== nodeTag) {
+            return;
+        }
 
         (node.DatabaseStorageUsage?.Items ?? []).forEach((item) => {
             let agg = dbMap.get(item.Database);

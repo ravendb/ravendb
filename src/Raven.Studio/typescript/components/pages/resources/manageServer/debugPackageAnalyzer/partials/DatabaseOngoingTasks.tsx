@@ -50,14 +50,14 @@ function useDatabaseOngoingTasksColumns(availableWidth: number) {
             {
                 header: "Name",
                 accessorKey: "TaskName",
-                cell: taskNameCell,
+                cell: TaskNameCell,
                 size: getSize(33),
             },
             {
                 header: "Responsible node",
                 id: "responsibleNode",
                 accessorFn: (task) => task.ResponsibleNode?.NodeTag ?? "",
-                cell: taskResponsibleNodeCell,
+                cell: TaskResponsibleNodeCell,
                 size: getSize(20),
             },
             {
@@ -220,12 +220,12 @@ function DatabaseOngoingTasksWithSize({
     );
 }
 
-function taskNameCell({ getValue }: { getValue: () => unknown }) {
+function TaskNameCell({ getValue }: { getValue: () => unknown }) {
     const v = getValue() as string;
     return <span title={v}>{v}</span>;
 }
 
-function taskResponsibleNodeCell({ row }: { row: { original: OngoingTask } }) {
+function TaskResponsibleNodeCell({ row }: { row: { original: OngoingTask } }) {
     return row.original.ResponsibleNode?.NodeTag ? (
         <span className="hstack gap-1 align-items-center">
             <NodeTagPill tag={row.original.ResponsibleNode.NodeTag} />

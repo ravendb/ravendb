@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useServices } from "hooks/useServices";
-import { useAsyncCallback } from "react-async-hook";
+import { useAsync, useAsyncCallback } from "react-async-hook";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -9,23 +9,9 @@ export type DebugPackageAnalyzerView = "upload" | "analyzing" | "error" | "loade
 export function useDebugPackageAnalyzer() {
     const { manageServerService } = useServices();
 
-    const [selectedFile, setSelectedFile] = useState<File>(null);
     const [summary, setSummary] = useState<DebugPackageAnalysisSummary>(null);
     const [fileName, setFileName] = useState<string>(null);
     const [error, setError] = useState<any>(null);
-
-    const packageIdRef = useRef<string>(null);
-    useEffect(() => {
-        packageIdRef.current = summary?.PackageId ?? null;
-    }, [summary]);
-
-    useEffect(() => {
-        return () => {
-            if (packageIdRef.current) {
-                manageServerService.removeDebugPackageAnalysis(packageIdRef.current).catch(() => {});
-            }
-        };
-    }, [manageServerService]);
 
     const analyzeAsync = useAsyncCallback((file: File) => manageServerService.uploadDebugPackageForAnalysis(file), {
         onSuccess: (result) => {
@@ -37,20 +23,22 @@ export function useDebugPackageAnalyzer() {
         },
     });
 
-    const analyze = useCallback(() => {
-        if (selectedFile) {
-            setError(null);
-            setFileName(selectedFile.name);
-            analyzeAsync.execute(selectedFile);
-        }
-    }, [analyzeAsync, selectedFile]);
+    const onFileSelected = useCallback(
+        (file: File) => {
+            if (file) {
+                setError(null);
+                setFileName(file.name);
+                analyzeAsync.execute(file);
+            }
+        },
+        [analyzeAsync]
+    );
 
     const reset = useCallback(async () => {
         const packageId = summary?.PackageId;
 
         setSummary(null);
         setFileName(null);
-        setSelectedFile(null);
         setError(null);
 
         if (packageId) {
@@ -62,23 +50,18 @@ export function useDebugPackageAnalyzer() {
         }
     }, [manageServerService, summary]);
 
-    // deep-link: load an already-analyzed package by id (valid while the server keeps the report)
-    useEffect(() => {
+    // deep-link: load an already-analyzed package by id (valid while the server keeps the report).
+    // an error (e.g. the report expired server-side) is swallowed by useAsync, leaving us on the upload view.
+    useAsync(async () => {
         const { packageId, fileName: fileNameParam } = parseHashQuery();
         if (!packageId) {
             return;
         }
 
-        manageServerService
-            .getDebugPackageAnalysisSummary(packageId)
-            .then((result) => {
-                setSummary(result);
-                setFileName(fileNameParam || packageId);
-            })
-            .catch(() => {
-                // the report may have expired server-side - stay on the upload view
-            });
-    }, [manageServerService]);
+        const result = await manageServerService.getDebugPackageAnalysisSummary(packageId);
+        setSummary(result);
+        setFileName(fileNameParam || packageId);
+    }, []);
 
     const view: DebugPackageAnalyzerView = summary
         ? "loaded"
@@ -90,11 +73,9 @@ export function useDebugPackageAnalyzer() {
 
     return {
         view,
-        selectedFile,
-        setSelectedFile,
+        onFileSelected,
         summary,
         fileName,
-        analyze,
         reset,
         isAnalyzing: analyzeAsync.loading,
         error,

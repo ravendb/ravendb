@@ -1,4 +1,4 @@
-﻿import React, { memo } from "react";
+import React, { memo } from "react";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";

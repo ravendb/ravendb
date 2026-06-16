@@ -1,5 +1,7 @@
 import React from "react";
+import moment from "moment";
 import Button from "react-bootstrap/Button";
+import genUtils from "common/generalUtils";
 
 interface PackageInfoProps {
     fileName: string;
@@ -22,22 +24,14 @@ export default function PackageInfo({ fileName, onReset }: PackageInfoProps) {
     );
 }
 
-// debug package file names are produced as e.g. "2025-11-19 10-55-11 Cluster Wide.zip"
+// debug package file names are produced as e.g. "2025-11-19 10-55-11 Cluster Wide.zip" - the date and time
+// are the first two space-separated tokens
 function parseCreatedDate(fileName: string): string {
     if (!fileName) {
         return null;
     }
 
-    const match = fileName.match(/(\d{4})-(\d{2})-(\d{2})[ _](\d{2})-(\d{2})-(\d{2})/);
-    if (!match) {
-        return null;
-    }
-
-    const [, year, month, day, hour, minute, second] = match;
-    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
-    if (isNaN(date.getTime())) {
-        return null;
-    }
-
-    return date.toLocaleString();
+    const [datePart, timePart] = fileName.split(" ");
+    const created = moment(`${datePart} ${timePart ?? ""}`.trim(), "YYYY-MM-DD HH-mm-ss", true);
+    return created.isValid() ? created.format(genUtils.dateFormat) : null;
 }

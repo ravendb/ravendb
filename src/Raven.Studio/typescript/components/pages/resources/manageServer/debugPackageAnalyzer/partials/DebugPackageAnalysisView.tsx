@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useMemo, useState } from "react";
+import React, { useDeferredValue, useLayoutEffect, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import PackageInfo from "./PackageInfo";
 import { Icon } from "components/common/Icon";
@@ -41,6 +41,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
     const nodeTags = useMemo(() => Object.keys(summary.SummaryPerNode ?? {}).sort(), [summary]);
     const databaseNames = useMemo(() => collectDatabaseNames(summary), [summary]);
     const [context, setContext] = useState<AnalysisContext>("cluster");
+    const deferredContext = useDeferredValue(context);
     const [selectedNode, setSelectedNode] = useState<string>(() => defaultNode(summary, nodeTags));
     const [selectedDatabase, setSelectedDatabase] = useState<string>(() => databaseNames[0] ?? null);
     const deferredDatabase = useDeferredValue(selectedDatabase);
@@ -50,18 +51,27 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
         () => databaseNames.map((name): SelectOption<string> => ({ value: name, label: name })),
         [databaseNames]
     );
+    const databaseNodeOptions = useMemo(
+        () => databaseNodes.map((tag): SelectOption<string> => ({ value: tag, label: `Node ${tag}` })),
+        [databaseNodes]
+    );
+    // the node selector only lists nodes that actually host the selected database, so fall back to one of
+    // them whenever the previously selected node isn't among the new database's nodes
+    const effectiveDatabaseNode = databaseNodes.includes(selectedDatabaseNode)
+        ? selectedDatabaseNode
+        : (databaseNodes[0] ?? null);
 
     const allIssues = useMemo(() => flattenIssues(summary), [summary]);
 
     const contextIssues = useMemo(() => {
-        if (context === "node") {
+        if (deferredContext === "node") {
             return allIssues.filter((issue) => issue.nodeTags.includes(selectedNode));
         }
-        if (context === "database") {
+        if (deferredContext === "database") {
             return allIssues.filter((issue) => issue.scope === "database" && issue.database === deferredDatabase);
         }
         return allIssues;
-    }, [allIssues, context, selectedNode, deferredDatabase]);
+    }, [allIssues, deferredContext, selectedNode, deferredDatabase]);
 
     const contextItems = useMemo<ContextItem[]>(
         () => [
@@ -87,7 +97,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
             <div className="d-flex align-items-center justify-content-between gap-4 flex-wrap">
                 <div className="d-flex align-items-center gap-3 flex-wrap">
                     <ContextToggle items={contextItems} selected={context} onSelect={setContext} />
-                    {context === "node" && nodeTags.length > 0 && (
+                    {deferredContext === "node" && nodeTags.length > 0 && (
                         <div className="node-select">
                             <div className="context-toggle-label mb-1">Select node</div>
                             <Select<SelectOption<string>>
@@ -100,19 +110,19 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                             />
                         </div>
                     )}
-                    {context === "database" && databaseNames.length > 0 && (
+                    {deferredContext === "database" && databaseNames.length > 0 && (
                         <div className="node-select">
                             <div className="context-toggle-label mb-1">Select database</div>
                             <Select<SelectOption<string>>
                                 options={databaseOptions}
                                 value={selectedDatabase ? { value: selectedDatabase, label: selectedDatabase } : null}
                                 onChange={(option) => option && setSelectedDatabase(option.value)}
-                                isSearchable={false}
+                                isSearchable
                                 isLoading={deferredDatabase !== selectedDatabase}
                             />
                         </div>
                     )}
-                    {context === "database" && nodeTags.length > 1 && (
+                    {deferredContext === "database" && nodeTags.length > 1 && (
                         <PopoverWithHoverWrapper
                             message={databaseNodes.length <= 1 ? "This database has data on one node only" : null}
                             placement="top"
@@ -126,10 +136,12 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                             <div className="node-select">
                                 <div className="context-toggle-label mb-1">Select node</div>
                                 <Select<SelectOption<string>>
-                                    options={nodeTags.map(
-                                        (tag): SelectOption<string> => ({ value: tag, label: `Node ${tag}` })
-                                    )}
-                                    value={{ value: selectedDatabaseNode, label: `Node ${selectedDatabaseNode}` }}
+                                    options={databaseNodeOptions}
+                                    value={
+                                        effectiveDatabaseNode
+                                            ? { value: effectiveDatabaseNode, label: `Node ${effectiveDatabaseNode}` }
+                                            : null
+                                    }
                                     onChange={(option) => option && setSelectedDatabaseNode(option.value)}
                                     isSearchable={false}
                                     isDisabled={databaseNodes.length <= 1}
@@ -145,7 +157,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
 
             <AnalysisResults issues={contextIssues} />
 
-            {context === "cluster" && (
+            {deferredContext === "cluster" && (
                 <>
                     <ClusterOverview summary={summary} />
                     <ResourceUsage summary={summary} />
@@ -159,7 +171,7 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                     <ClusterObserverDecisions summary={summary} />
                 </>
             )}
-            {context === "node" && selectedNode && (
+            {deferredContext === "node" && selectedNode && (
                 <>
                     <NodeOverview summary={summary} nodeTag={selectedNode} />
                     <PerformanceMetrics summary={summary} nodeTag={selectedNode} />
@@ -170,12 +182,12 @@ export default function DebugPackageAnalysisView({ summary, fileName, onReset }:
                     <OngoingTasks summary={summary} nodeTag={selectedNode} />
                 </>
             )}
-            {context === "database" &&
+            {deferredContext === "database" &&
                 (deferredDatabase ? (
                     <DatabaseContextView
                         summary={summary}
                         database={deferredDatabase}
-                        selectedNode={selectedDatabaseNode}
+                        selectedNode={effectiveDatabaseNode}
                     />
                 ) : (
                     <EmptySet>No databases found in the package</EmptySet>
@@ -223,14 +235,62 @@ interface ContextToggleProps {
     onSelect: (value: AnalysisContext) => void;
 }
 
+interface IndicatorRect {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
 function ContextToggle({ items, selected, onSelect }: ContextToggleProps) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const buttonRefs = useRef<Record<string, HTMLButtonElement>>({});
+    const [indicator, setIndicator] = useState<IndicatorRect | null>(null);
+
+    useLayoutEffect(() => {
+        const container = containerRef.current;
+        if (!container) {
+            return;
+        }
+        const measure = () => {
+            const btn = buttonRefs.current[selected];
+            if (btn) {
+                setIndicator({
+                    left: btn.offsetLeft,
+                    top: btn.offsetTop,
+                    width: btn.offsetWidth,
+                    height: btn.offsetHeight,
+                });
+            }
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [selected, items]);
+
     return (
         <div className="context-toggle">
             <div className="context-toggle-label mb-1">Select analysis context</div>
-            <div className="context-toggle-container">
+            <div className="context-toggle-container" ref={containerRef}>
+                {indicator && (
+                    <span
+                        className="context-toggle-indicator"
+                        style={{
+                            width: indicator.width,
+                            height: indicator.height,
+                            transform: `translate(${indicator.left}px, ${indicator.top}px)`,
+                        }}
+                    />
+                )}
                 {items.map((item) => (
                     <button
                         key={item.value}
+                        ref={(el) => {
+                            if (el) {
+                                buttonRefs.current[item.value] = el;
+                            }
+                        }}
                         type="button"
                         className={classNames("context-toggle-btn", { active: selected === item.value })}
                         onClick={() => onSelect(item.value)}

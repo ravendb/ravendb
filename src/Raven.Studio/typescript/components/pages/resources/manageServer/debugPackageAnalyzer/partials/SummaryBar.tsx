@@ -1,9 +1,10 @@
 import React from "react";
 import { Icon } from "components/common/Icon";
+import IconName from "typings/server/icons";
 
 interface SummaryBarItem {
-    icon: string;
-    iconAddon?: string;
+    icon: IconName;
+    iconAddon?: IconName;
     count: number;
     label: string;
     colorClass?: string;
@@ -34,7 +35,7 @@ export default function SummaryBar({ items }: SummaryBarProps) {
 function SummaryBarItem({ item }: { item: SummaryBarItem }) {
     return (
         <span className={`hstack gap-1 small-label${item.colorClass ? ` ${item.colorClass}` : ""}`}>
-            <Icon icon={item.icon as any} addon={item.iconAddon as any} margin="m-0" />
+            <Icon icon={item.icon} addon={item.iconAddon} margin="m-0" />
             {item.count.toLocaleString()} {item.label}
         </span>
     );

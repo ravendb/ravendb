@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import ProgressBar from "react-bootstrap/ProgressBar";
@@ -172,6 +172,7 @@ function RaftSummaryTable({ results }: { results: NodeRaftResult[] }) {
                             {result.info ? (
                                 <PopoverWithHoverWrapper
                                     inline={false}
+                                    targetStyle={{ width: "100%" }}
                                     message={
                                         <>
                                             First entry index:{" "}

@@ -1,3 +1,9 @@
+.flex-window.debug-package-window-fill {
+    height: 100%;
+    flex-grow: 1;
+    min-height: 0;
+}
+
 .debug-package-analyzer {
     .file-dropzone {
         body[data-theme="blue"] & {
@@ -6,6 +12,71 @@
             .text-muted {
                 color: var(--bs-secondary-color) !important;
             }
+        }
+    }
+
+    &.debug-package-analyzer--fill {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .debug-package-upload {
+        flex-grow: 1;
+        min-height: 0;
+    }
+
+    .debug-package-dropzone {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+
+        .file-dropzone {
+            flex-grow: 1;
+        }
+    }
+
+    .analysis-progress {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        text-align: center;
+        padding: 2rem;
+        border: 2px dashed var(--border-color-light);
+        border-radius: var(--bs-border-radius-md);
+        background-color: var(--input-bg);
+        color: var(--text-muted);
+
+        .analysis-progress-text {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .analysis-progress-title {
+            font-size: 1.1rem;
+            color: var(--text-emphasis);
+        }
+
+        .analysis-progress-bar {
+            position: relative;
+            width: min(420px, 80%);
+            height: 6px;
+            border-radius: 100px;
+            background-color: var(--border-color-light);
+            overflow: hidden;
+        }
+
+        .analysis-progress-bar-fill {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 40%;
+            border-radius: inherit;
+            background-color: var(--bs-primary);
+            animation: analysis-progress-indeterminate 1.2s ease-in-out infinite;
         }
     }
 
@@ -122,6 +193,9 @@
         }
 
         .context-toggle-container {
+            --context-indicator-bg: var(--bs-secondary);
+
+            position: relative;
             background: var(--well-bg);
             border: 1px solid var(--border-color-light);
             border-radius: 0.5rem;
@@ -130,12 +204,31 @@
             gap: 4px;
             padding: 4px;
 
+            body[data-theme="light"] & {
+                --context-indicator-bg: var(--faded-primary);
+            }
+
             &.w-100 {
                 display: flex;
             }
         }
 
+        .context-toggle-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            border-radius: 4px;
+            background: var(--context-indicator-bg);
+            will-change: transform;
+            transition:
+                transform 0.25s ease,
+                width 0.25s ease;
+        }
+
         .context-toggle-btn {
+            position: relative;
+            z-index: 1;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -148,16 +241,13 @@
             cursor: pointer;
             white-space: nowrap;
             font-size: 0.9rem;
-            transition:
-                background-color 0.15s,
-                color 0.15s;
+            transition: color 0.15s;
 
             &:hover:not(.active) {
                 color: var(--text-emphasis);
             }
 
             &.active {
-                background-color: var(--bs-secondary);
                 color: var(--bs-white);
 
                 .context-toggle-badge {
@@ -166,7 +256,6 @@
                 }
 
                 body[data-theme="light"] & {
-                    background-color: var(--faded-primary);
                     color: var(--text-faded-primary);
 
                     .context-toggle-badge {
@@ -430,5 +519,24 @@
         .stat-tile-value {
             font-weight: 600;
         }
+    }
+}
+
+@keyframes analysis-progress-indeterminate {
+    0% {
+        left: -40%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .debug-package-analyzer .context-toggle-indicator {
+        transition: none;
+    }
+
+    .debug-package-analyzer .analysis-progress-bar-fill {
+        animation-duration: 2.4s;
     }
 }

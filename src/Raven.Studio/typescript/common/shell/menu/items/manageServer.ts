@@ -219,7 +219,7 @@ function getManageServerMenuItem() {
             },
         }),
         new leafMenuItem({
-            route: ['admin/settings/debugPackage', 'admin/settings/debugInfo'],
+            route: 'admin/settings/debugPackage',
             moduleId: reactUtils.bridgeToReact(GatherDebugInfo.default, "nonShardedView"),
             title: 'Debug Package',
             nav: true,

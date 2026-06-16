@@ -1,32 +1,28 @@
 import React from "react";
 import FileDropzone from "components/common/FileDropzone";
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import AnalysisProgress from "./AnalysisProgress";
 
 interface DebugPackageUploadProps {
-    hasFile: boolean;
     isAnalyzing: boolean;
+    fileName?: string;
     onFileSelected: (file: File) => void;
-    onAnalyze: () => void;
 }
 
 export default function DebugPackageUpload(props: DebugPackageUploadProps) {
-    const { hasFile, isAnalyzing, onFileSelected, onAnalyze } = props;
+    const { isAnalyzing, fileName, onFileSelected } = props;
+
+    if (isAnalyzing) {
+        return (
+            <div className="debug-package-upload vstack gap-3">
+                <AnalysisProgress fileName={fileName} />
+            </div>
+        );
+    }
 
     return (
         <div className="debug-package-upload vstack gap-3">
-            <div>
-                <ButtonWithSpinner
-                    variant="primary"
-                    className="rounded-pill"
-                    icon="search"
-                    isSpinning={isAnalyzing}
-                    disabled={!hasFile}
-                    onClick={onAnalyze}
-                >
-                    Analyze package
-                </ButtonWithSpinner>
-            </div>
             <FileDropzone
+                className="debug-package-dropzone"
                 onChange={(files) => onFileSelected(files[0] ?? null)}
                 validExtensions={["zip"]}
                 maxFiles={1}

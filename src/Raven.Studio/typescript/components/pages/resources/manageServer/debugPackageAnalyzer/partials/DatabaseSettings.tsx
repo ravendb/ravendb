@@ -51,7 +51,7 @@ function useDatabaseSettingsColumns(availableWidth: number) {
             {
                 header: "Key",
                 accessorKey: "key",
-                cell: settingKeyCell,
+                cell: SettingKeyCell,
                 size: getSize(33),
             },
             {
@@ -68,7 +68,7 @@ function useDatabaseSettingsColumns(availableWidth: number) {
             {
                 header: "Effective value",
                 accessorKey: "value",
-                cell: settingValueCell,
+                cell: SettingValueCell,
                 size: getSize(35),
             },
         ];
@@ -204,7 +204,7 @@ function DatabaseSettingsWithSize({ packageId, database, node, width }: Database
     );
 }
 
-function settingKeyCell({ row }: { row: { original: SettingRow } }) {
+function SettingKeyCell({ row }: { row: { original: SettingRow } }) {
     return (
         <span className="fw-bold" title={row.original.description}>
             {row.original.key}
@@ -212,7 +212,7 @@ function settingKeyCell({ row }: { row: { original: SettingRow } }) {
     );
 }
 
-function settingValueCell({ getValue }: { getValue: () => unknown }) {
+function SettingValueCell({ getValue }: { getValue: () => unknown }) {
     const v = getValue() as string;
     return <span title={v ?? undefined}>{v ?? "-"}</span>;
 }

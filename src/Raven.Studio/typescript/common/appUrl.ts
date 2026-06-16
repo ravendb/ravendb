@@ -196,10 +196,6 @@ class appUrl {
         return "#admin/settings/trafficWatch" + filter;
     }
 
-    static forDebugInfo(): string {
-        return "#admin/settings/debugInfo";
-    }
-
     static forDebugPackage(): string {
         return "#admin/settings/debugPackage";
     }

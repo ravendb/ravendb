@@ -1,9 +1,8 @@
-﻿import React, { useEffect, useState } from "react";
-import Popover from "react-bootstrap/Popover";
+import React from "react";
 import StatTile from "./StatTile";
 import NodeTagPill from "./NodeTagPill";
 import { formatUpTime, osIcon } from "./analyzerUtils";
-import { PopoverWithHover } from "components/common/PopoverWithHover";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
@@ -14,16 +13,6 @@ interface NodeOverviewProps {
 
 export default function NodeOverview({ summary, nodeTag }: NodeOverviewProps) {
     const node = summary.SummaryPerNode?.[nodeTag]?.ClusterNodeInfo;
-    const [urlEl, setUrlEl] = useState<HTMLAnchorElement>();
-    const [isUrlTruncated, setIsUrlTruncated] = useState(false);
-
-    useEffect(() => {
-        if (!urlEl) return;
-        const check = () => setIsUrlTruncated(urlEl.scrollWidth > urlEl.offsetWidth);
-        const observer = new ResizeObserver(check);
-        observer.observe(urlEl);
-        return () => observer.disconnect();
-    }, [urlEl]);
 
     if (!node) {
         return null;
@@ -50,22 +39,11 @@ export default function NodeOverview({ summary, nodeTag }: NodeOverviewProps) {
                             label="URL"
                             icon="link"
                             value={
-                                <>
-                                    <a
-                                        ref={setUrlEl}
-                                        href={node.NodeUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="node-url-link"
-                                    >
+                                <PopoverWithHoverWrapper message={node.NodeUrl} placement="top">
+                                    <a href={node.NodeUrl} target="_blank" rel="noreferrer" className="node-url-link">
                                         {node.NodeUrl}
                                     </a>
-                                    {isUrlTruncated && (
-                                        <PopoverWithHover target={urlEl}>
-                                            <Popover.Body>{node.NodeUrl}</Popover.Body>
-                                        </PopoverWithHover>
-                                    )}
-                                </>
+                                </PopoverWithHoverWrapper>
                             }
                         />
                     </div>

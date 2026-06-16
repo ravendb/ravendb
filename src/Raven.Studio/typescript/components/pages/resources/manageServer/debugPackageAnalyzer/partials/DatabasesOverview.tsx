@@ -46,50 +46,50 @@ function useDatabasesOverviewColumns(availableWidth: number) {
             {
                 header: "Database",
                 accessorKey: "database",
-                cell: dbNameCell,
+                cell: DbNameCell,
                 size: getSize(20),
             },
             {
                 header: "Node",
                 accessorKey: "nodeTag",
-                cell: dbNodeTagCell,
+                cell: DbNodeTagCell,
                 size: getSize(8),
             },
             {
                 header: "Documents",
                 accessorKey: "documentsCount",
-                cell: dbDocumentsCell,
+                cell: DbDocumentsCell,
                 size: getSize(12),
             },
             {
                 header: "Indexes",
                 accessorKey: "indexesCount",
-                cell: dbIndexesCell,
+                cell: DbIndexesCell,
                 size: getSize(11),
             },
             {
                 header: "Indexing errors",
                 accessorKey: "indexingErrorsCount",
-                cell: dbIndexingErrorsCell,
+                cell: DbIndexingErrorsCell,
                 size: getSize(14),
             },
             {
                 header: "Ongoing tasks",
                 accessorKey: "ongoingTasksCount",
-                cell: dbOngoingTasksCell,
+                cell: DbOngoingTasksCell,
                 size: getSize(14),
             },
             {
                 header: "Replication factor",
                 accessorKey: "replicationFactor",
-                cell: dbReplicationFactorCell,
+                cell: DbReplicationFactorCell,
                 size: getSize(14),
             },
             {
                 header: "State",
                 id: "state",
                 accessorFn: (row) => row.disabled,
-                cell: dbStateCell,
+                cell: DbStateCell,
                 size: getSize(7),
             },
         ],
@@ -161,19 +161,19 @@ function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSize
     );
 }
 
-function dbNameCell({ row }: { row: { original: TableRow } }) {
+function DbNameCell({ row }: { row: { original: TableRow } }) {
     return row.original.rowKind === "database" ? <span className="fw-bold">{row.original.database}</span> : null;
 }
 
-function dbNodeTagCell({ row }: { row: { original: TableRow } }) {
+function DbNodeTagCell({ row }: { row: { original: TableRow } }) {
     return row.original.rowKind === "node" ? <NodeTagPill tag={row.original.nodeTag!} /> : null;
 }
 
-function dbDocumentsCell({ row }: { row: { original: TableRow } }) {
+function DbDocumentsCell({ row }: { row: { original: TableRow } }) {
     return row.original.rowKind === "database" ? formatCount(row.original.documentsCount ?? -1) : null;
 }
 
-function dbIndexesCell({ row }: { row: { original: TableRow } }) {
+function DbIndexesCell({ row }: { row: { original: TableRow } }) {
     if (row.original.rowKind !== "database") {
         return null;
     }
@@ -190,7 +190,7 @@ function dbIndexesCell({ row }: { row: { original: TableRow } }) {
     );
 }
 
-function dbIndexingErrorsCell({ row }: { row: { original: TableRow } }) {
+function DbIndexingErrorsCell({ row }: { row: { original: TableRow } }) {
     if (row.original.rowKind !== "database") {
         return null;
     }
@@ -198,15 +198,15 @@ function dbIndexingErrorsCell({ row }: { row: { original: TableRow } }) {
     return <span className={count > 0 ? "text-danger" : ""}>{formatCount(count)}</span>;
 }
 
-function dbOngoingTasksCell({ row }: { row: { original: TableRow } }) {
+function DbOngoingTasksCell({ row }: { row: { original: TableRow } }) {
     return row.original.rowKind === "database" ? formatCount(row.original.ongoingTasksCount ?? -1) : null;
 }
 
-function dbReplicationFactorCell({ row }: { row: { original: TableRow } }) {
+function DbReplicationFactorCell({ row }: { row: { original: TableRow } }) {
     return row.original.rowKind === "database" ? formatCount(row.original.replicationFactor ?? -1) : null;
 }
 
-function dbStateCell({ row }: { row: { original: TableRow } }) {
+function DbStateCell({ row }: { row: { original: TableRow } }) {
     if (row.original.rowKind !== "node") {
         return null;
     }
@@ -245,7 +245,9 @@ function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
 
     Object.entries(summary.SummaryPerNode ?? {}).forEach(([nodeTag, node]) => {
         (node.DatabasesOverview?.Items ?? []).forEach((item) => {
-            if (item.Irrelevant) return;
+            if (item.Irrelevant) {
+                return;
+            }
 
             let agg = dbMap.get(item.Database);
             if (!agg) {

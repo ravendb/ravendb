@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
 import { useAsync } from "react-async-hook";
@@ -57,7 +57,7 @@ function ObserverBody({ results, width }: ObserverBodyProps) {
     const [selectedNode, setSelectedNode] = useState<string>(ranked[0]?.nodeTag ?? null);
     const [filter, setFilter] = useState<string>("");
 
-    const selected = ranked.find((result) => result.nodeTag === selectedNode) ?? ranked[0];
+    const selected = ranked.find((result) => result.nodeTag === selectedNode);
     const decisions = selected?.decisions;
     const log = decisions?.ObserverLog ?? [];
 
@@ -162,7 +162,7 @@ function ObserverBody({ results, width }: ObserverBodyProps) {
                         {!filter && totalEntries > maxObserverEntriesShown && (
                             <>
                                 {" "}
-                                (showing first {maxObserverEntriesShown.toLocaleString()} of{" "}
+                                (showing latest {maxObserverEntriesShown.toLocaleString()} of{" "}
                                 {totalEntries.toLocaleString()})
                             </>
                         )}

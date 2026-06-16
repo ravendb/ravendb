@@ -84,7 +84,6 @@ const docsHashes: Record<string, StringWithAutocomplete<"MISSING_DOCS">> = {
     "admin/settings/serverWideTasks": "MISSING_DOCS",
     "admin/settings/serverSettings": "MISSING_DOCS",
     "admin/settings/trafficWatch": "MISSING_DOCS",
-    "admin/settings/debugInfo": "MISSING_DOCS",
     "admin/settings/storageReport": "MISSING_DOCS",
     "admin/settings/ioStats": "MISSING_DOCS",
     "admin/settings/captureStackTraces": "MISSING_DOCS",

@@ -65,13 +65,13 @@ function useOngoingTasksColumns(availableWidth: number) {
             {
                 header: "Task",
                 accessorKey: "label",
-                cell: ongoingTaskLabelCell,
+                cell: OngoingTaskLabelCell,
                 size: getSize(57),
             },
             {
                 header: "Node",
                 accessorKey: "nodeTag",
-                cell: ongoingTaskNodeTagCell,
+                cell: OngoingTaskNodeTagCell,
                 size: getSize(21),
             },
             {
@@ -134,11 +134,11 @@ function OngoingTasksWithSize({ summary, nodeTag, width }: OngoingTasksWithSizeP
     );
 }
 
-function ongoingTaskLabelCell({ row }: { row: { original: TaskTableRow } }) {
+function OngoingTaskLabelCell({ row }: { row: { original: TaskTableRow } }) {
     return row.original.rowKind === "task" ? <span className="fw-bold">{row.original.label}</span> : null;
 }
 
-function ongoingTaskNodeTagCell({ row }: { row: { original: TaskTableRow } }) {
+function OngoingTaskNodeTagCell({ row }: { row: { original: TaskTableRow } }) {
     return row.original.rowKind === "node" ? <NodeTagPill tag={row.original.nodeTag!} /> : null;
 }
 
@@ -152,7 +152,9 @@ function buildTaskRows(summary: DebugPackageAnalysisSummary, nodeTag?: string): 
     >();
 
     Object.entries(summary.SummaryPerNode ?? {}).forEach(([tag, node]) => {
-        if (nodeTag && tag !== nodeTag) return;
+        if (nodeTag && tag !== nodeTag) {
+            return;
+        }
 
         (node.DatabasesOngoingTasks?.Items ?? []).forEach((item) => {
             taskTypeLabels.forEach(({ field, label }) => {

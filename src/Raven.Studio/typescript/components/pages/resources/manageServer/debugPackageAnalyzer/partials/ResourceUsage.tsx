@@ -86,7 +86,7 @@ function useResourceUsageColumns(availableWidth: number) {
             {
                 header: "Dirty memory",
                 accessorKey: "dirtyMemory",
-                cell: resourceDirtyMemoryCell,
+                cell: ResourceDirtyMemoryCell,
                 size: getSize(13),
             },
             {
@@ -154,7 +154,7 @@ function ResourceUsageWithSize({ summary, width }: ResourceUsageWithSizeProps) {
     );
 }
 
-function resourceDirtyMemoryCell({ row }: { row: { original: ResourceRow } }) {
+function ResourceDirtyMemoryCell({ row }: { row: { original: ResourceRow } }) {
     return <span className={row.original.isHighDirty ? "text-warning" : ""}>{row.original.dirtyMemory ?? "-"}</span>;
 }
 

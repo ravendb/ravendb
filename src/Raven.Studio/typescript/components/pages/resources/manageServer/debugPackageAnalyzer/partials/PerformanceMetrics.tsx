@@ -236,7 +236,7 @@ function useMemoryMetricColumns(availableWidth: number) {
             {
                 header: "Value",
                 accessorKey: "value",
-                cell: memoryValueCell,
+                cell: MemoryValueCell,
                 size: getSize(25),
             },
         ],
@@ -246,7 +246,7 @@ function useMemoryMetricColumns(availableWidth: number) {
     return { memoryMetricColumns };
 }
 
-function memoryValueCell({ getValue }: { getValue: () => unknown }) {
+function MemoryValueCell({ getValue }: { getValue: () => unknown }) {
     return <span className="fw-bold">{(getValue() as string) ?? "-"}</span>;
 }
 
@@ -495,7 +495,7 @@ function useNetworkColumns(availableWidth: number) {
                 header: "TCP ping",
                 id: "tcp",
                 accessorFn: (row) => row.TcpInfo?.ReceiveTime ?? 0,
-                cell: pingTcpCell,
+                cell: PingTcpCell,
                 size: getSize(18),
                 enableSorting: true,
             },
@@ -503,7 +503,7 @@ function useNetworkColumns(availableWidth: number) {
                 header: "Status",
                 id: "status",
                 accessorFn: (row) => (row.SetupAlive?.Error || row.TcpInfo?.Error ? 1 : 0),
-                cell: pingStatusCell,
+                cell: PingStatusCell,
                 size: getSize(29),
                 enableSorting: true,
             },
@@ -514,13 +514,13 @@ function useNetworkColumns(availableWidth: number) {
     return { tcpColumns, pingColumns };
 }
 
-function pingTcpCell({ row }: { row: { original: PingResult } }) {
+function PingTcpCell({ row }: { row: { original: PingResult } }) {
     const tcpPing = row.original.TcpInfo?.ReceiveTime;
     const pingClass = tcpPing > 5000 ? "text-danger" : tcpPing > 2000 ? "text-warning" : "";
     return <span className={pingClass}>{formatPingMs(tcpPing)}</span>;
 }
 
-function pingStatusCell({ row }: { row: { original: PingResult } }) {
+function PingStatusCell({ row }: { row: { original: PingResult } }) {
     const setupError = row.original.SetupAlive?.Error;
     const tcpError = row.original.TcpInfo?.Error;
     const hasError = Boolean(setupError || tcpError);
@@ -644,7 +644,7 @@ function useThreadColumns(availableWidth: number) {
                 header: "Thread",
                 id: "name",
                 accessorFn: (row) => row.Name ?? "",
-                cell: threadNameCell,
+                cell: ThreadNameCell,
                 size: getSize(22),
                 enableSorting: true,
             },
@@ -702,7 +702,7 @@ function useThreadColumns(availableWidth: number) {
     return { threadColumns };
 }
 
-function threadNameCell({ row }: { row: { original: ThreadInfo } }) {
+function ThreadNameCell({ row }: { row: { original: ThreadInfo } }) {
     return (
         <>
             <div className="fw-bold text-break">{row.original.Name}</div>

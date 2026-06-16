@@ -41,13 +41,13 @@ function useIndexStatsColumns(availableWidth: number) {
             {
                 header: "Index",
                 accessorKey: "Name",
-                cell: indexNameCell,
+                cell: IndexNameCell,
                 size: getSize(28),
             },
             {
                 header: "State",
                 accessorKey: "State",
-                cell: ({ getValue }) => stateCell(getValue<IndexState>()),
+                cell: ({ getValue }) => StateCell(getValue<IndexState>()),
                 size: getSize(10),
             },
             {
@@ -69,14 +69,14 @@ function useIndexStatsColumns(availableWidth: number) {
             {
                 header: "Errors",
                 accessorKey: "ErrorsCount",
-                cell: indexErrorsCell,
+                cell: IndexErrorsCell,
                 size: getSize(9),
             },
             {
                 header: "Stale",
                 id: "stale",
                 accessorFn: (index) => index.IsStale,
-                cell: indexStaleCell,
+                cell: IndexStaleCell,
                 size: getSize(10),
             },
             {
@@ -156,7 +156,7 @@ function DatabaseIndexStatsWithSize({ packageId, database, node, width }: Databa
     );
 }
 
-function indexNameCell({ getValue }: { getValue: () => unknown }) {
+function IndexNameCell({ getValue }: { getValue: () => unknown }) {
     const name = getValue() as string;
     return (
         <div className="text-truncate fw-bold" title={name}>
@@ -165,12 +165,12 @@ function indexNameCell({ getValue }: { getValue: () => unknown }) {
     );
 }
 
-function indexErrorsCell({ row }: { row: { original: IndexStats } }) {
+function IndexErrorsCell({ row }: { row: { original: IndexStats } }) {
     const count = row.original.ErrorsCount ?? 0;
     return <span className={count > 0 ? "text-danger" : ""}>{formatCount(count)}</span>;
 }
 
-function indexStaleCell({ getValue }: { getValue: () => unknown }) {
+function IndexStaleCell({ getValue }: { getValue: () => unknown }) {
     return getValue() ? (
         <span className="hstack gap-1 text-warning">
             <Icon icon="warning" margin="m-0" /> Stale
@@ -184,7 +184,7 @@ function formatCount(value: number): string {
     return value == null ? "-" : value.toLocaleString();
 }
 
-function stateCell(state: IndexState) {
+function StateCell(state: IndexState) {
     switch (state) {
         case "Error":
             return (

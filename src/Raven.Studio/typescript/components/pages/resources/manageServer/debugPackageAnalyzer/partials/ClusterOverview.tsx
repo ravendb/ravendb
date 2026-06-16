@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from "react";
+import React, { useMemo } from "react";
 import {
     ColumnDef,
     getCoreRowModel,
@@ -43,7 +43,7 @@ function useClusterOverviewColumns(availableWidth: number) {
             {
                 header: "Role",
                 accessorKey: "NodeState",
-                cell: clusterRoleCell,
+                cell: ClusterRoleCell,
                 size: getSize(10),
                 enableSorting: true,
             },
@@ -56,7 +56,7 @@ function useClusterOverviewColumns(availableWidth: number) {
             {
                 header: "OS",
                 accessorKey: "OsName",
-                cell: clusterOsCell,
+                cell: ClusterOsCell,
                 size: getSize(18),
                 enableSorting: true,
             },
@@ -77,7 +77,7 @@ function useClusterOverviewColumns(availableWidth: number) {
             {
                 header: "URL",
                 accessorKey: "NodeUrl",
-                cell: clusterUrlCell,
+                cell: ClusterUrlCell,
                 size: getSize(28),
             },
         ],
@@ -165,7 +165,7 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
     );
 }
 
-function clusterRoleCell({ getValue }: { getValue: () => unknown }) {
+function ClusterRoleCell({ getValue }: { getValue: () => unknown }) {
     const state = getValue() as string;
     if (!state) {
         return null;
@@ -200,7 +200,7 @@ function clusterRoleCell({ getValue }: { getValue: () => unknown }) {
     }
 }
 
-function clusterOsCell({ row }: { row: { original: ClusterNodeInfo } }) {
+function ClusterOsCell({ row }: { row: { original: ClusterNodeInfo } }) {
     return (
         <>
             <Icon icon={osIcon(row.original.OsType)} /> {row.original.OsName}
@@ -208,7 +208,7 @@ function clusterOsCell({ row }: { row: { original: ClusterNodeInfo } }) {
     );
 }
 
-function clusterUrlCell({ getValue }: { getValue: () => unknown }) {
+function ClusterUrlCell({ getValue }: { getValue: () => unknown }) {
     const url = getValue() as string;
     return (
         <a href={url} target="_blank" rel="noreferrer">

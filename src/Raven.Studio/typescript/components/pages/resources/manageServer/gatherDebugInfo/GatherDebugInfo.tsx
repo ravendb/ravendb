@@ -10,6 +10,7 @@ import { FormSwitch } from "components/common/Form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useGatherDebugInfoHelpers } from "./useGatherDebugInfoHelpers";
 import GatherDebugInfoAbortConfirm from "./GatherDebugInfoAbortConfirm";
+import GatherDebugInfoDatabaseList from "./GatherDebugInfoDatabaseList";
 import { Icon } from "components/common/Icon";
 import { AboutViewHeading } from "components/common/AboutView";
 import appUrl = require("common/appUrl");
@@ -209,24 +210,11 @@ function GatherDebugInfo() {
                                                 />
                                             </div>
                                         </div>
-                                        <div className="gather-debug-info-db-scroll">
-                                            {filteredDatabaseNames.map((db) => (
-                                                <div key={db} className="gather-debug-info-db-item">
-                                                    <span className="text-truncate me-3">{db}</span>
-                                                    <Form.Check
-                                                        type="switch"
-                                                        checked={(selectedDatabases ?? []).includes(db)}
-                                                        onChange={() => handleToggleDatabase(db)}
-                                                        id={`db-toggle-${db.replace(/[^a-zA-Z0-9]/g, "-")}`}
-                                                        label=""
-                                                        className="m-0"
-                                                    />
-                                                </div>
-                                            ))}
-                                            {filteredDatabaseNames.length === 0 && (
-                                                <div className="py-3 text-center text-muted">No databases found</div>
-                                            )}
-                                        </div>
+                                        <GatherDebugInfoDatabaseList
+                                            databaseNames={filteredDatabaseNames}
+                                            selectedDatabases={selectedDatabases ?? []}
+                                            onToggle={handleToggleDatabase}
+                                        />
                                     </div>
                                 </div>
                             )}

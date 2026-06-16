@@ -51,9 +51,15 @@ export function useGatherDebugInfoHelpers() {
         const operationId = await asyncGetNextOperationId.execute();
 
         const dataTypes: DebugInfoPackageContentType[] = [];
-        if (formData.includeServer) dataTypes.push("ServerWide");
-        if (formData.includeDatabases) dataTypes.push("Databases");
-        if (formData.includeLogs) dataTypes.push("LogFile");
+        if (formData.includeServer) {
+            dataTypes.push("ServerWide");
+        }
+        if (formData.includeDatabases) {
+            dataTypes.push("Databases");
+        }
+        if (formData.includeLogs) {
+            dataTypes.push("LogFile");
+        }
 
         const urlParams: DownloadPackageRequestDto = {
             operationId,
