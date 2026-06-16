@@ -337,6 +337,9 @@ public static class AppsEndpoints
                 // Full structured model output, so the wizard can render the whole JSON answer
                 // (not just the streamed field). Omitted when the turn produced no object.
                 fullAnswer = result.Answer,
+                // The query tools the agent ran this turn (RQL, model-filled parameters, and the
+                // returned content), so the wizard can show the transcript. Empty when none ran.
+                toolCalls = result.ToolCalls,
                 conversationId = result.ConversationId,
             });
         }

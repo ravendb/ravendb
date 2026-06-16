@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Bot, ChevronDown, ChevronUp, FlaskConical, MessageSquare, Send, Settings2, Trash2 } from "lucide-react";
 import { api } from "@/api/api";
+import type { AgentToolCall } from "@/api/custom-services/agent-stream";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { buildAgentConfigurationPayload } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { Button } from "@/components/shadcn/ui/button";
@@ -21,6 +22,7 @@ import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormTextarea } from "@/components/form/form-textarea";
 import AceEditor from "@/components/ace-editor/ace-editor";
+import { TestQueryToolCall } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-tool-call";
 import { withNestedSubmit } from "@/lib/form-utils";
 
 // Footer action for the wizard's Review step: opens a sheet to chat with the draft agent.
@@ -66,8 +68,15 @@ export function ReviewTestAgentButton() {
 
 // Agent answers always render as JSON: `json` holds the live answer (the sample response
 // shape with the streamed field filling in) and is swapped for the full structured answer
-// once the turn finishes. `text` carries plain user prompts and error messages.
-type ChatMessage = { id: string; role: "user" | "agent" | "error"; text: string; json?: string };
+// once the turn finishes. `toolCalls` are the query tools the agent ran (filled on `done`).
+// `text` carries plain user prompts and error messages.
+type ChatMessage = {
+    id: string;
+    role: "user" | "agent" | "error";
+    text: string;
+    json?: string;
+    toolCalls?: AgentToolCall[];
+};
 
 const testFormSchema = z.object({
     prompt: z.string(),
@@ -156,12 +165,14 @@ function TestAgentPanel() {
                     );
                 } else if (event.type === "done") {
                     // Swap the live answer for the full structured output, keeping the streamed
-                    // JSON if the server returned no structured answer.
+                    // JSON if the server returned no structured answer. Attach the query tools the
+                    // agent ran so the transcript can show them above the answer.
                     const json =
                         toAnswerJson(event.fullAnswer ?? event.answer) ??
                         buildStreamingJson(answerShape, streamField, streamedText);
+                    const toolCalls = event.toolCalls ?? [];
                     setMessages((previous) =>
-                        replaceMessage(previous, agentMessageId, (message) => ({ ...message, json })),
+                        replaceMessage(previous, agentMessageId, (message) => ({ ...message, json, toolCalls })),
                     );
                 } else if (event.type === "error") {
                     setMessages((previous) =>
@@ -356,6 +367,13 @@ function TestMessage({ message, isLoading }: { message: ChatMessage; isLoading: 
                     <div className="mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
                         <Spinner className="size-3" />
                         <span>Generating response…</span>
+                    </div>
+                )}
+                {message.toolCalls && message.toolCalls.length > 0 && (
+                    <div className="mb-2 grid gap-2">
+                        {message.toolCalls.map((toolCall, index) => (
+                            <TestQueryToolCall key={toolCall.id || index} toolCall={toolCall} />
+                        ))}
                     </div>
                 )}
                 <div className="overflow-hidden rounded-lg border">

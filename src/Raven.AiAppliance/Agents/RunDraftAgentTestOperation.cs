@@ -62,6 +62,11 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
         // produced no structured response object.
         public JsonElement? Answer { get; set; }
 
+        // The query tools the agent invoked during the turn (with their RQL, the parameters the
+        // model filled in, and the returned content), so the wizard can show the transcript.
+        // Empty when the turn called no query tool.
+        public IReadOnlyList<AgentQueryToolCall> ToolCalls { get; set; } = [];
+
         public string ConversationId { get; set; } = "";
     }
 
@@ -194,6 +199,11 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
                 Result.Answer = answer.Clone();
                 Result.Reply = ExtractReply(answer);
             }
+
+            // Reconstruct the query tool calls from the returned conversation transcript so the
+            // wizard can show what the agent did. The extracted strings are copied out of the
+            // JsonDocument here, so they outlive its disposal.
+            Result.ToolCalls = AgentTestTranscript.ExtractQueryToolCalls(root, _configuration);
         }
 
         // The model answer wraps the reply under the configured reply field; fall back to the
