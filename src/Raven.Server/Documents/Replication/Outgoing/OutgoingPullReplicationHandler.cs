@@ -189,6 +189,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         private void PersistSinkCursor(string confirmedSinkCv)
         {
+            var existingCv = ReplicationUtils.ReadCursorFromClusterFor(_parent.Server, _database.Name, _node.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor);
+            if (existingCv == confirmedSinkCv)
+                return;
+
             var command = new UpdateExternalReplicationStateCommand(_database.Name, RaftIdGenerator.NewId())
             {
                 ExternalReplicationState = new ExternalReplicationState
@@ -199,7 +203,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     Type = ExternalReplicationState.ReplicationStateType.SinkCursor
                 }
             };
-            _parent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
+            _parent.Server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
         internal override bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions =>
