@@ -55,6 +55,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     private CdcSinkStatsAggregator _lastStats;
 
+    private int _statsId;
+
     private readonly ConcurrentQueue<CdcSinkStatsAggregator> _lastCdcSinkStats = new();
 
     protected readonly CdcSinkDocumentProcessor DocumentProcessor;
@@ -438,22 +440,42 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         // We *intentionally* submit the command here, even if we have no entries
         // to update the checkpoint and table load state in a timely manner
 
-        var command = new Commands.CdcSinkBatchCommand(
-            Database, ops, Configuration.Name, checkpoint,
-            tableLoadUpdates: tableLoadUpdates,
-            patchRequest: DocumentProcessor.CombinedPatchRequest,
-            statsScope: null, statistics: Statistics, logger: Logger,
-            grouper: grouper, defaultSchema: DefaultSchema);
+        // Per-batch stats aggregator, mirroring the ETL/QueueSink stats lifecycle: chain the
+        // start time off the previous batch, open a scope the batch command records into,
+        // start the timer and register it as the latest (and in the ring buffer), then
+        // Complete() once the batch finishes. CreateScope() returns an unstarted scope, so
+        // Start() it here to begin timing at batch submission rather than at construction.
+        var statsAggregator = new CdcSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+        var stats = statsAggregator.CreateScope();
 
-        var start = Stopwatch.GetTimestamp();
-        await Database.TxMerger.Enqueue(command);
+        statsAggregator.Start();
+        stats.Start();
+        AddPerformanceStats(statsAggregator);
 
-        LastBatchTime = Database.Time.GetUtcNow();
-        if (checkpoint != null)
-            LastCheckpoint = checkpoint;
+        try
+        {
+            var command = new Commands.CdcSinkBatchCommand(
+                Database, ops, Configuration.Name, checkpoint,
+                tableLoadUpdates: tableLoadUpdates,
+                patchRequest: DocumentProcessor.CombinedPatchRequest,
+                statsScope: stats, statistics: Statistics, logger: Logger,
+                grouper: grouper, defaultSchema: DefaultSchema);
 
-        if (Logger.IsDebugEnabled)
-            Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={checkpoint ?? "(none)"}");
+            var start = Stopwatch.GetTimestamp();
+            await Database.TxMerger.Enqueue(command);
+
+            LastBatchTime = Database.Time.GetUtcNow();
+            if (checkpoint != null)
+                LastCheckpoint = checkpoint;
+
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={checkpoint ?? "(none)"}");
+        }
+        finally
+        {
+            stats.Dispose();
+            statsAggregator.Complete();
+        }
 
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
         return (checkpoint, ops.Count);
