@@ -30,6 +30,24 @@ import { Icon } from "components/common/Icon";
 
 type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
 
+// Mode is a [Flags] enum, so the bidirectional case arrives as a combined string (e.g. "HubToSink, SinkToHub").
+// Use includes() to stay robust to the flag formatting and render a readable label.
+function formatReplicationMode(mode: Raven.Client.Documents.Operations.Replication.PullReplicationMode): string {
+    const hubToSink = mode?.includes("HubToSink");
+    const sinkToHub = mode?.includes("SinkToHub");
+
+    if (hubToSink && sinkToHub) {
+        return "Hub to Sink & Sink to Hub";
+    }
+    if (hubToSink) {
+        return "Hub to Sink";
+    }
+    if (sinkToHub) {
+        return "Sink to Hub";
+    }
+    return null;
+}
+
 function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const connectionStringDefined = !!data.shared.destinationDatabase;
@@ -38,9 +56,12 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
 
+    const mode = formatReplicationMode(data.shared.mode);
+
     return (
         <RichPanelDetails>
             <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
+            {mode && <RichPanelDetailItem label="Mode">{mode}</RichPanelDetailItem>}
             <ConnectionStringItem
                 connectionStringDefined={connectionStringDefined}
                 canEdit={canEdit}
@@ -57,6 +78,13 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
                     {url}
                 </RichPanelDetailItem>
             ))}
+
+            {data.shared.hubCursor && (
+                <RichPanelDetailItem label="Hub Cursor">{data.shared.hubCursor}</RichPanelDetailItem>
+            )}
+            {data.shared.sinkCursor && (
+                <RichPanelDetailItem label="Sink Cursor">{data.shared.sinkCursor}</RichPanelDetailItem>
+            )}
         </RichPanelDetails>
     );
 }
