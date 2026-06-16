@@ -69,7 +69,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     TaskId = IncomingPullReplicationParams.TaskId,
                     NodeTag = ReplicationLoaderParent._server.NodeTag,
                     SourceChangeVector = confirmedHubCv,
-                    Type = ExternalReplicationState.ReplicationStateType.HubCursor
+                    Type = ExternalReplicationState.ReplicationStateType.HubCursor,
+                    FromToString = FromToString
                 }
             };
             ReplicationLoaderParent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
