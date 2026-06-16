@@ -25,6 +25,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 
@@ -623,6 +624,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             AccessName = sinkReplication.AccessName,
             AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
             AllowedSinkToHubPaths = sinkReplication.AllowedSinkToHubPaths,
+            HubCursor = ReplicationUtils.ReadCursorFromClusterFor(_server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor),
+            SinkCursor = ReplicationUtils.ReadCursorFromClusterFor(_server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor),
             Error = error
         };
 

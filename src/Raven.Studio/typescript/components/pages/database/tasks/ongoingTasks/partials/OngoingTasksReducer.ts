@@ -436,6 +436,8 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 topologyDiscoveryUrls: incoming.TopologyDiscoveryUrls,
                 hubName: incoming.HubName,
                 mode: incoming.Mode,
+                hubCursor: incoming.HubCursor,
+                sinkCursor: incoming.SinkCursor,
             };
             return result;
         }
