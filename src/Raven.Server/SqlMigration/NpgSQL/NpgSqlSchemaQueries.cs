@@ -45,7 +45,7 @@ namespace Raven.Server.SqlMigration.NpgSQL
             " ORDER BY ORDINAL_POSITION";
 
         public override string SelectReferentialConstraintsQuery { get; } =
-            "SELECT CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
+            "SELECT CONSTRAINT_SCHEMA, CONSTRAINT_NAME, UNIQUE_CONSTRAINT_SCHEMA, UNIQUE_CONSTRAINT_NAME " +
             "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS";
 
         public override string SelectKeyColumnUsageQuery { get; } =
