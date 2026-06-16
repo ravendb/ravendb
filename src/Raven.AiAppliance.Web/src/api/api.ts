@@ -1,6 +1,7 @@
 import { createApiClient, type ApiClient, type ApiClientOptions } from "@/api/http-client";
 import { createServerApi, type ServerApi } from "@/api/generated/server-api";
 import { createChatService } from "@/api/custom-services/chat-service";
+import { createAgentTestService } from "@/api/custom-services/agent-test-service";
 import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createAgentsQueries } from "@/api/queries/agents-queries";
 import { createChannelsQueries } from "@/api/queries/channels-queries";
@@ -11,6 +12,7 @@ import { createAiConnectionStringsQueries } from "@/api/queries/ai-connection-st
 
 export type ApiServices = Omit<ServerApi, "chat"> & {
     chat: ReturnType<typeof createChatService>;
+    agentTest: ReturnType<typeof createAgentTestService>;
 };
 
 export type ApiQueries = {
@@ -35,6 +37,7 @@ export function createApi(options?: ApiClientOptions): Api {
     const services = {
         ...generatedServices,
         chat: createChatService(client),
+        agentTest: createAgentTestService(client),
     };
 
     return {

@@ -770,7 +770,11 @@ export interface components {
         };
         SetupTryRequest: {
             prompt: string;
-            agentId: string;
+            configuration: components["schemas"]["AiAgentConfiguration"];
+            parameters: null | {
+                [key: string]: string;
+            };
+            streamField?: null | string;
         };
         SuggestAgentRequest: {
             intentPrompt: null | string;

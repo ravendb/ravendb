@@ -16,14 +16,24 @@ public static class AiAgentRegistrar
     // requires either OutputSchema or SampleObject to be non-empty.
     private const string DefaultSampleObject = """{"reply":""}""";
 
+    /// <summary>
+    /// Applies the minimal default output shape when the configuration declares neither a
+    /// sample object nor an output schema. Both provisioning and the draft "Test agent" turn
+    /// go through RavenDB's agent validation, which requires one — so both call this first.
+    /// </summary>
+    public static void EnsureDefaultOutputShape(AiAgentConfiguration config)
+    {
+        if (string.IsNullOrWhiteSpace(config.SampleObject) && string.IsNullOrWhiteSpace(config.OutputSchema))
+            config.SampleObject = DefaultSampleObject;
+    }
+
     public static async Task<RegisterResult> RegisterAsync(
         IDocumentStore store,
         AiAgentConfiguration config,
         string targetDatabase,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(config.SampleObject) && string.IsNullOrWhiteSpace(config.OutputSchema))
-            config.SampleObject = DefaultSampleObject;
+        EnsureDefaultOutputShape(config);
 
         var result = await store.AI.ForDatabase(targetDatabase).CreateAgentAsync(config, ct);
         return new RegisterResult(result.Identifier);

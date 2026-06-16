@@ -44,6 +44,9 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     bodyComponent: (props: WizardBodyComponentProps<StepId>) => ReactNode;
     validate: WizardValidationTarget<Values>;
     beforeNext?: WizardBeforeNext;
+    // Optional step-specific action rendered in the footer (e.g. the review step's "Test
+    // agent" button). Renders alongside the wizard's Back/Next/Submit controls.
+    footerComponent?: () => ReactNode;
 } & WizardStepBadge<Values>;
 
 export type WizardSteps<StepId extends string, Values extends FieldValues = FieldValues> = Record<
@@ -163,6 +166,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         isBusy={isBusy}
                         currentStepId={currentStepIdInFlow}
                         submitLabel={submitLabel}
+                        footerComponent={currentStep.footerComponent}
                     />
                 </div>
 
@@ -287,6 +291,7 @@ type WizardFooterProps<StepId extends string> = {
     handleNext: () => Promise<void>;
     isBusy: boolean;
     submitLabel?: ReactNode;
+    footerComponent?: () => ReactNode;
 };
 
 function WizardFooter<StepId extends string>({
@@ -297,9 +302,10 @@ function WizardFooter<StepId extends string>({
     handleNext,
     isBusy,
     submitLabel,
+    footerComponent: FooterComponent,
 }: WizardFooterProps<StepId>) {
     return (
-        <div className="flex border-t px-4 py-2">
+        <div className="flex items-center border-t px-4 py-2">
             <div className="flex gap-2">
                 <Button onClick={cancel} variant="outline">
                     Cancel
@@ -311,17 +317,20 @@ function WizardFooter<StepId extends string>({
                 )}
             </div>
 
-            {stepPosition === "last" ? (
-                <Button type="submit" className="ml-auto" disabled={isBusy} key={`${currentStepId}:submit`}>
-                    {isBusy && <Spinner />}
-                    {submitLabel ?? "Submit"}
-                </Button>
-            ) : (
-                <Button onClick={handleNext} className="ml-auto" disabled={isBusy} key={`${currentStepId}:next`}>
-                    {isBusy && <Spinner />}
-                    Next
-                </Button>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+                {FooterComponent && <FooterComponent />}
+                {stepPosition === "last" ? (
+                    <Button type="submit" disabled={isBusy} key={`${currentStepId}:submit`}>
+                        {isBusy && <Spinner />}
+                        {submitLabel ?? "Submit"}
+                    </Button>
+                ) : (
+                    <Button onClick={handleNext} disabled={isBusy} key={`${currentStepId}:next`}>
+                        {isBusy && <Spinner />}
+                        Next
+                    </Button>
+                )}
+            </div>
         </div>
     );
 }
