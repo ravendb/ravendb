@@ -297,15 +297,7 @@ namespace Voron.Impl.Journal
             
             if (_env.Options.IncrementalBackupEnabled == false && _env.Options.CopyOnWriteMode == false)
             {
-                // we want to check that we clean up old log files if they aren't needed
-                // this is more just to be safe than anything else, they shouldn't be there.
-                var unusedFiles = logInfo.LastSyncedJournal;
-                while (true)
-                {
-                    unusedFiles--;
-                    if (_env.Options.TryDeleteJournal(unusedFiles) == false)
-                        break;
-                }
+                _env.Options.DeleteJournalsBelow(logInfo.LastSyncedJournal);
             }
 
             var modifiedPages = new HashSet<long>();
@@ -394,15 +386,21 @@ namespace Voron.Impl.Journal
                         journalPager.Dispose(); // need to close it before we open the journal writer
                     }
 
-                    
-                    if (_env.Options.RootJournal is null)
+                    bool isHardLinked = _env.Options.IsJournalHardLinked(journalNumber);
+
+
+                    if (_env.Options.RootJournal is null || isHardLinked == false)
                     {
-                        // A standalone env may still find local journals that are hard-linked to another env's journals,
-                        // left over from a previous run with shared journals enabled. We must never write to such a file -
-                        // it would corrupt the env owning the other link. Hard-linked journals are kept read-only for the
-                        // duration of recovery, and the env will allocate a fresh journal for any subsequent writes.
-                        // See RavenDB-26655.
-                        bool isHardLinked = _env.Options.IsJournalHardLinked(journalNumber);
+                        // We could have switched from non-shared to shared journals mode, or vice versa - two kinds of leftover journal can show up here:
+
+                        // Non-shared (standalone) mode tracks all of its journals, but it can still find local journals that are
+                        // hard-linked to another env's journals, left over from a previous run with shared journals enabled. We must
+                        // never write to such a file - it would corrupt the env owning the other link - so hard-linked journals are
+                        // kept read-only for the duration of recovery, and the env allocates a fresh journal for subsequent writes.
+
+                        // Shared (branch) mode can still find non-hard-linked journals left over from a non-shared interlude. We never
+                        // write to them, but we track them in journalFiles so the normal flush/sync path reclaims them instead of
+                        // leaking them as orphans.
 
                         var jrnlWriter = isHardLinked
                             ? _env.Options.CreateReadOnlyJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize)
@@ -413,9 +411,15 @@ namespace Voron.Impl.Journal
                             IsHardLinked = isHardLinked
                         };
                         jrnlFile.DoneWriting = new SingleUseFlag();
+                        
+                        
+                        if (isHardLinked || _env.Options.RootJournal != null)
+                        {
+                            // a hard link is read-only and a branch writes via the root's merger - in both cases mark the journal
+                            // done-writing so it is never adopted as a writable current file
 
-                        if (isHardLinked)
                             jrnlFile.DoneWriting.Raise();
+                        }
 
                         jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
                         jrnlFile.AddRef(); // creator reference - write ahead log
@@ -568,11 +572,12 @@ namespace Voron.Impl.Journal
                     _files[i].DoneWriting.Raise();
                 }
                 var lastFile = _files[^1];
-                bool mustRollToNewFile = _env.Options.RootJournal is null
-                                         && _env.Options.IsJournalHardLinked(lastFile.Number);
+
+                bool mustRollToNewFile = lastFile.DoneWriting.IsRaised();
+
                 if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 && // room for next tx header + 4kb of data
                     lastFile.HasLegacyTransaction is false && // legacy txs cannot be mixed with new ones in the same file
-                    mustRollToNewFile is false) // standalone env must not append to a hard-linked journal - would corrupt the env owning the other link
+                    mustRollToNewFile is false)
                 {
                     CurrentFile = lastFile;
                 }
@@ -581,7 +586,7 @@ namespace Voron.Impl.Journal
                     lastFile.DoneWriting.Raise();
                     if (mustRollToNewFile)
                         addToInitLog?.Invoke(LogLevel.Info,
-                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is hard-linked; rolling to a new file.");
+                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is hard-linked or owned by a branch; rolling to a new file.");
                 }
             }
 
