@@ -6,6 +6,7 @@ import { useConnectProviderStep } from "@/pages/setup/add-capability-wizard/step
 import { CreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/create-agent-step";
 import { useCreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/use-create-agent-step";
 import { ReviewAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/review-agent-step";
+import { ReviewTestAgentButton } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-sheet";
 import { CAPABILITY_OPTIONS } from "@/pages/setup/add-capability-wizard/steps/capability/capability-options";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { getOptionLabel } from "@/lib/form-utils";
@@ -55,6 +56,7 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             title: "Review & edit your agent",
             bodyComponent: ReviewAgentStep,
             validate: "review",
+            footerComponent: ReviewTestAgentButton,
         },
     };
 };

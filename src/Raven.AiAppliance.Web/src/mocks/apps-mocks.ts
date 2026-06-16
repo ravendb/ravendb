@@ -1,4 +1,6 @@
+import { delay, http, HttpResponse } from "msw";
 import type { AppResponse, ProvisionAgentResponse, SuggestAgentResponse } from "@/api/generated/server-api";
+import type { AgentStreamEvent } from "@/api/custom-services/agent-stream";
 import { apiHttp } from "./api-http";
 
 export const appsMocks = {
@@ -10,7 +12,24 @@ export const appsMocks = {
         }),
     provisionAgent: (result: ProvisionAgentResponse = { agentId: "agents/sales" }) =>
         apiHttp.post("/api/apps/{slug}/setup/agent", ({ response }) => response(200).json(result)),
-    setupTry: () => apiHttp.post("/api/apps/{slug}/setup/try", ({ response }) => response(200).empty()),
+    // setup/try streams newline-delimited JSON events (not described by the OpenAPI
+    // contract), so this mock uses plain msw instead of `apiHttp` — mirroring chatMocks.
+    setupTry: (events: AgentStreamEvent[] = sampleAgentTestEvents, chunkDelayMs = 150) =>
+        http.post("/api/apps/:slug/setup/try", () => {
+            const encoder = new TextEncoder();
+            const stream = new ReadableStream<Uint8Array>({
+                async start(controller) {
+                    for (const event of events) {
+                        await delay(chunkDelayMs);
+                        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+                    }
+
+                    controller.close();
+                },
+            });
+
+            return new HttpResponse(stream, { headers: { "Content-Type": "application/x-ndjson" } });
+        }),
     suggestAgent: (suggestion: SuggestAgentResponse = sampleAgentSuggestion) =>
         apiHttp.post("/api/apps/{slug}/suggest/agent", ({ response }) => response(200).json(suggestion)),
 };
@@ -41,6 +60,14 @@ export const sampleAgentSuggestion: SuggestAgentResponse = {
             name: "Sales assistant",
             connectionStringName: "openai-chat",
             systemPrompt: "You help customers of the Demo Shop find products and check their orders.",
+            sampleObject: JSON.stringify(
+                {
+                    reply: "A helpful answer to the customer's question.",
+                    relatedProducts: "Up to three product names worth suggesting.",
+                },
+                null,
+                4,
+            ),
             queries: [
                 {
                     name: "search-products",
@@ -54,3 +81,19 @@ export const sampleAgentSuggestion: SuggestAgentResponse = {
     rationale: ["The database contains products and orders, so a shopping assistant fits well."],
     status: "Success",
 };
+
+export const sampleAgentTestEvents: AgentStreamEvent[] = [
+    { type: "chunk", text: "Sure! " },
+    { type: "chunk", text: "Based on the demo data, " },
+    { type: "chunk", text: "I can help you find products and check orders." },
+    {
+        type: "done",
+        answer: { reply: "Sure! Based on the demo data, I can help you find products and check orders." },
+        // The full structured model output the wizard renders as JSON (server's `fullAnswer`).
+        fullAnswer: {
+            reply: "Sure! Based on the demo data, I can help you find products and check orders.",
+            relatedProducts: ["Wireless Mouse", "USB-C Hub", "Laptop Stand"],
+        },
+        conversationId: "chats/test",
+    },
+];

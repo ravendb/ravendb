@@ -41,7 +41,7 @@ public static class AppsEndpoints
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
             .Accepts<SetupTryRequest>("application/json")
-            // Streams NDJSON frames, not a single string — declare the status +
+            // Streams NDJSON frames (chunk/done/error), not a single body — declare the status +
             // content type only, without a (misleading) string body schema.
             .Produces(StatusCodes.Status200OK, contentType: "application/x-ndjson")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -275,25 +275,26 @@ public static class AppsEndpoints
     }
 
     /// <summary>
-    /// "Try the agent" smoke test (design §1.3 Stage C.2 step 12 /
-    /// RavenDB-26629 carryover). Streams one turn against the per-app agent via
-    /// <see cref="IAgentRouter"/> as NDJSON, so the operator can confirm the
-    /// agent answers before wiring a channel to it.
+    /// "Test agent" smoke test (design §1.3 Stage C.2 step 12 / RavenDB-26629
+    /// carryover). Streams a single turn against the <em>draft</em> configuration the
+    /// operator is editing in the wizard's Review step — before it is provisioned — via
+    /// <see cref="RunDraftAgentTestOperation"/> (RavenDB's agent test endpoint), relaying
+    /// the reply chunks as NDJSON so the operator can confirm it answers before saving.
+    /// The conversation is not persisted, so each turn is independent.
     /// </summary>
     private static async Task SetupTryAsync(
         string slug,
         SetupTryRequest body,
         IDocumentStore store,
-        IAgentRouter router,
         ILogger<AppsLogger> logger,
         HttpContext ctx)
     {
         var ct = ctx.RequestAborted;
 
-        if (body is null || string.IsNullOrWhiteSpace(body.Prompt) || string.IsNullOrWhiteSpace(body.AgentId))
+        if (body is null || string.IsNullOrWhiteSpace(body.Prompt) || body.Configuration is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("prompt and agentId are required"), ct);
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("prompt and configuration are required"), ct);
             return;
         }
 
@@ -306,34 +307,36 @@ public static class AppsEndpoints
             return;
         }
 
-        // Validate the agent id against the per-app database up front (mirrors
-        // ProvisionIFrameAsync). Without this an unknown id surfaces as a 200 +
-        // NDJSON error frame after the headers flush; a miss is a client error, so
-        // return a clean 400 before the stream starts — and adopt the persisted
-        // agent's canonical casing for the run.
-        var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
-        if (config is null)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"), ct);
-            return;
-        }
+        // Give the smallest draft (name + prompt + connection string) the same default output
+        // shape provisioning applies, so RavenDB's agent validation accepts it.
+        AiAgentRegistrar.EnsureDefaultOutputShape(body.Configuration);
 
-        var agentId = config.Identifier;
+        // The operator can pick which output field streams token-by-token (the wizard's
+        // "Streamed field" select); fall back to the conventional first-declared field when unset.
+        var streamField = string.IsNullOrWhiteSpace(body.StreamField)
+            ? AgentOutputShape.ResolveReplyField(body.Configuration)
+            : body.StreamField.Trim();
 
         NdjsonStream.SetHeaders(ctx);
         try
         {
-            var result = await router.RunAsync(
-                new AgentRequest(app.Database, agentId, ConversationId: null, body.Prompt, Parameters: null),
-                async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
-                ct,
-                resolved: config);
+            var operation = new RunDraftAgentTestOperation(
+                body.Configuration,
+                body.Prompt,
+                body.Parameters,
+                streamField,
+                async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }));
+
+            var result = await store.Maintenance.ForDatabase(app.Database).SendAsync(operation, ct);
 
             await NdjsonStream.WriteLineAsync(ctx, new
             {
                 type = "done",
-                answer = result.Answer,
+                // Normalized single reply (casing-safe) — the no-stream fallback for the chat bubble.
+                answer = new { reply = result.Reply },
+                // Full structured model output, so the wizard can render the whole JSON answer
+                // (not just the streamed field). Omitted when the turn produced no object.
+                fullAnswer = result.Answer,
                 conversationId = result.ConversationId,
             });
         }
@@ -343,12 +346,13 @@ public static class AppsEndpoints
         }
         catch (Exception e)
         {
-            // Log full detail server-side; surface only a generic message — raw
-            // exceptions can leak DB names / connection strings / file paths.
-            logger.LogError(e, "setup/try failed for slug={Slug} agentId={AgentId}", slug, agentId);
+            // Both an invalid draft (RavenDB validation) and a model/provider failure surface
+            // here. Log full detail server-side; emit a generic error frame — raw exceptions can
+            // leak DB names / connection strings / file paths.
+            logger.LogError(e, "setup/try failed for slug={Slug}", slug);
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Agent run failed. See server logs for details." });
+                await NdjsonStream.WriteLineAsync(ctx, new { type = "error", message = "Agent test failed. See server logs for details." });
             }
             catch
             {

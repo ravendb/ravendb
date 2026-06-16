@@ -17,12 +17,12 @@ namespace AiApplianceTests;
 /// <summary>
 /// RavenDB-26700 (T-6) channel lifecycle + wizard read-side coverage:
 /// list / edit / delete channels, the <c>/cdc/progress</c> WebSocket, and the
-/// <c>/setup/try</c> smoke stream, plus the two channel-adjacent embed gates
-/// (CSP header + agent-deleted 404). The minted-token embed lifecycle lives in
-/// <see cref="EmbedLinksTests"/> (RavenDB-26775). The real-LLM reply path is
-/// asserted in the E2E (<see cref="E2E.ApplianceFullFlowTests"/> T14); here we
-/// only prove the stream wiring opens with valid NDJSON, so these run without a
-/// live LLM.
+/// <c>/setup/try</c> draft "Test agent" smoke stream, plus the two channel-adjacent
+/// embed gates (CSP header + agent-deleted 404). The minted-token embed lifecycle
+/// lives in <see cref="EmbedLinksTests"/> (RavenDB-26775). The real-LLM reply path
+/// is asserted in the E2E (<see cref="E2E.ApplianceFullFlowTests"/> T14); here we
+/// only prove the stream wiring opens with valid NDJSON against the draft, so these
+/// run without a live LLM.
 /// </summary>
 public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTestBase(output)
 {
@@ -408,7 +408,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     // ---- setup/try ----
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task SetupTry_opens_an_ndjson_stream()
+    public async Task SetupTry_streams_ndjson_for_the_draft()
     {
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
@@ -418,19 +418,31 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
+        // Seed the connection string the draft references (this also provisions a throwaway
+        // agent, which the draft test ignores — it runs the posted configuration, not a
+        // persisted agent).
         await ApplianceTestSeed.SeedMockAgentAsync(client, "my-app", "demo-agent");
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var req = new HttpRequestMessage(HttpMethod.Post, "/api/apps/my-app/setup/try")
         {
-            Content = JsonContent.Create(new { prompt = "hello", agentId = "demo-agent" }),
+            Content = JsonContent.Create(new
+            {
+                prompt = "hello",
+                configuration = new
+                {
+                    name = "Draft Agent",
+                    systemPrompt = "You are a placeholder draft agent.",
+                    connectionStringName = "demo-llm",
+                },
+            }),
         };
         var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         Assert.Contains("application/x-ndjson", resp.Content.Headers.ContentType?.ToString() ?? "");
 
-        // No live LLM in this unit test, so the wiring surfaces a valid NDJSON
-        // frame (chunk/done if an LLM happened to be reachable, otherwise error).
+        // No live LLM in this unit test, so the wiring surfaces a valid NDJSON frame: chunk/done
+        // if a model happened to be reachable, otherwise an error frame.
         var line = await ReadFirstLineAsync(resp, l => string.IsNullOrWhiteSpace(l) == false, cts.Token);
         Assert.NotNull(line);
         using var doc = JsonDocument.Parse(line!);
@@ -439,7 +451,24 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task SetupTry_returns_400_when_agentId_missing()
+    public async Task SetupTry_returns_400_when_prompt_missing()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/try",
+            new { configuration = new { name = "Draft", systemPrompt = "p", connectionStringName = "demo-llm" } });
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task SetupTry_returns_400_when_configuration_missing()
     {
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
@@ -454,34 +483,19 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task SetupTry_returns_400_for_unknown_agentId()
-    {
-        // A non-empty but unknown agentId is a client error, so the handler
-        // validates it against the per-app database and returns 400 before
-        // opening the NDJSON stream (rather than a 200 + error frame after the
-        // headers flush).
-        var store = GetDocumentStore();
-        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _db = cleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/setup/try",
-            new { prompt = "hi", agentId = "does-not-exist" });
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task SetupTry_returns_404_for_unknown_slug()
     {
         var store = GetDocumentStore();
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.PostAsJsonAsync("/api/apps/nonexistent/setup/try", new { prompt = "hi", agentId = "demo-agent" });
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/nonexistent/setup/try",
+            new
+            {
+                prompt = "hi",
+                configuration = new { name = "Draft", systemPrompt = "p", connectionStringName = "demo-llm" },
+            });
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
@@ -510,7 +524,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     /// <summary>Reads the streamed response line by line and returns the first
     /// line satisfying <paramref name="match"/>, or null on end-of-stream /
     /// cancellation. Cancellation comes from the caller's CTS so the test never
-    /// hangs on the open-ended SSE / NDJSON stream.</summary>
+    /// hangs on the open-ended NDJSON stream.</summary>
     private static async Task<string?> ReadFirstLineAsync(HttpResponseMessage resp, Func<string, bool> match, CancellationToken ct)
     {
         try
