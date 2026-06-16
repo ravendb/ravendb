@@ -94,6 +94,22 @@ export const sampleAgentTestEvents: AgentStreamEvent[] = [
             reply: "Sure! Based on the demo data, I can help you find products and check orders.",
             relatedProducts: ["Wireless Mouse", "USB-C Hub", "Laptop Stand"],
         },
+        // The query tools the agent ran this turn (server's `toolCalls`): the RQL, the parameters
+        // the model filled in, and the rows the query returned.
+        toolCalls: [
+            {
+                id: "call_1",
+                name: "search-products",
+                description: "Search products by name.",
+                query: "from Products where search(Name, $searchTerm)",
+                arguments: JSON.stringify({ searchTerm: "mouse" }),
+                result: JSON.stringify([
+                    { Name: "Wireless Mouse", Price: 24.99 },
+                    { Name: "USB-C Hub", Price: 39.0 },
+                    { Name: "Laptop Stand", Price: 29.5 },
+                ]),
+            },
+        ],
         conversationId: "chats/test",
     },
 ];
