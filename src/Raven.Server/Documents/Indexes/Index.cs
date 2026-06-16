@@ -296,6 +296,8 @@ namespace Raven.Server.Documents.Indexes
         private bool _newComplexFieldsToReport = false;
         private record CachedStaticHeaviness(IndexHeavinessGrade Grade, IndexDefinitionBaseServerSide Definition);
         private record CachedFullHeaviness(IndexHeavinessGrade Grade, long TickCount);
+        // Full grade opens a read transaction to scan collection sizes; cache for 60 s to avoid
+        // overhead on frequent Studio polls. A slightly stale score is acceptable for a heuristic.
         private const long FullHeavinessCacheMs = 60_000;
         private volatile CachedStaticHeaviness _cachedHeaviness;
         private volatile CachedFullHeaviness _cachedFullHeaviness;
@@ -3278,12 +3280,13 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                IndexDefinition indexDefinition = GetIndexDefinition();
+                IndexDefinitionBaseServerSide currentDefinition = Definition;
+                IndexDefinition indexDefinition = currentDefinition.GetOrCreateIndexDefinitionInternal();
 
                 if (indexDefinition == null)
                     return null;
 
-                IndexHeavinessGrade staticGrade = GetOrComputeStaticHeavinessGrade(indexDefinition);
+                IndexHeavinessGrade staticGrade = GetOrComputeStaticHeavinessGrade(indexDefinition, currentDefinition);
 
                 IndexDefinitionHeavinessAnalyzer.CollectionDataProvider collectionDataProvider = null;
                 DocumentsOperationContext docsContext = null;
@@ -3326,7 +3329,7 @@ namespace Raven.Server.Documents.Indexes
                         };
                     }
 
-                    IndexHeavinessGrade result = IndexDefinitionHeavinessAnalyzer.ComputeFullGrade(staticGrade, Collections, stats, collectionDataProvider);
+                    IndexHeavinessGrade result = IndexDefinitionHeavinessAnalyzer.ComputeFullGrade(staticGrade, currentDefinition.Collections, stats, collectionDataProvider);
                     _cachedFullHeaviness = new CachedFullHeaviness(result, Environment.TickCount64);
                     return result;
                 }
@@ -3344,16 +3347,15 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private IndexHeavinessGrade GetOrComputeStaticHeavinessGrade(IndexDefinition indexDefinition)
+        private IndexHeavinessGrade GetOrComputeStaticHeavinessGrade(IndexDefinition indexDefinition, IndexDefinitionBaseServerSide serverSideDefinition)
         {
-            IndexDefinitionBaseServerSide currentDefinition = Definition;
             CachedStaticHeaviness cached = _cachedHeaviness;
 
-            if (cached != null && ReferenceEquals(cached.Definition, currentDefinition))
+            if (cached != null && ReferenceEquals(cached.Definition, serverSideDefinition))
                 return cached.Grade;
 
-            IndexHeavinessGrade staticGrade = IndexDefinitionHeavinessAnalyzer.ComputeStaticGrade(indexDefinition, Collections);
-            _cachedHeaviness = new CachedStaticHeaviness(staticGrade, currentDefinition);
+            IndexHeavinessGrade staticGrade = IndexDefinitionHeavinessAnalyzer.ComputeStaticGrade(indexDefinition, serverSideDefinition.Collections);
+            _cachedHeaviness = new CachedStaticHeaviness(staticGrade, serverSideDefinition);
             return staticGrade;
         }
 

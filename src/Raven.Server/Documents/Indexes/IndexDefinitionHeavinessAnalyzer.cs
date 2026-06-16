@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Acornima;
+using Acornima.Ast;
 using Microsoft.CodeAnalysis.CSharp;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
@@ -464,7 +466,10 @@ namespace Raven.Server.Documents.Indexes
                 return null;
 
             if (definition.Type.IsJavaScript())
-                return new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Constants.Documents.Collections.AllDocumentsCollection };
+            {
+                HashSet<string> jsCollections = ExtractCollectionsFromJavaScriptMaps(definition.Maps);
+                return jsCollections?.Count > 0 ? jsCollections : null;
+            }
 
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -505,11 +510,56 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch
                 {
-                    // Ignore parse errors
+                    collections.Add(Constants.Documents.Collections.AllDocumentsCollection);
                 }
             }
 
             return collections.Count > 0 ? collections : null;
+        }
+
+        private static HashSet<string> ExtractCollectionsFromJavaScriptMaps(ISet<string> maps)
+        {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var parser = new Parser(new ParserOptions { Tolerant = true });
+
+            foreach (string map in maps)
+            {
+                if (string.IsNullOrWhiteSpace(map))
+                    continue;
+
+                try
+                {
+                    Script script = parser.ParseScript(map);
+
+                    foreach (Statement stmt in script.Body)
+                    {
+                        if (stmt is not ExpressionStatement { Expression: CallExpression call })
+                            continue;
+
+                        if (call.Callee is not Identifier { Name: "map" } || call.Arguments.Count == 0)
+                            continue;
+
+                        if (call.Arguments[0] is Literal { Value: string col })
+                        {
+                            result.Add(col);
+                        }
+                        else if (call.Arguments[0] is ArrayExpression arr)
+                        {
+                            foreach (var element in arr.Elements)
+                            {
+                                if (element is Literal { Value: string elemCol })
+                                    result.Add(elemCol);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Skip maps that cannot be parsed
+                }
+            }
+
+            return result;
         }
 
         /// <summary>
