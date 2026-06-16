@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -14,9 +13,6 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -25,7 +21,6 @@ using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -214,34 +209,53 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Logging)]
         public async Task UpdatePullReplicationOnSink()
         {
             var definitionName1 = $"pull-replication {GetDatabaseName()}";
             var definitionName2 = $"pull-replication {GetDatabaseName()}";
             var timeout = 3000;
-
-            using (var sink = GetDocumentStore())
-            using (var hub = GetDocumentStore())
-            using (var hub2 = GetDocumentStore())
+            var auditLogPath = NewDataPath(suffix: "AuditLog");
+            var settings = new Dictionary<string, string>
             {
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName1));
-                await hub2.Maintenance.ForDatabase(hub2.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName2));
+                [RavenConfiguration.GetKey(x => x.Security.AuditLogPath)] = auditLogPath
+            };
+            var certificates = Certificates.SetupServerAuthentication(settings);
+            var serverCertificate = certificates.ServerCertificateForCommunication.Value;
+            var pullReplicationCertificate = certificates.ClientCertificate1.Value;
+
+            using (var sink = GetDocumentStore(SecuredOptions()))
+            using (var hub = GetDocumentStore(SecuredOptions()))
+            using (var hub2 = GetDocumentStore(SecuredOptions()))
+            {
+                await DefineHubAndRegisterAccess(hub, definitionName1);
+                await DefineHubAndRegisterAccess(hub2, definitionName2);
 
                 using (var main = hub.OpenSession())
                 {
                     main.Store(new User(), "hub1/1");
                     main.SaveChanges();
                 }
-                var pullTasks = await SetupPullReplicationAsync(definitionName1, sink, hub);
+                var pullTasks = await SetupPullReplicationAsync(definitionName1, sink, pullReplicationCertificate, hub);
                 Assert.True(WaitForDocument(sink, "hub1/1", timeout), sink.Identifier);
 
                 var pull = new PullReplicationAsSink(hub2.Database, $"ConnectionString2-{sink.Database}", definitionName2)
                 {
                     Url = sink.Urls[0],
-                    TaskId = pullTasks[0].TaskId
+                    TaskId = pullTasks[0].TaskId,
+                    CertificateWithPrivateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx))
                 };
                 await AddWatcherToReplicationTopology(sink, pull, hub2.Urls);
+                await WaitForAssertionAsync(() =>
+                {
+                    var auditLog = ReadAuditLog();
+                    var updateSinkAuditLines = auditLog
+                        .Split(Environment.NewLine)
+                        .Where(x => x.Contains("update-sink-pull-replication"));
+
+                    Assert.Contains(updateSinkAuditLines, x => x.Contains(definitionName2));
+                    return Task.CompletedTask;
+                }, TimeSpan.FromSeconds(5));
 
                 using (var main = hub.OpenSession())
                 {
@@ -256,6 +270,45 @@ namespace SlowTests.Server.Replication
                     main.SaveChanges();
                 }
                 Assert.True(WaitForDocument(sink, "hub2", timeout), sink.Identifier);
+            }
+
+            return;
+
+            Options SecuredOptions()
+            {
+                return new Options
+                {
+                    ClientCertificate = serverCertificate,
+                    AdminCertificate = serverCertificate
+                };
+            }
+
+            async Task DefineHubAndRegisterAccess(DocumentStore hub, string definitionName)
+            {
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(definitionName));
+                await hub.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(definitionName,
+                    new ReplicationHubAccess
+                    {
+                        Name = definitionName,
+                        CertificateBase64 = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
+                    }));
+            }
+
+            string ReadAuditLog()
+            {
+                NLog.LogManager.Flush(TimeSpan.FromSeconds(1));
+
+                return Directory.Exists(auditLogPath)
+                    ? string.Join(Environment.NewLine, Directory.GetFiles(auditLogPath, "*.log").Select(ReadAuditLogFile))
+                    : string.Empty;
+            }
+
+            static string ReadAuditLogFile(string path)
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+
+                return reader.ReadToEnd();
             }
         }
 
