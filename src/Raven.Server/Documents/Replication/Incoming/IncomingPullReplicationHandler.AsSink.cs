@@ -7,6 +7,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -50,21 +51,28 @@ namespace Raven.Server.Documents.Replication.Incoming
             // and persist it as the hub cursor for failover.
             // _lastBatchChangeVector is filled only when we send a batch of items OR we are skipping items through a heartbeat
             if (_hubBatchHistory.ComputeConfirmedChangeVector(_lastBatchChangeVector) is { } confirmedHubCv)
-            {
-                var command = new UpdateExternalReplicationStateCommand(ReplicationLoaderParent.Database.Name, RaftIdGenerator.NewId())
-                {
-                    ExternalReplicationState = new ExternalReplicationState
-                    {
-                        TaskId = IncomingPullReplicationParams.TaskId,
-                        NodeTag = ReplicationLoaderParent._server.NodeTag,
-                        SourceChangeVector = confirmedHubCv,
-                        Type = ExternalReplicationState.ReplicationStateType.HubCursor
-                    }
-                };
-                ReplicationLoaderParent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
-            }
+                PersistHubCursor(confirmedHubCv);
 
             return heartbeat;
+        }
+
+        private void PersistHubCursor(string confirmedHubCv)
+        {
+            var existingCv = ReplicationUtils.ReadCursorFromClusterFor(ReplicationLoaderParent.Server, ReplicationLoaderParent.Database.Name, IncomingPullReplicationParams.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor);
+            if (existingCv == confirmedHubCv)
+                return;
+
+            var command = new UpdateExternalReplicationStateCommand(ReplicationLoaderParent.Database.Name, RaftIdGenerator.NewId())
+            {
+                ExternalReplicationState = new ExternalReplicationState
+                {
+                    TaskId = IncomingPullReplicationParams.TaskId,
+                    NodeTag = ReplicationLoaderParent._server.NodeTag,
+                    SourceChangeVector = confirmedHubCv,
+                    Type = ExternalReplicationState.ReplicationStateType.HubCursor
+                }
+            };
+            ReplicationLoaderParent._server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context, DataForReplicationCommand data, long lastDocumentEtag)
