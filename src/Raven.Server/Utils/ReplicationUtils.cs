@@ -86,13 +86,21 @@ namespace Raven.Server.Utils
             using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var key = ExternalReplicationState.GenerateItemName(databaseName, taskId, type);
-                var stateBlittable = serverStore.Cluster.Read(context, key);
-                if (stateBlittable == null)
-                    return null;
+                return ReadCursorFromClusterFor(serverStore, databaseName, taskId, type, context);
+            }
+        }
 
-                var state = JsonDeserializationCluster.ExternalReplicationState(stateBlittable);
-                return state.SourceChangeVector;
+        public static string ReadCursorFromClusterFor(ServerStore serverStore, string databaseName, long taskId, ExternalReplicationState.ReplicationStateType type, ClusterOperationContext context)
+        {
+            var key = ExternalReplicationState.GenerateItemName(databaseName, taskId, type);
+            var stateBlittable = serverStore.Cluster.Read(context, key);
+            if (stateBlittable == null)
+                return null;
+
+            using (stateBlittable)
+            {
+                stateBlittable.TryGet(nameof(ExternalReplicationState.SourceChangeVector), out string sourceChangeVector);
+                return sourceChangeVector;
             }
         }
 
