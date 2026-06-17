@@ -38,23 +38,27 @@ namespace SlowTests.Server.Documents.OngoingTasks
             using var source = GetDocumentStore(options);
             using var destination = GetDocumentStore(options);
 
-            // we want the first result to show unprocessed items
-            // so, we define an external replication task and break it immediately
-
             var sourceDb = await GetDocumentDatabaseInstanceForAsync(source, options.DatabaseMode, UserId);
 
             await SetupReplicationAsync(source, destination);
-            var replication = await BreakReplication(Server.ServerStore, sourceDb.Name);
 
-            await StoreData(source);
+            var replication = new ReplicationInstance(sourceDb, sourceDb.Name, false);
 
-            // since we broke replication, we expect incomplete results with items to process
+            // we want the first result to show unprocessed items
+            // so, we define an external replication task and break it immediately
 
-            await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: false);
+            await using (replication.Break())
+            {
+                await StoreData(source);
 
-            // continue the replication and let the items replicate to the destination
+                // since we broke replication, we expect incomplete results with items to process
 
-            replication.Mend();
+                await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: false);
+            }
+
+            // DisposeAsync mends replication and waits for one full batch+ACK cycle to complete,
+            // guaranteeing _lastSentDocumentEtag is updated before we verify completion
+
             Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(destination, UserId, TimeSpan.FromSeconds(10)));
 
             // now we should have values for the last sent Etag and change vectors, so we retrieve them to verify they are correct
@@ -63,15 +67,14 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             // break the replication again to perform deletion and check tombstone items
 
-            replication.Break();
+            await using (replication.Break())
+            {
+                await DeleteUserDocument(source);
 
-            await DeleteUserDocument(source);
-
-            await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: false, hasTombstones: true);
+                await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: false, hasTombstones: true);
+            }
 
             // continue the replication and check if all tombstones are processed
-
-            replication.Mend();
 
             Assert.True(WaitForDocumentDeletion(destination, UserId));
 
@@ -519,6 +522,9 @@ namespace SlowTests.Server.Documents.OngoingTasks
                     return false;
 
                 if (result.ProcessesProgress[0].LastSentEtag != lastSentEtag)
+                    return false;
+
+                if (result.ProcessesProgress[0].DestinationChangeVector == null)
                     return false;
 
                 return true;
