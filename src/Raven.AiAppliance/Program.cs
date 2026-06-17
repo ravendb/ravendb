@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -80,6 +81,7 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_AI_API_URL",              v => options.AiApiUrl = v);
         ReadEnv("QUILL_LICENSE_KEY",             v => options.LicenseToken = v);
         ReadEnv("QUILL_API_KEY",                 v => options.ApiKey = v);
+        ReadEnv("RAVEN_AI_RAVENDB_INTERNAL_PORT", v => { if (int.TryParse(v, out var p)) options.RavenInternalPort = p; });
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -171,8 +173,9 @@ builder.Services.AddHealthChecks()
 // RavenDB-26775 backstop: a coarse per-IP cap on the public embed chat route.
 // The minted link's invocation cap + TTL is the PRIMARY control; this only
 // blunts token-brute-forcing the 410/404 path and high-N "public" tokens.
-// Caveat: no UseForwardedHeaders today (M2) — behind a TLS proxy the partition
-// key is the proxy's IP, so the per-link cap remains the real guarantee.
+// Behind the nginx :443 front the client IP is the loopback proxy (the TLS-passthrough SNI
+// listener can't carry the real IP), so this partitions per-appliance; the minted link's
+// invocation cap + TTL remains the primary control regardless.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -190,8 +193,8 @@ builder.Services.AddRateLimiter(options =>
             }));
 
     // Brute-force backstop on the operator login. The API key is high-entropy (unguessable), so this
-    // mainly bounds online guessing of an operator-chosen QUILL_API_KEY; same per-IP partition caveat
-    // as the embed policy applies until UseForwardedHeaders (Phase 1) lands.
+    // mainly bounds online guessing of an operator-chosen QUILL_API_KEY. Behind the nginx :443 front the
+    // partition key is the loopback proxy IP, so this is effectively a global ~10/min login cap.
     options.AddPolicy(AuthEndpoints.LoginRateLimitPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Connection.Id,
@@ -244,6 +247,21 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+// Behind the in-container nginx :443 SNI front: honor the forwarded scheme/host so the session cookie
+// goes Secure and embed-link URLs use https + the request host. The only proxy is nginx on loopback —
+// trust it explicitly (the defaults trust just ::1 and would otherwise drop the forwarded values).
+// Note: the TLS-passthrough SNI listener can't carry the real client IP, so X-Forwarded-For is the
+// loopback proxy and the rate limiter buckets per-appliance, not per-client.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+    options.KnownProxies.Clear();
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Add(System.Net.IPAddress.Loopback);
+    options.KnownProxies.Add(System.Net.IPAddress.IPv6Loopback);
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -269,6 +287,10 @@ if (app.Environment.IsDevelopment())
             "Mock API mode: activation serves the mounted setup-package zip (MockLicenseClient) and the AI Helper returns canned Northwind sample data (MockAiHelperClient), not live results from api.ravendb.net.");
     }
 }
+
+// Must run first: rewrites Request.Scheme/Host + RemoteIpAddress from the nginx :443 front's
+// X-Forwarded-* before anything reads them (cookie Secure policy, embed URLs, rate-limit partition).
+app.UseForwardedHeaders();
 
 // Enables WebSocket upgrades for the live-feed proxy (e.g. /api/apps/{slug}/cdc/progress).
 app.UseWebSockets();
