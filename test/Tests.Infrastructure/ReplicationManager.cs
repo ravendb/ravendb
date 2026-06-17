@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server;
 using Tests.Infrastructure;
@@ -18,11 +19,26 @@ public partial class RavenTestBase
             Instances = instances;
         }
 
-        public void Break()
+        public IAsyncDisposable Break()
         {
+            var handles = new List<IAsyncDisposable>();
             foreach (var (node, replicationInstance) in Instances)
             {
-                replicationInstance.Break();
+                handles.Add(replicationInstance.Break());
+            }
+            return new CompositeAsyncDisposable(handles);
+        }
+
+        internal sealed class CompositeAsyncDisposable : IAsyncDisposable
+        {
+            private readonly List<IAsyncDisposable> _disposables;
+
+            public CompositeAsyncDisposable(List<IAsyncDisposable> disposables) => _disposables = disposables;
+
+            public async ValueTask DisposeAsync()
+            {
+                foreach (IAsyncDisposable disposable in _disposables)
+                    await disposable.DisposeAsync();
             }
         }
 

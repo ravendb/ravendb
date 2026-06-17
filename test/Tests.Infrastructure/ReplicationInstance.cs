@@ -39,10 +39,54 @@ namespace Tests.Infrastructure
 
         }
 
-        public void Break()
+        public IAsyncDisposable Break()
         {
             var mre = new ManualResetEventSlim(false);
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+            return new BreakHandle(this, mre);
+        }
+
+        private async Task WaitForResetAsync(int timeout = 15_000)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                if (_replicateOnceMre?.IsSet == false)
+                    return;
+
+                await Task.Delay(16);
+            }
+
+            throw new TimeoutException("Replication cycle did not complete within timeout");
+        }
+
+        private sealed class BreakHandle : IAsyncDisposable
+        {
+            private readonly ReplicationInstance _instance;
+            private readonly ManualResetEventSlim _blockedMre;
+
+            public BreakHandle(ReplicationInstance instance, ManualResetEventSlim blockedMre)
+            {
+                _instance = instance;
+                _blockedMre = blockedMre;
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                // nextMre starts SET — handler runs one full batch+ACK iteration, then calls Reset() and blocks.
+                // That Reset() is our signal that _lastSentDocumentEtag has been updated.
+                var nextMre = new ManualResetEventSlim(true);
+                _instance._replicateOnceMre = nextMre;
+                _instance._database.ReplicationLoader.DebugWaitAndRunReplicationOnce = nextMre;
+                _instance._database.Configuration.Replication.MaxItemsCount = null;
+
+                _blockedMre.Set();
+
+                await _instance.WaitForResetAsync();
+
+                _instance._database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                nextMre.Set();
+            }
         }
 
         public void Mend()
