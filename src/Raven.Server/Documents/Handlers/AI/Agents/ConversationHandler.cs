@@ -55,6 +55,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private bool _cancelPendingActionTools;
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
+    private string _schema;
+    public string Schema => _schema;
     public required RavenServer.AuthenticateConnection Authentication;
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null, bool cancelPendingActionTools = false)
     {
@@ -66,7 +68,29 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         _debugOverride = debugOverride;
         _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
         _cancelPendingActionTools = cancelPendingActionTools;
+        _schema = GetSchema(configuration, body.OutputOptions);
     }
+
+    private static string GetSchema(AiAgentConfiguration configuration, AiServerOutputOptions opts)
+    {
+        if (opts == null)
+        {
+            // take from the agent configuration, if exists.
+            return ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
+        }
+
+        if (opts.NoSchema)
+            return null;
+
+        if (string.IsNullOrWhiteSpace(opts.OutputSchema) == false)
+            return opts.OutputSchema;
+
+        if (string.IsNullOrWhiteSpace(opts.SampleObject) == false)
+            return ChatCompletionClient.GetSchemaFromSampleObject(opts.SampleObject);
+
+        return ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
+    }
+
 
     protected virtual async Task InitializeDocumentAsync(DocumentsOperationContext context, CancellationToken token)
     {
@@ -367,7 +391,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         Func<Memory<byte>, Task> streaming,
         CancellationToken token)
     {
-        using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath, streaming);
+        using var talker = new Talker(this, context, _configuration, _schema, _document, firstStreamPropertyPath, streaming);
         return await RunInternalAsync(context, talker, token);
     }
         
@@ -375,7 +399,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         JsonOperationContext context,
         CancellationToken token)
     {
-        using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath: null, streaming: null);
+        using var talker = new Talker(this, context, _configuration, _schema, _document, firstStreamPropertyPath: null, streaming: null);
         return await RunInternalAsync(context, talker, token);
     }
 
@@ -423,7 +447,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
                 isFirstIteration = false;
 
-                _document.AddMessage(context, r.Message, currentTurnUsage);
+                bool isNoSchema = r.Type is AiResponseType.Result && _schema == null;
+                _document.AddMessage(context, r.Message, currentTurnUsage, isNoSchema);
                 _document.UpdateUsage(talker.AiUsage);
                 OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
 
@@ -730,9 +755,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         var usage = new AiUsage();
         var tools = client.GenerateTools(context, configuration, this);
         using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
-        var result = await client.CompleteAsync(context, request, usage, trace: null, token);
+        var result = await client.CompleteAsync(context, request, usage, SummarizationOutputSchema, trace: null, token);
 
-        if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
+        if (result.Result is not BlittableJsonReaderObject resultObj || resultObj.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
             throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };
 
         oldChat.Messages.Clear();
@@ -1362,7 +1387,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         public string Answer = "Summary of the following chat messages history";
     }
 
-    public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response, int toolsIterations)
+    public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, object response, int toolsIterations)
     {
         return new DynamicJsonValue
         {

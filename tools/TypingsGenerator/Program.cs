@@ -13,6 +13,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
@@ -654,6 +655,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestResult));
             scripter.AddType(typeof(AiAgentActionRequest));
             scripter.AddType(typeof(ConversionRequestBody));
+            scripter.AddType(typeof(AiOutputOptions));
 
             // ongoing tasks - ETLs
             scripter.AddType(typeof(EtlTaskStats));
