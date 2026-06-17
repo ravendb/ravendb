@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { agentsMocks } from "@/mocks/agents-mocks";
+import { channelsMocks } from "@/mocks/channels-mocks";
 import { AppOverview } from "./app-overview";
 
 const meta = {
@@ -15,3 +17,16 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+// Fresh app: no agents or channels yet, so the welcome panel shows the remaining
+// steps as numbered (incomplete) call-to-actions.
+export const Onboarding: Story = {
+    parameters: {
+        msw: {
+            handlers: {
+                agents: [agentsMocks.list([])],
+                channels: [channelsMocks.list([])],
+            },
+        },
+    },
+};
