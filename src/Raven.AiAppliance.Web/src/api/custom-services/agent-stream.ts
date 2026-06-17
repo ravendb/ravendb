@@ -44,13 +44,15 @@ const agentStreamEventSchema = z.discriminatedUnion("type", [
 export type AgentStreamEvent = z.infer<typeof agentStreamEventSchema>;
 
 /** POSTs `body` to `path` and yields the NDJSON frames the server streams back. Non-2xx
- * responses (e.g. a pre-stream 400/404) throw an ApiError before the first frame. */
+ * responses (e.g. a pre-stream 400/404) throw an ApiError before the first frame. Pass a
+ * `signal` to cancel the request (the caller aborts it when the panel unmounts mid-stream). */
 export async function* streamAgentNdjson(
     client: ApiClient,
     path: string,
     body: unknown,
+    signal?: AbortSignal,
 ): AsyncGenerator<AgentStreamEvent> {
-    const response = await client.post<Response>(path, body, { responseType: "response" });
+    const response = await client.post<Response>(path, body, { responseType: "response", signal });
 
     if (!response.body) {
         return;
@@ -81,7 +83,10 @@ export async function* streamAgentNdjson(
             yield parseAgentStreamEvent(buffer);
         }
     } finally {
-        reader.releaseLock();
+        // Cancel the body so an aborted or abandoned generator stops the request streaming in the
+        // background instead of only releasing the lock. cancel() also releases the reader; it
+        // rejects on an already-errored stream (e.g. after an abort), which is safe to ignore.
+        await reader.cancel().catch(() => {});
     }
 }
 

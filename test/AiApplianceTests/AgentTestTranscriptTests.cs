@@ -113,6 +113,28 @@ public class AgentTestTranscriptTests(ITestOutputHelper output) : NoDisposalNeed
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public void Skips_tool_calls_that_are_not_on_an_assistant_message()
+    {
+        // Only assistant messages carry the model's tool invocations; tool_calls riding on any
+        // other role (here a "tool" message) are not the model's calls and must be ignored.
+        const string json = """
+        {
+            "Documents": {
+                "TestConversation": {
+                    "Messages": [
+                        { "role": "tool", "tool_call_id": "call_1", "content": "[]", "tool_calls": [
+                            { "id": "call_1", "type": "function", "function": { "name": "search-products", "arguments": "{}" } }
+                        ] }
+                    ]
+                }
+            }
+        }
+        """;
+
+        Assert.Empty(Extract(json, ConfigWithSearchProducts()));
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void Returns_empty_when_the_result_has_no_documents()
     {
         const string json = """{ "ConversationId": "TestConversation", "Response": { "reply": "Hi." } }""";

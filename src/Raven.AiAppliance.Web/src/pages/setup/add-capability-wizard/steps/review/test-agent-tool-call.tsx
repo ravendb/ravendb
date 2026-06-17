@@ -39,7 +39,7 @@ export function TestQueryToolCall({ toolCall }: { toolCall: AgentToolCall }) {
                         mode="json"
                         height="60px"
                     />
-                    {toolCall.result != null && <ResultField result={toolCall.result} />}
+                    {toolCall.result?.trim() && <ResultField result={toolCall.result} />}
                 </div>
             )}
         </div>
