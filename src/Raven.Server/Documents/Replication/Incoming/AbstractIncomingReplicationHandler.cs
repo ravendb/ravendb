@@ -151,20 +151,29 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                     long lastTotalBytesRead = 0;
 
+                    // Throttle notify-sends. A busy node pokes _replicationFromAnotherSource very frequently (once per
+                    // sibling batch). The peer emits its periodic heartbeat only when ITS read of our messages goes
+                    // quiet for a heartbeat interval (see DatabaseOutgoingReplicationHandler.WaitForChanges), so a
+                    // "Notify" reply for every poke starves the peer's heartbeats and makes this healthy connection
+                    // look dead. Sending at most once per (heartbeat + timeout)/2 -- always larger than the heartbeat
+                    // interval -- leaves the peer quiet time to heartbeat while still forwarding our change vector.
+                    var heartbeatInterval = (int)configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
+                    var notifyMinInterval = (heartbeatInterval + readTimeout) / 2;
+                    var notifyClock = Stopwatch.StartNew();
+                    long lastNotifyElapsed = -notifyMinInterval; // allow the first notify immediately
+
                     while (_cts.IsCancellationRequested == false)
                     {
                         try
                         {
                             var remaining = readTimeout - (int)sinceLastReceive.ElapsedMilliseconds;
-                            if (remaining <= 0)
-                                ThrowReadTimeout(readTimeout);                // woken repeatedly, but no data in the window
 
                             AddReplicationPulse(ReplicationPulseDirection.IncomingInitiate);
 
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
-                                remaining,
+                                Math.Max(0, remaining),
                                 _copiedBuffer.Buffer,
                                 _cts.Token))
                             {
@@ -186,7 +195,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                         continue;
                                     }
 
-                                    ThrowReadTimeout(readTimeout);
+                                    // No data received within the timeout window. This is likely a zombie connection.
+                                    throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
                                 }
 
                                 if (msg.Document != null)
@@ -209,6 +219,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 else // notify peer about new change vector
                                 {
+                                    // Throttle: don't flood the peer with notify replies (see notifyMinInterval above),
+                                    // or it never gets the quiet window it needs to send us a heartbeat.
+                                    var notifyElapsed = notifyClock.ElapsedMilliseconds;
+                                    if (notifyElapsed - lastNotifyElapsed < notifyMinInterval)
+                                        continue;
+
+                                    lastNotifyElapsed = notifyElapsed;
+
+                                    sinceLastReceive.Stop();
+
                                     using (_contextPool.AllocateOperationContext(out TOperationContext context))
                                     using (var writer = new BlittableJsonTextWriter(context, _stream))
                                     {
@@ -218,6 +238,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             _lastDocumentEtag,
                                             "Notify");
                                     }
+
+                                    sinceLastReceive.Start();
                                 }
                             }
                         }
@@ -279,12 +301,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     InvokeOnFailed(e);
                 }
             }
-        }
-
-        private void ThrowReadTimeout(int readTimeout)
-        {
-            // No data received within the timeout window. This is likely a zombie connection.
-            throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
         }
 
         internal void HandleSingleReplicationBatch(TOperationContext context, BlittableJsonReaderObject message, BlittableJsonTextWriter writer)
