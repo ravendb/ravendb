@@ -72,8 +72,6 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
-    console.log("maxym data.shared", data.shared);
-
     const editUrl = forCurrentDatabase.editExternalReplication(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
