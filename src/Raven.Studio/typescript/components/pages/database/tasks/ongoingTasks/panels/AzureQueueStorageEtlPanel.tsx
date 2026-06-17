@@ -33,7 +33,7 @@ type AzureQueueStorageEtlPanelProps = EtlPanelBaseProps<OngoingTaskAzureQueueSto
 export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editAzureQueueStorageEtl(data.shared.taskId)();
 
     const {
@@ -50,11 +50,6 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        databaseName,
-        "AzureQueueStorage",
-        data.shared.connectionStringName
-    );
 
     return (
         <RichPanel>
@@ -101,7 +96,8 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="AzureQueueStorage"
+                    databaseName={databaseName}
                 />
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
                 <EtlPanelErrors

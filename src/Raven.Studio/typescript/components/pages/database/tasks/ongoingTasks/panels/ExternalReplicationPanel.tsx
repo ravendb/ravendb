@@ -36,9 +36,7 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
     const showDelayReplication = data.shared.delayReplicationTime > 0;
     const delayHumane = genUtils.formatTimeSpan(1000 * (data.shared.delayReplicationTime ?? 0), true);
     const connectionStringDefined = !!data.shared.destinationDatabase;
-    const { appUrl } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
@@ -49,7 +47,8 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
                 connectionStringDefined={!!data.shared.destinationDatabase}
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
+                connectionStringType="Raven"
+                databaseName={databaseName}
             />
             {connectionStringDefined && (
                 <RichPanelDetailItem label="Destination Database">
@@ -73,6 +72,8 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
     const { forCurrentDatabase } = useAppUrls();
 
     const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
+    console.log("maxym data.shared", data.shared);
+
     const editUrl = forCurrentDatabase.editExternalReplication(data.shared.taskId)();
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
