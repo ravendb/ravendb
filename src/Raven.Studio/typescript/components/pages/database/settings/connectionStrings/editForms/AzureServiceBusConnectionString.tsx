@@ -9,13 +9,13 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { Control, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { FormInput, FormLabel, FormSelect } from "components/common/Form";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useServices } from "components/hooks/useServices";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { useAppSelector } from "components/store";
@@ -39,6 +39,7 @@ export default function AzureServiceBusConnectionString({
     onSave,
 }: AzureServiceBusConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["AzureServiceBus"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
@@ -56,7 +57,6 @@ export default function AzureServiceBusConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -140,10 +140,8 @@ export default function AzureServiceBusConnectionString({
                 </div>
             )}
 
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editAzureServiceBusSink}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" usedBy={initialConnection.usedBy} />}
         </Form>
     );
 }
@@ -285,6 +283,7 @@ function getStringRequiredSchema(authType: AzureServiceBusAuthenticationType) {
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     authType: yup.string<AzureServiceBusAuthenticationType>(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
     settings: yupObjectSchema<FormData["settings"]>({
         connectionString: yupObjectSchema<FormData["settings"]["connectionString"]>({
             connectionStringValue: yup
@@ -328,5 +327,5 @@ function getDefaultValues(initialConnection: AzureServiceBusConnection, isForNew
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

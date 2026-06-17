@@ -562,6 +562,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-service-bus-name": {
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "azure-service-bus-name",
                     BrokerType: "AzureServiceBus",
@@ -682,6 +683,7 @@ export class DatabasesStubs {
                 RabbitMqConnectionSettings: null,
                 AzureQueueStorageConnectionSettings: null,
                 AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: null,
                 ExcludedDatabases: [],
             },
             {
@@ -695,6 +697,7 @@ export class DatabasesStubs {
                 },
                 AzureQueueStorageConnectionSettings: null,
                 AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: null,
                 ExcludedDatabases: [],
             },
             {
@@ -717,6 +720,7 @@ export class DatabasesStubs {
                     Passwordless: null,
                 },
                 AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: null,
                 ExcludedDatabases: [],
             },
             {
@@ -734,6 +738,24 @@ export class DatabasesStubs {
                         RegionName: "us-west-2",
                     },
                     Passwordless: false,
+                },
+                AzureServiceBusConnectionSettings: null,
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Queue",
+                UsedBy: [],
+                Name: "azure-service-bus-name",
+                BrokerType: "AzureServiceBus",
+                KafkaConnectionSettings: null,
+                RabbitMqConnectionSettings: null,
+                AzureQueueStorageConnectionSettings: null,
+                AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: {
+                    ConnectionString:
+                        "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub",
+                    EntraId: null,
+                    Passwordless: null,
                 },
                 ExcludedDatabases: [],
             },

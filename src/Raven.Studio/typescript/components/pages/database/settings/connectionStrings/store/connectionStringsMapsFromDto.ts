@@ -392,36 +392,52 @@ function getAzureServiceBusAuthType(dto: QueueConnectionStringDto): AzureService
     }
 }
 
-export function mapAzureServiceBusConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): AzureServiceBusConnection[] {
-    const type: AzureServiceBusConnection["type"] = "AzureServiceBus";
+function mapAzureServiceBusFromSingleDto(
+    d: QueueConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): AzureServiceBusConnection {
+    return {
+        type: "AzureServiceBus",
+        name: d.Name,
+        authType: getAzureServiceBusAuthType(d),
+        settings: {
+            connectionString: {
+                connectionStringValue: d.AzureServiceBusConnectionSettings.ConnectionString,
+            },
+            entraId: {
+                namespace: d.AzureServiceBusConnectionSettings.EntraId?.Namespace,
+                tenantId: d.AzureServiceBusConnectionSettings.EntraId?.TenantId,
+                clientId: d.AzureServiceBusConnectionSettings.EntraId?.ClientId,
+                clientSecret: d.AzureServiceBusConnectionSettings.EntraId?.ClientSecret,
+            },
+            passwordless: {
+                namespace: d.AzureServiceBusConnectionSettings.Passwordless?.Namespace,
+            },
+        },
+        usedBy,
+        excludedDatabases,
+    } satisfies AzureServiceBusConnection;
+}
 
+export function mapAzureServiceBusConnectionsFromDto(
+    connections: Record<string, QueueConnectionStringDto>
+): AzureServiceBusConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AzureServiceBus")
-        .map(
-            (connection) =>
-                ({
-                    type,
-                    name: connection.Name,
-                    authType: getAzureServiceBusAuthType(connection),
-                    settings: {
-                        connectionString: {
-                            connectionStringValue: connection.AzureServiceBusConnectionSettings.ConnectionString,
-                        },
-                        entraId: {
-                            namespace: connection.AzureServiceBusConnectionSettings.EntraId?.Namespace,
-                            tenantId: connection.AzureServiceBusConnectionSettings.EntraId?.TenantId,
-                            clientId: connection.AzureServiceBusConnectionSettings.EntraId?.ClientId,
-                            clientSecret: connection.AzureServiceBusConnectionSettings.EntraId?.ClientSecret,
-                        },
-                        passwordless: {
-                            namespace: connection.AzureServiceBusConnectionSettings.Passwordless?.Namespace,
-                        },
-                    },
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                }) satisfies AzureServiceBusConnection
+        .map((d) =>
+            mapAzureServiceBusFromSingleDto(
+                d,
+                (d.UsedBy ?? []).map(
+                    (t) =>
+                        ({
+                            kind: t.Kind,
+                            id: t.Id,
+                            identifier: t.Identifier,
+                            name: t.Name,
+                        }) satisfies ConnectionStringUsage
+                )
+            )
         );
 }
 
@@ -555,6 +571,7 @@ export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStri
         RabbitMQ: mapRabbitMqConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
         AzureQueueStorage: mapAzureQueueStorageConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
         AmazonSqs: mapAmazonSqsConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        AzureServiceBus: mapAzureServiceBusConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
         Ai: mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings),
     };
 }
@@ -585,6 +602,7 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
         RabbitMQ: [],
         AzureQueueStorage: [],
         AmazonSqs: [],
+        AzureServiceBus: [],
         Ai: [],
     };
 
@@ -640,6 +658,9 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
                         break;
                     case "AmazonSqs":
                         mapped.AmazonSqs.push(mapAmazonSqsFromSingleDto(d, usedBy, excludedDatabases));
+                        break;
+                    case "AzureServiceBus":
+                        mapped.AzureServiceBus.push(mapAzureServiceBusFromSingleDto(d, usedBy, excludedDatabases));
                         break;
                     case "None":
                         break;

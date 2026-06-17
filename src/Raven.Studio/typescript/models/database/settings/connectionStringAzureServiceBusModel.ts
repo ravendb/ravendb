@@ -48,16 +48,15 @@ class connectionStringAzureServiceBusModel extends connectionStringModel {
 
     static empty(): connectionStringAzureServiceBusModel {
         return new connectionStringAzureServiceBusModel({
+            UsedBy: [],
             Type: "Queue",
             BrokerType: "AzureServiceBus",
             Name: "",
-
             AzureServiceBusConnectionSettings: {
                 ConnectionString: "",
                 EntraId: null,
                 Passwordless: null,
             },
-
             KafkaConnectionSettings: null,
             RabbitMqConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
@@ -67,20 +66,19 @@ class connectionStringAzureServiceBusModel extends connectionStringModel {
 
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString {
         return {
+            UsedBy: [],
             Type: "Queue",
             BrokerType: "AzureServiceBus",
             Name: this.connectionStringName(),
-
             AzureServiceBusConnectionSettings: {
                 ConnectionString: this.azureServiceBusConnectionString(),
                 EntraId: null,
                 Passwordless: null,
             },
-
             KafkaConnectionSettings: null,
             RabbitMqConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
-            AmazonSqsConnectionSettings: null,
+            AmazonSqsConnectionSettings: null
         };
     }
 
