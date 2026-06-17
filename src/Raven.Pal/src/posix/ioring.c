@@ -442,9 +442,10 @@ int32_t rvn_write_io_ring(
         return FAIL_IO_RING_SUBMIT;
     }
 
-    if (pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock))
+    var rc_lock = pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock);
+    if (rc_lock != 0)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = rc_lock;
         return FAIL_MUTEX_LOCK;
     }
     // The worst case is that we have separate work item for each buffer, we assume that we
@@ -527,10 +528,12 @@ int32_t rvn_write_io_ring(
         rc = FAIL_IO_RING_WRITE_RESULT;
     }
 
-    if (pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock) &&
-        rc != SUCCESS)
+    int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock);
+    if (unlock_rc && rc == SUCCESS)
     {
-        *detailed_error_code = errno;
+        // If we cannot unlock the mutex but wait_for_work_completion finishes without issue, we propagate the mutex error; otherwise, 
+        // the original issue is what happens in wait_for_work_completion rather than the mutex exception.
+        *detailed_error_code = unlock_rc;
         return FAIL_MUTEX_UNLOCK;
     }
     return rc;
@@ -650,9 +653,10 @@ rvn_sync_directories_ioring(void *handle, char **folders, int32_t count, int32_t
         return FAIL_MATH_OVERFLOW;
     }
 
-    if (pthread_mutex_lock(&handle_ptr->global_state->fsync_dir_arena.lock))
+    int lock_rc = pthread_mutex_lock(&handle_ptr->global_state->fsync_dir_arena.lock);
+    if (lock_rc != 0)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = lock_rc;
         return FAIL_MUTEX_LOCK;
     }
 
@@ -740,10 +744,10 @@ rvn_sync_directories_ioring(void *handle, char **folders, int32_t count, int32_t
     if (*detailed_error_code)
         rc = FAIL_IO_RING_WRITE_RESULT;
 
-    if (pthread_mutex_unlock(&handle_ptr->global_state->fsync_dir_arena.lock) &&
-        rc != SUCCESS)
+    int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->fsync_dir_arena.lock);
+    if (unlock_rc && rc == SUCCESS)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = unlock_rc;
         return FAIL_MUTEX_UNLOCK;
     }
     return rc;

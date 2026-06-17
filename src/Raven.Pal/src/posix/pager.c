@@ -136,7 +136,7 @@ int32_t _open_pager_file(int fd,
 
     int32_t mmap_flags = (global_state->open_flags & OPEN_FILE_COPY_ON_WRITE) ? MAP_PRIVATE : MAP_SHARED;
     mem = rvn_mmap(NULL, st.st_size, PROT_READ, mmap_flags, fd, 0L);
-    if (mem == NULL)
+    if (mem == MAP_FAILED)
     {
         rc = FAIL_MAP_VIEW_OF_FILE;
         goto Error;
@@ -145,7 +145,7 @@ int32_t _open_pager_file(int fd,
     if (global_state->open_flags & OPEN_FILE_WRITABLE_MAP)
     {
         wmem = rvn_mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, mmap_flags, fd, 0L);
-        if (wmem == NULL)
+        if (wmem == MAP_FAILED)
         {
             rc = FAIL_MAP_VIEW_OF_FILE;
             goto Error;
@@ -176,11 +176,11 @@ Error:
     {
         *detailed_error_code = errno;
     }
-    if (mem != NULL)
+    if (mem != NULL && mem != MAP_FAILED)
     {
         munmap(mem, st.st_size);
     }
-    if (wmem != NULL)
+    if (wmem != NULL && wmem != MAP_FAILED)
     {
         munmap(wmem, st.st_size);
     }
@@ -333,9 +333,10 @@ rvn_increase_pager_size(void *handle,
         return FAIL_DUPLICATE_HANDLE;
     }
     int32_t rc = SUCCESS;
-    if (pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock))
+    int lock_rc = pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock);
+    if (lock_rc)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = lock_rc;
         rc = FAIL_MUTEX_LOCK;
         goto error;
     }
@@ -344,9 +345,10 @@ rvn_increase_pager_size(void *handle,
     {
         handle_ptr->global_state->ref_count++;
     }
-    if (pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock))
+    int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock);
+    if (unlock_rc && rc == SUCCESS)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = unlock_rc;
         rc = FAIL_MUTEX_UNLOCK;
         goto error;
     }
@@ -400,15 +402,17 @@ rvn_close_pager(
             rc = FAIL_CLOSE;
     }
 
-    if (pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock))
+    int lock_rc = pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock);
+    if (lock_rc && rc == SUCCESS)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = lock_rc;
         rc = FAIL_MUTEX_LOCK;
     }
     uint32_t refs = --handle_ptr->global_state->ref_count;
-    if (pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock))
+    int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock);
+    if (unlock_rc && rc == SUCCESS)
     {
-        *detailed_error_code = errno;
+        *detailed_error_code = unlock_rc;
         rc = FAIL_MUTEX_UNLOCK;
     }
     if (refs == 0)
@@ -518,6 +522,7 @@ int32_t rvn_map_memory(void *handle,
                        int32_t *detailed_error_code)
 {
     int32_t rc = SUCCESS;
+    *mem = NULL;
     if (sizeof(void *) == 4)
     {
         if (size > INT32_MAX)
@@ -537,7 +542,7 @@ int32_t rvn_map_memory(void *handle,
     int32_t mmap_flags = (handle_ptr->global_state->open_flags & OPEN_FILE_COPY_ON_WRITE) ? MAP_PRIVATE : MAP_SHARED;
     int32_t prot = (handle_ptr->global_state->open_flags & OPEN_FILE_WRITABLE_MAP) ? PROT_READ | PROT_WRITE : PROT_READ;
     *mem = rvn_mmap(NULL, size, prot, mmap_flags, handle_ptr->file_fd, offset);
-    if (*mem == NULL)
+    if (*mem == MAP_FAILED)
     {
         rc = FAIL_MAP_VIEW_OF_FILE;
         goto Error;
@@ -557,7 +562,7 @@ int32_t rvn_map_memory(void *handle,
 
 Error:
     *detailed_error_code = errno;
-    if (*mem)
+    if (*mem != NULL && *mem != MAP_FAILED)
     {
         munmap(*mem, size);
         *mem = NULL;
