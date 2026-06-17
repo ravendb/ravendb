@@ -624,8 +624,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             AccessName = sinkReplication.AccessName,
             AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
             AllowedSinkToHubPaths = sinkReplication.AllowedSinkToHubPaths,
-            HubCursor = ReplicationUtils.ReadCursorFromClusterFor(_server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor, context),
-            SinkCursor = ReplicationUtils.ReadCursorFromClusterFor(_server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor, context),
+            HubCursor = ReplicationUtils.ReadCursorFromClusterFor(context, _server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor),
+            SinkCursor = ReplicationUtils.ReadCursorFromClusterFor(context, _server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor),
             Error = error
         };
 

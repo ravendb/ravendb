@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Replication
             DatabaseTopology topology;
             long minEtag = long.MaxValue;
 
-            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (_server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var dbRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name);
@@ -133,10 +133,22 @@ namespace Raven.Server.Documents.Replication
                 {
                     foreach (var external in externals)
                     {
-                        var state = GetExternalReplicationState(_server, Database.Name, external.TaskId, ctx);
+                        var state = GetExternalReplicationState(ctx, _server, Database.Name, external.TaskId);
                         var myEtag = ChangeVectorUtils.GetEtagById(state.SourceChangeVector, Database.DbBase64Id);
                         minEtag = Math.Min(myEtag, minEtag);
                         AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, external.Name, myEtag, ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication);
+                    }
+                }
+
+                var sinkPullReplications = dbRecord.SinkPullReplications;
+                if (sinkPullReplications != null)
+                {
+                    foreach (var sink in sinkPullReplications)
+                    {
+                        var sinkCursor = ReplicationUtils.ReadCursorFromClusterFor(ctx, _server, Database.Name, sink.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor);
+                        var myEtag = ChangeVectorUtils.GetEtagById(sinkCursor, Database.DbBase64Id);
+                        minEtag = Math.Min(myEtag, minEtag);
+                        AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, sink.Name, myEtag, ITombstoneAware.TombstoneDeletionBlockerType.PullReplicationAsSink);
                     }
                 }
             }
@@ -1135,14 +1147,14 @@ namespace Raven.Server.Documents.Replication
         
         public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
         {
-            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return GetExternalReplicationState(server, database, taskId, context);
+                return GetExternalReplicationState(context, server, database, taskId);
             }
         }
 
-        private static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId, TransactionOperationContext context)
+        private static ExternalReplicationState GetExternalReplicationState(ClusterOperationContext context, ServerStore server, string database, long taskId)
         {
             var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, taskId));
 

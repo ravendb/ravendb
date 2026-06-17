@@ -166,10 +166,20 @@ public abstract class FilteredPullDualClusterTestBase : ReplicationTestBase
     protected async Task<DualClusterLab> CreateDualClusterLabAsync(
         Options options,
         ClusterSide? filteredPassReceiveSide = null,
-        string itemName = null)
+        string itemName = null,
+        int hubNodeCount = 3,
+        int sinkNodeCount = 3)
     {
-        var hubCluster = await CreateTaggedClusterAsync(nodeTags: ["HA", "HB", "HC"]);
-        var sinkCluster = await CreateTaggedClusterAsync(nodeTags: ["SA", "SB", "SC"]);
+        if (hubNodeCount < 1 || hubNodeCount > NodesOnEachClusterSide.Length)
+            throw new ArgumentOutOfRangeException(nameof(hubNodeCount), hubNodeCount, $"Hub node count must be between 1 and {NodesOnEachClusterSide.Length}.");
+        if (sinkNodeCount < 1 || sinkNodeCount > NodesOnEachClusterSide.Length)
+            throw new ArgumentOutOfRangeException(nameof(sinkNodeCount), sinkNodeCount, $"Sink node count must be between 1 and {NodesOnEachClusterSide.Length}.");
+
+        var hubLabNodes = NodesOnEachClusterSide.Take(hubNodeCount).ToArray();
+        var sinkLabNodes = NodesOnEachClusterSide.Take(sinkNodeCount).ToArray();
+
+        var hubCluster = await CreateTaggedClusterAsync(hubLabNodes.Select(node => NodeTag(ClusterSide.Hub, node)).ToArray());
+        var sinkCluster = await CreateTaggedClusterAsync(sinkLabNodes.Select(node => NodeTag(ClusterSide.Sink, node)).ToArray());
         var hubAdminCertificate = RegisterClusterAdminCertificate(hubCluster);
         var sinkAdminCertificate = RegisterClusterAdminCertificate(sinkCluster);
 
@@ -178,11 +188,11 @@ public abstract class FilteredPullDualClusterTestBase : ReplicationTestBase
 
         var hubRecord = new DatabaseRecord(hubDatabaseName);
         DisableResolveToLatest(hubRecord);
-        await CreateDatabaseInCluster(hubRecord, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubAdminCertificate);
+        await CreateDatabaseInCluster(hubRecord, replicationFactor: hubNodeCount, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubAdminCertificate);
 
         var sinkRecord = new DatabaseRecord(sinkDatabaseName);
         DisableResolveToLatest(sinkRecord);
-        await CreateDatabaseInCluster(sinkRecord, replicationFactor: 3, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkAdminCertificate);
+        await CreateDatabaseInCluster(sinkRecord, replicationFactor: sinkNodeCount, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkAdminCertificate);
 
         var hubStores = Cluster.GetDocumentStores(
             hubCluster.Nodes,
@@ -198,16 +208,19 @@ public abstract class FilteredPullDualClusterTestBase : ReplicationTestBase
 
         var pullCertificate = Convert.ToBase64String(hubCluster.Certificates.ClientCertificate2.Value.Export(X509ContentType.Pfx));
 
-        var lab = new DualClusterLab(hubCluster, sinkCluster, hubDatabaseName, pullCertificate, filteredPassReceiveSide, itemName);
+        var lab = new DualClusterLab(hubCluster, sinkCluster, hubDatabaseName, sinkDatabaseName, pullCertificate, filteredPassReceiveSide, itemName);
 
-        foreach (var node in NodesOnEachClusterSide)
+        foreach (var node in hubLabNodes)
         {
             var hubServer = hubCluster.Nodes.Single(x => string.Equals(x.ServerStore.NodeTag, NodeTag(ClusterSide.Hub, node), StringComparison.OrdinalIgnoreCase));
-            var hubStore = hubStores[node switch { LabNode.A => 0, LabNode.B => 1, _ => 2 }];
+            var hubStore = hubStores[(int)node];
             lab.AddNode(ClusterSide.Hub, node, hubServer, hubStore, await GetDocumentDatabaseInstanceForAsync(hubDatabaseName, hubServer));
+        }
 
+        foreach (var node in sinkLabNodes)
+        {
             var sinkServer = sinkCluster.Nodes.Single(x => string.Equals(x.ServerStore.NodeTag, NodeTag(ClusterSide.Sink, node), StringComparison.OrdinalIgnoreCase));
-            var sinkStore = sinkStores[node switch { LabNode.A => 0, LabNode.B => 1, _ => 2 }];
+            var sinkStore = sinkStores[(int)node];
             lab.AddNode(ClusterSide.Sink, node, sinkServer, sinkStore, await GetDocumentDatabaseInstanceForAsync(sinkDatabaseName, sinkServer));
         }
 
