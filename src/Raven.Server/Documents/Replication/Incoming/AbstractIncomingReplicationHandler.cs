@@ -147,6 +147,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     var configuration = GetConfiguration();
                     var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+                    var sinceLastReceive = Stopwatch.StartNew(); // time since the last REAL read
 
                     long lastTotalBytesRead = 0;
 
@@ -154,12 +155,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                     {
                         try
                         {
+                            var remaining = readTimeout - (int)sinceLastReceive.ElapsedMilliseconds;
+                            if (remaining <= 0)
+                                ThrowReadTimeout(readTimeout);                // woken repeatedly, but no data in the window
+
                             AddReplicationPulse(ReplicationPulseDirection.IncomingInitiate);
 
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
-                                readTimeout,
+                                remaining,
                                 _copiedBuffer.Buffer,
                                 _cts.Token))
                             {
@@ -172,6 +177,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     var currentUsed = _copiedBuffer.Buffer.Used;
                                     if (currentUsed > lastTotalBytesRead)
                                     {
+                                        sinceLastReceive.Restart(); // partial bytes = activity
                                         lastTotalBytesRead = currentUsed;
                                         if (Logger.IsInfoEnabled)
                                             Logger.Info($"Incoming replication from `{FromToString}` timed out ({readTimeout}ms) while reading next batch, " +
@@ -180,14 +186,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                                         continue;
                                     }
 
-                                    // No data received within the timeout window. This is likely a zombie connection.
-                                    throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
+                                    ThrowReadTimeout(readTimeout);
                                 }
-
-                                lastTotalBytesRead = 0;
 
                                 if (msg.Document != null)
                                 {
+                                    // Only a fully-consumed message resets the partial-read tracker; doing it on the
+                                    // notify branch would make any residual buffered bytes look like fresh growth on the
+                                    // next timeout, which would keep restarting sinceLastReceive and defeat the read-timeout.
+                                    lastTotalBytesRead = 0;
+
                                     EnsureNotDeleted();
 
                                     using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
@@ -196,6 +204,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             msg.Document,
                                             writer);
                                     }
+
+                                    sinceLastReceive.Restart();
                                 }
                                 else // notify peer about new change vector
                                 {
@@ -269,6 +279,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                     InvokeOnFailed(e);
                 }
             }
+        }
+
+        private void ThrowReadTimeout(int readTimeout)
+        {
+            // No data received within the timeout window. This is likely a zombie connection.
+            throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
         }
 
         internal void HandleSingleReplicationBatch(TOperationContext context, BlittableJsonReaderObject message, BlittableJsonTextWriter writer)
