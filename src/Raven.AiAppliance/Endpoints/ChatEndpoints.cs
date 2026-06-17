@@ -20,7 +20,7 @@ public static class ChatEndpoints
 {
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/chat").WithTags("chat");
+        var group = app.MapGroup("/api/chat").WithTags("chat").RequireAuthorization();
         group.MapPost("/stream", HandleStreamAsync)
             .WithName("chat.stream")
             .Accepts<ChatRequest>("application/json")

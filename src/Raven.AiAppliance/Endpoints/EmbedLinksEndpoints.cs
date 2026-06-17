@@ -30,7 +30,7 @@ public static class EmbedLinksEndpoints
 {
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/apps/{slug}").WithTags("embed-links");
+        var group = app.MapGroup("/api/apps/{slug}").WithTags("embed-links").RequireAuthorization();
 
         group.MapGet("/embed-links", ListAsync)
             .WithName("embedLinks.list")

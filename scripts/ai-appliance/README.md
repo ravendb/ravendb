@@ -90,27 +90,33 @@ $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH = 'C:\path\to\setup-package.zip'
 ```
 
 - First build is long (publishes RavenDB + the appliance + builds the React frontend); rebuilds are cached.
-- `up.ps1` mounts the setup-package zip (enabling demo-mode bootstrap + the mock AI-config helper),
-  publishes the web app on **http://localhost:5000**, and tails container logs.
-- Useful flags: `-Rebuild` (no-cache), `-Port <n>` (host web port), `-WithStudio` (also publish RavenDB
-  Studio on 443 + import the admin cert, so you can inspect the mirrored data).
+- `up.ps1` mounts the setup-package zip (enabling demo-mode activation + the mock AI-config helper),
+  runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes the web
+  app on **http://localhost:5000**, and tails container logs.
+- Useful flags: `-Rebuild` (no-cache), `-Port <n>` (host web port), `-ApiKey <key>` (operator login key,
+  default `egor`), `-WithStudio` (also publish RavenDB Studio on 443 + import the admin cert).
 
-Confirm it's up (pre-activation state):
+The appliance **activates itself at startup** — no operator action. Status walks
+`NeedsActivation → Redeeming → Restarting → Ready` (~30–60s after the build). Watch it:
 
 ```bash
-curl -s http://localhost:5000/api/bootstrap/status      # {"state":"NeedsActivation"}
+curl -s http://localhost:5000/api/bootstrap/status      # wait for {"state":"Ready"}
 ```
 
 ---
 
-## 4. Activate (bootstrap)
+## 4. Sign in to the dashboard
 
-In the browser at **http://localhost:5000**, trigger activation. In demo mode the license-key field is
-ignored (the mounted zip is used). The container restarts RavenDB into secure mode and the host bounces;
-status walks `NeedsActivation → Redeeming → Restarting → Ready` (~30–60s).
+Activation is automatic (step 3) — there is no activation screen. Once status is `Ready`, open
+**http://localhost:5000**; you land on **/login**. Enter the **API key** you ran with (`QUILL_API_KEY`,
+default `egor`) and continue — the server issues a session cookie and drops you on the dashboard.
+
+Programmatic / `api.*` callers skip the login screen and pass the key on every request as an
+`X-Api-Key` header instead; the CLI steps below use that. The same login from the CLI:
 
 ```bash
-curl -s http://localhost:5000/api/bootstrap/status      # wait for {"state":"Ready"}
+curl -i -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" -d '{"apiKey":"egor"}'   # 200 + Set-Cookie: quill.session=...
 ```
 
 ---
@@ -125,10 +131,11 @@ In the appliance UI, run the wizard with your Northwind connection string (provi
 4. **Provision** — give an app name (e.g. `northwind-demo`). Creates the per-app DB + CDC task and starts the
    initial load (Customers 91 / Orders 830 / Products 77 mirror into RavenDB).
 
-Note the **slug** (the app's database name). Verify the app exists:
+Note the **slug** (the app's database name). Verify the app exists (admin `/api/*` needs the API key —
+either the `X-Api-Key` header, as below, or the session cookie from the dashboard login):
 
 ```bash
-curl -s http://localhost:5000/api/apps/                 # [{ "slug": "...", "database": "...", ... }]
+curl -s http://localhost:5000/api/apps/ -H "X-Api-Key: egor"   # [{ "slug": "...", "database": "...", ... }]
 ```
 
 ---
@@ -140,9 +147,11 @@ agents; `product-catalog` and `sales-insights` work over the iframe (their query
 
 ```bash
 SLUG=northwind-demo
+API_KEY=egor   # operator key (QUILL_API_KEY); admin /api/* needs it on every call
 
 # (a) AI connection string  — OpenAI
 curl -s -X POST http://localhost:5000/api/apps/$SLUG/ai/connection-strings \
+  -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"demo-llm\",\"identifier\":\"demo-llm\",\"modelType\":\"Chat\",
        \"openAiSettings\":{\"apiKey\":\"$OPENAI_API_KEY\",\"endpoint\":\"https://api.openai.com/\",\"model\":\"gpt-4.1-mini\"}}"
@@ -150,11 +159,13 @@ curl -s -X POST http://localhost:5000/api/apps/$SLUG/ai/connection-strings \
 
 # (b) pull a mock agent config (demo mode)
 curl -s -X POST http://localhost:5000/api/apps/$SLUG/suggest/agent \
+  -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" -d '{"mode":"from-data"}'
 #   returns candidates: order-support, product-catalog, sales-insights
 
 # (c) provision the product-catalog agent (connectionStringName injected)
 curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/agent \
+  -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"identifier":"product-catalog","name":"Product Catalog Assistant","connectionStringName":"demo-llm",
        "systemPrompt":"You are a product-catalog assistant for the Northwind store. Help shoppers search the catalog, compare prices, and check stock availability. Mention when a product is discontinued. Only answer from the catalog data returned by the query tools.",
@@ -163,6 +174,7 @@ curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/agent \
 
 # (d) bind an iframe channel
 curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/channel \
+  -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"type":"iframe","agentId":"product-catalog","allowedOrigins":[]}'
 #   -> {"widgetId":"wgt_..."}
@@ -203,7 +215,8 @@ rm docker/ai-appliance/license.json         # the build-context license you supp
 | Symptom | Cause / fix |
 |---|---|
 | Build fails: `COPY docker/ai-appliance/license.json … not found` | You skipped step 1 — extract `license.json` from the setup-package zip into `docker/ai-appliance/`. |
-| Bootstrap stuck at `NeedsActivation`, or 5xx on redeem | No setup-package mounted. Set `APPLIANCE_E2E_SETUP_PACKAGE_PATH` before `up.ps1` (demo mode), or wire a real license API for production. |
+| Bootstrap stuck at `NeedsActivation` | Startup activation had nothing to redeem. In demo mode, set `APPLIANCE_E2E_SETUP_PACKAGE_PATH` before `up.ps1` (mounts the zip the mock license client serves); in production, set `QUILL_LICENSE_KEY` + a reachable license API. Check `docker logs ai-appliance-demo` for the activation line. |
+| `401 Unauthorized` on `/api/*` (or bounced to `/login`) | Missing/wrong API key or an expired session. Pass `-H "X-Api-Key: <key>"` (the `QUILL_API_KEY` you ran with, default `egor`) or sign in again. `QUILL_API_KEY` is **required** — auth fails closed when it's unset. |
 | Wizard **Connect** fails | The connection-string host isn't reachable **from the container**. Use a LAN IP or `host.docker.internal`, not `localhost`. |
 | Discover: `wal_level is 'replica'…` / no permission to set up | Set `wal_level = logical` and restart Postgres; grant the login `REPLICATION`. |
 | Chat returns an `error` frame | `docker logs ai-appliance-demo` for the real exception. Common ones below. |

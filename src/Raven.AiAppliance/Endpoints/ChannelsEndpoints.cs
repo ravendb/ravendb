@@ -31,7 +31,7 @@ public static class ChannelsEndpoints
 
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/apps/{slug}").WithTags("channels");
+        var group = app.MapGroup("/api/apps/{slug}").WithTags("channels").RequireAuthorization();
 
         group.MapPost("/setup/channel", ProvisionChannelAsync)
             .WithName("channels.create")

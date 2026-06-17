@@ -21,7 +21,7 @@ public static class AiConnectionStringsEndpoints
 
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/apps/{slug}/ai/connection-strings");
+        var group = app.MapGroup("/api/apps/{slug}/ai/connection-strings").RequireAuthorization();
         group.MapPost("/", PostAsync)
             .WithName("aiConnectionStrings.create")
             .Accepts<AiConnectionString>("application/json")

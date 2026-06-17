@@ -66,34 +66,26 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         await using var licenseApi = await MockLicenseApi.StartAsync(HardcodedLicenseKey, zipBytes);
         var setupRoot = NewDataPath(forceCreateDir: true, prefix: "egor-ai-setup");
 
-        // ---------- T2. Appliance starts in NEEDS-ACTIVATION ----------
+        // ---------- T2. Appliance activates from QUILL_LICENSE_KEY at startup ----------
         // Single owner: the WAF registers `store` as a singleton in its DI
         // container, which disposes IDisposable singletons during host shutdown
         // — so no `using` here. (RavenTestBase tracks the store separately for
         // class teardown; that's a second touch but DocumentStore.Dispose is
         // idempotent, so it's a no-op when the WAF got there first.)
+        // The license token (QUILL_LICENSE_KEY) drives startup activation; the WAF seeds the operator
+        // API key and authenticates every client by default, so the now-gated admin calls below pass.
         var store = GetDocumentStore();
         using var factory = new ApplianceWebApplicationFactory(
             licenseApiUrl: licenseApi.BaseAddress,
             setupPackagePath: setupRoot,
-            applianceStore: store);
+            applianceStore: store,
+            configureOptions: opts => opts.LicenseToken = HardcodedLicenseKey);
         var client = factory.CreateClient();
 
-        // The JSON status API returns the BootstrapPhase enum as its PascalCase
-        // name (kebab-case is reserved for non-JSON surfaces like /healthz — see
-        // BootstrapPhaseExtensions).
-        var statusBefore = await client.GetFromJsonAsync<JsonElement>("/api/bootstrap/status");
-        Assert.Equal("NeedsActivation", statusBefore.GetProperty("state").GetString());
-
-        var healthBefore = await client.GetAsync("/healthz");
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, healthBefore.StatusCode);
-
-        // ---------- T3. Redeem license, wait for READY ----------
-        var redeem = await client.PostAsJsonAsync("/api/bootstrap/redeem-license",
-            new { licenseKey = HardcodedLicenseKey });
-        Assert.True(redeem.IsSuccessStatusCode,
-            $"redeem returned {redeem.StatusCode}: {await redeem.Content.ReadAsStringAsync()}");
-
+        // ---------- T3. Startup activation pulls the package by token; wait for READY ----------
+        // No operator redeem call anymore: ApplianceActivationService runs at startup, fetches the
+        // setup-package zip from the (mock) license API by QUILL_LICENSE_KEY, unpacks it, and — with no
+        // s6 in the test host — flips bootstrap to Ready inline.
         await WaitForBootstrapStateAsync(client, expected: "Ready", timeoutMs: 60_000);
 
         var healthAfter = await client.GetAsync("/healthz");
@@ -184,6 +176,10 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // cdc-sink/performance/live feed. Assert at least one (non-close) frame
         // relays through — the ticket's "progress event during initial load" AC.
         var cdcWsClient = factory.Server.CreateWebSocketClient();
+        // The cdc/progress upgrade is under the gated /api/apps group — carry the operator key.
+        cdcWsClient.ConfigureRequest = request =>
+            request.Headers[Raven.AiAppliance.Auth.ApiKeyAuthenticationHandler.HeaderName] =
+                ApplianceWebApplicationFactory.TestApiKey;
         var cdcWsUri = new Uri(factory.Server.BaseAddress, $"api/apps/{slug}/cdc/progress");
         using (var cdcCts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
         using (var cdcWs = await cdcWsClient.ConnectAsync(cdcWsUri, cdcCts.Token))

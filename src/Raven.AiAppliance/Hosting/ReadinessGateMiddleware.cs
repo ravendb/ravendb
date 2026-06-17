@@ -13,9 +13,10 @@ namespace Raven.AiAppliance.Hosting;
 /// to per-process.
 /// </summary>
 /// <remarks>
-/// Gating rule: every path under <c>/api/</c> except <c>/api/bootstrap/</c>.
-/// <c>/api/bootstrap/*</c> is the only way out of <c>NeedsActivation</c>, so
-/// it has to remain reachable while <c>IsReady</c> is false. Static assets
+/// Gating rule: every path under <c>/api/</c> except <c>/api/bootstrap/</c> and
+/// <c>/api/auth/</c>. <c>/api/bootstrap/*</c> is the boot-status the SPA polls out of
+/// <c>NeedsActivation</c>, and <c>/api/auth/*</c> is operator login — both are
+/// infrastructure-level and must stay reachable while <c>IsReady</c> is false. Static assets
 /// and <c>/healthz</c> live outside <c>/api/</c> and are never gated — the
 /// SPA must render so it can poll <c>/api/bootstrap/status</c>, and liveness
 /// probes need to work in every phase.
@@ -27,7 +28,8 @@ public static class ReadinessGateMiddleware
         {
             var path = context.Request.Path;
             var gated = path.StartsWithSegments("/api") &&
-                        !path.StartsWithSegments("/api/bootstrap");
+                        !path.StartsWithSegments("/api/bootstrap") &&
+                        !path.StartsWithSegments("/api/auth");
 
             if (gated)
             {

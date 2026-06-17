@@ -3,6 +3,9 @@ using System.Text.Json;
 using System.Threading.RateLimiting;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -11,6 +14,7 @@ using Polly.Retry;
 using Polly.Timeout;
 using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.AiHelper;
+using Raven.AiAppliance.Auth;
 using Raven.AiAppliance.Endpoints;
 using Raven.AiAppliance.Hosting;
 using Raven.AiAppliance.Infrastructure;
@@ -74,6 +78,8 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_AI_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_AI_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
         ReadEnv("RAVEN_AI_API_URL",              v => options.AiApiUrl = v);
+        ReadEnv("QUILL_LICENSE_KEY",             v => options.LicenseToken = v);
+        ReadEnv("QUILL_API_KEY",                 v => options.ApiKey = v);
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -84,8 +90,14 @@ builder.Services.AddSingleton<IDocumentStore>(sp =>
 builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
+builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
 if (!isOpenApiDocumentGeneration)
+{
     builder.Services.AddHostedService<RavenReadinessService>();
+    // Startup activation (replaces the old POST /api/bootstrap/redeem-license): pulls + unpacks the
+    // setup package for QUILL_LICENSE_KEY, then restarts into secure mode (or marks Ready inline).
+    builder.Services.AddHostedService<ApplianceActivationService>();
+}
 builder.Services.AddHttpClient();
 
 // AI Helper: identity provider (license.json + admin-thumbprint) and the AI-Helper
@@ -97,11 +109,15 @@ builder.Services.AddHttpClient();
 // IOptions isn't resolved yet at registration time.
 builder.Services.AddSingleton<IApplianceLicenseProvider, SetupPackageLicenseProvider>();
 
+// One mock toggle drives both external HTTP deps: when the setup-package zip is mounted the appliance
+// runs in mock mode — the AI Helper returns canned data and the license client serves the mounted zip
+// — so the whole flow works without a live api.ravendb.net. Production (no zip) dials the real APIs.
 var setupPackageZip = Environment.GetEnvironmentVariable("RAVEN_AI_SETUP_PACKAGE_ZIP");
-var useAiHelperMock = string.IsNullOrEmpty(setupPackageZip) == false && File.Exists(setupPackageZip);
-if (useAiHelperMock)
+var useMockApi = string.IsNullOrEmpty(setupPackageZip) == false && File.Exists(setupPackageZip);
+if (useMockApi)
 {
     builder.Services.AddSingleton<IAiHelperClient, MockAiHelperClient>();
+    builder.Services.AddSingleton<ILicenseClient>(new MockLicenseClient(setupPackageZip!));
 }
 else
 {
@@ -109,6 +125,11 @@ else
     {
         var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
         http.BaseAddress = new Uri(opts.AiApiUrl);
+    });
+    builder.Services.AddHttpClient<ILicenseClient, LicenseHttpClient>(static (sp, http) =>
+    {
+        var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+        http.BaseAddress = new Uri(opts.LicenseApiUrl);
     });
 }
 
@@ -167,6 +188,60 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
+
+    // Brute-force backstop on the operator login. The API key is high-entropy (unguessable), so this
+    // mainly bounds online guessing of an operator-chosen QUILL_API_KEY; same per-IP partition caveat
+    // as the embed policy applies until UseForwardedHeaders (Phase 1) lands.
+    options.AddPolicy(AuthEndpoints.LoginRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Connection.Id,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
+
+// Operator authentication: an API-key header (api.*) or a login-issued session cookie (dashboard.*),
+// both validated against IApiKeyStore. Admin endpoints require either credential; the public surfaces
+// (auth, bootstrap status, /healthz, static assets, /embed/*) stay anonymous.
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultScheme = ApiKeyAuthenticationHandler.SchemeName;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null)
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.Cookie.Name = "quill.session";
+        options.Cookie.HttpOnly = true;
+        // SameAsRequest while the appliance is on plain HTTP behind the demo; the Phase-1 TLS front
+        // plus UseForwardedHeaders make this effectively Always (Secure) in production.
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        // API surface: answer 401/403 instead of redirecting to a login page.
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = ctx =>
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new AuthorizationPolicyBuilder(
+            ApiKeyAuthenticationHandler.SchemeName, CookieAuthenticationDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
 });
 
 var app = builder.Build();
@@ -175,9 +250,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
 // Dev-mode safeguard: a forgetful local run with no RAVEN_AI_LICENSE_API_URL
-// override will hit the real api.ravendb.net on first /api/bootstrap/redeem-license
-// and hang (no test license to redeem). Warn loudly at startup so the operator
-// notices before triggering activation; in Production we trust the default.
+// override (and no mock zip) will hit the real api.ravendb.net during startup
+// activation and hang (no test license to redeem). Warn loudly at startup; in
+// Production we trust the default.
 {
     var opts = app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value;
     if (app.Environment.IsDevelopment() &&
@@ -188,10 +263,10 @@ if (app.Environment.IsDevelopment())
             ApplianceOptions.DefaultLicenseApiUrl);
     }
 
-    if (useAiHelperMock)
+    if (useMockApi)
     {
         app.Logger.LogInformation(
-            "AI Helper is running in demo mode: suggest/cdc and suggest/agent return canned Northwind sample data (MockAiHelperClient), not live results from the internal AI service.");
+            "Mock API mode: activation serves the mounted setup-package zip (MockLicenseClient) and the AI Helper returns canned Northwind sample data (MockAiHelperClient), not live results from api.ravendb.net.");
     }
 }
 
@@ -200,10 +275,13 @@ app.UseWebSockets();
 
 app.UseReadinessGate();
 app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
 
 StaticAssetEndpoints.Map(app);
 HealthEndpoints.Map(app);
 BootstrapEndpoints.Map(app);
+AuthEndpoints.Map(app);
 AppsEndpoints.Map(app);
 ChannelsEndpoints.Map(app);
 EmbedLinksEndpoints.Map(app);

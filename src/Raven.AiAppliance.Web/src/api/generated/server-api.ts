@@ -20,7 +20,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/bootstrap/redeem-license": {
+    "/api/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,7 +29,39 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["bootstrap.redeemLicense"];
+        post: operations["auth.login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["auth.logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["auth.status"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -480,6 +512,9 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        AuthStatusResponse: {
+            authenticated: boolean;
+        };
         AzureOpenAiSettings: {
             deploymentName?: null | string;
             apiKey?: null | string;
@@ -495,10 +530,6 @@ export interface components {
         };
         /** @enum {unknown} */
         BootstrapPhase: "NeedsActivation" | "Redeeming" | "Restarting" | "Ready";
-        BootstrapRedeemConflictResponse: {
-            error: string;
-            state: components["schemas"]["BootstrapPhase"];
-        };
         BootstrapStatusResponse: {
             state: components["schemas"]["BootstrapPhase"];
             reason?: null | string;
@@ -672,7 +703,9 @@ export interface components {
             embeddingsMaxConcurrentBatches?: null | number;
         };
         JsonElement: unknown;
-        MapRequest: {
+        LoginRequest: {
+            apiKey: string;
+        };        MapRequest: {
             /** Format: int64 */
             taskId?: null | number;
             disabled?: null | boolean;
@@ -765,9 +798,6 @@ export interface components {
         ProvisionResponse: {
             id: string;
             slug: string;
-        };
-        RedeemLicenseRequest: {
-            licenseKey: string;
         };
         SetupTryParameter: {
             value: null | components["schemas"]["JsonElement"];
@@ -862,7 +892,7 @@ export interface operations {
             };
         };
     };
-    "bootstrap.redeemLicense": {
+    "auth.login": {
         parameters: {
             query?: never;
             header?: never;
@@ -871,7 +901,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RedeemLicenseRequest"];
+                "application/json": components["schemas"]["LoginRequest"];
             };
         };
         responses: {
@@ -881,25 +911,54 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BootstrapStatusResponse"];
+                    "application/json": components["schemas"]["AuthStatusResponse"];
                 };
             };
-            /** @description Bad Request */
-            400: {
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["AuthStatusResponse"];
                 };
             };
-            /** @description Conflict */
-            409: {
+        };
+    };
+    "auth.logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "auth.status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BootstrapRedeemConflictResponse"];
+                    "application/json": components["schemas"]["AuthStatusResponse"];
                 };
             };
         };
@@ -1823,9 +1882,9 @@ export type AiConnectorType = components["schemas"]["AiConnectorType"];
 export type AiModelType = components["schemas"]["AiModelType"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
 export type AppResponse = components["schemas"]["AppResponse"];
+export type AuthStatusResponse = components["schemas"]["AuthStatusResponse"];
 export type AzureOpenAiSettings = components["schemas"]["AzureOpenAiSettings"];
 export type BootstrapPhase = components["schemas"]["BootstrapPhase"];
-export type BootstrapRedeemConflictResponse = components["schemas"]["BootstrapRedeemConflictResponse"];
 export type BootstrapStatusResponse = components["schemas"]["BootstrapStatusResponse"];
 export type CdcColumnMapping = components["schemas"]["CdcColumnMapping"];
 export type CdcColumnType = components["schemas"]["CdcColumnType"];
@@ -1852,6 +1911,7 @@ export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
 export type JsonElement = components["schemas"]["JsonElement"];
+export type LoginRequest = components["schemas"]["LoginRequest"];
 export type MapRequest = components["schemas"]["MapRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
@@ -1865,7 +1925,6 @@ export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelReq
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
 export type ProvisionRequest = components["schemas"]["ProvisionRequest"];
 export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
-export type RedeemLicenseRequest = components["schemas"]["RedeemLicenseRequest"];
 export type SetupTryParameter = components["schemas"]["SetupTryParameter"];
 export type SetupTryRequest = components["schemas"]["SetupTryRequest"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
@@ -1896,8 +1955,12 @@ export const API_ENDPOINTS = {
         setupTry: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/try`,
         suggestAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/suggest/agent`,
     },
+    auth: {
+        login: "/auth/login",
+        logout: "/auth/logout",
+        status: "/auth/status",
+    },
     bootstrap: {
-        redeemLicense: "/bootstrap/redeem-license",
         status: "/bootstrap/status",
     },
     channels: {
@@ -1942,8 +2005,12 @@ export function createServerApi(client: ApiClient) {
             setupTry: (slug: string, request: SetupTryRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.apps.setupTry(slug), request),
             suggestAgent: (slug: string, request: SuggestAgentRequest) => client.post<SuggestAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.suggestAgent(slug), request),
         },
+        auth: {
+            login: (request: LoginRequest) => client.post<AuthStatusResponse, AuthStatusResponse>(API_ENDPOINTS.auth.login, request),
+            logout: () => client.post<void>(API_ENDPOINTS.auth.logout),
+            status: () => client.get<AuthStatusResponse>(API_ENDPOINTS.auth.status),
+        },
         bootstrap: {
-            redeemLicense: (request: RedeemLicenseRequest) => client.post<BootstrapStatusResponse, ApiErrorResponse | BootstrapRedeemConflictResponse>(API_ENDPOINTS.bootstrap.redeemLicense, request),
             status: () => client.get<BootstrapStatusResponse>(API_ENDPOINTS.bootstrap.status),
         },
         channels: {

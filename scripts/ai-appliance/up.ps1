@@ -40,13 +40,23 @@
   becomes https://a.egor-ai.ravendb.run:<port>/ and the cert still validates
   (it's bound to the domain, not the port). Only meaningful with -WithStudio.
 
+.PARAMETER ApiKey
+  Operator API key the dashboard login validates against (QUILL_API_KEY). Demo
+  default: 'egor'. The dashboard /login screen and the api.* surface authenticate
+  with this; it is required (auth fails closed when unset).
+
+.PARAMETER LicenseKey
+  Activation token (QUILL_LICENSE_KEY) the appliance uses to pull its setup
+  package at startup. Demo default: 'egor'. Ignored in demo/mock mode (the mounted
+  setup-package zip answers any token), but set for parity with production.
+
 .NOTES
   Demo setup-package zip: this script mounts $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH
   (the same env you use for the AiApplianceTests E2E suite) at the Dockerfile-
-  pinned in-container path /var/lib/ai-appliance/setup-source.zip. The activation
-  endpoint reads from there in demo mode instead of calling the license API.
-  Production builds won't set this env and won't ship a zip; the appliance falls
-  back to the HTTP path automatically.
+  pinned in-container path /var/lib/ai-appliance/setup-source.zip. Startup
+  activation (ApplianceActivationService) serves it via the mock license client in
+  demo mode instead of calling the real license API. Production builds won't set
+  this env and won't ship a zip; the appliance dials the real license API instead.
 #>
 [CmdletBinding()]
 param(
@@ -55,7 +65,9 @@ param(
     [int]$Port = 5000,
     [string]$Volume = 'ai-appliance-data',
     [switch]$WithStudio,
-    [int]$StudioHostPort = 443
+    [int]$StudioHostPort = 443,
+    [string]$ApiKey = 'egor',
+    [string]$LicenseKey = 'egor'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -97,7 +109,12 @@ $runArgs = @(
     # securely.
     '--restart=unless-stopped',
     '-p', "${Port}:5000",
-    '-v', "${Volume}:/var/lib/ai-appliance"
+    '-v', "${Volume}:/var/lib/ai-appliance",
+    # Operator auth: QUILL_API_KEY gates the dashboard login + the api.* surface
+    # (required; auth fails closed without it). QUILL_LICENSE_KEY is the activation
+    # token (ignored in demo/mock mode, where the mounted zip answers any token).
+    '-e', "QUILL_API_KEY=$ApiKey",
+    '-e', "QUILL_LICENSE_KEY=$LicenseKey"
 )
 # Mount the demo setup-package zip if APPLIANCE_E2E_SETUP_PACKAGE_PATH points
 # at one. The container path is hardcoded in the Dockerfile via
@@ -157,6 +174,10 @@ $runArgs += $Tag
 
 Write-Host "Starting $Tag on http://localhost:$Port (volume: $Volume)..." -ForegroundColor Cyan
 & docker @runArgs | Out-Null
+
+Write-Host ''
+Write-Host "Dashboard: http://localhost:$Port - sign in on /login with the API key '$ApiKey'." -ForegroundColor Green
+Write-Host "Activation runs automatically at startup; wait for status Ready at /api/bootstrap/status (~30-60s)." -ForegroundColor DarkGray
 
 if ($WithStudio) {
     # RavenDB's root path 302-redirects to /studio/index.html; the bare URL is

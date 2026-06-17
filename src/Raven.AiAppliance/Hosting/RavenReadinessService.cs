@@ -67,7 +67,7 @@ public sealed class RavenReadinessService(
             else
             {
                 logger.LogInformation(
-                    "RavenDB reachable but setup package not yet extracted at {Path}; bootstrap stays NeedsActivation until /api/bootstrap/redeem-license completes.",
+                    "RavenDB reachable but setup package not yet extracted at {Path}; bootstrap stays NeedsActivation until startup activation completes.",
                     opts.SetupPackagePath);
             }
         }
