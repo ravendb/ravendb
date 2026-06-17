@@ -18,7 +18,7 @@ namespace Raven.Analyzers.Shared
     /// <c>GenerateRavenProductVersion</c> target in <c>Raven.Analyzers.csproj</c>, which reads the
     /// canonical <c>AssemblyVersion</c> from <c>src/CommonAssemblyInfo.cs</c>.
     /// </summary>
-    internal static partial class SeverityPolicy
+    public static partial class SeverityPolicy
     {
         /// <summary>
         /// Resolves the effective severity against the baked-in <see cref="ProductVersion"/>.
