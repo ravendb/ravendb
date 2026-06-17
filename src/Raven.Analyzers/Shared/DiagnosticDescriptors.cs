@@ -33,18 +33,21 @@ namespace Raven.Analyzers.Shared
             DiagnosticSeverity destinationSeverity,
             string description)
         {
-            DiagnosticSeverity effective = SeverityPolicy.Resolve(introducedAt, destinationSeverity);
-            _policies.Add(new DiagnosticSeverityPolicyEntry(id, introducedAt, destinationSeverity, effective));
-
-            return new DiagnosticDescriptor(
+            DiagnosticDescriptor descriptor = new(
                 id: id,
                 title: title,
                 messageFormat: messageFormat,
                 category: Category,
-                defaultSeverity: effective,
+                defaultSeverity: SeverityPolicy.Resolve(introducedAt, destinationSeverity),
                 isEnabledByDefault: true,
                 description: description,
                 helpLinkUri: HelpLinkBase + id);
+
+            // The registry mirrors the descriptors: EffectiveSeverity IS the descriptor's shipped
+            // DefaultSeverity, so the test asserts the real severity against the version policy.
+            _policies.Add(new DiagnosticSeverityPolicyEntry(id, introducedAt, destinationSeverity, descriptor.DefaultSeverity));
+
+            return descriptor;
         }
 
         /// <summary>
