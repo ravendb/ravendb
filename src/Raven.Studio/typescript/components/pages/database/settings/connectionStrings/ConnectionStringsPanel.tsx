@@ -30,8 +30,15 @@ interface ConnectionStringsPanelProps {
 }
 
 export default function ConnectionStringsPanel({ connection }: ConnectionStringsPanelProps) {
+    const { appUrl } = useAppUrls();
     const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+
     const isServerWide = viewContext === "serverWideConnectionStrings";
+
+    const hasWriteAccess = isServerWide ? hasOperatorAccess : hasDatabaseAdminAccess;
 
     const confirm = useConfirm();
     const dispatch = useDispatch();
@@ -39,14 +46,8 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
 
     const isInheritedFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
 
-    const isDeleteDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide;
+    const isDeleteDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide || !hasWriteAccess;
     const isEditDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide;
-
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
-    const hasWriteAccess = isServerWide ? hasOperatorAccess : hasDatabaseAdminAccess;
-    const { appUrl } = useAppUrls();
 
     const asyncDelete = useAsyncCallback(async () => {
         if (isServerWide) {
@@ -100,17 +101,13 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                         </>
                                     ),
                                 },
-                                {
-                                    isActive: isEditDisabled,
-                                    message: "Connection string is being used by an ongoing task",
-                                },
                             ]}
                         >
                             <Button
                                 variant="secondary"
                                 title="Edit connection string"
                                 onClick={() => dispatch(connectionStringsActions.editConnectionModalOpened(connection))}
-                                disabled={!hasWriteAccess || isEditDisabled}
+                                disabled={isEditDisabled}
                             >
                                 <Icon icon="edit" margin="m-0" />
                             </Button>
@@ -134,7 +131,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                     ),
                                 },
                                 {
-                                    isActive: isDeleteDisabled,
+                                    isActive: connection.usedBy?.length > 0,
                                     message: "Connection string is being used by an ongoing task",
                                 },
                             ]}
@@ -142,7 +139,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                             <ButtonWithSpinner
                                 variant="danger"
                                 title="Delete connection string"
-                                disabled={!hasWriteAccess || isDeleteDisabled || isInheritedFromServerWide}
+                                disabled={isDeleteDisabled}
                                 onClick={onDelete}
                                 icon="trash"
                                 isSpinning={asyncDelete.loading}

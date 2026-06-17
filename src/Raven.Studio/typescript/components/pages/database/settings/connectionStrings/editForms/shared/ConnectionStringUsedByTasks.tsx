@@ -85,7 +85,7 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
     return (
         <div className="mt-2">
             <FormLabel className="d-flex align-items-center gap-1">
-                Used by <CounterBadge count={tasks.length} />
+                Used in tasks <CounterBadge count={tasks.length} />
             </FormLabel>
             <div className="d-flex flex-wrap gap-2">
                 {tasks.map((task, index) => {
@@ -94,12 +94,16 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
                     // server-wide usages span databases, so disambiguate by appending the database name
                     const label = task.databaseName ? `${task.name} (${task.databaseName})` : task.name;
 
-                    return url ? (
-                        <a key={key} href={url} className="btn btn-primary rounded-pill" title={label}>
-                            <Icon icon="ongoing-tasks" />
-                            {label}
-                        </a>
-                    ) : (
+                    if (url) {
+                        return (
+                            <a key={key} href={url} className="btn btn-primary rounded-pill" title={label}>
+                                <Icon icon="ongoing-tasks" />
+                                {label}
+                            </a>
+                        );
+                    }
+
+                    return (
                         <span key={key} className="btn btn-primary rounded-pill disabled" title={label}>
                             <Icon icon="ongoing-tasks" />
                             {label}
