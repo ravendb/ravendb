@@ -12,6 +12,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Json;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -178,7 +179,8 @@ ai.genContext({}).withPdf(pdf);
             else
                 Assert.Null(oldHash2);
 
-            var etl = await GetEtlMre(store);
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            var etl = await GetEtlMre(db, store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -202,11 +204,11 @@ ai.genContext({}).withPdf(pdf);
                 Assert.NotNull(hash1);
                 Assert.False(hash2 == null, $"oldHash1={oldHash1}, oldHash2={oldHash2}, hash1={hash1}, hash2={hash2}");
                 Assert.NotEqual(oldHash1, hash1);
-                Assert.NotEqual(oldHash2, hash1);
-            }, Debugger.IsAttached ? 1200 : 120);
+                Assert.NotEqual(oldHash2, hash2);
+            }, Debugger.IsAttached ? 1_200_000 : 120_000);
 
 
-            etl = await GetEtlMre(store);
+            etl = await GetEtlMre(db, store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -223,7 +225,7 @@ ai.genContext({}).withPdf(pdf);
                     Assert.NotEqual(hash1, newHash1);
                 else
                     Assert.Null(newHash1); // doc1 produces no context objects now - metadata hashes gets cleared
-            }, Debugger.IsAttached ? 1200 : 120);
+            }, Debugger.IsAttached ? 1_200_000 : 120_000);
         }
 
         private async Task EtlWait(AsyncManualResetEvent etl)
@@ -231,9 +233,8 @@ ai.genContext({}).withPdf(pdf);
             Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
         }
 
-        private async Task<AsyncManualResetEvent> GetEtlMre(DocumentStore store)
+        private async Task<AsyncManualResetEvent> GetEtlMre(DocumentDatabase db, DocumentStore store)
         {
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             var baselineEtag = db.EtlLoader.Processes.Single().Statistics.LastProcessedEtag;
             var etl = Etl.WaitForEtlToComplete(store, predicate: (_, statistics) => statistics.LastProcessedEtag > baselineEtag);
             return etl;
