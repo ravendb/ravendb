@@ -50,10 +50,11 @@ namespace Raven.Analyzers.Indexes
                 foreach (ConstructorDeclarationSyntax ctor in classDecl.Members
                     .OfType<ConstructorDeclarationSyntax>())
                 {
-                    if (ctor.Body == null)
+                    SyntaxNode? body = ctor.GetBodyNode();
+                    if (body == null)
                         continue;
 
-                    StoredFieldsStatus result = ExtractFromCtorBody(ctor.Body, model, allFields);
+                    StoredFieldsStatus result = ExtractFromCtorBody(body, model, allFields);
                     if (result == StoredFieldsStatus.BailCannotAnalyze)
                         return IndexStoredFieldSet.Bail;
                     if (result == StoredFieldsStatus.AllStored)
@@ -64,9 +65,9 @@ namespace Raven.Analyzers.Indexes
             return new IndexStoredFieldSet(StoredFieldsStatus.Ok, allFields.ToImmutableHashSet());
         }
 
-        private static bool ContainsDynamicFieldCalls(BlockSyntax body)
+        private static bool ContainsDynamicFieldCalls(SyntaxNode body)
         {
-            foreach (InvocationExpressionSyntax inv in body.DescendantNodes().OfType<InvocationExpressionSyntax>())
+            foreach (InvocationExpressionSyntax inv in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
                 if (name == null && inv.Expression is IdentifierNameSyntax id)
@@ -83,14 +84,14 @@ namespace Raven.Analyzers.Indexes
         }
 
         private static StoredFieldsStatus ExtractFromCtorBody(
-            BlockSyntax body,
+            SyntaxNode body,
             SemanticModel model,
             HashSet<string> fields)
         {
             if (ContainsDynamicFieldCalls(body))
                 return StoredFieldsStatus.BailCannotAnalyze;
 
-            foreach (SyntaxNode node in body.DescendantNodes())
+            foreach (SyntaxNode node in body.DescendantNodesAndSelf())
             {
                 // Store(x => x.Field, FieldStorage.Yes) or Store("FieldName", FieldStorage.Yes)
                 if (node is InvocationExpressionSyntax invocation)
@@ -122,11 +123,12 @@ namespace Raven.Analyzers.Indexes
                 }
 
                 // Stores[x => x.Field] = FieldStorage.Yes  or  StoresStrings["FieldName"] = FieldStorage.Yes
+                // The receiver may be bare (Stores[…]) or qualified (this.Stores[…] / base.Stores[…]).
                 if (node is AssignmentExpressionSyntax assignment
                     && assignment.Left is ElementAccessExpressionSyntax elementAccess
-                    && elementAccess.Expression is IdentifierNameSyntax dictId)
+                    && SyntaxHelpers.TryGetSimpleMemberName(elementAccess.Expression) is SimpleNameSyntax dictNameNode)
                 {
-                    string dictName = dictId.Identifier.ValueText;
+                    string dictName = dictNameNode.Identifier.ValueText;
                     if (dictName != KnownTypes.StoresPropertyName && dictName != KnownTypes.StoresStringsPropertyName)
                         continue;
 

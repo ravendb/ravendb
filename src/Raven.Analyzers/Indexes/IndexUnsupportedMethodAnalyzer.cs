@@ -90,7 +90,7 @@ namespace Raven.Analyzers.Indexes
             // Map = lambda  /  Reduce = lambda  /  this.Map = lambda  /  base.Reduce = lambda  etc.
             if (node is AssignmentExpressionSyntax assignment)
             {
-                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
                 if (nameNode == null)
                     return null;
 

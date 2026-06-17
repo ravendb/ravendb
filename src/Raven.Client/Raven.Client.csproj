@@ -166,7 +166,12 @@
           Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
-  <Target Name="BuildAnalyzerProjects" BeforeTargets="GenerateNuspec">
+  <!--
+    Guarded to the outer (cross-targeting) build only — where TargetFramework is empty and
+    GenerateNuspec runs during pack. Without this, the multi-TFM inner builds could each invoke
+    the target, building the analyzer projects redundantly and racing on their shared bin/ outputs.
+  -->
+  <Target Name="BuildAnalyzerProjects" BeforeTargets="GenerateNuspec" Condition="'$(TargetFramework)' == ''">
     <!-- Restore first: these projects are not referenced by Raven.Client, so without an
          explicit Restore here a clean machine has no project.assets.json and Build fails. -->
     <MSBuild Projects="..\Raven.Analyzers\Raven.Analyzers.csproj"

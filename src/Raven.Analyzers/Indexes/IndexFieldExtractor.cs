@@ -119,7 +119,7 @@ namespace Raven.Analyzers.Indexes
                 // Map = lambda  /  this.Map = lambda  /  base.Map = lambda
                 if (node is AssignmentExpressionSyntax assignment)
                 {
-                    SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                    SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
                     if (nameNode != null && nameNode.Identifier.Text == KnownTypes.MapFieldName)
                     {
                         ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;

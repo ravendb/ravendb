@@ -129,11 +129,11 @@ function BuildAnalyzers ( $analyzerSrcDir, $codeFixesSrcDir ) {
     }
 
     write-host -ForegroundColor Cyan "Building Analyzers: $command $commandArgs $analyzerSrcDir"
-    Invoke-Expression -Command "$command $commandArgs $analyzerSrcDir"
+    & $command @commandArgs $analyzerSrcDir
     CheckLastExitCode
 
     write-host -ForegroundColor Cyan "Building Analyzers.CodeFixes: $command $commandArgs $codeFixesSrcDir"
-    Invoke-Expression -Command "$command $commandArgs $codeFixesSrcDir"
+    & $command @commandArgs $codeFixesSrcDir
     CheckLastExitCode
 }
 

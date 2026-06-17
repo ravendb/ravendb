@@ -283,6 +283,67 @@ class Test
             Assert.Contains("FromIndexOrThrow", d.GetMessage());
         }
 
+        // ── Stored-field extraction: expression-bodied ctor & this/base receiver ──
+
+        [Fact]
+        public async Task ProjectInto_FromIndexOrThrow_Field_Stored_Via_ThisStores_No_Diagnostic()
+        {
+            // The stored-field receiver is qualified (this.StoresStrings[...]); it must still be detected.
+            const string source = CommonUsings + OrderClass + @"
+class Dto { public string Name { get; set; } }
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+        this.StoresStrings[""Name""] = FieldStorage.Yes;
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+            .ProjectInto<Dto>();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task ProjectInto_FromIndexOrThrow_Stored_Via_ExpressionBodied_Ctor_No_Diagnostic()
+        {
+            // StoreAllFields is declared in an expression-bodied constructor; it must still be detected.
+            const string source = CommonUsings + OrderClass + @"
+class Dto { public string Name { get; set; } }
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+
+    public OrderIndex(bool storeAll) => StoreAllFields(FieldStorage.Yes);
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+            .ProjectInto<Dto>();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
         // ── ProjectInto — FromDocument / FromDocumentOrThrow ─────────────────
 
         [Fact]
