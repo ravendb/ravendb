@@ -256,7 +256,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     var permissions = FormatPermissions(certificate);
                     LogAuditForServer("ADD",
-                        $"New certificate {certificate?.Name} ['{certificate?.Thumbprint}']. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}");
+                        $"New certificate {certificate?.Name} ['{certificate?.Thumbprint}']. Usage: {certificate?.Usage}. Security Clearance: {certificate?.SecurityClearance}. Permissions:{permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}");
                 }
 
                 try
@@ -405,6 +405,11 @@ namespace Raven.Server.Web.Authentication
             {
                 await WriteJsonErrorAsync(HttpStatusCode.UnprocessableEntity, $"The content at '{url}' is not a valid certificate: {e.Message}");
                 return;
+            }
+
+            if (AuditLogger.IsAuditEnabled)
+            {
+                LogAuditForServer("FETCH SSO SERVER CERT", $"Fetched certificate from '{fetchUri}'.");
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -632,7 +637,15 @@ namespace Raven.Server.Web.Authentication
 
                 if (AuditLogger.IsAuditEnabled)
                 {
-                    LogAuditForServer("DELETE", $"Certificate '{thumbprint}'.");
+                    var details = $"Certificate '{thumbprint}'. Usage: {definition?.Usage}.";
+                    if (definition?.Usage == CertificateUsage.SsoClient && definition.SsoIdentifiers != null && definition.SsoIdentifiers.Count > 0)
+                    {
+                        var identifiers = string.Join(", ", definition.SsoIdentifiers.Select(id =>
+                            new SsoExtensionPayload(id.Identifier, id.Provider, id.Domain).GetDisplayIdentity()));
+                        details += $" SSO identity: [{identifiers}].";
+                    }
+
+                    LogAuditForServer("DELETE", details);
                 }
 
                 await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
