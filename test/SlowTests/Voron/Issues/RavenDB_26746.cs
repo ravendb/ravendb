@@ -29,12 +29,10 @@ namespace SlowTests.Voron.Issues
         // The workload mimics the original scenario: tombstone-like keys (short ids mixed with ~1.5 KB
         // change-vector suffixes, so branch pages hold only a few nodes), waves of sorted inserts
         // followed by mass deletes.
+        // Fixed-seed variants run in StressTests.Voron.RavenDB_26746.
+        // Here we keep a single random-seed case so every PR run fuzzes it.
         [RavenTheory(RavenTestCategory.Voron)]
-        [InlineData(15, 4)]
-        [InlineData(15, 5)]
-        [InlineData(15, 10)]
-        [InlineData(50, 3)] // on unfixed code this seed failed with the search-misroute symptom (out-of-order separators)
-        [InlineDataWithRandomSeed(20)]
+        [InlineDataWithRandomSeed(-1)] // maxCycles -1 -> pick a random 15..20 below
         public void Rebalancing_must_not_corrupt_tree_when_separator_readd_splits_ancestors(int maxCycles, int seed)
         {
             using (var tx = Env.WriteTransaction())
@@ -44,6 +42,8 @@ namespace SlowTests.Voron.Issues
             }
 
             var rng = new Random(seed);
+            if (maxCycles < 0)
+                maxCycles = rng.Next(15, 21); // 15..20, derived from the seed so a failure stays reproducible
             var generations = new Dictionary<long, int>();
             var live = new HashSet<string>(StringComparer.Ordinal);
 
