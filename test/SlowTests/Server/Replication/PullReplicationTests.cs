@@ -3,21 +3,22 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -1208,6 +1209,464 @@ namespace SlowTests.Server.Replication
                 resList.Add(await task);
             }
             return resList;
+        }
+
+        // Reproduces the "zombie pull connection" deadlock on a busy sink.
+        //
+        // RavenDB_25412 proved that when the hub stops sending, the sink's read-timeout
+        // (Replication.ActiveConnectionTimeout) fires, the hung connection is reaped, and the sink reconnects.
+        //
+        // This test adds the one ingredient that was present in the production incident but missing from
+        // that test: OTHER incoming replication traffic on the same sink node. Every time any other incoming
+        // connection receives a batch, ReplicationLoader.OnIncomingReceiveSucceeded calls
+        // OnReplicationFromAnotherSource() on EVERY other incoming handler. That wakes the handler's read loop
+        // (the "notify" branch), which (a) bumps LastHeartbeatTicks so the connection keeps looking "fresh",
+        // and (b) makes InterruptibleRead.ParseToMemory return Interrupted and start a brand-new read-timeout
+        // window. On a busy node these wake-ups arrive faster than the timeout, so the timeout never elapses:
+        // the hung connection becomes an immortal zombie that is never reaped and never reconnects, and only a
+        // task restart (which disposes it via DropIncomingConnections) clears it.
+        //
+        // EXPECTED: this test FAILS on the current code (reproduces the bug) and passes once the read-timeout
+        // is made to track real activity instead of being reset by notify wake-ups.
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task BusySink_ShouldStillTimeoutAndReconnect_HangingPullConnection()
+        {
+            DoNotReuseServer();
+
+            // keep the read-timeout short so the test is fast
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ActiveConnectionTimeout)] = "5"
+            };
+
+            using var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+            using var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                Server = hubServer
+            });
+
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                Server = sinkServer
+            });
+
+            var pullReplicationName = $"{hubStore.Database}-pull";
+            var connectionStringName = "ConnectionString-" + hubStore.Database;
+
+            var sinkDb = await GetDatabase(sinkStore.Database, sinkServer);
+
+            // Open = normal, Closed = reads hang (socket stays up, no data arrives).
+            var networkGate = new AsyncGate();
+            var connectionCounter = 0;
+
+            var forTesting = sinkDb.ReplicationLoader.ForTestingPurposesOnly();
+            forTesting.WrapIncomingReplicationStream = innerStream =>
+            {
+                // Hang ONLY the first connection (the one we will strangle). Any reconnection must read
+                // normally, otherwise the global gate would block the recovered connection too and the
+                // second document could never arrive -- on buggy AND fixed code alike.
+                var n = Interlocked.Increment(ref connectionCounter);
+                return n == 1
+                    ? new SmartHangingStreamWrapper(innerStream, networkGate)
+                    : innerStream;
+            };
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Name = connectionStringName,
+                Database = hubStore.Database,
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                Name = pullReplicationName,
+                HubName = pullReplicationName,
+                ConnectionStringName = connectionStringName
+            }));
+
+            // 1. initial replication works
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/1-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/1-A", u => u.Name == "Lev"), "Initial replication failed");
+
+            var initialConnections = connectionCounter;
+
+            // The incoming pull handler must be established before we strangle it.
+            Assert.True(WaitForValue(() => sinkDb.ReplicationLoader.IncomingHandlers.OfType<IncomingReplicationHandler>().Any(), true),
+                "Expected an incoming pull replication handler on the sink");
+
+            // 2. Simulate a busy sink node: keep poking the notify event on every live incoming handler,
+            // exactly as OnIncomingReceiveSucceeded would when sibling connections receive batches.
+            using var pumpCts = new CancellationTokenSource();
+            var pump = Task.Run(async () =>
+            {
+                while (pumpCts.IsCancellationRequested == false)
+                {
+                    foreach (var handler in sinkDb.ReplicationLoader.IncomingHandlers)
+                    {
+                        try
+                        {
+                            (handler as IncomingReplicationHandler)?.OnReplicationFromAnotherSource();
+                        }
+                        catch
+                        {
+                            // handler may be disposed mid-iteration; ignore
+                        }
+                    }
+
+                    try
+                    { await Task.Delay(100, pumpCts.Token); }
+                    catch { /* cancelled */ }
+                }
+            });
+
+            // 3. The hub goes silent on this connection (socket up, nothing arrives). The notify wake-ups keep driving
+            // the "notify" branch -> GetHeartbeatStatusMessage -> LastHeartbeatTicks = now (a SEND-path update), so the
+            // dead connection keeps looking "fresh" with zero receives -- which is what makes AssertValidConnection
+            // reject the reconnect. The read-timeout fix must reap it despite that.
+            networkGate.Close();
+
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/2-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+
+            // Allow several timeout windows for the zombie to be reaped, the sink to reconnect, and the doc to arrive.
+            var timeout = (int)sinkDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 4;
+
+            // PRIMARY assertion (gates the read-timeout fix): even on a busy sink, the read-timeout must fire, reap the
+            // zombie, and trigger a reconnect. A reconnect creates a new incoming stream, so connectionCounter increments.
+            var reconnected = WaitForValue(() => connectionCounter > initialConnections, true, timeout: timeout, interval: 200);
+            Assert.True(reconnected,
+                $"The hung pull connection was never reaped while the sink was busy. connectionCounter={connectionCounter}, initial={initialConnections}. " +
+                $"The notify wake-ups kept resetting the read-timeout, leaving an immortal zombie incoming handler that only a task restart would clear.");
+
+            // SECONDARY assertion (end-to-end recovery): once reaped, the sink reconnects on a clean stream and the
+            // second document arrives.
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/2-A", u => u.Name == "Lev", timeout), "Second replication failed (end-to-end recovery)");
+
+            pumpCts.Cancel();
+            try
+            { await pump; }
+            catch { /* ignored */ }
+        }
+
+        // The flip side of the read-timeout fix: it must NOT reap a HEALTHY idle connection.
+        // A healthy idle source keeps sending heartbeats (every ReplicationMinimalHeartbeat), which the sink RECEIVES
+        // (the msg.Document != null branch) and which restart sinceLastReceive. As long as ActiveConnectionTimeout >
+        // ReplicationMinimalHeartbeat, the connection stays alive across many timeout windows. (The notify/"interrupted"
+        // branch deliberately does NOT restart the timer; it doesn't need to -- received heartbeats do.)
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task HealthyIdleConnection_IsNotReaped()
+        {
+            DoNotReuseServer();
+
+            // read-timeout (5s) > heartbeat interval (2s): a healthy idle peer's heartbeats keep the connection alive.
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ActiveConnectionTimeout)] = "5",
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "2"
+            };
+
+            using var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+            using var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+
+            using var hubStore = GetDocumentStore(new Options { Server = hubServer });
+            using var sinkStore = GetDocumentStore(new Options { Server = sinkServer });
+
+            var pullReplicationName = $"{hubStore.Database}-pull";
+            var connectionStringName = "ConnectionString-" + hubStore.Database;
+            var sinkDb = await GetDatabase(sinkStore.Database, sinkServer);
+
+            var connectionCounter = 0;
+            var forTesting = sinkDb.ReplicationLoader.ForTestingPurposesOnly();
+            forTesting.WrapIncomingReplicationStream = innerStream =>
+            {
+                // Passthrough: the connection stays healthy; we only count (re)connections.
+                Interlocked.Increment(ref connectionCounter);
+                return innerStream;
+            };
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Name = connectionStringName,
+                Database = hubStore.Database,
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                Name = pullReplicationName,
+                HubName = pullReplicationName,
+                ConnectionStringName = connectionStringName
+            }));
+
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/1-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/1-A", u => u.Name == "Lev"), "Initial replication failed");
+
+            var initialConnections = connectionCounter;
+
+            IncomingReplicationHandler pullHandler = null;
+            Assert.True(WaitForValue(() =>
+            {
+                pullHandler = sinkDb.ReplicationLoader.IncomingHandlers.OfType<IncomingReplicationHandler>().FirstOrDefault();
+                return pullHandler != null;
+            }, true), "Expected an incoming pull replication handler on the sink");
+
+            // A healthy idle source keeps sending heartbeats (every ReplicationMinimalHeartbeat = 2s), which the sink
+            // RECEIVES (the msg.Document != null branch) and which restart sinceLastReceive. Because ActiveConnectionTimeout
+            // (5s) is larger than the heartbeat interval, the connection must survive many read-timeout windows and must
+            // never be reaped/reconnected. (The notify branch deliberately does NOT restart the timer -- and it doesn't
+            // need to: received heartbeats keep the connection alive. The reproduction test above proves the converse,
+            // that notify wake-ups alone do NOT keep a connection that receives nothing alive.)
+            var readTimeoutMs = (int)sinkDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+            for (var i = 0; i < (readTimeoutMs * 3) / 1000; i++)
+            {
+                await Task.Delay(1000);
+                Assert.Equal(initialConnections, connectionCounter); // a reconnect would increment this => reaped
+                var current = sinkDb.ReplicationLoader.IncomingHandlers.OfType<IncomingReplicationHandler>().FirstOrDefault();
+                Assert.True(ReferenceEquals(current, pullHandler),
+                    $"The healthy incoming handler was reaped/replaced while idle (connectionCounter={connectionCounter}, initial={initialConnections}).");
+            }
+
+            // And it still works: a new document flows over the SAME connection (no reconnect).
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/2-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/2-A", u => u.Name == "Lev", 10_000), "Healthy connection stopped replicating");
+            Assert.Equal(initialConnections, connectionCounter);
+        }
+
+        // Realistic fleet-load check (external replication, same code path as a hub): many sources replicate into one
+        // destination. One source stays idle (the "victim"); the others push continuously, so every batch fires
+        // ReplicationLoader.OnIncomingReceiveSucceeded -> OnReplicationFromAnotherSource on the victim's handler (genuine
+        // notify fan-out). Under that load an idle connection may be transiently reaped (the notify flood can delay the
+        // idle peer's heartbeat round-trip past ActiveConnectionTimeout), but it must RECOVER and keep replicating -- no
+        // permanent outage or deadlock. This guards against the read-timeout fix causing unrecoverable churn at scale.
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task BusyDestination_IdleSource_RecoversAndKeepsReplicating()
+        {
+            DoNotReuseServer();
+
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ActiveConnectionTimeout)] = "10",
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "2"
+            };
+            using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+
+            using var dest = GetDocumentStore(new Options { Server = server });
+            using var victim = GetDocumentStore(new Options { Server = server });
+            var noisy = new List<DocumentStore>();
+            for (var i = 0; i < 4; i++)
+                noisy.Add((DocumentStore)GetDocumentStore(new Options { Server = server }));
+
+            var destDb = await GetDatabase(dest.Database, server);
+
+            var sources = new List<DocumentStore> { victim };
+            sources.AddRange(noisy);
+
+            // external replication: every source -> destination
+            foreach (var src in sources)
+                await SetupReplicationAsync(src, dest);
+
+            // seed one doc per source so all connections establish and replicate
+            for (var i = 0; i < sources.Count; i++)
+            {
+                using var s = sources[i].OpenAsyncSession();
+                await s.StoreAsync(new User { Id = $"seed/{i}", Name = "x" });
+                await s.SaveChangesAsync();
+            }
+            Assert.True(WaitForValue(() => destDb.ReplicationLoader.IncomingHandlers.Count() == sources.Count, true, timeout: 30_000),
+                $"Expected {sources.Count} incoming handlers on the destination, got {destDb.ReplicationLoader.IncomingHandlers.Count()}");
+
+            await Task.Delay(2000); // let things settle
+
+            // The noisy sources push continuously -> genuine OnIncomingReceiveSucceeded fan-out onto every handler.
+            using var noiseCts = new CancellationTokenSource();
+            var noiseTasks = noisy.Select((src, idx) => Task.Run(async () =>
+            {
+                var k = 0;
+                while (noiseCts.IsCancellationRequested == false)
+                {
+                    try
+                    {
+                        using var s = src.OpenAsyncSession();
+                        await s.StoreAsync(new User { Id = $"noise/{idx}/{k++}", Name = "n" });
+                        await s.SaveChangesAsync();
+                    }
+                    catch { /* shutting down */ }
+                    try
+                    { await Task.Delay(100, noiseCts.Token); }
+                    catch { /* cancelled */ }
+                }
+            })).ToList();
+
+            // Let the system run under heavy notify fan-out for several read-timeout windows. Under that load an idle
+            // connection MAY be reaped transiently (the notify flood can delay the idle peer's heartbeat round-trip past
+            // ActiveConnectionTimeout), but it must RECOVER -- reconnect and keep replicating, with no permanent outage.
+            // Active connections are never affected (received data resets the timer). We tolerate transient reconnects
+            // and assert recovery below.
+            var readTimeoutMs = (int)destDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+            await Task.Delay(readTimeoutMs * 3);
+
+            // The idle victim must be connected (recovered if it was transiently reaped) and must keep replicating.
+            Assert.True(WaitForValue(() => destDb.ReplicationLoader.IncomingHandlers.Any(h => h.ConnectionInfo.SourceDatabaseName == victim.Database), true, timeout: 20_000),
+                "The idle victim never re-established its connection under fleet load.");
+
+            using (var s = victim.OpenAsyncSession())
+            {
+                await s.StoreAsync(new User { Id = "victim/final", Name = "v" });
+                await s.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(dest, "victim/final", u => u.Name == "v", 20_000),
+                "The idle victim source stopped replicating under fleet load.");
+
+            noiseCts.Cancel();
+            foreach (var t in noiseTasks)
+            { try { await t; } catch { /* ignored */ } }
+            foreach (var s in noisy)
+                s.Dispose();
+        }
+
+        private class AsyncGate
+        {
+            private readonly object _lock = new object();
+            private TaskCompletionSource<object> _openTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private TaskCompletionSource<object> _closeTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private volatile bool _isOpen = true;
+
+            public AsyncGate()
+            {
+                _openTcs.SetResult(null);
+            }
+
+            public bool IsOpen => _isOpen;
+
+            public void Close()
+            {
+                lock (_lock)
+                {
+                    if (!_isOpen)
+                        return;
+                    _isOpen = false;
+                    _openTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _closeTcs.TrySetResult(null);
+                }
+            }
+
+            public void Open()
+            {
+                lock (_lock)
+                {
+                    if (_isOpen)
+                        return;
+                    _isOpen = true;
+                    _closeTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _openTcs.TrySetResult(null);
+                }
+            }
+
+            public Task WaitToOpenAsync(CancellationToken token)
+            {
+                lock (_lock)
+                {
+                    if (_isOpen)
+                        return Task.CompletedTask;
+                    return _openTcs.Task.WithCancellation(token);
+                }
+            }
+
+            public Task WaitToCloseAsync(CancellationToken token)
+            {
+                lock (_lock)
+                {
+                    if (!_isOpen)
+                        return Task.CompletedTask;
+                    return _closeTcs.Task.WithCancellation(token);
+                }
+            }
+        }
+
+        private class SmartHangingStreamWrapper : Stream
+        {
+            private readonly Stream _inner;
+            private readonly AsyncGate _gate;
+            private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
+
+            public SmartHangingStreamWrapper(Stream inner, AsyncGate gate)
+            {
+                _inner = inner;
+                _gate = gate;
+            }
+
+            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCts.Token))
+                    {
+                        try
+                        {
+                            await _gate.WaitToOpenAsync(linkedCts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            if (_disposeCts.IsCancellationRequested)
+                                throw new IOException("Stream disposed");
+                            throw;
+                        }
+
+                        var readTask = _inner.ReadAsync(buffer, offset, count, cancellationToken);
+                        var closeGateTask = _gate.WaitToCloseAsync(linkedCts.Token);
+
+                        var completedTask = await Task.WhenAny(readTask, closeGateTask);
+                        if (completedTask == closeGateTask)
+                        {
+                            continue;
+                        }
+
+                        return await readTask;
+                    }
+                }
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _disposeCts.Cancel();
+                    _inner.Dispose();
+                    _disposeCts.Dispose();
+                }
+                base.Dispose(disposing);
+            }
+
+            public override void Flush() => _inner.Flush();
+            public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+            public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+            public override void SetLength(long value) => _inner.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+            public override bool CanRead => _inner.CanRead;
+            public override bool CanSeek => _inner.CanSeek;
+            public override bool CanWrite => _inner.CanWrite;
+            public override long Length => _inner.Length;
+            public override long Position { get => _inner.Position; set => _inner.Position = value; }
         }
     }
 }
