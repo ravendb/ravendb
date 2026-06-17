@@ -1220,14 +1220,14 @@ namespace SlowTests.Server.Replication
         // that test: OTHER incoming replication traffic on the same sink node. Every time any other incoming
         // connection receives a batch, ReplicationLoader.OnIncomingReceiveSucceeded calls
         // OnReplicationFromAnotherSource() on EVERY other incoming handler. That wakes the handler's read loop
-        // (the "notify" branch), which (a) bumps LastHeartbeatTicks so the connection keeps looking "fresh",
-        // and (b) makes InterruptibleRead.ParseToMemory return Interrupted and start a brand-new read-timeout
-        // window. On a busy node these wake-ups arrive faster than the timeout, so the timeout never elapses:
-        // the hung connection becomes an immortal zombie that is never reaped and never reconnects, and only a
-        // task restart (which disposes it via DropIncomingConnections) clears it.
+        // (the "notify" branch) and makes InterruptibleRead.ParseToMemory return Interrupted with a brand-new
+        // per-call timeout window. On a busy node these wake-ups arrive faster than the timeout, so msg.Timeout
+        // never fires: before the fix the hung connection became an immortal zombie that was never reaped and
+        // never reconnected, and only a task restart (which disposes it via DropIncomingConnections) cleared it.
         //
-        // EXPECTED: this test FAILS on the current code (reproduces the bug) and passes once the read-timeout
-        // is made to track real activity instead of being reset by notify wake-ups.
+        // The fix tracks time since the last REAL receive and reaps on that, so the timeout fires regardless of
+        // how many notify wake-ups occur. EXPECTED: this test FAILS on the pre-fix code (reproduces the bug) and
+        // passes with the fix.
         [RavenFact(RavenTestCategory.Replication)]
         public async Task BusySink_ShouldStillTimeoutAndReconnect_HangingPullConnection()
         {
@@ -1304,32 +1304,10 @@ namespace SlowTests.Server.Replication
             // 2. Simulate a busy sink node: keep poking the notify event on every live incoming handler,
             // exactly as OnIncomingReceiveSucceeded would when sibling connections receive batches.
             using var pumpCts = new CancellationTokenSource();
-            var pump = Task.Run(async () =>
-            {
-                while (pumpCts.IsCancellationRequested == false)
-                {
-                    foreach (var handler in sinkDb.ReplicationLoader.IncomingHandlers)
-                    {
-                        try
-                        {
-                            (handler as IncomingReplicationHandler)?.OnReplicationFromAnotherSource();
-                        }
-                        catch
-                        {
-                            // handler may be disposed mid-iteration; ignore
-                        }
-                    }
-
-                    try
-                    { await Task.Delay(100, pumpCts.Token); }
-                    catch { /* cancelled */ }
-                }
-            });
+            var pump = NotifyPump(sinkDb, pumpCts.Token);
 
             // 3. The hub goes silent on this connection (socket up, nothing arrives). The notify wake-ups keep driving
-            // the "notify" branch -> GetHeartbeatStatusMessage -> LastHeartbeatTicks = now (a SEND-path update), so the
-            // dead connection keeps looking "fresh" with zero receives -- which is what makes AssertValidConnection
-            // reject the reconnect. The read-timeout fix must reap it despite that.
+            // the "notify" branch, so before the fix the read-timeout never fired. The fix must reap it regardless.
             networkGate.Close();
 
             using (var session = hubStore.OpenAsyncSession())
@@ -1358,13 +1336,15 @@ namespace SlowTests.Server.Replication
             catch { /* ignored */ }
         }
 
-        // The flip side of the read-timeout fix: it must NOT reap a HEALTHY idle connection.
-        // A healthy idle source keeps sending heartbeats (every ReplicationMinimalHeartbeat), which the sink RECEIVES
-        // (the msg.Document != null branch) and which restart sinceLastReceive. As long as ActiveConnectionTimeout >
-        // ReplicationMinimalHeartbeat, the connection stays alive across many timeout windows. (The notify/"interrupted"
-        // branch deliberately does NOT restart the timer; it doesn't need to -- received heartbeats do.)
+        // The flip side of the read-timeout fix: it must NOT reap a HEALTHY idle connection, EVEN under heavy notify
+        // fan-out. A healthy idle source keeps sending heartbeats (every ReplicationMinimalHeartbeat); the sink RECEIVES
+        // them (the msg.Document != null branch) and restarts the read-timeout. Because the timeout is evaluated only
+        // AFTER the read has had its chance to return, a heartbeat that already arrived is always consumed before any
+        // reap -- so the notify flood cannot reap a live connection. (Before the fix this test FAILED: the read-timeout
+        // was decided at the top of the loop, so under a notify flood a buffered heartbeat could be reaped before it was
+        // consumed.)
         [RavenFact(RavenTestCategory.Replication)]
-        public async Task HealthyIdleConnection_IsNotReaped()
+        public async Task HealthyIdleConnection_IsNotReaped_UnderNotifyFanOut()
         {
             DoNotReuseServer();
 
@@ -1424,12 +1404,11 @@ namespace SlowTests.Server.Replication
                 return pullHandler != null;
             }, true), "Expected an incoming pull replication handler on the sink");
 
-            // A healthy idle source keeps sending heartbeats (every ReplicationMinimalHeartbeat = 2s), which the sink
-            // RECEIVES (the msg.Document != null branch) and which restart sinceLastReceive. Because ActiveConnectionTimeout
-            // (5s) is larger than the heartbeat interval, the connection must survive many read-timeout windows and must
-            // never be reaped/reconnected. (The notify branch deliberately does NOT restart the timer -- and it doesn't
-            // need to: received heartbeats keep the connection alive. The reproduction test above proves the converse,
-            // that notify wake-ups alone do NOT keep a connection that receives nothing alive.)
+            // Flood the handler with notify wake-ups, exactly as a busy node would. The connection is healthy: the hub
+            // keeps sending heartbeats which the sink receives. It must survive every read-timeout window unchanged.
+            using var pumpCts = new CancellationTokenSource();
+            var pump = NotifyPump(sinkDb, pumpCts.Token);
+
             var readTimeoutMs = (int)sinkDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
             for (var i = 0; i < (readTimeoutMs * 3) / 1000; i++)
             {
@@ -1437,7 +1416,8 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(initialConnections, connectionCounter); // a reconnect would increment this => reaped
                 var current = sinkDb.ReplicationLoader.IncomingHandlers.OfType<IncomingReplicationHandler>().FirstOrDefault();
                 Assert.True(ReferenceEquals(current, pullHandler),
-                    $"The healthy incoming handler was reaped/replaced while idle (connectionCounter={connectionCounter}, initial={initialConnections}).");
+                    $"The healthy incoming handler was reaped/replaced while idle under notify fan-out " +
+                    $"(connectionCounter={connectionCounter}, initial={initialConnections}).");
             }
 
             // And it still works: a new document flows over the SAME connection (no reconnect).
@@ -1448,16 +1428,21 @@ namespace SlowTests.Server.Replication
             }
             Assert.True(WaitForDocument<User>(sinkStore, "Users/2-A", u => u.Name == "Lev", 10_000), "Healthy connection stopped replicating");
             Assert.Equal(initialConnections, connectionCounter);
+
+            pumpCts.Cancel();
+            try
+            { await pump; }
+            catch { /* ignored */ }
         }
 
         // Realistic fleet-load check (external replication, same code path as a hub): many sources replicate into one
         // destination. One source stays idle (the "victim"); the others push continuously, so every batch fires
         // ReplicationLoader.OnIncomingReceiveSucceeded -> OnReplicationFromAnotherSource on the victim's handler (genuine
-        // notify fan-out). Under that load an idle connection may be transiently reaped (the notify flood can delay the
-        // idle peer's heartbeat round-trip past ActiveConnectionTimeout), but it must RECOVER and keep replicating -- no
-        // permanent outage or deadlock. This guards against the read-timeout fix causing unrecoverable churn at scale.
+        // notify fan-out). The idle victim keeps sending heartbeats, so with the fix it must NOT be reaped: the timeout
+        // is only evaluated after a read, and received heartbeats reset it. We assert ZERO churn on the destination
+        // (no reconnect of any handler) and that the idle victim keeps replicating.
         [RavenFact(RavenTestCategory.Replication)]
-        public async Task BusyDestination_IdleSource_RecoversAndKeepsReplicating()
+        public async Task BusyDestination_IdleSource_IsNotReaped_AndKeepsReplicating()
         {
             DoNotReuseServer();
 
@@ -1475,6 +1460,13 @@ namespace SlowTests.Server.Replication
                 noisy.Add((DocumentStore)GetDocumentStore(new Options { Server = server }));
 
             var destDb = await GetDatabase(dest.Database, server);
+
+            var connectionCounter = 0;
+            destDb.ReplicationLoader.ForTestingPurposesOnly().WrapIncomingReplicationStream = s =>
+            {
+                Interlocked.Increment(ref connectionCounter); // count every incoming (re)connection on the destination
+                return s;
+            };
 
             var sources = new List<DocumentStore> { victim };
             sources.AddRange(noisy);
@@ -1494,6 +1486,7 @@ namespace SlowTests.Server.Replication
                 $"Expected {sources.Count} incoming handlers on the destination, got {destDb.ReplicationLoader.IncomingHandlers.Count()}");
 
             await Task.Delay(2000); // let things settle
+            var initialConnections = connectionCounter;
 
             // The noisy sources push continuously -> genuine OnIncomingReceiveSucceeded fan-out onto every handler.
             using var noiseCts = new CancellationTokenSource();
@@ -1515,17 +1508,16 @@ namespace SlowTests.Server.Replication
                 }
             })).ToList();
 
-            // Let the system run under heavy notify fan-out for several read-timeout windows. Under that load an idle
-            // connection MAY be reaped transiently (the notify flood can delay the idle peer's heartbeat round-trip past
-            // ActiveConnectionTimeout), but it must RECOVER -- reconnect and keep replicating, with no permanent outage.
-            // Active connections are never affected (received data resets the timer). We tolerate transient reconnects
-            // and assert recovery below.
+            // Run under heavy notify fan-out for several read-timeout windows. The idle victim keeps sending heartbeats,
+            // so its connection must never be reaped: no handler on the destination should reconnect (zero churn).
             var readTimeoutMs = (int)destDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
             await Task.Delay(readTimeoutMs * 3);
 
-            // The idle victim must be connected (recovered if it was transiently reaped) and must keep replicating.
-            Assert.True(WaitForValue(() => destDb.ReplicationLoader.IncomingHandlers.Any(h => h.ConnectionInfo.SourceDatabaseName == victim.Database), true, timeout: 20_000),
-                "The idle victim never re-established its connection under fleet load.");
+            Assert.Equal(initialConnections, connectionCounter); // any reconnect under load => a healthy connection was reaped
+
+            // The idle victim is still connected and still replicates.
+            Assert.True(destDb.ReplicationLoader.IncomingHandlers.Any(h => h.ConnectionInfo.SourceDatabaseName == victim.Database),
+                "The idle victim's incoming connection was dropped under fleet load.");
 
             using (var s = victim.OpenAsyncSession())
             {
@@ -1540,6 +1532,33 @@ namespace SlowTests.Server.Replication
             { try { await t; } catch { /* ignored */ } }
             foreach (var s in noisy)
                 s.Dispose();
+        }
+
+        // Pokes the notify event on every live incoming handler, exactly as ReplicationLoader.OnIncomingReceiveSucceeded
+        // does when sibling connections receive batches. This is the "busy node" ingredient.
+        private static Task NotifyPump(Raven.Server.Documents.DocumentDatabase db, CancellationToken token)
+        {
+            return Task.Run(async () =>
+            {
+                while (token.IsCancellationRequested == false)
+                {
+                    foreach (var handler in db.ReplicationLoader.IncomingHandlers)
+                    {
+                        try
+                        {
+                            (handler as IncomingReplicationHandler)?.OnReplicationFromAnotherSource();
+                        }
+                        catch
+                        {
+                            // handler may be disposed mid-iteration; ignore
+                        }
+                    }
+
+                    try
+                    { await Task.Delay(100, token); }
+                    catch { /* cancelled */ }
+                }
+            });
         }
 
         private class AsyncGate
