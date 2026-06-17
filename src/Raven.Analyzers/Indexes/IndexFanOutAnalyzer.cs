@@ -89,10 +89,12 @@ namespace Raven.Analyzers.Indexes
                     if (clause is not FromClauseSyntax fromClause)
                         continue;
 
+                    // Use a stable token ("nested from") rather than the collection expression so the
+                    // message reads consistently with the method-chain case ("fans out via 'SelectMany'").
                     context.ReportDiagnostic(Diagnostic.Create(
                         DiagnosticDescriptors.IndexFanOut,
                         fromClause.FromKeyword.GetLocation(),
-                        fromClause.Expression.ToString()));
+                        "nested from"));
                 }
             }
         }

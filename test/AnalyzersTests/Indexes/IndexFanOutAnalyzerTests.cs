@@ -95,6 +95,8 @@ class Item { public string Value { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.IndexFanOut, d.Id);
+            // Query-syntax fan-out reports a stable token, consistent with the method-chain "SelectMany".
+            Assert.Contains("nested from", d.GetMessage());
         }
 
         [Fact]
