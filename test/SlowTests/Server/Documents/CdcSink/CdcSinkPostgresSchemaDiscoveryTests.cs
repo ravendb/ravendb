@@ -142,5 +142,54 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.False(total.IsCdcCapturable);
             Assert.False(string.IsNullOrEmpty(total.UnsupportedReason));
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task TwoSchemasWithIdenticalConstraintNames_DoNotCollide()
+        {
+            // Regression for RavenDB-26636: the PK join and FK cache used to be keyed by the bare
+            // CONSTRAINT_NAME. Postgres constraint names are unique only within a schema, so two
+            // schemas each carrying a 'pk_shared'/'fk_shared' pair collapsed onto one cache entry —
+            // the second overwrote the first, cross-wiring a child's foreign key to the wrong
+            // parent (or dropping it). The fix keys both by (schema, constraint name); discovery
+            // must keep the two pairs distinct and resolve each FK within its own schema.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE SCHEMA s1;
+                CREATE SCHEMA s2;
+
+                CREATE TABLE s1.parent_a (id_a INTEGER NOT NULL, CONSTRAINT pk_shared PRIMARY KEY (id_a));
+                CREATE TABLE s1.child_a  (cid INTEGER PRIMARY KEY, ref_a INTEGER NOT NULL,
+                                          CONSTRAINT fk_shared FOREIGN KEY (ref_a) REFERENCES s1.parent_a(id_a));
+
+                CREATE TABLE s2.parent_b (id_b INTEGER NOT NULL, CONSTRAINT pk_shared PRIMARY KEY (id_b));
+                CREATE TABLE s2.child_b  (cid INTEGER PRIMARY KEY, ref_b INTEGER NOT NULL,
+                                          CONSTRAINT fk_shared FOREIGN KEY (ref_b) REFERENCES s2.parent_b(id_b));
+            ");
+
+            var discovery = CdcSinkSchemaDiscovery.For("Npgsql");
+            var schema = await discovery.DiscoverAsync(connectionString, new[] { "s1", "s2" }, CancellationToken.None);
+
+            // PK join keyed by (schema, constraint): each parent keeps its own PK column.
+            var parentA = schema.Tables.Single(t => t.SourceTableSchema == "s1" && t.SourceTableName == "parent_a");
+            Assert.Equal(new[] { "id_a" }, parentA.PrimaryKeyColumns);
+            var parentB = schema.Tables.Single(t => t.SourceTableSchema == "s2" && t.SourceTableName == "parent_b");
+            Assert.Equal(new[] { "id_b" }, parentB.PrimaryKeyColumns);
+
+            // FK cache keyed by (schema, constraint): each child resolves to the parent in its own schema.
+            var childA = schema.Tables.Single(t => t.SourceTableSchema == "s1" && t.SourceTableName == "child_a");
+            var fkA = Assert.Single(childA.ForeignKeys);
+            Assert.Equal(new[] { "ref_a" }, fkA.Columns);
+            Assert.Equal("s1", fkA.ReferencedSchema);
+            Assert.Equal("parent_a", fkA.ReferencedTable);
+            Assert.Equal(new[] { "id_a" }, fkA.ReferencedColumns);
+
+            var childB = schema.Tables.Single(t => t.SourceTableSchema == "s2" && t.SourceTableName == "child_b");
+            var fkB = Assert.Single(childB.ForeignKeys);
+            Assert.Equal(new[] { "ref_b" }, fkB.Columns);
+            Assert.Equal("s2", fkB.ReferencedSchema);
+            Assert.Equal("parent_b", fkB.ReferencedTable);
+            Assert.Equal(new[] { "id_b" }, fkB.ReferencedColumns);
+        }
     }
 }

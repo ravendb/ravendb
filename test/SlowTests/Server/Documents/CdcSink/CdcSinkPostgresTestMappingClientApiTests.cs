@@ -899,5 +899,70 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Contains("Oracle.ManagedDataAccess.Client", error);
             Assert.Contains("does not support provider", error);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_MixedCaseAndReservedWordIdentifiers_AreQuoted()
+        {
+            // Regression for RavenDB-26636: the Postgres test-mapping row fetch emitted raw,
+            // unquoted identifiers. Postgres folds unquoted identifiers to lower-case and chokes
+            // on reserved words, so a mixed-case/reserved-word table ("Order") or column
+            // ("Select", "FromDate") produced a SQL syntax/lookup error instead of returning the
+            // row. The fix double-quotes identifiers in BuildSelectByPrimaryKeyQuery /
+            // BuildSelectFirstRowsQuery. Every identifier here passes the handler's
+            // [A-Za-z_][A-Za-z0-9_]* gate (no spaces/punctuation) yet still requires quoting.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE ""Order"" (
+                    ""Id""       SERIAL PRIMARY KEY,
+                    ""Select""   VARCHAR(200),
+                    ""FromDate"" VARCHAR(200)
+                );
+                INSERT INTO ""Order"" (""Id"", ""Select"", ""FromDate"") VALUES (1, 'asc', '2026-01-01');");
+
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Orders",
+                SourceTableSchema = "public",
+                SourceTableName = "Order",
+                PrimaryKeyColumns = new List<string> { "Id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "Id", Name = "DbId" },
+                    new() { Column = "Select", Name = "Sort" },
+                    new() { Column = "FromDate", Name = "Since" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-quoted-identifiers",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "Order",
+                RowSelector = TestCdcSinkRowSelector.ByPrimaryKey,
+                PrimaryKeyValues = new[] { "1" },
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Equal("Orders/1", row.DocumentId);
+            Assert.Contains("\"Sort\":\"asc\"", row.Document);
+            Assert.Contains("\"Since\":\"2026-01-01\"", row.Document);
+        }
     }
 }
