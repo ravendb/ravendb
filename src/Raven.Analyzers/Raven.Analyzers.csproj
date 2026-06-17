@@ -31,4 +31,28 @@
     <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
     <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
   </ItemGroup>
+
+  <!--
+    Bakes the product version into the analyzer assembly so SeverityPolicy can compute each
+    diagnostic's effective severity (Info in the introducing release, destination severity after).
+    The version is read from the single source of truth, src/CommonAssemblyInfo.cs, the same
+    AssemblyVersion line that scripts/version.ps1 parses during a release build. A plain
+    'dotnet build' reads the committed value, so the behaviour is deterministic locally too.
+  -->
+  <Target Name="GenerateRavenProductVersion" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_RavenCommonAssemblyInfo>$(MSBuildProjectDirectory)\..\CommonAssemblyInfo.cs</_RavenCommonAssemblyInfo>
+      <RavenProductVersion>$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('$(_RavenCommonAssemblyInfo)')), '(?s).*AssemblyVersion\("([^"]*)"\).*', '$1'))</RavenProductVersion>
+      <_RavenProductVersionFile>$(IntermediateOutputPath)RavenProductVersion.g.cs</_RavenProductVersionFile>
+    </PropertyGroup>
+    <WriteLinesToFile
+        File="$(_RavenProductVersionFile)"
+        Lines="namespace Raven.Analyzers.Shared { internal static partial class SeverityPolicy { internal const string ProductVersion = &quot;$(RavenProductVersion)&quot;%3B } }"
+        Overwrite="true"
+        WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(_RavenProductVersionFile)" />
+      <FileWrites Include="$(_RavenProductVersionFile)" />
+    </ItemGroup>
+  </Target>
 </Project>
