@@ -33,7 +33,9 @@ interface DatabaseIndexStatsWithSizeProps extends DatabaseIndexStatsProps {
 }
 
 function useIndexStatsColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
 
     const indexStatsColumns: ColumnDef<IndexStats>[] = useMemo(() => {
         const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
@@ -133,7 +135,7 @@ function DatabaseIndexStatsWithSize({ packageId, database, node, width }: Databa
         <div className="database-index-stats">
             <div className="panel-bg-1 rounded">
                 <div className="p-4 vstack gap-3">
-                    <h3 className="m-0">Indexes</h3>
+                    <h3 className="m-0">Index Stats</h3>
                     {stats.loading ? (
                         <div className="hstack gap-2 justify-content-center text-muted py-3">
                             <Spinner size="sm" /> Loading indexes for node {node}...
@@ -159,7 +161,7 @@ function DatabaseIndexStatsWithSize({ packageId, database, node, width }: Databa
 function IndexNameCell({ getValue }: { getValue: () => unknown }) {
     const name = getValue() as string;
     return (
-        <div className="text-truncate fw-bold" title={name}>
+        <div className="text-truncate" title={name}>
             {name}
         </div>
     );

@@ -1,5 +1,6 @@
 import React from "react";
 import { Icon } from "components/common/Icon";
+import "./AnalysisProgress.scss";
 
 interface AnalysisProgressProps {
     fileName?: string;

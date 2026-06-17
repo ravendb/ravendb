@@ -43,7 +43,9 @@ interface DatabaseSettingsWithSizeProps extends DatabaseSettingsProps {
 }
 
 function useDatabaseSettingsColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
 
     const settingsColumns: ColumnDef<SettingRow>[] = useMemo(() => {
         const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
@@ -79,10 +81,18 @@ function useDatabaseSettingsColumns(availableWidth: number) {
 
 function OriginBadge({ origin }: { origin: SettingOrigin }) {
     if (origin === "Database") {
-        return <Badge bg="warning">Database</Badge>;
+        return (
+            <Badge bg="warning" pill>
+                Database
+            </Badge>
+        );
     }
     if (origin === "Server") {
-        return <Badge bg="info">Server</Badge>;
+        return (
+            <Badge bg="info" pill>
+                Server
+            </Badge>
+        );
     }
     return <span className="text-muted">Default</span>;
 }
@@ -102,7 +112,6 @@ export default memo(function DatabaseSettings({ packageId, database, node }: Dat
 
 function DatabaseSettingsWithSize({ packageId, database, node, width }: DatabaseSettingsWithSizeProps) {
     const { manageServerService } = useServices();
-    const [search, setSearch] = useState<string>("");
     // default to the actionable subset: settings actually customized away from their default
     const [showDefaults, setShowDefaults] = useState<boolean>(false);
 
@@ -114,22 +123,12 @@ function DatabaseSettingsWithSize({ packageId, database, node, width }: Database
     }, [packageId, node, database]);
 
     const rows = useMemo(() => parseSettings(settings.result), [settings.result]);
-    const filtered = useMemo(() => {
-        const term = search.trim().toLowerCase();
-        return rows.filter((row) => {
-            if (!showDefaults && row.origin === "Default") {
-                return false;
-            }
-            if (!term) {
-                return true;
-            }
-            return (
-                row.key.toLowerCase().includes(term) ||
-                row.category.toLowerCase().includes(term) ||
-                (row.value ?? "").toLowerCase().includes(term)
-            );
-        });
-    }, [rows, search, showDefaults]);
+    // per-column filtering is handled by the table's built-in filters; this only applies the
+    // "show default values" toggle (defaults are hidden by default to surface customized settings)
+    const filtered = useMemo(
+        () => (showDefaults ? rows : rows.filter((row) => row.origin !== "Default")),
+        [rows, showDefaults]
+    );
 
     const { settingsColumns } = useDatabaseSettingsColumns(width);
 
@@ -137,7 +136,7 @@ function DatabaseSettingsWithSize({ packageId, database, node, width }: Database
         data: filtered,
         columns: settingsColumns,
         enableSorting: filtered.length > analyzerConstants.minRowsForControls,
-        enableColumnFilters: filtered.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: true,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
@@ -150,7 +149,23 @@ function DatabaseSettingsWithSize({ packageId, database, node, width }: Database
         <div className="database-settings">
             <div className="panel-bg-1 rounded">
                 <div className="p-4 vstack gap-3">
-                    <h3 className="m-0">Configuration</h3>
+                    <div className="hstack justify-content-between align-items-center flex-wrap gap-2">
+                        <h3 className="m-0">Settings</h3>
+                        {!settings.loading && !settings.error && rows.length > 0 && (
+                            <div className="hstack gap-3 align-items-center">
+                                <Form.Check
+                                    type="switch"
+                                    id="debug-package-settings-show-defaults"
+                                    label="Show default values"
+                                    checked={showDefaults}
+                                    onChange={(e) => setShowDefaults(e.target.checked)}
+                                />
+                                <span className="small-label">
+                                    {filtered.length} of {rows.length}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     {settings.loading ? (
                         <div className="hstack gap-2 justify-content-center text-muted py-3">
                             <Spinner size="sm" /> Loading configuration for node {node}...
@@ -164,39 +179,12 @@ function DatabaseSettingsWithSize({ packageId, database, node, width }: Database
                         <EmptySet compact className="justify-content-center">
                             No configuration settings for {database} on node {node}
                         </EmptySet>
+                    ) : filtered.length === 0 ? (
+                        <EmptySet compact className="justify-content-center">
+                            No customized settings - all are at their default values
+                        </EmptySet>
                     ) : (
-                        <>
-                            <div className="hstack justify-content-between flex-wrap">
-                                <Form.Control
-                                    type="text"
-                                    style={{ maxWidth: "360px" }}
-                                    placeholder="Filter by key, value or category..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
-                                <div className="hstack gap-3">
-                                    <Form.Check
-                                        type="switch"
-                                        id="debug-package-settings-show-defaults"
-                                        label="Show default values"
-                                        checked={showDefaults}
-                                        onChange={(e) => setShowDefaults(e.target.checked)}
-                                    />
-                                    <span className="small-label">
-                                        {filtered.length} of {rows.length}
-                                    </span>
-                                </div>
-                            </div>
-                            {filtered.length === 0 ? (
-                                <EmptySet compact className="justify-content-center">
-                                    {search.trim()
-                                        ? "No settings match the filter"
-                                        : "No customized settings - all are at their default values"}
-                                </EmptySet>
-                            ) : (
-                                <VirtualTable table={table} heightInPx={heightInPx} />
-                            )}
-                        </>
+                        <VirtualTable table={table} heightInPx={heightInPx} />
                     )}
                 </div>
             </div>
@@ -205,11 +193,7 @@ function DatabaseSettingsWithSize({ packageId, database, node, width }: Database
 }
 
 function SettingKeyCell({ row }: { row: { original: SettingRow } }) {
-    return (
-        <span className="fw-bold" title={row.original.description}>
-            {row.original.key}
-        </span>
-    );
+    return <span title={row.original.description}>{row.original.key}</span>;
 }
 
 function SettingValueCell({ getValue }: { getValue: () => unknown }) {

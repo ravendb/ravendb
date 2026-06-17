@@ -127,7 +127,7 @@ export default memo(function DatabaseStats({ packageId, database, node }: Databa
                                     <div className="small-label mb-1">Stale indexes ({info.StaleIndexes.length})</div>
                                     <div className="hstack gap-1 flex-wrap">
                                         {info.StaleIndexes.map((name) => (
-                                            <Badge key={name} bg="warning">
+                                            <Badge key={name} bg="warning" pill>
                                                 {name}
                                             </Badge>
                                         ))}

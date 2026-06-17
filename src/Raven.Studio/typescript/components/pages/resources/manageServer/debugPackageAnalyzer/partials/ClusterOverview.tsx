@@ -6,6 +6,7 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
+import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
@@ -28,7 +29,9 @@ interface ClusterOverviewWithSizeProps extends ClusterOverviewProps {
 }
 
 function useClusterOverviewColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const clusterColumns: ColumnDef<ClusterNodeInfo>[] = useMemo(
@@ -141,24 +144,37 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
             <div className="panel-bg-1 rounded">
                 <div className="p-4 vstack">
                     <h3 className="mb-3">Cluster Overview</h3>
-                    <div className="overview-stats gap-3 mb-3">
-                        <StatTile
-                            label="Nodes status"
-                            icon="check"
-                            iconColor="success"
-                            value={`${nodeCount}/${nodeCount} online`}
-                        />
-                        <StatTile label="Leader node" icon="cluster-member" value={leader?.NodeTag ?? "-"} />
-                        <StatTile
-                            label="Cluster uptime"
-                            icon="clock"
-                            value={clusterUpTime != null ? formatUpTime(clusterUpTime) : "-"}
-                        />
-                        <StatTile label="Total databases" icon="database" value={String(totalDatabases)} />
-                        <StatTile label="License tier" icon="license" value="n/a" />
-                    </div>
+                    {nodeInfos.length === 0 ? (
+                        <EmptySet compact className="justify-content-center">
+                            No cluster overview data in the package
+                        </EmptySet>
+                    ) : (
+                        <>
+                            <div className="overview-stats gap-3 mb-3">
+                                <StatTile
+                                    label="Nodes status"
+                                    icon="check"
+                                    iconColor="success"
+                                    value={`${nodeCount}/${nodeCount} online`}
+                                />
+                                <StatTile
+                                    label="Leader node"
+                                    icon="node-leader"
+                                    iconColor="node"
+                                    value={leader?.NodeTag ?? "-"}
+                                />
+                                <StatTile
+                                    label="Cluster uptime"
+                                    icon="clock"
+                                    value={clusterUpTime != null ? formatUpTime(clusterUpTime) : "-"}
+                                />
+                                <StatTile label="Total databases" icon="database" value={String(totalDatabases)} />
+                                <StatTile label="License tier" icon="license" value="n/a" />
+                            </div>
 
-                    <VirtualTable table={table} heightInPx={heightInPx} />
+                            <VirtualTable table={table} heightInPx={heightInPx} />
+                        </>
+                    )}
                 </div>
             </div>
         </div>

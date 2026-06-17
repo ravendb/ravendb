@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
     ColumnDef,
-    ExpandedState,
     Row,
     getCoreRowModel,
     getExpandedRowModel,
@@ -11,7 +10,9 @@ import {
 } from "@tanstack/react-table";
 import { Icon } from "components/common/Icon";
 import NodeTagPill from "./NodeTagPill";
-import { ExpandIndicator, NodeTagPillStack, expandableRowProps } from "./nodeStackTable";
+import { ExpandIndicator, NodeTagPillStack, RangeCell, canExpandNodeRow, expandableRowProps } from "./NodeStackTable";
+import { MetricRange, toReplicaRange } from "./analyzerUtils";
+import { useExpandAllSync } from "./ExpandAllContext";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { analyzerConstants } from "./analyzerConstants";
@@ -32,19 +33,22 @@ interface TableRow {
     rowKind: "database" | "node";
     database: string;
     nodeTag?: string;
-    documentsCount?: number;
-    indexesCount?: number;
-    erroredIndexesCount?: number;
-    indexingErrorsCount?: number;
-    ongoingTasksCount?: number;
-    replicationFactor?: number;
+    // per-node rows carry a single value (min === max); database rows carry the replica spread
+    documentsCount?: MetricRange;
+    indexesCount?: MetricRange;
+    erroredIndexesCount?: MetricRange;
+    indexingErrorsCount?: MetricRange;
+    ongoingTasksCount?: MetricRange;
+    replicationFactor?: MetricRange;
     disabled?: boolean;
     nodes?: { nodeTag: string; disabled: boolean }[];
     subRows?: TableRow[];
 }
 
 function useDatabasesOverviewColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const databasesColumns: ColumnDef<TableRow>[] = useMemo(
@@ -63,31 +67,36 @@ function useDatabasesOverviewColumns(availableWidth: number) {
             },
             {
                 header: "Documents",
-                accessorKey: "documentsCount",
+                id: "documentsCount",
+                accessorFn: (row) => row.documentsCount?.max ?? -1,
                 cell: DbDocumentsCell,
                 size: getSize(12),
             },
             {
                 header: "Indexes",
-                accessorKey: "indexesCount",
+                id: "indexesCount",
+                accessorFn: (row) => row.indexesCount?.max ?? -1,
                 cell: DbIndexesCell,
                 size: getSize(11),
             },
             {
                 header: "Indexing errors",
-                accessorKey: "indexingErrorsCount",
+                id: "indexingErrorsCount",
+                accessorFn: (row) => row.indexingErrorsCount?.max ?? 0,
                 cell: DbIndexingErrorsCell,
                 size: getSize(14),
             },
             {
                 header: "Ongoing tasks",
-                accessorKey: "ongoingTasksCount",
+                id: "ongoingTasksCount",
+                accessorFn: (row) => row.ongoingTasksCount?.max ?? -1,
                 cell: DbOngoingTasksCell,
                 size: getSize(14),
             },
             {
                 header: "Replication factor",
-                accessorKey: "replicationFactor",
+                id: "replicationFactor",
+                accessorFn: (row) => row.replicationFactor?.max ?? -1,
                 cell: DbReplicationFactorCell,
                 size: getSize(14),
             },
@@ -110,8 +119,8 @@ export default function DatabasesOverview({ summary }: DatabasesOverviewProps) {
 }
 
 function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSizeProps) {
-    const rows = useMemo(() => buildTableRows(summary), [summary]);
-    const [expanded, setExpanded] = useState<ExpandedState>({});
+    const rows = useMemo(() => buildDatabasesOverviewRows(summary), [summary]);
+    const [expanded, setExpanded] = useExpandAllSync();
 
     // every top-level row is a database; its nodes live in subRows and are revealed on expand
     const disabledCount = rows.filter((r) => r.disabled).length;
@@ -125,7 +134,7 @@ function DatabasesOverviewWithSize({ summary, width }: DatabasesOverviewWithSize
         state: { expanded },
         onExpandedChange: setExpanded,
         getSubRows: (row) => row.subRows,
-        getRowCanExpand: (row) => (row.original.subRows?.length ?? 0) > 0,
+        getRowCanExpand: canExpandNodeRow,
         enableSorting: rows.length > analyzerConstants.minRowsForControls,
         enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
         getCoreRowModel: getCoreRowModel(),
@@ -178,7 +187,7 @@ function DbNameCell({ row }: { row: Row<TableRow> }) {
         return null;
     }
     return (
-        <span className="hstack gap-1 fw-bold">
+        <span className="hstack gap-1">
             {row.getCanExpand() && <ExpandIndicator expanded={row.getIsExpanded()} />}
             {row.original.database}
         </span>
@@ -199,20 +208,22 @@ function DbNodeTagCell({ row }: { row: Row<TableRow> }) {
 }
 
 function DbDocumentsCell({ row }: { row: { original: TableRow } }) {
-    return row.original.rowKind === "database" ? formatCount(row.original.documentsCount ?? -1) : null;
+    const range = row.original.documentsCount;
+    return range ? <RangeCell range={range} format={formatCount} /> : null;
 }
 
 function DbIndexesCell({ row }: { row: { original: TableRow } }) {
-    if (row.original.rowKind !== "database") {
+    const range = row.original.indexesCount;
+    if (!range) {
         return null;
     }
-    const errored = row.original.erroredIndexesCount ?? 0;
+    const errored = row.original.erroredIndexesCount;
     return (
         <>
-            {formatCount(row.original.indexesCount ?? -1)}
-            {errored > 0 && (
+            <RangeCell range={range} format={formatCount} />
+            {errored && errored.max > 0 && (
                 <span className="text-danger ms-1">
-                    <Icon icon="danger" margin="m-0" /> {errored}
+                    <Icon icon="danger" margin="m-0" /> <RangeCell range={errored} format={formatCount} />
                 </span>
             )}
         </>
@@ -220,19 +231,25 @@ function DbIndexesCell({ row }: { row: { original: TableRow } }) {
 }
 
 function DbIndexingErrorsCell({ row }: { row: { original: TableRow } }) {
-    if (row.original.rowKind !== "database") {
+    const range = row.original.indexingErrorsCount;
+    if (!range) {
         return null;
     }
-    const count = row.original.indexingErrorsCount ?? 0;
-    return <span className={count > 0 ? "text-danger" : ""}>{formatCount(count)}</span>;
+    return (
+        <span className={range.max > 0 ? "text-danger" : ""}>
+            <RangeCell range={range} format={formatCount} />
+        </span>
+    );
 }
 
 function DbOngoingTasksCell({ row }: { row: { original: TableRow } }) {
-    return row.original.rowKind === "database" ? formatCount(row.original.ongoingTasksCount ?? -1) : null;
+    const range = row.original.ongoingTasksCount;
+    return range ? <RangeCell range={range} format={formatCount} /> : null;
 }
 
 function DbReplicationFactorCell({ row }: { row: { original: TableRow } }) {
-    return row.original.rowKind === "database" ? formatCount(row.original.replicationFactor ?? -1) : null;
+    const range = row.original.replicationFactor;
+    return range ? <RangeCell range={range} format={formatCount} /> : null;
 }
 
 function DbStateCell({ row }: { row: Row<TableRow> }) {
@@ -274,20 +291,19 @@ function formatCount(value: number): string {
     return value.toLocaleString();
 }
 
-function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
-    const dbMap = new Map<
-        string,
-        {
-            documentsCount: number;
-            indexesCount: number;
-            erroredIndexesCount: number;
-            indexingErrorsCount: number;
-            ongoingTasksCount: number;
-            replicationFactor: number;
-            disabled: boolean;
-            nodes: { nodeTag: string; disabled: boolean }[];
-        }
-    >();
+interface NodeMetrics {
+    nodeTag: string;
+    documentsCount: number;
+    indexesCount: number;
+    erroredIndexesCount: number;
+    indexingErrorsCount: number;
+    ongoingTasksCount: number;
+    replicationFactor: number;
+    disabled: boolean;
+}
+
+export function buildDatabasesOverviewRows(summary: DebugPackageAnalysisSummary): TableRow[] {
+    const dbMap = new Map<string, { disabled: boolean; nodes: NodeMetrics[] }>();
 
     Object.entries(summary.SummaryPerNode ?? {}).forEach(([nodeTag, node]) => {
         (node.DatabasesOverview?.Items ?? []).forEach((item) => {
@@ -297,7 +313,13 @@ function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
 
             let agg = dbMap.get(item.Database);
             if (!agg) {
-                agg = {
+                agg = { disabled: item.Disabled, nodes: [] };
+                dbMap.set(item.Database, agg);
+            }
+
+            if (!agg.nodes.some((n) => n.nodeTag === nodeTag)) {
+                agg.nodes.push({
+                    nodeTag,
                     documentsCount: item.DocumentsCount,
                     indexesCount: item.IndexesCount,
                     erroredIndexesCount: item.ErroredIndexesCount,
@@ -305,20 +327,7 @@ function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
                     ongoingTasksCount: item.OngoingTasksCount,
                     replicationFactor: item.ReplicationFactor,
                     disabled: item.Disabled,
-                    nodes: [],
-                };
-                dbMap.set(item.Database, agg);
-            } else {
-                agg.documentsCount = Math.max(agg.documentsCount, item.DocumentsCount);
-                agg.indexesCount = Math.max(agg.indexesCount, item.IndexesCount);
-                agg.erroredIndexesCount = Math.max(agg.erroredIndexesCount, item.ErroredIndexesCount);
-                agg.indexingErrorsCount = Math.max(agg.indexingErrorsCount, item.IndexingErrorsCount);
-                agg.ongoingTasksCount = Math.max(agg.ongoingTasksCount, item.OngoingTasksCount);
-                agg.replicationFactor = Math.max(agg.replicationFactor, item.ReplicationFactor);
-            }
-
-            if (!agg.nodes.some((n) => n.nodeTag === nodeTag)) {
-                agg.nodes.push({ nodeTag, disabled: item.Disabled });
+                });
             }
         });
     });
@@ -331,19 +340,33 @@ function buildTableRows(summary: DebugPackageAnalysisSummary): TableRow[] {
             const agg = dbMap.get(database)!;
             const sortedNodes = [...agg.nodes].sort((a, b) => a.nodeTag.localeCompare(b.nodeTag));
 
+            // the children are replicas of the same database, so each metric is a spread, never a sum
+            const rangeOf = (selector: (n: NodeMetrics) => number) => toReplicaRange(sortedNodes.map(selector));
+
             result.push({
                 rowKind: "database",
                 database,
-                documentsCount: agg.documentsCount,
-                indexesCount: agg.indexesCount,
-                erroredIndexesCount: agg.erroredIndexesCount,
-                indexingErrorsCount: agg.indexingErrorsCount,
-                ongoingTasksCount: agg.ongoingTasksCount,
-                replicationFactor: agg.replicationFactor,
+                documentsCount: rangeOf((n) => n.documentsCount),
+                indexesCount: rangeOf((n) => n.indexesCount),
+                erroredIndexesCount: rangeOf((n) => n.erroredIndexesCount),
+                indexingErrorsCount: rangeOf((n) => n.indexingErrorsCount),
+                ongoingTasksCount: rangeOf((n) => n.ongoingTasksCount),
+                replicationFactor: rangeOf((n) => n.replicationFactor),
                 disabled: agg.disabled,
-                nodes: sortedNodes,
+                nodes: sortedNodes.map(({ nodeTag, disabled }) => ({ nodeTag, disabled })),
                 subRows: sortedNodes.map(
-                    ({ nodeTag, disabled }): TableRow => ({ rowKind: "node", database, nodeTag, disabled })
+                    (n): TableRow => ({
+                        rowKind: "node",
+                        database,
+                        nodeTag: n.nodeTag,
+                        documentsCount: toReplicaRange([n.documentsCount]),
+                        indexesCount: toReplicaRange([n.indexesCount]),
+                        erroredIndexesCount: toReplicaRange([n.erroredIndexesCount]),
+                        indexingErrorsCount: toReplicaRange([n.indexingErrorsCount]),
+                        ongoingTasksCount: toReplicaRange([n.ongoingTasksCount]),
+                        replicationFactor: toReplicaRange([n.replicationFactor]),
+                        disabled: n.disabled,
+                    })
                 ),
             });
         });

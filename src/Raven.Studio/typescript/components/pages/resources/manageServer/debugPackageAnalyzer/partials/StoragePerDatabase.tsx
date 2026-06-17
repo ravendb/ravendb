@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
     ColumnDef,
-    ExpandedState,
     Row,
     getCoreRowModel,
     getExpandedRowModel,
@@ -10,7 +9,9 @@ import {
     useReactTable,
 } from "@tanstack/react-table";
 import NodeTagPill from "./NodeTagPill";
-import { ExpandIndicator, NodeTagPillStack, expandableRowProps } from "./nodeStackTable";
+import { ExpandIndicator, NodeTagPillStack, RangeCell, canExpandNodeRow, expandableRowProps } from "./NodeStackTable";
+import { MetricRange, toReplicaRange } from "./analyzerUtils";
+import { useExpandAllSync } from "./ExpandAllContext";
 import { EmptySet } from "components/common/EmptySet";
 import genUtils from "common/generalUtils";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
@@ -20,13 +21,17 @@ import SizeGetter from "components/common/SizeGetter";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 
+const formatBytes = (value: number): string => genUtils.formatBytesToSize(value);
+
 interface StorageTableRow {
     rowKind: "database" | "node";
     key: string;
     database: string;
     nodeTag?: string;
-    size: number;
-    temp: number;
+    // per-node rows carry a single value (min === max); database rows carry the replica spread
+    size: MetricRange;
+    temp: MetricRange;
+    total: MetricRange;
     nodeTags?: string[];
     subRows?: StorageTableRow[];
 }
@@ -41,7 +46,9 @@ interface StoragePerDatabaseWithSizeProps extends StoragePerDatabaseProps {
 }
 
 function useStorageColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const storageColumns: ColumnDef<StorageTableRow>[] = useMemo(
@@ -60,21 +67,23 @@ function useStorageColumns(availableWidth: number) {
             },
             {
                 header: "Data",
-                accessorKey: "size",
-                cell: ({ getValue }) => genUtils.formatBytesToSize(getValue<number>()),
+                id: "size",
+                accessorFn: (row) => row.size.max,
+                cell: ({ row }) => <RangeCell range={row.original.size} format={formatBytes} />,
                 size: getSize(17),
             },
             {
                 header: "Temp",
-                accessorKey: "temp",
-                cell: ({ getValue }) => genUtils.formatBytesToSize(getValue<number>()),
+                id: "temp",
+                accessorFn: (row) => row.temp.max,
+                cell: ({ row }) => <RangeCell range={row.original.temp} format={formatBytes} />,
                 size: getSize(17),
             },
             {
                 header: "Total",
                 id: "total",
-                accessorFn: (row) => row.size + row.temp,
-                cell: ({ getValue }) => genUtils.formatBytesToSize(getValue<number>()),
+                accessorFn: (row) => row.total.max,
+                cell: ({ row }) => <RangeCell range={row.original.total} format={formatBytes} />,
                 size: getSize(16),
             },
         ],
@@ -94,7 +103,7 @@ export default function StoragePerDatabase({ summary, nodeTag }: StoragePerDatab
 
 function StoragePerDatabaseWithSize({ summary, nodeTag, width }: StoragePerDatabaseWithSizeProps) {
     const rows = useMemo(() => buildStorageRows(summary, nodeTag), [summary, nodeTag]);
-    const [expanded, setExpanded] = useState<ExpandedState>({});
+    const [expanded, setExpanded] = useExpandAllSync();
 
     const { storageColumns } = useStorageColumns(width);
 
@@ -104,7 +113,7 @@ function StoragePerDatabaseWithSize({ summary, nodeTag, width }: StoragePerDatab
         state: { expanded },
         onExpandedChange: setExpanded,
         getSubRows: (row) => row.subRows,
-        getRowCanExpand: (row) => (row.original.subRows?.length ?? 0) > 0,
+        getRowCanExpand: canExpandNodeRow,
         enableSorting: rows.length > analyzerConstants.minRowsForControls,
         enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
         getCoreRowModel: getCoreRowModel(),
@@ -117,7 +126,7 @@ function StoragePerDatabaseWithSize({ summary, nodeTag, width }: StoragePerDatab
     const heightInPx = virtualTableUtils.getHeightInPx(table.getRowModel().rows.length, 400);
 
     return (
-        <div className="storage-per-database flex-grow-1">
+        <div className="flex-grow-1">
             <div className="panel-bg-1 rounded">
                 <div className="p-4">
                     <h3 className="mb-3">Storage per Database</h3>
@@ -143,7 +152,7 @@ function StorageDbNameCell({ row }: { row: Row<StorageTableRow> }) {
         return null;
     }
     return (
-        <span className="hstack gap-1 fw-bold">
+        <span className="hstack gap-1">
             {row.getCanExpand() && <ExpandIndicator expanded={row.getIsExpanded()} />}
             {row.original.database}
         </span>
@@ -158,15 +167,8 @@ function StorageNodeTagCell({ row }: { row: Row<StorageTableRow> }) {
     return tags.length > 0 ? <NodeTagPillStack tags={tags} /> : null;
 }
 
-function buildStorageRows(summary: DebugPackageAnalysisSummary, nodeTag?: string): StorageTableRow[] {
-    const dbMap = new Map<
-        string,
-        {
-            totalSize: number;
-            totalTemp: number;
-            nodes: { nodeTag: string; size: number; temp: number }[];
-        }
-    >();
+export function buildStorageRows(summary: DebugPackageAnalysisSummary, nodeTag?: string): StorageTableRow[] {
+    const dbMap = new Map<string, { nodes: { nodeTag: string; size: number; temp: number }[] }>();
 
     Object.entries(summary.SummaryPerNode ?? {}).forEach(([tag, node]) => {
         if (nodeTag && tag !== nodeTag) {
@@ -176,11 +178,9 @@ function buildStorageRows(summary: DebugPackageAnalysisSummary, nodeTag?: string
         (node.DatabaseStorageUsage?.Items ?? []).forEach((item) => {
             let agg = dbMap.get(item.Database);
             if (!agg) {
-                agg = { totalSize: 0, totalTemp: 0, nodes: [] };
+                agg = { nodes: [] };
                 dbMap.set(item.Database, agg);
             }
-            agg.totalSize += item.Size;
-            agg.totalTemp += item.TempBuffersSize;
             agg.nodes.push({ nodeTag: tag, size: item.Size, temp: item.TempBuffersSize });
         });
     });
@@ -198,8 +198,10 @@ function buildStorageRows(summary: DebugPackageAnalysisSummary, nodeTag?: string
                 rowKind: "database",
                 key: database,
                 database,
-                size: agg.totalSize,
-                temp: agg.totalTemp,
+                // the children are replicas of the same data, so we show the spread, never the sum
+                size: toReplicaRange(sortedNodes.map((n) => n.size)),
+                temp: toReplicaRange(sortedNodes.map((n) => n.temp)),
+                total: toReplicaRange(sortedNodes.map((n) => n.size + n.temp)),
                 nodeTags: sortedNodes.map((n) => n.nodeTag),
                 subRows: sortedNodes.map(
                     ({ nodeTag: tag, size, temp }): StorageTableRow => ({
@@ -207,8 +209,9 @@ function buildStorageRows(summary: DebugPackageAnalysisSummary, nodeTag?: string
                         key: `${database}/${tag}`,
                         database,
                         nodeTag: tag,
-                        size,
-                        temp,
+                        size: toReplicaRange([size]),
+                        temp: toReplicaRange([temp]),
+                        total: toReplicaRange([size + temp]),
                     })
                 ),
             });

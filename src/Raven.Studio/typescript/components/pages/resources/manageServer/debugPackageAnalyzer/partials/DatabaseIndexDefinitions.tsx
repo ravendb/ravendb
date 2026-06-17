@@ -21,6 +21,7 @@ import { Icon } from "components/common/Icon";
 import Code, { CodeLanguage } from "components/common/Code";
 import IndexUtils from "components/utils/IndexUtils";
 import IconName from "typings/server/icons";
+import "./DatabaseIndexDefinitions.scss";
 
 type IndexDefinition = Raven.Client.Documents.Indexes.IndexDefinition;
 type IndexFieldOptions = Raven.Client.Documents.Indexes.IndexFieldOptions;
@@ -150,9 +151,13 @@ const IndexDefinitionPanel = memo(function IndexDefinitionPanel({
                         <Icon icon={sourceTypeIcon(index.SourceType)} margin="m-0" />
                         {index.SourceType === "TimeSeries" ? "Time Series" : index.SourceType}
                     </span>
-                    {index.State && index.State !== "Normal" && <Badge bg="warning">{index.State}</Badge>}
+                    {index.State && index.State !== "Normal" && (
+                        <Badge bg="warning" pill>
+                            {index.State}
+                        </Badge>
+                    )}
                     {index.OutputReduceToCollection && (
-                        <Badge bg="success">
+                        <Badge bg="success" pill>
                             <Icon icon="documents" margin="m-0" /> Output to {index.OutputReduceToCollection}
                         </Badge>
                     )}
@@ -207,7 +212,7 @@ const IndexDefinitionPanel = memo(function IndexDefinitionPanel({
                                 <div className="small-label mb-1">Additional sources</div>
                                 <div className="hstack gap-1 flex-wrap">
                                     {sources.map((name) => (
-                                        <Badge key={name} bg="secondary">
+                                        <Badge key={name} bg="secondary" pill>
                                             {name}
                                         </Badge>
                                     ))}
@@ -220,7 +225,7 @@ const IndexDefinitionPanel = memo(function IndexDefinitionPanel({
                                 <div className="vstack">
                                     {configuration.map(([key, value]) => (
                                         <div key={key} className="small">
-                                            <span className="fw-bold">{key}</span>: {String(value)}
+                                            <span>{key}</span>: {String(value)}
                                         </div>
                                     ))}
                                 </div>
@@ -331,7 +336,7 @@ function FieldsTable({ fields }: { fields: { [key: string]: IndexFieldOptions } 
                 <tbody>
                     {entries.map(([name, options]) => (
                         <tr key={name}>
-                            <td className="fw-bold">{name}</td>
+                            <td>{name}</td>
                             <td>{options.Indexing ?? "-"}</td>
                             <td>{options.Storage ?? "-"}</td>
                             <td>{options.Analyzer ?? "-"}</td>

@@ -22,6 +22,8 @@ import { virtualTableUtils } from "components/common/virtualTable/utils/virtualT
 import { analyzerConstants } from "./analyzerConstants";
 import classNames from "classnames";
 import SizeGetter from "components/common/SizeGetter";
+import SegmentedControl from "components/common/SegmentedControl";
+import IconName from "typings/server/icons";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type CpuUsageAnalysisInfo =
@@ -45,10 +47,10 @@ interface PerformanceMetricsWithSizeProps extends PerformanceMetricsProps {
     width: number;
 }
 
-const metricTabs: { label: string; value: MetricTab; icon: string }[] = [
+const metricTabs: { label: string; value: MetricTab; icon: IconName }[] = [
     { label: "CPU", value: "cpu", icon: "processor" },
     { label: "Memory", value: "memory", icon: "memory" },
-    { label: "GC", value: "gc", icon: "generation" },
+    { label: "GC", value: "gc", icon: "gc" },
     { label: "Network", value: "network", icon: "global" },
     { label: "Threads", value: "threads", icon: "thread-stack-trace" },
 ];
@@ -70,22 +72,7 @@ function PerformanceMetricsWithSize({ summary, nodeTag, width }: PerformanceMetr
             <div className="panel-bg-1 rounded">
                 <div className="p-4 vstack gap-3">
                     <h3 className="m-0">Performance Metrics</h3>
-                    <div className="context-toggle performance-metrics-tabs">
-                        <div className="context-toggle-label mb-1">Select metric</div>
-                        <div className="context-toggle-container w-100">
-                            {metricTabs.map((t) => (
-                                <button
-                                    key={t.value}
-                                    type="button"
-                                    className={classNames("context-toggle-btn flex-fill", { active: tab === t.value })}
-                                    onClick={() => setTab(t.value)}
-                                >
-                                    <Icon icon={t.icon as any} margin="m-0" />
-                                    <span>{t.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <SegmentedControl<MetricTab> items={metricTabs} selected={tab} onSelect={setTab} fullWidth />
                     {tab === "cpu" && <CpuTab cpu={node?.CpuUsageInfo} width={width} />}
                     {tab === "memory" && <MemoryTab memory={node?.MemoryUsageInfo} width={width} />}
                     {tab === "gc" && <GcTab gc={node?.GcInfo} width={width} />}
@@ -125,25 +112,19 @@ function CpuTab({ cpu, width }: { cpu?: CpuUsageAnalysisInfo; width: number }) {
     }
     return (
         <>
-            <div className="overview-stats gap-2">
-                <StatTile
-                    label="Process CPU"
-                    icon="processor"
-                    iconColor="info"
-                    value={formatPercentage(cpu.CurrentCpuUsage)}
-                />
+            <div className="overview-stats gap-3">
+                <StatTile label="Process CPU" icon="hammer-driver" value={formatPercentage(cpu.CurrentCpuUsage)} />
                 <StatTile
                     label="Machine CPU"
-                    icon="processor"
-                    iconColor="warning"
+                    icon="studio-configuration"
                     value={formatPercentage(cpu.CurrentMachineCpuUsage)}
                 />
-                <StatTile label="Average CPU" icon="graph" value={formatPercentage(cpu.AverageCpuUsage)} />
-                <StatTile label="Kernel time" icon="processor" value={formatPercentage(cpu.KernelTimePercentage)} />
-                <StatTile label="Cores" icon="cluster-node" value={formatNumber(cpu.NumberOfCores)} />
-                <StatTile label="Utilized cores" icon="cluster-node" value={formatNumber(cpu.UtilizedCores)} />
+                <StatTile label="Average CPU" icon="graph-range" value={formatPercentage(cpu.AverageCpuUsage)} />
+                <StatTile label="Kernel time" icon="settings" value={formatPercentage(cpu.KernelTimePercentage)} />
+                <StatTile label="Cores" icon="processor" value={formatNumber(cpu.NumberOfCores)} />
+                <StatTile label="Utilized cores" icon="swap" value={formatNumber(cpu.UtilizedCores)} />
             </div>
-            <div className="d-flex gap-4">
+            <div className="d-flex gap-3">
                 <ThreadList
                     className="flex-fill"
                     title="Top current CPU usage threads"
@@ -164,7 +145,9 @@ function CpuTab({ cpu, width }: { cpu?: CpuUsageAnalysisInfo; width: number }) {
 type ThreadItem = { name: string };
 
 function useThreadListColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const threadListColumns: ColumnDef<ThreadItem>[] = useMemo(
@@ -213,7 +196,7 @@ function ThreadList({
     return (
         <div className={classNames("overflow-hidden", className)}>
             <div className="small-label ms-1 mb-1">{title}</div>
-            <VirtualTable table={table} heightInPx={300} />
+            <VirtualTable table={table} heightInPx={virtualTableUtils.getHeightInPx(data.length, 300)} />
         </div>
     );
 }
@@ -223,7 +206,9 @@ function ThreadList({
 type MemoryMetric = { label: string; value: string };
 
 function useMemoryMetricColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const memoryMetricColumns: ColumnDef<MemoryMetric>[] = useMemo(
@@ -247,7 +232,7 @@ function useMemoryMetricColumns(availableWidth: number) {
 }
 
 function MemoryValueCell({ getValue }: { getValue: () => unknown }) {
-    return <span className="fw-bold">{(getValue() as string) ?? "-"}</span>;
+    return <span>{(getValue() as string) ?? "-"}</span>;
 }
 
 function MemoryTab({ memory, width }: { memory?: MemoryAnalysisInfo; width: number }) {
@@ -303,19 +288,19 @@ function MemoryTab({ memory, width }: { memory?: MemoryAnalysisInfo; width: numb
 
     return (
         <>
-            <div className="overview-stats gap-2">
-                <StatTile label="Working set" icon="memory" iconColor="info" value={memory.WorkingSet} />
+            <div className="overview-stats gap-3">
+                <StatTile label="Working set" icon="storage-used" value={memory.WorkingSet} />
                 <StatTile label="Physical memory" icon="memory" value={memory.PhysicalMemory} />
-                <StatTile label="Available memory" icon="memory" value={memory.AvailableMemory} />
-                <StatTile label="Available for processing" icon="memory" value={memory.AvailableMemoryForProcessing} />
+                <StatTile label="Available memory" icon="storage-free" value={memory.AvailableMemory} />
+                <StatTile label="Available for processing" icon="swap" value={memory.AvailableMemoryForProcessing} />
                 <StatTile
                     label="Dirty memory"
-                    icon="memory"
+                    icon="clean"
                     iconColor={warnColor}
                     value={memory.DirtyMemory}
                     valueColor={warnColor}
                 />
-                <StatTile label="Memory mapped" icon="storage" value={memory.MemoryMapped} />
+                <StatTile label="Memory mapped" icon="map" value={memory.MemoryMapped} />
             </div>
             <VirtualTable table={table} heightInPx={heightInPx} />
         </>
@@ -327,7 +312,9 @@ function MemoryTab({ memory, width }: { memory?: MemoryAnalysisInfo; width: numb
 type GenerationRow = { label: string; size: GenerationInfoSize };
 
 function useGcGenerationColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const gcGenerationColumns: ColumnDef<GenerationRow>[] = useMemo(
@@ -407,24 +394,19 @@ function GcTab({ gc, width }: { gc?: GcMemoryInfo; width: number }) {
 
     return (
         <>
-            <div className="overview-stats gap-2">
-                <StatTile label="Last GC generation" icon="generation" value={`Gen ${gc.Generation}`} />
-                <StatTile label="GC index" icon="refresh" value={formatNumber(gc.Index)} />
-                <StatTile label="Pause time" icon="clock" value={formatPercentage(gc.PauseTimePercentage)} />
+            <div className="overview-stats gap-3">
+                <StatTile label="Last GC generation" icon="gc" value={`Gen ${gc.Generation}`} />
+                <StatTile label="GC index" icon="hash" value={formatNumber(gc.Index)} />
+                <StatTile label="Pause time" icon="pause" value={formatPercentage(gc.PauseTimePercentage)} />
                 <StatTile
                     label="Total heap after"
                     icon="memory"
                     value={genUtils.formatBytesToSize(gc.TotalHeapSizeAfterBytes)}
                 />
-                <StatTile
-                    label="Concurrent"
-                    icon="refresh"
-                    value={gc.Concurrent ? "Yes" : "No"}
-                    valueColor={gc.Concurrent ? "success" : undefined}
-                />
+                <StatTile label="Concurrent" icon="shuffle" value={gc.Concurrent ? "Yes" : "No"} />
                 <StatTile
                     label="Compacted"
-                    icon="clean"
+                    icon="compact"
                     value={gc.Compacted ? "Yes" : "No"}
                     valueColor={gc.Compacted ? "success" : undefined}
                 />
@@ -445,7 +427,9 @@ function GcTab({ gc, width }: { gc?: GcMemoryInfo; width: number }) {
 // --- Network tab ---
 
 function useNetworkColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const tcpColumns: ColumnDef<TcpConnections>[] = useMemo(
@@ -602,11 +586,10 @@ function NetworkTab({ packageId, nodeTag, width }: { packageId: string; nodeTag:
 
     return (
         <>
-            <div className="overview-stats gap-2">
+            <div className="overview-stats gap-3">
                 <StatTile
                     label="Active TCP connections"
                     icon="global"
-                    iconColor="info"
                     value={formatNumber(info.TotalActiveTcpConnections)}
                 />
                 <StatTile label="Connection states" icon="link" value={formatNumber(info.TcpConnections?.length)} />
@@ -635,7 +618,9 @@ function NetworkTab({ packageId, nodeTag, width }: { packageId: string; nodeTag:
 // --- Threads tab ---
 
 function useThreadColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const threadColumns: ColumnDef<ThreadInfo>[] = useMemo(
@@ -705,7 +690,7 @@ function useThreadColumns(availableWidth: number) {
 function ThreadNameCell({ row }: { row: { original: ThreadInfo } }) {
     return (
         <>
-            <div className="fw-bold text-break">{row.original.Name}</div>
+            <div className="text-break">{row.original.Name}</div>
             <div className="small-label">#{row.original.Id}</div>
         </>
     );
@@ -763,20 +748,15 @@ function ThreadsTab({ packageId, nodeTag, width }: { packageId: string; nodeTag:
 
     return (
         <>
-            <div className="overview-stats gap-2">
-                <StatTile
-                    label="Process CPU"
-                    icon="processor"
-                    iconColor="info"
-                    value={formatPercentage(info.ProcessCpuUsage)}
-                />
+            <div className="overview-stats gap-3">
+                <StatTile label="Process CPU" icon="hammer-driver" value={formatPercentage(info.ProcessCpuUsage)} />
                 <StatTile label="Threads" icon="thread-stack-trace" value={formatNumber(info.ThreadsCount)} />
                 <StatTile
                     label="Dedicated threads"
                     icon="stack-traces"
                     value={formatNumber(info.DedicatedThreadsCount)}
                 />
-                <StatTile label="Active cores" icon="cluster-node" value={formatNumber(info.ActiveCores)} />
+                <StatTile label="Active cores" icon="processor" value={formatNumber(info.ActiveCores)} />
             </div>
             {table.getRowCount() === 0 ? (
                 <EmptySet compact className="justify-content-center">

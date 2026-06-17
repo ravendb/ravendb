@@ -4,6 +4,7 @@ import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import { ThemeColor } from "components/models/common";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import "./StatTile.scss";
 
 interface StatTileProps {
     label: string;

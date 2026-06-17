@@ -1,0 +1,108 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.segmented-control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: sizes.$gutter-xxxs;
+    padding: sizes.$gutter-xxxs;
+    width: fit-content;
+    max-width: 100%;
+    background: colors.$well-bg-var;
+    border-radius: sizes.$border-radius-md;
+
+    &.segmented-control--full-width {
+        display: flex;
+        width: 100%;
+
+        .segmented-control-btn {
+            flex: 1 1 0;
+            justify-content: center;
+        }
+    }
+
+    .segmented-control-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 0;
+        border-radius: sizes.$border-radius;
+        background: colors.$secondary-var;
+        will-change: transform, width;
+        transition:
+            transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+            width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+            height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .segmented-control-btn {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: sizes.$gutter-xxs;
+        padding: sizes.$gutter-xxs sizes.$gutter-xs;
+        border: none;
+        border-radius: sizes.$border-radius;
+        background: transparent;
+        color: colors.$text-muted-var;
+        cursor: pointer;
+        white-space: nowrap;
+        font-size: 0.875rem;
+        transition: color 0.2s ease;
+
+        &:hover:not(.active) {
+            color: colors.$text-emphasis-var;
+        }
+
+        &.active {
+            color: var(--bs-white);
+
+            .segmented-control-count {
+                background: var(--bs-white);
+                color: colors.$secondary-var;
+            }
+        }
+    }
+
+    .segmented-control-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.4em;
+        padding: 0 sizes.$gutter-xxs;
+        border-radius: sizes.$border-radius-pill;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: colors.$secondary-var;
+        color: var(--bs-white);
+        transition:
+            background-color 0.2s ease,
+            color 0.2s ease;
+    }
+
+    body[data-theme="light"] & {
+        .segmented-control-btn {
+            &.active {
+                color: colors.$text-muted-var;
+
+                .segmented-control-count {
+                    background-color: colors.$secondary-var;
+                    color: colors.$white;
+                }
+            }
+        }
+        .segmented-control-indicator {
+            background-color: colors.$white;
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .segmented-control .segmented-control-indicator {
+        transition: none;
+    }
+}

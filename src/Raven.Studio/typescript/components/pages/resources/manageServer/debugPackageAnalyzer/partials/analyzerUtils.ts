@@ -26,6 +26,25 @@ export interface FlatIssue {
 
 export const severityOrder: IssueSeverity[] = ["Error", "Warning", "Info", "None"];
 
+export interface IssueSummary {
+    total: number;
+    counts: Record<IssueSeverity, number>;
+    worst: IssueSeverity;
+}
+
+// Summarizes a flat issue list for the package health verdict. `worst` is the highest-ranked
+// severity actually present (severityOrder is Error > Warning > Info), or "None" when clean.
+// `total` counts only the displayed severities (Error/Warning/Info), matching what the meter renders.
+export function summarizeIssues(issues: FlatIssue[]): IssueSummary {
+    const counts: Record<IssueSeverity, number> = { Error: 0, Warning: 0, Info: 0, None: 0 };
+    for (const issue of issues) {
+        counts[issue.severity] = (counts[issue.severity] ?? 0) + 1;
+    }
+    const worst = severityOrder.find((severity) => severity !== "None" && counts[severity] > 0) ?? "None";
+    const total = counts.Error + counts.Warning + counts.Info;
+    return { total, counts, worst };
+}
+
 export const issueCategories: IssueCategory[] = ["General", "Cluster", "Server", "Database", "Indexes"];
 
 export const issueScopes: IssueScope[] = ["cluster-wide", "node", "database"];
@@ -122,6 +141,28 @@ export function formatNumber(value: number | undefined): string {
         return "-";
     }
     return value.toLocaleString();
+}
+
+export interface MetricRange {
+    min: number;
+    max: number;
+}
+
+// A parent row's child rows are always replicas of the same data, so we never sum their values -
+// we capture the spread between replicas as a range instead.
+export function toReplicaRange(values: number[]): MetricRange {
+    return {
+        min: Math.min(...values),
+        max: Math.max(...values),
+    };
+}
+
+// Renders a single formatted value when the replicas agree *after formatting* (so near-equal byte
+// sizes that round to the same string collapse, with no arbitrary tolerance), otherwise "min-max".
+export function formatRange(range: MetricRange, format: (value: number) => string): string {
+    const low = format(range.min);
+    const high = format(range.max);
+    return low === high ? low : `${low}–${high}`;
 }
 
 export function countBy<T extends string>(

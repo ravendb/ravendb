@@ -38,7 +38,9 @@ interface ResourceUsageWithSizeProps extends ResourceUsageProps {
 }
 
 function useResourceUsageColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const resourceColumns: ColumnDef<ResourceRow>[] = useMemo(
@@ -117,6 +119,9 @@ export default function ResourceUsage({ summary }: ResourceUsageProps) {
 
 function ResourceUsageWithSize({ summary, width }: ResourceUsageWithSizeProps) {
     const rows = useMemo(() => collectResourceRows(summary), [summary]);
+    // a row is created per node, but a node may carry no CPU/memory/GC data at all - only treat the
+    // section as populated when at least one node actually reported a resource metric
+    const hasResourceData = useMemo(() => rows.some(hasAnyResourceMetric), [rows]);
 
     const { resourceColumns } = useResourceUsageColumns(width);
 
@@ -141,7 +146,7 @@ function ResourceUsageWithSize({ summary, width }: ResourceUsageWithSizeProps) {
             <div className="panel-bg-1 rounded">
                 <div className="p-4">
                     <h3 className="mb-3">Resource Usage</h3>
-                    {rows.length === 0 ? (
+                    {!hasResourceData ? (
                         <EmptySet compact className="justify-content-center">
                             No resource data in the package
                         </EmptySet>
@@ -156,6 +161,19 @@ function ResourceUsageWithSize({ summary, width }: ResourceUsageWithSizeProps) {
 
 function ResourceDirtyMemoryCell({ row }: { row: { original: ResourceRow } }) {
     return <span className={row.original.isHighDirty ? "text-warning" : ""}>{row.original.dirtyMemory ?? "-"}</span>;
+}
+
+function hasAnyResourceMetric(row: ResourceRow): boolean {
+    return (
+        row.processCpu != null ||
+        row.machineCpu != null ||
+        row.cores != null ||
+        row.workingSet != null ||
+        row.availableMemory != null ||
+        row.dirtyMemory != null ||
+        row.gcGeneration != null ||
+        row.gcPause != null
+    );
 }
 
 function collectResourceRows(summary: DebugPackageAnalysisSummary): ResourceRow[] {

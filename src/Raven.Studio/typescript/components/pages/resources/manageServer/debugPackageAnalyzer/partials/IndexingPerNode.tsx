@@ -32,7 +32,9 @@ interface IndexingPerNodeWithSizeProps extends IndexingPerNodeProps {
 }
 
 function useIndexingPerNodeColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const indexingColumns: ColumnDef<IndexingRow>[] = useMemo(

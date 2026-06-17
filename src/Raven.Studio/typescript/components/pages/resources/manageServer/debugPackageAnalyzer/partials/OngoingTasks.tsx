@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
     ColumnDef,
-    ExpandedState,
     Row,
     getCoreRowModel,
     getExpandedRowModel,
@@ -10,12 +9,13 @@ import {
     useReactTable,
 } from "@tanstack/react-table";
 import NodeTagPill from "./NodeTagPill";
-import { ExpandIndicator, NodeTagPillStack, expandableRowProps } from "./nodeStackTable";
+import { ExpandIndicator, NodeTagPillStack, canExpandNodeRow, expandableRowProps } from "./NodeStackTable";
+import { useExpandAllSync } from "./ExpandAllContext";
 import { EmptySet } from "components/common/EmptySet";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { analyzerConstants } from "./analyzerConstants";
-import SummaryBar from "./SummaryBar";
+import Badge from "react-bootstrap/Badge";
 import SizeGetter from "components/common/SizeGetter";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
@@ -63,7 +63,9 @@ interface OngoingTasksWithSizeProps extends OngoingTasksProps {
 }
 
 function useOngoingTasksColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
     const taskColumns: ColumnDef<TaskTableRow>[] = useMemo(
@@ -103,7 +105,7 @@ export default function OngoingTasks({ summary, nodeTag }: OngoingTasksProps) {
 
 function OngoingTasksWithSize({ summary, nodeTag, width }: OngoingTasksWithSizeProps) {
     const rows = useMemo(() => buildTaskRows(summary, nodeTag), [summary, nodeTag]);
-    const [expanded, setExpanded] = useState<ExpandedState>({});
+    const [expanded, setExpanded] = useExpandAllSync();
     const total = rows.reduce((sum, r) => sum + r.count, 0);
 
     const { taskColumns } = useOngoingTasksColumns(width);
@@ -114,7 +116,7 @@ function OngoingTasksWithSize({ summary, nodeTag, width }: OngoingTasksWithSizeP
         state: { expanded },
         onExpandedChange: setExpanded,
         getSubRows: (row) => row.subRows,
-        getRowCanExpand: (row) => (row.original.subRows?.length ?? 0) > 0,
+        getRowCanExpand: canExpandNodeRow,
         enableSorting: rows.length > analyzerConstants.minRowsForControls,
         enableColumnFilters: rows.length > analyzerConstants.minRowsForControls,
         getCoreRowModel: getCoreRowModel(),
@@ -130,8 +132,12 @@ function OngoingTasksWithSize({ summary, nodeTag, width }: OngoingTasksWithSizeP
         <div className="ongoing-tasks">
             <div className="panel-bg-1 rounded">
                 <div className="p-4 vstack gap-3">
-                    <h3 className="mb-0">Ongoing Tasks</h3>
-                    <SummaryBar items={[{ icon: "ongoing-tasks", count: total, label: "total" }]} />
+                    <div className="hstack gap-2 align-items-center">
+                        <h3 className="mb-0">Ongoing Tasks</h3>
+                        <Badge bg="secondary" pill>
+                            {total.toLocaleString()}
+                        </Badge>
+                    </div>
                     {rows.length === 0 ? (
                         <EmptySet compact className="justify-content-center">
                             No ongoing tasks in the package
@@ -150,7 +156,7 @@ function OngoingTaskLabelCell({ row }: { row: Row<TaskTableRow> }) {
         return null;
     }
     return (
-        <span className="hstack gap-1 fw-bold">
+        <span className="hstack gap-1">
             {row.getCanExpand() && <ExpandIndicator expanded={row.getIsExpanded()} />}
             {row.original.label}
         </span>

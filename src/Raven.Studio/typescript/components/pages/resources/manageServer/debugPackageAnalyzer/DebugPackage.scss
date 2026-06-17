@@ -1,6 +1,5 @@
-@use "Content/scss/bs5variables";
-@use "Content/scss/sizes";
 @use "Content/scss/colors";
+@use "Content/scss/sizes";
 
 .flex-window.debug-package-window-fill {
     height: 100%;
@@ -11,10 +10,10 @@
 .debug-package-analyzer {
     .file-dropzone {
         body[data-theme="blue"] & {
-            color: var(--bs-secondary-color);
+            color: colors.$secondary-var;
 
             .text-muted {
-                color: var(--bs-secondary-color) !important;
+                color: colors.$secondary-var !important;
             }
         }
     }
@@ -39,93 +38,42 @@
         }
     }
 
-    .analysis-progress {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        text-align: center;
-        padding: 2rem;
-        border: 2px dashed var(--border-color-light);
-        border-radius: var(--bs-border-radius-md);
-        background-color: var(--input-bg);
-        color: var(--text-muted);
-
-        .analysis-progress-text {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .analysis-progress-title {
-            font-size: 1.1rem;
-            color: var(--text-emphasis);
-        }
-
-        .analysis-progress-bar {
-            position: relative;
-            width: min(420px, 80%);
-            height: 6px;
-            border-radius: 100px;
-            background-color: var(--border-color-light);
-            overflow: hidden;
-        }
-
-        .analysis-progress-bar-fill {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 40%;
-            border-radius: inherit;
-            background-color: var(--bs-primary);
-            animation: analysis-progress-indeterminate 1.2s ease-in-out infinite;
-        }
-    }
-
     body[data-theme="dark"] &,
     body[data-theme="classic"] & {
         .database-index-definitions {
             .rich-panel-item {
-                --bs-card-bg: var(--panel-bg-2);
+                --bs-card-bg: colors.$panel-bg-2-var;
             }
 
             .index-definition-body {
-                background: var(--well-bg);
+                background: colors.$well-bg-var;
 
                 .code,
                 .code .code-classes {
-                    background-color: var(--panel-bg-1);
+                    background-color: colors.$panel-bg-1-var;
                 }
             }
         }
     }
 
-    // light mode: panel-header-bg equals panel-bg-1 so summary bars are invisible;
-    // drop one step to panel-bg-2 to restore the distinction.
-    // rich-panel-item cards also share panel-bg-1 with their container – bump them
-    // to panel-bg-2 so individual index/task rows read as distinct surfaces.
     body[data-theme="light"] & {
         .panel-header-bg {
-            background-color: var(--panel-bg-2) !important;
+            background-color: colors.$panel-bg-2-var !important;
         }
 
         .database-index-definitions .rich-panel-item {
-            background-color: var(--panel-bg-2);
+            background-color: colors.$panel-bg-2-var;
 
             .card-header {
-                background-color: var(--panel-bg-2);
+                background-color: colors.$panel-bg-2-var;
             }
 
             .index-definition-body {
-                background: var(--pre-bg);
+                background: colors.$pre-bg-var;
             }
         }
     }
 
-    // blue mode: apply the same light-zone variable overrides that .virtual-grid
-    // gets globally, scoped to this view only so no global styles are touched.
     body[data-theme="blue"] & {
         .virtual-table {
             --text-color: #232e45;
@@ -143,37 +91,27 @@
         }
     }
 
-    // blue mode: --bs-body-color and --bs-secondary-color resolve to dark navy
-    // because Bootstrap compiles them against the light colour scale, but all panel
-    // backgrounds are dark in blue mode – flip those tokens to the light variants.
     body[data-theme="blue"] & {
         .small-label,
         .issue-group-header {
-            color: var(--text-muted);
-        }
-
-        .analysis-results,
-        .cluster-observer-decisions {
-            .severity-cards .severity-card {
-                color: var(--text-color);
-            }
+            color: colors.$text-muted-var;
         }
 
         .react-select-container {
             .react-select__control--is-disabled {
-                background-color: var(--input-bg) !important;
+                background-color: colors.$input-bg-var !important;
             }
 
             .react-select__value-container * {
-                color: var(--bs-body-color) !important;
+                color: colors.$body-bg-var !important;
             }
 
             .react-select__placeholder {
-                color: var(--bs-secondary-color) !important;
+                color: colors.$secondary-var !important;
             }
 
             .react-select__dropdown-indicator {
-                color: var(--bs-body-color);
+                color: colors.$body-bg-var;
             }
         }
     }
@@ -183,105 +121,10 @@
         overflow: auto;
         white-space: pre-wrap;
         word-break: break-word;
-        font-size: 12px;
-    }
-
-    .package-info {
-        min-width: 280px;
-    }
-
-    .context-toggle {
-        .context-toggle-label {
-            font-size: 0.875rem;
-            color: var(--text-emphasis);
-        }
-
-        .context-toggle-container {
-            --context-indicator-bg: var(--bs-secondary);
-
-            position: relative;
-            background: var(--well-bg);
-            border: 1px solid var(--border-color-light);
-            border-radius: 0.5rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px;
-
-            body[data-theme="light"] & {
-                --context-indicator-bg: var(--faded-primary);
-            }
-
-            &.w-100 {
-                display: flex;
-            }
-        }
-
-        .context-toggle-indicator {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 0;
-            border-radius: 4px;
-            background: var(--context-indicator-bg);
-            will-change: transform;
-            transition:
-                transform 0.25s ease,
-                width 0.25s ease;
-        }
-
-        .context-toggle-btn {
-            position: relative;
-            z-index: 1;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 4px;
-            border: none;
-            background: transparent;
-            color: var(--text-muted);
-            cursor: pointer;
-            white-space: nowrap;
-            font-size: 0.9rem;
-            transition: color 0.15s;
-
-            &:hover:not(.active) {
-                color: var(--text-emphasis);
-            }
-
-            &.active {
-                color: var(--bs-white);
-
-                .context-toggle-badge {
-                    background: var(--bs-white);
-                    color: var(--bs-secondary);
-                }
-
-                body[data-theme="light"] & {
-                    color: var(--text-faded-primary);
-
-                    .context-toggle-badge {
-                        background: var(--text-faded-primary);
-                        color: var(--faded-primary);
-                    }
-                }
-            }
-
-            .context-toggle-badge {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                min-width: 1.4em;
-                padding: 1px 6px;
-                border-radius: 100px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                background: colors.$secondary-var;
-                color: colors.$white;
-            }
-        }
+        font-size: 0.75rem;
+        padding: sizes.$gutter-xs;
+        background-color: colors.$panel-bg-2-var;
+        border-radius: sizes.$border-radius-sm;
     }
 
     h2 .icon-addon-search::after {
@@ -294,265 +137,8 @@
         line-height: 1;
     }
 
-    .small-label {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-    }
-
     .group-by-control {
         min-width: 200px;
-    }
-
-    .node-select {
-        min-width: 220px;
-    }
-
-    .node-tag-circle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 21px;
-        height: 21px;
-        border-radius: 50%;
-        font-size: 0.6rem;
-        font-weight: 800;
-        flex-shrink: 0;
-        text-transform: uppercase;
-        color: colors.$well-bg-var;
-    }
-
-    // collapsed parent row: node avatars overlap like a shadcn-style avatar group, with a ring in the
-    // row color so each circle reads as separate. The first node is rendered on top (z-index set inline).
-    .node-tag-stack {
-        display: inline-flex;
-        align-items: center;
-
-        .node-tag-stack-item {
-            position: relative;
-            display: inline-flex;
-
-            &:not(:first-child) {
-                margin-left: -0.45rem;
-            }
-        }
-
-        // ring matches the row background; rows alternate, so even rows use row-even-bg and .is-odd
-        // rows are overridden to row-bg below (see VirtualTable.scss striping).
-        // content-box keeps the coloured disc at the base 21px and puts the ring outside it, so a
-        // stacked (ringed) circle reads at the same size as a plain circle in the expanded rows.
-        .node-tag-circle {
-            box-sizing: content-box;
-            border: 2px solid colors.$row-even-bg-var;
-        }
-    }
-
-    tr.is-odd .node-tag-stack .node-tag-circle {
-        border-color: colors.$row-bg-var;
-    }
-
-    // parent rows can be expanded/collapsed by clicking anywhere on the row; brighten on hover so the
-    // affordance matches the rest of the Studio (shared --hover-filter)
-    tr.clickable-row {
-        cursor: pointer;
-        transition: none;
-
-        &:hover {
-            filter: colors.$hover-filter-var;
-            transition: bs5variables.$transition-base;
-        }
-    }
-
-    // small, muted expand/collapse chevron that rotates when its row is expanded
-    .node-table-chevron {
-        transition: transform 0.15s ease;
-        color: colors.$border-color-light-var;
-
-        &.expanded {
-            transform: rotate(90deg);
-        }
-    }
-
-    .stat-tile-label {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    // truncate long text inside stat-tile (flex container prevents auto-truncation)
-    .stat-tile-value {
-        min-width: 0;
-        overflow: hidden;
-    }
-
-    .stat-tile-text {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        min-width: 0;
-    }
-
-    // truncate long node URLs inside stat-tile (flex container prevents auto-truncation)
-    .node-url-link {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: block;
-        min-width: 0;
-        max-width: 260px;
-    }
-
-    .storage-per-database,
-    .indexing-per-node {
-        min-width: 360px;
-    }
-
-    // long auto-index names would otherwise stretch the table and push columns off-screen
-    .database-index-stats .index-name {
-        max-width: 360px;
-    }
-
-    .sortable-header {
-        cursor: pointer;
-        user-select: none;
-        white-space: nowrap;
-
-        // the active column always shows its sort arrow solid; inactive columns reveal a faint
-        // arrow on hover as a "click to sort" affordance (no theme-color change, which read as black)
-        .sortable-header-arrow-inactive {
-            opacity: 0;
-        }
-
-        &:hover .sortable-header-arrow-inactive {
-            opacity: 0.4;
-        }
-    }
-
-    .analysis-results,
-    .cluster-observer-decisions {
-        .small-label {
-            font-size: 0.875em;
-            text-transform: none;
-            letter-spacing: normal;
-            margin-left: 0 !important;
-        }
-
-        .severity-cards {
-            // split-button: colored-icon + inline count+label on the left, arrow tab on the right
-            .severity-card {
-                flex: 1 1 0;
-                display: flex;
-                align-items: stretch;
-                padding: 0;
-                border: 1px solid var(--border-color-light);
-                border-radius: var(--bs-border-radius);
-                overflow: hidden;
-                cursor: pointer;
-                transition: box-shadow 0.15s ease;
-                background: transparent;
-                color: var(--bs-body-color);
-                text-align: left;
-
-                .severity-card-content {
-                    flex: 1 0 0;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 0.875rem 1rem;
-                    background: var(--panel-bg-2);
-                    min-width: 0;
-                }
-
-                .severity-card-text {
-                    font-size: 1rem;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-
-                .severity-card-arrow {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 0.75rem;
-                    min-width: 46px;
-                    flex-shrink: 0;
-                    background: var(--panel-bg-3);
-                    border-left: 1px solid var(--border-color-light);
-                }
-
-                &:disabled,
-                &.severity-card--empty {
-                    opacity: 0.4;
-                    cursor: default;
-                }
-
-                // active ring uses the severity color
-                &.severity-card--danger.active {
-                    box-shadow:
-                        0 0 0 2px var(--bs-danger),
-                        0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
-                }
-
-                &.severity-card--warning.active {
-                    box-shadow:
-                        0 0 0 2px var(--bs-warning),
-                        0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
-                }
-
-                &.severity-card--info.active {
-                    box-shadow:
-                        0 0 0 2px var(--bs-info),
-                        0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
-                }
-
-                &:not(:disabled):not(.severity-card--empty):not(.active):hover {
-                    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
-
-                    .severity-card-arrow {
-                        filter: brightness(1.3);
-                    }
-                }
-            }
-        }
-
-        .issue-group-header {
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--bs-secondary-color);
-            padding: 0.5rem 0.25rem 0.375rem;
-        }
-
-        .issue-row {
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border-color-light);
-            border-radius: var(--bs-border-radius);
-            background: var(--panel-bg-2);
-            margin-bottom: 0.375rem;
-
-            &:last-child {
-                margin-bottom: 0;
-            }
-        }
-
-        .issue-description {
-            &.clamped {
-                display: -webkit-box;
-                -webkit-line-clamp: 3;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
-
-            &.expanded {
-                max-height: 320px;
-                overflow: auto;
-                // keep the same font/size as the collapsed preview - only reveal the full text
-                white-space: pre-wrap;
-                word-break: break-word;
-            }
-        }
     }
 
     .overview-stats {
@@ -571,23 +157,9 @@
             font-weight: 600;
         }
     }
-}
 
-@keyframes analysis-progress-indeterminate {
-    0% {
-        left: -40%;
-    }
-    100% {
-        left: 100%;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .debug-package-analyzer .context-toggle-indicator {
-        transition: none;
-    }
-
-    .debug-package-analyzer .analysis-progress-bar-fill {
-        animation-duration: 2.4s;
+    .database-context-group-heading {
+        font-size: 1.25rem;
+        margin: 0;
     }
 }

@@ -35,7 +35,9 @@ interface DatabaseOngoingTasksWithSizeProps extends DatabaseOngoingTasksProps {
 }
 
 function useDatabaseOngoingTasksColumns(availableWidth: number) {
-    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(
+        availableWidth - analyzerConstants.panelHorizontalPaddingInPx
+    );
 
     const taskColumns: ColumnDef<OngoingTask>[] = useMemo(() => {
         const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
@@ -44,7 +46,7 @@ function useDatabaseOngoingTasksColumns(availableWidth: number) {
                 header: "Task",
                 id: "type",
                 accessorFn: (task) => taskTypeLabel(task.TaskType),
-                cell: ({ getValue }) => <span className="fw-bold">{getValue<string>()}</span>,
+                cell: ({ getValue }) => <span>{getValue<string>()}</span>,
                 size: getSize(25),
             },
             {

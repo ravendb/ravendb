@@ -83,7 +83,6 @@ export default function ClusterRaftDebug({ summary }: ClusterRaftDebugProps) {
 
     return (
         <div className="cluster-raft-debug">
-            <h3 className="mb-3">Cluster Debug</h3>
             {raft.loading ? (
                 <div className="hstack gap-2 justify-content-center text-muted py-3">
                     <Spinner size="sm" /> Loading cluster raft log...
@@ -94,14 +93,15 @@ export default function ClusterRaftDebug({ summary }: ClusterRaftDebugProps) {
                 </EmptySet>
             ) : (
                 <div className="vstack gap-3">
-                    <ClusterDebugGlobalInfo nodes={loadableNodes} />
                     <div className="panel-bg-1 rounded">
                         <div className="p-4">
-                            <h4>Summary</h4>
+                            <h3 className="mb-3">Cluster Debug</h3>
+                            <ClusterDebugGlobalInfo nodes={loadableNodes} cardClassName="panel-bg-2" fillWidth />
+                            <h4 className="mt-3">Summary</h4>
                             <RaftSummaryTable results={results} />
                         </div>
+                        <LogEntriesCard results={results} />
                     </div>
-                    <LogEntriesCard results={results} />
                 </div>
             )}
         </div>
@@ -400,66 +400,58 @@ function LogEntriesCard({ results }: { results: NodeRaftResult[] }) {
     const commitIndex = log?.CommitIndex ?? 0;
 
     return (
-        <div className="panel-bg-1 rounded">
-            <div className="p-4">
-                <h4 className="hstack align-items-center">Log Entries</h4>
-                <div className="cluster-debug-entries">
-                    {withLogs.length === 0 ? (
-                        <EmptySet compact className="justify-content-center">
-                            No log entries captured for this node
-                        </EmptySet>
-                    ) : (
-                        <>
-                            <ul className="nav nav-tabs mb-2">
-                                {withLogs.map((result) => (
-                                    <li key={result.nodeTag} className="nav-item">
-                                        <button
-                                            type="button"
-                                            className={classNames("nav-link no-decor", {
-                                                active: result.nodeTag === activeNodeTag,
-                                            })}
-                                            onClick={() => setSelectedNodeTag(result.nodeTag)}
-                                        >
-                                            <div className="d-flex gap-1 align-items-center">
-                                                <Icon
-                                                    icon={
-                                                        result.info?.role === "Leader"
-                                                            ? "node-leader"
-                                                            : "cluster-member"
-                                                    }
-                                                    color="node"
-                                                />
-                                                <span className="text-nowrap">Node {result.nodeTag}</span>
-                                            </div>
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                            {entries.length === 0 ? (
-                                <EmptySet compact className="justify-content-center">
-                                    No log entries captured for this node
-                                </EmptySet>
-                            ) : (
-                                <>
-                                    {log && (
-                                        <div className="px-1 py-2 small text-muted">
-                                            {entries.length.toLocaleString()} captured /{" "}
-                                            {log.TotalEntries.toLocaleString()} total
-                                            {entries.length > maxEntriesShown
-                                                ? ` (showing last ${maxEntriesShown})`
-                                                : ""}
+        <div className="p-4 pt-0">
+            <h3 className="hstack align-items-center">Log Entries</h3>
+            <div className="cluster-debug-entries">
+                {withLogs.length === 0 ? (
+                    <EmptySet compact className="justify-content-center">
+                        No log entries captured for this node
+                    </EmptySet>
+                ) : (
+                    <>
+                        <ul className="nav nav-tabs mb-2">
+                            {withLogs.map((result) => (
+                                <li key={result.nodeTag} className="nav-item">
+                                    <button
+                                        type="button"
+                                        className={classNames("nav-link no-decor", {
+                                            active: result.nodeTag === activeNodeTag,
+                                        })}
+                                        onClick={() => setSelectedNodeTag(result.nodeTag)}
+                                    >
+                                        <div className="d-flex gap-1 align-items-center">
+                                            <Icon
+                                                icon={result.info?.role === "Leader" ? "node-leader" : "cluster-member"}
+                                                color="node"
+                                            />
+                                            <span className="text-nowrap">Node {result.nodeTag}</span>
                                         </div>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                        {entries.length === 0 ? (
+                            <EmptySet compact className="justify-content-center">
+                                No log entries captured for this node
+                            </EmptySet>
+                        ) : (
+                            <>
+                                {log && (
+                                    <div className="px-1 py-2 small text-muted">
+                                        {entries.length.toLocaleString()} captured / {log.TotalEntries.toLocaleString()}{" "}
+                                        total
+                                        {entries.length > maxEntriesShown ? ` (showing last ${maxEntriesShown})` : ""}
+                                    </div>
+                                )}
+                                <SizeGetter
+                                    render={({ width }) => (
+                                        <LogEntriesTable shown={shown} commitIndex={commitIndex} width={width} />
                                     )}
-                                    <SizeGetter
-                                        render={({ width }) => (
-                                            <LogEntriesTable shown={shown} commitIndex={commitIndex} width={width} />
-                                        )}
-                                    />
-                                </>
-                            )}
-                        </>
-                    )}
-                </div>
+                                />
+                            </>
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );
@@ -514,5 +506,5 @@ function LogEntriesTable({ shown, commitIndex, width }: { shown: LogEntry[]; com
         getFilteredRowModel: getFilteredRowModel(),
     });
 
-    return <VirtualTable table={table} heightInPx={500} />;
+    return <VirtualTable table={table} heightInPx={virtualTableUtils.getHeightInPx(shown.length, 500)} />;
 }

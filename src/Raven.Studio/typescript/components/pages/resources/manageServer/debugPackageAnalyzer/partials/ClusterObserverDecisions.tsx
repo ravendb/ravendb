@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import Form from "react-bootstrap/Form";
 import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { EmptySet } from "components/common/EmptySet";
-import NodeTagPill from "./NodeTagPill";
 import StatTile from "./StatTile";
-import Select, { SelectOption } from "components/common/select/Select";
+import SegmentedControl from "components/common/SegmentedControl";
 import genUtils from "common/generalUtils";
 import {
     ColumnDef,
@@ -19,6 +17,7 @@ import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { analyzerConstants } from "./analyzerConstants";
 import SizeGetter from "components/common/SizeGetter";
+import "./AnalysisResults.scss";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type ClusterObserverDecisionsDto = Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions;
@@ -55,48 +54,35 @@ function ObserverBody({ results, width }: ObserverBodyProps) {
     );
 
     const [selectedNode, setSelectedNode] = useState<string>(ranked[0]?.nodeTag ?? null);
-    const [filter, setFilter] = useState<string>("");
 
     const selected = ranked.find((result) => result.nodeTag === selectedNode);
     const decisions = selected?.decisions;
     const log = decisions?.ObserverLog ?? [];
 
-    const filtered = useMemo(() => {
-        const needle = filter.trim().toLowerCase();
-        const base = needle
-            ? log.filter(
-                  (entry) =>
-                      (entry.Message ?? "").toLowerCase().includes(needle) ||
-                      (entry.Database ?? "").toLowerCase().includes(needle)
-              )
-            : log;
-        // newest first; slice before reversing so we only copy at most maxObserverEntriesShown entries
-        return base.length > maxObserverEntriesShown
-            ? base.slice(-maxObserverEntriesShown).reverse()
-            : [...base].reverse();
-    }, [log, filter]);
+    const logEntries = useMemo(() => {
+        // newest first; slice before reversing so we only copy at most maxObserverEntriesShown entries.
+        // filtering by database/message is handled by the table's built-in per-column filters.
+        return log.length > maxObserverEntriesShown
+            ? log.slice(-maxObserverEntriesShown).reverse()
+            : [...log].reverse();
+    }, [log]);
 
     const totalEntries = log.length;
-
-    const nodeOptions: SelectOption<string>[] = ranked.map((result) => ({
-        value: result.nodeTag,
-        label: `Node ${result.nodeTag} (${(result.decisions.ObserverLog?.length ?? 0).toLocaleString()})`,
-    }));
 
     const { logColumns } = useLogColumns(width);
 
     const table = useReactTable({
-        data: filtered,
+        data: logEntries,
         columns: logColumns,
-        enableSorting: filtered.length > analyzerConstants.minRowsForControls,
-        enableColumnFilters: filtered.length > analyzerConstants.minRowsForControls,
+        enableSorting: logEntries.length > analyzerConstants.minRowsForControls,
+        enableColumnFilters: true,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getRowId: (_row, index) => String(index),
     });
 
-    const heightInPx = virtualTableUtils.getHeightInPx(filtered.length, 500);
+    const heightInPx = virtualTableUtils.getHeightInPx(logEntries.length, 500);
 
     return (
         <div className="vstack gap-3">
@@ -105,7 +91,8 @@ function ObserverBody({ results, width }: ObserverBodyProps) {
                     className="flex-fill"
                     label="Leader node"
                     icon="node-leader"
-                    value={decisions?.LeaderNode ? <NodeTagPill tag={decisions.LeaderNode} /> : "n/a"}
+                    iconColor="node"
+                    value={decisions?.LeaderNode ? <span>{decisions.LeaderNode}</span> : "n/a"}
                 />
                 <StatTile
                     className="flex-fill"
@@ -130,48 +117,29 @@ function ObserverBody({ results, width }: ObserverBodyProps) {
             </div>
 
             <div className="vstack gap-2">
-                <h4 className="m-0">Decisions log</h4>
-                <div className="hstack gap-2 align-items-end flex-wrap">
-                    {nodeOptions.length > 1 && (
-                        <div>
-                            <div className="small-label ms-1 mb-1">Node</div>
-                            <div className="node-select">
-                                <Select
-                                    options={nodeOptions}
-                                    value={nodeOptions.find((o) => o.value === selected?.nodeTag)}
-                                    onChange={(option) => option && setSelectedNode(option.value)}
-                                    isSearchable={false}
-                                    isRoundedPill
-                                />
-                            </div>
-                        </div>
+                <div className="hstack gap-2 align-items-center flex-wrap">
+                    <h4 className="m-0">Decisions log</h4>
+                    {totalEntries > maxObserverEntriesShown && (
+                        <span className="small-label text-muted">
+                            latest {maxObserverEntriesShown.toLocaleString()} shown
+                        </span>
                     )}
-                    <div>
-                        <div className="small-label mb-1">Filter by message</div>
-                        <Form.Control
-                            type="text"
-                            size="sm"
-                            style={{ maxWidth: "400px" }}
-                            placeholder="Filter by message or database"
-                            value={filter}
-                            onChange={(e) => setFilter(e.target.value)}
-                        />
-                    </div>
-                    <span className="small-label ms-auto">
-                        {filtered.length.toLocaleString()} {filter ? "matching" : "entries"}
-                        {!filter && totalEntries > maxObserverEntriesShown && (
-                            <>
-                                {" "}
-                                (showing latest {maxObserverEntriesShown.toLocaleString()} of{" "}
-                                {totalEntries.toLocaleString()})
-                            </>
-                        )}
-                    </span>
                 </div>
+                {ranked.length > 1 && (
+                    <SegmentedControl
+                        items={ranked.map((result) => ({
+                            value: result.nodeTag,
+                            label: `Node ${result.nodeTag}`,
+                            count: result.decisions.ObserverLog?.length ?? 0,
+                        }))}
+                        selected={selectedNode}
+                        onSelect={setSelectedNode}
+                    />
+                )}
 
-                {filtered.length === 0 ? (
+                {logEntries.length === 0 ? (
                     <EmptySet compact className="justify-content-center">
-                        {filter ? "No decisions match the filter" : "No observer decisions captured for this node"}
+                        No observer decisions captured for this node
                     </EmptySet>
                 ) : (
                     <VirtualTable table={table} heightInPx={heightInPx} />
@@ -233,6 +201,7 @@ function useLogColumns(availableWidth: number) {
             {
                 header: "Date",
                 accessorKey: "Date",
+                enableColumnFilter: false,
                 cell: ({ getValue }) => {
                     const v = getValue<string>();
                     return v ? genUtils.formatUtcDateAsLocal(v) : "-";
