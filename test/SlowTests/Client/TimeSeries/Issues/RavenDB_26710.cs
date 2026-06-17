@@ -6,7 +6,6 @@ using Raven.Client.Documents;
 using Raven.Server.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Issues
 {
