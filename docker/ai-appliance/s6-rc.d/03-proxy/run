@@ -1,0 +1,32 @@
+#!/command/with-contenv sh
+set -e
+
+# nginx :443 SNI front (Phase 1). It terminates TLS for the web subdomains with the setup package's
+# wildcard cert, which only exists post-activation. Wait for it; pre-activation the operator reaches
+# the dashboard on the published :5000 (first-run). db.*/a.* are TLS-passthrough to RavenDB.
+
+SETUP_DIR="${RAVEN_AI_SETUP_PACKAGE_PATH:-/var/lib/ai-appliance/setup}"
+PROXY_DIR=/var/lib/ai-appliance/proxy
+mkdir -p "$PROXY_DIR"
+
+i=0
+while [ -z "$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx 2>/dev/null)" ]; do
+    i=$((i + 1))
+    if [ "$i" -ge 600 ]; then
+        echo "03-proxy: wildcard cert not present at $SETUP_DIR/A after 600s; aborting." >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+PFX="$(ls "$SETUP_DIR"/A/cluster.server.certificate.*.pfx | head -n1)"
+
+# Unprotected PFX (RavenDB setup wizard) -> PEM for nginx. Build a leaf-first fullchain (leaf + CA
+# chain) so clients that don't already cache the intermediate still validate.
+openssl pkcs12 -in "$PFX" -nokeys -clcerts -passin pass: -out "$PROXY_DIR/leaf.pem"
+openssl pkcs12 -in "$PFX" -nokeys -cacerts -passin pass: -out "$PROXY_DIR/chain.pem"
+cat "$PROXY_DIR/leaf.pem" "$PROXY_DIR/chain.pem" > "$PROXY_DIR/fullchain.pem"
+openssl pkcs12 -in "$PFX" -nocerts -nodes  -passin pass: -out "$PROXY_DIR/privkey.pem"
+chmod 600 "$PROXY_DIR/privkey.pem"
+
+exec nginx -c /etc/nginx/nginx.conf -g 'daemon off;'

@@ -20,10 +20,11 @@ public static class RavenStoreFactory
         ArgumentException.ThrowIfNullOrWhiteSpace(options.ConfigDatabase, nameof(ApplianceOptions.ConfigDatabase));
 
         // Post-activation: A/settings.json carries the LE-bound PublicServerUrl
-        // (e.g. https://a.egor-ai.ravendb.run) and the matching admin client
-        // cert sits at the package root. Connect via the public hostname so
-        // RavenDB's server cert validates — /etc/hosts (written by the s6 run
-        // script) pins that hostname back to 127.0.0.1 inside the container.
+        // (e.g. https://a.egor-ai.ravendb.run) and the matching admin client cert
+        // sits at the package root. We connect via the public hostname (so the
+        // wildcard server cert validates) — *.ravendb.run resolves to 127.0.0.1 via
+        // public DNS, no /etc/hosts hack needed — but on the loopback HTTPS port
+        // RavenDB now binds, since nginx owns :443 (see the port rewrite below).
         if (TryCreateSecureStore(options, out var secureStore))
             return secureStore;
 
@@ -126,11 +127,17 @@ public static class RavenStoreFactory
                 ex);
         }
 
+        // nginx owns :443; RavenDB listens on the loopback internal port. Keep the wildcard-cert
+        // hostname (resolves to loopback), swap the port. DisableTopologyUpdates so this single-node
+        // store keeps the explicit URL and never adopts the advertised :443 PublicServerUrl (now nginx).
+        var connectUrl = new UriBuilder(publicUrl) { Port = options.RavenInternalPort }.Uri.ToString().TrimEnd('/');
+
         var secured = new DocumentStore
         {
-            Urls = [publicUrl],
+            Urls = [connectUrl],
             Database = options.ConfigDatabase,
             Certificate = adminCert,
+            Conventions = { DisableTopologyUpdates = true },
         };
         secured.Initialize();
         store = secured;

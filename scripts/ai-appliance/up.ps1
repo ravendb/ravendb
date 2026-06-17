@@ -23,22 +23,17 @@
   semantics RavenDB needs.
 
 .PARAMETER WithStudio
-  Publish RavenDB's secure port 443 so you can open
-  https://a.egor-ai.ravendb.run/ in a browser and reach Studio. Off by default
-  (the design's loopback-only acceptance §3.9 stays intact for the normal demo
-  run). Also auto-imports the admin client cert from the demo zip into
-  Cert:\CurrentUser\My so Chrome can authenticate; idempotent (re-runs skip
-  the import if the thumbprint is already in the store).
+  Import the admin client cert from the demo zip into Cert:\CurrentUser\My so the browser can
+  authenticate to RavenDB Studio (reached through the proxy's db.* TLS-passthrough at
+  https://db.egor-ai.ravendb.run/). Idempotent. nginx already fronts :443, so this no longer
+  publishes a port -- it only does the cert import.
 
-  *.ravendb.run has public-DNS A records pointing to 127.0.0.1, so no
-  hosts-file edit is needed on the Windows side. Chrome will prompt to pick
-  the imported client cert on the first request to Studio.
+  *.ravendb.run has public-DNS A records pointing to 127.0.0.1, so no hosts-file edit is needed.
 
-.PARAMETER StudioHostPort
-  Host port to publish for RavenDB's 443. Default: 443. Use a non-privileged
-  port (e.g. 8443) if 443 is taken by another service; the browser URL then
-  becomes https://a.egor-ai.ravendb.run:<port>/ and the cert still validates
-  (it's bound to the domain, not the port). Only meaningful with -WithStudio.
+.PARAMETER HttpsPort
+  Host port mapped to the container's :443 (the nginx SNI front). Default: 443. Use a non-privileged
+  port (e.g. 8443) if 443 is taken; the browser URLs then carry that port and the wildcard cert still
+  validates (bound to the domain, not the port).
 
 .PARAMETER ApiKey
   Operator API key the dashboard login validates against (QUILL_API_KEY). Demo
@@ -65,7 +60,7 @@ param(
     [int]$Port = 5000,
     [string]$Volume = 'ai-appliance-data',
     [switch]$WithStudio,
-    [int]$StudioHostPort = 443,
+    [int]$HttpsPort = 443,
     [string]$ApiKey = 'egor',
     [string]$LicenseKey = 'egor'
 )
@@ -109,6 +104,8 @@ $runArgs = @(
     # securely.
     '--restart=unless-stopped',
     '-p', "${Port}:5000",
+    # nginx fronts the container's :443 (the SNI router); :5000 stays for first-run / pre-activation.
+    '-p', "${HttpsPort}:443",
     '-v', "${Volume}:/var/lib/ai-appliance",
     # Operator auth: QUILL_API_KEY gates the dashboard login + the api.* surface
     # (required; auth fails closed without it). QUILL_LICENSE_KEY is the activation
@@ -126,8 +123,8 @@ if ($demoZip -and (Test-Path $demoZip)) {
     $runArgs += @('-v', "${resolvedZip}:/var/lib/ai-appliance/setup-source.zip:ro")
 }
 if ($WithStudio) {
-    Write-Host "-WithStudio enabled: publishing RavenDB on https://localhost:$StudioHostPort and importing admin cert." -ForegroundColor Yellow
-    $runArgs += @('-p', "${StudioHostPort}:443")
+    Write-Host "-WithStudio: importing the admin client cert so the browser can reach RavenDB Studio at https://db.egor-ai.ravendb.run/." -ForegroundColor Yellow
+    # nginx already fronts :443 (published above); no extra RavenDB port publish needed.
 
     # Auto-import the admin client cert from the demo zip so Chrome can
     # authenticate to Studio. RavenDB rejects any client cert that isn't in
@@ -175,17 +172,14 @@ $runArgs += $Tag
 Write-Host "Starting $Tag on http://localhost:$Port (volume: $Volume)..." -ForegroundColor Cyan
 & docker @runArgs | Out-Null
 
+$portSuffix = if ($HttpsPort -eq 443) { '' } else { ":$HttpsPort" }
 Write-Host ''
-Write-Host "Dashboard: http://localhost:$Port - sign in on /login with the API key '$ApiKey'." -ForegroundColor Green
-Write-Host "Activation runs automatically at startup; wait for status Ready at /api/bootstrap/status (~30-60s)." -ForegroundColor DarkGray
-
-if ($WithStudio) {
-    # RavenDB's root path 302-redirects to /studio/index.html; the bare URL is
-    # what the user types and the browser follows the redirect transparently.
-    $studioUrl = if ($StudioHostPort -eq 443) { 'https://a.egor-ai.ravendb.run/' } else { "https://a.egor-ai.ravendb.run:$StudioHostPort/" }
-    Write-Host ''
-    Write-Host "Studio: $studioUrl  (Chrome will prompt for client cert on first request)" -ForegroundColor Green
-}
+Write-Host "Sign in:  https://dashboard.egor-ai.ravendb.run$portSuffix/   (API key: $ApiKey)" -ForegroundColor Green
+Write-Host "  API:     https://api.egor-ai.ravendb.run$portSuffix/        (header X-Api-Key: $ApiKey)" -ForegroundColor DarkGray
+Write-Host "  Public:  https://public.egor-ai.ravendb.run$portSuffix/     (iframe embed-link tokens)" -ForegroundColor DarkGray
+Write-Host "  RavenDB: https://db.egor-ai.ravendb.run$portSuffix/         (Studio; run with -WithStudio to import the client cert)" -ForegroundColor DarkGray
+Write-Host "First-run only (pre-activation, before nginx has the cert): http://localhost:$Port" -ForegroundColor DarkGray
+Write-Host "Activation is automatic at startup; :443 comes up once /api/bootstrap/status is Ready (~30-60s)." -ForegroundColor DarkGray
 
 Write-Host ''
 Write-Host 'Tailing logs (Ctrl+C to detach; container keeps running):' -ForegroundColor Cyan

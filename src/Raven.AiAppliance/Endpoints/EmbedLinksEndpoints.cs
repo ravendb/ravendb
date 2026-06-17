@@ -191,9 +191,8 @@ public static class EmbedLinksEndpoints
             await cfg.SaveChangesAsync(ct);
         }
 
-        // Include PathBase so the URL is correct when the appliance is hosted under
-        // a sub-path. (Scheme/Host behind a TLS proxy is the separate, deferred M2
-        // limitation — no UseForwardedHeaders today.)
+        // Include PathBase so the URL is correct when the appliance is hosted under a sub-path.
+        // Scheme/Host are correct behind the nginx :443 front via UseForwardedHeaders (Program.cs).
         var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}{ctx.Request.PathBase}/embed/{token}";
         logger.LogInformation(
             "Minted embed link slug={Slug} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",

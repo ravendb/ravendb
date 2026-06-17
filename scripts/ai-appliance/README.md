@@ -3,13 +3,15 @@
 End-to-end: stand up the appliance in Docker, point it at a Northwind PostgreSQL source it mirrors via CDC,
 provision an AI agent, and chat with it through an embeddable iframe.
 
-The appliance is a single Docker image bundling **RavenDB** (secure) + the **appliance web app** (port 5000),
-supervised by s6. `up.ps1` builds and runs it; `down.ps1` tears it down.
+The appliance is a single Docker image bundling an **nginx** TLS/SNI front (`:443`) + **RavenDB** (secure) +
+the **appliance web app** (`:5000`), supervised by s6. `up.ps1` builds and runs it; `down.ps1` tears it down.
 
 ```
-operator ── browser ──> appliance :5000 ──> RavenDB (in-container, secure)
-                                     │
-                                     └─ CDC ──> PostgreSQL (Northwind)  ── mirrors ──> RavenDB collections
+browser ─HTTPS :443─> nginx (routes by SNI, one wildcard cert)
+                         ├─ dashboard.* / api.* ─(TLS terminate)──────> appliance web :5000
+                         ├─ public.*            ─(TLS terminate)──────> appliance web :5000  (/embed)
+                         └─ db.* / a.*          ─(TLS passthrough, mTLS)─> RavenDB (in-container, secure)
+appliance web ──> RavenDB ──CDC──> PostgreSQL (Northwind) ── mirrors ──> RavenDB collections
 agent turn ──> appliance ──> RavenDB AI ──> OpenAI / Ollama (LLM)
 ```
 
@@ -91,10 +93,11 @@ $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH = 'C:\path\to\setup-package.zip'
 
 - First build is long (publishes RavenDB + the appliance + builds the React frontend); rebuilds are cached.
 - `up.ps1` mounts the setup-package zip (enabling demo-mode activation + the mock AI-config helper),
-  runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes the web
-  app on **http://localhost:5000**, and tails container logs.
-- Useful flags: `-Rebuild` (no-cache), `-Port <n>` (host web port), `-ApiKey <key>` (operator login key,
-  default `egor`), `-WithStudio` (also publish RavenDB Studio on 443 + import the admin cert).
+  runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes the nginx
+  TLS front on **:443** (HTTPS) and the web app on **:5000** (first-run / pre-activation), and tails logs.
+- Useful flags: `-Rebuild` (no-cache), `-Port <n>` (host :5000 port), `-HttpsPort <n>` (host :443 port),
+  `-ApiKey <key>` (operator login key, default `egor`), `-WithStudio` (import the admin client cert so the
+  browser can reach RavenDB Studio at `https://db.egor-ai.ravendb.run/`).
 
 The appliance **activates itself at startup** — no operator action. Status walks
 `NeedsActivation → Redeeming → Restarting → Ready` (~30–60s after the build). Watch it:
@@ -108,8 +111,10 @@ curl -s http://localhost:5000/api/bootstrap/status      # wait for {"state":"Rea
 ## 4. Sign in to the dashboard
 
 Activation is automatic (step 3) — there is no activation screen. Once status is `Ready`, open
-**http://localhost:5000**; you land on **/login**. Enter the **API key** you ran with (`QUILL_API_KEY`,
-default `egor`) and continue — the server issues a session cookie and drops you on the dashboard.
+**https://dashboard.egor-ai.ravendb.run/** (nginx terminates TLS with the package's wildcard cert;
+`*.ravendb.run` resolves to 127.0.0.1). You land on **/login** — enter the **API key** you ran with
+(`QUILL_API_KEY`, default `egor`) and continue; the server issues a `Secure` session cookie and drops you
+on the dashboard. (Pre-activation, before `:443` is up, the SPA is also on `http://localhost:5000`.)
 
 Programmatic / `api.*` callers skip the login screen and pass the key on every request as an
 `X-Api-Key` header instead; the CLI steps below use that. The same login from the CLI:
@@ -217,10 +222,11 @@ rm docker/ai-appliance/license.json         # the build-context license you supp
 | Build fails: `COPY docker/ai-appliance/license.json … not found` | You skipped step 1 — extract `license.json` from the setup-package zip into `docker/ai-appliance/`. |
 | Bootstrap stuck at `NeedsActivation` | Startup activation had nothing to redeem. In demo mode, set `APPLIANCE_E2E_SETUP_PACKAGE_PATH` before `up.ps1` (mounts the zip the mock license client serves); in production, set `QUILL_LICENSE_KEY` + a reachable license API. Check `docker logs ai-appliance-demo` for the activation line. |
 | `401 Unauthorized` on `/api/*` (or bounced to `/login`) | Missing/wrong API key or an expired session. Pass `-H "X-Api-Key: <key>"` (the `QUILL_API_KEY` you ran with, default `egor`) or sign in again. `QUILL_API_KEY` is **required** — auth fails closed when it's unset. |
+| `https://…:443` connection refused | nginx only starts after activation extracts the wildcard cert. Pre-activation use `http://localhost:5000`; once `/api/bootstrap/status` is `Ready`, retry `:443`. If it never comes up, check `docker logs ai-appliance-demo` for the `03-proxy` service. |
 | Wizard **Connect** fails | The connection-string host isn't reachable **from the container**. Use a LAN IP or `host.docker.internal`, not `localhost`. |
 | Discover: `wal_level is 'replica'…` / no permission to set up | Set `wal_level = logical` and restart Postgres; grant the login `REPLICATION`. |
 | Chat returns an `error` frame | `docker logs ai-appliance-demo` for the real exception. Common ones below. |
 | `UnsuccessfulAiRequestException: 401 invalid_api_key` | The LLM key is wrong/expired. Re-POST `ai/connection-strings` with a valid key (test it: `curl -H "Authorization: Bearer $KEY" https://api.openai.com/v1/models`). |
 | `MissingAiAgentParameterException: Parameter 'customerId' is missing` | The agent declares a **caller-supplied** agent-level parameter the iframe can't provide (e.g. `order-support`). Use `product-catalog` / `sales-insights`, whose inputs are model-filled query params. |
 | Agent runs but finds no rows | Check the query matches the mirrored field **types**, not just names — e.g. Northwind's `Discontinued` mirrors as integer `0/1`, so `Discontinued = false` matches nothing; filter on `= 0` or drop it. Confirm the CDC initial load finished (collection counts via Studio or `collections/stats`). |
-| Want to inspect mirrored data | Re-run `up.ps1 -WithStudio` and open `https://<your-domain>/` (Studio), or query `collections/stats` with the admin cert from the setup package. |
+| Want to inspect mirrored data | Run `up.ps1 -WithStudio` (imports the admin client cert), then open `https://db.egor-ai.ravendb.run/` — nginx passes `db.*` through to RavenDB Studio and the browser prompts for the client cert. |

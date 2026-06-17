@@ -11,6 +11,14 @@ public sealed class ApplianceOptions
     [Required] public string ConfigDatabase { get; set; } = ApplianceDatabases.Config;
 
     /// <summary>
+    /// Loopback HTTPS port RavenDB binds inside the container once the nginx <c>:443</c> SNI front owns
+    /// 443 (Phase 1). The secure store connects to RavenDB on this port; the s6 <c>01-ravendb</c> run
+    /// script rewrites the setup package's <c>ServerUrl</c> to match. Bound from
+    /// <c>RAVEN_AI_RAVENDB_INTERNAL_PORT</c>. Keep in sync with that script.
+    /// </summary>
+    public int RavenInternalPort { get; set; } = 8443;
+
+    /// <summary>
     /// Directory where the redeemed setup-package zip is unpacked and where the
     /// appliance reads its on-boot configuration from (admin client cert, license,
     /// RavenDB node settings). Empty / missing on first start puts the appliance
