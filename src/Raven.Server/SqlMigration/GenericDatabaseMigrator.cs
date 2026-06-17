@@ -594,10 +594,22 @@ namespace Raven.Server.SqlMigration
 
         public object ValueAsObject(SqlTableSchema tableSchema, string column, string[] primaryKeyValue, int index)
         {
-            var type = tableSchema.Columns.Find(x => x.Name == column).Type;
-            var value = type == ColumnType.Number ? (object)int.Parse(primaryKeyValue[index].ToString()) : primaryKeyValue[index];
+            // Case-insensitive column lookup: source identifiers can differ in case from the configured
+            // mapping; an exact-case Find missed them and then NRE'd on .Type.
+            var columnSchema = tableSchema.Columns.Find(x => string.Equals(x.Name, column, StringComparison.OrdinalIgnoreCase));
+            var raw = primaryKeyValue[index];
 
-            return value;
+            if (columnSchema?.Type != ColumnType.Number)
+                return raw;
+
+            // Widen the numeric parse: integer keys may be bigint (beyond int range), so try long first,
+            // then decimal for fixed-point/scaled keys. Leave the original value if it isn't numeric.
+            var text = raw?.ToString();
+            if (long.TryParse(text, out var asLong))
+                return asLong;
+            if (decimal.TryParse(text, out var asDecimal))
+                return asDecimal;
+            return raw;
         }
 
         protected IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
