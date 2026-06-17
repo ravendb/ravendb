@@ -117,7 +117,7 @@ export default function RabbitMqConnectionString({
                 </div>
             </div>
             <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
-            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" usedBy={initialConnection.usedBy} />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );

@@ -47,7 +47,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
     const isInheritedFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
 
     const isDeleteDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide || !hasWriteAccess;
-    const isEditDisabled = connection.usedBy?.length > 0 || isInheritedFromServerWide;
+    const isEditDisabled = isInheritedFromServerWide || !hasWriteAccess;
 
     const asyncDelete = useAsyncCallback(async () => {
         if (isServerWide) {

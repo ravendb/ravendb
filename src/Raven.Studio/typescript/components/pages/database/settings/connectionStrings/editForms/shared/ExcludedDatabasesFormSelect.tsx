@@ -3,20 +3,29 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { Control, FieldValues, Path } from "react-hook-form";
 import { useMemo } from "react";
+import { ConnectionStringUsage } from "../../connectionStringsTypes";
 
 interface ExcludedDatabasesFormSelectProps<TFieldValues extends FieldValues> {
     control: Control<TFieldValues>;
     name: Path<TFieldValues>;
+    usedBy?: ConnectionStringUsage[];
 }
 
 export default function ExcludedDatabasesFormSelect<TFieldValues extends FieldValues>({
     control,
     name,
+    usedBy,
 }: ExcludedDatabasesFormSelectProps<TFieldValues>) {
     const allDatabases = useAppSelector(databaseSelectors.allDatabases);
+    const usedByDatabaseNames = useMemo(() => new Set(usedBy?.map((x) => x.databaseName).filter(Boolean)), [usedBy]);
     const databaseOptions = useMemo(
-        () => allDatabases.filter((x) => !x.isDisabled).map((x) => ({ value: x.name, label: x.name })),
-        [allDatabases]
+        () =>
+            allDatabases.map((x) => ({
+                value: x.name,
+                label: x.name,
+                isDisabled: usedByDatabaseNames.has(x.name),
+            })),
+        [allDatabases, usedByDatabaseNames]
     );
 
     return (
