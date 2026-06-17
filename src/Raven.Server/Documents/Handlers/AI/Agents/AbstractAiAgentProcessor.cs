@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Server.Documents.AI;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Batches;
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             if (streaming)
             {
-                var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath");
+                var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath", required: handler.Schema != null);
                 HttpContext.Response.Headers.ContentType = "text/event-stream";
                 RequestHandler.DisableResponseBuffering();
 
@@ -131,14 +132,40 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 MaxModelIterationsPerCall = maxModelIterationsPerCall
             };
 
-            return new RequestBody
+            var request = new RequestBody
             {
                 ActionResponses = actionResponses,
                 ArtificialActions = artificialActions,
                 UserPrompt = userPrompt,
                 Parameters = parameters,
-                CreationOptions = options
+                CreationOptions = options,
+                OutputOptions = GetOutputOptions(body)
             };
+
+            return request;
+        }
+
+        private static AiServerOutputOptions GetOutputOptions(BlittableJsonReaderObject body)
+        {
+            if (body.TryGet(nameof(ConversionRequestBody.OutputOptions), out BlittableJsonReaderObject outputOptions) && outputOptions != null)
+            {
+                var opts = new AiServerOutputOptions();
+                if (outputOptions.TryGet(nameof(AiServerOutputOptions.NoSchema), out bool noSchema) && noSchema)
+                {
+                    opts.NoSchema = true;
+                }
+                else if (outputOptions.TryGet(nameof(AiServerOutputOptions.OutputSchema), out string outputSchema) && string.IsNullOrWhiteSpace(outputSchema) == false)
+                {
+                    opts.OutputSchema = outputSchema;
+                }
+                else if (outputOptions.TryGet(nameof(AiServerOutputOptions.SampleObject), out string sampleObject) && string.IsNullOrWhiteSpace(sampleObject) == false)
+                {
+                    opts.SampleObject = sampleObject;
+                }
+                return opts;
+            }
+
+            return null;
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(DocumentsOperationContext context, string destinationDocumentId, CancellationToken token)
