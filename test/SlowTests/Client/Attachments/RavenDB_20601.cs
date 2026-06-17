@@ -15,7 +15,7 @@ namespace SlowTests.Client.Attachments
         public RavenDB_20601(ITestOutputHelper output) : base(output)
         {
         }
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Replication | RavenTestCategory.ClusterTransactions)]
         public async Task ConflictOfClusterTxDocumentWithAttachment()
         {
             var co = new ServerCreationOptions
@@ -39,7 +39,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2, server);
 
                 var d = await BreakReplication(server.ServerStore, store1.Database);
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -65,11 +65,11 @@ namespace SlowTests.Client.Attachments
 
                 d.Mend();
 
-                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2, server);
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Replication | RavenTestCategory.ClusterTransactions)]
         public async Task ConflictOfTwoClusterTxAndAttachment()
         {
             using (var store1 = GetDocumentStore())
@@ -113,7 +113,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Replication | RavenTestCategory.ClusterTransactions)]
         public async Task ConflictOfClusterTxDocumentWithAttachment2()
         {
             var co = new ServerCreationOptions
@@ -138,7 +138,7 @@ namespace SlowTests.Client.Attachments
 
                 await SetupReplicationAsync(store1, store2);
 
-                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2, server);
                 var d = await BreakReplication(server.ServerStore, store1.Database);
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
@@ -178,7 +178,7 @@ namespace SlowTests.Client.Attachments
 
                 d.Mend();
 
-                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2, server);
             }
         }
     }
