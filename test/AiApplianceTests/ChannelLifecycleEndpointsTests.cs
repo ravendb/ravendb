@@ -380,6 +380,10 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using var factory = NewApplianceFactory(store);
 
         var wsClient = factory.Server.CreateWebSocketClient();
+        // cdc/progress is under the gated /api/apps group — carry the operator key on the upgrade.
+        wsClient.ConfigureRequest = request =>
+            request.Headers[Raven.AiAppliance.Auth.ApiKeyAuthenticationHandler.HeaderName] =
+                ApplianceWebApplicationFactory.TestApiKey;
         var wsUri = new Uri(factory.Server.BaseAddress, "api/apps/my-app/cdc/progress");
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));

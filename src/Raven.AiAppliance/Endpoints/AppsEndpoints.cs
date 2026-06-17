@@ -19,7 +19,7 @@ public static class AppsEndpoints
 {
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/apps").WithTags("apps");
+        var group = app.MapGroup("/api/apps").WithTags("apps").RequireAuthorization();
         group.MapGet("/", ListAsync)
             .WithName("apps.list")
             .Produces<AppResponse[]>();

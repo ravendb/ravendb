@@ -2,21 +2,26 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Raven.AiAppliance.Auth;
 using Raven.AiAppliance.Hosting;
 using Raven.Client.Documents;
 
 namespace AiApplianceTests.E2E.Fixtures;
 
-/// Hosts the appliance Program for the E2E test:
-///   - Points ApplianceOptions at the test's mock license API and a temp setup-package dir.
-///   - Replaces IDocumentStore with the test's in-process store so wizard endpoints
-///     exercise real RavenDB code paths without launching a second instance.
-///   - Removes RavenReadinessService — the test store is already ready; we don't want
-///     the probe loop firing against the (unused) default RavenDB URL.
-///   - Flips IServerReady to ready so the new ReadinessGateMiddleware lets requests
-///     through. RavenReadinessService would normally do this; we removed it.
+/// Hosts the appliance Program for tests:
+///   - Points ApplianceOptions at the test's mock license API and a temp setup-package dir, and seeds
+///     a known operator API key (<see cref="TestApiKey"/>) so the now-gated admin endpoints authenticate.
+///   - Replaces IDocumentStore with the test's in-process store so wizard endpoints exercise real
+///     RavenDB code paths without launching a second instance.
+///   - Removes RavenReadinessService and flips IServerReady ready (the test store is already ready).
+///   - Every CreateClient() carries the TestApiKey header by default; tests that exercise the
+///     unauthenticated path remove it. Startup activation is inert unless a license token / mock zip is
+///     configured (see ApplianceActivationService), so it stays out of the way of non-activation tests.
 internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Program>
 {
+    /// <summary>Operator API key seeded into the appliance and sent by default on every test client.</summary>
+    public const string TestApiKey = "test-api-key";
+
     private readonly string _licenseApiUrl;
     private readonly string _setupPackagePath;
     private readonly IDocumentStore _applianceStore;
@@ -42,6 +47,7 @@ internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Pro
             {
                 opts.LicenseApiUrl = _licenseApiUrl;
                 opts.SetupPackagePath = _setupPackagePath;
+                opts.ApiKey = TestApiKey;
                 _configureOptions?.Invoke(opts);
             });
 
@@ -58,5 +64,11 @@ internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Pro
         var host = base.CreateHost(builder);
         host.Services.GetRequiredService<IServerReady>().MarkReady();
         return host;
+    }
+
+    protected override void ConfigureClient(HttpClient client)
+    {
+        base.ConfigureClient(client);
+        client.DefaultRequestHeaders.Add(ApiKeyAuthenticationHandler.HeaderName, TestApiKey);
     }
 }

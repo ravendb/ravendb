@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { bootstrapMocks } from "@/mocks/bootstrap-mocks";
+import { authMocks, authUnauthenticated } from "@/mocks/auth-mocks";
 import { Login } from "./login";
 
 const meta = {
@@ -15,20 +15,7 @@ export const LoggedOut: Story = {
     parameters: {
         msw: {
             handlers: {
-                bootstrap: [bootstrapMocks.status({ state: "NeedsActivation" }), bootstrapMocks.redeemLicense()],
-            },
-        },
-    },
-};
-
-export const Restarting: Story = {
-    parameters: {
-        msw: {
-            handlers: {
-                bootstrap: [
-                    bootstrapMocks.status({ state: "Restarting" }),
-                    bootstrapMocks.redeemLicense({ state: "Restarting" }),
-                ],
+                auth: [authMocks.status(authUnauthenticated), authMocks.login()],
             },
         },
     },

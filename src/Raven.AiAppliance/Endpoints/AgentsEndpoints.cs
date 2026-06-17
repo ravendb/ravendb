@@ -19,7 +19,7 @@ public static class AgentsEndpoints
 {
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/apps/{slug}").WithTags("agents");
+        var group = app.MapGroup("/api/apps/{slug}").WithTags("agents").RequireAuthorization();
 
         group.MapGet("/agents", ListAgentsAsync)
             .WithName("agents.list")

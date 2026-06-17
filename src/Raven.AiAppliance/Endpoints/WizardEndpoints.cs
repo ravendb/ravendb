@@ -29,7 +29,7 @@ public static class WizardEndpoints
 
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/setup").WithTags("setup");
+        var group = app.MapGroup("/api/setup").WithTags("setup").RequireAuthorization();
         group.MapPost("/connect", ConnectAsync)
             .WithName("setup.connect")
             .Accepts<ConnectRequest>("application/json")

@@ -14,19 +14,33 @@ public sealed class ApplianceOptions
     /// Directory where the redeemed setup-package zip is unpacked and where the
     /// appliance reads its on-boot configuration from (admin client cert, license,
     /// RavenDB node settings). Empty / missing on first start puts the appliance
-    /// into NEEDS-ACTIVATION; a successful POST /api/bootstrap/redeem-license
+    /// into NEEDS-ACTIVATION; startup activation (ApplianceActivationService)
     /// populates it and flips to READY.
     /// </summary>
     public string SetupPackagePath { get; set; } = "/setup";
 
     /// <summary>
-    /// Path to a local setup-package zip used by the activation endpoint instead of
-    /// calling <see cref="LicenseApiUrl"/>. <b>Demo-only</b>: the 8-week demo ships a
-    /// pre-baked zip mounted into the container; production will fetch
-    /// <c>license.json</c> + <c>app-name</c> from the license API and run LE
-    /// provisioning locally (no zip path involved). Bound from
-    /// <c>RAVEN_AI_SETUP_PACKAGE_ZIP</c>; empty / missing file falls back to the
-    /// HTTP path.
+    /// Activation token, bound from <c>QUILL_LICENSE_KEY</c>. At startup
+    /// <see cref="ApplianceActivationService"/> pulls the setup-package zip for this token from
+    /// <see cref="LicenseApiUrl"/> (RavenDB-26783, <c>GET /api/v{version}/quill/licenses/{token}</c>).
+    /// Required in production; ignored in mock mode (the mounted zip answers any token). The value is
+    /// never logged.
+    /// </summary>
+    public string? LicenseToken { get; set; }
+
+    /// <summary>
+    /// Operator API key, bound from <c>QUILL_API_KEY</c>. The single source of truth for admin auth in
+    /// beta: the <c>api.*</c> header credential and the <c>dashboard.*</c> login both validate against
+    /// it (see <see cref="Auth.ApiKeyStore"/>), and its salted hash is hard-overwritten into the config
+    /// DB. Fail-closed when unset. The value is never logged.
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Path to a local setup-package zip. <b>Mock-only</b>: when set (file present) the appliance runs
+    /// in mock mode — <see cref="AiHelper.MockLicenseClient"/> serves this zip instead of calling the
+    /// real license API, and the AI Helper uses <see cref="AiHelper.MockAiHelperClient"/>. Bound from
+    /// <c>RAVEN_AI_SETUP_PACKAGE_ZIP</c>; empty / missing file selects the real HTTP clients.
     /// </summary>
     public string? SetupPackageZipPath { get; set; }
 

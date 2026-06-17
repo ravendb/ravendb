@@ -2,6 +2,7 @@ import type { RequestHandler } from "msw";
 import { agentsMocks } from "./agents-mocks";
 import { aiConnectionStringsMocks } from "./ai-connection-strings-mocks";
 import { appsMocks } from "./apps-mocks";
+import { authMocks } from "./auth-mocks";
 import { bootstrapMocks } from "./bootstrap-mocks";
 import { channelsMocks } from "./channels-mocks";
 import { chatMocks } from "./chat-mocks";
@@ -34,7 +35,8 @@ export const defaultApiMocks = {
         appsMocks.setupTry(),
         appsMocks.suggestAgent(),
     ],
-    bootstrap: [bootstrapMocks.status(), bootstrapMocks.redeemLicense()],
+    auth: [authMocks.status(), authMocks.login()],
+    bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
     chat: [chatMocks.stream()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],

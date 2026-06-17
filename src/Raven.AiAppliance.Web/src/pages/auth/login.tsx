@@ -1,50 +1,38 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
-import type { BootstrapPhase } from "@/api/generated/server-api";
 import { FormInput } from "@/components/form/form-input";
 import { Button } from "@/components/shadcn/ui/button";
 import { useAuth } from "@/components/auth/auth-context";
 import { appRoutes } from "@/lib/app-routes";
-import { useActivationPolling } from "@/pages/auth/use-activation-polling";
 
 export function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
-    const { isActivationWaiting, retryActivationPolling, startActivationPolling, timedOut } = useActivationPolling();
     const {
         control,
         formState: { isSubmitting },
         handleSubmit,
     } = useForm<LoginFormValues>({
         defaultValues: {
-            licenseKey: "",
+            apiKey: "",
         },
         resolver: zodResolver(loginSchema),
     });
 
     async function handleLogin(values: LoginFormValues) {
         try {
-            const status = await login(values);
-            if (status.state === "Ready") {
+            const status = await login(values.apiKey);
+            if (status.authenticated) {
                 navigate(appRoutes.dashboard(), {
                     replace: true,
                 });
                 return;
             }
 
-            if (isActivationPending(status.state)) {
-                startActivationPolling();
-                return;
-            }
-
-            if (status.state === "NeedsActivation") {
-                toast.error("Activation could not be started. Check the license key and try again.");
-                return;
-            }
+            toast.error("Invalid API key. Check the key and try again.");
         } catch {
             toast.error("Sign in failed. Please try again later.");
         }
@@ -60,21 +48,17 @@ export function Login() {
 
                 <section className="rounded-xl border bg-card px-6 py-7">
                     <div className="text-center">
-                        <h1 className="text-xl font-semibold">Activate dashboard</h1>
-                        <p className="mt-3 text-sm text-muted-foreground">Enter the license key for this appliance.</p>
+                        <h1 className="text-xl font-semibold">Sign in</h1>
+                        <p className="mt-3 text-sm text-muted-foreground">Enter the API key for this appliance.</p>
                     </div>
 
-                    {isActivationWaiting ? (
-                        <ActivationWaiting timedOut={timedOut} onRetry={retryActivationPolling} />
-                    ) : (
-                        <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
-                            <FormInput control={control} name="licenseKey" label="License key" type="password" />
+                    <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
+                        <FormInput control={control} name="apiKey" label="API key" type="password" />
 
-                            <Button className="w-full" disabled={isSubmitting} type="submit">
-                                {isSubmitting ? "Activating..." : "Continue"}
-                            </Button>
-                        </form>
-                    )}
+                        <Button className="w-full" disabled={isSubmitting} type="submit">
+                            {isSubmitting ? "Signing in..." : "Continue"}
+                        </Button>
+                    </form>
                 </section>
             </div>
         </main>
@@ -82,34 +66,7 @@ export function Login() {
 }
 
 const loginSchema = z.object({
-    licenseKey: z.string().trim().min(1, "License key is required."),
+    apiKey: z.string().trim().min(1, "API key is required."),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-
-function isActivationPending(state?: BootstrapPhase) {
-    return state === "Redeeming" || state === "Restarting";
-}
-
-function ActivationWaiting({ timedOut, onRetry }: { timedOut: boolean; onRetry: () => void }) {
-    return (
-        <div className="mt-7 space-y-5 text-center">
-            <Loader2 className="mx-auto size-8 animate-spin text-primary" aria-hidden="true" />
-            <div className="space-y-2">
-                <h2 className="text-base font-semibold">
-                    {timedOut ? "Activation is taking longer than expected" : "Restarting server"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                    {timedOut
-                        ? "The server did not report readiness within 120 seconds. Check the status again in a moment."
-                        : "Activation was accepted. Wait up to 120 seconds while the server restarts."}
-                </p>
-            </div>
-            {timedOut && (
-                <Button className="w-full" onClick={onRetry}>
-                    Check again
-                </Button>
-            )}
-        </div>
-    );
-}
