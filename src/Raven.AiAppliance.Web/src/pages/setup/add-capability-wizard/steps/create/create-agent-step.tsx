@@ -1,5 +1,6 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
+import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { Alert } from "@/components/shadcn/ui/alert";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
@@ -42,7 +43,7 @@ export function CreateAgentStep() {
             <div
                 className={cn(
                     "grid gap-3 rounded-lg border bg-background p-4 transition-colors",
-                    mode === "prompt" && "border-foreground",
+                    mode === "prompt" && SELECTED_CARD_CLASSES,
                 )}
             >
                 <FormTextarea
@@ -64,8 +65,8 @@ export function CreateAgentStep() {
                     onClick={chooseManualSetup}
                     className={cn(
                         "min-h-16 rounded-lg border bg-background p-4 text-left transition-colors",
-                        "hover:bg-accent hover:text-accent-foreground",
-                        mode === "manual" && "border-foreground bg-accent text-accent-foreground",
+                        mode !== "manual" && "hover:bg-accent hover:text-accent-foreground",
+                        mode === "manual" && SELECTED_CARD_CLASSES,
                     )}
                 >
                     <span className="block text-sm font-semibold">Setup manually</span>

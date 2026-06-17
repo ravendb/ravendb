@@ -1,4 +1,5 @@
 import { useController, useFormContext } from "react-hook-form";
+import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
@@ -38,9 +39,9 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                                 disabled={isBusy}
                                 className={cn(
                                     "flex min-h-28 flex-col items-center justify-center gap-3 rounded-lg border bg-background p-4 transition-colors",
-                                    "hover:bg-accent hover:text-accent-foreground",
-                                    isSelected && "border-foreground bg-accent text-accent-foreground",
-                                    isBusy && "cursor-not-allowed opacity-55 hover:bg-background hover:text-foreground",
+                                    isSelected && SELECTED_CARD_CLASSES,
+                                    !isSelected && !isBusy && "hover:bg-accent hover:text-accent-foreground",
+                                    isBusy && "cursor-not-allowed opacity-55",
                                 )}
                             >
                                 {option.icon}
