@@ -325,7 +325,8 @@ public static class AppsEndpoints
                 body.Prompt,
                 body.Parameters,
                 streamField,
-                async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }));
+                async chunk => await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk }),
+                ct);
 
             var result = await store.Maintenance.ForDatabase(app.Database).SendAsync(operation, ct);
 

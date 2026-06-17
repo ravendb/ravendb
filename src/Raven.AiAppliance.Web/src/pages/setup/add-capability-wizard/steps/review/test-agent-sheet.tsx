@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type Control, useFieldArray, useForm, useFormContext, useWatch } from "react-hook-form";
 import { useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +23,6 @@ import { FormSelect, type FormSelectOption } from "@/components/form/form-select
 import { FormTextarea } from "@/components/form/form-textarea";
 import AceEditor from "@/components/ace-editor/ace-editor";
 import { TestQueryToolCall } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-tool-call";
-import { withNestedSubmit } from "@/lib/form-utils";
 
 // Footer action for the wizard's Review step: opens a sheet to chat with the draft agent.
 // The button stays disabled until the draft has the minimum a test needs (name, system
@@ -66,6 +65,12 @@ export function ReviewTestAgentButton() {
     );
 }
 
+let messageIdCounter = 0;
+function nextMessageId(): string {
+    messageIdCounter += 1;
+    return `agent-test-message-${messageIdCounter}`;
+}
+
 // Agent answers always render as JSON: `json` holds the live answer (the sample response
 // shape with the streamed field filling in) and is swapped for the full structured answer
 // once the turn finishes. `toolCalls` are the query tools the agent ran (filled on `done`).
@@ -82,7 +87,24 @@ const testFormSchema = z.object({
     prompt: z.string(),
     // Which output field streams token-by-token; empty lets the server pick the first field.
     streamField: z.string(),
-    parameters: z.array(z.object({ name: z.string(), value: z.string().trim().min(1, "Value is required") })),
+    parameters: z
+        .array(
+            z.object({
+                name: z.string(),
+                value: z.string(),
+                // A value is required only when the model isn't allowed to generate one
+                // (ForbidModelGeneration). Parameters the model can fill stay optional for a
+                // one-off test run, so the operator needn't invent a value.
+                isRequired: z.boolean(),
+            }),
+        )
+        .superRefine((parameters, ctx) => {
+            parameters.forEach((parameter, index) => {
+                if (parameter.isRequired && parameter.value.trim().length === 0) {
+                    ctx.addIssue({ code: "custom", message: "Value is required", path: [index, "value"] });
+                }
+            });
+        }),
 });
 
 type TestFormData = z.infer<typeof testFormSchema>;
@@ -94,22 +116,34 @@ function TestAgentPanel() {
     const [isStreaming, setIsStreaming] = useState(false);
     const [areParametersCollapsed, setAreParametersCollapsed] = useState(false);
 
-    // The draft's declared output fields (sample object first, schema as fallback) — the
-    // options for the "Streamed field" select. Read once from the wizard form on open.
-    const [streamFieldOptions] = useState(() =>
-        getOutputFieldNames(wizardForm.getValues("review.sampleObject"), wizardForm.getValues("review.outputSchema")),
-    );
+    // Re-read the draft's output shape live from the wizard form (it stays mounted behind the
+    // sheet), so the "Streamed field" options and the streaming preview track edits to the
+    // sample object / schema instead of a stale open-time snapshot.
+    const [sampleObject, outputSchema] = useWatch({
+        control: wizardForm.control,
+        name: ["review.sampleObject", "review.outputSchema"],
+    });
+    const answerShape = getOutputShape(sampleObject, outputSchema);
+    // Only string-typed fields can stream as text, so they alone populate the select.
+    const streamFieldOptions = getStreamableFieldNames(answerShape);
+
+    // Aborts the in-flight stream when the panel unmounts (the sheet closes) so the request stops
+    // and no state update fires afterwards.
+    const abortControllerRef = useRef<AbortController | null>(null);
+    useEffect(() => () => abortControllerRef.current?.abort(), []);
 
     const form = useForm<TestFormData>({
         resolver: zodResolver(testFormSchema),
         defaultValues: {
             prompt: "",
-            // Default to the first declared field — the server's own convention when unset.
+            // Default to the first streamable field — the server's own convention when unset.
             streamField: streamFieldOptions[0] ?? "",
-            // The agent's declared parameters, ready for the operator to fill in values.
+            // The agent's declared parameters, ready for the operator to fill in values. A value
+            // is required only for parameters the model may not generate (ForbidModelGeneration).
             parameters: wizardForm.getValues("review.parameters").map((parameter) => ({
                 name: parameter.name,
                 value: "",
+                isRequired: parameter.policy === "ForbidModelGeneration",
             })),
         },
     });
@@ -126,33 +160,42 @@ function TestAgentPanel() {
             return;
         }
 
-        // Re-read the wizard form so the test always runs the latest draft.
+        // Re-read the wizard form so the test always runs the latest draft. The streamed field
+        // fills into `answerShape` (derived above from the same live form values), so the live
+        // answer reads as a real JSON object while it streams in.
         const wizardValues = wizardForm.getValues();
         const configuration = buildAgentConfigurationPayload(wizardValues);
         const parameters = toParameterRecord(values.parameters);
-        // The streamed field fills into this declared answer shape, so the live answer reads
-        // as a real JSON object while it streams in. The shape comes from the sample response
-        // object, or the Response JSON schema when only that is provided.
-        const answerShape = getOutputShape(wizardValues.review.sampleObject, wizardValues.review.outputSchema);
-        const { streamField } = values;
+        // An edit to the sample/schema may have dropped the selected field; fall back to the
+        // first streamable one so the value sent matches the current options.
+        const streamField = streamFieldOptions.includes(values.streamField)
+            ? values.streamField
+            : (streamFieldOptions[0] ?? "");
 
-        const agentMessageId = crypto.randomUUID();
+        const agentMessageId = nextMessageId();
         setMessages((previous) => [
             ...previous,
-            { id: crypto.randomUUID(), role: "user", text: trimmedPrompt },
+            { id: nextMessageId(), role: "user", text: trimmedPrompt },
             { id: agentMessageId, role: "agent", text: "", json: buildStreamingJson(answerShape, streamField, "") },
         ]);
         form.setValue("prompt", "");
         setIsStreaming(true);
 
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
         let streamedText = "";
         try {
-            for await (const event of api.services.agentTest.stream(slug, {
-                prompt: trimmedPrompt,
-                configuration,
-                parameters,
-                streamField: streamField || null,
-            })) {
+            for await (const event of api.services.agentTest.stream(
+                slug,
+                {
+                    prompt: trimmedPrompt,
+                    configuration,
+                    parameters,
+                    streamField: streamField || null,
+                },
+                abortController.signal,
+            )) {
                 if (event.type === "chunk") {
                     streamedText += event.text;
                     const json = buildStreamingJson(answerShape, streamField, streamedText);
@@ -185,11 +228,18 @@ function TestAgentPanel() {
                 }
             }
         } catch (error) {
+            // The panel closed mid-stream (the unmount cleanup aborted) — the component is gone,
+            // so there's nothing to surface.
+            if (abortController.signal.aborted) {
+                return;
+            }
+
             const message = error instanceof Error ? error.message : "Agent test failed.";
             setMessages((previous) =>
                 replaceMessage(previous, agentMessageId, () => ({ id: agentMessageId, role: "error", text: message })),
             );
         } finally {
+            abortControllerRef.current = null;
             setIsStreaming(false);
         }
     }
@@ -199,9 +249,12 @@ function TestAgentPanel() {
         form.setValue("prompt", "");
     }
 
-    // Reveal the parameters when a send is blocked by a missing value, so the validation
-    // errors are never hidden behind a collapsed section.
-    const handleSend = form.handleSubmit(send, () => setAreParametersCollapsed(false));
+    // Build and run the submit handler at event time (not during render), so `send` — which
+    // manages the abort-controller ref — isn't treated as a render-time ref access. On a blocked
+    // send, reveal the parameters so the validation errors aren't hidden behind a collapsed section.
+    function handleSend() {
+        return form.handleSubmit(send, () => setAreParametersCollapsed(false))();
+    }
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -247,7 +300,16 @@ function TestAgentPanel() {
                 )}
             </div>
 
-            <form className="border-t p-4" onSubmit={withNestedSubmit(handleSend)}>
+            <form
+                className="border-t p-4"
+                // Inlined (rather than withNestedSubmit) so the ref-touching handleSend stays in an
+                // event handler. stopPropagation keeps this nested submit off the outer wizard form.
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleSend();
+                }}
+            >
                 <FormTextarea
                     control={form.control}
                     name="prompt"
@@ -258,7 +320,7 @@ function TestAgentPanel() {
                         if (event.key === "Enter" && !event.shiftKey) {
                             event.preventDefault();
                             event.stopPropagation();
-                            void handleSend();
+                            handleSend();
                         }
                     }}
                 />
@@ -282,8 +344,9 @@ function TestAgentPanel() {
     );
 }
 
-// Operator-supplied values for the agent's declared parameters. Each value is required;
-// the section can be collapsed to a one-line summary once filled to free up chat space.
+// Operator-supplied values for the agent's declared parameters. Only parameters the model may
+// not generate require a value; the section can be collapsed to a one-line summary once filled
+// to free up chat space.
 function TestParametersSection({
     control,
     fields,
@@ -292,7 +355,7 @@ function TestParametersSection({
     disabled,
 }: {
     control: Control<TestFormData>;
-    fields: { id: string; name: string }[];
+    fields: { id: string; name: string; isRequired: boolean }[];
     isCollapsed: boolean;
     onToggleCollapsed: () => void;
     disabled: boolean;
@@ -329,7 +392,14 @@ function TestParametersSection({
                             key={field.id}
                             control={control}
                             name={`parameters.${index}.value`}
-                            label={field.name}
+                            label={
+                                <span className="flex items-center gap-1.5">
+                                    {field.name}
+                                    {!field.isRequired && (
+                                        <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                                    )}
+                                </span>
+                            }
                             placeholder={`Value for ${field.name}`}
                             disabled={disabled}
                         />
@@ -388,6 +458,8 @@ function replaceMessage(messages: ChatMessage[], id: string, update: (message: C
     return messages.map((message) => (message.id === id ? update(message) : message));
 }
 
+// Builds the parameter map sent to the server, dropping blanks: optional parameters the operator
+// left empty are omitted so the model/server applies its own value rather than receiving "".
 function toParameterRecord(parameters: TestFormData["parameters"]): Record<string, string> | null {
     const entries = parameters
         .map((parameter) => [parameter.name, parameter.value] as const)
@@ -406,10 +478,16 @@ function buildStreamingJson(
     streamedText: string,
 ): string {
     const answer: Record<string, unknown> = { ...(answerShape ?? {}) };
-    const field = streamField || Object.keys(answer)[0] || "reply";
+    // Prefer the chosen field, then the first string-typed field (a non-string slot can't hold
+    // streamed text), then any field, then a single "reply" key when the draft declares no shape.
+    const field = streamField || firstStringKey(answer) || Object.keys(answer)[0] || "reply";
     answer[field] = streamedText;
 
     return JSON.stringify(answer, null, 4);
+}
+
+function firstStringKey(answer: Record<string, unknown>): string | undefined {
+    return Object.keys(answer).find((key) => typeof answer[key] === "string");
 }
 
 // Pretty-prints the structured answer for the JSON editor; null when there is nothing to show.
@@ -421,11 +499,12 @@ function toAnswerJson(answer: unknown): string | null {
     return null;
 }
 
-// The agent's declared output fields — the keys of the resolved output shape (see
-// getOutputShape). Empty when the draft declares neither a sample nor a schema, which hides
-// the "Streamed field" select and lets the server pick the default.
-function getOutputFieldNames(sampleObject: string, outputSchema: string): string[] {
-    return objectKeys(getOutputShape(sampleObject, outputSchema));
+// The output fields that can stream as text: the string-typed keys of the resolved output shape
+// (see getOutputShape). A non-string field (array/object/number) can't hold a streamed string, so
+// it's excluded from the "Streamed field" select and never used as the default. Empty when the
+// draft declares no string output field, which hides the select and lets the server pick.
+function getStreamableFieldNames(shape: Record<string, unknown> | null): string[] {
+    return shape ? Object.keys(shape).filter((key) => typeof shape[key] === "string") : [];
 }
 
 // The declared output shape used to skeleton the live answer: the sample response object when
@@ -488,8 +567,4 @@ function parseJsonObject(json: string | null | undefined): Record<string, unknow
     } catch {
         return null;
     }
-}
-
-function objectKeys(value: Record<string, unknown> | null): string[] {
-    return value ? Object.keys(value) : [];
 }

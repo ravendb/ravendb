@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
@@ -34,23 +35,26 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
     private readonly IReadOnlyDictionary<string, string>? _parameters;
     private readonly string _streamField;
     private readonly Func<string, Task> _onChunk;
+    private readonly CancellationToken _token;
 
     public RunDraftAgentTestOperation(
         AiAgentConfiguration configuration,
         string prompt,
         IReadOnlyDictionary<string, string>? parameters,
         string streamField,
-        Func<string, Task> onChunk)
+        Func<string, Task> onChunk,
+        CancellationToken token)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _prompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
         _parameters = parameters;
         _streamField = streamField ?? throw new ArgumentNullException(nameof(streamField));
         _onChunk = onChunk ?? throw new ArgumentNullException(nameof(onChunk));
+        _token = token;
     }
 
     public RavenCommand<Result> GetCommand(DocumentConventions conventions, JsonOperationContext ctx) =>
-        new Command(_configuration, _prompt, _parameters, _streamField, _onChunk, conventions);
+        new Command(_configuration, _prompt, _parameters, _streamField, _onChunk, conventions, _token);
 
     public sealed class Result
     {
@@ -78,6 +82,7 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
         private readonly string _replyField;
         private readonly Func<string, Task> _onChunk;
         private readonly DocumentConventions _conventions;
+        private readonly CancellationToken _token;
 
         public Command(
             AiAgentConfiguration configuration,
@@ -85,7 +90,8 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             IReadOnlyDictionary<string, string>? parameters,
             string replyField,
             Func<string, Task> onChunk,
-            DocumentConventions conventions)
+            DocumentConventions conventions,
+            CancellationToken token)
         {
             _configuration = configuration;
             _prompt = prompt;
@@ -93,6 +99,7 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             _replyField = replyField;
             _onChunk = onChunk;
             _conventions = conventions;
+            _token = token;
 
             // The server streams the reply property as text/event-stream; read it raw so we can
             // relay chunks as they arrive instead of buffering the whole turn.
@@ -158,7 +165,9 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             using var reader = new StreamReader(stream);
             while (true)
             {
-                var line = await reader.ReadLineAsync().ConfigureAwait(false);
+                // Pass the request token so a client disconnect is observed promptly mid-read,
+                // rather than only when the next chunk write to the browser fails.
+                var line = await reader.ReadLineAsync(_token).ConfigureAwait(false);
                 if (line is null)
                     break;
 

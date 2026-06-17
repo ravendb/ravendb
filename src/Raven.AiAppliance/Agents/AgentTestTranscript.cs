@@ -54,6 +54,7 @@ public static class AgentTestTranscript
     private const string NameField = "name";
     private const string ArgumentsField = "arguments";
     private const string ToolRole = "tool";
+    private const string AssistantRole = "assistant";
 
     /// <summary>
     /// Extracts the query tool calls from the test endpoint's final result object
@@ -105,9 +106,14 @@ public static class AgentTestTranscript
                     resultsByCallId[callId] = GetString(message, ContentField);
             }
 
-            // Second pass: each assistant tool_call that names a configured query tool.
+            // Second pass: each assistant tool_call that names a configured query tool. Only
+            // assistant messages carry the calls the model made; tool_calls on any other role
+            // aren't the model's invocations, so skip them.
             foreach (var message in messages.EnumerateArray())
             {
+                if (GetString(message, RoleField) != AssistantRole)
+                    continue;
+
                 if (message.TryGetProperty(ToolCallsField, out var calls) == false || calls.ValueKind != JsonValueKind.Array)
                     continue;
 

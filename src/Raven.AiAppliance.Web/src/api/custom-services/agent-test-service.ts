@@ -8,8 +8,8 @@ import { streamAgentNdjson, type AgentStreamEvent } from "@/api/custom-services/
 // NDJSON rather than a JSON body), so the wizard uses this custom streaming service instead.
 export function createAgentTestService(client: ApiClient) {
     return {
-        stream: (slug: string, request: SetupTryRequest): AsyncGenerator<AgentStreamEvent> =>
-            streamAgentNdjson(client, API_ENDPOINTS.apps.setupTry(slug), request),
+        stream: (slug: string, request: SetupTryRequest, signal?: AbortSignal): AsyncGenerator<AgentStreamEvent> =>
+            streamAgentNdjson(client, API_ENDPOINTS.apps.setupTry(slug), request, signal),
     };
 }
 
