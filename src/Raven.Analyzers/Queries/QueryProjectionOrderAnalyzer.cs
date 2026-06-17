@@ -17,9 +17,10 @@ namespace Raven.Analyzers.Queries
     public sealed class QueryProjectionOrderAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            ImmutableArray.Create(
-                DiagnosticDescriptors.QueryFilteringAfterProjection,
-                DiagnosticDescriptors.DoubleProjectInto);
+        [
+            DiagnosticDescriptors.QueryFilteringAfterProjection,
+            DiagnosticDescriptors.DoubleProjectInto
+        ];
 
         public override void Initialize(AnalysisContext context)
         {

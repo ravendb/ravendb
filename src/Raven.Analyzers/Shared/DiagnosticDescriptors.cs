@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Raven.Analyzers.Shared
 {
-    internal static class DiagnosticDescriptors
+    public static class DiagnosticDescriptors
     {
         private const string Category = "Usage";
         private const string HelpLinkBase = "https://docs.ravendb.net/docs/client-api/csharp-code-analyzers/";

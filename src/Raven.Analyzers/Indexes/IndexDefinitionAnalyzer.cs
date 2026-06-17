@@ -112,7 +112,7 @@ namespace Raven.Analyzers.Indexes
             foreach (AssignmentExpressionSyntax assignment in
                 body.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
             {
-                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
                 if (nameNode == null)
                     continue;
 
@@ -138,7 +138,7 @@ namespace Raven.Analyzers.Indexes
             foreach (AssignmentExpressionSyntax assignment in
                 node.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
             {
-                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
                 if (nameNode == null || nameNode.Identifier.Text != KnownTypes.MapFieldName)
                     continue;
 

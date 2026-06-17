@@ -176,17 +176,17 @@ namespace Raven.Analyzers.Shared
             (SyntaxNode?)member.Body ?? member.ExpressionBody?.Expression;
 
         /// <summary>
-        /// Extracts the <see cref="SimpleNameSyntax"/> node that names the assigned member from an
-        /// assignment LHS, handling both the bare form (<c>Map = …</c>) and the qualified forms
-        /// (<c>this.Map = …</c> / <c>base.Map = …</c>).
-        /// Returns <c>null</c> for any other LHS shape.
+        /// Extracts the <see cref="SimpleNameSyntax"/> node that names a member reference, handling both
+        /// the bare form (<c>Map = …</c> / <c>Stores[…]</c>) and the qualified forms
+        /// (<c>this.Map = …</c> / <c>base.Stores[…]</c>).
+        /// Returns <c>null</c> for any other shape.
         /// </summary>
-        internal static SimpleNameSyntax? TryGetMapReduceLhsNameNode(ExpressionSyntax lhs)
+        internal static SimpleNameSyntax? TryGetSimpleMemberName(ExpressionSyntax expression)
         {
-            if (lhs is IdentifierNameSyntax id)
+            if (expression is IdentifierNameSyntax id)
                 return id;
 
-            if (lhs is MemberAccessExpressionSyntax ma
+            if (expression is MemberAccessExpressionSyntax ma
                 && ma.Expression is ThisExpressionSyntax or BaseExpressionSyntax)
                 return ma.Name;
 
