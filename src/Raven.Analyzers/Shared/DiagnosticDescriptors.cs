@@ -6,7 +6,10 @@ namespace Raven.Analyzers.Shared
     public static class DiagnosticDescriptors
     {
         private const string Category = "Usage";
-        private const string HelpLinkBase = "https://docs.ravendb.net/docs/client-api/csharp-code-analyzers/";
+
+        // Per-rule short links (ravendb.net/l/<code>) that redirect to the diagnostic's documentation
+        // page. Using a redirector lets the doc target move without shipping a new analyzer.
+        private const string HelpLinkBase = "https://ravendb.net/l/";
 
         // Declared before the descriptor fields so this initializer runs first: the Create factory
         // appends to it as each descriptor below is constructed.
@@ -31,7 +34,8 @@ namespace Raven.Analyzers.Shared
             string messageFormat,
             string introducedAt,
             DiagnosticSeverity destinationSeverity,
-            string description)
+            string description,
+            string helpCode)
         {
             DiagnosticDescriptor descriptor = new(
                 id: id,
@@ -41,7 +45,7 @@ namespace Raven.Analyzers.Shared
                 defaultSeverity: SeverityPolicy.Resolve(introducedAt, destinationSeverity),
                 isEnabledByDefault: true,
                 description: description,
-                helpLinkUri: HelpLinkBase + id);
+                helpLinkUri: HelpLinkBase + helpCode);
 
             // The registry mirrors the descriptors: EffectiveSeverity IS the descriptor's shipped
             // DefaultSeverity, so the test asserts the real severity against the version policy.
@@ -60,7 +64,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "'{0}' is called after a projection (.ProjectInto or .Select). Move the projection to the end of the query chain.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "RavenDB query operators that bind against the source document or index shape (Where, OrderBy, Search, Spatial, OrderByDistance, OrderByScore, MoreLikeThis, VectorSearch, Filter, GroupBy, etc.) must appear before projection (ProjectInto, Select). Projection changes the element type; any operator placed after it operates on the projected shape rather than the source document, producing silent incorrect results or a runtime exception.");
+            description: "RavenDB query operators that bind against the source document or index shape (Where, OrderBy, Search, Spatial, OrderByDistance, OrderByScore, MoreLikeThis, VectorSearch, Filter, GroupBy, etc.) must appear before projection (ProjectInto, Select). Projection changes the element type; any operator placed after it operates on the projected shape rather than the source document, producing silent incorrect results or a runtime exception.",
+            helpCode: "HXYWDE");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.DoubleProjectInto"/>.
@@ -72,7 +77,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "ProjectInto is called more than once on the same query chain. This throws InvalidOperationException at runtime.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "RavenDB's ProjectInto can only be called once per query. Calling it a second time throws InvalidOperationException because the projection is already registered on the provider.");
+            description: "RavenDB's ProjectInto can only be called once per query. Calling it a second time throws InvalidOperationException because the projection is already registered on the provider.",
+            helpCode: "5EDKFL");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.IndexMapAssignedOutsideCtor"/>.
@@ -84,7 +90,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "'{0}' is assigned outside a constructor. RavenDB index Map and Reduce expressions must be set in the constructor.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "RavenDB reads the Map and Reduce expression trees during index registration, which happens when the constructor runs. Assigning them in a method that is called conditionally or after construction can result in the index being registered without a mapping.");
+            description: "RavenDB reads the Map and Reduce expression trees during index registration, which happens when the constructor runs. Assigning them in a method that is called conditionally or after construction can result in the index being registered without a mapping.",
+            helpCode: "244GGC");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.IndexMissingMapAssignment"/>.
@@ -96,7 +103,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Class '{0}' inherits from an index creation task but does not assign the Map property in its constructor",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "Every class that inherits from AbstractIndexCreationTask<TDocument> must assign the Map property in its constructor. Without a Map the index has no definition and will fail when deployed.");
+            description: "Every class that inherits from AbstractIndexCreationTask<TDocument> must assign the Map property in its constructor. Without a Map the index has no definition and will fail when deployed.",
+            helpCode: "DEIJZG");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.MultiMapIndexMissingAddMap"/>.
@@ -108,7 +116,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Class '{0}' inherits from a multi-map index creation task but does not call AddMap in its constructor",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "Every class that inherits from AbstractMultiMapIndexCreationTask (or the time-series / counters variants) must call AddMap<TSource>(...) at least once in its constructor. Without at least one AddMap the index has no definition and will fail when deployed.");
+            description: "Every class that inherits from AbstractMultiMapIndexCreationTask (or the time-series / counters variants) must call AddMap<TSource>(...) at least once in its constructor. Without at least one AddMap the index has no definition and will fail when deployed.",
+            helpCode: "NKEYXB");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.MultiMapIndexSingleAddMap"/>.
@@ -121,7 +130,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Class '{0}' calls AddMap only once. Consider deriving from AbstractIndexCreationTask<T> instead of a multi-map base class.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Info,
-            description: "Multi-map index base classes are designed for indexes that map over multiple document types. If only one AddMap call is present, a regular AbstractIndexCreationTask<TDocument> is simpler and equally expressive.");
+            description: "Multi-map index base classes are designed for indexes that map over multiple document types. If only one AddMap call is present, a regular AbstractIndexCreationTask<TDocument> is simpler and equally expressive.",
+            helpCode: "KZTWYV");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.QueryFieldNotIndexed"/>.
@@ -134,7 +144,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Field '{0}' is referenced in {1} but is not indexed by '{2}'. The query will not return results for this field.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Info,
-            description: "When querying a specific index, all fields used in Where, OrderBy, and Search clauses should match the fields projected by the index Map expression. A field not in the projection cannot be searched or sorted efficiently.");
+            description: "When querying a specific index, all fields used in Where, OrderBy, and Search clauses should match the fields projected by the index Map expression. A field not in the projection cannot be searched or sorted efficiently.",
+            helpCode: "148URW");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.QueryProjectionFieldNotRetrievable"/>.
@@ -147,7 +158,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Field '{0}' in projection is not retrievable from index '{1}' (not stored) and is not a member of source document '{2}'. The projected value will be missing at runtime under ProjectionBehavior.{3}.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Info,
-            description: "RavenDB projections retrieve each field from the stored index entry or fall back to the source document. If a field is absent from both, the projected value will be null or missing at runtime. Under FromIndex or FromIndexOrThrow behaviors the fallback is disabled, making unstored fields silently empty or a hard error.");
+            description: "RavenDB projections retrieve each field from the stored index entry or fall back to the source document. If a field is absent from both, the projected value will be null or missing at runtime. Under FromIndex or FromIndexOrThrow behaviors the fallback is disabled, making unstored fields silently empty or a hard error.",
+            helpCode: "LPJ9EL");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.IndexUnsupportedMethodCall"/>.
@@ -159,7 +171,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Method '{0}' is user-defined and may not be translatable inside an index {1} expression. Inline the operation or use a Raven-supported construct.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "RavenDB compiles index Map and Reduce expressions to server-side IL. User-defined helper methods cannot be translated and will cause the index to fail at deployment or produce incorrect results. Inline the logic directly in the lambda or use only Raven-supported constructs (LINQ, BCL string/math, LoadDocument, etc.).");
+            description: "RavenDB compiles index Map and Reduce expressions to server-side IL. User-defined helper methods cannot be translated and will cause the index to fail at deployment or produce incorrect results. Inline the logic directly in the lambda or use only Raven-supported constructs (LINQ, BCL string/math, LoadDocument, etc.).",
+            helpCode: "PGOSBH");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.QueryUnsupportedMethodCall"/>.
@@ -171,7 +184,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Method '{0}' is user-defined and may not translate to server-side query semantics. Move the call outside the query, inline the operation, or materialize with ToList() first.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "RavenDB translates LINQ query lambdas (Where, OrderBy, Select, etc.) to RQL on the server. User-defined methods inside these lambdas cannot be translated and will throw at runtime. Compute the value before the query, inline the logic, or call ToList() first to evaluate client-side.");
+            description: "RavenDB translates LINQ query lambdas (Where, OrderBy, Select, etc.) to RQL on the server. User-defined methods inside these lambdas cannot be translated and will throw at runtime. Compute the value before the query, inline the logic, or call ToList() first to evaluate client-side.",
+            helpCode: "5X6TTO");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.SubscriptionStoreOpenSession"/>.
@@ -186,7 +200,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "'{0}' is called on an IDocumentStore inside a subscription Run lambda. Use batch.{0}() instead to participate in the batch's acknowledge transaction.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "Inside a subscription worker Run delegate, sessions must be opened via the batch object (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. Using the store bypasses the batch's internal transaction tracking, which means the session will not participate in the batch acknowledgement and documents may be re-processed.");
+            description: "Inside a subscription worker Run delegate, sessions must be opened via the batch object (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. Using the store bypasses the batch's internal transaction tracking, which means the session will not participate in the batch acknowledgement and documents may be re-processed.",
+            helpCode: "P13F9F");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.SessionLazyBatching"/>.
@@ -200,7 +215,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "'{0}' is an eager session operation. This method contains multiple independent session operations; use session.Advanced.Lazily or query.Lazily() to batch them into a single server round-trip.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "Each eager Load or materializing Query (ToList, First, etc.) sends a separate HTTP request to the RavenDB server. When a method contains two or more independent operations, they can be registered as lazy and executed together in a single multi-get request, reducing latency. Use session.Advanced.Lazily.Load<T>() and query.Lazily() to register operations lazily, then access .Value or call session.Advanced.Eagerly.ExecuteAllPendingLazyOperations() to trigger the batch.");
+            description: "Each eager Load or materializing Query (ToList, First, etc.) sends a separate HTTP request to the RavenDB server. When a method contains two or more independent operations, they can be registered as lazy and executed together in a single multi-get request, reducing latency. Use session.Advanced.Lazily.Load<T>() and query.Lazily() to register operations lazily, then access .Value or call session.Advanced.Eagerly.ExecuteAllPendingLazyOperations() to trigger the batch.",
+            helpCode: "N74R8M");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.QueryUnboundedResult"/>.
@@ -212,7 +228,8 @@ namespace Raven.Analyzers.Shared
             messageFormat: "'{0}' returns an unbounded result set. Add .Take(n) before {0} to limit the number of documents fetched from the server.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "RavenDB queries default to returning at most 128 documents per request (the server's page size). Without an explicit .Take(n), the intent is invisible and the query may silently fetch far more data than intended as the dataset grows. Add .Take(n) to make the limit explicit.");
+            description: "RavenDB queries default to returning at most 128 documents per request (the server's page size). Without an explicit .Take(n), the intent is invisible and the query may silently fetch far more data than intended as the dataset grows. Add .Take(n) to make the limit explicit.",
+            helpCode: "CCHF6Z");
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.IndexFanOut"/>.
@@ -224,6 +241,7 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Index Map fans out via '{0}'. Each source document yields one index entry per element in the collection; unbounded collections can significantly degrade indexing performance.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. The RavenDB server fires a runtime warning (WarnIndexOutputsPerDocument) for the same reason. Verify the collection is intentionally fanned out and that its cardinality is acceptable.");
+            description: "Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. The RavenDB server fires a runtime warning (WarnIndexOutputsPerDocument) for the same reason. Verify the collection is intentionally fanned out and that its cardinality is acceptable.",
+            helpCode: "9S4SVZ");
     }
 }
