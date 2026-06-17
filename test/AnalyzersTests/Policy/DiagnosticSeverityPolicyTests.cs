@@ -11,82 +11,57 @@ using Xunit;
 namespace AnalyzersTests.Policy
 {
     /// <summary>
-    /// Captures the graduated-severity policy of every RavenDB analyzer diagnostic and enforces it:
-    ///
-    /// - every diagnostic id declares a Start (introduced) version and a destination severity in code;
-    /// - a rule ships as Info in the release that introduces it and is promoted to its destination
-    ///   severity once the product moves past that release (see <see cref="SeverityPolicy"/>);
-    /// - the captured table below must match what the code produces, so any new rule or any change to a
-    ///   Start version / destination severity / currently-effective severity fails this test on purpose.
+    /// Enforces the graduated-severity policy without restating it: every diagnostic declares its
+    /// Start (introduced) version and destination severity once, in the analyzer's <c>Create</c>
+    /// factory, and <see cref="DiagnosticDescriptors.Policies"/> is the single source of truth this
+    /// test reads. A rule ships as Info in the release that introduces it and is promoted to its
+    /// destination severity once the product moves past that release (see <see cref="SeverityPolicy"/>).
+    /// Adding a rule needs no change here.
     /// </summary>
     public class DiagnosticSeverityPolicyTests
     {
-        /// <summary>
-        /// The captured, expected policy for every diagnostic. This is the snapshot: it pins each rule's
-        /// introduced version, destination severity, and the severity currently in effect for the built
-        /// product version (7.2.x → every rule is still Info, promoting at 7.3.0).
-        /// </summary>
-        private static readonly IReadOnlyList<DiagnosticSeverityPolicyEntry> Expected =
-        [
-            new(DiagnosticIds.IndexMapAssignedOutsideCtor, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.QueryFilteringAfterProjection, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.DoubleProjectInto, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.IndexMissingMapAssignment, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.MultiMapIndexMissingAddMap, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.MultiMapIndexSingleAddMap, "7.2", DiagnosticSeverity.Info, DiagnosticSeverity.Info),
-            new (DiagnosticIds.QueryFieldNotIndexed, "7.2", DiagnosticSeverity.Info, DiagnosticSeverity.Info),
-            new (DiagnosticIds.QueryProjectionFieldNotRetrievable, "7.2", DiagnosticSeverity.Info, DiagnosticSeverity.Info),
-            new (DiagnosticIds.IndexUnsupportedMethodCall, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.QueryUnsupportedMethodCall, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.SubscriptionStoreOpenSession, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.SessionLazyBatching, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.QueryUnboundedResult, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info),
-            new (DiagnosticIds.IndexFanOut, "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info)
-        ];
-
         [Fact]
         public void Every_DiagnosticId_Has_Exactly_One_Policy_Entry()
         {
-            string[] ids = AllDiagnosticIds();
-            IReadOnlyList<DiagnosticSeverityPolicyEntry> policies = DiagnosticDescriptors.Policies;
+            HashSet<string> declaredIds = new(AllDiagnosticIds(), StringComparer.Ordinal);
+            List<string> policyIds = DiagnosticDescriptors.Policies.Select(p => p.Id).ToList();
 
-            // Every declared id must have a policy entry — a new rule that forgets to declare a Start
-            // version / destination severity (i.e. is built without the Create factory) fails here.
-            string[] missing = ids.Where(id => policies.All(p => p.Id != id)).ToArray();
-            Assert.True(missing.Length == 0, $"Diagnostic ids without a severity policy entry: {string.Join(", ", missing)}");
+            Assert.True(policyIds.ToHashSet().Count == declaredIds.Count, $"Diagnostic ids with more than one policy entry exist!");
 
-            // No duplicates and no stray entries for ids that don't exist.
-            string[] orphaned = policies.Select(p => p.Id).Where(id => !ids.Contains(id)).ToArray();
-            Assert.True(orphaned.Length == 0, $"Policy entries for unknown diagnostic ids: {string.Join(", ", orphaned)}");
-
-            string[] duplicated = policies.GroupBy(p => p.Id).Where(g => g.Count() > 1).Select(g => g.Key).ToArray();
-            Assert.True(duplicated.Length == 0, $"Diagnostic ids with more than one policy entry: {string.Join(", ", duplicated)}");
+            // Set equality between the declared ids and the policy registry. A new rule that forgets to
+            // go through Create (so it has no policy entry), or a stray entry, fails here.
+            Assert.Equal(
+                declaredIds.OrderBy(id => id, StringComparer.Ordinal),
+                policyIds.OrderBy(id => id, StringComparer.Ordinal));
         }
 
         [Fact]
-        public void Captured_Severity_Policy_Matches_Code()
+        public void Effective_Severity_Follows_The_Version_Policy()
         {
-            // Record value equality compares all four fields. Adding a rule, or changing a Start version /
-            // destination / currently-effective severity, must be an intentional edit to Expected above.
-            Assert.Equal(
-                Expected.OrderBy(p => p.Id, StringComparer.Ordinal),
-                DiagnosticDescriptors.Policies.OrderBy(p => p.Id, StringComparer.Ordinal));
+            // EffectiveSeverity is the descriptor's shipped DefaultSeverity; it must equal what the
+            // version resolver derives from the declared Start version and destination severity.
+            foreach (DiagnosticSeverityPolicyEntry policy in DiagnosticDescriptors.Policies)
+            {
+                DiagnosticSeverity expected = SeverityPolicy.Resolve(policy.IntroducedAt, policy.DestinationSeverity);
+                Assert.Equal(expected, policy.EffectiveSeverity);
+            }
         }
 
         [Fact]
         public void AnalyzerReleases_Severities_Are_In_Sync_With_Code()
         {
             Dictionary<string, DiagnosticSeverity> tracked = ReadAnalyzerReleaseSeverities();
-            IReadOnlyList<DiagnosticSeverityPolicyEntry> policies = DiagnosticDescriptors.Policies;
+            Dictionary<string, DiagnosticSeverityPolicyEntry> byId =
+                DiagnosticDescriptors.Policies.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
-            foreach (DiagnosticSeverityPolicyEntry policy in policies)
+            foreach (DiagnosticSeverityPolicyEntry policy in byId.Values)
             {
-                Assert.True(tracked.ContainsKey(policy.Id),
+                Assert.True(tracked.TryGetValue(policy.Id, out DiagnosticSeverity severity),
                     $"{policy.Id} is not listed in any AnalyzerReleases file.");
-                Assert.Equal(policy.EffectiveSeverity, tracked[policy.Id]);
+                Assert.Equal(policy.EffectiveSeverity, severity);
             }
 
-            string[] strayTracked = tracked.Keys.Where(id => policies.All(p => p.Id != id)).ToArray();
+            string[] strayTracked = tracked.Keys.Where(id => !byId.ContainsKey(id)).ToArray();
             Assert.True(strayTracked.Length == 0,
                 $"AnalyzerReleases lists rules with no descriptor: {string.Join(", ", strayTracked)}");
         }
@@ -119,7 +94,7 @@ namespace AnalyzersTests.Policy
 
         private static Dictionary<string, DiagnosticSeverity> ReadAnalyzerReleaseSeverities()
         {
-            var result = new Dictionary<string, DiagnosticSeverity>();
+            var result = new Dictionary<string, DiagnosticSeverity>(StringComparer.Ordinal);
             foreach (string fileName in new[] { "AnalyzerReleases.Shipped.md", "AnalyzerReleases.Unshipped.md" })
             {
                 string path = FindRepoFile(Path.Combine("src", "Raven.Analyzers", fileName));
