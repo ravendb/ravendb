@@ -759,9 +759,6 @@ namespace Raven.Server.Documents.Replication
                 if (Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors)
                     response[nameof(ReplicationMessageReply.SupportsPullReplicationCompositeChangeVectors)] = true;
 
-                if (replParams?.Mode == PullReplicationMode.HubToSink)
-                    response[nameof(ReplicationMessageReply.LastConfirmedChangeVector)] = ReplicationUtils.ReadCursorFromClusterFor(Server, DatabaseName, replParams.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor);
-
                 return response;
             }
         }
