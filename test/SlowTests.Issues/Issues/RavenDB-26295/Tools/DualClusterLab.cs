@@ -34,6 +34,8 @@ public sealed class DualClusterLab : IAsyncDisposable
     private readonly Dictionary<string, IDocumentStore> _stores;
     private readonly Dictionary<string, RavenServer> _servers;
     private readonly Dictionary<string, DocumentDatabase> _databases;
+    private readonly List<LabNode> _hubNodes;
+    private readonly List<LabNode> _sinkNodes;
     private readonly List<LogicalInternalReplicationBlocker> _internalReplicationBlockers;
     private readonly List<IDisposable> _testingHookScopes;
     private Func<ClusterSide, LabNode, Task> _waitForExpectedFilteredRoundTripItemAsync;
@@ -46,6 +48,7 @@ public sealed class DualClusterLab : IAsyncDisposable
         TaggedCluster hubCluster,
         TaggedCluster sinkCluster,
         string hubDatabaseName,
+        string sinkDatabaseName,
         string pullCertificate,
         ClusterSide? filteredPassReceiveSide,
         string itemName)
@@ -53,6 +56,7 @@ public sealed class DualClusterLab : IAsyncDisposable
         HubCluster = hubCluster;
         SinkCluster = sinkCluster;
         HubDatabaseName = hubDatabaseName;
+        SinkDatabaseName = sinkDatabaseName;
         PullCertificate = pullCertificate;
         FilteredPassReceiveSide = filteredPassReceiveSide;
         FilteredRoundTripItemName = itemName;
@@ -82,6 +86,8 @@ public sealed class DualClusterLab : IAsyncDisposable
         _stores = new Dictionary<string, IDocumentStore>(StringComparer.OrdinalIgnoreCase);
         _servers = new Dictionary<string, RavenServer>(StringComparer.OrdinalIgnoreCase);
         _databases = new Dictionary<string, DocumentDatabase>(StringComparer.OrdinalIgnoreCase);
+        _hubNodes = [];
+        _sinkNodes = [];
         _internalReplicationBlockers = [];
         _testingHookScopes = [];
     }
@@ -94,9 +100,11 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     private TestCertificatesHolder SinkCertificates => SinkCluster.Certificates;
 
-    private string HubDatabaseName { get; }
+    public string HubDatabaseName { get; }
 
-    private string PullCertificate { get; }
+    public string SinkDatabaseName { get; }
+
+    public string PullCertificate { get; }
 
     private ClusterSide? FilteredPassReceiveSide { get; }
 
@@ -134,9 +142,14 @@ public sealed class DualClusterLab : IAsyncDisposable
         _servers[key] = server;
         _stores[key] = store;
         _databases[key] = database;
+        (side == ClusterSide.Hub ? _hubNodes : _sinkNodes).Add(node);
     }
 
     private IDocumentStore Store(ClusterSide side, LabNode node) => _stores[Key(side, node)];
+
+    public IDocumentStore GetStore(ClusterSide side, LabNode node) => Store(side, node);
+
+    private IReadOnlyList<LabNode> NodesOf(ClusterSide side) => side == ClusterSide.Hub ? _hubNodes : _sinkNodes;
 
     public async Task SeedInternalReplicationAsync()
     {
@@ -146,7 +159,8 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     private async Task SeedInternalReplicationAsync(ClusterSide side)
     {
-        foreach (var node in NodesOnEachClusterSide)
+        var nodes = NodesOf(side);
+        foreach (var node in nodes)
         {
             var nodeTag = NodeTagLower(side, node);
             var documentId = $"tickets/internal-replication-seed/from-{nodeTag}";
@@ -154,7 +168,7 @@ public sealed class DualClusterLab : IAsyncDisposable
 
             await StoreTicketAsync(side, node, documentId, name);
 
-            foreach (var other in NodesOnEachClusterSide.Where(x => x != node))
+            foreach (var other in nodes.Where(x => x != node))
                 await WaitForDocumentNameByIdAsync(side, other, documentId, name, DefaultReplicationWaitTimeout);
         }
     }
@@ -167,11 +181,12 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     private async Task WaitForInternalHandlersAsync(ClusterSide side)
     {
-        foreach (var node in NodesOnEachClusterSide)
+        var nodes = NodesOf(side);
+        foreach (var node in nodes)
         {
             var ready = await WaitForValueAsync(
                 () => Database(side, node).ReplicationLoader.OutgoingHandlers
-                    .Count(x => x.Destination is InternalReplication) >= 2,
+                    .Count(x => x.Destination is InternalReplication) >= nodes.Count - 1,
                 expectedVal: true,
                 timeout: (int)DefaultReplicationWaitTimeout.TotalMilliseconds,
                 interval: 100);
@@ -198,7 +213,7 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     public async Task ConfigurePerNodeHubDefinitionsAsync()
     {
-        foreach (var node in NodesOnEachClusterSide)
+        foreach (var node in NodesOf(ClusterSide.Hub))
         {
             var hubDefinition = new PullReplicationDefinition
             {
@@ -224,6 +239,8 @@ public sealed class DualClusterLab : IAsyncDisposable
     }
 
     private RavenServer Server(ClusterSide side, LabNode node) => _servers[Key(side, node)];
+
+    public RavenServer GetServer(ClusterSide side, LabNode node) => Server(side, node);
 
     private DocumentDatabase Database(ClusterSide side, LabNode node) => _databases[Key(side, node)];
 
@@ -752,12 +769,33 @@ public sealed class DualClusterLab : IAsyncDisposable
         _allowedTicketThenFilteredOutUserStored = true;
     }
 
-    private async Task StoreTicketAsync(ClusterSide side, LabNode node, string documentId, string name)
+    public async Task StoreTicketAsync(ClusterSide side, LabNode node, string documentId, string name)
     {
         using var session = Store(side, node).OpenAsyncSession();
         await session.StoreAsync(new Ticket { Name = name }, documentId);
         await session.SaveChangesAsync();
     }
+
+    public async Task DeleteDocumentAsync(ClusterSide side, LabNode node, string documentId)
+    {
+        using var session = Store(side, node).OpenAsyncSession();
+        session.Delete(documentId);
+        await session.SaveChangesAsync();
+    }
+
+    public Task WaitForTicketAsync(ClusterSide side, LabNode node, string documentId, string expectedName, TimeSpan? timeout = null) =>
+        WaitForDocumentNameByIdAsync(side, node, documentId, expectedName, timeout);
+
+    public long GetNumberOfDocumentTombstones(ClusterSide side, LabNode node)
+    {
+        var database = Database(side, node);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+            return database.DocumentsStorage.GetNumberOfTombstones(context);
+    }
+
+    public Task RunTombstoneCleanupAsync(ClusterSide side, LabNode node) =>
+        Database(side, node).TombstoneCleaner.ExecuteCleanup();
 
     private async Task StoreUserAsync(ClusterSide side, LabNode node, string documentId, string name)
     {
