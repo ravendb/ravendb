@@ -526,9 +526,11 @@ namespace Raven.Server
             void ConfigureMetrics(MeterProviderBuilder builder)
             {
                 var configuration = Configuration.Monitoring.OpenTelemetry;
+                var serviceName = configuration.ServiceName;
+                var serviceNamespace = configuration.ServiceNamespace;
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
-                        .AddService("server", "ravendb", serviceInstanceId: serviceInstanceId));
+                        .AddService(serviceName, serviceNamespace, serviceInstanceId: serviceInstanceId));
                 if (configuration.AspNetCoreInstrumentationMetersEnabled)
                     builder.AddAspNetCoreInstrumentation();
                 if (configuration.RuntimeInstrumentationMetersEnabled)
