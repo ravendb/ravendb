@@ -1,26 +1,19 @@
 import { Database, DatabaseZap } from "lucide-react";
+import type { RadioCardOption } from "@/components/form/form-radio-cards";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 
-type DataSourceOption = {
-    value: AppFormData["dataSource"]["source"];
-    label: string;
-    description: string;
-    icon: React.ReactNode;
-    isDisabled?: boolean;
-};
-
-export const DATA_SOURCE_OPTIONS: DataSourceOption[] = [
+export const DATA_SOURCE_OPTIONS: RadioCardOption<AppFormData["dataSource"]["source"]>[] = [
     {
         value: "external",
         label: "External database",
         description: "Mirror data from PostgreSQL, SQL Server, or MySQL via Change Data Capture.",
-        icon: <Database className="mb-5 size-5" />,
+        icon: <Database className="size-5" />,
     },
     {
         value: "ravendb",
         label: "RavenDB database",
         description: "Connect to an existing database on your RavenDB server.",
-        isDisabled: true,
-        icon: <DatabaseZap className="mb-5 size-5" />,
+        disabled: true,
+        icon: <DatabaseZap className="size-5" />,
     },
 ];

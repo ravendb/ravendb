@@ -1,5 +1,6 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
+import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import type { AiAgentConfiguration } from "@/api/generated/server-api";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { applySuggestionToForm } from "@/pages/setup/add-capability-wizard/agent-config-form";
@@ -32,8 +33,8 @@ export function SuggestionPicker() {
                         }}
                         className={cn(
                             "min-h-28 rounded-lg border bg-background p-4 text-left transition-colors",
-                            "hover:bg-accent hover:text-accent-foreground",
-                            isSelected && "border-foreground bg-accent text-accent-foreground",
+                            !isSelected && "hover:bg-accent hover:text-accent-foreground",
+                            isSelected && SELECTED_CARD_CLASSES,
                         )}
                     >
                         <span className="block text-sm font-semibold">{config.name}</span>

@@ -19,9 +19,9 @@ export function withNestedSubmit<T>(action: (...args: T[]) => void) {
 }
 
 export function getOptionLabel<TValue extends string>(
-    options: ReadonlyArray<{ value: TValue; label: string }>,
+    options: ReadonlyArray<{ value: TValue; label: React.ReactNode }>,
     value: TValue | null | undefined,
-): string | undefined {
+): React.ReactNode {
     return options.find((option) => option.value === value)?.label;
 }
 
