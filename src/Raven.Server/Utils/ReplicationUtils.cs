@@ -86,11 +86,11 @@ namespace Raven.Server.Utils
             using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return ReadCursorFromClusterFor(serverStore, databaseName, taskId, type, context);
+                return ReadCursorFromClusterFor(context, serverStore, databaseName, taskId, type);
             }
         }
 
-        public static string ReadCursorFromClusterFor(ServerStore serverStore, string databaseName, long taskId, ExternalReplicationState.ReplicationStateType type, ClusterOperationContext context)
+        public static string ReadCursorFromClusterFor(ClusterOperationContext context, ServerStore serverStore, string databaseName, long taskId, ExternalReplicationState.ReplicationStateType type)
         {
             var key = ExternalReplicationState.GenerateItemName(databaseName, taskId, type);
             var stateBlittable = serverStore.Cluster.Read(context, key);
