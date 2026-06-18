@@ -671,6 +671,7 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        JsonElement: unknown;
         MapRequest: {
             /** Format: int64 */
             taskId?: null | number;
@@ -768,11 +769,15 @@ export interface components {
         RedeemLicenseRequest: {
             licenseKey: string;
         };
+        SetupTryParameter: {
+            value: null | components["schemas"]["JsonElement"];
+            sendToModel: boolean;
+        };
         SetupTryRequest: {
             prompt: string;
             configuration: components["schemas"]["AiAgentConfiguration"];
             parameters: null | {
-                [key: string]: string;
+                [key: string]: components["schemas"]["SetupTryParameter"];
             };
             streamField?: null | string;
         };
@@ -1846,6 +1851,7 @@ export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryRe
 export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
+export type JsonElement = components["schemas"]["JsonElement"];
 export type MapRequest = components["schemas"]["MapRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
@@ -1860,6 +1866,7 @@ export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelRe
 export type ProvisionRequest = components["schemas"]["ProvisionRequest"];
 export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
 export type RedeemLicenseRequest = components["schemas"]["RedeemLicenseRequest"];
+export type SetupTryParameter = components["schemas"]["SetupTryParameter"];
 export type SetupTryRequest = components["schemas"]["SetupTryRequest"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];

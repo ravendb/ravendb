@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.AiAppliance.Contracts;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -32,7 +33,7 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
 {
     private readonly AiAgentConfiguration _configuration;
     private readonly string _prompt;
-    private readonly IReadOnlyDictionary<string, string>? _parameters;
+    private readonly IReadOnlyDictionary<string, SetupTryParameter>? _parameters;
     private readonly string _streamField;
     private readonly Func<string, Task> _onChunk;
     private readonly CancellationToken _token;
@@ -40,7 +41,7 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
     public RunDraftAgentTestOperation(
         AiAgentConfiguration configuration,
         string prompt,
-        IReadOnlyDictionary<string, string>? parameters,
+        IReadOnlyDictionary<string, SetupTryParameter>? parameters,
         string streamField,
         Func<string, Task> onChunk,
         CancellationToken token)
@@ -78,7 +79,7 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
     {
         private readonly AiAgentConfiguration _configuration;
         private readonly string _prompt;
-        private readonly IReadOnlyDictionary<string, string>? _parameters;
+        private readonly IReadOnlyDictionary<string, SetupTryParameter>? _parameters;
         private readonly string _replyField;
         private readonly Func<string, Task> _onChunk;
         private readonly DocumentConventions _conventions;
@@ -87,7 +88,7 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
         public Command(
             AiAgentConfiguration configuration,
             string prompt,
-            IReadOnlyDictionary<string, string>? parameters,
+            IReadOnlyDictionary<string, SetupTryParameter>? parameters,
             string replyField,
             Func<string, Task> onChunk,
             DocumentConventions conventions,
@@ -119,15 +120,14 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             if (_parameters is { Count: > 0 })
             {
                 var values = new DynamicJsonValue();
-                foreach (var (key, value) in _parameters)
+                foreach (var (key, parameter) in _parameters)
                 {
-                    // Mirror AiConversationParameter so the server binds it like a normal
-                    // conversation parameter; SendToModel mirrors the appliance router's
-                    // string-parameter convention (always exposed to the model).
+                    // Mirror AiConversationParameter so the server binds the already-typed JSON
+                    // value exactly like RavenDB Studio's agent test panel.
                     values[key] = new DynamicJsonValue
                     {
-                        ["Value"] = value,
-                        ["SendToModel"] = true,
+                        ["Value"] = AgentTestParameterValue.Convert(parameter?.Value),
+                        ["SendToModel"] = parameter?.SendToModel ?? true,
                     };
                 }
 

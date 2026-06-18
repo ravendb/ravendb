@@ -6,7 +6,10 @@ import { z } from "zod";
 import { Bot, ChevronDown, ChevronUp, FlaskConical, MessageSquare, Send, Settings2, Trash2 } from "lucide-react";
 import { api } from "@/api/api";
 import type { AgentToolCall } from "@/api/custom-services/agent-stream";
-import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import {
+    AGENT_PARAMETER_TYPES,
+    type AgentFormData,
+} from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import type { WizardFooterComponentProps } from "@/components/form/wizard/form-wizard";
 import { buildAgentConfigurationPayload } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { Button } from "@/components/shadcn/ui/button";
@@ -21,6 +24,7 @@ import {
 } from "@/components/shadcn/ui/sheet";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
+import { FormSwitch } from "@/components/form/form-switch";
 import { FormTextarea } from "@/components/form/form-textarea";
 import AceEditor from "@/components/ace-editor/ace-editor";
 import { TestQueryToolCall } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-tool-call";
@@ -84,28 +88,38 @@ type ChatMessage = {
     toolCalls?: AgentToolCall[];
 };
 
+const testParameterSchema = z
+    .object({
+        name: z.string(),
+        value: z.string(),
+        type: z.enum(AGENT_PARAMETER_TYPES),
+        isSendToModel: z.boolean(),
+    })
+    .superRefine((parameter, ctx) => {
+        const value = parameter.value.trim();
+        if (parameter.type === "Null") {
+            return;
+        }
+
+        if (!value) {
+            ctx.addIssue({ code: "custom", message: "Value is required", path: ["value"] });
+            return;
+        }
+
+        if (parameter.type === "Number" && !Number.isFinite(Number(value))) {
+            ctx.addIssue({ code: "custom", message: "Enter a valid number", path: ["value"] });
+        } else if (parameter.type === "Boolean" && !isBooleanToken(value)) {
+            ctx.addIssue({ code: "custom", message: "Select true or false", path: ["value"] });
+        } else if (parameter.type.startsWith("ArrayOf") && !isValidParameterArray(value, parameter.type)) {
+            ctx.addIssue({ code: "custom", message: `Enter a valid ${parameter.type} JSON array`, path: ["value"] });
+        }
+    });
+
 const testFormSchema = z.object({
     prompt: z.string(),
     // Which output field streams token-by-token; empty lets the server pick the first field.
     streamField: z.string(),
-    parameters: z
-        .array(
-            z.object({
-                name: z.string(),
-                value: z.string(),
-                // A value is required only when the model isn't allowed to generate one
-                // (ForbidModelGeneration). Parameters the model can fill stay optional for a
-                // one-off test run, so the operator needn't invent a value.
-                isRequired: z.boolean(),
-            }),
-        )
-        .superRefine((parameters, ctx) => {
-            parameters.forEach((parameter, index) => {
-                if (parameter.isRequired && parameter.value.trim().length === 0) {
-                    ctx.addIssue({ code: "custom", message: "Value is required", path: [index, "value"] });
-                }
-            });
-        }),
+    parameters: z.array(testParameterSchema),
 });
 
 type TestFormData = z.infer<typeof testFormSchema>;
@@ -139,12 +153,14 @@ function TestAgentPanel() {
             prompt: "",
             // Default to the first streamable field — the server's own convention when unset.
             streamField: streamFieldOptions[0] ?? "",
-            // The agent's declared parameters, ready for the operator to fill in values. A value
-            // is required only for parameters the model may not generate (ForbidModelGeneration).
+            // The agent's declared parameters, ready for the operator to fill in values. RavenDB
+            // requires every declared parameter value for a top-level conversation; policy only
+            // controls parameter generation when this agent is used as a sub-agent.
             parameters: wizardForm.getValues("review.parameters").map((parameter) => ({
                 name: parameter.name,
                 value: "",
-                isRequired: parameter.policy === "ForbidModelGeneration",
+                type: parameter.type,
+                isSendToModel: parameter.isSendToModel,
             })),
         },
     });
@@ -271,7 +287,7 @@ function TestAgentPanel() {
                     />
                 )}
 
-                {parameterFields.fields.length > 0 && (
+                {parameterFields.fields.some((field) => field.type !== "Null") && (
                     <TestParametersSection
                         control={form.control}
                         fields={parameterFields.fields}
@@ -345,9 +361,9 @@ function TestAgentPanel() {
     );
 }
 
-// Operator-supplied values for the agent's declared parameters. Only parameters the model may
-// not generate require a value; the section can be collapsed to a one-line summary once filled
-// to free up chat space.
+// Operator-supplied values for the agent's declared parameters. Null parameters have no editable
+// value; all others are required for a top-level test conversation. The section can be collapsed
+// to a one-line summary once filled to free up chat space.
 function TestParametersSection({
     control,
     fields,
@@ -356,13 +372,14 @@ function TestParametersSection({
     disabled,
 }: {
     control: Control<TestFormData>;
-    fields: { id: string; name: string; isRequired: boolean }[];
+    fields: { id: string; name: string; type: TestFormData["parameters"][number]["type"] }[];
     isCollapsed: boolean;
     onToggleCollapsed: () => void;
     disabled: boolean;
 }) {
     const values = useWatch({ control, name: "parameters" });
     const summary = (values ?? [])
+        .filter((parameter) => parameter.type !== "Null")
         .map((parameter) => `${parameter.name}: ${parameter.value?.trim() || "—"}`)
         .join(", ");
 
@@ -388,23 +405,46 @@ function TestParametersSection({
                 <p className="truncate text-xs text-muted-foreground">{summary}</p>
             ) : (
                 <div className="grid gap-2">
-                    {fields.map((field, index) => (
-                        <FormInput
-                            key={field.id}
-                            control={control}
-                            name={`parameters.${index}.value`}
-                            label={
-                                <span className="flex items-center gap-1.5">
-                                    {field.name}
-                                    {!field.isRequired && (
-                                        <span className="text-xs font-normal text-muted-foreground">(optional)</span>
-                                    )}
-                                </span>
-                            }
-                            placeholder={`Value for ${field.name}`}
-                            disabled={disabled}
-                        />
-                    ))}
+                    {fields.map((field, index) => {
+                        if (field.type === "Null") {
+                            return null;
+                        }
+
+                        return (
+                            <div key={field.id} className="grid gap-2 rounded-md border p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="truncate text-sm font-medium" title={field.name}>
+                                        {field.name}
+                                    </span>
+                                    <FormSwitch
+                                        control={control}
+                                        name={`parameters.${index}.isSendToModel`}
+                                        label="Send to model"
+                                        disabled={disabled}
+                                    />
+                                </div>
+                                {field.type === "Boolean" ? (
+                                    <FormSelect
+                                        control={control}
+                                        name={`parameters.${index}.value`}
+                                        label="Value"
+                                        placeholder="Select true or false"
+                                        options={BOOLEAN_PARAMETER_OPTIONS}
+                                        disabled={disabled}
+                                    />
+                                ) : (
+                                    <FormInput
+                                        control={control}
+                                        name={`parameters.${index}.value`}
+                                        label="Value"
+                                        placeholder={getParameterPlaceholder(field.name, field.type)}
+                                        inputMode={field.type === "Number" ? "decimal" : undefined}
+                                        disabled={disabled}
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -459,14 +499,111 @@ function replaceMessage(messages: ChatMessage[], id: string, update: (message: C
     return messages.map((message) => (message.id === id ? update(message) : message));
 }
 
-// Builds the parameter map sent to the server, dropping blanks: optional parameters the operator
-// left empty are omitted so the model/server applies its own value rather than receiving "".
-function toParameterRecord(parameters: TestFormData["parameters"]): Record<string, string> | null {
+const BOOLEAN_PARAMETER_OPTIONS: FormSelectOption<string>[] = [
+    { value: "true", label: "True" },
+    { value: "false", label: "False" },
+];
+
+// Mirrors RavenDB Studio's createParametersDto: convert the form text to the parameter's declared
+// JSON type and send the per-test SendToModel value alongside it.
+function toParameterRecord(
+    parameters: TestFormData["parameters"],
+): Record<string, { value: unknown; sendToModel: boolean }> | null {
     const entries = parameters
-        .map((parameter) => [parameter.name, parameter.value] as const)
-        .filter(([name, value]) => name && value.trim() !== "");
+        .filter((parameter) => parameter.name)
+        .map(
+            (parameter) =>
+                [
+                    parameter.name,
+                    {
+                        value: mapParameterValueToType(parameter.value, parameter.type),
+                        sendToModel: parameter.isSendToModel,
+                    },
+                ] as const,
+        );
 
     return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function mapParameterValueToType(value: string, type: TestFormData["parameters"][number]["type"]): unknown {
+    switch (type) {
+        case "Number":
+            return Number(value);
+        case "Boolean":
+            return value.trim().toLowerCase() === "true";
+        case "ArrayOfString":
+            return requireParameterArray(value);
+        case "ArrayOfNumber":
+            return requireParameterArray(value).map((item) => Number(item));
+        case "ArrayOfBoolean":
+            return requireParameterArray(value).map((item) =>
+                typeof item === "boolean" ? item : String(item).trim().toLowerCase() === "true",
+            );
+        case "Null":
+            return null;
+        case "Default":
+        case "String":
+            return value;
+    }
+}
+
+function requireParameterArray(value: string): unknown[] {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) {
+        throw new Error("Expected an agent parameter value in JSON array format.");
+    }
+    return parsed;
+}
+
+function isBooleanToken(value: string): boolean {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "false";
+}
+
+function isValidParameterArray(value: string, type: TestFormData["parameters"][number]["type"]): boolean {
+    try {
+        const parsed: unknown = JSON.parse(value);
+        if (!Array.isArray(parsed)) {
+            return false;
+        }
+
+        switch (type) {
+            case "ArrayOfString":
+                return parsed.every((item) => typeof item === "string");
+            case "ArrayOfNumber":
+                return parsed.every(isFiniteNumberToken);
+            case "ArrayOfBoolean":
+                return parsed.every(
+                    (item) => typeof item === "boolean" || (typeof item === "string" && isBooleanToken(item)),
+                );
+            default:
+                return false;
+        }
+    } catch {
+        return false;
+    }
+}
+
+function isFiniteNumberToken(value: unknown): boolean {
+    if (typeof value === "number") {
+        return Number.isFinite(value);
+    }
+    return typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value));
+}
+
+function getParameterPlaceholder(name: string, type: TestFormData["parameters"][number]["type"]): string {
+    switch (type) {
+        case "ArrayOfString":
+            return `["value1", "value2"] for ${name}`;
+        case "ArrayOfNumber":
+            return `[1, 2] for ${name}`;
+        case "ArrayOfBoolean":
+            return `[true, false] for ${name}`;
+        case "Number":
+            return `Number for ${name}`;
+        default:
+            return `Value for ${name}`;
+    }
 }
 
 // Builds the JSON shown while a single field streams in: the declared answer shape with the
