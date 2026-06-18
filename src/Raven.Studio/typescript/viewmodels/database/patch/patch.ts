@@ -24,7 +24,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
-import PatchSamplesPanel = require("viewmodels/database/patch/PatchSamplesPanel");
+import PatchSamplesDropdown = require("viewmodels/database/patch/PatchSamplesDropdown");
 
 class patchList {
 
@@ -156,13 +156,7 @@ class patch extends shardViewModelBase {
 
     inSaveMode = ko.observable<boolean>();
 
-    showSamples = ko.observable<boolean>(false);
-
-    samplesView: ReactInKnockout<typeof PatchSamplesPanel.default>;
-
-    openSamples() {
-        this.showSamples(true);
-    }
+    samplesDropdownView: ReactInKnockout<typeof PatchSamplesDropdown.default>;
 
     spinners = {
         save: ko.observable<boolean>(false),
@@ -197,16 +191,12 @@ class patch extends shardViewModelBase {
         this.bindToCurrentInstance("savePatch");
         this.initObservables();
 
-        this.samplesView = ko.pureComputed(() => ({
-            component: PatchSamplesPanel.default,
+        this.samplesDropdownView = ko.pureComputed(() => ({
+            component: PatchSamplesDropdown.default,
             props: {
-                initialScript: this.patchDocument().query(),
-                isOpened: this.showSamples(),
-                onUpdateScript: (script: string) => {
+                onLoadScript: (script: string) => {
                     this.patchDocument().query(script);
-                    this.showSamples(false);
                 },
-                onClose: () => this.showSamples(false),
             },
         }));
     }

@@ -19,7 +19,6 @@
                 <div class="row">
                     <div class="col-sm-3 col-lg-2">
                         <h2 class="on-base-background">Patch</h2>
-                        <a href="#" data-bind="click: openSamples" class="syntax-help"><small>Samples <i class="icon-patch"></i></small></a>
                     </div>
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
@@ -39,6 +38,7 @@
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
                                     <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
                                 </div>
+                                <div data-bind="react: samplesDropdownView" class="bs5 mt-2"></div>
                             </div>
                             <div class="patch-controls">
                                 <div class="flex-separator"></div>
@@ -71,7 +71,6 @@
     </div>
     <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()"></div>
 </div>
-<div data-bind="visible: showSamples, react: samplesView" class="patch-samples-overlay"></div>
 <div class="backdrop"></div>
 
 <script type="text/html" id="test-component">
