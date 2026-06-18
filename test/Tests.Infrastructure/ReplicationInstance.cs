@@ -42,17 +42,17 @@ namespace Tests.Infrastructure
 
         public IAsyncDisposable Break()
         {
-            _breakBlockedMre = new ManualResetEventSlim(false);
+            _breakBlockedMre = new ManualResetEventSlim(true);
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = _breakBlockedMre;
-            return new BreakHandle();
+            return new BreakHandle(this);
         }
 
-        private async Task WaitForResetAsync(int timeout = 15_000)
+        private async Task WaitForResetAsync(ManualResetEventSlim mre, int timeout = 15_000)
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < timeout)
             {
-                if (_replicateOnceMre?.IsSet == false)
+                if (mre?.IsSet == false)
                     return;
 
                 await Task.Delay(16);
@@ -61,15 +61,15 @@ namespace Tests.Infrastructure
             throw new TimeoutException("Replication cycle did not complete within timeout");
         }
 
-        // Intentionally a no-op: unblocking the handler is MendAsync()'s job, not Dispose's.
-        // The handler stays blocked for the entire await-using scope, so MendAsync() can
-        // arm its confirmation signal before releasing it - no window for the handler to
-        // race ahead and go idle in WaitForChanges() before we're watching for it.
-        // If MendAsync() is never reached (e.g. an exception escapes the scope),
-        // ReplicationInstance.Dispose() is the fail-safe that releases the handler at teardown.
         private sealed class BreakHandle : IAsyncDisposable
         {
-            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+            private readonly ReplicationInstance _owner;
+            public BreakHandle(ReplicationInstance owner) => _owner = owner;
+
+            public async ValueTask DisposeAsync()
+            {
+                await _owner.WaitForResetAsync(_owner._breakBlockedMre, timeout: 15_000);
+            }
         }
 
         public async Task MendAsync()
@@ -95,7 +95,7 @@ namespace Tests.Infrastructure
                 // Short timeout: if there's genuinely nothing to replicate, the handler's first
                 // iteration after waking returns didWork == false and breaks out before ever
                 // re-checking nextMre, so this path legitimately can't observe a Reset() signal.
-                await WaitForResetAsync(timeout: 3_000);
+                await WaitForResetAsync(nextMre, timeout: 3_000);
             }
             catch (TimeoutException)
             {
