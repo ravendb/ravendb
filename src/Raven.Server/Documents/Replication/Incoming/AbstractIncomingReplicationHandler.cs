@@ -154,12 +154,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     var sinceLastSentHeartbeat = Stopwatch.StartNew(); // time since the last sent heartbeat
                     const int notifyMinIntervalInMs = 1000;
 
-                    // Throttle notify-sends. A busy node pokes _replicationFromAnotherSource very frequently (once per
-                    // sibling batch). The peer emits its periodic heartbeat only when ITS read of our messages goes
-                    // quiet for a heartbeat interval (see DatabaseOutgoingReplicationHandler.WaitForChanges), so a
-                    // "Notify" reply for every poke starves the peer's heartbeats and makes this healthy connection
-                    // look dead. Sending at most once per (heartbeat + timeout)/2 -- always larger than the heartbeat
-                    // interval -- leaves the peer quiet time to heartbeat while still forwarding our change vector.
+                    // Throttle "Notify" replies to at most once per second: a busy node pokes _replicationFromAnotherSource once per
+                    // sibling batch, and replying to every poke floods the peer with no added value (the next Notify carries the latest change vector).
 
                     while (_cts.IsCancellationRequested == false)
                     {
