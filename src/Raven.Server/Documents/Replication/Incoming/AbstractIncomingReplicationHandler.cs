@@ -216,10 +216,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 {
                                     // Throttle: only send a notify if enough time has passed since the last one.
                                     if (sinceLastSentHeartbeat.ElapsedMilliseconds <= notifyMinIntervalInMs)
-                                    {
-                                        sinceLastSentHeartbeat.Restart();
                                         continue;
-                                    }
 
                                     using (_contextPool.AllocateOperationContext(out TOperationContext context))
                                     using (var writer = new BlittableJsonTextWriter(context, _stream))
@@ -230,6 +227,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             _lastDocumentEtag,
                                             "Notify");
                                     }
+
+                                    sinceLastSentHeartbeat.Restart();
                                 }
                             }
                         }
