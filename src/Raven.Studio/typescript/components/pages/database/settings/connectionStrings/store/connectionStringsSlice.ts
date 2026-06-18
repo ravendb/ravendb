@@ -171,8 +171,11 @@ const fetchServerWideData = createAsyncThunk<FetchServerWideDataResult, void, { 
     connectionStringsSlice.name + "/fetchServerWideConnectionStrings",
     async (_, { getState }) => {
         const state = getState();
+
         const { Results } = await services.tasksService.getServerWideConnectionStrings();
+
         const hasOperatorAccess = accessManagerSelectors.isOperatorOrAbove(state);
+
         return { serverWideDto: Results, hasOperatorAccess };
     }
 );

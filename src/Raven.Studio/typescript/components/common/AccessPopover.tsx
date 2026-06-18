@@ -5,11 +5,11 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { getAccessRequiredMessage } from "components/utils/accessUtils";
 
 export interface DatabaseAccessPopoverProps extends Omit<ConditionalPopoverProps, "conditions"> {
-    accessRequired: databaseAccessLevel;
+    accessRequired: accessLevel;
     conditions?: ConditionalPopoverProps["conditions"];
 }
 
-export function DatabaseAccessPopover({
+export function AccessPopover({
     conditions = [],
     children,
     accessRequired = "DatabaseAdmin",

@@ -9,6 +9,7 @@ import { Connection, StudioConnectionType } from "./connectionStringsTypes";
 import { connectionStringsActions, connectionStringSelectors } from "./store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
+import { AccessPopover } from "components/common/AccessPopover";
 
 interface ConnectionStringsPanelsProps {
     connections: Connection[];
@@ -16,35 +17,13 @@ interface ConnectionStringsPanelsProps {
 }
 
 export default function ConnectionStringsPanels({ connections, connectionsType }: ConnectionStringsPanelsProps) {
-    const dispatch = useDispatch();
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
-
     if (connections.length === 0) {
         return null;
     }
 
     return (
         <div className="mb-4 connection-strings-panels">
-            <HrHeader
-                right={
-                    hasDatabaseAdminAccess &&
-                    viewContext === "connectionStrings" && (
-                        <Button
-                            variant="info"
-                            size="sm"
-                            className="rounded-pill"
-                            title="Add new credentials"
-                            onClick={() =>
-                                dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))
-                            }
-                        >
-                            <Icon icon="plus" />
-                            Add new
-                        </Button>
-                    )
-                }
-            >
+            <HrHeader right={<AddNewButton connectionsType={connectionsType} />}>
                 <Icon icon={getIcon(connectionsType)} />
                 {getTypeLabel(connectionsType)}
             </HrHeader>
@@ -53,6 +32,55 @@ export default function ConnectionStringsPanels({ connections, connectionsType }
             ))}
         </div>
     );
+}
+
+interface AddNewButtonProps {
+    connectionsType: Connection["type"];
+}
+
+function AddNewButton({ connectionsType }: AddNewButtonProps) {
+    const dispatch = useDispatch();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+
+    if (viewContext === "connectionStrings") {
+        return (
+            <AccessPopover accessRequired="DatabaseAdmin">
+                <Button
+                    variant="info"
+                    size="sm"
+                    className="rounded-pill"
+                    title="Add new credentials"
+                    disabled={!hasDatabaseAdminAccess}
+                    onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))}
+                >
+                    <Icon icon="plus" />
+                    Add new
+                </Button>
+            </AccessPopover>
+        );
+    }
+
+    if (viewContext === "serverWideConnectionStrings") {
+        return (
+            <AccessPopover accessRequired="Operator">
+                <Button
+                    variant="info"
+                    size="sm"
+                    className="rounded-pill"
+                    title="Add new connection string"
+                    disabled={!hasOperatorAccess}
+                    onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))}
+                >
+                    <Icon icon="plus" />
+                    Add new
+                </Button>
+            </AccessPopover>
+        );
+    }
+
+    return null;
 }
 
 export function getTypeLabel(type: StudioConnectionType): string {

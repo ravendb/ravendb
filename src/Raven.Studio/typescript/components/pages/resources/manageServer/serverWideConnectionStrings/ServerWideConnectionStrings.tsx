@@ -4,14 +4,12 @@ import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { HrHeader } from "components/common/HrHeader";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import ConnectionStringsPanel from "components/pages/database/settings/connectionStrings/ConnectionStringsPanel";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
-import { getIcon, getTypeLabel } from "components/pages/database/settings/connectionStrings/ConnectionStringsPanels";
+import ConnectionStringsPanels from "components/pages/database/settings/connectionStrings/ConnectionStringsPanels";
 import { EmptySet } from "components/common/EmptySet";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
@@ -24,7 +22,6 @@ import {
 import { ConnectionStringsUrlParameters } from "components/pages/database/settings/connectionStrings/ConnectionStrings";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
-import { getAccessRequiredMessage } from "components/utils/accessUtils";
 
 const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "Ai",
@@ -40,7 +37,9 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "AzureServiceBus"
 );
 
-export default function ServerWideConnectionStrings({ queryParams }: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
+export default function ServerWideConnectionStrings({
+    queryParams,
+}: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
     const dispatch = useAppDispatch();
     const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const hasServerWideConnectionStrings = useAppSelector(
@@ -64,14 +63,10 @@ export default function ServerWideConnectionStrings({ queryParams }: ReactQueryP
         return () => {
             dispatch(connectionStringsActions.reset());
         };
-    }, [dispatch, hasServerWideConnectionStrings]);
+        // Changing the database causes re-mount
+    }, []);
 
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
-
-    const handleSave = async (_name: string) => {
-        dispatch(connectionStringsActions.fetchServerWideData());
-        dispatch(connectionStringsActions.editConnectionModalClosed());
-    };
 
     if (loadStatus === "failure") {
         return (
@@ -84,13 +79,7 @@ export default function ServerWideConnectionStrings({ queryParams }: ReactQueryP
 
     return (
         <div className="content-margin">
-            {initialEditConnection && (
-                <EditConnectionStrings
-                    initialConnection={initialEditConnection}
-                    afterSave={handleSave}
-                    afterClose={() => dispatch(connectionStringsActions.editConnectionModalClosed())}
-                />
-            )}
+            {initialEditConnection && <EditConnectionStrings initialConnection={initialEditConnection} />}
             <Row className="gy-sm">
                 <Col>
                     <AboutViewHeading
@@ -126,7 +115,6 @@ export default function ServerWideConnectionStrings({ queryParams }: ReactQueryP
 }
 
 function ServerWideConnectionStringsBody() {
-    const dispatch = useAppDispatch();
     const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
     const connections = useAppSelector(connectionStringSelectors.connections);
@@ -134,57 +122,15 @@ function ServerWideConnectionStringsBody() {
 
     return (
         <div className={hasOperatorAccess ? null : "item-disabled pe-none"}>
-            <LazyLoad active={loadStatus === "loading"}>
+            <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
                 {isEmpty ? (
-                    <EmptySet>No server-wide connection strings have been defined</EmptySet>
+                    <div className="w-100">
+                        <EmptySet>No server-wide connection strings have been defined</EmptySet>
+                    </div>
                 ) : (
-                    allStudioEtlTypes.map((type) => {
-                        const typeConnections = connections[type];
-                        if (typeConnections.length === 0) {
-                            return null;
-                        }
-                        return (
-                            <div key={type} className="mb-4 connection-strings-panels">
-                                <HrHeader
-                                    right={
-                                        <ConditionalPopover
-                                            conditions={{
-                                                isActive: !hasOperatorAccess,
-                                                message: getAccessRequiredMessage("Operator"),
-                                            }}
-                                        >
-                                            <Button
-                                                variant="info"
-                                                size="sm"
-                                                className="rounded-pill"
-                                                title="Add new connection string"
-                                                disabled={!hasOperatorAccess}
-                                                onClick={() =>
-                                                    dispatch(
-                                                        connectionStringsActions.editConnectionModalOpened({
-                                                            type,
-                                                        })
-                                                    )
-                                                }
-                                            >
-                                                <Icon icon="plus" />
-                                                Add new
-                                            </Button>
-                                        </ConditionalPopover>
-                                    }
-                                >
-                                    <Icon icon={getIcon(type)} />
-                                    {getTypeLabel(type)}
-                                </HrHeader>
-                                {typeConnections.map((connection) => (
-                                    <ConnectionStringsPanel
-                                        key={connection.type + "_" + connection.name}
-                                        connection={connection}
-                                    />
-                                ))}
-                            </div>
-                        );
-                    })
+                    allStudioEtlTypes.map((type) => (
+                        <ConnectionStringsPanels key={type} connections={connections[type]} connectionsType={type} />
+                    ))
                 )}
             </LazyLoad>
         </div>
