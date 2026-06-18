@@ -66,10 +66,10 @@ export default function AzureServiceBusConnectionString({
             return;
         }
 
-        return tasksService.testAzureServiceBusServerConnection(
-            databaseName,
-            mapAzureServiceBusConnectionStringSettingsToDto(formValues)
-        );
+        const dto = mapAzureServiceBusConnectionStringSettingsToDto(formValues);
+        return isServerWide
+            ? tasksService.testServerWideAzureServiceBusServerConnection(dto)
+            : tasksService.testAzureServiceBusServerConnection(databaseName, dto);
     });
 
     useEffect(() => {
@@ -155,7 +155,20 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
     if (authMethod === "connectionString") {
         return (
             <div className="mb-2">
-                <FormLabel>Connection string</FormLabel>
+                <div className="d-flex flex-grow align-items-baseline justify-content-between">
+                    <FormLabel>Connection string</FormLabel>
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Example: <code>{exampleConnectionString}</code>
+                            </>
+                        }
+                    >
+                        <small className="text-primary">
+                            Syntax <Icon icon="help" margin="m-0" />
+                        </small>
+                    </PopoverWithHoverWrapper>
+                </div>
                 <FormInput
                     control={control}
                     name="settings.connectionString.connectionStringValue"
@@ -329,3 +342,5 @@ function getDefaultValues(initialConnection: AzureServiceBusConnection, isForNew
 
     return _.omit(initialConnection, "type", "usedBy");
 }
+
+const exampleConnectionString = "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub"

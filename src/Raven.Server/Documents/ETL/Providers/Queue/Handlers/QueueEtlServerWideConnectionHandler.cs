@@ -18,5 +18,8 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
 
         [RavenAction("/admin/etl/queue/amazonsqs/test-connection", "POST", AuthorizationStatus.Operator)]
         public Task GetTestAmazonSqsConnectionResult() => QueueEtlTestConnectionHelpers.TestAmazonSqsAsync(this);
+
+        [RavenAction("/admin/etl/queue/azureservicebus/test-connection", "POST", AuthorizationStatus.Operator)]
+        public Task GetTestAzureServiceBusConnectionResult() => QueueEtlTestConnectionHelpers.TestAzureServiceBusAsync(this);
     }
 }

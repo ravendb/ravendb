@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using Amazon.SQS;
+using Azure.Messaging.ServiceBus;
 using Azure.Storage.Queues;
 using Confluent.Kafka;
 using Newtonsoft.Json;
@@ -151,6 +152,34 @@ internal static class QueueEtlTestConnectionHelpers
                 // In this case, it means the connection is valid but the queue is not accessible
                 await WriteSuccessAsync(requestHandler);
             }
+        }
+        catch (Exception ex)
+        {
+            await WriteErrorAsync(requestHandler, ex);
+        }
+    }
+
+    public static async Task TestAzureServiceBusAsync(RequestHandler requestHandler)
+    {
+        try
+        {
+            string authenticationJson = await new StreamReader(requestHandler.HttpContext.Request.Body).ReadToEndAsync();
+            AzureServiceBusConnectionSettings connectionSettings = JsonConvert.DeserializeObject<AzureServiceBusConnectionSettings>(authenticationJson);
+
+            var probeEntity = $"ravendb-connection-test-{Guid.NewGuid():N}";
+            await using var client = QueueBrokerConnectionHelper.CreateAzureServiceBusClient("RavenDB-test-connectivity", connectionSettings);
+            await using var receiver = client.CreateReceiver(probeEntity);
+
+            try
+            {
+                await receiver.PeekMessageAsync();
+            }
+            catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
+            {
+                // Credentials and network are valid; the probe entity not existing is expected.
+            }
+
+            await WriteSuccessAsync(requestHandler);
         }
         catch (Exception ex)
         {

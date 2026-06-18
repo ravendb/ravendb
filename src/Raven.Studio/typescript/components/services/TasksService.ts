@@ -33,6 +33,7 @@ import testServerWideKafkaServerConnectionCommand from "commands/serverWide/conn
 import testServerWideRabbitMqServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideRabbitMqServerConnectionCommand";
 import testServerWideAzureQueueStorageServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAzureQueueStorageServerConnectionCommand";
 import testServerWideAmazonSqsServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAmazonSqsServerConnectionCommand";
+import testServerWideAzureServiceBusServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAzureServiceBusServerConnectionCommand";
 import testServerWideAiConnectionStringCommand from "commands/serverWide/connectionStrings/testServerWideAiConnectionStringCommand";
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
@@ -196,6 +197,12 @@ export default class TasksService {
         ...args: ConstructorParameters<typeof testServerWideAmazonSqsServerConnectionCommand>
     ) {
         return new testServerWideAmazonSqsServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAzureServiceBusServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideAzureServiceBusServerConnectionCommand>
+    ) {
+        return new testServerWideAzureServiceBusServerConnectionCommand(...args).execute();
     }
 
     async testServerWideAiConnectionString(

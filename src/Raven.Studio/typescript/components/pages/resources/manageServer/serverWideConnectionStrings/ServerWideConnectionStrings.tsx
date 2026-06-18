@@ -84,41 +84,36 @@ export default function ServerWideConnectionStrings() {
                     afterClose={() => dispatch(connectionStringsActions.editConnectionModalClosed())}
                 />
             )}
-            <Col xxl={12}>
-                <Row className="gy-sm">
-                    <Col>
-                        <AboutViewHeading
-                            title="Server-Wide Connection Strings"
-                            icon="manage-connection-strings"
-                            licenseBadgeText={hasServerWideConnectionStrings ? null : "Professional +"}
-                        />
-                        <ConditionalPopover
-                            conditions={{
-                                isActive: !hasServerWideConnectionStrings,
-                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                            }}
+            <Row className="gy-sm">
+                <Col>
+                    <AboutViewHeading
+                        title="Server-Wide Connection Strings"
+                        icon="manage-connection-strings"
+                        licenseBadgeText={hasServerWideConnectionStrings ? null : "Professional +"}
+                    />
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: !hasServerWideConnectionStrings,
+                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                        }}
+                    >
+                        <Button
+                            variant="primary"
+                            onClick={() => dispatch(connectionStringsActions.editConnectionModalOpened({ type: null }))}
+                            disabled={!hasOperatorAccess || !hasServerWideConnectionStrings}
                         >
-                            <Button
-                                variant="primary"
-                                className="mb-3 mt-4"
-                                onClick={() =>
-                                    dispatch(connectionStringsActions.editConnectionModalOpened({ type: null }))
-                                }
-                                disabled={!hasOperatorAccess || !hasServerWideConnectionStrings}
-                            >
-                                <Icon icon="plus" />
-                                Add a server-wide connection string
-                            </Button>
-                        </ConditionalPopover>
-                        <div className={hasServerWideConnectionStrings ? null : "item-disabled pe-none"}>
-                            <ServerWideConnectionStringsBody />
-                        </div>
-                    </Col>
-                    <Col sm={12} lg={4}>
-                        <ServerWideConnectionStringsInfoHub />
-                    </Col>
-                </Row>
-            </Col>
+                            <Icon icon="plus" />
+                            Add a server-wide connection string
+                        </Button>
+                    </ConditionalPopover>
+                    <div className={hasServerWideConnectionStrings ? null : "item-disabled pe-none"}>
+                        <ServerWideConnectionStringsBody />
+                    </div>
+                </Col>
+                <Col sm={12} lg={4}>
+                    <ServerWideConnectionStringsInfoHub />
+                </Col>
+            </Row>
         </div>
     );
 }
