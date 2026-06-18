@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json;
 using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.AiAppliance.Contracts;
@@ -20,5 +21,12 @@ namespace Raven.AiAppliance.Contracts;
 public sealed record SetupTryRequest(
     string Prompt,
     AiAgentConfiguration Configuration,
-    Dictionary<string, string>? Parameters,
+    Dictionary<string, SetupTryParameter>? Parameters,
     string? StreamField = null);
+
+/// <summary>
+/// One operator-supplied conversation parameter, matching RavenDB's
+/// <see cref="Raven.Client.Documents.AI.AiConversationParameter"/> wire shape. The value keeps
+/// its JSON type and <see cref="SendToModel"/> can be overridden for an individual test run.
+/// </summary>
+public sealed record SetupTryParameter(JsonElement? Value, bool SendToModel);
