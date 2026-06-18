@@ -34,7 +34,7 @@ import IconName from "../../../../../../typings/server/icons";
 import { TaskItemProps } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
 import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import { serverWideConnectionStringPrefix } from "components/pages/database/settings/connectionStrings/connectionStringsUtils";
+import { serverWideConnectionStringPrefix, getServerWideShortName } from "components/pages/database/settings/connectionStrings/connectionStringsUtils";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -224,8 +224,10 @@ export function ConnectionStringItem(props: {
 }) {
     const { canEdit, connectionStringDefined, connectionStringName, connectionStringType, databaseName } = props;
 
-    const connectionStringsUrl = connectionStringName?.startsWith(serverWideConnectionStringPrefix)
-        ? appUrl.forServerWideConnectionStrings()
+    const isServerWide = connectionStringName?.startsWith(serverWideConnectionStringPrefix);
+
+    const connectionStringsUrl = isServerWide
+        ? appUrl.forServerWideConnectionStrings(connectionStringType, getServerWideShortName(connectionStringName))
         : appUrl.forConnectionStrings(databaseName, connectionStringType, connectionStringName);
 
     if (connectionStringDefined) {

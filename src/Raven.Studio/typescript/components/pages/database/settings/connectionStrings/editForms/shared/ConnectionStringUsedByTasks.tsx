@@ -30,6 +30,7 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
                 return appUrl.forEditAzureQueueStorageEtl(databaseName, id);
             case "AmazonSqs":
                 return appUrl.forEditAmazonSqsEtl(databaseName, id);
+
             default:
                 return null;
         }
@@ -41,6 +42,8 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
                 return appUrl.forEditKafkaSink(databaseName, id);
             case "RabbitMQ":
                 return appUrl.forEditRabbitMqSink(databaseName, id);
+            case "AzureServiceBus":
+                return appUrl.forEditAzureServiceBusSink(databaseName, id);
             default:
                 // Azure Queue Storage / Amazon SQS do not have a dedicated sink edit view
                 return null;
@@ -83,7 +86,7 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
     };
 
     return (
-        <div className="mt-2">
+        <div className="mb-2">
             <FormLabel className="d-flex align-items-center gap-1">
                 Used in tasks <CounterBadge count={tasks.length} />
             </FormLabel>

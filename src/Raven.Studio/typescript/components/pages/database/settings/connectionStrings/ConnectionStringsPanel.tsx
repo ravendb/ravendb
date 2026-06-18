@@ -22,7 +22,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import copyToClipboard from "common/copyToClipboard";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { serverWideConnectionStringPrefix } from "./connectionStringsUtils";
+import { serverWideConnectionStringPrefix, getServerWideShortName } from "./connectionStringsUtils";
 import { getAccessRequiredMessage } from "components/utils/accessUtils";
 
 interface ConnectionStringsPanelProps {
@@ -94,7 +94,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                     message: (
                                         <>
                                             This connection string is managed server-wide. To edit or delete it, go to{" "}
-                                            <a href={appUrl.forServerWideConnectionStrings()}>
+                                            <a href={appUrl.forServerWideConnectionStrings(connection.type, getServerWideShortName(connection.name))}>
                                                 Server-Wide Connection Strings
                                             </a>
                                             .

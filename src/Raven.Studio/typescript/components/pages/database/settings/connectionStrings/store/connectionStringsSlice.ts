@@ -114,8 +114,18 @@ export const connectionStringsSlice = createSlice({
                 state.loadStatus = "failure";
             })
             .addCase(fetchServerWideData.fulfilled, (state, { payload }) => {
+                const { urlParameters } = state;
+
                 state.connections = mapServerWideConnectionsFromDto(payload.serverWideDto);
                 state.loadStatus = "success";
+
+                if (payload.hasOperatorAccess && urlParameters.name && urlParameters.type) {
+                    const foundConnection = state.connections?.[urlParameters.type]?.find(
+                        (x) => x?.name === urlParameters.name
+                    );
+
+                    state.initialEditConnection = foundConnection ?? null;
+                }
             })
             .addCase(fetchServerWideData.pending, (state) => {
                 state.loadStatus = "loading";
@@ -133,6 +143,7 @@ interface FetchDataResult {
 
 interface FetchServerWideDataResult {
     serverWideDto: ServerWideConnectionStringDto[];
+    hasOperatorAccess: boolean;
 }
 
 const fetchData = createAsyncThunk<
@@ -156,11 +167,13 @@ const fetchData = createAsyncThunk<
     };
 });
 
-const fetchServerWideData = createAsyncThunk<FetchServerWideDataResult, void>(
+const fetchServerWideData = createAsyncThunk<FetchServerWideDataResult, void, { state: RootState }>(
     connectionStringsSlice.name + "/fetchServerWideConnectionStrings",
-    async () => {
+    async (_, { getState }) => {
+        const state = getState();
         const { Results } = await services.tasksService.getServerWideConnectionStrings();
-        return { serverWideDto: Results };
+        const hasOperatorAccess = accessManagerSelectors.isOperatorOrAbove(state);
+        return { serverWideDto: Results, hasOperatorAccess };
     }
 );
 

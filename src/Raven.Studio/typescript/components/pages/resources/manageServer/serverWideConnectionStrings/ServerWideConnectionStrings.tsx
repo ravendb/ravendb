@@ -21,6 +21,7 @@ import {
     connectionStringsActions,
     connectionStringSelectors,
 } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import { ConnectionStringsUrlParameters } from "components/pages/database/settings/connectionStrings/ConnectionStrings";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { getAccessRequiredMessage } from "components/utils/accessUtils";
@@ -39,7 +40,7 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "AzureServiceBus"
 );
 
-export default function ServerWideConnectionStrings() {
+export default function ServerWideConnectionStrings({ queryParams }: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
     const dispatch = useAppDispatch();
     const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const hasServerWideConnectionStrings = useAppSelector(
@@ -49,6 +50,12 @@ export default function ServerWideConnectionStrings() {
 
     useEffect(() => {
         dispatch(connectionStringsActions.viewContextSet("serverWideConnectionStrings"));
+        dispatch(
+            connectionStringsActions.urlParametersLoaded({
+                name: queryParams?.name,
+                type: queryParams?.type,
+            })
+        );
 
         if (hasServerWideConnectionStrings) {
             dispatch(connectionStringsActions.fetchServerWideData());

@@ -259,8 +259,10 @@ class appUrl {
         return "#admin/settings/serverWideCustomSorters";
     }
 
-    static forServerWideConnectionStrings(): string {
-        return "#admin/settings/serverWideConnectionStrings";
+    static forServerWideConnectionStrings(type?: connectionStringsTypes.StudioConnectionType, name?: string): string {
+        const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
+        const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
+        return "#admin/settings/serverWideConnectionStrings?" + typeUrlPart + nameUrlPart;
     }
 
     static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string, shardToCompact?: number): string {
