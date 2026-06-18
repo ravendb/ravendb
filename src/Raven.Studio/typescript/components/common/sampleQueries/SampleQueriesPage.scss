@@ -47,18 +47,12 @@
     }
 }
 
-.patch-samples-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1050;
-    background-color: colors.$body-bg;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+.patch-samples-dropdown-menu {
+    min-width: 520px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
 
-    .sample-queries-page {
-        flex: 1;
-        min-height: 0;
-        overflow: hidden;
+    .sample-queries-tabs {
+        height: 100%;
     }
 }

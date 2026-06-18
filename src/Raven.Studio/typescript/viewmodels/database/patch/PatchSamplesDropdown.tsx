@@ -1,43 +1,21 @@
-import React, { useLayoutEffect } from "react";
-import SampleQueriesPage from "components/common/sampleQueries/SampleQueriesPage";
+import React from "react";
+import Dropdown from "react-bootstrap/Dropdown";
+import { CustomDropdownToggle } from "components/common/Dropdown";
+import SampleQueriesTabs from "components/common/sampleQueries/SampleQueriesTabs";
 import { MethodGroup, SampleScript } from "components/common/sampleQueries/partials/sampleQueriesTypes";
-import PatchSamplesAboutView from "./PatchSamplesAboutView";
 
-export interface PatchSamplesPanelProps {
-    initialScript: string;
-    isOpened: boolean;
-    onUpdateScript: (script: string) => void;
-    onClose: () => void;
+export interface PatchSamplesDropdownProps {
+    onLoadScript: (script: string) => void;
 }
 
-export default function PatchSamplesPanel({
-    initialScript,
-    isOpened,
-    onUpdateScript,
-    onClose,
-}: PatchSamplesPanelProps) {
-    useLayoutEffect(() => {
-        if (!isOpened) {
-            return;
-        }
-        // FIXME: hack to allow bs5 and bs3
-        const bs3Container = document.querySelector(".content-container.bs3");
-        if (bs3Container) {
-            bs3Container.classList.remove("bs3");
-        }
-    }, [isOpened]);
-
+export default function PatchSamplesDropdown({ onLoadScript }: PatchSamplesDropdownProps) {
     return (
-        <SampleQueriesPage
-            title="Patch scripts sample"
-            icon="info"
-            scripts={scripts}
-            methodGroups={methodGroups}
-            onClose={onClose}
-            initialScript={initialScript}
-            onUpdateScript={onUpdateScript}
-            aboutView={<PatchSamplesAboutView />}
-        />
+        <Dropdown className="patch-samples-dropdown">
+            <Dropdown.Toggle as={CustomDropdownToggle}>Samples</Dropdown.Toggle>
+            <Dropdown.Menu className="patch-samples-dropdown-menu p-0">
+                <SampleQueriesTabs scripts={scripts} methodGroups={methodGroups} onSelect={onLoadScript} />
+            </Dropdown.Menu>
+        </Dropdown>
     );
 }
 
