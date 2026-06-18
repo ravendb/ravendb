@@ -62,7 +62,7 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                d.Mend();
+                await d.MendAsync();
 
                 await EnsureReplicatingAsync(store1, store2);
             }
@@ -106,7 +106,7 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                d.Mend();
+                await d.MendAsync();
 
                 await EnsureReplicatingAsync(store1, store2);
             }
@@ -175,7 +175,7 @@ namespace SlowTests.Client.Attachments
                     }
                 }
 
-                d.Mend();
+                await d.MendAsync();
 
                 await EnsureReplicatingAsync(store1, store2);
             }

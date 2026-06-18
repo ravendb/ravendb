@@ -56,8 +56,10 @@ namespace SlowTests.Server.Documents.OngoingTasks
                 await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: false);
             }
 
-            // DisposeAsync mends replication and waits for one full batch+ACK cycle to complete,
+            // MendAsync waits for one full batch+ACK cycle to complete,
             // guaranteeing _lastSentDocumentEtag is updated before we verify completion
+
+            await replication.MendAsync();
 
             Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(destination, UserId, TimeSpan.FromSeconds(10)));
 
@@ -75,6 +77,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
             }
 
             // continue the replication and check if all tombstones are processed
+
+            await replication.MendAsync();
 
             Assert.True(WaitForDocumentDeletion(destination, UserId));
 
@@ -105,7 +109,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             // continue the replication and let the items replicate to the sink
 
-            replication.Mend();
+            await replication.MendAsync();
             Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink, UserId, TimeSpan.FromSeconds(10)));
 
             // now we should have values for the last sent Etag and change vectors, so we retrieve them to verify they are correct
@@ -114,15 +118,15 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             // break the replication again to perform deletion and check tombstone items
 
-            replication.Break();
+            await using (replication.Break())
+            {
+                await DeleteUserDocument(hub);
 
-            await DeleteUserDocument(hub);
+                await VerifyReplicationProgressAsync(hub, hubDatabase, ReplicationNode.ReplicationType.PullAsHub, isCompleted: false, hasTombstones: true);
 
-            await VerifyReplicationProgressAsync(hub, hubDatabase, ReplicationNode.ReplicationType.PullAsHub, isCompleted: false, hasTombstones: true);
-
-            // continue the replication and check if all tombstones are processed
-
-            replication.Mend();
+                // continue the replication and check if all tombstones are processed
+            }
+            await replication.MendAsync();
             Assert.True(WaitForDocumentDeletion(sink, UserId));
 
             await VerifyReplicationProgressAsync(hub, hubDatabase, ReplicationNode.ReplicationType.PullAsHub, isCompleted: true, hasTombstones: true);
@@ -154,7 +158,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             // continue the replication and let the items replicate to the sink
 
-            replication.Mend();
+            await replication.MendAsync();
             Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink1, UserId, TimeSpan.FromSeconds(15)));
             Assert.NotNull(await WaitForDocumentToReplicateAsync<User>(sink2, UserId, TimeSpan.FromSeconds(15)));
 
@@ -162,15 +166,15 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             // break the replication again to perform deletion and check tombstone items
 
-            replication.Break();
+            await using (replication.Break())
+            {
+                await DeleteUserDocument(hub);
 
-            await DeleteUserDocument(hub);
+                await VerifyPullAsHubReplicationProgress(hub, hubDatabase, isCompleted: false, hasTombstones: true);
 
-            await VerifyPullAsHubReplicationProgress(hub, hubDatabase, isCompleted: false, hasTombstones: true);
-
-            // continue the replication and check if all tombstones are processed
-
-            replication.Mend();
+                // continue the replication and check if all tombstones are processed
+            }
+            await replication.MendAsync();
             Assert.True(WaitForDocumentDeletion(sink1, UserId));
             Assert.True(WaitForDocumentDeletion(sink2, UserId));
 
