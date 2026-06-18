@@ -1,23 +1,14 @@
-import { cn } from "@/lib/utils";
+import { CircleCheckIcon } from "lucide-react";
+
+import { Badge } from "@/components/shadcn/ui/badge";
 
 export function StatusIndicator({ tone, label }: { tone: "positive" | "muted"; label: string }) {
+    const isPositive = tone === "positive";
+
     return (
-        <span
-            className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
-                tone === "positive"
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "bg-muted text-muted-foreground",
-            )}
-        >
-            <span
-                className={cn(
-                    "size-1.5 rounded-full",
-                    tone === "positive" ? "bg-emerald-500" : "bg-muted-foreground/50",
-                )}
-                aria-hidden="true"
-            />
+        <Badge variant={isPositive ? "success" : "secondary"}>
+            {isPositive && <CircleCheckIcon aria-hidden="true" />}
             {label}
-        </span>
+        </Badge>
     );
 }
