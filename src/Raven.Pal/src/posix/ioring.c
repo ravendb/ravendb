@@ -264,7 +264,10 @@ void *do_ring_work(void *arg)
                     if (result > 0)
                     {
                         cur->op.write.offset += result;
-                        while (result)
+
+                        // We need to process all bytes we've written
+                        // However, we also need to consider the items we have to write.
+                        while (result > 0 && cur->op.write.iovecs_count > 0)
                         {
                             if (result >= cur->op.write.iovecs->iov_len)
                             {
@@ -276,10 +279,14 @@ void *do_ring_work(void *arg)
                             {
                                 cur->op.write.iovecs->iov_len -= result;
                                 cur->op.write.iovecs->iov_base += result;
-                                break;
+                                
+                                // We've had a partial write of some item, so we're shrinking the current iovec.
+                                // All bytes have now been processed.
+                                result = 0;
                             }
                         }
-                        if (result < 0)
+
+                        if (result > 0)
                         {
                             // I'm *never* supposed to get to this line of code
                             // this is here as a safety net, to ensure that we if
@@ -289,8 +296,9 @@ void *do_ring_work(void *arg)
                             cur->submittion->result = ERANGE;
                             result = 0; // will force a completion of the current write
                         }
-                        if (result)
+                        else if (cur->op.write.iovecs_count > 0)
                         {
+                            // We still have some unprocessed iovecs, so let's queue a new task.
                             queue_work(cur, cur);
                             continue;
                         }
