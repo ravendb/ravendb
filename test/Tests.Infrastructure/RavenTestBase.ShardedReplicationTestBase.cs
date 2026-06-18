@@ -71,11 +71,11 @@ public partial class RavenTestBase
                 _config = config;
             }
 
-            public void Mend()
+            public async Task MendAsync()
             {
                 foreach (var (shardNumber, brokenReplication) in ShardReplications)
                 {
-                    brokenReplication.Mend();
+                    await brokenReplication.MendAsync();
                 }
             }
 

@@ -18,6 +18,7 @@ namespace Tests.Infrastructure
         public readonly string DatabaseName;
         private readonly RavenTestBase.ReplicationManager.ReplicationOptions _options;
         private ManualResetEventSlim _replicateOnceMre;
+        private ManualResetEventSlim _breakBlockedMre;
         private bool _replicateOnceInitialized = false;
 
         public ReplicationInstance(DocumentDatabase database, string databaseName, RavenTestBase.ReplicationManager.ReplicationOptions options)
@@ -41,9 +42,9 @@ namespace Tests.Infrastructure
 
         public IAsyncDisposable Break()
         {
-            var mre = new ManualResetEventSlim(false);
-            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
-            return new BreakHandle(this, mre);
+            _breakBlockedMre = new ManualResetEventSlim(false);
+            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = _breakBlockedMre;
+            return new BreakHandle(this, _breakBlockedMre);
         }
 
         private async Task WaitForResetAsync(int timeout = 15_000)
@@ -71,31 +72,42 @@ namespace Tests.Infrastructure
                 _blockedMre = blockedMre;
             }
 
-            public async ValueTask DisposeAsync()
+            public ValueTask DisposeAsync()
             {
-                // nextMre starts SET — handler runs one full batch+ACK iteration, then calls Reset() and blocks.
-                // That Reset() is our signal that _lastSentDocumentEtag has been updated.
-                var nextMre = new ManualResetEventSlim(true);
-                _instance._replicateOnceMre = nextMre;
-                _instance._database.ReplicationLoader.DebugWaitAndRunReplicationOnce = nextMre;
-                _instance._database.Configuration.Replication.MaxItemsCount = null;
+                if (_blockedMre.IsSet == false)
+                {
+                    _instance._database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                    _instance._database.Configuration.Replication.MaxItemsCount = null;
+                    _blockedMre.Set();
+                }
 
-                _blockedMre.Set();
-
-                await _instance.WaitForResetAsync();
-
-                _instance._database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
-                nextMre.Set();
+                return ValueTask.CompletedTask;
             }
         }
 
-        public void Mend()
+        public async Task MendAsync()
         {
-            var mre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
-            Assert.NotNull(mre);
-            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
             _database.Configuration.Replication.MaxItemsCount = null;
-            mre.Set();
+
+            if (_breakBlockedMre?.IsSet == false)
+            {
+                // Handler is still blocked by Break() — set nextMre so handler signals us when the batch starts.
+                // nextMre starts SET; handler calls Reset() before its batch, which is our signal.
+                ManualResetEventSlim nextMre = new(true);
+                _replicateOnceMre = nextMre;
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = nextMre;
+                _breakBlockedMre.Set();
+                await WaitForResetAsync();
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                nextMre.Set();
+            }
+            else
+            {
+                // Handler was already freed (e.g., by DisposeAsync) — just clear remaining state.
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                _breakBlockedMre?.Set();
+                _replicateOnceMre?.Set();
+            }
         }
 
         private void InitializeReplicateOnce()

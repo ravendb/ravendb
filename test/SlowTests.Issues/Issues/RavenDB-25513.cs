@@ -27,24 +27,25 @@ public class RavenDB_25513(ITestOutputHelper output) : ReplicationTestBase(outpu
             await EnsureReplicatingAsync(storeA, storeB);
 
             using var r = await GetReplicationManagerAsync(storeA, storeA.Database, RavenDatabaseMode.Single);
-            r.Break();
-
-            using (var session = storeB.OpenAsyncSession())
+            await using (r.Break())
             {
-                session.Delete("users/1");
-                await session.SaveChangesAsync();
-            }
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
 
-            string cv;
-            using (var session = storeA.OpenAsyncSession())
-            {
-                session.TimeSeriesFor("users/1", "heartbeat").Append(DateTime.Now.AddDays(35), new List<double> { 1, 2, 3 }, "herz");
-                await session.SaveChangesAsync();
+                string cv;
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    session.TimeSeriesFor("users/1", "heartbeat").Append(DateTime.Now.AddDays(35), new List<double> { 1, 2, 3 }, "herz");
+                    await session.SaveChangesAsync();
 
-                var doc = await session.LoadAsync<User>("users/1");
-                cv = session.Advanced.GetChangeVectorFor(doc);
+                    var doc = await session.LoadAsync<User>("users/1");
+                    cv = session.Advanced.GetChangeVectorFor(doc);
+                }
             }
-            r.Mend();
+            await r.MendAsync();
             await EnsureReplicatingAsync(storeA, storeB);
 
             await SetupReplicationAsync(storeB, storeA);
@@ -81,15 +82,15 @@ public class RavenDB_25513(ITestOutputHelper output) : ReplicationTestBase(outpu
             Assert.True(preStatsB.CountOfTimeSeriesSegments > 0);
 
             using var r = await GetReplicationManagerAsync(storeA, storeA.Database, RavenDatabaseMode.Single);
-            r.Break();
-
-            using (var session = storeB.OpenAsyncSession())
+            await using (r.Break())
             {
-                session.Delete("users/1");
-                await session.SaveChangesAsync();
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
             }
-
-            r.Mend();
+            await r.MendAsync();
             await EnsureReplicatingAsync(storeA, storeB);
 
             await SetupReplicationAsync(storeB, storeA);
@@ -155,24 +156,24 @@ public class RavenDB_25513(ITestOutputHelper output) : ReplicationTestBase(outpu
             Assert.True(preStatsB.CountOfTimeSeriesSegments > 0);
 
             using var r = await GetReplicationManagerAsync(storeA, storeA.Database, RavenDatabaseMode.Single);
-            r.Break();
-
-            // B: delete doc
-            using (var session = storeB.OpenAsyncSession())
+            await using (r.Break())
             {
-                session.Delete("users/1");
-                await session.SaveChangesAsync();
-            }
+                // B: delete doc
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
 
-            // A: modify the segment while replication is broken
-            using (var session = storeA.OpenAsyncSession())
-            {
-                session.TimeSeriesFor("users/1", "heartbeat")
-                    .Append(baseline.AddMinutes(10), new List<double> { 4, 5, 6 }, "herz");
-                await session.SaveChangesAsync();
+                // A: modify the segment while replication is broken
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    session.TimeSeriesFor("users/1", "heartbeat")
+                        .Append(baseline.AddMinutes(10), new List<double> { 4, 5, 6 }, "herz");
+                    await session.SaveChangesAsync();
+                }
             }
-
-            r.Mend();
+            await r.MendAsync();
             await EnsureReplicatingAsync(storeA, storeB);
 
             // replicate deletion back to A

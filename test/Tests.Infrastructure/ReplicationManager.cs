@@ -42,11 +42,11 @@ public partial class RavenTestBase
             }
         }
 
-        public void Mend()
+        public async Task MendAsync()
         {
             foreach (var (node, replicationInstance) in Instances)
             {
-                replicationInstance.Mend();
+                await replicationInstance.MendAsync();
             }
         }
 

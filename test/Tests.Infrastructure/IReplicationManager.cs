@@ -6,7 +6,7 @@ namespace Tests.Infrastructure
     public interface IReplicationManager : IDisposable
     {
         public IAsyncDisposable Break();
-        public void Mend();
+        public Task MendAsync();
         public void ReplicateOnce(string docId);
         public Task EnsureNoReplicationLoopAsync();
     }
