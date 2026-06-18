@@ -147,9 +147,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     var configuration = GetConfiguration();
                     var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+                    
                     var sinceLastReceive = Stopwatch.StartNew(); // time since the last REAL read
-
                     long lastTotalBytesRead = 0;
+
+                    var sinceLastSentHeartbeat = Stopwatch.StartNew(); // time since the last sent heartbeat
+                    const int notifyMinIntervalInMs = 1000;
 
                     // Throttle notify-sends. A busy node pokes _replicationFromAnotherSource very frequently (once per
                     // sibling batch). The peer emits its periodic heartbeat only when ITS read of our messages goes
@@ -157,10 +160,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     // "Notify" reply for every poke starves the peer's heartbeats and makes this healthy connection
                     // look dead. Sending at most once per (heartbeat + timeout)/2 -- always larger than the heartbeat
                     // interval -- leaves the peer quiet time to heartbeat while still forwarding our change vector.
-                    var heartbeatInterval = (int)configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-                    var notifyMinInterval = (heartbeatInterval + readTimeout) / 2;
-                    var notifyClock = Stopwatch.StartNew();
-                    long lastNotifyElapsed = -notifyMinInterval; // allow the first notify immediately
 
                     while (_cts.IsCancellationRequested == false)
                     {
@@ -219,15 +218,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 else // notify peer about new change vector
                                 {
-                                    // Throttle: don't flood the peer with notify replies (see notifyMinInterval above),
-                                    // or it never gets the quiet window it needs to send us a heartbeat.
-                                    var notifyElapsed = notifyClock.ElapsedMilliseconds;
-                                    if (notifyElapsed - lastNotifyElapsed < notifyMinInterval)
+                                    // Throttle: only send a notify if enough time has passed since the last one.
+                                    if (sinceLastSentHeartbeat.ElapsedMilliseconds <= notifyMinIntervalInMs)
+                                    {
+                                        sinceLastSentHeartbeat.Restart();
                                         continue;
-
-                                    lastNotifyElapsed = notifyElapsed;
-
-                                    sinceLastReceive.Stop();
+                                    }
 
                                     using (_contextPool.AllocateOperationContext(out TOperationContext context))
                                     using (var writer = new BlittableJsonTextWriter(context, _stream))
@@ -238,8 +234,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             _lastDocumentEtag,
                                             "Notify");
                                     }
-
-                                    sinceLastReceive.Start();
                                 }
                             }
                         }
