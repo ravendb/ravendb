@@ -142,7 +142,13 @@ export default function AzureQueueStorageConnectionString({
             )}
 
             <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
-            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" usedBy={initialConnection.usedBy} />}
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
         </Form>
     );
 }

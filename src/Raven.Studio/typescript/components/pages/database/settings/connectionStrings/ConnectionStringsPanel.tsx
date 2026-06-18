@@ -94,7 +94,12 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                     message: (
                                         <>
                                             This connection string is managed server-wide. To edit or delete it, go to{" "}
-                                            <a href={appUrl.forServerWideConnectionStrings(connection.type, getServerWideShortName(connection.name))}>
+                                            <a
+                                                href={appUrl.forServerWideConnectionStrings(
+                                                    connection.type,
+                                                    getServerWideShortName(connection.name)
+                                                )}
+                                            >
                                                 Server-Wide Connection Strings
                                             </a>
                                             .

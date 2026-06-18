@@ -70,7 +70,13 @@ export default function OlapConnectionString({
                     />
                 </div>
                 <FormDestinationList isForNewConnection={isForNewConnection} />
-                {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" usedBy={initialConnection.usedBy} />}
+                {isServerWide && (
+                    <ExcludedDatabasesFormSelect
+                        control={control}
+                        name="excludedDatabases"
+                        usedBy={initialConnection.usedBy}
+                    />
+                )}
             </Form>
 
             <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />

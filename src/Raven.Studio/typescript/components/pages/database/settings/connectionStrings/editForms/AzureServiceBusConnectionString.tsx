@@ -141,7 +141,13 @@ export default function AzureServiceBusConnectionString({
             )}
 
             <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
-            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" usedBy={initialConnection.usedBy} />}
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
         </Form>
     );
 }
@@ -343,4 +349,5 @@ function getDefaultValues(initialConnection: AzureServiceBusConnection, isForNew
     return _.omit(initialConnection, "type", "usedBy");
 }
 
-const exampleConnectionString = "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub"
+const exampleConnectionString =
+    "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub";
