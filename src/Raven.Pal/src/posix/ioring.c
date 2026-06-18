@@ -340,12 +340,12 @@ error:
         }
         while (work)
         {
+            struct workitem *next = work->next;
             work->submittion->error = true;
             work->submittion->result = rc;
-            if (--work->submittion->count > 0)
-                continue;
-            eventfd_write(work->submittion->notifyfd, 1);
-            work = work->next;
+            if (--work->submittion->count == 0)
+                eventfd_write(work->submittion->notifyfd, 1);
+            work = next;
         }
     }
     return 0;
@@ -451,7 +451,7 @@ int32_t rvn_write_io_ring(
         return FAIL_IO_RING_SUBMIT;
     }
 
-    var rc_lock = pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock);
+    int rc_lock = pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock);
     if (rc_lock != 0)
     {
         *detailed_error_code = rc_lock;
