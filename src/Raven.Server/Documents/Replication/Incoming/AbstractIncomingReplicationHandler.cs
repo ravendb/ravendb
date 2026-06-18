@@ -151,12 +151,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     var sinceLastReceive = Stopwatch.StartNew(); // time since the last REAL read
                     long lastTotalBytesRead = 0;
 
-                    var sinceLastSentHeartbeat = Stopwatch.StartNew(); // time since the last sent heartbeat
-                    const int notifyMinIntervalInMs = 1000;
-
-                    // Throttle "Notify" replies to at most once per second: a busy node pokes _replicationFromAnotherSource once per
-                    // sibling batch, and replying to every poke floods the peer with no added value (the next Notify carries the latest change vector).
-
                     while (_cts.IsCancellationRequested == false)
                     {
                         try
@@ -214,10 +208,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 else // notify peer about new change vector
                                 {
-                                    // Throttle: only send a notify if enough time has passed since the last one.
-                                    if (sinceLastSentHeartbeat.ElapsedMilliseconds <= notifyMinIntervalInMs)
-                                        continue;
-
                                     using (_contextPool.AllocateOperationContext(out TOperationContext context))
                                     using (var writer = new BlittableJsonTextWriter(context, _stream))
                                     {
@@ -227,8 +217,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             _lastDocumentEtag,
                                             "Notify");
                                     }
-
-                                    sinceLastSentHeartbeat.Restart();
                                 }
                             }
                         }
