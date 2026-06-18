@@ -325,7 +325,8 @@ void *do_ring_work(void *arg)
     }
 
 error:
-    atomic_store(&g_worker.errored, rc);
+    g_worker.result = rc;
+    atomic_store(&g_worker.errored, true);
     close(g_worker.eventfd);
     g_worker.eventfd = -1;
     close_ring_with_error(ring, rc);
@@ -443,7 +444,9 @@ int32_t rvn_write_io_ring(
     int32_t rc = SUCCESS;
     struct handle *handle_ptr = handle;
     if (count == 0)
+    {
         return SUCCESS;
+    }
 
     if (g_worker.errored)
     {
