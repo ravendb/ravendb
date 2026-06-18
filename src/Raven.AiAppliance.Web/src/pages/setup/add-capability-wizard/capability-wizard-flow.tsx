@@ -30,7 +30,7 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
                 if (!isComplete) {
                     return null;
                 }
-                return <Badge variant="secondary">{getOptionLabel(CAPABILITY_OPTIONS, values.capability.type)}</Badge>;
+                return <Badge variant="primary">{getOptionLabel(CAPABILITY_OPTIONS, values.capability.type)}</Badge>;
             },
         },
         connection: {
@@ -39,7 +39,6 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             bodyComponent: ConnectProviderStep,
             validate: "connection",
             beforeNext: connectProviderBeforeNext,
-            badgeFields: ["connection.connectionStringName"],
             badge: ({ isComplete }: WizardBadgeContext<AgentFormData>) => {
                 if (!isComplete) {
                     return null;
@@ -64,6 +63,12 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             beforeNext: provisionAgentBeforeNext,
             nextLabel: "Save agent",
             footerComponent: ReviewTestAgentButton,
+            badge: ({ isComplete }: WizardBadgeContext<AgentFormData>) => {
+                if (!isComplete) {
+                    return null;
+                }
+                return <Badge variant="success">Agent created</Badge>;
+            },
         },
         channels: {
             title: "Add a channel",

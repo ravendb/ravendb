@@ -31,9 +31,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
                 if (!isComplete) {
                     return null;
                 }
-                return (
-                    <Badge variant="secondary">{getOptionLabel(DATA_SOURCE_OPTIONS, values.dataSource.source)}</Badge>
-                );
+                return <Badge variant="primary">{getOptionLabel(DATA_SOURCE_OPTIONS, values.dataSource.source)}</Badge>;
             },
         },
         externalConnection: {
@@ -61,9 +59,13 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             validate: "map",
             beforeNext: mapSchemaBeforeNext,
             badgeFields: ["map.source"],
-            badge: ({ values }) => (
-                <Badge variant="secondary">{getOptionLabel(MAP_SOURCE_OPTIONS, values.map?.source)}</Badge>
-            ),
+            badge: ({ isComplete, values }) => {
+                if (!isComplete) {
+                    return null;
+                }
+
+                return <Badge variant="primary">{getOptionLabel(MAP_SOURCE_OPTIONS, values.map?.source)}</Badge>;
+            },
         },
         mapTables: {
             title: "Map schema",

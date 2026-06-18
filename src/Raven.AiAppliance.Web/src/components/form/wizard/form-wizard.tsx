@@ -43,7 +43,7 @@ type WizardStepBadge<Values extends FieldValues> =
       }
     | {
           badge: (context: WizardBadgeContext<Values>) => ReactNode;
-          badgeFields: readonly Path<Values>[];
+          badgeFields?: readonly Path<Values>[];
       };
 
 export type WizardStep<StepId extends string, Values extends FieldValues = FieldValues> = {
@@ -286,7 +286,7 @@ function WizardStepper<StepId extends string, Values extends FieldValues>({
 type WizardStepBadgeProps<StepId extends string, Values extends FieldValues> = {
     step: WizardStep<StepId, Values> & {
         badge: (context: WizardBadgeContext<Values>) => ReactNode;
-        badgeFields: readonly Path<Values>[];
+        badgeFields?: readonly Path<Values>[];
     };
     isComplete: boolean;
     isCurrent: boolean;
@@ -301,7 +301,8 @@ function WizardStepBadge<StepId extends string, Values extends FieldValues>({
     control,
     getValues,
 }: WizardStepBadgeProps<StepId, Values>) {
-    useWatch({ control, name: step.badgeFields });
+    // An empty name array subscribes to nothing, so steps with a static badge can omit badgeFields.
+    useWatch({ control, name: step.badgeFields ?? [] });
     const badge = step.badge({ values: getValues(), isComplete, isCurrent });
 
     if (!badge) {
