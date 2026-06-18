@@ -118,7 +118,7 @@ void mark_all_cqes_as_errors(struct io_uring *ring, int rc)
     {
         struct workitem *work = io_uring_cqe_get_data(cqe);
         io_uring_cqe_seen(ring, cqe);
-        if (--work->submittion->count > 0)
+        if (work == NULL || --work->submittion->count > 0)
         {
             continue;
         }
@@ -134,6 +134,7 @@ void close_ring_with_error(struct io_uring *ring, int rc)
     if (sqe)
     {
         io_uring_prep_cancel(sqe, 0, 0); // Cancel all, if possible
+        io_uring_sqe_set_data(sqe, 0);   // The SQE can have a stale pointer. We need to clear it because we will try to read it in mark_all_cqes_as_errors.
         io_uring_submit_and_get_events(ring);
     }
     mark_all_cqes_as_errors(ring, rc);
