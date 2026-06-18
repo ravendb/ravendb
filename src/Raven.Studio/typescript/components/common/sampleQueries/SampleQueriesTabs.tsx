@@ -6,6 +6,7 @@ import { Icon } from "components/common/Icon";
 import SampleScriptsList from "./partials/SampleScriptsList";
 import MethodsTable from "./partials/MethodsTable";
 import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
+import "./SampleQueriesPage.scss";
 
 type ActiveTab = "scripts" | "methods";
 
@@ -19,7 +20,7 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
     const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
 
     return (
-        <Card className="vstack panel-bg-1 border border-color-light border-1 rounded flex-grow-1 overflow-hidden sample-queries-tabs">
+        <Card className="panel-bg-1 border border-color-light border-1 rounded sample-queries-tabs">
             <Tab.Container
                 mountOnEnter
                 unmountOnExit
@@ -27,7 +28,7 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                 activeKey={activeTab}
                 onSelect={(tab) => setActiveTab(tab as ActiveTab)}
             >
-                <Nav variant="pills" className="gap-1 panel-bg-2 p-2 flex-shrink-0">
+                <Nav variant="pills" className="gap-1 panel-bg-2 p-2">
                     <Nav.Item>
                         <Nav.Link eventKey="scripts">
                             <Icon icon="document" />
@@ -41,16 +42,14 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                         </Nav.Link>
                     </Nav.Item>
                 </Nav>
-                <div className="flex-grow-1 overflow-y-auto">
-                    <Tab.Content>
-                        <Tab.Pane eventKey="scripts">
-                            <SampleScriptsList scripts={scripts} onSelect={onSelect} />
-                        </Tab.Pane>
-                        <Tab.Pane eventKey="methods">
-                            <MethodsTable methodGroups={methodGroups} />
-                        </Tab.Pane>
-                    </Tab.Content>
-                </div>
+                <Tab.Content>
+                    <Tab.Pane eventKey="scripts">
+                        <SampleScriptsList scripts={scripts} onSelect={onSelect} />
+                    </Tab.Pane>
+                    <Tab.Pane eventKey="methods">
+                        <MethodsTable methodGroups={methodGroups} />
+                    </Tab.Pane>
+                </Tab.Content>
             </Tab.Container>
         </Card>
     );
