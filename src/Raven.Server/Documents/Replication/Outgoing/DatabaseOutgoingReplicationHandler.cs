@@ -320,12 +320,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
+            var sinceLastReceive = Stopwatch.StartNew();
+
             while (true)
             {
+                var remaining = timeout - (int)sinceLastReceive.ElapsedMilliseconds;
+
                 using (var result = _interruptibleRead.ParseToMemory(
                     _waitForChanges,
                     "replication notify message",
-                    timeout,
+                    remaining,
                     _buffer,
                     token))
                 {
