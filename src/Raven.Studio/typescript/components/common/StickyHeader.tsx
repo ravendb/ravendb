@@ -4,11 +4,12 @@ import "./StickyHeader.scss";
 
 interface StickyHeaderProps extends HTMLAttributes<HTMLDivElement> {
     children: ReactNode;
+    flush?: boolean;
 }
 
-export function StickyHeader({ children, className, ...rest }: StickyHeaderProps) {
+export function StickyHeader({ flush, children, className, ...rest }: StickyHeaderProps) {
     return (
-        <div {...rest} className={classNames("sticky-header", className)}>
+        <div {...rest} className={classNames("sticky-header", className, flush && "sticky-header--flush")}>
             {children}
         </div>
     );

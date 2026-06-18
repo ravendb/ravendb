@@ -49,10 +49,30 @@
 
 .patch-samples-dropdown-menu {
     min-width: 520px;
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
 
-    .sample-queries-tabs {
-        height: 100%;
+    // The Nav (tab pills) stays fixed at the top as the dropdown's navigation.
+    // Only the Tab.Content scrolls, so the "Search by signature" StickyHeader
+    // inside MethodsTable can pin to the top of its own scroll container.
+    //
+    // We cannot make the menu itself the scroll container: react-bootstrap's
+    // Popper manages the menu's inline styles, and the legacy BS3 rule
+    // `.bs3 .dropdown-menu { max-height: 45vh }` caps the menu height (the patch
+    // page is rendered inside a .bs3 ancestor). So the scroll lives on
+    // .tab-content, and its max-height tracks that 45vh cap minus the Nav height
+    // (~52px) so the menu itself never needs its own scrollbar.
+    .tab-content {
+        background-color: transparent;
+        max-height: calc(45vh - 60px);
+        overflow-y: auto;
+
+        // Bootstrap's .tab-content adds top padding; with the StickyHeader
+        // pinned at top: -1px that padding becomes a gap above the header that
+        // scrolling content bleeds through. Zero it so the header sits flush.
+        padding-top: 0;
+    }
+
+    .tab-pane.fade {
+        opacity: 1;
+        transition: none;
     }
 }

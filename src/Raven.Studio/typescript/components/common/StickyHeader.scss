@@ -8,4 +8,9 @@
     background-color: rgba(bs5variables.$body-bg-rgb-var, 0.9);
     z-index: bs5variables.$zindex-sticky-header;
     backdrop-filter: blur(2px);
+
+    &--flush {
+        margin: 0;
+        padding: 0;
+    }
 }
