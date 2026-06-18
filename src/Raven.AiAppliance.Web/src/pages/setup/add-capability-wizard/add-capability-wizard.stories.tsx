@@ -5,6 +5,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { sampleAgentSuggestion } from "@/mocks/apps-mocks";
+import { channelsMocks } from "@/mocks/channels-mocks";
 import { AddCapabilityWizard } from "./add-capability-wizard";
 import { suggestionToAgentConfiguration } from "./agent-config-form";
 import { CAPABILITY_FLOW, useCapabilitySteps } from "./capability-wizard-flow";
@@ -45,7 +46,15 @@ const SEED: AgentFormData = {
 // suggestions from the store, so seed them before those steps first render (Default's
 // AddCapabilityWizard resets the store on mount, so this never leaks).
 function CapabilityWizardAtStep({ initialStep }: { initialStep: AgentStepId }) {
-    useState(() => useCapabilityWizardStore.setState({ suggestions: sampleAgentSuggestion.configurations }));
+    // Seed the store so any step renders with realistic data. The channels step is entered
+    // directly (no provisioning runs first), so seed its created agent; other steps provision
+    // on the way in and must start without one so "Save agent" actually creates the agent.
+    useState(() =>
+        useCapabilityWizardStore.setState({
+            suggestions: sampleAgentSuggestion.configurations,
+            createdAgent: initialStep === "channels" ? { agentId: "agents/sales", name: "Sales assistant" } : null,
+        }),
+    );
 
     const form = useForm<AgentFormData>({
         mode: "onChange",
@@ -72,7 +81,7 @@ function CapabilityWizardStepBody({ initialStep }: { initialStep: AgentStepId })
             flow={CAPABILITY_FLOW}
             initialStep={initialStep}
             cancel={() => {}}
-            submitLabel="Save agent"
+            completion={{ type: "action", label: "Finish", onComplete: () => {} }}
         />
     );
 }
@@ -91,4 +100,13 @@ export const CreateAgent: Story = {
 
 export const ReviewAgent: Story = {
     render: () => <CapabilityWizardAtStep initialStep="review" />,
+};
+
+export const Channels: Story = {
+    render: () => <CapabilityWizardAtStep initialStep="channels" />,
+};
+
+export const ChannelsEmpty: Story = {
+    render: () => <CapabilityWizardAtStep initialStep="channels" />,
+    parameters: { msw: { handlers: { channels: [channelsMocks.list([])] } } },
 };

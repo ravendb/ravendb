@@ -8,7 +8,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/shadcn/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/shadcn/ui/sheet";
-import { WebWidgetChannelForm } from "@/pages/apps/channels/web-widget-channel-form";
+import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
 type ChannelOption = {
     id: string;
@@ -50,7 +50,7 @@ const CHANNEL_OPTIONS: ChannelOption[] = [
     },
 ];
 
-export function AddChannelMenu({ slug }: { slug: string }) {
+export function AddChannelMenu({ slug, agent }: { slug: string; agent?: FixedAgent }) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     return (
@@ -84,9 +84,13 @@ export function AddChannelMenu({ slug }: { slug: string }) {
                 <SheetContent className="w-full gap-0 sm:max-w-lg data-[side=right]:sm:max-w-lg">
                     <SheetHeader className="border-b">
                         <SheetTitle>New web widget channel</SheetTitle>
-                        <SheetDescription>Embed a chat widget on your site and route it to an agent.</SheetDescription>
+                        <SheetDescription>
+                            {agent
+                                ? `Embed a chat widget on your site, routed to “${agent.name}”.`
+                                : "Embed a chat widget on your site and route it to an agent."}
+                        </SheetDescription>
                     </SheetHeader>
-                    <WebWidgetChannelForm slug={slug} onCreated={() => setIsSheetOpen(false)} />
+                    <WebWidgetChannelForm slug={slug} agent={agent} onCreated={() => setIsSheetOpen(false)} />
                 </SheetContent>
             </Sheet>
         </>

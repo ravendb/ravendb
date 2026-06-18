@@ -7,15 +7,18 @@ import { CreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/creat
 import { useCreateAgentStep } from "@/pages/setup/add-capability-wizard/steps/create/use-create-agent-step";
 import { ReviewAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/review-agent-step";
 import { ReviewTestAgentButton } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-sheet";
+import { useProvisionAgentStep } from "@/pages/setup/add-capability-wizard/steps/review/use-provision-agent-step";
+import { ChannelsStep } from "@/pages/setup/add-capability-wizard/steps/channels/channels-step";
 import { CAPABILITY_OPTIONS } from "@/pages/setup/add-capability-wizard/steps/capability/capability-options";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { getOptionLabel } from "@/lib/form-utils";
 
-export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "create", "review"];
+export const CAPABILITY_FLOW: AgentStepId[] = ["capability", "connection", "create", "review", "channels"];
 
 export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> => {
     const connectProviderBeforeNext = useConnectProviderStep();
     const createAgentBeforeNext = useCreateAgentStep();
+    const provisionAgentBeforeNext = useProvisionAgentStep();
 
     return {
         capability: {
@@ -56,7 +59,23 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             title: "Review & edit your agent",
             bodyComponent: ReviewAgentStep,
             validate: "review",
+            // Provisions the agent on the way out, then the wizard advances to the optional
+            // channels step.
+            beforeNext: provisionAgentBeforeNext,
+            nextLabel: "Save agent",
             footerComponent: ReviewTestAgentButton,
+        },
+        channels: {
+            title: "Add a channel",
+            description:
+                "Your agent is ready. Connect a channel so people can reach it — or finish and add channels later.",
+            bodyComponent: ChannelsStep,
+            // Channels are created through their own API, not via the wizard form.
+            validate: false,
+            // The agent was already committed on the review step. Do not offer navigation that
+            // could provision it a second time or imply that cancelling would undo it.
+            canCancel: false,
+            canGoBack: false,
         },
     };
 };

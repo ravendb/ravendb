@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
     useFormContext,
     useWatch,
@@ -13,12 +13,20 @@ import { Alert } from "@/components/shadcn/ui/alert";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { cn } from "@/lib/utils";
 
-export type WizardBeforeNext = () => void | Promise<void>;
+export type WizardAction = () => void | Promise<void>;
 export type WizardStepPosition = "first" | "middle" | "last";
 export type WizardValidationTarget<Values extends FieldValues> = Path<Values> | readonly Path<Values>[] | false;
 
+export type WizardCompletion =
+    | { type: "submit"; label?: ReactNode }
+    | { type: "action"; label?: ReactNode; onComplete: WizardAction };
+
 export type WizardBodyComponentProps<StepId extends string = string> = {
     currentStepId: StepId;
+    isBusy: boolean;
+};
+
+export type WizardFooterComponentProps = {
     isBusy: boolean;
 };
 
@@ -43,10 +51,11 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     description?: ReactNode;
     bodyComponent: (props: WizardBodyComponentProps<StepId>) => ReactNode;
     validate: WizardValidationTarget<Values>;
-    beforeNext?: WizardBeforeNext;
-    // Optional step-specific action rendered in the footer (e.g. the review step's "Test
-    // agent" button). Renders alongside the wizard's Back/Next/Submit controls.
-    footerComponent?: () => ReactNode;
+    beforeNext?: WizardAction;
+    nextLabel?: ReactNode;
+    canCancel?: boolean;
+    canGoBack?: boolean;
+    footerComponent?: (props: WizardFooterComponentProps) => ReactNode;
 } & WizardStepBadge<Values>;
 
 export type WizardSteps<StepId extends string, Values extends FieldValues = FieldValues> = Record<
@@ -59,15 +68,15 @@ type FormWizardProps<StepId extends string, Values extends FieldValues> = {
     flow: StepId[];
     initialStep?: StepId;
     cancel: () => void;
-    submitLabel?: ReactNode;
+    completion?: WizardCompletion;
 };
 
 export function FormWizard<StepId extends string, Values extends FieldValues>({
     steps,
     flow,
     initialStep,
-    submitLabel,
     cancel,
+    completion = { type: "submit" },
 }: FormWizardProps<StepId, Values>) {
     const { trigger, control, getValues, formState } = useFormContext<Values>();
 
@@ -80,6 +89,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     const [lastKnownIndex, setLastKnownIndex] = useState(() => Math.max(flow.indexOf(initialStepId), 0));
     const [isAdvancing, setIsAdvancing] = useState(false);
     const [advanceError, setAdvanceError] = useState<Error | null>(null);
+    const isAdvancingRef = useRef(false);
 
     const currentIndexInFlow = flow.indexOf(currentStepId);
     const currentIndex = currentIndexInFlow >= 0 ? currentIndexInFlow : Math.min(lastKnownIndex, flow.length - 1);
@@ -104,11 +114,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         setActiveStepIndex(currentIndex - 1);
     };
 
-    const handleNext = async () => {
-        if (currentIndex >= flow.length - 1) {
-            return;
-        }
-
+    const validateCurrentStep = async () => {
         if (currentStep.validate !== false) {
             // The trigger only works correctly when passing an array
             const isValid = await trigger(
@@ -116,24 +122,62 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
             );
 
             if (!isValid) {
-                return;
+                return false;
             }
         }
 
+        return true;
+    };
+
+    const runAction = async (action: () => Promise<void>) => {
+        // A ref closes the gap before React commits the disabled state, including the time spent
+        // in async RHF validation.
+        if (isAdvancingRef.current) {
+            return;
+        }
+
+        isAdvancingRef.current = true;
         setIsAdvancing(true);
         setAdvanceError(null);
 
         try {
-            if (currentStep.beforeNext) {
-                await currentStep.beforeNext();
-            }
-
-            setActiveStepIndex(currentIndex + 1);
+            await action();
         } catch (error) {
             setAdvanceError(error instanceof Error ? error : new Error(String(error)));
         } finally {
+            isAdvancingRef.current = false;
             setIsAdvancing(false);
         }
+    };
+
+    const handleNext = async () => {
+        if (currentIndex >= flow.length - 1) {
+            return;
+        }
+
+        await runAction(async () => {
+            if (!(await validateCurrentStep())) {
+                return;
+            }
+
+            await currentStep.beforeNext?.();
+            setActiveStepIndex(currentIndex + 1);
+        });
+    };
+
+    const handleComplete = async () => {
+        if (completion.type !== "action") {
+            return;
+        }
+
+        await runAction(async () => {
+            if (!(await validateCurrentStep())) {
+                return;
+            }
+
+            await currentStep.beforeNext?.();
+            await completion.onComplete();
+        });
     };
 
     return (
@@ -163,9 +207,13 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         cancel={cancel}
                         goPrev={goPrev}
                         handleNext={handleNext}
+                        handleComplete={handleComplete}
                         isBusy={isBusy}
                         currentStepId={currentStepIdInFlow}
-                        submitLabel={submitLabel}
+                        nextLabel={currentStep.nextLabel}
+                        canCancel={currentStep.canCancel !== false}
+                        canGoBack={currentStep.canGoBack !== false}
+                        completion={completion}
                         footerComponent={currentStep.footerComponent}
                     />
                 </div>
@@ -207,7 +255,7 @@ function WizardStepper<StepId extends string, Values extends FieldValues>({
                 const isComplete = index < currentIndex;
 
                 return (
-                    <li key={stepId} className="flex items-start gap-3">
+                    <li key={stepId} className="flex items-start gap-3" aria-current={isCurrent ? "step" : undefined}>
                         <StepIndicator isComplete={isComplete} isCurrent={isCurrent} />
                         <div className="grid gap-1.5">
                             <span
@@ -289,9 +337,13 @@ type WizardFooterProps<StepId extends string> = {
     cancel: () => void;
     goPrev: () => void;
     handleNext: () => Promise<void>;
+    handleComplete: () => Promise<void>;
     isBusy: boolean;
-    submitLabel?: ReactNode;
-    footerComponent?: () => ReactNode;
+    nextLabel?: ReactNode;
+    canCancel: boolean;
+    canGoBack: boolean;
+    completion: WizardCompletion;
+    footerComponent?: (props: WizardFooterComponentProps) => ReactNode;
 };
 
 function WizardFooter<StepId extends string>({
@@ -300,17 +352,25 @@ function WizardFooter<StepId extends string>({
     cancel,
     goPrev,
     handleNext,
+    handleComplete,
     isBusy,
-    submitLabel,
+    nextLabel,
+    canCancel,
+    canGoBack,
+    completion,
     footerComponent: FooterComponent,
 }: WizardFooterProps<StepId>) {
+    const isLast = stepPosition === "last";
+
     return (
         <div className="flex items-center border-t px-4 py-2">
             <div className="flex gap-2">
-                <Button onClick={cancel} variant="outline">
-                    Cancel
-                </Button>
-                {stepPosition !== "first" && (
+                {canCancel && (
+                    <Button onClick={cancel} variant="outline" disabled={isBusy}>
+                        Cancel
+                    </Button>
+                )}
+                {stepPosition !== "first" && canGoBack && (
                     <Button onClick={goPrev} variant="secondary" disabled={isBusy}>
                         Back
                     </Button>
@@ -318,16 +378,21 @@ function WizardFooter<StepId extends string>({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-                {FooterComponent && <FooterComponent />}
-                {stepPosition === "last" ? (
+                {FooterComponent && <FooterComponent isBusy={isBusy} />}
+                {isLast && completion.type === "action" ? (
+                    <Button type="button" onClick={handleComplete} disabled={isBusy} key={`${currentStepId}:complete`}>
+                        {isBusy && <Spinner />}
+                        {completion.label ?? "Finish"}
+                    </Button>
+                ) : isLast ? (
                     <Button type="submit" disabled={isBusy} key={`${currentStepId}:submit`}>
                         {isBusy && <Spinner />}
-                        {submitLabel ?? "Submit"}
+                        {completion.label ?? "Submit"}
                     </Button>
                 ) : (
                     <Button onClick={handleNext} disabled={isBusy} key={`${currentStepId}:next`}>
                         {isBusy && <Spinner />}
-                        Next
+                        {nextLabel ?? "Next"}
                     </Button>
                 )}
             </div>

@@ -28,14 +28,27 @@ const DEFAULT_VALUES: WebWidgetChannelFormData = {
     allowedOrigins: [],
 };
 
-export function WebWidgetChannelForm({ slug, onCreated }: { slug: string; onCreated: () => void }) {
+// The agent the channel routes to, when the caller has already chosen it (e.g. the capability
+// wizard just created it). When omitted, the operator picks from the app's agents.
+export type FixedAgent = { agentId: string; name: string };
+
+export function WebWidgetChannelForm({
+    slug,
+    agent,
+    onCreated,
+}: {
+    slug: string;
+    agent?: FixedAgent;
+    onCreated: () => void;
+}) {
     const queryClient = useQueryClient();
-    const agentsQuery = useQuery(api.queries.agents.list(slug));
+    // With a fixed agent there's nothing to pick, so skip loading the list.
+    const agentsQuery = useQuery({ ...api.queries.agents.list(slug), enabled: !agent });
 
     const form = useForm<WebWidgetChannelFormData>({
         mode: "onChange",
         resolver: zodResolver(webWidgetChannelSchema),
-        defaultValues: DEFAULT_VALUES,
+        defaultValues: { ...DEFAULT_VALUES, agentId: agent?.agentId ?? "" },
     });
 
     const createMutation = useMutation({
@@ -58,10 +71,12 @@ export function WebWidgetChannelForm({ slug, onCreated }: { slug: string; onCrea
     });
 
     const agents = agentsQuery.data ?? [];
-    const agentOptions: FormSelectOption<string>[] = agents.map((agent) => ({
-        value: agent.agentId,
-        label: agent.name,
+    const agentOptions: FormSelectOption<string>[] = agents.map((option) => ({
+        value: option.agentId,
+        label: option.name,
     }));
+    // A fixed agent always gives a target; otherwise the operator needs at least one to pick.
+    const hasAgentTarget = Boolean(agent?.agentId) || agents.length > 0;
 
     return (
         <form
@@ -70,26 +85,30 @@ export function WebWidgetChannelForm({ slug, onCreated }: { slug: string; onCrea
         >
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
                 <ApiState
-                    isLoading={agentsQuery.isPending}
-                    isError={agentsQuery.isError}
+                    isLoading={!agent && agentsQuery.isPending}
+                    isError={!agent && agentsQuery.isError}
                     errorTitle="Could not load agents"
                     onRetry={() => void agentsQuery.refetch()}
                     loadingLabel="Loading agents..."
                 >
-                    {agents.length === 0 ? (
+                    {!hasAgentTarget ? (
                         <Alert>
                             Create an agent first — a channel routes conversations to one of the app&apos;s agents.
                         </Alert>
                     ) : (
                         <>
-                            <FormSelect
-                                control={form.control}
-                                name="agentId"
-                                label="Agent"
-                                placeholder="Select an agent"
-                                options={agentOptions}
-                                description="Conversations from this widget are answered by this agent."
-                            />
+                            {/* When the agent is fixed it's bound via the form's defaults; only show the
+                                picker when the operator still needs to choose one. */}
+                            {!agent && (
+                                <FormSelect
+                                    control={form.control}
+                                    name="agentId"
+                                    label="Agent"
+                                    placeholder="Select an agent"
+                                    options={agentOptions}
+                                    description="Conversations from this widget are answered by this agent."
+                                />
+                            )}
                             <FormInput
                                 control={form.control}
                                 name="displayName"
@@ -114,7 +133,7 @@ export function WebWidgetChannelForm({ slug, onCreated }: { slug: string; onCrea
                     {createMutation.isError && (
                         <Alert variant="destructive">
                             {createMutation.error instanceof Error
-                                ? createMutation.error.message
+                                ? createMutation.error.message.split("\n")[0]
                                 : "Could not create channel."}
                         </Alert>
                     )}
@@ -127,7 +146,7 @@ export function WebWidgetChannelForm({ slug, onCreated }: { slug: string; onCrea
                         Cancel
                     </Button>
                 </SheetClose>
-                <Button type="submit" disabled={createMutation.isPending || agents.length === 0}>
+                <Button type="submit" disabled={createMutation.isPending || !hasAgentTarget}>
                     {createMutation.isPending && <Spinner />}
                     Create channel
                 </Button>

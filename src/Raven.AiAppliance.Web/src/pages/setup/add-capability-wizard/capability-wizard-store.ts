@@ -10,6 +10,11 @@ export type PromptResult = {
     config: AiAgentConfiguration;
 };
 
+export type CreatedAgent = {
+    agentId: string;
+    name: string;
+};
+
 export type CapabilityWizardState = {
     // AI-suggested agent candidates returned by the suggest/agent endpoint. Held here (not in
     // the form) because they are read-only source data the create/review steps select from.
@@ -18,17 +23,21 @@ export type CapabilityWizardState = {
     // The latest agent generated from a custom prompt (see PromptResult).
     promptResult: PromptResult | null;
     setPromptResult: (result: PromptResult) => void;
+    createdAgent: CreatedAgent | null;
+    setCreatedAgent: (agent: CreatedAgent) => void;
     reset: () => void;
 };
 
-const initialState: Pick<CapabilityWizardState, "suggestions" | "promptResult"> = {
+const initialState: Pick<CapabilityWizardState, "suggestions" | "promptResult" | "createdAgent"> = {
     suggestions: [],
     promptResult: null,
+    createdAgent: null,
 };
 
 export const useCapabilityWizardStore = create<CapabilityWizardState>((set) => ({
     ...initialState,
     setSuggestions: (suggestions) => set({ suggestions }),
     setPromptResult: (promptResult) => set({ promptResult }),
+    setCreatedAgent: (createdAgent) => set({ createdAgent }),
     reset: () => set(initialState),
 }));

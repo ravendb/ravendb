@@ -111,4 +111,6 @@ export type AgentConfigurationFormData = AgentFormData["review"];
 export type AgentParameterFormData = AgentConfigurationFormData["parameters"][number];
 export type AgentQueryToolFormData = AgentConfigurationFormData["queries"][number];
 
-export type AgentStepId = keyof AgentFormData;
+// "channels" has no form fields of its own (channels are created through their own API);
+// it is an optional step shown after the agent is provisioned.
+export type AgentStepId = keyof AgentFormData | "channels";

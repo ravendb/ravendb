@@ -7,6 +7,7 @@ import { Bot, ChevronDown, ChevronUp, FlaskConical, MessageSquare, Send, Setting
 import { api } from "@/api/api";
 import type { AgentToolCall } from "@/api/custom-services/agent-stream";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import type { WizardFooterComponentProps } from "@/components/form/wizard/form-wizard";
 import { buildAgentConfigurationPayload } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
@@ -27,7 +28,7 @@ import { TestQueryToolCall } from "@/pages/setup/add-capability-wizard/steps/rev
 // Footer action for the wizard's Review step: opens a sheet to chat with the draft agent.
 // The button stays disabled until the draft has the minimum a test needs (name, system
 // prompt, and an AI provider connection).
-export function ReviewTestAgentButton() {
+export function ReviewTestAgentButton({ isBusy }: WizardFooterComponentProps) {
     const { control } = useFormContext<AgentFormData>();
     const [name, systemPrompt, connectionStringName] = useWatch({
         control,
@@ -43,7 +44,7 @@ export function ReviewTestAgentButton() {
                 <Button
                     type="button"
                     variant="outline"
-                    disabled={!isReady}
+                    disabled={isBusy || !isReady}
                     title={
                         isReady ? undefined : "Add a name, system prompt, and AI provider connection before testing."
                     }
