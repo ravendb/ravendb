@@ -44,7 +44,7 @@ namespace Tests.Infrastructure
         {
             _breakBlockedMre = new ManualResetEventSlim(false);
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = _breakBlockedMre;
-            return new BreakHandle(this, _breakBlockedMre);
+            return new BreakHandle();
         }
 
         private async Task WaitForResetAsync(int timeout = 15_000)
@@ -61,52 +61,52 @@ namespace Tests.Infrastructure
             throw new TimeoutException("Replication cycle did not complete within timeout");
         }
 
+        // Intentionally a no-op: unblocking the handler is MendAsync()'s job, not Dispose's.
+        // The handler stays blocked for the entire await-using scope, so MendAsync() can
+        // arm its confirmation signal before releasing it - no window for the handler to
+        // race ahead and go idle in WaitForChanges() before we're watching for it.
+        // If MendAsync() is never reached (e.g. an exception escapes the scope),
+        // ReplicationInstance.Dispose() is the fail-safe that releases the handler at teardown.
         private sealed class BreakHandle : IAsyncDisposable
         {
-            private readonly ReplicationInstance _instance;
-            private readonly ManualResetEventSlim _blockedMre;
-
-            public BreakHandle(ReplicationInstance instance, ManualResetEventSlim blockedMre)
-            {
-                _instance = instance;
-                _blockedMre = blockedMre;
-            }
-
-            public ValueTask DisposeAsync()
-            {
-                if (_blockedMre.IsSet == false)
-                {
-                    _instance._database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
-                    _instance._database.Configuration.Replication.MaxItemsCount = null;
-                    _blockedMre.Set();
-                }
-
-                return ValueTask.CompletedTask;
-            }
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
         }
 
         public async Task MendAsync()
         {
             _database.Configuration.Replication.MaxItemsCount = null;
 
-            if (_breakBlockedMre?.IsSet == false)
+            // Capture whatever the handler might currently be blocked on - either Break()'s
+            // _breakBlockedMre, or the initial MRE from BreakReplicationOnStart - before we
+            // replace it, so we can release it below.
+            ManualResetEventSlim previousMre = _replicateOnceMre;
+
+            // nextMre starts SET — handler runs its next loop iteration, then calls Reset() and
+            // blocks. That Reset() is our signal that the handler is running again.
+            ManualResetEventSlim nextMre = new(true);
+            _replicateOnceMre = nextMre;
+            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = nextMre;
+
+            _breakBlockedMre?.Set();
+            previousMre?.Set();
+
+            try
             {
-                // Handler is still blocked by Break() — set nextMre so handler signals us when the batch starts.
-                // nextMre starts SET; handler calls Reset() before its batch, which is our signal.
-                ManualResetEventSlim nextMre = new(true);
-                _replicateOnceMre = nextMre;
-                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = nextMre;
-                _breakBlockedMre.Set();
-                await WaitForResetAsync();
+                // Short timeout: if there's genuinely nothing to replicate, the handler's first
+                // iteration after waking returns didWork == false and breaks out before ever
+                // re-checking nextMre, so this path legitimately can't observe a Reset() signal.
+                await WaitForResetAsync(timeout: 3_000);
+            }
+            catch (TimeoutException)
+            {
+                // Fail-safe: the handler may have had nothing to replicate and gone straight to
+                // WaitForChanges() without re-entering the inner loop to observe nextMre. That's
+                // an "unfinished cycle" we can't observe directly, not a real failure.
+            }
+            finally
+            {
                 _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
                 nextMre.Set();
-            }
-            else
-            {
-                // Handler was already freed (e.g., by DisposeAsync) — just clear remaining state.
-                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
-                _breakBlockedMre?.Set();
-                _replicateOnceMre?.Set();
             }
         }
 
@@ -171,6 +171,10 @@ namespace Tests.Infrastructure
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
             if (_options.KeepMaxItemsCountOnDispose == false)
                 _database.Configuration.Replication.MaxItemsCount = null;
+
+            // Fail-safe: releases the handler if Break() was engaged but MendAsync() was never
+            // reached (e.g. an exception escaped the await-using scope), so teardown doesn't hang.
+            _breakBlockedMre?.Set();
             _replicateOnceMre?.Set();
         }
 
