@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
-                                Math.Max(0, remaining),
+                                remaining,
                                 _copiedBuffer.Buffer,
                                 _cts.Token))
                             {
