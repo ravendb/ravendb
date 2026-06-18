@@ -2,26 +2,16 @@ import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { api } from "@/api/api";
-import type { AiAgentConfiguration } from "@/api/generated/server-api";
 import { appRoutes } from "@/lib/app-routes";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { agentSchema, type AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
-import {
-    buildAgentConfigurationPayload,
-    emptyAgentConfiguration,
-} from "@/pages/setup/add-capability-wizard/agent-config-form";
+import { emptyAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { CAPABILITY_FLOW, useCapabilitySteps } from "@/pages/setup/add-capability-wizard/capability-wizard-flow";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 
 export function AddCapabilityWizard() {
-    const { slug = "" } = useParams();
-    const navigate = useNavigate();
     const resetStore = useCapabilityWizardStore((state) => state.reset);
-    const queryClient = useQueryClient();
 
     const form = useForm<AgentFormData>({
         mode: "onChange",
@@ -34,43 +24,12 @@ export function AddCapabilityWizard() {
         return resetStore;
     }, [resetStore]);
 
-    const provisionMutation = useMutation({
-        mutationFn: async (values: AgentFormData) => {
-            // The base carries fields the form does not edit (e.g. chatTrimming) from the AI
-            // candidate; manual setup has none. Everything editable is overridden below.
-            const base = resolveAgentBase(values);
-
-            const config: AiAgentConfiguration = {
-                ...base,
-                ...buildAgentConfigurationPayload(values),
-            };
-
-            await api.services.apps.provisionAgent(slug, config);
-            return config.name;
-        },
-        onSuccess: async (name) => {
-            await queryClient.invalidateQueries({ queryKey: api.queries.agents.list(slug).queryKey });
-            toast.success(`Agent "${name}" created`);
-            navigate(appRoutes.app(slug));
-        },
-        onError: (error) => {
-            // Backend rejections can carry a full stack trace; show only the first line.
-            const message = error instanceof Error ? error.message.split("\n")[0] : "Could not create agent.";
-            toast.error(message);
-        },
-    });
-
     return (
         <FormProvider {...form}>
-            <form
-                onSubmit={form.handleSubmit(async (values) => {
-                    // Errors surface via the mutation's onError toast; swallow so the rejected
-                    // promise doesn't bubble out of handleSubmit.
-                    await provisionMutation.mutateAsync(values).catch(() => {});
-                })}
-                onKeyDown={preventEnterKeySubmission}
-                className="h-full"
-            >
+            {/* The agent is provisioned in the review step's beforeNext (so the wizard can advance
+                to the optional channels step), not on form submit. The form element just provides
+                the RHF context and swallows stray Enter-key submits. */}
+            <form onSubmit={(event) => event.preventDefault()} onKeyDown={preventEnterKeySubmission} className="h-full">
                 <AddCapabilityWizardBody />
             </form>
         </FormProvider>
@@ -93,34 +52,13 @@ function AddCapabilityWizardBody() {
             flow={CAPABILITY_FLOW}
             initialStep={isAgentPreselected ? "connection" : undefined}
             cancel={() => navigate(appRoutes.app(slug))}
-            submitLabel="Save agent"
+            completion={{
+                type: "action",
+                label: "Finish",
+                onComplete: () => navigate(appRoutes.app(slug)),
+            }}
         />
     );
-}
-
-// The AI candidate a provisioned agent builds on: the selected data suggestion ("ai"), the
-// prompt-generated config ("prompt"), or none ("manual"). Throws when the expected candidate
-// is missing so we never silently provision an empty agent.
-function resolveAgentBase(values: AgentFormData): AiAgentConfiguration | undefined {
-    const store = useCapabilityWizardStore.getState();
-
-    if (values.create.mode === "ai") {
-        const base = store.suggestions[values.create.selectedIndex];
-        if (!base) {
-            throw new Error("No agent suggestion selected.");
-        }
-        return base;
-    }
-
-    if (values.create.mode === "prompt") {
-        const base = store.promptResult?.config;
-        if (!base) {
-            throw new Error("No generated agent. Go back and generate one from your prompt.");
-        }
-        return base;
-    }
-
-    return undefined;
 }
 
 function getDefaultValues(): AgentFormData {

@@ -42,7 +42,7 @@ export function AddAppWizard() {
         onSuccess: async (result) => {
             await queryClient.invalidateQueries({ queryKey: api.queries.apps.list().queryKey });
             toast.success(`App ${result.slug} created`);
-            navigate(appRoutes.app(result.slug));
+            navigate(appRoutes.addCapability(result.slug, "agent"));
         },
         onError: (error) => {
             const message = error instanceof Error ? error.message.split("\n")[0] : "Could not create app.";
@@ -53,7 +53,7 @@ export function AddAppWizard() {
     return (
         <FormProvider {...form}>
             <form
-                onSubmit={form.handleSubmit((x) => provisionMutation.mutateAsync(x))}
+                onSubmit={form.handleSubmit((values) => provisionMutation.mutate(values))}
                 onKeyDown={preventEnterKeySubmission}
                 className="h-full"
             >
