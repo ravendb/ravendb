@@ -1,6 +1,5 @@
 ﻿using Sparrow;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,17 +15,12 @@ using Voron.Impl.FileHeaders;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
-using Sparrow.Threading;
 using Voron.Logging;
 using Voron.Util.PFor;
-using Voron.Util.Settings;
-using static Voron.StorageEnvironmentOptions;
 
 namespace Voron.Impl.Journal
 {
@@ -681,17 +675,14 @@ namespace Voron.Impl.Journal
                     continue;
                 }
 
-                if (current->JournalId == Guid.Empty)
+                if (Legacy_IsOldTransactionFromRecycledJournal(current))
                 {
-                    if (Legacy_IsOldTransactionFromRecycledJournal(current))
-                    {
-                        _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
-                        continue;
-                    }
-                    // Here we are dealing with a valid transaction (in terms of tx id)
-                    // that has zeroed DatabaseId, probably a legacy transaction for the 
-                    // current database (non-shared journal mode), allowing it
+                    _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
+                    continue;
                 }
+
+                // transaction belongs to this environment - it either carries our JournalId or it has none
+                // at all, meaning a pre-8.0 (legacy) transaction
 
                 VerifyTransactionSequence(options, current);
                 
@@ -775,10 +766,8 @@ namespace Voron.Impl.Journal
                 if (TryValidateTransaction(options, ref txState, out var current) is false)
                     continue;
                 
-                if (current->JournalId == Guid.Empty && Legacy_IsOldTransactionFromRecycledJournal(current))
+                if (Legacy_IsOldTransactionFromRecycledJournal(current))
                 {
-                    // leftover tx from a previous use of this reused (recycled) legacy journal - it is older than
-                    // what we already read, so it is NOT a hole in our committed sequence
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
                 }
@@ -830,8 +819,13 @@ namespace Voron.Impl.Journal
                    IsAlreadySyncTransaction(transactionId);
         }
         
+        // a transaction left over from a previous use of a recycled journal file (< 8.0 feature):
+        // a legacy tx (no JournalId) whose id is older than what we have already read
         private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
         {
+            if (currentTx->JournalId != Guid.Empty)
+                return false;
+
             if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
                 return true;
 
