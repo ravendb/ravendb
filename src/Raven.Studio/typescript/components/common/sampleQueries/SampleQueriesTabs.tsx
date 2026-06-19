@@ -6,7 +6,7 @@ import { Icon } from "components/common/Icon";
 import SampleScriptsList from "./partials/SampleScriptsList";
 import MethodsTable from "./partials/MethodsTable";
 import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
-import "./SampleQueriesPage.scss";
+import "./SampleQueries.scss";
 
 type ActiveTab = "scripts" | "methods";
 
@@ -20,7 +20,7 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
     const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
 
     return (
-        <Card className="panel-bg-1 border border-color-light border-1 rounded sample-queries-tabs">
+        <Card className="panel-bg-1 border border-color-light sample-queries-tabs">
             <Tab.Container
                 mountOnEnter
                 unmountOnExit
