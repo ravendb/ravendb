@@ -205,7 +205,7 @@ export function mapAmazonSqsConnectionStringToDto(connection: AmazonSqsConnectio
 }
 
 export function mapAzureServiceBusConnectionStringSettingsToDto(
-    connection: Omit<AzureServiceBusConnection, "type" | "usedByTasks">
+    connection: Omit<AzureServiceBusConnection, "type" | "usedBy">
 ): Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings {
     switch (connection.authType) {
         case "connectionString": {

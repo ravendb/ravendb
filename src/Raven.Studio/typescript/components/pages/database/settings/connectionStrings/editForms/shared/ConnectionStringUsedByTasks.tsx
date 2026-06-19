@@ -6,6 +6,7 @@ import { FormLabel } from "components/common/Form";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 interface ConnectionStringUsedByTasksProps {
     tasks: ConnectionStringUsage[];
@@ -50,7 +51,7 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
         }
     };
 
-    const getUrl = (usage: ConnectionStringUsage): string | null => {
+    const getUrl = (usage: ConnectionStringUsage) => {
         // For server-wide connection strings the usage carries its own database; otherwise it is the active one.
         const databaseName = usage.databaseName ?? activeDatabaseName;
         const id = usage.id;
@@ -81,7 +82,7 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
             case "QueueSink":
                 return id != null ? getQueueSinkUrl(databaseName, id) : null;
             default:
-                return null;
+                return assertUnreachable(usage.kind);
         }
     };
 

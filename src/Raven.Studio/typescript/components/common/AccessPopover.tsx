@@ -4,7 +4,7 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { getAccessRequiredMessage } from "components/utils/accessUtils";
 
-export interface DatabaseAccessPopoverProps extends Omit<ConditionalPopoverProps, "conditions"> {
+export interface AccessPopoverProps extends Omit<ConditionalPopoverProps, "conditions"> {
     accessRequired: accessLevel;
     conditions?: ConditionalPopoverProps["conditions"];
 }
@@ -14,7 +14,7 @@ export function AccessPopover({
     children,
     accessRequired = "DatabaseAdmin",
     ...rest
-}: DatabaseAccessPopoverProps) {
+}: AccessPopoverProps) {
     const canHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation)(accessRequired);
 
     const additionalConditions = Array.isArray(conditions) ? conditions : [conditions];

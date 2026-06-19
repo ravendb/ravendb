@@ -7,8 +7,10 @@ export interface ConnectionStringsNameContext {
 
 export const serverWideConnectionStringPrefix = "Server Wide Connection String";
 
+const separator = ", ";
+
 export function getServerWideShortName(fullName: string): string {
-    return fullName.slice(serverWideConnectionStringPrefix.length + 2);
+    return fullName.slice(serverWideConnectionStringPrefix.length + separator.length);
 }
 
 export const connectionStringsUtils = {

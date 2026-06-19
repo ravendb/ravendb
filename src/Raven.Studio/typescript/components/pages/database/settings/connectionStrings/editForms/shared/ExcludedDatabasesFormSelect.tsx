@@ -16,16 +16,16 @@ export default function ExcludedDatabasesFormSelect<TFieldValues extends FieldVa
     name,
     usedBy,
 }: ExcludedDatabasesFormSelectProps<TFieldValues>) {
-    const allDatabases = useAppSelector(databaseSelectors.allDatabases);
+    const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
     const usedByDatabaseNames = useMemo(() => new Set(usedBy?.map((x) => x.databaseName).filter(Boolean)), [usedBy]);
     const databaseOptions = useMemo(
         () =>
-            allDatabases.map((x) => ({
-                value: x.name,
-                label: x.name,
-                isDisabled: usedByDatabaseNames.has(x.name),
+            allDatabaseNames.map((name) => ({
+                value: name,
+                label: name,
+                isDisabled: usedByDatabaseNames.has(name),
             })),
-        [allDatabases, usedByDatabaseNames]
+        [allDatabaseNames, usedByDatabaseNames]
     );
 
     return (

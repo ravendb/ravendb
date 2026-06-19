@@ -44,43 +44,29 @@ function AddNewButton({ connectionsType }: AddNewButtonProps) {
     const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const viewContext = useAppSelector(connectionStringSelectors.viewContext);
 
-    if (viewContext === "connectionStrings") {
-        return (
-            <AccessPopover accessRequired="DatabaseAdmin">
-                <Button
-                    variant="info"
-                    size="sm"
-                    className="rounded-pill"
-                    title="Add new credentials"
-                    disabled={!hasDatabaseAdminAccess}
-                    onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))}
-                >
-                    <Icon icon="plus" />
-                    Add new
-                </Button>
-            </AccessPopover>
-        );
+    if (viewContext !== "connectionStrings" && viewContext !== "serverWideConnectionStrings") {
+        return null;
     }
 
-    if (viewContext === "serverWideConnectionStrings") {
-        return (
-            <AccessPopover accessRequired="Operator">
-                <Button
-                    variant="info"
-                    size="sm"
-                    className="rounded-pill"
-                    title="Add new connection string"
-                    disabled={!hasOperatorAccess}
-                    onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))}
-                >
-                    <Icon icon="plus" />
-                    Add new
-                </Button>
-            </AccessPopover>
-        );
-    }
+    const isServerWide = viewContext === "serverWideConnectionStrings";
+    const accessRequired: accessLevel = isServerWide ? "Operator" : "DatabaseAdmin";
+    const isDisabled = isServerWide ? !hasOperatorAccess : !hasDatabaseAdminAccess;
 
-    return null;
+    return (
+        <AccessPopover accessRequired={accessRequired}>
+            <Button
+                variant="info"
+                size="sm"
+                className="rounded-pill"
+                title="Add new connection string"
+                disabled={isDisabled}
+                onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))}
+            >
+                <Icon icon="plus" />
+                Add new
+            </Button>
+        </AccessPopover>
+    );
 }
 
 export function getTypeLabel(type: StudioConnectionType): string {

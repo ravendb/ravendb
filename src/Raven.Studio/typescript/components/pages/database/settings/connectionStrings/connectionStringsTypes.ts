@@ -254,3 +254,16 @@ export interface EditConnectionStringFormProps {
 }
 
 export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedBy">;
+
+export type WithExcludedDatabases<T> = T & {
+    ExcludedDatabases?: string[];
+};
+
+export type ServerWideConnectionStringDto =
+    | WithExcludedDatabases<RavenConnectionStringDto>
+    | WithExcludedDatabases<SqlConnectionStringDto>
+    | WithExcludedDatabases<SnowflakeConnectionStringDto>
+    | WithExcludedDatabases<OlapConnectionStringDto>
+    | WithExcludedDatabases<ElasticSearchConnectionStringDto>
+    | WithExcludedDatabases<QueueConnectionStringDto>
+    | WithExcludedDatabases<AiConnectionSettingsDto>;

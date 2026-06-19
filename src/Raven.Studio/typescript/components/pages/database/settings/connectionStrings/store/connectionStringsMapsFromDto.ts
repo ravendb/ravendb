@@ -14,7 +14,11 @@ import {
     AzureServiceBusConnection,
     AiConnection,
     StudioConnectionType,
+    WithExcludedDatabases,
+    ServerWideConnectionStringDto,
 } from "../connectionStringsTypes";
+
+export type { ServerWideConnectionStringDto };
 
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
@@ -26,6 +30,21 @@ import assertUnreachable from "components/utils/assertUnreachable";
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 type AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
+
+function mapUsedByFromDto<
+    T extends { UsedBy?: Array<{ Kind: any; Id?: number; Identifier?: string; Name: string; DatabaseName?: string }> },
+>(dto: T, includeDatabaseName = false): ConnectionStringUsage[] {
+    return (dto.UsedBy ?? []).map(
+        (t) =>
+            ({
+                kind: t.Kind,
+                id: t.Id,
+                identifier: t.Identifier,
+                name: t.Name,
+                ...(includeDatabaseName ? { databaseName: t.DatabaseName } : {}),
+            }) satisfies ConnectionStringUsage
+    );
+}
 
 function mapRavenFromSingleDto(
     d: RavenConnectionStringDto,
@@ -72,41 +91,17 @@ function mapSnowflakeFromSingleDto(
 }
 
 export function mapRavenConnectionsFromDto(connections: Record<string, RavenConnectionStringDto>): RavenConnection[] {
-    return Object.values(connections).map((d) =>
-        mapRavenFromSingleDto(
-            d,
-            (d.UsedBy ?? []).map(
-                (t) =>
-                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
-            )
-        )
-    );
+    return Object.values(connections).map((d) => mapRavenFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapSqlConnectionsFromDto(connections: Record<string, SqlConnectionStringDto>): SqlConnection[] {
-    return Object.values(connections).map((d) =>
-        mapSqlFromSingleDto(
-            d,
-            (d.UsedBy ?? []).map(
-                (t) =>
-                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
-            )
-        )
-    );
+    return Object.values(connections).map((d) => mapSqlFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapSnowflakeConnectionsFromDto(
     connections: Record<string, SnowflakeConnectionStringDto>
 ): SnowflakeConnection[] {
-    return Object.values(connections).map((d) =>
-        mapSnowflakeFromSingleDto(
-            d,
-            (d.UsedBy ?? []).map(
-                (t) =>
-                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
-            )
-        )
-    );
+    return Object.values(connections).map((d) => mapSnowflakeFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function mapOlapFromSingleDto(
@@ -124,15 +119,7 @@ function mapOlapFromSingleDto(
 }
 
 export function mapOlapConnectionsFromDto(connections: Record<string, OlapConnectionStringDto>): OlapConnection[] {
-    return Object.values(connections).map((d) =>
-        mapOlapFromSingleDto(
-            d,
-            (d.UsedBy ?? []).map(
-                (t) =>
-                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
-            )
-        )
-    );
+    return Object.values(connections).map((d) => mapOlapFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function getElasticSearchAuthenticationMethod(
@@ -182,15 +169,7 @@ function mapElasticSearchFromSingleDto(
 export function mapElasticSearchConnectionsFromDto(
     connections: Record<string, ElasticSearchConnectionStringDto>
 ): ElasticSearchConnection[] {
-    return Object.values(connections).map((d) =>
-        mapElasticSearchFromSingleDto(
-            d,
-            (d.UsedBy ?? []).map(
-                (t) =>
-                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
-            )
-        )
-    );
+    return Object.values(connections).map((d) => mapElasticSearchFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function mapKafkaFromSingleDto(
@@ -229,20 +208,7 @@ function mapRabbitMqFromSingleDto(
 export function mapKafkaConnectionsFromDto(connections: Record<string, QueueConnectionStringDto>): KafkaConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "Kafka")
-        .map((d) =>
-            mapKafkaFromSingleDto(
-                d,
-                (d.UsedBy ?? []).map(
-                    (t) =>
-                        ({
-                            kind: t.Kind,
-                            id: t.Id,
-                            identifier: t.Identifier,
-                            name: t.Name,
-                        }) satisfies ConnectionStringUsage
-                )
-            )
-        );
+        .map((d) => mapKafkaFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapRabbitMqConnectionsFromDto(
@@ -250,20 +216,7 @@ export function mapRabbitMqConnectionsFromDto(
 ): RabbitMqConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "RabbitMq")
-        .map((d) =>
-            mapRabbitMqFromSingleDto(
-                d,
-                (d.UsedBy ?? []).map(
-                    (t) =>
-                        ({
-                            kind: t.Kind,
-                            id: t.Id,
-                            identifier: t.Identifier,
-                            name: t.Name,
-                        }) satisfies ConnectionStringUsage
-                )
-            )
-        );
+        .map((d) => mapRabbitMqFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function getAzureQueueStorageAuthType(dto: QueueConnectionStringDto): AzureQueueStorageAuthenticationType {
@@ -333,20 +286,7 @@ export function mapAzureQueueStorageConnectionsFromDto(
 ): AzureQueueStorageConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AzureQueueStorage")
-        .map((d) =>
-            mapAzureQueueStorageFromSingleDto(
-                d,
-                (d.UsedBy ?? []).map(
-                    (t) =>
-                        ({
-                            kind: t.Kind,
-                            id: t.Id,
-                            identifier: t.Identifier,
-                            name: t.Name,
-                        }) satisfies ConnectionStringUsage
-                )
-            )
-        );
+        .map((d) => mapAzureQueueStorageFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapAmazonSqsConnectionsFromDto(
@@ -354,20 +294,7 @@ export function mapAmazonSqsConnectionsFromDto(
 ): AmazonSqsConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AmazonSqs")
-        .map((d) =>
-            mapAmazonSqsFromSingleDto(
-                d,
-                (d.UsedBy ?? []).map(
-                    (t) =>
-                        ({
-                            kind: t.Kind,
-                            id: t.Id,
-                            identifier: t.Identifier,
-                            name: t.Name,
-                        }) satisfies ConnectionStringUsage
-                )
-            )
-        );
+        .map((d) => mapAmazonSqsFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthenticationType {
@@ -425,20 +352,7 @@ export function mapAzureServiceBusConnectionsFromDto(
 ): AzureServiceBusConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AzureServiceBus")
-        .map((d) =>
-            mapAzureServiceBusFromSingleDto(
-                d,
-                (d.UsedBy ?? []).map(
-                    (t) =>
-                        ({
-                            kind: t.Kind,
-                            id: t.Id,
-                            identifier: t.Identifier,
-                            name: t.Name,
-                        }) satisfies ConnectionStringUsage
-                )
-            )
-        );
+        .map((d) => mapAzureServiceBusFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function getAiConnectorType(connection: AiConnectionStringDto): AiConnection["connectorType"] {
@@ -547,15 +461,7 @@ function mapAiFromSingleDto(
 }
 
 export function mapAiConnectionsFromDto(connections: Record<string, AiConnectionStringDto>): AiConnection[] {
-    return Object.values(connections).map((d) =>
-        mapAiFromSingleDto(
-            d,
-            (d.UsedBy ?? []).map(
-                (t) =>
-                    ({ kind: t.Kind, id: t.Id, identifier: t.Identifier, name: t.Name }) satisfies ConnectionStringUsage
-            )
-        )
-    );
+    return Object.values(connections).map((d) => mapAiFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStringsResult): {
@@ -576,19 +482,6 @@ export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStri
     };
 }
 
-type WithExcludedDatabases<T> = T & {
-    ExcludedDatabases?: string[];
-};
-
-export type ServerWideConnectionStringDto =
-    | WithExcludedDatabases<RavenConnectionStringDto>
-    | WithExcludedDatabases<SqlConnectionStringDto>
-    | WithExcludedDatabases<SnowflakeConnectionStringDto>
-    | WithExcludedDatabases<OlapConnectionStringDto>
-    | WithExcludedDatabases<ElasticSearchConnectionStringDto>
-    | WithExcludedDatabases<QueueConnectionStringDto>
-    | WithExcludedDatabases<AiConnectionStringDto>;
-
 export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStringDto[]): {
     [key in StudioConnectionType]: Connection[];
 } {
@@ -608,16 +501,7 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
 
     for (const dto of results) {
         const excludedDatabases = dto.ExcludedDatabases ?? [];
-        const usedBy = (dto.UsedBy ?? []).map(
-            (t) =>
-                ({
-                    kind: t.Kind,
-                    id: t.Id,
-                    identifier: t.Identifier,
-                    name: t.Name,
-                    databaseName: t.DatabaseName,
-                }) satisfies ConnectionStringUsage
-        );
+        const usedBy = mapUsedByFromDto(dto, true);
         switch (dto.Type) {
             case "Raven": {
                 const d = dto as WithExcludedDatabases<RavenConnectionStringDto>;

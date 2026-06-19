@@ -95,7 +95,7 @@ export default function ServerWideConnectionStrings({
                     >
                         <Button
                             variant="primary"
-                            onClick={() => dispatch(connectionStringsActions.editConnectionModalOpened({ type: null }))}
+                            onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
                             disabled={!hasOperatorAccess || !hasServerWideConnectionStrings}
                         >
                             <Icon icon="plus" />
