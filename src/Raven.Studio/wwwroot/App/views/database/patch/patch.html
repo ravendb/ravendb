@@ -23,22 +23,22 @@
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
                             <div class="patch-main">
-                                <div class="btn-group btn-group-sm pull-right" role="group">
-                                    <div class="dropdown">
-                                        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                            <i class="icon-settings"></i><span>Settings</span>
-                                            <span class="caret"></span>
-                                        </button>
-                                        <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
+                                <div class="patch-main-toolbar">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <div class="dropdown">
+                                            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                <i class="icon-settings"></i><span>Settings</span>
+                                                <span class="caret"></span>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <pre class="form-control editor query-source"
-                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/rql', completer: languageService.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
+                                <div data-bind="react: patchAceEditorView" class="bs5"></div>
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
                                     <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
                                 </div>
-                                <div data-bind="react: samplesDropdownView" class="bs5 mt-2"></div>
                             </div>
                             <div class="patch-controls">
                                 <div class="flex-separator"></div>

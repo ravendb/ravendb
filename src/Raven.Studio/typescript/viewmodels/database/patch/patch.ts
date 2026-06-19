@@ -24,7 +24,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
-import PatchSamplesDropdown = require("viewmodels/database/patch/PatchSamplesDropdown");
+import PatchAceEditor = require("viewmodels/database/patch/PatchAceEditor");
 
 class patchList {
 
@@ -156,7 +156,7 @@ class patch extends shardViewModelBase {
 
     inSaveMode = ko.observable<boolean>();
 
-    samplesDropdownView: ReactInKnockout<typeof PatchSamplesDropdown.default>;
+    patchAceEditorView: ReactInKnockout<typeof PatchAceEditor.default>;
 
     spinners = {
         save: ko.observable<boolean>(false),
@@ -191,12 +191,11 @@ class patch extends shardViewModelBase {
         this.bindToCurrentInstance("savePatch");
         this.initObservables();
 
-        this.samplesDropdownView = ko.pureComputed(() => ({
-            component: PatchSamplesDropdown.default,
+        this.patchAceEditorView = ko.pureComputed(() => ({
+            component: PatchAceEditor.default,
             props: {
-                onLoadScript: (script: string) => {
-                    this.patchDocument().query(script);
-                },
+                query: this.patchDocument().query,
+                languageService: this.languageService,
             },
         }));
     }
@@ -298,12 +297,6 @@ class patch extends shardViewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
-
-        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
-
-        this.patchDocument().query.throttle(500).subscribe(() => {
-            this.languageService.syntaxCheck(queryEditor);
-        });
     }
 
     usePatch(item: storedPatchDto) {
