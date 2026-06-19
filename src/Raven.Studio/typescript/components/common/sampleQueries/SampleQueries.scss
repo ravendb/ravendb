@@ -7,6 +7,10 @@
 }
 
 .sample-queries-tabs {
+    &.card {
+        border-radius: 0;
+    }
+
     .nav-item {
         .nav-link {
             color: inherit;
@@ -49,6 +53,50 @@
     }
 }
 
+.patch-ace-editor-wrapper {
+    position: relative;
+}
+
+.patch-ace-placeholder {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: flex-start;
+    // gutter 42px + 1px border + 4px ace line padding = 47px to align with first char
+    padding-top: 2px;
+    padding-left: 47px;
+
+    &__text {
+        font-family: var(--monospace-font, var(--bs-font-monospace));
+        font-size: 14px;
+        color: var(--token-boolean);
+        opacity: 0.6;
+        white-space: pre;
+        line-height: 26px;
+    }
+
+    &__link {
+        pointer-events: auto;
+        background: none;
+        border: none;
+        padding: 0;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+        color: var(--token-keyword);
+        opacity: 0.8;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: bold;
+
+        &:hover {
+            text-decoration: underline;
+            opacity: 1;
+        }
+    }
+}
+
 .patch-samples-action {
     &.dropstart .dropdown-toggle::before {
         display: none;
@@ -60,6 +108,7 @@
     .bs3 & {
         min-width: 560px;
     }
+
     min-width: 560px;
 
     // The Nav (tab pills) stays fixed at the top as the dropdown's navigation.
