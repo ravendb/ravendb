@@ -158,11 +158,6 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
         public async Task TwoSchemasWithIdenticalConstraintNames_DoNotCollide()
         {
-            // Regression for RavenDB-26636: the PK join and FK cache used to be keyed by the bare
-            // CONSTRAINT_NAME. SQL Server constraint names are unique only within a schema, so two
-            // schemas each carrying a 'pk_shared'/'fk_shared' pair collapsed onto one cache entry,
-            // cross-wiring a child's foreign key to the wrong parent. The fix keys both by
-            // (schema, constraint name); discovery must keep the two pairs distinct.
             using var teardown = WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out _, dataSet: null, includeData: false);
 
             ExecuteMsSql(connectionString, "CREATE SCHEMA s1;");

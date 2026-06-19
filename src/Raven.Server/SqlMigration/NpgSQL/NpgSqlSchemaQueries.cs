@@ -34,9 +34,8 @@ namespace Raven.Server.SqlMigration.NpgSQL
             "SELECT TC.TABLE_SCHEMA, TC.TABLE_NAME, COLUMN_NAME " +
             "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC " +
             "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU " +
-            // Postgres constraint names are unique only within (catalog, schema); joining on
-            // CONSTRAINT_NAME alone cross-joins identically-named PKs across schemas (e.g. customers_pkey
-            // in both public and tenant_a) and attaches the wrong PK columns. Qualify by schema + table.
+            // Postgres constraint names are unique only within (catalog, schema), so qualify the
+            // PK-constraint join by schema + table.
             "ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' " +
             "AND TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME " +
             "AND TC.CONSTRAINT_SCHEMA = KU.CONSTRAINT_SCHEMA " +

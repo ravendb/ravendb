@@ -146,12 +146,6 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task TwoSchemasWithIdenticalConstraintNames_DoNotCollide()
         {
-            // Regression for RavenDB-26636: the PK join and FK cache used to be keyed by the bare
-            // CONSTRAINT_NAME. Postgres constraint names are unique only within a schema, so two
-            // schemas each carrying a 'pk_shared'/'fk_shared' pair collapsed onto one cache entry —
-            // the second overwrote the first, cross-wiring a child's foreign key to the wrong
-            // parent (or dropping it). The fix keys both by (schema, constraint name); discovery
-            // must keep the two pairs distinct and resolve each FK within its own schema.
             using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
 
             ExecuteNpgSql(connectionString, @"

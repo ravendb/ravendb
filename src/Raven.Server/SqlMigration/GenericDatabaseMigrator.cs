@@ -594,8 +594,7 @@ namespace Raven.Server.SqlMigration
 
         public object ValueAsObject(SqlTableSchema tableSchema, string column, string[] primaryKeyValue, int index)
         {
-            // Case-insensitive column lookup: source identifiers can differ in case from the configured
-            // mapping; an exact-case Find missed them and then NRE'd on .Type.
+            // Case-insensitive column lookup: source identifiers can differ in case from the configured mapping.
             var columnSchema = tableSchema.Columns.Find(x => string.Equals(x.Name, column, StringComparison.OrdinalIgnoreCase));
             var raw = primaryKeyValue[index];
 

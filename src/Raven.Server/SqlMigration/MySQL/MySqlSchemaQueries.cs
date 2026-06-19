@@ -22,9 +22,6 @@ namespace Raven.Server.SqlMigration.MySQL
         public override string SelectReferentialConstraintsQuery { get; } =
             "SELECT CONSTRAINT_SCHEMA, UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, TABLE_NAME, REFERENCED_TABLE_NAME " +
             "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS " +
-            // Filter on the FK's OWN schema (outgoing FKs from the discovered schema), not the
-            // referenced unique constraint's schema: UNIQUE_CONSTRAINT_SCHEMA dropped FKs pointing at
-            // another schema and admitted FKs whose source table isn't in the discovery set.
             "WHERE CONSTRAINT_SCHEMA = @schema ";
 
         public override string SelectKeyColumnUsageQuery { get; } =

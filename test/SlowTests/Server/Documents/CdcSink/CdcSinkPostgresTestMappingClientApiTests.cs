@@ -903,13 +903,9 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ClientOperation_MixedCaseAndReservedWordIdentifiers_AreQuoted()
         {
-            // Regression for RavenDB-26636: the Postgres test-mapping row fetch emitted raw,
-            // unquoted identifiers. Postgres folds unquoted identifiers to lower-case and chokes
-            // on reserved words, so a mixed-case/reserved-word table ("Order") or column
-            // ("Select", "FromDate") produced a SQL syntax/lookup error instead of returning the
-            // row. The fix double-quotes identifiers in BuildSelectByPrimaryKeyQuery /
-            // BuildSelectFirstRowsQuery. Every identifier here passes the handler's
-            // [A-Za-z_][A-Za-z0-9_]* gate (no spaces/punctuation) yet still requires quoting.
+            // The mixed-case table ("Order") and reserved-word columns ("Select", "FromDate") pass
+            // the handler's [A-Za-z_][A-Za-z0-9_]* identifier gate yet still require double-quoting:
+            // Postgres folds unquoted identifiers to lower-case and rejects reserved words.
             using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
 
             ExecuteNpgSql(connectionString, @"

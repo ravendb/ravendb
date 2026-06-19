@@ -131,8 +131,6 @@ namespace Raven.Server.Documents.CdcSink.Schema
             Dictionary<(string Schema, string Table), CdcSinkSourceTable> tableLookup,
             CancellationToken ct)
         {
-            // Key by (schema, constraint name): constraint names are unique only within a schema,
-            // so a bare-name key merges/overwrites identically-named constraints across schemas.
             var keyColumnUsage = new Dictionary<(string Schema, string ConstraintName), (string Schema, string Table, List<string> Columns)>();
             await using (var cmd = new NpgsqlCommand(queries.SelectKeyColumnUsageQuery, conn))
             await using (var reader = await cmd.ExecuteReaderAsync(ct))
