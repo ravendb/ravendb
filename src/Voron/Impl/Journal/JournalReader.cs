@@ -775,10 +775,17 @@ namespace Voron.Impl.Journal
                 if (TryValidateTransaction(options, ref txState, out var current) is false)
                     continue;
                 
-                if (current->JournalId == JournalId ||
-                    current->JournalId == Guid.Empty && Legacy_IsOldTransactionFromRecycledJournal(current))
+                if (current->JournalId == Guid.Empty && Legacy_IsOldTransactionFromRecycledJournal(current))
                 {
-                    // This is a valid transaction, but if all the transactions *up to it* are sync-ed, then we know that we can 
+                    // leftover tx from a previous use of this reused (recycled) legacy journal - it is older than
+                    // what we already read, so it is NOT a hole in our committed sequence
+                    _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
+                    continue;
+                }
+
+                if (current->JournalId == JournalId)
+                {
+                    // This is a valid transaction, but if all the transactions *up to it* are sync-ed, then we know that we can
                     // ignore corrupted journal, the data is already on the data file
                     if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId - 1, options))
                         return true;
