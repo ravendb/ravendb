@@ -113,5 +113,6 @@
   <ItemGroup>
     <None Remove="Voron\SharedJournal\Legacy-db.zip" />
     <EmbeddedResource Include="Voron\SharedJournal\Legacy-db.zip" />
+    <EmbeddedResource Include="Voron\SharedJournal\RavenDB_26830-legacy.zip" />
   </ItemGroup>
 </Project>
