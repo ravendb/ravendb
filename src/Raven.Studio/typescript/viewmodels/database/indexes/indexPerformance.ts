@@ -364,8 +364,9 @@ class indexPerformance extends shardViewModelBase {
             this.expandedTracks.push(args.indexName);
         }
 
-        if (args.packageId) {
-            // data comes from the debug package - skip the live index stats query against the host database
+        if (args.packageId && args.nodeTag) {
+            // data comes from the debug package (captured per node, so both ids are required) - skip the live
+            // index stats query against the host database
             this.packageContext = { packageId: args.packageId, nodeTag: args.nodeTag };
             return;
         }
@@ -1458,6 +1459,9 @@ class indexPerformance extends shardViewModelBase {
             .done((results) => {
                 this.importFileName(`${this.db.name} @ node ${nodeTag} (debug package)`);
                 this.applyPerformanceData(results || []);
+            })
+            .fail((response: JQueryXHR) => {
+                messagePublisher.reportError("Failed to load indexing performance from the debug package", response.responseText, response.statusText);
             })
             .always(() => this.packageLoading(false));
     }

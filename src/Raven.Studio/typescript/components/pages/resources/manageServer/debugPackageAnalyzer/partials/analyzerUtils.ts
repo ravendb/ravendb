@@ -151,6 +151,9 @@ export interface MetricRange {
 // A parent row's child rows are always replicas of the same data, so we never sum their values -
 // we capture the spread between replicas as a range instead.
 export function toReplicaRange(values: number[]): MetricRange {
+    if (values.length === 0) {
+        return { min: 0, max: 0 };
+    }
     return {
         min: Math.min(...values),
         max: Math.max(...values),

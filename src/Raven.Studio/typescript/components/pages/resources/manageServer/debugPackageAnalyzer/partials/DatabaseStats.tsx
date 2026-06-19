@@ -55,7 +55,6 @@ export default memo(function DatabaseStats({ packageId, database, node }: Databa
                                 <StatTile
                                     label="Documents"
                                     icon="documents"
-                                    iconColor="info"
                                     value={formatNumber(info.CountOfDocuments)}
                                 />
                                 <StatTile label="Indexes" icon="indexing" value={formatNumber(info.CountOfIndexes)} />
@@ -76,7 +75,7 @@ export default memo(function DatabaseStats({ packageId, database, node }: Databa
                                 />
                                 <StatTile
                                     label="Tombstones"
-                                    icon="zombie"
+                                    icon="tombstones"
                                     value={formatNumber(info.CountOfTombstones)}
                                 />
                                 <StatTile
@@ -92,18 +91,17 @@ export default memo(function DatabaseStats({ packageId, database, node }: Databa
                                 <StatTile
                                     label="Size on disk"
                                     icon="storage"
-                                    iconColor="warning"
                                     value={info.SizeOnDisk?.HumaneSize ?? "-"}
                                 />
                                 <StatTile
                                     label="Temp buffers"
-                                    icon="storage"
+                                    icon="clock"
                                     value={info.TempBuffersSizeOnDisk?.HumaneSize ?? "-"}
                                 />
                                 <StatTile label="Database ID" icon="hash" value={info.DatabaseId} />
                                 <StatTile
                                     label="Last indexing time"
-                                    icon="clock"
+                                    icon="index-history"
                                     value={
                                         info.LastIndexingTime
                                             ? genUtils.formatUtcDateAsLocal(info.LastIndexingTime)

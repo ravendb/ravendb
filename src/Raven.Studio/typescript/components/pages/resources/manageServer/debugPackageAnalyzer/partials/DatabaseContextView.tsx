@@ -78,9 +78,9 @@ export default memo(function DatabaseContextView({ summary, database, selectedNo
                                         <div className="overview-stats gap-2">
                                             <StatTile
                                                 label="Node status"
-                                                icon={row.disabled ? "cancel" : "check"}
-                                                iconColor={row.disabled ? "warning" : "success"}
-                                                value={row.disabled ? "Disabled" : "Online"}
+                                                icon={row.disabled ? "cancel" : row.online ? "check" : "disconnected"}
+                                                iconColor={row.disabled ? "warning" : row.online ? "success" : "danger"}
+                                                value={row.disabled ? "Disabled" : row.online ? "Online" : "Offline"}
                                             />
                                             <StatTile
                                                 label="Documents"
@@ -105,7 +105,7 @@ export default memo(function DatabaseContextView({ summary, database, selectedNo
                                             />
                                             <StatTile
                                                 label="Indexing errors"
-                                                icon="indexing"
+                                                icon="index-errors"
                                                 iconColor={row.indexingErrors > 0 ? "danger" : undefined}
                                                 valueColor={row.indexingErrors > 0 ? "danger" : undefined}
                                                 value={formatCount(row.indexingErrors)}
@@ -144,14 +144,13 @@ export default memo(function DatabaseContextView({ summary, database, selectedNo
                         <div className="overview-stats gap-2">
                             <StatTile
                                 label="Data size"
-                                icon="storage"
-                                iconColor="info"
+                                icon="ravendb-data"
                                 value={genUtils.formatBytesToSize(totalData)}
                             />
-                            <StatTile label="Temp size" icon="storage" value={genUtils.formatBytesToSize(totalTemp)} />
+                            <StatTile label="Temp size" icon="clock" value={genUtils.formatBytesToSize(totalTemp)} />
                             <StatTile
                                 label="Total size"
-                                icon="storage"
+                                icon="sum"
                                 value={genUtils.formatBytesToSize(totalData + totalTemp)}
                             />
                         </div>
@@ -169,18 +168,17 @@ export default memo(function DatabaseContextView({ summary, database, selectedNo
                                         <div className="overview-stats gap-2">
                                             <StatTile
                                                 label="Data size"
-                                                icon="storage"
-                                                iconColor="info"
+                                                icon="ravendb-data"
                                                 value={genUtils.formatBytesToSize(row.data)}
                                             />
                                             <StatTile
                                                 label="Temp size"
-                                                icon="storage"
+                                                icon="clock"
                                                 value={genUtils.formatBytesToSize(row.temp)}
                                             />
                                             <StatTile
                                                 label="Total size"
-                                                icon="storage"
+                                                icon="sum"
                                                 value={genUtils.formatBytesToSize(row.data + row.temp)}
                                             />
                                         </div>

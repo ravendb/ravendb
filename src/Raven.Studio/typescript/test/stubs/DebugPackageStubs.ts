@@ -15,6 +15,15 @@ type SettingsResult = Raven.Server.Config.SettingsResult;
 type NetworkAnalysisInfo = Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.NetworkAnalysisInfo;
 type ThreadsInfo = Raven.Server.Dashboard.ThreadsInfo;
 
+// Stubs are intentionally partial - they only fill the fields the UI reads. Typing them as DeepPartial of the
+// real server type (instead of `as unknown as ...`) keeps that partiality while still failing the build if a
+// field we do set is renamed/retyped on the server, so we find out when the server contract changes.
+type DeepPartial<T> = T extends (infer U)[]
+    ? DeepPartial<U>[]
+    : T extends object
+      ? { [K in keyof T]?: DeepPartial<T[K]> }
+      : T;
+
 // One flag per summary-driven (synchronous) section. Setting a flag strips that section's backing
 // data from the built summary so the section renders its no-data state. Async sections (raft log,
 // observer decisions, all per-database panels) are emptied separately via the service mocks.
@@ -482,7 +491,7 @@ export class DebugPackageStubs {
     // ----- On-demand (async) section stubs, resolved through MockManageServerService -----
 
     static observerDecisions(): ClusterObserverDecisions {
-        return {
+        const stub: DeepPartial<ClusterObserverDecisions> = {
             LeaderNode: "A",
             Term: 5,
             Suspended: false,
@@ -509,11 +518,12 @@ export class DebugPackageStubs {
                     Message: "Cluster topology is stable",
                 },
             ],
-        } as unknown as ClusterObserverDecisions;
+        };
+        return stub as ClusterObserverDecisions;
     }
 
     static databaseStats(): DatabaseStatistics {
-        return {
+        const stub: DeepPartial<DatabaseStatistics> = {
             CountOfDocuments: 1_250_000,
             CountOfIndexes: 4,
             CountOfAttachments: 320,
@@ -529,7 +539,8 @@ export class DebugPackageStubs {
             LastIndexingTime: "2025-11-19T10:40:12.0000000Z",
             Is64Bit: true,
             StaleIndexes: ["Orders/ByCompany"],
-        } as unknown as DatabaseStatistics;
+        };
+        return stub as DatabaseStatistics;
     }
 
     static databaseIndexStats(): IndexStats[] {
@@ -537,7 +548,7 @@ export class DebugPackageStubs {
     }
 
     static databaseIndexDefinitions(): IndexDefinition[] {
-        return [
+        const stub: DeepPartial<IndexDefinition>[] = [
             {
                 Name: "Orders/Totals",
                 Type: "MapReduce",
@@ -573,16 +584,16 @@ export class DebugPackageStubs {
                 Configuration: { "Indexing.MapTimeoutInSec": "30" },
                 AdditionalSources: {},
             },
-        ] as unknown as IndexDefinition[];
+        ];
+        return stub as IndexDefinition[];
     }
 
     static databaseIndexErrors(): IndexErrors[] {
-        return IndexesStubs.getIndexErrorDetails() as unknown as IndexErrors[];
+        return IndexesStubs.getIndexErrorDetails() as IndexErrors[];
     }
 
     static databaseOngoingTasks(): OngoingTasksResult {
-        return {
-            OngoingTasksCount: 4,
+        const stub: DeepPartial<OngoingTasksResult> = {
             SubscriptionsCount: 1,
             PullReplications: [],
             OngoingTasks: [
@@ -623,7 +634,8 @@ export class DebugPackageStubs {
                     PinToMentorNode: false,
                 },
             ],
-        } as unknown as OngoingTasksResult;
+        };
+        return stub as OngoingTasksResult;
     }
 
     static databaseSettings(): SettingsResult {
@@ -645,7 +657,7 @@ export class DebugPackageStubs {
             ServerValues: opts.server != null ? { [key]: { HasValue: true, Value: opts.server, HasAccess: true } } : {},
         });
 
-        return {
+        const stub: DeepPartial<SettingsResult> = {
             Settings: [
                 setting(
                     "Indexing.MapTimeoutInSec",
@@ -672,11 +684,12 @@ export class DebugPackageStubs {
                     { db: "supersecret", secured: true }
                 ),
             ],
-        } as unknown as SettingsResult;
+        };
+        return stub as SettingsResult;
     }
 
     static networkInfo(): NetworkAnalysisInfo {
-        return {
+        const stub: DeepPartial<NetworkAnalysisInfo> = {
             TotalActiveTcpConnections: 42,
             TcpConnections: [
                 {
@@ -710,11 +723,12 @@ export class DebugPackageStubs {
                     },
                 },
             ],
-        } as unknown as NetworkAnalysisInfo;
+        };
+        return stub as NetworkAnalysisInfo;
     }
 
     static threadsInfo(): ThreadsInfo {
-        return {
+        const stub: DeepPartial<ThreadsInfo> = {
             ProcessCpuUsage: 14,
             ThreadsCount: 128,
             DedicatedThreadsCount: 24,
@@ -748,6 +762,7 @@ export class DebugPackageStubs {
                     IoStats: { ReadBytes: 0, WriteBytes: 0 },
                 },
             ],
-        } as unknown as ThreadsInfo;
+        };
+        return stub as ThreadsInfo;
     }
 }

@@ -112,7 +112,7 @@ function CpuTab({ cpu, width }: { cpu?: CpuUsageAnalysisInfo; width: number }) {
     }
     return (
         <>
-            <div className="overview-stats gap-3">
+            <div className="overview-stats gap-2">
                 <StatTile label="Process CPU" icon="hammer-driver" value={formatPercentage(cpu.CurrentCpuUsage)} />
                 <StatTile
                     label="Machine CPU"
@@ -148,7 +148,7 @@ function useThreadListColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const threadListColumns: ColumnDef<ThreadItem>[] = useMemo(
         () => [
@@ -209,7 +209,7 @@ function useMemoryMetricColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const memoryMetricColumns: ColumnDef<MemoryMetric>[] = useMemo(
         () => [
@@ -288,7 +288,7 @@ function MemoryTab({ memory, width }: { memory?: MemoryAnalysisInfo; width: numb
 
     return (
         <>
-            <div className="overview-stats gap-3">
+            <div className="overview-stats gap-2">
                 <StatTile label="Working set" icon="storage-used" value={memory.WorkingSet} />
                 <StatTile label="Physical memory" icon="memory" value={memory.PhysicalMemory} />
                 <StatTile label="Available memory" icon="storage-free" value={memory.AvailableMemory} />
@@ -315,7 +315,7 @@ function useGcGenerationColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const gcGenerationColumns: ColumnDef<GenerationRow>[] = useMemo(
         () => [
@@ -394,7 +394,7 @@ function GcTab({ gc, width }: { gc?: GcMemoryInfo; width: number }) {
 
     return (
         <>
-            <div className="overview-stats gap-3">
+            <div className="overview-stats gap-2">
                 <StatTile label="Last GC generation" icon="gc" value={`Gen ${gc.Generation}`} />
                 <StatTile label="GC index" icon="hash" value={formatNumber(gc.Index)} />
                 <StatTile label="Pause time" icon="pause" value={formatPercentage(gc.PauseTimePercentage)} />
@@ -430,7 +430,7 @@ function useNetworkColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const tcpColumns: ColumnDef<TcpConnections>[] = useMemo(
         () => [
@@ -586,7 +586,7 @@ function NetworkTab({ packageId, nodeTag, width }: { packageId: string; nodeTag:
 
     return (
         <>
-            <div className="overview-stats gap-3">
+            <div className="overview-stats gap-2">
                 <StatTile
                     label="Active TCP connections"
                     icon="global"
@@ -621,7 +621,7 @@ function useThreadColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const threadColumns: ColumnDef<ThreadInfo>[] = useMemo(
         () => [
@@ -748,7 +748,7 @@ function ThreadsTab({ packageId, nodeTag, width }: { packageId: string; nodeTag:
 
     return (
         <>
-            <div className="overview-stats gap-3">
+            <div className="overview-stats gap-2">
                 <StatTile label="Process CPU" icon="hammer-driver" value={formatPercentage(info.ProcessCpuUsage)} />
                 <StatTile label="Threads" icon="thread-stack-trace" value={formatNumber(info.ThreadsCount)} />
                 <StatTile

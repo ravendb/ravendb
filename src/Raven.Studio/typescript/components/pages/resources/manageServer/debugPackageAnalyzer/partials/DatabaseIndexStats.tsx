@@ -15,6 +15,7 @@ import {
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { analyzerConstants } from "./analyzerConstants";
+import { formatNumber } from "./analyzerUtils";
 import SizeGetter from "components/common/SizeGetter";
 
 type IndexStats = Raven.Client.Documents.Indexes.IndexStats;
@@ -65,7 +66,7 @@ function useIndexStatsColumns(availableWidth: number) {
             {
                 header: "Entries",
                 accessorKey: "EntriesCount",
-                cell: ({ getValue }) => formatCount(getValue<number>()),
+                cell: ({ getValue }) => formatNumber(getValue<number>()),
                 size: getSize(9),
             },
             {
@@ -169,7 +170,7 @@ function IndexNameCell({ getValue }: { getValue: () => unknown }) {
 
 function IndexErrorsCell({ row }: { row: { original: IndexStats } }) {
     const count = row.original.ErrorsCount ?? 0;
-    return <span className={count > 0 ? "text-danger" : ""}>{formatCount(count)}</span>;
+    return <span className={count > 0 ? "text-danger" : ""}>{formatNumber(count)}</span>;
 }
 
 function IndexStaleCell({ getValue }: { getValue: () => unknown }) {
@@ -180,10 +181,6 @@ function IndexStaleCell({ getValue }: { getValue: () => unknown }) {
     ) : (
         "Up to date"
     );
-}
-
-function formatCount(value: number): string {
-    return value == null ? "-" : value.toLocaleString();
 }
 
 function StateCell(state: IndexState) {

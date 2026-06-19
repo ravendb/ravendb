@@ -35,7 +35,7 @@ function useIndexingPerNodeColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const indexingColumns: ColumnDef<IndexingRow>[] = useMemo(
         () => [

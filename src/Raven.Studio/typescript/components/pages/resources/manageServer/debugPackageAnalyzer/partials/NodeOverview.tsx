@@ -28,7 +28,7 @@ export default function NodeOverview({ summary, nodeTag }: NodeOverviewProps) {
                             <div className="hstack gap-1 align-items-center mb-1">
                                 Node <NodeTagPill tag={nodeTag} />
                             </div>
-                            <div className="overview-stats gap-3">
+                            <div className="overview-stats gap-2">
                                 <StatTile label="Node status" icon="check" iconColor="success" value="Online" />
                                 <StatTile
                                     label="State"

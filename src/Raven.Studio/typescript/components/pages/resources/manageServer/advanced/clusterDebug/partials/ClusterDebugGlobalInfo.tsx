@@ -19,7 +19,7 @@ export default function ClusterDebugGlobalInfo(props: ClusterDebugGlobalInfoProp
     const wrapperClassName = classNames({ "flex-grow-1": fillWidth });
 
     return (
-        <div className="d-flex gap-3 flex-wrap">
+        <div className="d-flex gap-2 flex-wrap">
             <div className={wrapperClassName}>
                 <div className={classNames("card p-2 border-radius-xs vstack", cardClassName)}>
                     <small className="small-label">

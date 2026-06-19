@@ -106,7 +106,11 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
         return names.size;
     }, [nodes]);
 
-    const nodeCount = nodeInfos.length;
+    // A node only carries ClusterNodeInfo if it was reachable when the package was captured, so the count of
+    // captured infos is our "online" count against the total set of nodes the package knows about.
+    const totalNodes = nodes.length;
+    const onlineNodes = nodeInfos.length;
+    const allNodesOnline = onlineNodes === totalNodes;
 
     const clusterUpTime = useMemo(() => {
         let best: string | null = null;
@@ -150,12 +154,12 @@ function ClusterOverviewWithSize({ summary, width }: ClusterOverviewWithSizeProp
                         </EmptySet>
                     ) : (
                         <>
-                            <div className="overview-stats gap-3 mb-3">
+                            <div className="overview-stats gap-2 mb-3">
                                 <StatTile
                                     label="Nodes status"
-                                    icon="check"
-                                    iconColor="success"
-                                    value={`${nodeCount}/${nodeCount} online`}
+                                    icon={allNodesOnline ? "check" : "warning"}
+                                    iconColor={allNodesOnline ? "success" : "warning"}
+                                    value={`${onlineNodes}/${totalNodes} online`}
                                 />
                                 <StatTile
                                     label="Leader node"

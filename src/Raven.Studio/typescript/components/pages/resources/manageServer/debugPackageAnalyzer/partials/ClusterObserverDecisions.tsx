@@ -86,7 +86,7 @@ function ObserverBody({ results, width }: ObserverBodyProps) {
 
     return (
         <div className="vstack gap-3">
-            <div className="hstack gap-3 flex-wrap">
+            <div className="hstack gap-2 flex-wrap">
                 <StatTile
                     className="flex-fill"
                     label="Leader node"
@@ -97,7 +97,7 @@ function ObserverBody({ results, width }: ObserverBodyProps) {
                 <StatTile
                     className="flex-fill"
                     label="Term"
-                    icon="cluster"
+                    icon="document"
                     value={decisions?.Term?.toLocaleString() ?? "n/a"}
                 />
                 <StatTile

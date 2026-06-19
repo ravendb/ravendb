@@ -21,27 +21,33 @@ import SizeGetter from "components/common/SizeGetter";
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type DatabaseOngoingTasksInfoItem = Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem;
 
+// Every per-task-type count field on DatabaseOngoingTasksInfoItem (e.g. "RavenEtlCount") - excludes the
+// non-count fields (Database, Total). Adding a new *Count to the server payload becomes a compile error in
+// taskTypeLabels below until a label is supplied.
+type TaskCountField = Extract<keyof DatabaseOngoingTasksInfoItem, `${string}Count`>;
+
 // the summary reports task counts per node (the Database field is not populated), so we aggregate by task type
-const taskTypeLabels: { field: keyof DatabaseOngoingTasksInfoItem; label: string }[] = [
-    { field: "ExternalReplicationCount", label: "External Replication" },
-    { field: "ReplicationHubCount", label: "Replication Hub" },
-    { field: "ReplicationSinkCount", label: "Replication Sink" },
-    { field: "RavenEtlCount", label: "RavenDB ETL" },
-    { field: "SqlEtlCount", label: "SQL ETL" },
-    { field: "OlapEtlCount", label: "OLAP ETL" },
-    { field: "ElasticSearchEtlCount", label: "Elasticsearch ETL" },
-    { field: "KafkaEtlCount", label: "Kafka ETL" },
-    { field: "RabbitMqEtlCount", label: "RabbitMQ ETL" },
-    { field: "AzureQueueStorageEtlCount", label: "Azure Queue Storage ETL" },
-    { field: "AmazonSqsEtlCount", label: "Amazon SQS ETL" },
-    { field: "SnowflakeEtlCount", label: "Snowflake ETL" },
-    { field: "KafkaSinkCount", label: "Kafka Sink" },
-    { field: "RabbitMqSinkCount", label: "RabbitMQ Sink" },
-    { field: "PeriodicBackupCount", label: "Backup" },
-    { field: "SubscriptionCount", label: "Subscription" },
-    { field: "EmbeddingsGenerationCount", label: "Embeddings Generation" },
-    { field: "GenAiCount", label: "GenAI" },
-];
+const taskTypeLabels: Record<TaskCountField, string> = {
+    ExternalReplicationCount: "External Replication",
+    ReplicationHubCount: "Replication Hub",
+    ReplicationSinkCount: "Replication Sink",
+    RavenEtlCount: "RavenDB ETL",
+    SqlEtlCount: "SQL ETL",
+    OlapEtlCount: "OLAP ETL",
+    ElasticSearchEtlCount: "Elasticsearch ETL",
+    KafkaEtlCount: "Kafka ETL",
+    RabbitMqEtlCount: "RabbitMQ ETL",
+    AzureQueueStorageEtlCount: "Azure Queue Storage ETL",
+    AmazonSqsEtlCount: "Amazon SQS ETL",
+    SnowflakeEtlCount: "Snowflake ETL",
+    KafkaSinkCount: "Kafka Sink",
+    RabbitMqSinkCount: "RabbitMQ Sink",
+    AzureServiceBusSinkCount: "Azure Service Bus Sink",
+    PeriodicBackupCount: "Backup",
+    SubscriptionCount: "Subscription",
+    EmbeddingsGenerationCount: "Embeddings Generation",
+    GenAiCount: "GenAI",
+};
 
 interface TaskTableRow {
     rowKind: "task" | "node";
@@ -66,7 +72,7 @@ function useOngoingTasksColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const taskColumns: ColumnDef<TaskTableRow>[] = useMemo(
         () => [
@@ -186,8 +192,9 @@ function buildTaskRows(summary: DebugPackageAnalysisSummary, nodeTag?: string): 
         }
 
         (node.DatabasesOngoingTasks?.Items ?? []).forEach((item) => {
-            taskTypeLabels.forEach(({ field, label }) => {
-                const count = item[field] as number;
+            (Object.keys(taskTypeLabels) as TaskCountField[]).forEach((field) => {
+                const label = taskTypeLabels[field];
+                const count = item[field];
                 if (count > 0) {
                     let agg = byType.get(label);
                     if (!agg) {

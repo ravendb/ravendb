@@ -49,6 +49,22 @@ interface ClusterRaftDebugProps {
 
 const maxEntriesShown = 500;
 
+// The latest commit time across all captured node views, used as the snapshot's reference "now".
+// Falls back to wall-clock only when nothing valid was captured (no nodes are mapped in that case anyway).
+function mostRecentCommitTime(views: (RaftDebugView | null)[]): moment.Moment {
+    let latest: moment.Moment | null = null;
+    for (const view of views) {
+        if (!view) {
+            continue;
+        }
+        const commit = moment.utc(view.Log.LastCommitedTime);
+        if (commit.isValid() && (latest === null || commit.isAfter(latest))) {
+            latest = commit;
+        }
+    }
+    return latest ?? moment.utc();
+}
+
 // Recreates the live Cluster Debug view from the package's per-node raft log (cluster/log endpoint).
 // Reuses the live view's mapRaftDebugView + ClusterDebugGlobalInfo; the summary is adapted for a static
 // snapshot (no live-cluster "current node" / server URLs, absolute timestamps instead of now-relative).
@@ -61,10 +77,17 @@ export default function ClusterRaftDebug({ summary }: ClusterRaftDebugProps) {
         const settled = await Promise.allSettled(
             nodeTags.map((tag) => manageServerService.getDebugPackageClusterLog(packageId, tag))
         );
+        const views = settled.map((outcome) => (outcome.status === "fulfilled" ? outcome.value : null));
+
+        // For an offline snapshot there is no live "now", so we measure the choked heuristic against the most
+        // recent commit captured anywhere in the cluster (the closest proxy for the moment of capture). A node
+        // lagging behind that reference still flags as choked; the whole package no longer does.
+        const referenceTimeUtc = mostRecentCommitTime(views);
+
         return nodeTags.map((tag, index): NodeRaftResult => {
-            const outcome = settled[index];
-            if (outcome.status === "fulfilled" && outcome.value) {
-                return { nodeTag: tag, status: "success", view: outcome.value, info: mapRaftDebugView(outcome.value) };
+            const view = views[index];
+            if (view) {
+                return { nodeTag: tag, status: "success", view, info: mapRaftDebugView(view, referenceTimeUtc) };
             }
             return { nodeTag: tag, status: "failure" };
         });

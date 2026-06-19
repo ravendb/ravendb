@@ -1,14 +1,15 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
-import AnalysisNavRail from "./AnalysisNavRail";
+import AnalysisNavRail, { ScopeItem } from "./AnalysisNavRail";
+import { AnalysisSectionEntry } from "./AnalysisSectionsContext";
 
-const scopeItems = [
-    { value: "cluster" as const, label: "Cluster", icon: "cluster" as const, count: 3 },
-    { value: "node" as const, label: "Node", icon: "node" as const, count: 1 },
-    { value: "database" as const, label: "Database", icon: "database" as const, count: 2 },
+const scopeItems: ScopeItem<"cluster" | "node" | "database">[] = [
+    { value: "cluster", label: "Cluster", icon: "cluster", count: 3 },
+    { value: "node", label: "Node", icon: "node", count: 1 },
+    { value: "database", label: "Database", icon: "database", count: 2 },
 ];
 
-const sections = [
+const sections: AnalysisSectionEntry[] = [
     { id: "results", label: "Analysis results" },
     { id: "overview", label: "Cluster overview" },
 ];

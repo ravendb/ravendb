@@ -49,7 +49,7 @@ function useStorageColumns(availableWidth: number) {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(
         availableWidth - analyzerConstants.panelHorizontalPaddingInPx
     );
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
 
     const storageColumns: ColumnDef<StorageTableRow>[] = useMemo(
         () => [

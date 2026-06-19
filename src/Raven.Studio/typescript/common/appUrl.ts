@@ -363,11 +363,9 @@ class appUrl {
 
     static forIndexPerformance(db: database | string, indexName?: string, packageId?: string, nodeTag?: string): string {
         let url = `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
-        if (packageId) {
-            url += "&packageId=" + encodeURIComponent(packageId);
-            if (nodeTag) {
-                url += "&nodeTag=" + encodeURIComponent(nodeTag);
-            }
+        // the package's indexing performance is captured per node, so opening it requires both ids (same as forCaptureStackTraces)
+        if (packageId && nodeTag) {
+            url += "&packageId=" + encodeURIComponent(packageId) + "&nodeTag=" + encodeURIComponent(nodeTag);
         }
         return url;
     }

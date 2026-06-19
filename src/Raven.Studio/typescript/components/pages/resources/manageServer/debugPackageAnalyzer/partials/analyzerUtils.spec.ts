@@ -49,6 +49,10 @@ describe("summarizeIssues", () => {
 });
 
 describe("toReplicaRange", () => {
+    it("returns a zero range when there are no replicas", () => {
+        expect(toReplicaRange([])).toEqual({ min: 0, max: 0 });
+    });
+
     it("returns the value as both bounds for a single replica", () => {
         expect(toReplicaRange([42])).toEqual({ min: 42, max: 42 });
     });
