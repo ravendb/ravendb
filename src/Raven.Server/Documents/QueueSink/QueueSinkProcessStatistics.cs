@@ -24,7 +24,7 @@ public class QueueSinkProcessStatistics
     
     public int ConsumeErrors { get; set; }
     
-    public DateTime? LastConsumeErrorTime { get; private set; }
+    public DateTime? LastConsumeErrorTime { get; set; }
     
     public Queue<QueueSinkErrorInfo> ConsumeErrorsInCurrentBatch { get; } = new();
     
@@ -40,6 +40,7 @@ public class QueueSinkProcessStatistics
     {
         WasLatestConsumeSuccessful = true;
         ConsumeSuccesses += items;
+        LastConsumeErrorTime = null;
     }
     
     public void RecordConsumeError(string error, int count = 1)
@@ -49,8 +50,6 @@ public class QueueSinkProcessStatistics
         ConsumeErrors += count;
 
         ConsumeErrorsInCurrentBatch.Enqueue(new QueueSinkErrorInfo(error));
-
-        LastConsumeErrorTime = SystemTime.UtcNow;
 
         if (ConsumeErrors <= ConsumeSuccesses)
             return;
