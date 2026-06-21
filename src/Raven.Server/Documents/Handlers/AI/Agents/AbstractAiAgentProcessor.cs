@@ -139,33 +139,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 UserPrompt = userPrompt,
                 Parameters = parameters,
                 CreationOptions = options,
-                OutputOptions = GetOutputOptions(body)
+                OutputOptions = AiServerOutputOptions.From(body)
             };
 
             return request;
-        }
-
-        private static AiServerOutputOptions GetOutputOptions(BlittableJsonReaderObject body)
-        {
-            if (body.TryGet(nameof(ConversionRequestBody.OutputOptions), out BlittableJsonReaderObject outputOptions) && outputOptions != null)
-            {
-                var opts = new AiServerOutputOptions();
-                if (outputOptions.TryGet(nameof(AiServerOutputOptions.NoSchema), out bool noSchema) && noSchema)
-                {
-                    opts.NoSchema = true;
-                }
-                else if (outputOptions.TryGet(nameof(AiServerOutputOptions.OutputSchema), out string outputSchema) && string.IsNullOrWhiteSpace(outputSchema) == false)
-                {
-                    opts.OutputSchema = outputSchema;
-                }
-                else if (outputOptions.TryGet(nameof(AiServerOutputOptions.SampleObject), out string sampleObject) && string.IsNullOrWhiteSpace(sampleObject) == false)
-                {
-                    opts.SampleObject = sampleObject;
-                }
-                return opts;
-            }
-
-            return null;
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(DocumentsOperationContext context, string destinationDocumentId, CancellationToken token)

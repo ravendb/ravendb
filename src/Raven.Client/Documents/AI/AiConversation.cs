@@ -298,7 +298,7 @@ internal class AiConversation : IAiConversationOperations
 
     public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
     {
-        outputOptions = ValidateOutputOptions<TAnswer>(outputOptions);
+        ValidateOutputOptions<TAnswer>(outputOptions);
 
         while (true)
         {
@@ -357,7 +357,7 @@ internal class AiConversation : IAiConversationOperations
     {
         _dispatchedToolIds.Clear();
 
-        outputOptions = ValidateOutputOptions<TAnswer>(outputOptions);
+        ValidateOutputOptions<TAnswer>(outputOptions);
 
         while (true)
         {
@@ -407,9 +407,10 @@ internal class AiConversation : IAiConversationOperations
 
     public event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 
-    private static AiOutputOptions ValidateOutputOptions<TAnswer>(AiOutputOptions outputOptions)
+    private static void ValidateOutputOptions<TAnswer>(AiOutputOptions outputOptions)
     {
-        outputOptions ??= new AiOutputOptions();
+        if (outputOptions == null)
+            throw new ArgumentNullException(nameof(outputOptions));
 
         if (typeof(TAnswer) == typeof(string))
         {
@@ -429,8 +430,6 @@ internal class AiConversation : IAiConversationOperations
             throw new InvalidOperationException($"{nameof(AiOutputOptions.SampleObject)} is of type '{outputOptions.SampleObject.GetType().Name}' but the expected answer type is '{typeof(TAnswer).Name}'. " +
                                                 $"The sample object must match the answer type.");
         }
-
-        return outputOptions;
     }
 
     private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)

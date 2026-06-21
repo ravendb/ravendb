@@ -173,6 +173,7 @@ public class ChatCompletionClient : IDisposable
         using var parser = structuredOutput ? new SseStreamingJsonParser(streamingContext, streamPropertyPath) : null;
         if (parser != null)
         {
+            // the `e` we get here is the _full_ string (including past chunks we already saw)
             parser.OnStringRead += (e) =>
             {
                 alreadySeen += streamedPropertyBuffer.Append(alreadySeen, e);
@@ -241,9 +242,12 @@ public class ChatCompletionClient : IDisposable
                     if (structuredOutput)
                     {
                         var final = parser.Process(content);
-                        if (streamedPropertyBuffer.Length is not 0)
+                        if (streamedPropertyBuffer.Length is not 0) // Length is the written data length (not the buffer real size)
                         {
+                            // here we send all the data that wasn't sent so far to the client
                             await streamedPropertyCallback(streamedPropertyBuffer.AsMemory());
+                            // reset the buffer length so we can overwrite the start of the buffer
+                            // and only retain in memory the parts we'll need to send next time
                             streamedPropertyBuffer.Length = 0;
                         }
 
