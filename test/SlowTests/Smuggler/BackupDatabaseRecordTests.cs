@@ -76,7 +76,6 @@ namespace SlowTests.Smuggler
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64)]
         public async Task CanExportAndImportDatabaseRecord()
         {
-            DoNotReuseServer();
             var file = Path.GetTempFileName();
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
@@ -672,7 +671,6 @@ namespace SlowTests.Smuggler
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportMergedDatabaseRecord()
         {
-            DoNotReuseServer();
             var file = Path.GetTempFileName();
             try
             {
@@ -1228,7 +1226,6 @@ namespace SlowTests.Smuggler
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64, SnowflakeRequired = true)]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
-            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
@@ -1646,7 +1643,6 @@ namespace SlowTests.Smuggler
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions, RavenArchitecture.AllX64)]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
-            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -1729,8 +1725,7 @@ namespace SlowTests.Smuggler
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
         {
-            DoNotReuseServer();
-            var backupPath = NewDataPath(suffix: "BackupFolder");
+           var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
             {

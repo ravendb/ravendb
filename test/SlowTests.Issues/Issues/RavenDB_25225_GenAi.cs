@@ -65,20 +65,19 @@ namespace SlowTests.Issues
         public async Task FailToRestoreGenAiWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
                     await LicenseHelper.AddGenAiIntegration(store);
                     await LicenseHelper.RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     var exception = Assert.Throws<LicenseLimitException>(() =>
                     {
@@ -176,20 +175,19 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledGenAiWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
                     await LicenseHelper.AddGenAiIntegration(store, true);
                     await LicenseHelper.RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
                     LicenseHelper.RunRestore(store, backupPath);
                 }
             }

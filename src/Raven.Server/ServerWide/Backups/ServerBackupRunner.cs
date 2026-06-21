@@ -140,12 +140,14 @@ public class ServerBackupRunner : IDisposable
     /// Registers a new backup task state in the in-memory dictionary and enqueues it for polling.
     /// If a state for the same database already exists, uses the existing inner dictionary.
     /// </summary>
+    public void EnsureDatabaseRegistered(string databaseName)
+    {
+        BackupsPerDatabasePerTaskId.GetOrAdd(databaseName, static _ => new ConcurrentDictionary<long, DatabaseBackupState>());
+    }
+
     private void RegisterNewBackup(DatabaseBackupState backupState)
     {
-        if (BackupsPerDatabasePerTaskId.TryGetValue(backupState.DatabaseName, out var backupsPerDatabasePerTaskId) == false)
-        {
-            BackupsPerDatabasePerTaskId[backupState.DatabaseName] = backupsPerDatabasePerTaskId = new ConcurrentDictionary<long, DatabaseBackupState>();
-        }
+        var backupsPerDatabasePerTaskId = BackupsPerDatabasePerTaskId.GetOrAdd(backupState.DatabaseName, static _ => new ConcurrentDictionary<long, DatabaseBackupState>());
 
         backupsPerDatabasePerTaskId.TryAdd(backupState.Configuration.TaskId, backupState);
 
@@ -424,12 +426,13 @@ public class ServerBackupRunner : IDisposable
         {
             throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
         }
-        if (databaseBackupState.Running)
+        var runningTask = databaseBackupState.RunningTask;
+        if (databaseBackupState.Running && runningTask != null)
         {
             throw new BackupAlreadyRunningException(
-                $"Could not start backup task '{databaseBackupState.Configuration.TaskId}' because there is already a running backup under operation id '{databaseBackupState.RunningTask.Id}'")
+                $"Could not start backup task '{databaseBackupState.Configuration.TaskId}' because there is already a running backup under operation id '{runningTask.Id}'")
             {
-                OperationId = databaseBackupState.RunningTask.Id,
+                OperationId = runningTask.Id,
                 NodeTag = _serverStore.NodeTag
             };
         }
@@ -695,13 +698,12 @@ public class ServerBackupRunner : IDisposable
             return;
         }
 
-        if (BackupsPerDatabasePerTaskId.TryGetValue(databaseRecord.DatabaseName, out var backupsPerDatabase) == false)
-            BackupsPerDatabasePerTaskId[databaseRecord.DatabaseName] = backupsPerDatabase = new ConcurrentDictionary<long, DatabaseBackupState>();
+        var backupsPerDatabase = BackupsPerDatabasePerTaskId.GetOrAdd(databaseRecord.DatabaseName, static _ => new ConcurrentDictionary<long, DatabaseBackupState>());
 
         foreach (var periodicBackup in databaseRecord.PeriodicBackups)
         {
-            if (backupsPerDatabase.TryGetValue(periodicBackup.TaskId, out var currentBackupState))
-                UpdateConfigurations([periodicBackup], databaseRecord.DatabaseName);
+            if (backupsPerDatabase.TryGetValue(periodicBackup.TaskId, out _))
+                ApplyBackupConfiguration(databaseRecord.DatabaseName, periodicBackup);
             else
             {
                 var newBackupState = new DatabaseBackupState(databaseRecord.DatabaseName, periodicBackup, databaseRecord.Sharding != null, _serverStore);
@@ -727,7 +729,7 @@ public class ServerBackupRunner : IDisposable
     public void UpdateConfigurations(List<PeriodicBackupConfiguration> configurations, string databaseName)
     {
         if (BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out ConcurrentDictionary<long, DatabaseBackupState> backupStates) == false)
-            throw new InvalidOperationException($"There isn't backups configuration for Database : {databaseName} ");
+            return;
 
         if (configurations == null)
         {
@@ -744,29 +746,8 @@ public class ServerBackupRunner : IDisposable
         var allBackupTaskIds = new List<long>();
         foreach (var periodicBackupConfiguration in configurations)
         {
-            var newBackupTaskId = periodicBackupConfiguration.TaskId;
-            allBackupTaskIds.Add(newBackupTaskId);
-
-            var taskState = GetTaskStatus(periodicBackupConfiguration, databaseName, out _);
-            if (_forTestingPurposes != null &&
-                _forTestingPurposes.DatabaseTestingStuffInternals != null &&
-                _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
-            {
-                if (testingStuffInternal.SimulateActiveByOtherNodeStatus_UpdateConfigurations)
-                {
-                    taskState = TaskStatus.ActiveByOtherNode;
-                }
-                else if (testingStuffInternal.SimulateDisableNodeStatus_UpdateConfigurations)
-                {
-                    taskState = TaskStatus.Disabled;
-                }
-                else if (testingStuffInternal.SimulateActiveByCurrentNode_UpdateConfigurations)
-                {
-                    taskState = TaskStatus.ActiveByCurrentNode;
-                }
-            }
-
-            UpdatePeriodicBackup(databaseName, newBackupTaskId, periodicBackupConfiguration, taskState);
+            allBackupTaskIds.Add(periodicBackupConfiguration.TaskId);
+            ApplyBackupConfiguration(databaseName, periodicBackupConfiguration);
         }
 
         var deletedBackupTaskIds = backupStates.Keys.Except(allBackupTaskIds).ToList();
@@ -776,6 +757,30 @@ public class ServerBackupRunner : IDisposable
             backupStates[deletedBackupId].Stale.Raise();
             backupStates[deletedBackupId].CancelRunningBackup(CancelReasonTaskDeleted);
         }
+    }
+
+    private void ApplyBackupConfiguration(string databaseName, PeriodicBackupConfiguration configuration)
+    {
+        var taskState = GetTaskStatus(configuration, databaseName, out _);
+        if (_forTestingPurposes != null &&
+            _forTestingPurposes.DatabaseTestingStuffInternals != null &&
+            _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(databaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+        {
+            if (testingStuffInternal.SimulateActiveByOtherNodeStatus_UpdateConfigurations)
+            {
+                taskState = TaskStatus.ActiveByOtherNode;
+            }
+            else if (testingStuffInternal.SimulateDisableNodeStatus_UpdateConfigurations)
+            {
+                taskState = TaskStatus.Disabled;
+            }
+            else if (testingStuffInternal.SimulateActiveByCurrentNode_UpdateConfigurations)
+            {
+                taskState = TaskStatus.ActiveByCurrentNode;
+            }
+        }
+
+        UpdatePeriodicBackup(databaseName, configuration.TaskId, configuration, taskState);
     }
 
     /// <summary>

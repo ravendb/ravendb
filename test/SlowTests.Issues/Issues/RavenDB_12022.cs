@@ -24,8 +24,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public async Task CanMigrateLegacyCounters()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             From41016.NumberOfCountersToMigrateInSingleTransaction = 20;
 
             var backupPath = NewDataPath(forceCreateDir: true);
@@ -33,7 +31,7 @@ namespace SlowTests.Issues
 
             ExtractFile(fullBackupPath);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var databaseName = GetDatabaseName();
 
@@ -88,7 +86,7 @@ namespace SlowTests.Issues
                         Assert.Equal(3, details.Counters[0].TotalValue);
 
                         // verify that we removed the counter-tombstones from tombstones table
-                        var db = await Databases.GetDocumentDatabaseInstanceFor(server, store, databaseName);
+                        var db = await Databases.GetDocumentDatabaseInstanceFor(Server, store, databaseName);
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {

@@ -20,13 +20,11 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task FullAndIncrementalBackupsInSameFolderShouldWork()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string idUser = "user/1";
             const string restoredDbMane = "RestoredDB";
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -38,7 +36,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 using (var session = store.OpenAsyncSession())
                 {
                     var u = await session.LoadAsync<User>(idUser);
@@ -47,7 +45,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
                 using (var session = store.OpenAsyncSession())
                 {
                     var u = await session.LoadAsync<User>(idUser);
@@ -56,7 +54,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
                 DeleteFoldersAndFiles(backupPath);
 
                 using (var session = store.OpenAsyncSession())
@@ -67,7 +65,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(server, backupTaskId, store);
+                await Backup.RunBackupAsync(Server, backupTaskId, store);
                 using (var session = store.OpenAsyncSession())
                 {
                     var u = await session.LoadAsync<User>(idUser);
@@ -76,7 +74,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
                 using (var session = store.OpenAsyncSession())
                 {
                     var u = await session.LoadAsync<User>(idUser);
@@ -86,7 +84,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
                 var backupDirectory = Directory.GetDirectories(backupPath).First(); // get the temp folder created for backups
 
                 await (await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreBackupConfiguration()
@@ -98,7 +96,7 @@ namespace SlowTests.Issues
 
             using (var store2 = GetDocumentStore(new Options()
             {
-                Server = server,
+                Server = Server,
                 CreateDatabase = false,
                 ModifyDatabaseName = s => restoredDbMane
             }))

@@ -109,22 +109,21 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledSnowflakeEtlWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     await LicenseHelper.CreateSnowflakeEtlConfiguration(store, true);
 
                     await LicenseHelper.RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     LicenseHelper.RunRestore(store, backupPath);
                 }
@@ -139,21 +138,20 @@ namespace SlowTests.Issues
         public async Task RestoreSnowflakeEtlWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     await LicenseHelper.CreateSnowflakeEtlConfiguration(store);
                     await LicenseHelper.RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     var exception = Assert.Throws<LicenseLimitException>(() =>
                     {

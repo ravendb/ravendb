@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -20,19 +21,6 @@ using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    /// <summary>
-    /// Covers cancellation of an in-flight backup when its task is disabled, the task is deleted, or its
-    /// database is deleted (RavenDB-24994). See docs/cancellation-paths-investigation.md for the design.
-    ///
-    /// Mechanism under test: <see cref="DatabaseBackupState.CancelRunningBackup"/> cancels the live
-    /// <see cref="DatabaseBackupState.RunningCancel"/> token after the trigger raises Stale, and records a
-    /// [CANCELLED:&lt;reason&gt;] entry in the decision log.
-    ///
-    /// Each test pins a backup mid-run using the existing
-    /// <see cref="TestingStuffInternal.OnBackupTaskRunHoldBackupExecution"/> hook (awaited at
-    /// BackupTask.Run right after RunningTask is set), fires the trigger, then releases the pin and
-    /// observes the outcome.
-    /// </summary>
     public class BackupCancellationTests : RavenTestBase
     {
         public BackupCancellationTests(ITestOutputHelper output) : base(output)
@@ -238,6 +226,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 TaskScheduler.UnobservedTaskException -= OnUnobserved;
             }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task ValueChange_AfterDatabaseRemoved_DoesNotThrow()
+        {
+            DoNotReuseServer();
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            await StoreSomeDataAsync(store);
+
+            var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath), store);
+            var config = Backup.CreateBackupConfiguration(backupPath, taskId: taskId);
+
+            var runner = server.ServerStore.BackupRunner;
+
+            runner.RemoveDatabase(db.Name);
+
+            var ex = Record.Exception(() => runner.UpdateConfigurations(new List<PeriodicBackupConfiguration> { config }, db.Name));
+            Assert.Null(ex);
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]

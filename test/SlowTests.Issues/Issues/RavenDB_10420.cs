@@ -22,13 +22,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldWork()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
             }))
             {
@@ -44,7 +41,7 @@ namespace SlowTests.Issues
                 var beforeBackupStats = store.Maintenance.Send(new GetStatisticsOperation());
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
@@ -61,7 +58,7 @@ namespace SlowTests.Issues
                 {
                     var afterRestoreStats = store.Maintenance.ForDatabase(restoredDatabaseName).Send(new GetStatisticsOperation());
 
-                    var restoredDatabase = await GetDatabase(restoredDatabaseName, server);
+                    var restoredDatabase = await GetDatabase(restoredDatabaseName, Server);
                     
                     var indexesPath = restoredDatabase.Configuration.Indexing.StoragePath;
                     var indexesDirectory = new DirectoryInfo(indexesPath.FullPath);

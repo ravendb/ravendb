@@ -72,10 +72,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_to_directory()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -95,7 +93,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
@@ -114,11 +111,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_to_directory_multiple_backups_with_long_interval()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -127,7 +122,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -136,12 +131,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
@@ -159,10 +153,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_should_work_with_long_intervals()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -171,7 +163,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -180,12 +172,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
@@ -205,10 +196,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_to_directory_multiple_backups()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -217,7 +206,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -226,12 +215,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
@@ -249,10 +237,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanImportTombstonesFromIncrementalBackup()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -261,7 +247,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -269,12 +255,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
             }
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
@@ -291,10 +276,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_restore_smuggler_correctly()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -303,7 +286,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -312,17 +295,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store1 = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
@@ -359,10 +340,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -372,7 +351,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
 
                 var backupStatus = store.Maintenance.Send(operation);
@@ -394,7 +373,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -420,8 +399,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(200, val);
                     }
 
-                    var originalDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var restoredDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                     using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -440,33 +419,31 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(null, "0 0 1 * *")]
         public async Task next_full_backup_time_calculated_correctly(string fullBackupFrequency, string incrementalBackupFrequency)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency, incrementalBackupFrequency: incrementalBackupFrequency);
 
                 var backup = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, backup.TaskId);
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, backup.TaskId);
 
-                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(server, store));
+                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(Server, store));
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var now = DateTime.UtcNow;
 
                 // Inject a backup status row so the overdue branch in
                 // BackupUtils.GetNextBackupDetails returns TimeSpan.Zero — restores the precondition
                 // that the pre-refactor test set on the in-memory PeriodicBackup directly.
-                server.ServerStore.DatabaseInfoCache.BackupStatusStorage.Insert(new PeriodicBackupStatus
+                Server.ServerStore.DatabaseInfoCache.BackupStatusStorage.Insert(new PeriodicBackupStatus
                 {
                     TaskId = backup.TaskId,
                     BackupType = config.BackupType,
                     LastFullBackupInternal = now.AddDays(-360),
-                    NodeTag = server.ServerStore.NodeTag
+                    NodeTag = Server.ServerStore.NodeTag
                 }, store.Database);
 
-                var nextBackupDetails = server.ServerStore.BackupRunner.GetNextBackupDetails(backup.TaskId, store.Database, out var responsibleNode);
+                var nextBackupDetails = Server.ServerStore.BackupRunner.GetNextBackupDetails(backup.TaskId, store.Database, out var responsibleNode);
 
                 Assert.NotNull(nextBackupDetails);
                 Assert.Equal(backup.TaskId, nextBackupDetails.TaskId);
@@ -487,10 +464,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.NoCompression)]
         public async Task can_backup_and_restore_snapshot(SnapshotBackupCompressionAlgorithm? algorithm, CompressionLevel compressionLevel)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -520,7 +495,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     CompressionAlgorithm = algorithm,
                     CompressionLevel = compressionLevel
                 };
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -533,7 +508,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
@@ -562,8 +537,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfIndexes);
 
-                    var originalDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var restoredDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredDatabaseName);
+                    var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(restoredDatabaseName);
                     using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -578,12 +553,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanBackupAndRestoreSnapshotExcludingIndexes()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -616,7 +589,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
                 config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.Fastest, ExcludeIndexes = false };
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
@@ -633,7 +606,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                SkipIndexes = true
                            }))
                     {
-                        var database = await GetDatabase(restoredDatabaseName, server);
+                        var database = await GetDatabase(restoredDatabaseName, Server);
                         var pathToIndexes = database.Configuration.Indexing.StoragePath;
                         Assert.Equal(0, Directory.GetDirectories(pathToIndexes.FullPath).Length);
 
@@ -653,7 +626,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.False(Directory.Exists(backupLocation));
 
                 config.SnapshotSettings.ExcludeIndexes = true;
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
@@ -682,13 +655,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(BackupType.Backup)]
         public async Task can_backup_and_restore_snapshot_with_compare_exchange(BackupType backupType)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var ids = Enumerable.Range(0, 2 * 1024) // DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
                 .Select(i => "users/" + i).ToArray();
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
             await RevisionsHelper.SetupRevisionsAsync(store);
 
             using (var session = store.OpenAsyncSession(new SessionOptions
@@ -707,10 +678,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal(ids.Length, sourceStats.CountOfCompareExchange);
 
             var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
-            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
             var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
-            await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+            await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
             // restore the database with a different name
             string restoredDatabaseName = GetDatabaseName();
@@ -808,12 +779,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate, CompressionLevel.NoCompression)]
         public async Task can_backup_and_restore_snapshot_with_compression(SnapshotBackupCompressionAlgorithm algorithm, CompressionLevel compressionLevel)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 RunInMemory = false,
                 ModifyDatabaseRecord = record =>
                 {
@@ -829,7 +797,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var sourceStats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 var databasePath = database.Configuration.Core.DataDirectory.FullPath;
                 var compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
                 Assert.Equal(2, compressionRecovery.Length);
@@ -840,10 +808,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     CompressionAlgorithm = algorithm,
                     CompressionLevel = compressionLevel
                 };
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
@@ -861,7 +829,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     Assert.Equal(sourceStats.CountOfDocuments, restoreStats.CountOfDocuments);
 
-                    database = await Databases.GetDocumentDatabaseInstanceFor(server, store, restoredDatabaseName);
+                    database = await Databases.GetDocumentDatabaseInstanceFor(Server, store, restoredDatabaseName);
                     databasePath = database.Configuration.Core.DataDirectory.FullPath;
                     compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
                     Assert.Equal(2, compressionRecovery.Length);
@@ -872,10 +840,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Compression), Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_compression_config()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users");
@@ -896,7 +862,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -925,10 +891,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore_with_timeseries()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
                 await store.TimeSeries.SetRawPolicyAsync("users", TimeValue.FromYears(1));
@@ -950,7 +914,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
 
                 var backupStatus = store.Maintenance.Send(operation);
@@ -980,7 +944,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -1029,10 +993,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore_snapshot_with_timeseries()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1054,7 +1016,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1068,7 +1030,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
@@ -1113,10 +1075,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInFirstSnapshot()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var timeSeriesConfiguration = new TimeSeriesConfiguration
                 {
@@ -1133,7 +1093,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfiguration));
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 await RestoreAndCheckTimeSeriesConfiguration(store, backupPath, timeSeriesConfiguration);
             }
@@ -1142,10 +1102,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInIncrementalSnapshot()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var entity = new User();
                 using (var session = store.OpenAsyncSession())
@@ -1155,7 +1113,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 var statusLastEtag = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastEtag;
 
                 var timeSeriesConfiguration = new TimeSeriesConfiguration
@@ -1171,14 +1129,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfiguration));
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.Patch<User, string>(entity.Id, u => u.Name, "Patched");
                     await session.SaveChangesAsync();
                 }
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 Assert.True(status.LastEtag > statusLastEtag, "status.LastEtag > statusLastEtag");
 
                 await RestoreAndCheckTimeSeriesConfiguration(store, backupPath, timeSeriesConfiguration);
@@ -1187,7 +1145,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private async Task RestoreAndCheckTimeSeriesConfiguration(IDocumentStore store, string backupPath, TimeSeriesConfiguration timeSeriesConfiguration)
         {
-            DoNotReuseServer();
             string restoredDatabaseName = $"{store.Database}-restored";
             using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoredDatabaseName }))
             {
@@ -1209,7 +1166,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport, Skip = "RavenDB-18206/Sharding-Restore-Import")]
         public async Task restore_settings_tests()
         {
-            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options
             {
@@ -1280,12 +1236,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_should_export_starting_from_last_etag()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             //https://issues.hibernatingrhinos.com/issue/RavenDB-11395
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1298,11 +1252,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 var exportPath = GetBackupPath(store, backupTaskId, incremental: false);
 
-                using (var store2 = GetDocumentStore(new Options { Server = server }))
+                using (var store2 = GetDocumentStore())
                 {
                     var op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
                     await op.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -1337,11 +1291,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 exportPath = GetBackupPath(store, backupTaskId);
 
-                using (var store3 = GetDocumentStore(new Options { Server = server }))
+                using (var store3 = GetDocumentStore())
                 {
                     // importing to a new database, in order to verify that
                     // periodic backup imports only the changed documents (and counters)
@@ -1371,10 +1325,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_with_timeseries_should_export_starting_from_last_etag()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1396,11 +1348,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 var exportPath = GetBackupPath(store, backupTaskId, incremental: false);
 
-                using (var store2 = GetDocumentStore(new Options { Server = server }))
+                using (var store2 = GetDocumentStore())
                 {
                     var op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
                     await op.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -1441,11 +1393,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 exportPath = GetBackupPath(store, backupTaskId);
 
-                using (var store3 = GetDocumentStore(new Options { Server = server }))
+                using (var store3 = GetDocumentStore())
                 {
                     // importing to a new database, in order to verify that
                     // periodic backup imports only the changed documents (and timeseries)
@@ -1484,10 +1436,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_with_incremental_timeseries_should_export_starting_from_last_etag()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1508,11 +1458,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var exportPath = GetBackupPath(store, backupTaskId, incremental: false);
 
-                using (var store2 = GetDocumentStore(new Options { Server = server }))
+                using (var store2 = GetDocumentStore())
                 {
                     var op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
                     await op.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -1552,11 +1502,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 exportPath = GetBackupPath(store, backupTaskId);
 
-                using (var store3 = GetDocumentStore(new Options { Server = server }))
+                using (var store3 = GetDocumentStore())
                 {
                     // importing to a new database, in order to verify that
                     // periodic backup imports only the changed documents (and timeseries)
@@ -1594,12 +1544,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementTimeSeriesBackup()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var config = Backup.CreateBackupConfiguration(backupPath);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1619,7 +1567,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1631,9 +1579,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
-                using (var restored = RestoreAndGetStore(store, backupPath, out var releaseDatabase, server: server))
+                using (var restored = RestoreAndGetStore(store, backupPath, out var releaseDatabase, server: Server))
                 using (releaseDatabase)
                 {
                     var stats = await restored.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -1724,10 +1672,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullBackupWithSeveralCompareExchange()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var user = new User
                 {
@@ -1742,7 +1688,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
 
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */6 * * *");
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -1765,7 +1711,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
-                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -1787,10 +1732,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task incremental_and_full_check_last_file_for_backup()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1799,7 +1742,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1808,7 +1751,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
                 var lastBackupToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
@@ -1822,7 +1765,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 var databaseName = GetDatabaseName() + "restore";
 
@@ -1860,10 +1803,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_run_incremental_with_no_changes()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1872,9 +1813,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 var value = status.LocalBackup.IncrementalBackupDurationInMs;
                 Assert.Equal(0, value);
 
@@ -1909,10 +1850,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_create_local_snapshot_and_restore_using_restore_point()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -1926,7 +1865,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var client = store.GetRequestExecutor().HttpClient;
 
                 var data = new StringContent(JsonConvert.SerializeObject(localSettings), Encoding.UTF8, "application/json");
@@ -1949,7 +1888,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }));
 
                 await restoreOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-                using (var store2 = GetDocumentStore(new Options() { Server = server, CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
+                using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
                 {
                     using (var session = store2.OpenSession(databaseName))
                     {
@@ -1960,8 +1899,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(100, val);
                     }
 
-                    var originalDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var restoredDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                     using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -1977,10 +1916,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task SuccessfulFullBackupAfterAnErrorOneShouldClearTheErrorStatesFromBackupStatusAndLocalBackup()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1996,7 +1933,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.UseDatabaseKey
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.Faulted);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.Faulted);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 PeriodicBackupStatus status = store.Maintenance.Send(operation).Status;
                 Assert.NotNull(status.Error);
@@ -2030,7 +1967,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var id = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 Assert.Equal(backupTaskId, id);
 
-                status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: true, expectedEtag: 1);
+                status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true, expectedEtag: 1);
 
                 Assert.Null(status.Error);
                 Assert.NotNull(status.LocalBackup);
@@ -2061,10 +1998,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task FullBackupShouldSkipDeadSegments()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
@@ -2090,7 +2025,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -2111,10 +2046,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementalBackupShouldIncludeDeadSegments()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenAsyncSession())
@@ -2134,14 +2067,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 using (var session = store.OpenAsyncSession())
                 {
                     session.TimeSeriesFor("users/1", "Heartrate").Delete();
                     await session.SaveChangesAsync();
                 }
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -2217,12 +2150,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(BackupType.Backup)]
         public async Task CanCreateOneTimeBackupAndRestore(BackupType backupType)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var name = "EGR";
 
-            using (var store = GetDocumentStore(new Options { Server = server, DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
+            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2317,9 +2248,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task PeriodicBackup_WhenEnabledAndDefinesNoDestinations_ShouldThrows()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
 
             var config = Backup.CreateBackupConfiguration();
             var operation = new UpdatePeriodicBackupOperation(config);
@@ -2332,9 +2261,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ManualBackup_WhenDefinesNoDestinations_ShouldThrowsOnServerAsWell()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
 
             var config = new BackupConfiguration { BackupType = BackupType.Backup };
 
@@ -2356,9 +2283,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task OneTimeBackupWithInvalidConfigurationShouldThrow()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2379,12 +2304,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanGetOneTimeBackupStatusFromDatabasesInfo()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var name = "EGR";
 
-            using (var store = GetDocumentStore(new Options { Server = server, DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
+            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2423,10 +2346,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementalBackupWithNoChangesShouldSet_BackupStatus_IsFull_ToFalse()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2439,8 +2360,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 Assert.False(status.IsFull);
                 Assert.NotNull(status.LocalBackup);
@@ -2527,13 +2448,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             var userForFullBackup = new User();
             var userForIncrementalBackup = new User();
-            using (var src = GetDocumentStore(new Options { Server = server }))
+            using (var src = GetDocumentStore())
             {
                 using (var session = src.OpenAsyncSession())
                 {
@@ -2546,17 +2465,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, src);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, src);
 
                 using (var session = src.OpenAsyncSession())
                 {
                     session.Advanced.Revisions.ForceRevisionCreationFor(userForIncrementalBackup.Id);
                     await session.SaveChangesAsync();
                 }
-                await Backup.RunBackupAsync(server, backupTaskId, src, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, src, isFullBackup: false);
             }
 
-            using (var dest = GetDocumentStore(new Options { Server = server }))
+            using (var dest = GetDocumentStore())
             {
                 string fromDirectory = Directory.GetDirectories(backupPath).First();
                 await dest.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), fromDirectory);
@@ -2578,10 +2497,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Should_throw_on_document_with_changed_collection_when_no_tombstones_processed()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string documentId = "Users/1";
                 using (var session = store.OpenAsyncSession())
@@ -2591,7 +2508,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
                 Assert.NotNull(fullBackupOpId);
 
@@ -2607,7 +2524,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 Assert.NotNull(status.LastOperationId);
                 Assert.NotEqual(fullBackupOpId, status.LastOperationId);
 
@@ -2662,10 +2579,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Can_restore_backup_when_document_changed_collection_between_backups()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string documentId = "Users/1";
                 using (var session = store.OpenAsyncSession())
@@ -2675,7 +2590,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
                 Assert.NotNull(fullBackupOpId);
 
@@ -2702,7 +2617,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 Assert.NotNull(status.LastOperationId);
                 Assert.NotEqual(fullBackupOpId, status.LastOperationId);
 
@@ -2753,10 +2668,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Can_restore_snapshot_when_document_changed_collection_between_backups()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string documentId = "Users/1";
                 using (var session = store.OpenAsyncSession())
@@ -2766,7 +2679,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var fullBackupOpId = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status.LastOperationId;
                 Assert.NotNull(fullBackupOpId);
 
@@ -2793,7 +2706,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 Assert.NotNull(status.LastOperationId);
                 Assert.NotEqual(fullBackupOpId, status.LastOperationId);
 
@@ -2844,10 +2757,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Can_restore_backup_when_document_with_attachment_changed_collection_between_backups()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string documentId = "Users/1";
                 using (var session = store.OpenAsyncSession())
@@ -2857,7 +2768,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var fullBackupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
                 var fullBackupOpId = fullBackupStatus.LastOperationId;
                 Assert.NotNull(fullBackupOpId);
@@ -2880,7 +2791,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal("test_attachment", result.Name);
                 }
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 Assert.NotNull(status.LastOperationId);
                 Assert.True(fullBackupOpId != status.LastOperationId, AddDebugInfo(fullBackupStatus, status));
 
@@ -3880,12 +3791,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_restore_smuggler_with_escaped_quotes()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string docId = "\"users/1\"";
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -3894,7 +3803,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -3903,10 +3812,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -3922,10 +3831,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore_cluster_transactions_with_document_collection_change()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string id = "users/1";
                 const string country = "Israel";
@@ -3943,7 +3850,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
                 {
@@ -3966,7 +3873,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: 4);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 4);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -4020,10 +3927,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(BackupType.Snapshot)]
         public async Task can_incremental_snapshot_and_restore_with_subscription(BackupType backupType)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
             using (var session = store.OpenSession())
             {
                 for (int i = 0; i < 3; i++)
@@ -4069,7 +3974,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
                 config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenSession())
                 {
@@ -4092,7 +3997,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(true, subscriptionsConfig[0].Disabled);
 
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 // restore the database with a different name
                 string restoredDatabaseName = GetDatabaseName();
@@ -4119,10 +4024,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(BackupType.Snapshot)]
         public async Task can_snapshot_and_restore_with_subscription(BackupType backupType)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
             using (var session = store.OpenSession())
             {
                 for (int i = 0; i < 3; i++)
@@ -4171,7 +4074,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
                 config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 string restoredDatabaseName = GetDatabaseName();
@@ -4200,12 +4103,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(BackupType.Backup)]
         public async Task can_backup_and_restore_with_subscription(BackupType backupType)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var ids = Enumerable.Range(1, 5).Select(i => "users/" + i).ToArray();
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
 
             using (var session = store.OpenAsyncSession())
             {
@@ -4249,7 +4150,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var config = Backup.CreateBackupConfiguration(backupPath, backupType: backupType);
             config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.NoCompression };
-            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
             // restore the database with a different name
             string restoredDatabaseName = GetDatabaseName();
             var backupLocation = Directory.GetDirectories(backupPath).First();
@@ -4281,9 +4182,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task can_backup_and_restore_with_deleted_timeseries_ranges(Options options)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            options.Server = server;
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string id = "users/1";
 
@@ -4304,7 +4202,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(server, config, store, options.DatabaseMode);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4330,13 +4228,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 WaitHandle[] waitHandles;
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(new[] { store }, new List<RavenServer> { server });
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(new[] { store }, new List<RavenServer> { Server });
                     await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup : false);
                 }
                 else
                 {
-                    waitHandles = await Backup.WaitForBackupToComplete(store, server);
-                    await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup : false);
+                    waitHandles = await Backup.WaitForBackupToComplete(store, Server);
+                    await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup : false);
                 }
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)), AddDebugInfo(store, backupTaskId, options.DatabaseMode));
@@ -4380,9 +4278,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task deleted_ranges_should_be_processed_before_timeseries(Options options)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            options.Server = server;
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string id = "users/1";
 
@@ -4404,7 +4299,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
 
-                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(server, config, store, options.DatabaseMode);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4430,7 +4325,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(1, ts.Length);
                 }
 
-                await Backup.RunBackupForDatabaseModeAsync(server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
             }
 
             using (var store = GetDocumentStore(options))
@@ -4470,9 +4365,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task deleted_ranges_should_be_processed_before_timeseries2(Options options)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            options.Server = server;
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string id = "users/1";
 
@@ -4493,7 +4385,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(server, config, store, options.DatabaseMode);
+                var backupTaskId = await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4534,7 +4426,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(ts);
                 }
 
-                await Backup.RunBackupForDatabaseModeAsync(server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
+                await Backup.RunBackupForDatabaseModeAsync(Server, config, store, options.DatabaseMode, isFullBackup: false, backupTaskId);
             }
 
             using (var store = GetDocumentStore(options))
@@ -4573,13 +4465,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task can_skip_deleted_timeseries_ranges_on_import(Options options)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            options.Server = server;
             var backupPath = NewDataPath(suffix: "BackupFolder");
             const string id = "users/1";
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.UtcNow;
                 using (var session = store.OpenAsyncSession())
@@ -4596,7 +4485,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -4616,7 +4505,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(ts);
                 }
 
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
                 Assert.True(WaitForValue(() =>
                 {

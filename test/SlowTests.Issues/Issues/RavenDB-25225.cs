@@ -105,23 +105,22 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledDataArchivalCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     var config = new DataArchivalConfiguration { Disabled = true, ArchiveFrequencyInSec = 100 };
-                    await DataArchivalHelper.SetupDataArchival(store, server.ServerStore, config);
+                    await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
 
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
@@ -173,22 +172,21 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledAdditionalAssembliesWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     LicenseHelper.PutIndexWithAdditionalAssemblies(store, IndexState.Disabled);
 
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
@@ -238,13 +236,12 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledRevisionCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = true, MinimumRevisionsToKeep = 0 } };
                     await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
@@ -252,9 +249,9 @@ namespace SlowTests.Issues
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                     WaitForUserToContinueTheTest(store);
@@ -274,15 +271,14 @@ namespace SlowTests.Issues
         public async Task ImportingDisabledSnapshotWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = GetTempFileName();
             try
             {
                 PeriodicBackupConfiguration config;
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", backupType: BackupType.Snapshot, disabled: true);
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -291,9 +287,9 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
@@ -309,14 +305,13 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledSnapshotWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
                 PeriodicBackupConfiguration config;
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", backupType: BackupType.Snapshot, disabled: true);
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -324,9 +319,9 @@ namespace SlowTests.Issues
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
@@ -341,23 +336,22 @@ namespace SlowTests.Issues
         public async Task ImportingDisabledSnapshotWithProLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
                     await LicenseHelper.CreatePeriodicBackup(backupPath, store, BackupType.Snapshot, true);
 
                     var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_PRO);
+                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_PRO);
 
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
@@ -373,21 +367,20 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledSnapshotWithProLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
                     await LicenseHelper.CreatePeriodicBackup(backupPath, store, BackupType.Snapshot, true);
 
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_PRO);
+                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_PRO);
 
                     runRestore(store, backupPath);
                 }
@@ -402,15 +395,14 @@ namespace SlowTests.Issues
         public async Task ImportingDisabledBackupWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = GetTempFileName();
             try
             {
                 PeriodicBackupConfiguration config;
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", backupType: BackupType.Backup, disabled: true);
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -419,9 +411,9 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
@@ -437,14 +429,13 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledBackupWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
                 PeriodicBackupConfiguration config;
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", backupType: BackupType.Backup, disabled: true);
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -452,9 +443,9 @@ namespace SlowTests.Issues
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
@@ -469,23 +460,22 @@ namespace SlowTests.Issues
         public async Task ImportingDisabledBackupWithProLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = GetTempFileName();
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
                     await LicenseHelper.CreatePeriodicBackup(backupPath, store, BackupType.Backup, true);
 
                     var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_PRO);
+                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_PRO);
 
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
@@ -501,21 +491,20 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledBackupWithProLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
                     await LicenseHelper.CreatePeriodicBackup(backupPath, store, BackupType.Backup, true);
 
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_PRO);
+                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_PRO);
 
                     runRestore(store, backupPath);
                 }
@@ -594,20 +583,19 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledClientConfigurationWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server, ModifyDatabaseRecord = r => r.Client = new ClientConfiguration { MaxNumberOfRequestsPerSession = 50, Disabled = true } }))
+                using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = r => r.Client = new ClientConfiguration { MaxNumberOfRequestsPerSession = 50, Disabled = true } }))
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
@@ -657,22 +645,21 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledStudioConfigurationWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
                     var command = new PutDatabaseStudioConfigurationCommand(new ServerWideStudioConfiguration() { DisableAutoIndexCreation = true, Disabled = true}, store.Database,
                         RaftIdGenerator.NewId());
-                    await server.ServerStore.SendToLeaderAsync(command);
+                    await Server.ServerStore.SendToLeaderAsync(command);
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
@@ -723,23 +710,22 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledExpirationWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     var config = new ExpirationConfiguration { Disabled = true, DeleteFrequencyInSec = 100, };
-                    await ExpirationHelper.SetupExpiration(store, server.ServerStore, config);
+                    await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
 
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
@@ -790,13 +776,12 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledRefreshWithCommunityLicense()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.DisableRevisionCompression(server, store);
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
 
                     var refConfig = new RefreshConfiguration { RefreshFrequencyInSec = 33, Disabled = true };
                     await store.Maintenance.SendAsync(new ConfigureRefreshOperation(refConfig));
@@ -804,9 +789,9 @@ namespace SlowTests.Issues
                     await RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore(new Options { Server = server }))
+                using (var store = GetDocumentStore())
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
                     runRestore(store, backupPath);
                 }
