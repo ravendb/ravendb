@@ -223,6 +223,8 @@ namespace Raven.Server.Documents.TimeSeries
             ChangeVector predecessorChangeVector = null;
             if (remoteChangeVector == null)
             {
+                // A local deleted range can supersede a migrated composite range. Keep the predecessor
+                // version lineage so stale source segments can later be recognized as already deleted.
                 using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
                 {
                     foreach ((_, Table.TableValueHolder tableValueHolder) in table.SeekByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, Slices.Empty, skip: 0))
@@ -885,7 +887,7 @@ namespace Raven.Server.Documents.TimeSeries
                         continue;
 
                     var deletedRangeChangeVector = context.GetChangeVector(item.ChangeVector);
-                    if (ChangeVectorUtils.GetConflictStatus(changeVector, deletedRangeChangeVector) == ConflictStatus.AlreadyMerged)
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, deletedRangeChangeVector, _documentsStorage.UnusedDatabaseIds) == ConflictStatus.AlreadyMerged)
                         return true;
                 }
 
