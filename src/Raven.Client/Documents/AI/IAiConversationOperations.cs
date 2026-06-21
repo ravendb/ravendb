@@ -184,7 +184,7 @@ public interface IAiConversationOperations
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
     /// <param name="outputOptions">Options controlling the output format for this turn.</param>
     /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
-    Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(AiOutputOptions outputOptions, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> RunWithOutputOptionsAsync<TAnswer>(AiOutputOptions outputOptions, CancellationToken token = default);
 
     /// <summary>
     /// Asynchronously executes one "turn" of the conversation with streaming and output format options.
@@ -194,7 +194,7 @@ public interface IAiConversationOperations
     /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
     /// <param name="outputOptions">Options controlling the output format for this turn.</param>
     /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
-    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> StreamWithOutputOptionsAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default);
 
     /// <summary>
     /// Asynchronously executes one "turn" of the conversation with streaming and output format options.
@@ -204,7 +204,7 @@ public interface IAiConversationOperations
     /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
     /// <param name="outputOptions">Options controlling the output format for this turn.</param>
     /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
-    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> StreamWithOutputOptionsAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default);
 
     /// <summary>
     /// Asynchronously executes one "turn" of the conversation with streaming, using a sample object to derive the output schema.
@@ -214,7 +214,7 @@ public interface IAiConversationOperations
     /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
     /// <param name="sampleObject">A sample object used to derive the output schema for this turn.</param>
     /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
-    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> StreamWithSampleObjectAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default);
 
     /// <summary>
     /// Asynchronously executes one "turn" of the conversation with streaming, using a sample object to derive the output schema.
@@ -224,7 +224,7 @@ public interface IAiConversationOperations
     /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
     /// <param name="sampleObject">A sample object used to derive the output schema for this turn.</param>
     /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
-    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> StreamWithSampleObjectAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default);
 
     /// <summary>
     /// Asynchronously streams the full response as raw text without structured output.
@@ -256,7 +256,7 @@ public interface IAiConversationOperations
     /// <param name="streamPropertyPath">The property of the response to stream. Not used when <see cref="AiOutputOptions.NoSchema"/> is true.</param>
     /// <param name="streamedChunksCallback">A callback invoked synchronously with each streamed chunk.</param>
     /// <param name="outputOptions">Options controlling the output format for this turn.</param>
-    AiAnswer<TAnswer> Stream<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions);
+    AiAnswer<TAnswer> StreamWithOutputOptions<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions);
 
     /// <summary>
     /// Synchronously executes one "turn" of the conversation with streaming and output format options.
@@ -265,7 +265,7 @@ public interface IAiConversationOperations
     /// <param name="streamPropertyPath">A strongly-typed expression selecting the property of the response to stream. Not used when <see cref="AiOutputOptions.NoSchema"/> is true.</param>
     /// <param name="streamedChunksCallback">A callback invoked synchronously with each streamed chunk.</param>
     /// <param name="outputOptions">Options controlling the output format for this turn.</param>
-    AiAnswer<TAnswer> Stream<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions);
+    AiAnswer<TAnswer> StreamWithOutputOptions<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions);
 
     /// <summary>
     /// Synchronously streams the full response as raw text without structured output.
@@ -289,7 +289,7 @@ public interface IAiConversationOperations
     /// </summary>
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
     /// <param name="outputOptions">Options controlling the output format for this turn.</param>
-    AiAnswer<TAnswer> Run<TAnswer>(AiOutputOptions outputOptions);
+    AiAnswer<TAnswer> RunWithOutputOptions<TAnswer>(AiOutputOptions outputOptions);
 
     /// <summary>
     /// Asynchronously executes one "turn" of the conversation, deriving the output schema from
@@ -298,7 +298,7 @@ public interface IAiConversationOperations
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
     /// <param name="sampleObject">A sample instance used to generate the JSON schema sent to the LLM.</param>
     /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
-    Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(TAnswer sampleObject, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> RunWithSampleObjectAsync<TAnswer>(TAnswer sampleObject, CancellationToken token = default);
 
     /// <summary>
     /// Asynchronously executes one "turn" of the conversation with an explicit JSON schema override for this turn only.
@@ -306,7 +306,7 @@ public interface IAiConversationOperations
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
     /// <param name="schema">An explicit JSON schema string to send to the LLM for this turn.</param>
     /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
-    Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(string schema, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(string schema, CancellationToken token = default);
 
     /// <summary>
     /// Synchronously executes one "turn" of the conversation, deriving the output schema from
@@ -314,14 +314,14 @@ public interface IAiConversationOperations
     /// </summary>
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
     /// <param name="sampleObject">A sample instance used to generate the JSON schema sent to the LLM.</param>
-    AiAnswer<TAnswer> Run<TAnswer>(TAnswer sampleObject);
+    AiAnswer<TAnswer> RunWithSampleObject<TAnswer>(TAnswer sampleObject);
 
     /// <summary>
     /// Synchronously executes one "turn" of the conversation with an explicit JSON schema override for this turn only.
     /// </summary>
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
     /// <param name="schema">An explicit JSON schema string to send to the LLM for this turn.</param>
-    AiAnswer<TAnswer> Run<TAnswer>(string schema);
+    AiAnswer<TAnswer> RunWithSchema<TAnswer>(string schema);
 
     /// <summary>
     /// The identifier of this conversation.

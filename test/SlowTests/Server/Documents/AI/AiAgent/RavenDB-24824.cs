@@ -58,19 +58,19 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
         chat.SetUserPrompt("hello");
 
         var ex1 = Assert.Throws<InvalidOperationException>(() =>
-            chat.Run<AlternativeSchema>(new AiOutputOptions { NoSchema = true }));
+            chat.RunWithOutputOptions<AlternativeSchema>(new AiOutputOptions { NoSchema = true }));
         Assert.Contains(nameof(AiOutputOptions.NoSchema), ex1.Message);
 
         var ex2 = Assert.Throws<InvalidOperationException>(() =>
-            chat.Run<string>(new AiOutputOptions("{}")));
+            chat.RunWithOutputOptions<string>(new AiOutputOptions("{}")));
         Assert.Contains("raw string", ex2.Message);
 
         var ex3 = Assert.Throws<InvalidOperationException>(() =>
-            chat.Run<string>(new AiOutputOptions(new AlternativeSchema { Summary = "x", Score = 1 })));
+            chat.RunWithOutputOptions<string>(new AiOutputOptions(new AlternativeSchema { Summary = "x", Score = 1 })));
         Assert.Contains("raw string", ex3.Message);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            chat.RunAsync<AlternativeSchema>(new AiOutputOptions { NoSchema = true }));
+            chat.RunWithOutputOptionsAsync<AlternativeSchema>(new AiOutputOptions { NoSchema = true }));
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -109,11 +109,11 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
 
         // Turn 2: SampleObject as a .NET object, TAnswer differs from SampleObject type (cross-type)
         chat.SetUserPrompt("Rate how helpful you are on a scale of 1 to 10 and summarize what you do.");
-        await chat.RunAsync<AlternativeSchema>(new AiOutputOptions(new AlternativeSchema { Summary = "a short summary", Score = 5 }));
+        await chat.RunWithOutputOptionsAsync<AlternativeSchema>(new AiOutputOptions(new AlternativeSchema { Summary = "a short summary", Score = 5 }));
 
         // Turn 3: explicit OutputSchema string
         chat.SetUserPrompt("Rate your usefulness 1-10 and summarize in one sentence.");
-        var r3 = await chat.RunAsync<AlternativeSchema>(new AiOutputOptions(explicitSchema));
+        var r3 = await chat.RunWithOutputOptionsAsync<AlternativeSchema>(new AiOutputOptions(explicitSchema));
         Assert.NotNull(r3.Answer?.Summary);
         Assert.True(r3.Answer.Score > 0);
 
@@ -238,7 +238,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
 
         // sampleObject overload
         chat.SetUserPrompt("Rate how helpful you are on a scale of 1 to 10 and summarize what you do.");
-        var r1 = await chat.RunAsync(new AlternativeSchema { Summary = "a short summary", Score = 5 });
+        var r1 = await chat.RunWithSampleObjectAsync(new AlternativeSchema { Summary = "a short summary", Score = 5 });
         Assert.Equal(AiConversationResult.Done, r1.Status);
         Assert.NotNull(r1.Answer?.Summary);
         Assert.True(r1.Answer.Score > 0);
@@ -264,7 +264,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
             """;
 
         chat.SetUserPrompt("Rate your usefulness again 1-10 and summarize in one sentence.");
-        var r2 = await chat.RunAsync<AlternativeSchema>(schemaJson);
+        var r2 = await chat.RunWithSchemaAsync<AlternativeSchema>(schemaJson);
         Assert.Equal(AiConversationResult.Done, r2.Status);
         Assert.NotNull(r2.Answer?.Summary);
         Assert.True(r2.Answer.Score > 0);
@@ -346,7 +346,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
 
         var streamed = new StringBuilder();
         chat.SetUserPrompt("Rate how helpful you are on a scale of 1 to 10 and summarize what you do.");
-        var run = await chat.StreamAsync<AlternativeSchema>(
+        var run = await chat.StreamWithSampleObjectAsync<AlternativeSchema>(
             nameof(AlternativeSchema.Summary),
             chunk =>
             {
