@@ -42,7 +42,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
         public object Content { get; set; }
 
         [JsonProperty("output_schema")]
-        public bool? OutputSchema { get; set; }
+        public string OutputSchema { get; set; }
     }
 
     private static AiAgentConfiguration BuildSimpleAgent(string connectionStringName) =>
@@ -62,11 +62,11 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Contains(nameof(AiOutputOptions.NoSchema), ex1.Message);
 
         var ex2 = Assert.Throws<InvalidOperationException>(() =>
-            chat.Run<string>(new AiOutputOptions { OutputSchema = "{}" }));
+            chat.Run<string>(new AiOutputOptions("{}")));
         Assert.Contains("raw string", ex2.Message);
 
         var ex3 = Assert.Throws<InvalidOperationException>(() =>
-            chat.Run<string>(new AiOutputOptions { SampleObject = new AlternativeSchema { Summary = "x", Score = 1 } }));
+            chat.Run<string>(new AiOutputOptions(new AlternativeSchema { Summary = "x", Score = 1 })));
         Assert.Contains("raw string", ex3.Message);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -109,14 +109,11 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
 
         // Turn 2: SampleObject as a .NET object, TAnswer differs from SampleObject type (cross-type)
         chat.SetUserPrompt("Rate how helpful you are on a scale of 1 to 10 and summarize what you do.");
-        await chat.RunAsync<AlternativeSchema>(new AiOutputOptions
-        {
-            SampleObject = new AlternativeSchema { Summary = "a short summary", Score = 5 }
-        });
+        await chat.RunAsync<AlternativeSchema>(new AiOutputOptions(new AlternativeSchema { Summary = "a short summary", Score = 5 }));
 
         // Turn 3: explicit OutputSchema string
         chat.SetUserPrompt("Rate your usefulness 1-10 and summarize in one sentence.");
-        var r3 = await chat.RunAsync<AlternativeSchema>(new AiOutputOptions { OutputSchema = explicitSchema });
+        var r3 = await chat.RunAsync<AlternativeSchema>(new AiOutputOptions(explicitSchema));
         Assert.NotNull(r3.Answer?.Summary);
         Assert.True(r3.Answer.Score > 0);
 
@@ -137,7 +134,7 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Null(msgs[0].OutputSchema);                          // default: no field
         Assert.Null(msgs[1].OutputSchema);                          // SampleObject override: structured, not stored
         Assert.Null(msgs[2].OutputSchema);                          // explicit schema override: structured, not stored
-        Assert.Equal(false, msgs[3].OutputSchema);                  // NoSchema: output_schema stored as false
+        Assert.Equal("none", msgs[3].OutputSchema);                 // NoSchema: output_schema stored as "none"
         Assert.Null(msgs[4].OutputSchema);                          // default again: no contamination
     }
 
@@ -333,5 +330,36 @@ public class RavenDB_24824(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(AiConversationResult.Done, turn2.Status);
         Assert.NotNull(turn2.Answer?.Answer);
         Assert.NotEmpty(turn2.Answer.Answer);
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task CanStreamWithSchemaOverride(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        var agent = BuildSimpleAgent(config.ConnectionStringName);
+        var r = await store.AI.CreateAgentAsync(agent, new DefaultSchema { Answer = "the answer" });
+
+        var chat = store.AI.Conversation(r.Identifier, "chats/", new AiConversationCreationOptions());
+
+        var streamed = new StringBuilder();
+        chat.SetUserPrompt("Rate how helpful you are on a scale of 1 to 10 and summarize what you do.");
+        var run = await chat.StreamAsync<AlternativeSchema>(
+            nameof(AlternativeSchema.Summary),
+            chunk =>
+            {
+                streamed.Append(chunk);
+                return Task.CompletedTask;
+            },
+            new AlternativeSchema { Summary = "a short summary", Score = 5 });
+
+        Assert.Equal(AiConversationResult.Done, run.Status);
+        Assert.NotNull(run.Answer);
+        Assert.NotNull(run.Answer.Summary);
+        Assert.True(run.Answer.Score > 0);
+        Assert.Equal(streamed.ToString(), run.Answer.Summary);
+        Assert.NotEmpty(streamed.ToString());
     }
 }

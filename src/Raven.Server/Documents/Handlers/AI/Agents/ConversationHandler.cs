@@ -73,21 +73,19 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
     private static string GetSchema(AiAgentConfiguration configuration, AiServerOutputOptions opts)
     {
-        if (opts == null)
+        if (opts != null)
         {
-            // take from the agent configuration, if exists.
-            return ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
+            if (opts.NoSchema)
+                return null;
+
+            if (string.IsNullOrWhiteSpace(opts.OutputSchema) == false)
+                return opts.OutputSchema;
+
+            if (string.IsNullOrWhiteSpace(opts.SampleObject) == false)
+                return ChatCompletionClient.GetSchemaFromSampleObject(opts.SampleObject);
         }
 
-        if (opts.NoSchema)
-            return null;
-
-        if (string.IsNullOrWhiteSpace(opts.OutputSchema) == false)
-            return opts.OutputSchema;
-
-        if (string.IsNullOrWhiteSpace(opts.SampleObject) == false)
-            return ChatCompletionClient.GetSchemaFromSampleObject(opts.SampleObject);
-
+        // take from the agent configuration, if exists.
         return ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
     }
 

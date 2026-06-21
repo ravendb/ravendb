@@ -263,7 +263,7 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
         if (usage != null)
             msg.Modifications[UsageProperty] = usage.ToJson();
         if (isNoSchema)
-            msg.Modifications[OutputSchemaProperty] = false;
+            msg.Modifications[OutputSchemaProperty] = "none";
         Messages.Add(msg);
         LastMessageAt = currentDate;
     }

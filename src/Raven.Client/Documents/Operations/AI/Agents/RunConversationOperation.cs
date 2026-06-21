@@ -278,7 +278,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(async stream =>
                 {
-                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(), "conversation-params")).ConfigureAwait(false);
+                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(_conventions, ctx), "conversation-params")).ConfigureAwait(false);
                 }, _conventions)
             };
 
