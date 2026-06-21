@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Sharding;
@@ -96,8 +95,10 @@ namespace SlowTests.Issues
         // The series must remain deleted after that resend. This verifies that the destination deleted-range
         // preserves predecessor version lineage, and that stale incoming segments are checked against deleted
         // ranges by version instead of by the flattened change-vector order.
-        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Replication | RavenTestCategory.TimeSeries)]
-        public async Task DeletedTimeSeriesShouldStayDeletedAfterBucketResendAfterMigrationSourceFailover()
+        [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.Replication | RavenTestCategory.TimeSeries)]
+        [InlineData(false)]
+        [InlineData(true)] // Keeps another live segment, so deleted-range coverage is verified when time-series stats are not empty.
+        public async Task DeletedTimeSeriesShouldStayDeletedAfterBucketResendAfterMigrationSourceFailover(bool keepSeparateLocalSegment)
         {
             var settings = new Dictionary<string, string>
             {
@@ -207,19 +208,34 @@ namespace SlowTests.Issues
                 Assert.NotNull(migratedRangeChangeVector);
                 Assert.Contains("|", migratedRangeChangeVector);
 
-                // the user deletes the entire series; the write is routed to the destination shard
-                using (var session = store.OpenAsyncSession())
+                if (keepSeparateLocalSegment)
                 {
-                    session.TimeSeriesFor(id, "HeartRates").Delete();
-                    await session.SaveChangesAsync();
+                    // delete the migrated segment range, then append a value far enough away to create
+                    // a separate storage segment. The re-sent stale source segment is still covered by
+                    // the deleted range, but the time series itself is no longer empty.
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor(id, "HeartRates").Delete(baseline.AddMinutes(1), baseline.AddMinutes(10));
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor(id, "HeartRates").Append(baseline.AddDays(30), 30);
+                        await session.SaveChangesAsync();
+                    }
+                }
+                else
+                {
+                    // the user deletes the entire series; the write is routed to the destination shard
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor(id, "HeartRates").Delete();
+                        await session.SaveChangesAsync();
+                    }
                 }
 
-                Assert.Equal(0, CountTimeSeriesSegments(shard1OnA, id));
-                using (var session = store.OpenAsyncSession())
-                {
-                    var values = await session.TimeSeriesFor(id, "HeartRates").GetAsync();
-                    Assert.True(values == null || values.Length == 0);
-                }
+                await AssertExpectedTimeSeriesValuesAsync(store, id, keepSeparateLocalSegment);
 
                 // find which source replica owns the migration (it keeps the connection open for leftovers)
                 RavenServer migrationOwner = null;
@@ -283,16 +299,29 @@ namespace SlowTests.Issues
                     Assert.Fail("the surviving source replica did not re-send the bucket to the destination." + Environment.NewLine + diagnostics);
                 }
 
-                // the full-series delete is causally NEWER than the re-sent stale segment - the series must stay deleted
-                Assert.Equal(0, CountTimeSeriesSegments(shard1OnA, id));
-                using (var session = store.OpenAsyncSession())
+                // the local delete is causally NEWER than the re-sent stale segment - deleted values must stay deleted
+                await AssertExpectedTimeSeriesValuesAsync(store, id, keepSeparateLocalSegment);
+            }
+        }
+
+        private static async Task AssertExpectedTimeSeriesValuesAsync(IDocumentStore store, string id, bool keepSeparateLocalSegment)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var values = await session.TimeSeriesFor(id, "HeartRates").GetAsync();
+
+                if (keepSeparateLocalSegment == false)
                 {
-                    var values = await session.TimeSeriesFor(id, "HeartRates").GetAsync();
                     Assert.True(values == null || values.Length == 0,
                         $"the fully deleted time series was resurrected by the re-sent stale segment " +
                         $"(got {values?.Length} values back) - the local deleted-range change vector has no causal " +
                         "relation to the re-sent segment, or SegmentAlreadyDeleted failed to recognize the coverage");
+                    return;
                 }
+
+                Assert.NotNull(values);
+                Assert.Single(values);
+                Assert.Equal(30d, values[0].Value);
             }
         }
 

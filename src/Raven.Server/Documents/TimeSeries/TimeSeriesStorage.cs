@@ -678,12 +678,10 @@ namespace Raven.Server.Documents.TimeSeries
                 return false;
             }
 
-            if (Stats.GetStats(context, documentId, name) == default &&
-                SegmentAlreadyDeleted(context, documentId, name, changeVector, collectionName, segment, baseline))
+            if (SegmentAlreadyDeleted(context, documentId, name, changeVector, collectionName, segment, baseline))
             {
-                // if we reach this point, it means the entire time series was deleted,
-                // and the deletion has a newer change vector than this segment.
-                // since the deletion is more recent, we are up-to-date and can safely return
+                // The exact segment row is absent. It may be covered by a deleted range even
+                // when the same time series still has other live segments.
                 return true;
             }
 
