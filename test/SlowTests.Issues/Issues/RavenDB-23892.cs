@@ -25,9 +25,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Snapshot_Should_Not_Include_ServerWideBackupConfiguration()
         {
-            DoNotReuseServer();
-            using (var server = GetNewServer())
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var database = store.Database;
                 using (var session = store.OpenAsyncSession())
@@ -47,7 +45,7 @@ namespace SlowTests.Issues
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
                 config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.Fastest, ExcludeIndexes = false };
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
                 Assert.Equal(2, record.PeriodicBackups.Count);
@@ -73,9 +71,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
         public async Task Snapshot_Should_Not_Include_ServerWideExternalReplication()
         {
-            DoNotReuseServer();
-            using (var server = GetNewServer())
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var database = store.Database;
 
@@ -102,7 +98,7 @@ namespace SlowTests.Issues
                     ExcludeIndexes = false
                 };
 
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
                 Assert.Contains(record.ExternalReplications, x => x.Name.Contains(externalReplication.Name));

@@ -16,10 +16,8 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_continue_incremental_backup_with_same_folder()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -28,12 +26,12 @@ namespace SlowTests.Issues
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 3 */3 * *");
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var oldFolderName = store.Maintenance.Send(getPeriodicBackupStatus).Status.FolderName;
                 Assert.NotNull(oldFolderName);
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 var newfolderName = status.FolderName;
                 Assert.NotNull(newfolderName);
                 Assert.Equal(oldFolderName, newfolderName);

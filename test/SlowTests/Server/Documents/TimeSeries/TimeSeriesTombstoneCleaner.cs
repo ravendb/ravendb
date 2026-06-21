@@ -202,15 +202,13 @@ namespace SlowTests.Server.Documents.TimeSeries
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task IncrementalBackupCleanTimeSeriesTombstones(Options options)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            using (var store = GetDocumentStore(new Options(options) { Server = server }))
+            using (var store = GetDocumentStore(options))
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
                 var taskId = options.DatabaseMode == RavenDatabaseMode.Single
-                    ? await Backup.UpdateConfigAsync(server, config, store)
-                    : await Sharding.Backup.UpdateConfigAsync(server, config, store);
+                    ? await Backup.UpdateConfigAsync(Server, config, store)
+                    : await Sharding.Backup.UpdateConfigAsync(Server, config, store);
 
                 using (var session = store.OpenSession())
                 {
@@ -242,7 +240,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     session.SaveChanges();
                 }
 
-                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322", server);
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322");
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())

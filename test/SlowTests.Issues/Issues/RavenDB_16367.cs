@@ -183,12 +183,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanLockDatabase_Backup_Restore()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath();
             IOExtensions.DeleteDirectory(backupPath);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var databaseName1 = $"{store.Database}_LockMode_1";
                 var databaseName2 = $"{store.Database}_LockMode_2";

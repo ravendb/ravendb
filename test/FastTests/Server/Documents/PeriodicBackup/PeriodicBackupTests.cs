@@ -20,15 +20,13 @@ namespace FastTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport, LicenseRequired = true)]
         public async Task CanSetupPeriodicBackupWithVeryLargePeriods()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *");
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                var backups = server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database);
+                var backups = Server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database);
 
                 Assert.Equal("* */1 * * *", backups.First().Configuration.FullBackupFrequency);
                 Assert.Equal("* */2 * * *", backups.First().Configuration.IncrementalBackupFrequency);

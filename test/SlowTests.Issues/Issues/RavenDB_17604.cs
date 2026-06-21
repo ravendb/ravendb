@@ -64,11 +64,9 @@ public class RavenDB_17604 : ReplicationTestBase
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task Can_Disable_Backup_With_Marker()
     {
-        DoNotReuseServer();
         var path = NewDataPath();
         IOExtensions.DeleteDirectory(path);
-        using var server = GetNewServer();
-        using (var store = GetDocumentStore(new Options { RunInMemory = false, Path = path , Server = server}))
+        using (var store = GetDocumentStore(new Options { RunInMemory = false, Path = path}))
         {
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(new PeriodicBackupConfiguration
             {
@@ -76,19 +74,19 @@ public class RavenDB_17604 : ReplicationTestBase
                 FullBackupFrequency = "* * * * *"
             }));
 
-            await Backup.RunBackupAsync(server, result.TaskId, store);
+            await Backup.RunBackupAsync(Server, result.TaskId, store);
 
-            server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+            Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-            Assert.Equal(1, await WaitForValueAsync(() => server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database).Count, 1));
-            await Backup.RunBackupAsync(server, result.TaskId, store);
+            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database).Count, 1));
+            await Backup.RunBackupAsync(Server, result.TaskId, store);
 
-            server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+            Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
             File.Create(Path.Combine(path, "disable.tasks.marker"));
 
-            Assert.Equal(1, await WaitForValueAsync(() => server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database).Count, 1));
+            Assert.Equal(1, await WaitForValueAsync(() => Server.ServerStore.BackupRunner.GetDatabaseBackups(store.Database).Count, 1));
 
-            var e = await Assert.ThrowsAsync<InvalidOperationException>(() => Backup.RunBackupAsync(server, result.TaskId, store));
+            var e = await Assert.ThrowsAsync<InvalidOperationException>(() => Backup.RunBackupAsync(Server, result.TaskId, store));
             Assert.Contains("Backup task is disabled via marker file", e.Message);
         }
     }

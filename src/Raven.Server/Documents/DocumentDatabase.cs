@@ -450,6 +450,7 @@ namespace Raven.Server.Documents
                 TombstoneCleaner.Subscribe(new BackupTombstoneCleanerInfo(_serverStore, this));
                 IOExtensions.DeleteDirectory(Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _).FullPath);
                 IOExtensions.CreateDirectory(Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _).FullPath);
+                _serverStore.BackupRunner?.EnsureDatabaseRegistered(Name);
 
                 _addToInitLog(LogLevel.Debug, "Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);

@@ -456,11 +456,8 @@ public class PrefixedSharding : ClusterTestBase
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
     public async Task BackupAndRestoreShardedDatabase_ShouldPreservePrefixedSettingsAndBucketRanges()
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
         using var store = Sharding.GetDocumentStore(new Options
         {
-            Server = server,
             ModifyDatabaseRecord = databaseRecord =>
             {
                 databaseRecord.Sharding ??= new ShardingConfiguration();
@@ -543,11 +540,11 @@ public class PrefixedSharding : ClusterTestBase
             }
         }
 
-        var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store, server);
+        var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
         var backupPath = NewDataPath(suffix: "BackupFolder");
         var config = Backup.CreateBackupConfiguration(backupPath);
 
-        await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config);
+        await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
         Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
         var dirs = Directory.GetDirectories(backupPath);

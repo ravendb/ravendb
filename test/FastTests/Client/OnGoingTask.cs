@@ -32,14 +32,12 @@ namespace FastTests.Client
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void GetBackupTaskInfo(Options options)
         {
-            DoNotReuseServer();
             var backupConfig = Backup.CreateBackupConfiguration(backupPath: NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", azureSettings: new AzureSettings
             {
                 StorageContainer = "abc"
             }, disabled: true, name: "backup1");
 
-            using (var server = GetNewServer())
-            using (var store = GetDocumentStore(new Options(options) { Server = server }))
+            using (var store = GetDocumentStore(options))
             {
                 var updateBackupResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(backupConfig));
 

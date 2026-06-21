@@ -106,13 +106,10 @@ namespace SlowTests.Client.Attachments
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments)]
         public async Task ExportFullThanDeleteAttachmentAndCreateAnotherOneThanExportIncrementalThanImport()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_store1"
             }))
             {
@@ -129,7 +126,7 @@ namespace SlowTests.Client.Attachments
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file1", stream, "image/png"));
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+                var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var getPeriodicBackupResult = store.Maintenance.Send(operation);
                 var etagForBackups = getPeriodicBackupResult.Status.LastEtag;
@@ -138,7 +135,7 @@ namespace SlowTests.Client.Attachments
                 using (var stream = new MemoryStream(new byte[] { 4, 5, 6 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false);
                 Assert.True(status.LastEtag != etagForBackups);
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -149,7 +146,6 @@ namespace SlowTests.Client.Attachments
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ModifyDatabaseName = s => $"{s}_store2"
             }))
             {

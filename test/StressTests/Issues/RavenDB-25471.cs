@@ -22,14 +22,12 @@ namespace StressTests.Issues
 
         [RavenTheory(RavenTestCategory.BackupExportImport)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { BackupType.Backup })]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { BackupType.Snapshot })]
         public async Task DisableOlapOnRestoreWithoutLicense(Options options, BackupType backupType)
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
-
             var backupPath = NewDataPath(suffix: "BackupFolder");
-
+            using var server = GetNewServer();
             using (var store = GetDocumentStore(new Options(options) { Server = server }))
             {
                 await LicenseHelper.DisableRevisionCompression(server, store);

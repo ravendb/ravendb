@@ -76,7 +76,6 @@ namespace SlowTests.Smuggler
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportDatabaseRecord()
         {
-            DoNotReuseServer();
             var file = Path.GetTempFileName();
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
@@ -637,7 +636,6 @@ namespace SlowTests.Smuggler
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportMergedDatabaseRecord()
         {
-            DoNotReuseServer();
             var file = Path.GetTempFileName();
             try
             {
@@ -1193,7 +1191,6 @@ namespace SlowTests.Smuggler
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, SnowflakeRequired = true)]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
-            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
@@ -1576,7 +1573,6 @@ namespace SlowTests.Smuggler
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions)]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
-            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -1659,8 +1655,7 @@ namespace SlowTests.Smuggler
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
         {
-            DoNotReuseServer();
-            var backupPath = NewDataPath(suffix: "BackupFolder");
+           var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
             {

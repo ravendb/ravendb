@@ -29,11 +29,9 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task ReshardingBeforeBackupTest()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using var src = Sharding.GetDocumentStore(new Options { Server = server });
+            using var src = Sharding.GetDocumentStore();
 
             await RevisionsHelper.SetupRevisionsAsync(src, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
@@ -53,9 +51,9 @@ namespace SlowTests.Issues
             }
 
             var oldLocation = await Sharding.GetShardNumberForAsync(src, id);
-            await Sharding.Resharding.MoveShardForId(src, id, toShard: Math.Abs(oldLocation - 1), servers: new List<RavenServer> { server });
+            await Sharding.Resharding.MoveShardForId(src, id, toShard: Math.Abs(oldLocation - 1));
 
-            var nodes = new List<RavenServer>() { server };
+            var nodes = new List<RavenServer>() { Server };
             var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(nodes, src.Database);
             var config = Backup.CreateBackupConfiguration(backupPath);
             await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes, src, config);

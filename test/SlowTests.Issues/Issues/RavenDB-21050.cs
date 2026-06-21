@@ -22,13 +22,11 @@ public class RavenDB_21050 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndDelete_ShouldDeleteInTheDestination(Options options)
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
         var backupPath = NewDataPath(suffix: "BackupFolder");
         const string id = "TestObjs/0";
 
-        using (var source = GetDocumentStore(new Options(options) { Server = server }))
-        using (var destination = new DocumentStore { Urls = new[] { server.WebUrl }, Database = $"restored_{source.Database}" }.Initialize())
+        using (var source = GetDocumentStore(options))
+        using (var destination = new DocumentStore { Urls = new[] { Server.WebUrl }, Database = $"restored_{source.Database}" }.Initialize())
         {
             var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
             var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
@@ -72,7 +70,6 @@ public class RavenDB_21050 : RavenTestBase
                     Assert.Null(shouldBeDeleted); //Fails here
                 }
             }
-
         }
     }
 
@@ -90,13 +87,11 @@ public class RavenDB_21050 : RavenTestBase
     [InlineData(false)]
     public async Task ClusterWideTransaction_Restore_FromShardedToSharded(bool delete)
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
         var backupPath = NewDataPath(suffix: "BackupFolder");
         const string id = "TestObjs/0";
 
-        using (var source = Sharding.GetDocumentStore(new Options { Server = server }))
-        using (var destination = new DocumentStore { Urls = new[] { server.WebUrl }, Database = $"restored_{source.Database}" }.Initialize())
+        using (var source = Sharding.GetDocumentStore())
+        using (var destination = new DocumentStore { Urls = new[] { Server.WebUrl }, Database = $"restored_{source.Database}" }.Initialize())
         {
             var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
             var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;

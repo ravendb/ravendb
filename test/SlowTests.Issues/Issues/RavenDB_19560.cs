@@ -20,12 +20,10 @@ public class RavenDB_19560 : RavenTestBase
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
     public void BackwardCompatibilityForDictionaryProcessing()
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
         var backupPath = NewDataPath(forceCreateDir: true);
         var file = Path.Combine(backupPath, "ravendb_19560.ravendb-snapshot");
         ExtractFile(file);
-        using var store = GetDocumentStore(new Options { Server = server });
+        using var store = GetDocumentStore();
         var db = GetDatabaseName();
         using var _ = Backup.RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = backupPath, DatabaseName = db});
         var dict = new Dictionary<string, string>() {{"Name", "Maciej"}};

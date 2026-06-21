@@ -339,10 +339,8 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Delete_Backup_Task_Values_After_Task_Deletion()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options{Server = server}))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -351,11 +349,11 @@ namespace SlowTests.Issues
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 store.Maintenance.Send(new DeleteOngoingTaskOperation(backupTaskId, OngoingTaskType.Backup));
 
-                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var responsibleNodeInfo = Raven.Server.Utils.BackupUtils.GetResponsibleNodeInfoFromCluster(context, store.Database, backupTaskId);

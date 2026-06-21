@@ -285,10 +285,11 @@ namespace RachisTests.DatabaseCluster
             await LoadAndDeleteWhileUpdated(nodes, documentStore.Database, entity.Id);
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.BackupExportImport)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CallingStartBackupOperationWhileBackupRunningShouldThrow(Options options)
         {
+            DoNotReuseServer();
             var server = GetNewServer();
             options.Server = server;
             using (var store = GetDocumentStore(options))
@@ -324,10 +325,11 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.BackupExportImport)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CallingStartBackupOperationWhileBackupRunningShouldThrow_sharded(Options options)
         {
+            DoNotReuseServer();
             options.ReplicationFactor = 1;
             var server = GetNewServer();
             options.Server = server;
@@ -573,7 +575,6 @@ namespace RachisTests.DatabaseCluster
         [RavenData(2 * 1024, DatabaseMode = RavenDatabaseMode.All)]// DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
         public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdate_ShouldCompleteImportWithNoException(Options options, int count)
         {
-            DoNotReuseServer();
             const string modified = "Modified";
             var backupPath = NewDataPath(suffix: "BackupFolder");
 

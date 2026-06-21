@@ -146,8 +146,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.BackupExportImport)]
         public async Task Should_Be_Able_To_Restore_Snapshot_Backup()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var path1 = NewDataPath();
             var path2 = NewDataPath();
             var backupPath = NewDataPath();
@@ -158,7 +156,6 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
                 RunInMemory = false,
                 Path = path1
             }))
@@ -175,15 +172,15 @@ namespace SlowTests.Issues
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
-                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store);
+                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store);
                 string backupDirectory = status.LocalBackup.BackupDirectory;
 
                 var databaseName = $"{store.Database}_restore";
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { DataDirectory = path2, BackupLocation = backupDirectory, DatabaseName = databaseName }))
                 {
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(server, store, databaseName);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store, databaseName);
                     Assert.Equal(databaseName, database.Name);
 
                     var index = database.IndexStore.GetIndex(new Products_ByName().IndexName);

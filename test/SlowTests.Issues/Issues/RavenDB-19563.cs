@@ -25,12 +25,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_restore()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath();
             IOExtensions.DeleteDirectory(backupPath);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string id = "users/1";
 
@@ -46,7 +44,7 @@ namespace SlowTests.Issues
 
                 await Indexes.WaitForIndexingAsync(store);
 
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 database.ForTestingPurposesOnly().AfterSnapshotOfDocuments = () =>
                 {
                     using (var session = store.OpenSession())
@@ -58,7 +56,7 @@ namespace SlowTests.Issues
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -85,12 +83,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath();
             IOExtensions.DeleteDirectory(backupPath);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string id = "users/1";
 
@@ -106,7 +102,7 @@ namespace SlowTests.Issues
 
                 await Indexes.WaitForIndexingAsync(store);
 
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 long cleanedTombstones = 0;
                 database.ForTestingPurposesOnly().BeforeSnapshotOfDocuments = () =>
                 {
@@ -121,7 +117,7 @@ namespace SlowTests.Issues
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 Assert.Equal(0, cleanedTombstones);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -149,12 +145,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore_counters()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath();
             IOExtensions.DeleteDirectory(backupPath);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string id = "users/1";
                 const string counterName = "Count";
@@ -173,7 +167,7 @@ namespace SlowTests.Issues
 
                 await Indexes.WaitForIndexingAsync(store);
 
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 long cleanedTombstones = 0;
                 database.ForTestingPurposesOnly().BeforeSnapshotOfDocuments = () =>
                 {
@@ -188,7 +182,7 @@ namespace SlowTests.Issues
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 Assert.Equal(0, cleanedTombstones);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -216,12 +210,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore_timeseries()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath();
             IOExtensions.DeleteDirectory(backupPath);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 const string id = "users/1";
                 const string timeSeriesName = "Count";
@@ -240,7 +232,7 @@ namespace SlowTests.Issues
 
                 await Indexes.WaitForIndexingAsync(store);
 
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 long cleanedTombstones = 0;
                 database.ForTestingPurposesOnly().BeforeSnapshotOfDocuments = () =>
                 {
@@ -255,7 +247,7 @@ namespace SlowTests.Issues
                 };
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                 Assert.Equal(0, cleanedTombstones);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";

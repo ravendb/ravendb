@@ -18,13 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Smuggler)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task can_restore_legacy_backup()
         {
-            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using var server = GetNewServer();
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -33,7 +31,7 @@ namespace SlowTests.Issues
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -42,7 +40,7 @@ namespace SlowTests.Issues
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
             }
 
             using (var store = GetDocumentStore(new Options

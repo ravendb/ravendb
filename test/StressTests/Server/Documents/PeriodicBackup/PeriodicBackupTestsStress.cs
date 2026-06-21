@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server;
-using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -17,7 +16,6 @@ using Xunit;
 using Xunit.Abstractions;
 using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 using static Raven.Server.Utils.BackupUtils;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {
@@ -26,10 +24,11 @@ namespace StressTests.Server.Documents.PeriodicBackup
         public PeriodicBackupTestsStress(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [RavenFact(RavenTestCategory.Smuggler)]
         public async Task WillRunBackupAfterGettingMissingResponsibleNode()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
@@ -270,14 +269,14 @@ namespace StressTests.Server.Documents.PeriodicBackup
         public async Task NextCronScheduleOccurence_BasedOnLastBackup_ShouldBeCorrect()
         {
             DoNotReuseServer();
-            using var server = GetNewServer();
+
             const string endpoint = "/studio-tasks/next-cron-expression-occurrence";
             const string cronExpression = "*/2 * * * *";
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
 
             var configuration = Backup.CreateBackupConfiguration(NewDataPath(), fullBackupFrequency: cronExpression);
-            await Backup.WaitUntilNextFullBackupActionWindowAsync(configuration, TimeSpan.FromSeconds(15), server.ServerStore.ServerShutdown);
-            var taskId = await Backup.UpdateConfigAsync(server, configuration, store);
+            await Backup.WaitUntilNextFullBackupActionWindowAsync(configuration, TimeSpan.FromSeconds(15), Server.ServerStore.ServerShutdown);
+            var taskId = await Backup.UpdateConfigAsync(Server, configuration, store);
             await Task.Delay(TimeSpan.FromSeconds(130));
 
             var client = store.GetRequestExecutor().HttpClient;

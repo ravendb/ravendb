@@ -43,13 +43,11 @@ public class RavenDB_23846 : RestoreFromS3TestBase
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
     public async Task CanBackupAndRestoreWithIntelligentTieringSharding()
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
         var s3Settings = GetS3Settings();
         s3Settings.StorageClass = S3StorageClass.IntelligentTiering;
         try
         {
-            using (var store = Sharding.GetDocumentStore(new Options { Server = server }))
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -57,11 +55,11 @@ public class RavenDB_23846 : RestoreFromS3TestBase
                     await session.SaveChangesAsync();
                 }
 
-                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store, server);
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
                 var config = Backup.CreateBackupConfiguration(
                     backupType: BackupType.Backup,
                     s3Settings: s3Settings);
-                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
@@ -94,7 +92,7 @@ public class RavenDB_23846 : RestoreFromS3TestBase
                            restoreSettings,
                            timeout: TimeSpan.FromSeconds(60)))
                 {
-                    using var restored = Sharding.GetDocumentStore(new Options { Server = server, CreateDatabase = false, ModifyDatabaseName = _ => restoreSettings.DatabaseName });
+                    using var restored = Sharding.GetDocumentStore(new Options { CreateDatabase = false, ModifyDatabaseName = _ => restoreSettings.DatabaseName });
                     using var restoredSession = restored.OpenSession();
                     var user = restoredSession.Load<User>("users/1");
                     Assert.Equal("Golan", user.Name);
@@ -190,15 +188,13 @@ public class RavenDB_23846 : RestoreFromS3TestBase
     [InlineData(S3StorageClass.ReducedRedundancy)]
     public async Task Can_backup_and_restore_with_various_storage_classes(S3StorageClass? storageClass)
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
         var s3Settings = GetS3Settings();
         if (storageClass.HasValue)
             s3Settings.StorageClass = storageClass.Value;
 
         try
         {
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -216,8 +212,8 @@ public class RavenDB_23846 : RestoreFromS3TestBase
                     CompressionLevel = CompressionLevel.Fastest
                 };
 
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
-                await Backup.WaitForBackupToComplete(store, server);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                await Backup.WaitForBackupToComplete(store);
 
                 using var s3 = new AmazonS3Client(
                     s3Settings.AwsAccessKey,
@@ -251,7 +247,7 @@ public class RavenDB_23846 : RestoreFromS3TestBase
                 await op.WaitForCompletionAsync(TimeSpan.FromMinutes(10));
 
                 using var restored = GetDocumentStore(
-                    new Options { Server = server, CreateDatabase = false, ModifyDatabaseName = _ => restoreSettings.DatabaseName });
+                    new Options { CreateDatabase = false, ModifyDatabaseName = _ => restoreSettings.DatabaseName });
 
                 using var restoredSession = restored.OpenSession();
                 var user = restoredSession.Load<User>("users/1");

@@ -155,9 +155,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task IncludeArtificialDocuments_Backup_ShouldWork()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 await new MapReduce_WithOutput().ExecuteAsync(store);
 
@@ -190,7 +188,7 @@ namespace SlowTests.Issues
                 var toFolderWithArtificial = Path.Combine(NewDataPath(), "BackupFolder");
 
                 var config = Backup.CreateBackupConfiguration(toFolderWithArtificial);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 toFolderWithArtificial = Directory.GetDirectories(toFolderWithArtificial).First();
                 var toDatabaseName = store.Database + "_restored";

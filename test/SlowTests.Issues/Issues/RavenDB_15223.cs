@@ -21,8 +21,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public void CanMigrateCountersFrom42017()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             From42017.NumberOfCounterGroupsToMigrateInSingleTransaction = 10;
 
             var backupPath = NewDataPath(forceCreateDir: true);
@@ -31,7 +29,7 @@ namespace SlowTests.Issues
 
             ExtractFile(fullBackupPath, resource);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var databaseName = GetDatabaseName();
 
@@ -78,15 +76,13 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public void CanMigrateCountersFrom42017_SingleDocManyCounters()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "northwind.ravendb-snapshot");
             var resource = "SlowTests.Data.RavenDB_15223.manycounters.4.2.103.ravendb-snapshot";
 
             ExtractFile(fullBackupPath, resource);
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 var databaseName = GetDatabaseName();
 

@@ -77,12 +77,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 : JsonDeserializationClient.PeriodicBackupStatus(backupStatusBlittable);
         }
 
-        /// <summary>
-        /// Returns the backup status for a task by first checking the local Voron store, then falling
-        /// back to the cluster value store without the node-tag gate that <see cref="GetBackupStatus"/>
-        /// enforces. Used by ongoing-task and Studio read paths on non-responsible peers that need to
-        /// display the responsible node's schedule.
-        /// </summary>
         public PeriodicBackupStatus GetBackupStatusForOngoingTaskRead(string databaseName, long taskId)
         {
             using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -112,11 +106,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             return null;
         }
 
-        /// <summary>
-        /// Returns the raw blittable backup status by checking the local Voron store first, then the
-        /// cluster value store without a node-tag filter. Companion to <see cref="GetBackupStatusBlittable"/>
-        /// but intended for callers that need cross-node visibility rather than local-only reads.
-        /// </summary>
+        // Unlike GetBackupStatusBlittable, this does not apply the node-tag gate, so a non-responsible node
+        // can read the responsible node's status (ongoing-task / Studio read paths).
         public static BlittableJsonReaderObject GetBackupStatusBlittableForOngoingTaskRead(ClusterOperationContext context, string databaseName, long taskId)
         {
             var statusBlittable = GetLocalBackupStatusBlittableInternal(context, databaseName, taskId);

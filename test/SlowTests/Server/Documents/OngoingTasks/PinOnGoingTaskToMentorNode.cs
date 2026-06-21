@@ -288,9 +288,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
     [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
     public async Task Can_Set_Pin_To_Node_Backup()
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
-        var store = GetDocumentStore(new Options { Server = server });
+        var store = GetDocumentStore();
         var backupPath = NewDataPath();
         var updateBackupResult = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(new PeriodicBackupConfiguration
         {

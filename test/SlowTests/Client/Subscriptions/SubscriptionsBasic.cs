@@ -138,10 +138,8 @@ namespace SlowTests.Client.Subscriptions
         [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
         public async Task CanBackupAndRestoreSubscriptions()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -158,7 +156,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(3, subscriptionStataList.Count);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -166,7 +164,7 @@ namespace SlowTests.Client.Subscriptions
                 using (Backup.RestoreDatabase(store,
                            new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = databaseName }))
                 {
-                    using (var store2 = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = s => databaseName, CreateDatabase = false }))
+                    using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => databaseName, CreateDatabase = false }))
                     {
                         subscriptionStataList = await store2.Subscriptions.GetSubscriptionsAsync(0, 10, databaseName);
 

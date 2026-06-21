@@ -442,12 +442,9 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Core | RavenTestCategory.BackupExportImport)]
         public async Task TombstoneCleaningAfterPeriodicBackupDisabled()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore(new Options { Server = server }))
+            using (var store = GetDocumentStore())
             {
                 // Documents creation
                 using (var session = store.OpenSession())
@@ -466,7 +463,7 @@ namespace SlowTests.Issues
                     incrementalBackupFrequency: "0 0 1 1 *",
                     name: _customTaskName);
 
-                config.TaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, isFullBackup: true);
+                config.TaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, isFullBackup: true);
                 config.Disabled = true;
 
                 var operation = new UpdatePeriodicBackupOperation(config);
@@ -483,7 +480,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
 
                 Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));

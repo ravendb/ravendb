@@ -55,11 +55,9 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanRestoreSubscriptions(Options options)
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: $"{options.DatabaseMode}_BackupFolder");
 
-            using (var store = GetDocumentStore(new Options(options) { Server = server }))
+            using (var store = GetDocumentStore(options))
             {
                 await store.Subscriptions.CreateAsync<User>(x => x.Name == "Marcin");
                 await store.Subscriptions.CreateAsync<User>();
@@ -67,11 +65,11 @@ namespace SlowTests.Issues
                 var config = Backup.CreateBackupConfiguration(backupPath);
 
                 if (options.DatabaseMode == RavenDatabaseMode.Single)
-                    Backup.UpdateConfigAndRunBackup(server, config, store);
+                    Backup.UpdateConfigAndRunBackup(Server, config, store);
                 else
                 {
-                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store, server);
-                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config);
+                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store, Server);
+                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
                     Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
                 }
 

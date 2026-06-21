@@ -25,11 +25,11 @@ public class DataArchivalSmugglerTests : RavenTestBase
     {
     }
 
-    private async Task SetupDataArchival(IDocumentStore store, Raven.Server.RavenServer server = null)
+    private async Task SetupDataArchival(IDocumentStore store)
     {
         var config = new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 };
 
-        await DataArchivalHelper.SetupDataArchival(store, (server ?? Server).ServerStore, config);
+        await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
 
     [RavenFact(RavenTestCategory.Smuggler)]
@@ -114,11 +114,9 @@ public class DataArchivalSmugglerTests : RavenTestBase
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task Backup_And_Restore_ArchivedDocuments()
     {
-        DoNotReuseServer();
-        using var server = GetNewServer();
         var backupPath = NewDataPath(suffix: "BackupFolder");
 
-        using (var store = GetDocumentStore(new Options { Server = server }))
+        using (var store = GetDocumentStore())
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -131,9 +129,9 @@ public class DataArchivalSmugglerTests : RavenTestBase
             }
 
             // Activate the archival
-            await SetupDataArchival(store, server);
+            await SetupDataArchival(store);
 
-            var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
@@ -141,7 +139,7 @@ public class DataArchivalSmugglerTests : RavenTestBase
             var beforeBackupStats = store.Maintenance.Send(new GetStatisticsOperation());
 
             var config = Backup.CreateBackupConfiguration(backupPath);
-            await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+            await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
             // restore the database with a different name
             var restoredDatabaseName = GetDatabaseName();

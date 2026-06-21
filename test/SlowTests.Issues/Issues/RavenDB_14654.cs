@@ -19,9 +19,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task FullBackupShouldBackupDocumentTombstones()
         {
-            DoNotReuseServer();
-            using var server = GetNewServer();
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var store = GetDocumentStore();
 
             // create 3 docs
             using (var session = store.OpenSession())
@@ -53,11 +51,11 @@ namespace SlowTests.Issues
             var res = store.Operations.Send(new DeleteCompareExchangeValueOperation<DummyDoc>($"emojis/Rhinoceros", rhinoceros.Index));
             Assert.True(res.Successful);
 
-            var documentDb = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            var documentDb = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             (long etag, _) = documentDb.ReadLastEtagAndChangeVector();
 
             var config = Backup.CreateBackupConfiguration(NewDataPath(forceCreateDir: true));
-            var backupTaskId = Backup.UpdateConfigAndRunBackup(server, config, store);
+            var backupTaskId = Backup.UpdateConfigAndRunBackup(Server, config, store);
             var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
             var status = store.Maintenance.Send(operation).Status;
             var backupPath = status.LocalBackup.BackupDirectory;
