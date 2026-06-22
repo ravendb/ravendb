@@ -89,8 +89,11 @@ namespace Raven.Analyzers.Shared
 
         /// <summary>
         /// Returns true when the class (or any of its base classes up the chain) is a known
-        /// index creation task base. Covers document, time-series, and counters variants
-        /// (both regular and multi-map).
+        /// index creation task base: <c>AbstractIndexCreationTask&lt;T&gt;</c> /
+        /// <c>AbstractGenericIndexCreationTask</c> (document indexes) and the multi-map bases
+        /// (<c>AbstractMultiMapIndexCreationTask</c> and its time-series / counters variants).
+        /// Regular (non-multi-map) time-series and counters index bases are intentionally not
+        /// matched yet — their map conventions differ and analyzer support for them is a follow-up.
         /// </summary>
         internal static bool IsIndexCreationTask(INamedTypeSymbol? symbol)
         {

@@ -47,6 +47,37 @@ class Order { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task ExplicitlyTypedLoads_Transform_To_Var_Lazy()
+        {
+            // The rewritten lazy local holds a Lazy<T>, so the original explicit type ('User')
+            // must be replaced with 'var' or the generated code would not compile.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId)
+    {
+        User user = session.Load<User>(userId);
+        Order order = session.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            // Lazy declarations are emitted as 'var', not the original explicit type.
+            Assert.Contains("var lazyUser = session.Advanced.Lazily.Load<User>(userId);", fixed_code);
+            Assert.Contains("var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);", fixed_code);
+            Assert.DoesNotContain("User lazyUser", fixed_code);
+            Assert.DoesNotContain("Order lazyOrder", fixed_code);
+            // Value extractions restore the original variable names via var.
+            Assert.Contains("var user = lazyUser.Value;", fixed_code);
+            Assert.Contains("var order = lazyOrder.Value;", fixed_code);
+        }
+
+        [Fact]
         public async Task QueryAndLoad_Transforms_To_Lazy()
         {
             const string source = CommonUsings + @"

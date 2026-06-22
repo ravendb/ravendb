@@ -208,14 +208,18 @@ namespace Raven.Analyzers.Indexes
             foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(expression))
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
-                if (name != "Select" && name != "SelectMany")
+                if (name != KnownTypes.SelectMethodName && name != KnownTypes.SelectManyMethodName)
                     continue;
 
                 SeparatedSyntaxList<ArgumentSyntax> args = inv.ArgumentList.Arguments;
                 if (args.Count == 0)
                     return null;
 
-                ExpressionSyntax? body = ExtractLambdaBody(args[0].Expression);
+                // For SelectMany with a result selector — SelectMany(x => x.Items, (x, i) => new { … }) —
+                // the projection is the LAST argument; the first is the collection selector. Plain Select
+                // and single-argument SelectMany carry the projection in the first argument.
+                int projectionArgIndex = name == KnownTypes.SelectManyMethodName && args.Count >= 2 ? args.Count - 1 : 0;
+                ExpressionSyntax? body = ExtractLambdaBody(args[projectionArgIndex].Expression);
                 if (body == null)
                     return null;
 
