@@ -94,6 +94,31 @@ public class RavenDB_24423(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
     
+    [RavenFact(RavenTestCategory.Querying)]
+    public void CoraxAndLuceneAlphanumericalSortIdenticalForCasedAstral()
+    {
+        // The Deseret block holds cased characters outside the BMP (capitals U+10400-U+10427, smalls U+10428-U+1044F).
+        // Corax used to fold them with Rune.ToLowerInvariant while Lucene (lowercasing per UTF-16 code unit) left them
+        // untouched, so the two engines produced different sort orders. They must now be identical.
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+        using (var bulk = store.BulkInsert())
+        {
+            for (int i = 0x10400; i <= 0x1044F; i++)
+                bulk.Store(new Dto(char.ConvertFromUtf32(i), IntValue: i));
+        }
+
+        new Index().Execute(store);
+        new LuceneIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using var session = store.OpenSession();
+        var corax = session.Query<Dto, Index>().OrderBy(x => x.Title, OrderingType.AlphaNumeric).ToList();
+        var lucene = session.Query<Dto, LuceneIndex>().OrderBy(x => x.Title, OrderingType.AlphaNumeric).ToList();
+
+        Assert.Equal(lucene.Select(x => x.Id), corax.Select(x => x.Id));
+    }
+
     protected class LuceneIndex : Index
     {
         public override string IndexName => nameof(LuceneIndex);
