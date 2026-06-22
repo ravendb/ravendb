@@ -29,4 +29,9 @@ cat "$PROXY_DIR/leaf.pem" "$PROXY_DIR/chain.pem" > "$PROXY_DIR/fullchain.pem"
 openssl pkcs12 -in "$PFX" -nocerts -nodes  -passin pass: -out "$PROXY_DIR/privkey.pem"
 chmod 600 "$PROXY_DIR/privkey.pem"
 
-exec nginx -c /etc/nginx/nginx.conf -g 'daemon off;'
+# Render the RavenDB passthrough port into the config from RAVEN_AI_RAVENDB_INTERNAL_PORT — the same env
+# 01-ravendb/run binds RavenDB to — so the two never drift. Run the rendered copy.
+RAVENDB_PORT="${RAVEN_AI_RAVENDB_INTERNAL_PORT:-8443}"
+sed "s|__RAVENDB_PORT__|${RAVENDB_PORT}|g" /etc/nginx/nginx.conf > "$PROXY_DIR/nginx.conf"
+
+exec nginx -c "$PROXY_DIR/nginx.conf" -g 'daemon off;'

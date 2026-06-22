@@ -13,10 +13,14 @@ internal static class SetupPackageDownload
     public static async Task CopyCappedAsync(Stream source, Stream destination, CancellationToken ct)
     {
         var buffer = new byte[81920];
+        long total = 0;
         int read;
         while ((read = await source.ReadAsync(buffer, ct)) > 0)
         {
-            if (destination.Position + read > MaxSetupPackageBytes)
+            // Track bytes explicitly rather than reading destination.Position — the cap is on what we
+            // write this call, and Position throws on non-seekable destinations.
+            total += read;
+            if (total > MaxSetupPackageBytes)
                 throw new InvalidOperationException(
                     $"setup package exceeds the {MaxSetupPackageBytes:N0} byte cap; aborting download.");
             await destination.WriteAsync(buffer.AsMemory(0, read), ct);
