@@ -230,3 +230,16 @@ rm docker/ai-appliance/license.json         # the build-context license you supp
 | `MissingAiAgentParameterException: Parameter 'customerId' is missing` | The agent declares a **caller-supplied** agent-level parameter the iframe can't provide (e.g. `order-support`). Use `product-catalog` / `sales-insights`, whose inputs are model-filled query params. |
 | Agent runs but finds no rows | Check the query matches the mirrored field **types**, not just names — e.g. Northwind's `Discontinued` mirrors as integer `0/1`, so `Discontinued = false` matches nothing; filter on `= 0` or drop it. Confirm the CDC initial load finished (collection counts via Studio or `collections/stats`). |
 | Want to inspect mirrored data | Run `up.ps1 -WithStudio` (imports the admin client cert), then open `https://db.egor-ai.ravendb.run/` — nginx passes `db.*` through to RavenDB Studio and the browser prompts for the client cert. |
+
+---
+
+## Production hardening (beyond this demo)
+
+This runbook is the demo posture. For a real deployment:
+
+- **Publish only `:443`** (the nginx SNI front), not `:5000`. The plain-HTTP `:5000` surface is a
+  first-run/dev convenience; exposing it publicly would let a session ride over HTTP. The session cookie
+  is `Secure` on the real `https://dashboard.*` flow regardless (it's only non-Secure on the local
+  `:5000` fallback).
+- **Use a high-entropy `QUILL_API_KEY`** (not the demo `egor`). The server logs a startup warning if the
+  key is short and you're not in mock/demo mode; treat it as a hard requirement in production.
