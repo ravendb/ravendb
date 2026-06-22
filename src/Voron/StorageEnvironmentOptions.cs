@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -857,7 +857,10 @@ namespace Voron
                 }
 
                 string filename = fileInfo.FullName;
-                return OpenJournalPager(filename);
+                var (pager, state) = OpenJournalPager(filename);
+                if (UseSequentialReadAheadHintForJournalRecovery)
+                    pager.TrySetSequentialReadAheadHint(state);
+                return (pager, state);
             }
 
             public override (Pager Pager, Pager.State State) OpenJournalPager(string filename)
@@ -1263,6 +1266,7 @@ namespace Voron
         public bool DisableSparseRegions { get; set; }
         public int JournalsCompressionAcceleration { get; set; } = 1;
         public int MinimumSharedJournalsMergeCount { get; set; } = 8;
+        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 
         private readonly RavenLogger _log;
 

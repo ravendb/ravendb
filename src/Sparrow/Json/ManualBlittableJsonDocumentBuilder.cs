@@ -424,6 +424,17 @@ namespace Sparrow.Json
 
         public void WriteValue(ulong value)
         {
+            // values that fit in Int64 must be written as an Integer token (the same way the JSON
+            // parser tokenizes them when reading a document back from the server). Otherwise the
+            // write path (LazyNumber) and the read path (Integer) disagree, and change tracking
+            // bridges the two through a double - losing precision above 2^53 and reporting a
+            // spurious change (RavenDB-26846). Only values that don't fit in Int64 need LazyNumber.
+            if (value <= long.MaxValue)
+            {
+                WriteValue((long)value);
+                return;
+            }
+
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
             _writeToken = new WriteToken

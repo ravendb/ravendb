@@ -153,7 +153,7 @@ namespace SlowTests.Issues
                         }
                         // Replication from source to firstDestination
                         await SetupReplicationAsync(source, firstDestination);
-                        await EnsureReplicatingAsync(source, firstDestination);
+                        await EnsureReplicatingAsync(source, firstDestination, server);
 
                         var stats = await GetDatabaseStatisticsAsync(source, servers: servers);
                         Assert.True(await WaitForValueAsync(async () => await AssertReplicationAsync(firstDestination, firstDestination.Database, stats, servers), true, reasonableWaitTime, 333));
@@ -165,7 +165,7 @@ namespace SlowTests.Issues
                             await session.SaveChangesAsync();
                         }
 
-                        await EnsureReplicatingAsync(source, firstDestination);
+                        await EnsureReplicatingAsync(source, firstDestination, server);
 
                         stats = await GetDatabaseStatisticsAsync(source, servers: servers);
                         Assert.True(await WaitForValueAsync(async () => await AssertReplicationAsync(firstDestination, firstDestination.Database, stats, servers), true, reasonableWaitTime, 333));

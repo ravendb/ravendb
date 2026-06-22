@@ -35,7 +35,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
     switch ($arch) {
         "x64" { 
             $versionTags = @(
-                "$($repo):$($version)-ubuntu.22.04-x64"
+                "$($repo):$($version)-ubuntu.24.04-x64"
             )
             if ($useVersionTagsOnly) {
                 return $versionTags
@@ -49,7 +49,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
         }
         "arm32v7" {
             $versionTags = @(
-                "$($repo):$($version)-ubuntu.22.04-arm32v7"
+                "$($repo):$($version)-ubuntu.24.04-arm32v7"
             )
             if ($useVersionTagsOnly) {
                 return $versionTags
@@ -63,7 +63,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
         }
         "arm64v8" {
             $versionTags = @(
-                "$($repo):$($version)-ubuntu.22.04-arm64v8"
+                "$($repo):$($version)-ubuntu.24.04-arm64v8"
                 )
             if ($useVersionTagsOnly) {
                 return $versionTags
@@ -117,7 +117,8 @@ function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly
 
 function GetManifestTags {
     param (
-        $repo
+        $repo,
+        $version
     )
 
     return @(

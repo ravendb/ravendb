@@ -39,16 +39,11 @@ export default function ServerWideCustomAnalyzersInfoHub() {
                     <br />
                     When querying an index, these terms are used to define the search criteria and filter query results.
                 </p>
-                <div>
+                <p>
                     <strong>In this view</strong>, you can add your own analyzers in addition to the existing analyzers
-                    that come with RavenDB.
-                    <ul>
-                        <li>
-                            The custom analyzers added here can be used by indexes in ALL databases in your cluster.
-                        </li>
-                        <li>Note: custom analyzers are not supported by Corax indexes.</li>
-                    </ul>
-                </div>
+                    that come with RavenDB. The custom analyzers added here can be used by indexes in ALL databases in
+                    your cluster.
+                </p>
                 <div>
                     Provide <code>C#</code> code in the editor view, or upload from file.
                     <ul>

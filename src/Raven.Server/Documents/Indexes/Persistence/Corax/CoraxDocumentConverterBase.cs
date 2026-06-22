@@ -30,6 +30,7 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Binary;
+using Voron;
 using static Raven.Server.Config.Categories.IndexingConfiguration;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -116,6 +117,25 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
     
     public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders.Value;
+
+    /// <summary>
+    /// Returns the field-name slices (Voron tree names) of the index's vector fields, allocated on the converter's
+    /// long-lived <see cref="Allocator"/>.
+    /// </summary>
+    internal List<Slice> GetVectorFieldNames()
+    {
+        List<Slice> result = null;
+        foreach (var field in _index.Definition.IndexFields.Values)
+        {
+            if (field.Vector is null || field.Id == CoraxConstants.IndexWriter.DynamicField)
+                continue;
+
+            Slice.From(Allocator, field.Name, ByteStringType.Immutable, out var fieldName);
+            (result ??= new List<Slice>()).Add(fieldName);
+        }
+
+        return result;
+    }
 
     private IndexFieldsMapping CreateKnownFieldsForWriter()
     {

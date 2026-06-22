@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
@@ -49,6 +50,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationCategory(ConfigurationCategoryType.Monitoring)]
         public sealed class OpenTelemetryConfiguration : ConfigurationCategory
         {
+            public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
+            {
+                base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
+
+                if (Enabled == false)
+                    return;
+
+                if (string.IsNullOrWhiteSpace(ServiceName))
+                    throw new InvalidOperationException($"Configuration '{RavenConfiguration.GetKey(x => x.Monitoring.OpenTelemetry.ServiceName)}' cannot be null or empty.");
+
+                if (string.IsNullOrWhiteSpace(ServiceNamespace))
+                    throw new InvalidOperationException($"Configuration '{RavenConfiguration.GetKey(x => x.Monitoring.OpenTelemetry.ServiceNamespace)}' cannot be null or empty.");
+            }
+            
             [Description("Indicates if OpenTelemetry is enabled or not. Default: false")]
             [DefaultValue(false)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.Enabled", ConfigurationEntryScope.ServerWideOnly)]
@@ -58,6 +73,16 @@ namespace Raven.Server.Config.Categories
             [DefaultValue(null)]
             [ConfigurationEntry("Monitoring.OpenTelemetry.ServiceInstanceId", ConfigurationEntryScope.ServerWideOnly)]
             public string ServiceInstanceId { get; set; }
+            
+            [Description("Sets the OpenTelemetry service name.")]
+            [DefaultValue("server")]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServiceName", ConfigurationEntryScope.ServerWideOnly)]
+            public string ServiceName { get; set; }
+
+            [Description("Sets the OpenTelemetry service namespace.")]
+            [DefaultValue("ravendb")]
+            [ConfigurationEntry("Monitoring.OpenTelemetry.ServiceNamespace", ConfigurationEntryScope.ServerWideOnly)]
+            public string ServiceNamespace { get; set; }
             
             [Description("Indicates if RavenDB's OpenTelemetry metrics are enabled or not. Default: true")]
             [DefaultValue(true)]

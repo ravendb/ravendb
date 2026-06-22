@@ -786,7 +786,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                     UserPrompt = $"question {turn}"
                 }, changeVector: changeVector);
 
-                await handler.HandleRequest(context, CancellationToken.None);
+                await handler.HandleRequestAsync(context, CancellationToken.None);
                 callCount = localCallCount;
 
                 using (context.OpenReadTransaction())
@@ -1394,7 +1394,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                 UserPrompt = userPrompt
             }, changeVector: null);
 
-            await handler.HandleRequest(context, CancellationToken.None);
+            await handler.HandleRequestAsync(context, CancellationToken.None);
             return conversationId;
         }
     }
@@ -1422,7 +1422,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                     UserPrompt = prompt
                 }, changeVector: changeVector);
 
-                await handler.HandleRequest(context, CancellationToken.None);
+                await handler.HandleRequestAsync(context, CancellationToken.None);
 
                 // Read back change vector for next turn's concurrency check
                 using (context.OpenReadTransaction())

@@ -129,7 +129,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = "Please run the tool."
                 }, changeVector: null);
 
-                await handler.HandleRequest(context, CancellationToken.None);
+                await handler.HandleRequestAsync(context, CancellationToken.None);
 
                 Assert.True(ValidateDatabaseAlert(database, expectActionTool: false, expectQueryTool: true));
             }
