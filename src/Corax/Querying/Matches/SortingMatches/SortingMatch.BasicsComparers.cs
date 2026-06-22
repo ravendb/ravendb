@@ -133,12 +133,6 @@ internal sealed class AlphanumericalComparer
                     return string1State._numberLength.CompareTo(string2State._numberLength);
                 }
 
-                if (string1State._numberLengthInBytes != 1 || string2State._numberLengthInBytes != 1)
-                {
-                    var str1 = Encoding.UTF8.GetString(string1State._originalString);
-                    var str2 = Encoding.UTF8.GetString(string2State._originalString);
-                }
-
                 // else, it means they should be compared by string, again, we compare only the effective numbers
                 // we compare the numbers as byte sequences, because both numbers are guaranteed to be of the same length
                 return string1State._originalString.Slice((int)(string1State.CurrentBytePosition - string1State._numberLengthInBytes), (int)string1State._numberLengthInBytes)
