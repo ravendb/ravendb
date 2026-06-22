@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Graphs;
 
 namespace Raven.Server.Indexing
 {
@@ -32,5 +34,16 @@ namespace Raven.Server.Indexing
 
         public Dictionary<string, DirectoryFiles> DirectoriesByName = new Dictionary<string, DirectoryFiles>(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, CollectionEtags> Collections = new Dictionary<string, CollectionEtags>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Per-field HNSW vector caches keyed by field name. Populated by Corax indexes only
+        /// (null or empty for Lucene indexes and for Corax indexes without vector fields).
+        /// Attached to a transaction via
+        /// <see cref="Voron.Impl.LowLevelTransaction.ImmutableExternalState"/>, so a read tx
+        /// observes the same cache instance that was current at the moment its transaction was
+        /// created. Each cache instance is long-lived (one per index field) and survives across
+        /// commits; the dictionary only changes when a vector field is added or removed.
+        /// </summary>
+        public Dictionary<Slice, HnswIndexCache> VectorNodeCaches;
     }
 }

@@ -55,6 +55,9 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
                 case QueueBrokerType.AmazonSqs:
                     return Connection.AmazonSqsConnectionSettings.GetQueueUrl()
                         .StartsWith("https", StringComparison.OrdinalIgnoreCase);
+                case QueueBrokerType.AzureServiceBus:
+                    // Azure Service Bus always uses TLS (AMQP over TLS or AMQP over WebSockets/TLS)
+                    return true;
                 default:
                     throw new NotSupportedException($"Unknown broker type: {BrokerType}");
             }

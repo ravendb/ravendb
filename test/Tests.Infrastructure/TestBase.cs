@@ -16,7 +16,6 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
-using Raven.Client.Util;
 using Raven.Debug.StackTrace;
 using Raven.Server;
 using Raven.Server.Commercial;
@@ -772,39 +771,41 @@ namespace FastTests
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
-            var testOutcomeAnalyzer = new TestOutcomeAnalyzer(TestContext.Current?.TestState);
-            var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
-
-            exceptionAggregator.Execute(() =>
+            try
             {
-                if (_globalServer?.ServerStore.Observer?.Suspended == true)
-                    throw new InvalidOperationException("The observer is suspended for the global server!");
-            });
-
-            Dispose(exceptionAggregator);
-
-            DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator);
-
-            if (_localServer != null && _localServer != _globalServer)
-            {
-                DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _localServer, exceptionAggregator);
+                var testOutcomeAnalyzer = new TestOutcomeAnalyzer(TestContext.Current?.TestState);
+                var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
 
                 exceptionAggregator.Execute(() =>
                 {
-                    DisposeServer(_localServer, _disposeTimeout);
-                    _localServer = null;
+                    if (_globalServer?.ServerStore.Observer?.Suspended == true)
+                        throw new InvalidOperationException("The observer is suspended for the global server!");
                 });
-            }
 
-            for (int i = 0; i < ServersForDisposal.Count; i++)
-            {
-                var serverForDisposal = ServersForDisposal[i];
+                Dispose(exceptionAggregator);
 
-                if (i == 0)
-                    DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator);
+                DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator);
 
-                exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
-            }
+                if (_localServer != null && _localServer != _globalServer)
+                {
+                    DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _localServer, exceptionAggregator);
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        DisposeServer(_localServer, _disposeTimeout);
+                        _localServer = null;
+                    });
+                }
+
+                for (int i = 0; i < ServersForDisposal.Count; i++)
+                {
+                    var serverForDisposal = ServersForDisposal[i];
+
+                    if (i == 0)
+                        DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator);
+
+                    exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
+                }
 
 #if DEBUG2
             var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
@@ -823,13 +824,19 @@ namespace FastTests
             Output.WriteLine(sb.ToString());
 #endif
 
-            ServersForDisposal = null;
+                ServersForDisposal = null;
 
-            RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+                RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+
+                exceptionAggregator.Execute(() => TryExecuteWhenNoOtherTestsAreRunning(() => DefaultRavenHttpClientFactory.Instance.Clear()));
+
+            }
+            finally
+            {
+                await base.DisposeAsync();
+            }
 
             exceptionAggregator.ThrowIfNeeded();
-
-            await base.DisposeAsync();
         }
 
         private static void DownloadAndSaveDebugPackage(bool shouldSaveDebugPackage, RavenServer server, ExceptionAggregator exceptionAggregator)

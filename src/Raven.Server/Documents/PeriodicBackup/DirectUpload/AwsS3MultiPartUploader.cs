@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using S3StorageClass = Amazon.S3.S3StorageClass;
 
@@ -17,6 +16,7 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
     private readonly AmazonS3Client _client;
     private readonly string _bucketName;
     private readonly S3StorageClass _storageClass;
+    private readonly bool _disableChecksumValidation;
     private readonly Progress _progress;
     private readonly string _key;
     private readonly Dictionary<string, string> _metadata;
@@ -26,12 +26,13 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
     private int _partNumber;
     private List<PartETag> _partEtags;
 
-    public AwsS3MultiPartUploader(AmazonS3Client client, string bucketName, S3StorageClass storageClass, Progress progress, string key,
-        Dictionary<string, string> metadata, CancellationToken cancellationToken)
+    public AwsS3MultiPartUploader(AmazonS3Client client, string bucketName, S3StorageClass storageClass, bool disableChecksumValidation, 
+        Progress progress, string key, Dictionary<string, string> metadata, CancellationToken cancellationToken)
     {
         _client = client;
         _bucketName = bucketName;
         _storageClass = storageClass;
+        _disableChecksumValidation = disableChecksumValidation;
         _progress = progress;
         _key = key;
         _metadata = metadata;
@@ -84,6 +85,7 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
                 PartNumber = _partNumber++,
                 PartSize = size,
                 UploadId = _uploadId,
+                DisableDefaultChecksumValidation =  _disableChecksumValidation,
                 StreamTransferProgress = (_, args) =>
                 {
                     _progress?.UploadProgress.ChangeState(UploadState.Uploading);

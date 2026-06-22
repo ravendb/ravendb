@@ -128,6 +128,7 @@ function getDtoEtlType(
         case "RabbitMQ":
         case "AzureQueueStorage":
         case "AmazonSqs":
+        case "AzureServiceBus":
             return "Queue";
         default:
             return type;

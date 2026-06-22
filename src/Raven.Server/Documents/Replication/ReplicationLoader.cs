@@ -76,7 +76,6 @@ namespace Raven.Server.Documents.Replication
         private readonly HashSet<ExternalReplicationBase> _externalDestinations = new HashSet<ExternalReplicationBase>();
         private List<ReplicationNode> _destinations = new List<ReplicationNode>();
         protected ClusterTopology _clusterTopology = new ClusterTopology();
-        private int _numberOfSiblings;
         public ConflictSolver ConflictSolverConfig;
         private readonly CancellationToken _shutdownToken;
         private HubInfoForCleaner _hubInfoForCleaner;
@@ -94,9 +93,7 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public List<ReplicationNode> Destinations => _destinations;
-
         public int NumberOfSiblingsInInternalReplication { get; private set; }
-
         private sealed class HubInfoForCleaner
         {
             public long LastEtag;
@@ -987,8 +984,8 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
 
+            // a promotable node isn't counted as a sibling, it is a new node that was added and doesn't hold all the data yet
             NumberOfSiblingsInInternalReplication = Math.Max(newRecord.Topology.Members.Count + newRecord.Topology.Rehabs.Count - 1, 0);
-            _numberOfSiblings = _destinations.Select(x => x.Url).Intersect(_clusterTopology.AllNodes.Select(x => x.Value)).Count();
 
             DisposeConnections(instancesToDispose);
         }
@@ -1154,7 +1151,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private static ExternalReplicationState GetExternalReplicationState(ClusterOperationContext context, ServerStore server, string database, long taskId)
+        public static ExternalReplicationState GetExternalReplicationState(ClusterOperationContext context, ServerStore server, string database, long taskId)
         {
             var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, taskId));
 
@@ -2024,7 +2021,7 @@ namespace Raven.Server.Documents.Replication
 
         public int GetMinNumberOfReplicas()
         {
-            return (_numberOfSiblings + 1) / 2; // not "(_numberOfSiblings + 1) / 2 + 1" because 1 node already have got the data and only need to replicate
+            return (NumberOfSiblingsInInternalReplication + 1) / 2; // not "(NumberOfSiblingsInInternalReplication + 1) / 2 + 1" because the local node already has the data - we only need to replicate to additional nodes
         }
 
         public async Task<int> WaitForReplicationAsync(DocumentsOperationContext context, int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, ChangeVector lastChangeVector)

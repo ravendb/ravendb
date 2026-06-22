@@ -3599,6 +3599,66 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<CertificateDefinition> GetSsoServerCertificates<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage == CertificateUsage.SsoServer)
+                    yield return def;
+            }
+        }
+
+        public IEnumerable<CertificateDefinition> GetSsoClientCertificates<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage == CertificateUsage.SsoClient)
+                    yield return def;
+            }
+        }
+
+        public CertificateDefinition GetSsoClientCertificateByIdentity<TTransaction>(TransactionOperationContext<TTransaction> context, SsoExtensionPayload payload)
+            where TTransaction : RavenTransaction
+        {
+            if (payload.IsEmpty)
+                return null;
+
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage != CertificateUsage.SsoClient)
+                    continue;
+
+                if (def.SsoIdentifiers == null || def.SsoIdentifiers.Count == 0)
+                    continue;
+
+                foreach (var id in def.SsoIdentifiers)
+                {
+                    if (id.Provider != payload.Provider)
+                        continue;
+
+                    if (payload.Provider == SsoProvider.Windows &&
+                        string.Equals(id.Domain, payload.Domain, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    if (string.Equals(id.Identifier, payload.Username, StringComparison.OrdinalIgnoreCase))
+                        return def;
+                }
+            }
+
+            return null;
+        }
+
         public Raven.Client.ServerWide.Sharding.ShardingConfiguration ReadShardingConfiguration(string database)
         {
             using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))

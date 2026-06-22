@@ -69,4 +69,9 @@ public enum RavenServiceRequirement
     /// </summary>
     Azure = 1 << 10,
 
+    /// <summary>
+    /// Test requires Azure Service Bus.
+    /// </summary>
+    AzureServiceBus = 1 << 11,
+
 }

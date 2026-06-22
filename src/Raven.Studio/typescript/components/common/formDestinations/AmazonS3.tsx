@@ -87,6 +87,23 @@ export default function AmazonS3() {
                                             </span>
                                         </FormSwitch>
                                     )}
+                                    {formValues.isUseCustomHost && (
+                                        <FormSwitch
+                                            control={control}
+                                            name={getName("disableChecksumValidation")}
+                                            className="w-100"
+                                            color="secondary"
+                                        >
+                                            <span className="d-flex gap-1 align-items-center">
+                                                Disable Checksum Validation
+                                                <PopoverWithHoverWrapper
+                                                    message={<>Disables S3 checksum validation for uploads</>}
+                                                >
+                                                    <Icon icon="info" color="info" />
+                                                </PopoverWithHoverWrapper>
+                                            </span>
+                                        </FormSwitch>
+                                    )}
                                 </div>
                                 <div className="vstack gap-3 mt-2">
                                     {formValues.isUseCustomHost && (

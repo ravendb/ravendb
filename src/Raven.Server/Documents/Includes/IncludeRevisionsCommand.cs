@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Includes
         public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
         {
             var first = true;
-            ValueTask<int> maybeFlush;
+            ValueTask<long> maybeFlush;
             if (IdByRevisionsByDateTimeResults != null)
             {
                 foreach ((string id, var dateTimeToDictionary) in IdByRevisionsByDateTimeResults)

@@ -51,7 +51,7 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        expect(screen.getByText("System prompt")).toBeInTheDocument();
+        expect(await screen.findByText("System prompt")).toBeInTheDocument();
         expect(screen.getByText(systemPromptText)).toBeInTheDocument();
     });
 
@@ -102,7 +102,7 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        const transcriptButton = screen.getByText("Query tool: " + queryToolName);
+        const transcriptButton = await screen.findByText("Query tool: " + queryToolName);
         await fireClick(transcriptButton);
         expect(screen.getByText("Parameters filled by LLM")).toBeInTheDocument();
         expect(screen.getByText("Query tool result")).toBeInTheDocument();
@@ -147,7 +147,7 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        expect(screen.getByText("Action tool: " + actionToolName)).toBeInTheDocument();
+        expect(await screen.findByText("Action tool: " + actionToolName)).toBeInTheDocument();
 
         expect(screen.getByText(/Enter a response after completing action/)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        expect(screen.getByText("Action tool: " + actionToolName)).toBeInTheDocument();
+        expect(await screen.findByText("Action tool: " + actionToolName)).toBeInTheDocument();
 
         expect(screen.getByText(/Response from action tool/)).toBeInTheDocument();
         expect(screen.getByText("Submitted")).toBeInTheDocument();
@@ -222,7 +222,7 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        const transcriptButton = screen.getByText("Sub-agent: " + subAgentId);
+        const transcriptButton = await screen.findByText("Sub-agent: " + subAgentId);
         await fireClick(transcriptButton);
         expect(screen.getByText("Parameters filled by LLM")).toBeInTheDocument();
         expect(screen.getByText("Sub-conversation created")).toBeInTheDocument();
@@ -260,7 +260,7 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        const transcriptButton = screen.getByText("Tool: " + toolName);
+        const transcriptButton = await screen.findByText("Tool: " + toolName);
         await fireClick(transcriptButton);
         expect(screen.getByText("Parameters filled by LLM")).toBeInTheDocument();
     });

@@ -30,6 +30,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private AmazonS3Client _client;
         internal readonly string _bucketName;
         private readonly bool _usingCustomServerUrl;
+        private  readonly bool _disableChecksumValidation;
         public readonly string RemoteFolderName;
 
         public readonly string Region;
@@ -66,6 +67,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             else
             {
                 _usingCustomServerUrl = true;
+                _disableChecksumValidation = s3Settings.DisableChecksumValidation;
 
                 config = new AmazonS3Config
                 {
@@ -95,7 +97,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _bucketName = s3Settings.BucketName;
             RemoteFolderName = s3Settings.RemoteFolderName;
             Region = s3Settings.AwsRegionName == null ? string.Empty : s3Settings.AwsRegionName.ToLower();
-            _storageClass = s3Settings.StorageClass?.ToAmazonS3StorageClass() ?? Amazon.S3.S3StorageClass.Standard;;
+            _storageClass = s3Settings.StorageClass?.ToAmazonS3StorageClass() ?? Amazon.S3.S3StorageClass.Standard;
+            
             _progress = progress;
             _cancellationToken = cancellationToken;
         }
@@ -112,7 +115,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
         {
-            return new AwsS3MultiPartUploader(_client, _bucketName, _storageClass, _progress, key, metadata, _cancellationToken);
+            return new AwsS3MultiPartUploader(_client, _bucketName, _storageClass, _disableChecksumValidation, _progress, key, metadata, _cancellationToken);
         }
 
         public async Task PutObjectAsync(string key, Stream stream, Dictionary<string, string> metadata)
@@ -132,7 +135,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 {
                     _progress?.UploadProgress.ChangeType(UploadType.Chunked);
 
-                    var multiPartUploader = new AwsS3MultiPartUploader(_client, _bucketName, _storageClass, _progress, key, metadata, _cancellationToken);
+                    var multiPartUploader = new AwsS3MultiPartUploader(_client, _bucketName, _storageClass, _disableChecksumValidation, _progress, key, metadata, _cancellationToken);
 
                     await multiPartUploader.InitializeAsync();
 
@@ -159,7 +162,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                         _progress?.UploadProgress.ChangeState(UploadState.Uploading);
                         _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
                         _progress?.OnUploadProgress?.Invoke();
-                    }
+                    },
+                    DisableDefaultChecksumValidation = _disableChecksumValidation
                 };
 
                 FillMetadata(request.Metadata, metadata);

@@ -223,6 +223,8 @@ namespace Raven.Client.Documents.Operations.Backups
         public bool ForcePathStyle { get; set; }
 
         public S3StorageClass? StorageClass { get; set; }
+        
+        public bool DisableChecksumValidation { get; set; }
 
         public S3Settings()
         {
@@ -236,6 +238,7 @@ namespace Raven.Client.Documents.Operations.Backups
             BucketName = settings.BucketName;
             CustomServerUrl = settings.CustomServerUrl;
             ForcePathStyle = settings.ForcePathStyle;
+            DisableChecksumValidation = settings.DisableChecksumValidation;
             AwsRegionName = settings.AwsRegionName;
             AwsAccessKey = settings.AwsAccessKey;
             AwsSecretKey = settings.AwsSecretKey;
@@ -280,6 +283,9 @@ namespace Raven.Client.Documents.Operations.Backups
             if (other.ForcePathStyle != ForcePathStyle)
                 return false;
 
+            if (other.DisableChecksumValidation != DisableChecksumValidation)
+                return false;
+
             if (other.StorageClass != StorageClass)
                 return false;
 
@@ -292,6 +298,7 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(BucketName)] = BucketName;
             djv[nameof(CustomServerUrl)] = CustomServerUrl;
             djv[nameof(ForcePathStyle)] = ForcePathStyle;
+            djv[nameof(DisableChecksumValidation)] = DisableChecksumValidation;
 
             if (StorageClass.HasValue)
                 djv[nameof(StorageClass)] = StorageClass.Value;
@@ -305,6 +312,7 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(BucketName)] = BucketName;
             djv[nameof(CustomServerUrl)] = CustomServerUrl;
             djv[nameof(ForcePathStyle)] = ForcePathStyle;
+            djv[nameof(DisableChecksumValidation)] = DisableChecksumValidation;
             
             if (StorageClass.HasValue)
                 djv[nameof(StorageClass)] = StorageClass.Value;

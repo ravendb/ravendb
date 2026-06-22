@@ -1,23 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
-using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.QueueSink;
-using Raven.Server.NotificationCenter;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Server;
-using Tests.Infrastructure.Extensions;
 using Xunit;
-using QueueSinkConfiguration = Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration;
 
 namespace SlowTests.Server.Documents.QueueSink
 {
@@ -44,48 +40,24 @@ namespace SlowTests.Server.Documents.QueueSink
             return addResult;
         }
 
-        private async Task<string[]> GetQueueSinkErrorNotifications(DocumentStore src)
+        public static IEnumerable<QueueSinkErrorsDetails> GetAlerts(DocumentDatabase database, QueueSinkConfiguration config)
         {
-            var databaseInstanceFor = await Databases.GetDocumentDatabaseInstanceFor(src);
-            using (databaseInstanceFor.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
+            string tag = config.BrokerType switch
             {
-                var notifications = storedNotifications
-                    .Select(n => n.Json)
-                    .Where(n => n.TryGet("AlertType", out string type) && type.StartsWith("QueueSink_"))
-                    .Where(n => n.TryGet("Details", out BlittableJsonReaderObject _))
-                    .Select(n =>
-                    {
-                        n.TryGet("Details", out BlittableJsonReaderObject details);
-                        return details.ToString();
-                    }).ToArray();
-                return notifications;
-            }
-        }
-        
-        public async Task<QueueSinkErrorInfo> TryErrorFromAlertAsync(string databaseName, QueueSinkConfiguration config)
-        {
-            var database = await GetDatabase(databaseName);
+                QueueBrokerType.Kafka => QueueSinkProcess.KafkaTag,
+                QueueBrokerType.RabbitMq => QueueSinkProcess.RabbitMqTag,
+                QueueBrokerType.AzureServiceBus => QueueSinkProcess.AzureServiceBusTag,
+                _ => throw new NotSupportedException($"Unknown broker type: {config.BrokerType}")
+            };
 
-            string tag = config.BrokerType == QueueBrokerType.Kafka ? QueueSinkProcess.KafkaTag : QueueSinkProcess.RabbitMqTag;
-
-            var errorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertReason.QueueSink_Error);
-            var consumeErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertReason.QueueSink_ConsumeError);
-            var scriptErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertReason.QueueSink_ScriptError);
-
-            if (errorAlert.Errors.Count != 0)
+            foreach (var script in config.Scripts)
             {
-                return errorAlert.Errors.First();
+                var processName = $"{config.Name}/{script.Name}";
+                foreach (var error in database.NotificationCenter.QueueSinkNotifications.GetAlerts<QueueSinkErrorsDetails>(tag, processName))
+                {
+                    yield return error;
+                }
             }
-            if (consumeErrorAlert.Errors.Count != 0)
-            {
-                return consumeErrorAlert.Errors.First();
-            }
-            if (scriptErrorAlert.Errors.Count != 0)
-            {
-                return scriptErrorAlert.Errors.First();
-            }
-
-            return null;
         }
         
         protected AsyncManualResetEvent WaitForQueueSinkBatch(DocumentStore store,
@@ -108,10 +80,29 @@ namespace SlowTests.Server.Documents.QueueSink
         {
             if (await etlDone.WaitAsync(timeout) == false)
             {
-                var error = AsyncHelpers.RunSync(() => TryErrorFromAlertAsync(databaseName, config));
+                var database = await GetDatabase(databaseName);
 
-                Assert.Fail($"Queue Sink wasn't done. Error: {error?.Error}");
+                Assert.Fail(BuildSinkErrorMessage(database, config));
             }
+        }
+
+        public static string BuildSinkErrorMessage(DocumentDatabase database, QueueSinkConfiguration config)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Queue Sink '{config.Name}' ({config.BrokerType}) did not complete on database '{database.Name}'.");
+            sb.AppendLine($"Active processes: {database.QueueSinkLoader.Processes.Length}");
+            foreach (var process in database.QueueSinkLoader.Processes)
+            {
+                var stats = process.Statistics;
+                sb.AppendLine($"  - {process.Name}: ConsumeSuccesses={stats.ConsumeSuccesses}, ConsumeErrors={stats.ConsumeErrors}, WasLatestConsumeSuccessful={stats.WasLatestConsumeSuccessful}, LastConsumeErrorTime={stats.LastConsumeErrorTime}");
+            }
+
+            foreach (var alert in GetAlerts(database, config))
+            {
+                sb.AppendJoin(Environment.NewLine, alert.Errors.Select(x => $"{x.Date} : {x.Error}"));
+            }
+
+            return sb.ToString();
         }
 
         protected class User

@@ -506,6 +506,7 @@ export class DatabasesStubs {
                     RabbitMqConnectionSettings: null,
                     AzureQueueStorageConnectionSettings: null,
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "rabbitmq-name": {
                     Type: "Queue",
@@ -517,6 +518,7 @@ export class DatabasesStubs {
                     },
                     AzureQueueStorageConnectionSettings: null,
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "azure-queue-storage-name": {
                     Type: "Queue",
@@ -530,6 +532,7 @@ export class DatabasesStubs {
                         Passwordless: null,
                     },
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "azure-sqs-name": {
                     Type: "Queue",
@@ -545,6 +548,22 @@ export class DatabasesStubs {
                             RegionName: "us-west-2",
                         },
                         Passwordless: false,
+                    },
+                    AzureServiceBusConnectionSettings: null,
+                },
+                "azure-service-bus-name": {
+                    Type: "Queue",
+                    Name: "azure-service-bus-name",
+                    BrokerType: "AzureServiceBus",
+                    KafkaConnectionSettings: null,
+                    RabbitMqConnectionSettings: null,
+                    AzureQueueStorageConnectionSettings: null,
+                    AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: {
+                        ConnectionString:
+                            "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub",
+                        EntraId: null,
+                        Passwordless: null,
                     },
                 },
             },
@@ -598,6 +617,7 @@ export class DatabasesStubs {
             TcpServerUrl: null,
             Log: [],
             Error: "System.UriFormatException: Invalid URI: The format of the URI could not be determined.\n   at System.Uri.CreateThis(String uri, Boolean dontEscape, UriKind uriKind, UriCreationOptions& creationOptions)\n   at System.Uri..ctor(String uriString)\n   at Raven.Server.Documents.ETL.Providers.Queue.QueueBrokerConnectionHelper.CreateRabbitMqConnection(RabbitMqConnectionSettings settings) in D:\\Builds\\RavenDB-6.0-Nightly\\20231123-0200\\src\\Raven.Server\\Documents\\ETL\\Providers\\Queue\\QueueBrokerConnectionHelper.cs:line 80",
+            AcceptsImageInput: false,
         };
     }
 
@@ -608,6 +628,7 @@ export class DatabasesStubs {
             TcpServerUrl: null,
             Log: [],
             Error: null,
+            AcceptsImageInput: false,
         };
     }
 
@@ -1073,6 +1094,7 @@ return docs[0];`,
                     AwsRegionName: "eu-central-1",
                     CustomServerUrl: "",
                     ForcePathStyle: false,
+                    DisableChecksumValidation: false,
                     RemoteFolderName: "",
                 },
                 AzureSettings: {

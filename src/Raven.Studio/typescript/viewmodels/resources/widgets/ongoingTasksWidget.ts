@@ -96,6 +96,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             icon: "icon-rabbitmq-sink",
             colorClass: "rabbitmq-sink",
         },
+        "AzureServiceBusQueueSink": {
+            nameForUI: "Azure Service Bus Sink",
+            icon: "icon-azure-service-bus-sink",
+            colorClass: "azure-service-bus-sink",
+        },
         "Backup": {
             nameForUI: "Backup",
             icon: "icon-backups",

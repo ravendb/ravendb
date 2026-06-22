@@ -26,6 +26,7 @@ export interface S3Destination extends FormDestinationDataBase, AmazonDestinatio
     bucketName?: string;
     customServerUrl?: string;
     forcePathStyle?: boolean;
+    disableChecksumValidation?: boolean;
     isUseCustomHost?: boolean;
 }
 

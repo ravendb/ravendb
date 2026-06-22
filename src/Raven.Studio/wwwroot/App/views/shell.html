@@ -233,6 +233,11 @@
             <span class="global-spinner spinner-sm"></span> <strong>Loading, please wait</strong>
         </div>
         <div class="footer-right">
+            <div class="footer-item" data-bind="visible: ssoAppUrl">
+                <a class="btn btn-primary btn-sm" data-bind="attr: { href: ssoAppUrl }" title="Back to SSO app">
+                    <i class="icon-arrow-left"></i> <span>Back to SSO app</span>
+                </a>
+            </div>
             <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
                 <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
             </div>
