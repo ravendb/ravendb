@@ -10,7 +10,6 @@ $translate-hover-x: 100%;
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    min-height: 131.55px;
     border: 1px solid colors.$border-color-light-var;
     border-radius: sizes.$border-radius;
     transition: bs5variables.$transition-base;
@@ -90,8 +89,11 @@ $variants: (
 );
 
 .add-new-ongoing-task {
+    height: calc(100% - #{sizes.$gutter});
+    margin: #{sizes.$gutter} #{sizes.$gutter} 0 #{sizes.$gutter};
+
     @each $name, $props in $variants {
-        $selector: unquote(".add-new-ongoing-task__card.variant-#{$name}");
+        $selector: unquote(".add-new-ongoing-task-card.variant-#{$name}");
         #{$selector} {
             @extend %ongoing-task-card;
 
@@ -119,14 +121,130 @@ $variants: (
     }
 }
 
+.add-new-ongoing-task-card .task-icon {
+    font-size: 1.25rem;
+}
+
 .ongoing-tasks-grid {
     grid-template-columns: 1fr;
 
-    @media (min-width: sizes.$screen-sm) {
+    @container (min-width: 480px) {
         grid-template-columns: 1fr 1fr;
     }
 
-    @media (min-width: sizes.$screen-lg) {
+    @container (min-width: 720px) {
         grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+.add-new-ongoing-task-layout {
+    flex: 1;
+    min-height: 0;
+
+    @media (max-width: #{sizes.$screen-sm-max}) {
+        margin-top: 0 !important;
+    }
+}
+
+.add-new-ongoing-task-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    container-type: inline-size;
+}
+
+.add-new-ongoing-task-sidebar {
+    width: 224px;
+
+    .form-control.filtering-input {
+        min-width: 0;
+        width: 100%;
+    }
+
+    @media (max-width: #{sizes.$screen-sm-max}) {
+        display: none;
+    }
+}
+
+.add-new-ongoing-task-horizontal-nav {
+    display: none;
+
+    @media (max-width: #{sizes.$screen-sm-max}) {
+        display: flex;
+        flex-direction: column;
+        margin-top: sizes.$gutter-sm;
+    }
+}
+
+.add-new-ongoing-task-chips-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: sizes.$gutter-xs;
+}
+
+button.add-new-ongoing-task-chip {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xxs;
+    padding: 4px 10px;
+    border: 1px solid colors.$border-color-light-var;
+    border-radius: 100px;
+    background: transparent;
+    color: colors.$text-muted-var;
+    white-space: nowrap;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
+    flex-shrink: 0;
+
+    &:hover:not(:disabled) {
+        background: colors.$panel-bg-2-var;
+        color: colors.$text-emphasis-var;
+    }
+
+    &.active {
+        background: colors.$panel-bg-2-var;
+        color: colors.$text-emphasis-var;
+        border-color: colors.$text-muted-var;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+}
+
+button.add-new-ongoing-task-nav-item {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xxs;
+    width: 100%;
+    padding: sizes.$gutter-xxs sizes.$gutter-xs;
+    border: none;
+    border-radius: sizes.$border-radius-sm;
+    background: transparent;
+    color: colors.$text-muted-var;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+
+    &:hover:not(:disabled) {
+        background: colors.$panel-bg-2-var;
+        color: colors.$text-emphasis-var;
+    }
+
+    &.active {
+        background: colors.$panel-bg-2-var;
+        color: colors.$text-emphasis-var;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: default;
     }
 }
