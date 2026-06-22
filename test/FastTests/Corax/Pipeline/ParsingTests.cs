@@ -107,7 +107,14 @@ namespace FastTests.Corax.Pipeline
         public void LowercaseTransformer(string input)
         {
             var bytes = Encoding.UTF8.GetBytes(input);
-            var lowercaseBytes = Encoding.UTF8.GetBytes(input.ToLowerInvariant()).AsSpan();
+
+            // Corax matches Lucene's tokenizer, which lowercases per UTF-16 code unit. Surrogate code units have no
+            // case mapping, so characters outside the BMP are left unchanged - unlike string.ToLowerInvariant() which
+            // folds whole code points. Build the expectation the same way so non-BMP cased characters are not folded.
+            var expected = new StringBuilder(input.Length);
+            foreach (var c in input)
+                expected.Append(char.IsSurrogate(c) ? c : char.ToLowerInvariant(c));
+            var lowercaseBytes = Encoding.UTF8.GetBytes(expected.ToString()).AsSpan();
 
             var dest = new byte[bytes.Length];
             var tokenArray = new Token[1];
