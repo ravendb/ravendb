@@ -831,6 +831,7 @@ namespace Raven.Server.Documents.Replication
             _pullReplicationCompositeChangeVectorsSupported = SupportsPullReplicationCompositeChangeVectors(record);
             ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _logger);
+            SetNumberOfSiblings(record);
             Task.Run(() => ConflictResolver.RunConflictResolversOnce(record.ConflictSolverConfig, index));
             _isInitialized.Raise();
 
@@ -977,6 +978,8 @@ namespace Raven.Server.Documents.Replication
 
             _clusterTopology = GetClusterTopology();
 
+            SetNumberOfSiblings(newRecord);
+
             HandleReplicationChanges(newRecord, instancesToDispose);
 
             var destinations = new List<ReplicationNode>();
@@ -984,10 +987,13 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
 
+            DisposeConnections(instancesToDispose);
+        }
+
+        private void SetNumberOfSiblings(DatabaseRecord newRecord)
+        {
             // a promotable node isn't counted as a sibling, it is a new node that was added and doesn't hold all the data yet
             NumberOfSiblingsInInternalReplication = Math.Max(newRecord.Topology.Members.Count + newRecord.Topology.Rehabs.Count - 1, 0);
-
-            DisposeConnections(instancesToDispose);
         }
 
         protected virtual void HandleReplicationChanges(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
