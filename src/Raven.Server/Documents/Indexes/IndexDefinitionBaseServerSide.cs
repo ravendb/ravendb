@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Indexes
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxPagingBasedOnEntriesId_62;
+            public const long CurrentVersion = CoraxUnicodeLengthAnalyzers_62;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
