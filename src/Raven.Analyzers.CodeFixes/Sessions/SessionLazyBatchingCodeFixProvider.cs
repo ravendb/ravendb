@@ -205,9 +205,15 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     .WithIdentifier(SyntaxFactory.Identifier(lazyName))
                     .WithInitializer(SyntaxFactory.EqualsValueClause(newInitializer));
 
+                // Force 'var': the initializer is now a Lazy<T> (or Lazy<Task<T>>), so the original
+                // explicit declared type (e.g. 'User') would no longer match and would fail to compile.
+                // The .Value extraction statement below restores the original type via 'var'.
+                TypeSyntax varType = SyntaxFactory.IdentifierName("var").WithTriviaFrom(stmt.Declaration.Type);
+
                 LocalDeclarationStatementSyntax newStmt = stmt
-                    .WithDeclaration(stmt.Declaration.WithVariables(
-                        SyntaxFactory.SingletonSeparatedList(newDeclarator)));
+                    .WithDeclaration(stmt.Declaration
+                        .WithType(varType)
+                        .WithVariables(SyntaxFactory.SingletonSeparatedList(newDeclarator)));
 
                 renamings.Add((lazyName, originalName, methodName, stmt.GetLeadingTrivia()));
                 replacements[batchableIndices[i]] = newStmt;

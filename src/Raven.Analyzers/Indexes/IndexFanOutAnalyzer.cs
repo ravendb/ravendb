@@ -70,7 +70,7 @@ namespace Raven.Analyzers.Indexes
             // Detect SelectMany in method-chain form
             foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(lambdaBody as ExpressionSyntax))
             {
-                if (SyntaxHelpers.GetMethodName(chainCall) != "SelectMany")
+                if (SyntaxHelpers.GetMethodName(chainCall) != KnownTypes.SelectManyMethodName)
                     continue;
 
                 Location loc = chainCall.Expression is MemberAccessExpressionSyntax ma
@@ -78,7 +78,7 @@ namespace Raven.Analyzers.Indexes
                     : chainCall.GetLocation();
 
                 context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.IndexFanOut, loc, "SelectMany"));
+                    DiagnosticDescriptors.IndexFanOut, loc, KnownTypes.SelectManyMethodName));
             }
 
             // Detect nested from clauses in query-expression form

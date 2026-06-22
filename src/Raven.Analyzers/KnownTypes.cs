@@ -8,7 +8,8 @@ namespace Raven.Analyzers
         public const string IRavenQueryableName = "IRavenQueryable";
 
         public const string ProjectIntoMethodName = "ProjectInto";
-        public const string SelectMethodName = "Select";
+        public const string SelectMethodName = nameof(Queryable.Select);
+        public const string SelectManyMethodName = nameof(Queryable.SelectMany);
 
         /// <summary>
         /// Query chain methods that must not appear after a projection (Select / ProjectInto) in a

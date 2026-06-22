@@ -131,10 +131,14 @@ namespace Raven.Analyzers.Indexes
 
         private static string GetExpressionKind(SyntaxNode node)
         {
+            // Handles bare (Reduce = …) and qualified (this.Reduce = … / base.Reduce = …) forms,
+            // matching what TryGetMapReduceLambdaBody accepts, so the message names the right kind.
             if (node is AssignmentExpressionSyntax assignment
-                && assignment.Left is IdentifierNameSyntax id)
+                && SyntaxHelpers.TryGetSimpleMemberName(assignment.Left) is SimpleNameSyntax nameNode)
             {
-                return id.Identifier.Text == KnownTypes.ReduceFieldName ? "Reduce" : "Map";
+                return nameNode.Identifier.Text == KnownTypes.ReduceFieldName
+                    ? KnownTypes.ReduceFieldName
+                    : KnownTypes.MapFieldName;
             }
 
             return "Map";

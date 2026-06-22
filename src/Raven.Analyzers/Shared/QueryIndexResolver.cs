@@ -25,9 +25,24 @@ namespace Raven.Analyzers.Shared
             if (symbol is not IMethodSymbol method)
                 return false;
 
-            string containingTypeName = method.ContainingType.Name;
-            return containingTypeName == KnownTypes.IDocumentSessionName
-                || containingTypeName == KnownTypes.IAsyncDocumentSessionName;
+            // Accept the session interfaces themselves as well as concrete implementations
+            // (DocumentSession / AsyncDocumentSession), where the resolved method's containing
+            // type is the class rather than the interface.
+            return IsSessionType(method.ContainingType);
+        }
+
+        private static bool IsSessionType(INamedTypeSymbol type)
+        {
+            if (type.Name == KnownTypes.IDocumentSessionName || type.Name == KnownTypes.IAsyncDocumentSessionName)
+                return true;
+
+            foreach (INamedTypeSymbol iface in type.AllInterfaces)
+            {
+                if (iface.Name == KnownTypes.IDocumentSessionName || iface.Name == KnownTypes.IAsyncDocumentSessionName)
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
