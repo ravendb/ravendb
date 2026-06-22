@@ -25,7 +25,7 @@ export type SourceTableRef = {
 const wizardConfigSchema = z.object({
     provider: providerSchema,
     connectionString: z.string().trim().min(1, "The configuration is missing a connection string."),
-    tables: z.array(z.unknown()).min(1, "The configuration does not define any tables."),
+    tables: z.array(z.looseObject({})).min(1, "The configuration does not define any tables."),
 });
 
 export function buildConfigExport(values: AppFormData): WizardConfig {
@@ -90,7 +90,12 @@ type AnyTableConfig = {
 export function collectSourceTableRefs(tables: CdcSinkTableConfig[]): SourceTableRef[] {
     const refs = new Map<string, SourceTableRef>();
 
-    const visit = (table: AnyTableConfig) => {
+    const visit = (value: unknown) => {
+        if (value === null || typeof value !== "object") {
+            return;
+        }
+
+        const table = value as AnyTableConfig;
         const name = table.sourceTableName?.trim();
 
         if (name) {
@@ -98,8 +103,8 @@ export function collectSourceTableRefs(tables: CdcSinkTableConfig[]): SourceTabl
             refs.set(`${schema ?? ""}::${name}`, { sourceTableSchema: schema, sourceTableName: name });
         }
 
-        (table.embeddedTables ?? []).forEach(visit);
-        (table.linkedTables ?? []).forEach(visit);
+        (Array.isArray(table.embeddedTables) ? table.embeddedTables : []).forEach(visit);
+        (Array.isArray(table.linkedTables) ? table.linkedTables : []).forEach(visit);
     };
 
     tables.forEach(visit);

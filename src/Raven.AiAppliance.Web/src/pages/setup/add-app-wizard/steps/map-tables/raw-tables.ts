@@ -15,19 +15,13 @@ export function serializeFormTablesToRaw(tables: FormRootTable[]): string {
 }
 
 export function parseRawTablesToForm(rawContent: string): FormRootTable[] {
-    let parsed: unknown;
-
-    try {
-        parsed = JSON.parse(rawContent);
-    } catch {
-        throw new Error("The raw configuration is not valid JSON.");
-    }
+    const parsed = parseRawJson(rawContent);
 
     if (!Array.isArray(parsed)) {
         throw new Error("The raw configuration must be a JSON array of tables.");
     }
 
-    const result = tablesSchema.safeParse(wrapDtoTablesToFormShape(parsed as CdcSinkTableConfig[]));
+    const result = tablesSchema.safeParse(toFormShape(parsed as CdcSinkTableConfig[]));
 
     if (!result.success) {
         throw new Error(result.error.issues[0]?.message ?? "The raw configuration does not match the table shape.");
@@ -42,5 +36,21 @@ export function tryParseRawTablesToForm(rawContent: string): FormRootTable[] | n
         return parseRawTablesToForm(rawContent);
     } catch {
         return null;
+    }
+}
+
+function parseRawJson(rawContent: string): unknown {
+    try {
+        return JSON.parse(rawContent);
+    } catch {
+        throw new Error("The raw configuration is not valid JSON.");
+    }
+}
+
+function toFormShape(tables: CdcSinkTableConfig[]): unknown[] {
+    try {
+        return wrapDtoTablesToFormShape(tables);
+    } catch {
+        throw new Error("The raw configuration does not match the table shape.");
     }
 }
