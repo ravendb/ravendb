@@ -169,7 +169,6 @@ namespace Sparrow.Server
             // Serialize writers. Held until WriteHandle.Dispose, or until we
             // throw on timeout/cancel.
             bool gateHeld = false;
-            bool publishedFlag = false;
             try
             {
                 // Acquire inside the try with the ref-bool overload so an
@@ -186,7 +185,6 @@ namespace Sparrow.Server
                 // that races us sees WriterPending in its post-Add result and
                 // undoes before doing protected work.
                 long s = Interlocked.Or(ref _state, WriterPendingBit);
-                publishedFlag = true;
 
                 // Any non-flag bit set means readers are still active.
                 if ((s & ~WriterPendingBit) != 0)
@@ -202,16 +200,18 @@ namespace Sparrow.Server
             }
             catch
             {
-                if (publishedFlag)
+                // Held the gate, so we may have published the writer-pending
+                // flag. Roll back unconditionally: clearing a bit that was
+                // never set and re-setting the cleared events are idempotent,
+                // so this is correct whether we threw before or after the Or.
+                if (gateHeld)
                 {
-                    // Roll back the writer-pending flag so readers can resume.
                     Interlocked.And(ref _state, ~WriterPendingBit);
                     _writerCleared.Set();
                     SetAsyncWriterCleared();
                     _drained.Set();
-                }
-                if (gateHeld)
                     Monitor.Exit(_writerGate);
+                }
                 throw;
             }
         }
