@@ -1,4 +1,5 @@
 ﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
+import router from "plugins/router";
 import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./partials/OngoingTasksReducer";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
@@ -54,6 +55,7 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import { useAppUrls } from "components/hooks/useAppUrls";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import { AzureQueueStorageEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AzureQueueStorageEtlPanel";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -83,6 +85,9 @@ export function OngoingTasksPage() {
     });
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const { forCurrentDatabase } = useAppUrls();
+    const addNewOngoingTaskUrl = forCurrentDatabase.addNewOngoingTaskUrl();
+    const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -121,7 +126,7 @@ export function OngoingTasksPage() {
     useInterval(reload, 10_000);
 
     useEffect(() => {
-        reload();
+        reload().then(() => setIsInitialLoadDone(true));
     }, []);
 
     const onEtlProgress = useCallback(
@@ -341,6 +346,16 @@ export function OngoingTasksPage() {
     );
 
     const showInternalReplication = DatabaseUtils.hasInternalReplication(db);
+
+    useEffect(() => {
+        if (isInitialLoadDone && allTasksCount === 0 && !showInternalReplication) {
+            router.navigate(addNewOngoingTaskUrl + "&noBack=1");
+        }
+    }, [isInitialLoadDone, allTasksCount, showInternalReplication]);
+
+    if (!isInitialLoadDone || (allTasksCount === 0 && !showInternalReplication)) {
+        return null;
+    }
 
     return (
         <div className="content-margin">

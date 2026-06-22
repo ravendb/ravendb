@@ -20,7 +20,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
-import { InputItem } from "components/models/common";
+
 import {
     ongoingTasksReducer,
     ongoingTasksReducerInitializer,
@@ -388,6 +388,7 @@ export function useOngoingTasksOperations(reload: () => void) {
 
 interface OngoingTasksCategory {
     categoryName: string;
+    categoryHeaderName?: string;
     categoryIcon: IconName;
     tasks: TaskItemProps[];
 }
@@ -434,7 +435,6 @@ export function useNewOngoingTasks() {
         !isProfessionalOrAbove &&
         (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
 
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [searchText, setSearchText] = useState<string>("");
     const { forCurrentDatabase } = useAppUrls();
 
@@ -535,7 +535,8 @@ export function useNewOngoingTasks() {
             ],
         },
         {
-            categoryName: "ETL (RavenDB ⇛ TARGET)",
+            categoryName: "ETL",
+            categoryHeaderName: "ETL (RavenDB ⇛ TARGET)",
             categoryIcon: "etl",
             tasks: [
                 {
@@ -628,7 +629,8 @@ export function useNewOngoingTasks() {
             ],
         },
         {
-            categoryName: "SINK (SOURCE ⇛ RavenDB)",
+            categoryName: "Sink",
+            categoryHeaderName: "Sink (SOURCE ⇛ RavenDB)",
             categoryIcon: "hub-sink-replication",
             tasks: [
                 {
@@ -659,35 +661,23 @@ export function useNewOngoingTasks() {
         },
     ];
 
-    function getCategoryCount(category: OngoingTasksCategory["categoryName"]) {
-        const categoryTasks = ongoingTasks.find((x) => x.categoryName === category)?.tasks ?? [];
-        return categoryTasks.length;
-    }
-
     const filteredTasks = ongoingTasks
         .map((category) => ({
             ...category,
             tasks: category.tasks.filter((task) => matchesSearchText(task, searchText)),
         }))
-        .filter(
-            (category) => isCategorySelected(category.categoryName, selectedCategories) && category.tasks.length > 0
-        );
+        .filter((category) => category.tasks.length > 0);
 
-    const categoryList: InputItem[] = [
-        { value: "Replication", label: "Replication", count: getCategoryCount("Replication") },
-        { value: "Backups", label: "Backups", count: getCategoryCount("Backups") },
-        { value: "Subscriptions", label: "Subscriptions", count: getCategoryCount("Subscriptions") },
-        { value: "ETL (RavenDB ⇛ TARGET)", label: "ETL", count: getCategoryCount("ETL (RavenDB ⇛ TARGET)") },
-        { value: "SINK (SOURCE ⇛ RavenDB)", label: "Sink", count: getCategoryCount("SINK (SOURCE ⇛ RavenDB)") },
-    ];
+    const allCategories = ongoingTasks.map((c) => ({
+        categoryName: c.categoryName,
+        categoryIcon: c.categoryIcon,
+    }));
 
     return {
         filteredTasks,
-        categoryList,
+        allCategories,
         searchText,
-        selectedCategories,
         setSearchText,
-        setSelectedCategories,
     };
 }
 
@@ -698,13 +688,4 @@ const matchesSearchText = (task: TaskItemProps, searchText: string) => {
 
     const searchLower = searchText.trim().toLowerCase();
     return task.title.toLowerCase().includes(searchLower) || task.description.toLowerCase().includes(searchLower);
-};
-
-const isCategorySelected = (categoryName: string, selectedCategories: string[]) => {
-    if (selectedCategories.length === 0) {
-        return true;
-    }
-
-    const categoryLower = categoryName.toLowerCase();
-    return selectedCategories.some((selected) => selected.toLowerCase() === categoryLower);
 };
