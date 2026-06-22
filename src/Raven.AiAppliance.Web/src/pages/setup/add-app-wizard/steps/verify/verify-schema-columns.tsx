@@ -58,6 +58,7 @@ export const VERIFIED_COLUMNS: ColumnDef<DiscoverTableResponse>[] = [
                 checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
                 onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
                 aria-label="Select all"
+                disabled={table.options.enableRowSelection === false}
             />
         ),
         cell: ({ row }) => (
@@ -65,6 +66,7 @@ export const VERIFIED_COLUMNS: ColumnDef<DiscoverTableResponse>[] = [
                 checked={row.getIsSelected()}
                 onCheckedChange={(value) => row.toggleSelected(!!value)}
                 aria-label="Select row"
+                disabled={!row.getCanSelect()}
             />
         ),
         enableSorting: false,

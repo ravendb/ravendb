@@ -18,6 +18,8 @@ type VerifiedTablesTableProps = {
     search: string;
     rowSelection: RowSelectionState;
     onRowSelectionChange: (selection: RowSelectionState) => void;
+    /** When an imported configuration is locked, the selection is read-only. */
+    disabled?: boolean;
 };
 
 export function VerifiedTablesTable({
@@ -26,6 +28,7 @@ export function VerifiedTablesTable({
     search,
     rowSelection,
     onRowSelectionChange,
+    disabled,
 }: VerifiedTablesTableProps) {
     // react-table needs a stable filter-state reference between renders; a fresh identity on
     // every render makes it recompute row models and queue state resets, ending in a re-render
@@ -39,6 +42,7 @@ export function VerifiedTablesTable({
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getRowId: getTableKey,
+        enableRowSelection: !disabled,
         onRowSelectionChange: (updaterOrValue) => {
             const value = typeof updaterOrValue === "function" ? updaterOrValue(rowSelection) : updaterOrValue;
             onRowSelectionChange(value);
@@ -66,15 +70,19 @@ export function VerifiedTablesTable({
                         <span className="whitespace-nowrap text-muted-foreground">
                             {selectedCount} out of {totalTableCount} tables selected
                         </span>
-                        <div className="h-4 w-px bg-border" />
-                        <button
-                            type="button"
-                            className="flex items-center gap-1.5 whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
-                            onClick={() => onRowSelectionChange({})}
-                        >
-                            <XIcon className="size-3.5" aria-hidden="true" />
-                            Deselect all
-                        </button>
+                        {!disabled && (
+                            <>
+                                <div className="h-4 w-px bg-border" />
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-1.5 whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
+                                    onClick={() => onRowSelectionChange({})}
+                                >
+                                    <XIcon className="size-3.5" aria-hidden="true" />
+                                    Deselect all
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

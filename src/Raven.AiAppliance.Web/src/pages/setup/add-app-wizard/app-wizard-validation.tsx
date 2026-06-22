@@ -5,6 +5,12 @@ import { z } from "zod";
 const COLUMN_TYPES = ["Default", "Json", "Attachment"] as const satisfies readonly CdcColumnType[];
 const RELATION_TYPES = ["Array", "Map", "Value"] as const satisfies readonly CdcSinkRelationType[];
 
+export const providerSchema = z.union([
+    z.literal("Npgsql"),
+    z.literal("SqlClient"),
+    z.literal("MySqlConnectorFactory"),
+]);
+
 const hasUniqueValues = (values: Array<string | null | undefined>) => {
     const normalized = values.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
 
@@ -135,7 +141,7 @@ export const appSchema = z.object({
     }),
     externalConnection: z.object({
         appName: z.string().trim().min(1, "Application name is required"),
-        provider: z.union([z.literal("Npgsql"), z.literal("SqlClient"), z.literal("MySqlConnectorFactory")]),
+        provider: providerSchema,
         connectionString: z.string().trim().min(1, "Connection string is required."),
     }),
     verifySchema: z.object({

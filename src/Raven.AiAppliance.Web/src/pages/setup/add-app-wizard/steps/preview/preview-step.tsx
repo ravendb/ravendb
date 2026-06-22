@@ -4,21 +4,67 @@ import { FormSelect } from "@/components/form/form-select";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { FormInput } from "@/components/form/form-input";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/shadcn/ui/alert-dialog";
+import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Alert } from "@/components/shadcn/ui/alert";
 import AceEditor from "@/components/ace-editor/ace-editor";
-import { MessageSquareWarningIcon } from "lucide-react";
+import { DownloadIcon, MessageSquareWarningIcon } from "lucide-react";
+import { buildConfigExport, downloadConfig } from "@/pages/setup/add-app-wizard/config-io";
 
 export function PreviewStep() {
-    const { control } = useFormContext<AppFormData>();
+    const { control, getValues } = useFormContext<AppFormData>();
 
     const tables = useWatch({
         control,
         name: "mapTables.tables",
     });
 
+    const dataSource = useWatch({
+        control,
+        name: "dataSource.source",
+    });
+
     return (
         <>
+            {dataSource === "external" && (
+                <div className="flex justify-end">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button type="button" variant="outline" disabled={tables.length === 0}>
+                                <DownloadIcon aria-hidden="true" />
+                                Export configuration
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Export configuration?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    The exported file contains the connection string in plain text, including any
+                                    username and password it holds. Keep it somewhere safe and avoid sharing or
+                                    committing it.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => downloadConfig(buildConfigExport(getValues()))}>
+                                    Export
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
                 <FormSelect
                     control={control}

@@ -75,7 +75,10 @@ function AppWizardAtStep({
         useSetupWizardStore.setState({
             discoverResult: discovery,
             discoverSchemas: [],
+            importState: "none",
+            connectKey: null,
             appliedMapKey: null,
+            mapTablesKey: null,
             mapActiveTable: { type: "root", path: "mapTables.tables.0" },
             mapExpandedPaths: {},
         }),
