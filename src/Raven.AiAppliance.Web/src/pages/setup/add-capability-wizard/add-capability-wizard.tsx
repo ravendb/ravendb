@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/api/api";
 import { appRoutes } from "@/lib/app-routes";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { agentSchema, type AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
@@ -41,6 +43,16 @@ function AddCapabilityWizardBody() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const steps = useCapabilitySteps();
+    const createdAgent = useCapabilityWizardStore((state) => state.createdAgent);
+
+    // The channels step is optional, so the completion button reads "Skip for now" until the
+    // operator actually connects a channel. Shares the channels-step query via React Query cache.
+    const channelsQuery = useQuery({
+        ...api.queries.channels.list(slug),
+        enabled: Boolean(createdAgent),
+    });
+    const hasChannels =
+        createdAgent != null && (channelsQuery.data ?? []).some((channel) => channel.agentId === createdAgent.agentId);
 
     // "Add agent" links here with ?capability=agent; the capability step is then already
     // answered (the form defaults to "agent"), so the wizard starts at the connection step.
@@ -54,7 +66,7 @@ function AddCapabilityWizardBody() {
             cancel={() => navigate(appRoutes.app(slug))}
             completion={{
                 type: "action",
-                label: "Finish",
+                label: hasChannels ? "Finish" : "Skip for now",
                 onComplete: () => navigate(appRoutes.app(slug)),
             }}
         />

@@ -39,8 +39,6 @@ export function ChannelsStep() {
                 loadingLabel="Loading channels..."
             >
                 {channels.length === 0 ? (
-                    // The first-run case for a brand-new agent: lead with the action so connecting a
-                    // channel — not the "Finish" skip below — reads as the obvious next step.
                     <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed px-6 py-12 text-center">
                         <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
                             <MessageSquarePlus className="size-5" aria-hidden="true" />

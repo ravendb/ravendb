@@ -73,7 +73,7 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
         channels: {
             title: "Add a channel",
             description:
-                "Your agent is ready. Connect a channel so people can reach it — or finish and add channels later.",
+                "Your agent is ready. This step is optional — connect a channel so people can reach it, or skip for now and add channels later.",
             bodyComponent: ChannelsStep,
             // Channels are created through their own API, not via the wizard form.
             validate: false,
