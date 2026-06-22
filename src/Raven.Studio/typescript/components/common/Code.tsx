@@ -56,7 +56,18 @@ interface CodeProps {
 }
 
 export default function Code(props: CodeProps) {
-    const { code, className, codeClassName, whiteSpace, wrappable, isActionsHidden, isRunQueryHidden, extraActions, sourceView, isTitleHidden } = props;
+    const {
+        code,
+        className,
+        codeClassName,
+        whiteSpace,
+        wrappable,
+        isActionsHidden,
+        isRunQueryHidden,
+        extraActions,
+        sourceView,
+        isTitleHidden,
+    } = props;
 
     const [wrapped, setWrapped] = useState(true);
     const isWrapped = wrappable === true && wrapped;
