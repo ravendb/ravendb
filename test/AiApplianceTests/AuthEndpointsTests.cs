@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiApplianceTests.E2E.Fixtures;
@@ -72,6 +74,59 @@ public class AuthEndpointsTests(ITestOutputHelper output) : RavenTestBase(output
 
         var status = await client.GetFromJsonAsync<JsonElement>("/api/auth/status");
         Assert.True(status.GetProperty("authenticated").GetBoolean());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task With_no_operator_key_configured_even_a_plausible_key_is_401()
+    {
+        var store = GetDocumentStore();
+        using var factory = new ApplianceWebApplicationFactory(
+            licenseApiUrl: "http://unused-in-unit-tests",
+            setupPackagePath: NewDataPath(forceCreateDir: true),
+            applianceStore: store,
+            configureOptions: opts =>
+            {
+                opts.ConfigDatabase = store.Database;
+                opts.ApiKey = null; // QUILL_API_KEY unset -> ApiKeyStore fails closed (empty key set).
+            });
+        var client = factory.CreateClient(); // carries the default X-Api-Key header
+
+        var resp = await client.GetAsync("/api/apps");
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Admin_endpoint_with_bearer_token_is_authorized()
+    {
+        var store = GetDocumentStore();
+        using var factory = NewFactory(store);
+        var client = factory.CreateClient();
+        // Swap the X-Api-Key header for Authorization: Bearer <key> to exercise the Bearer extraction path.
+        client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", ApplianceWebApplicationFactory.TestApiKey);
+
+        var resp = await client.GetAsync("/api/apps");
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Login_is_rate_limited_after_repeated_attempts()
+    {
+        var store = GetDocumentStore();
+        using var factory = NewFactory(store);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+
+        // auth-login is a fixed-window 10/min policy; an attempt past the window's permit limit is 429.
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 12; i++)
+        {
+            var resp = await client.PostAsJsonAsync("/api/auth/login", new { apiKey = "wrong-key" });
+            statuses.Add(resp.StatusCode);
+        }
+
+        Assert.Contains(HttpStatusCode.TooManyRequests, statuses);
     }
 
     private ApplianceWebApplicationFactory NewFactory(IDocumentStore store) =>

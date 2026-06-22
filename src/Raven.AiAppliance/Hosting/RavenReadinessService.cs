@@ -54,20 +54,22 @@ public sealed class RavenReadinessService(
 
             ready.MarkReady();
 
-            // Bootstrap only flips to Ready once activation has produced a setup
-            // package on disk — pre-activation we still want RavenDB up so the
-            // appliance has somewhere to persist state, but the wizard / chat
-            // endpoints have to stay 503 until the secure config is applied.
-            var setupSettings = GetSetupSettingsPath(opts);
-            if (File.Exists(setupSettings))
+            // Flip bootstrap Ready only from the post-restart secure process — the one that STARTED with
+            // the setup package on disk. On a first / unsecured start the package appears mid-process
+            // (activation just extracted it and is about to restart), so File.Exists would be true against
+            // the still-unsecured store; gating on the startup state keeps readiness from clobbering the
+            // activation-owned Restarting -> Ready transition. Activation owns the flip on first run (s6
+            // restart in containers, or MarkReady inline on unsupervised hosts).
+            if (bootstrap.StartedWithSetupPackage)
             {
-                logger.LogInformation("Setup package present at {Path}; marking bootstrap Ready.", opts.SetupPackagePath);
+                logger.LogInformation("Process started with the setup package present; marking bootstrap Ready.");
                 bootstrap.MarkReady();
             }
             else
             {
                 logger.LogInformation(
-                    "RavenDB reachable but setup package not yet extracted at {Path}; bootstrap stays NeedsActivation until startup activation completes.",
+                    "RavenDB reachable but the process started without a setup package at {Path}; " +
+                    "bootstrap stays in its current phase until startup activation completes.",
                     opts.SetupPackagePath);
             }
         }
