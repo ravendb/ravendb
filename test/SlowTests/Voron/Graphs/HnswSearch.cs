@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FastTests.Voron;
+using FastTests.Voron.Graphs;
 using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Voron;

@@ -12,14 +12,14 @@ internal class GenAiConversationHandler(ServerStore server, DocumentDatabase dat
 {
     private readonly DocumentDatabase _database = database;
 
-    public async Task<GenAiHandlerResult> HandleRequest(CancellationToken token)
+    public async Task<GenAiHandlerResult> HandleRequestAsync(CancellationToken token)
     {
         using var _ = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
 
         // the parameters is a BlittableJsonReaderObject which use a shared underlying context that is not thread safe, so we need to clone it for concurrent read
         _request.Parameters = _request.Parameters?.CloneForConcurrentRead(context);
 
-        var response = await HandleRequest(context, token);
+        var response = await HandleRequestAsync(context, token);
         var result = new GenAiHandlerResult
         {
             Response = response.Response.ToString(), 

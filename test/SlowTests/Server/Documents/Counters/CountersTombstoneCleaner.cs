@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -557,42 +558,35 @@ namespace SlowTests.Server.Documents.Counters
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var cleaner = storage.TombstoneCleaner;
-                await cleaner.ExecuteCleanup();
-
-                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                var converged = await WaitForValueAsync(async () =>
                 {
-                    var cv = storage.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
-                    Assert.Equal(1, cv);
+                    await storage.TombstoneCleaner.ExecuteCleanup();
+                    await storage2.TombstoneCleaner.ExecuteCleanup();
+                    return Converged();
+                }, expectedVal: true, timeout: 30_000, interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds);
+
+                Assert.True(converged,
+                    $"counters did not converge after conflict + cleanup: " +
+                    $"store1 tombstones={Tombstones(storage)} counters={Counters(storage)}, " +
+                    $"store2 tombstones={Tombstones(storage2)} counters={Counters(storage2)} (expected tombstones=0, counters=1 on both)");
+
+                long Tombstones(DocumentDatabase db)
+                {
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                        return db.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
                 }
 
-                cleaner = storage2.TombstoneCleaner;
-                await cleaner.ExecuteCleanup();
-
-                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                long Counters(DocumentDatabase db)
                 {
-                    var cv = storage2.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
-                    Assert.Equal(1, cv);
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                        return db.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
                 }
 
-                long count1 = 0;
-                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    count1 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
-                }
-                Assert.Equal(0, count1);
-
-
-                long count2 = 0;
-                using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    count2 = storage2.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
-                }
-                Assert.Equal(count1, count2);
+                bool Converged() =>
+                    Tombstones(storage) == 0 && Tombstones(storage2) == 0 &&
+                    Counters(storage) == 1 && Counters(storage2) == 1;
             }
         }
 

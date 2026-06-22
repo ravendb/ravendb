@@ -549,5 +549,31 @@ namespace FastTests.Sparrow
                 Assert.NotEqual(Functions.HammingBitDistance<byte>(aSpan, bSpan), 0);
             }
         }
+
+        // DotProduct dispatches to a two-accumulator Vector512 kernel once size is large enough
+        // for a SIMD path. The boundary sizes — exactly one vector wide, and exactly two vectors
+        // wide — are the ones most likely to hit off-by-one conditions in the loop/tail guards.
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(16)]
+        [InlineData(17)]
+        [InlineData(31)]
+        [InlineData(32)]
+        [InlineData(33)]
+        [InlineData(63)]
+        [InlineData(128)]
+        public void DotProduct_MatchesTensorPrimitives_AtVector512Boundaries(int size)
+        {
+            var rng = new Random(size);
+            var a = new float[size];
+            var b = new float[size];
+            for (int i = 0; i < size; i++)
+            {
+                a[i] = (float)(rng.NextDouble() * 2 - 1);
+                b[i] = (float)(rng.NextDouble() * 2 - 1);
+            }
+            var actual = Functions.DotProduct(a, b);
+            var expected = TensorPrimitives.Dot<float>(a, b);
+            Assert.InRange(actual - expected, -1e-4f, 1e-4f);
+        }
     }
 }

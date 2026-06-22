@@ -46,7 +46,9 @@ namespace Raven.Server.Dashboard
         public long KafkaSinkCount { get; set; }
 
         public long RabbitMqSinkCount { get; set; }
-        
+
+        public long AzureServiceBusSinkCount { get; set; }
+
         public long SnowflakeEtlCount { get; set; }
         
         public long EmbeddingsGenerationCount { get; set; }
@@ -76,6 +78,7 @@ namespace Raven.Server.Dashboard
                 [nameof(SubscriptionCount)] = SubscriptionCount,
                 [nameof(KafkaSinkCount)] = KafkaSinkCount,
                 [nameof(RabbitMqSinkCount)] = RabbitMqSinkCount,
+                [nameof(AzureServiceBusSinkCount)] = AzureServiceBusSinkCount,
                 [nameof(SnowflakeEtlCount)] = SnowflakeEtlCount,
                 [nameof(EmbeddingsGenerationCount)] = EmbeddingsGenerationCount,
                 [nameof(GenAiCount)] = GenAiCount

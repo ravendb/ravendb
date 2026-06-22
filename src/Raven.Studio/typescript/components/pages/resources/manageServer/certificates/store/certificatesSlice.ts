@@ -4,6 +4,7 @@ import { loadStatus } from "components/models/common";
 import {
     CertificateItem,
     CertificatesClearance,
+    CertificatesManagementType,
     CertificatesSortMode,
     CertificatesState,
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
@@ -23,12 +24,17 @@ interface InitialState {
     databaseFilter: string;
     clearanceFilter: CertificatesClearance[];
     stateFilter: CertificatesState[];
+    managementTypeFilter: CertificatesManagementType[];
     sortMode: CertificatesSortMode;
     isGenerateModalOpen: boolean;
     isUploadModalOpen: boolean;
     certificateToEdit: CertificateItem;
     certificateToClone: CertificateItem;
     isReplaceServerModalOpen: boolean;
+    isRegisterSsoServerModalOpen: boolean;
+    isRegisterSsoUserModalOpen: boolean;
+    ssoUserToEdit: CertificateItem;
+    ssoUserToClone: CertificateItem;
 }
 
 const initialState: InitialState = {
@@ -45,12 +51,17 @@ const initialState: InitialState = {
     databaseFilter: "",
     clearanceFilter: [],
     stateFilter: [],
+    managementTypeFilter: [],
     sortMode: "By Name - Asc",
     isGenerateModalOpen: false,
     isUploadModalOpen: false,
     certificateToEdit: null,
     certificateToClone: null,
     isReplaceServerModalOpen: false,
+    isRegisterSsoServerModalOpen: false,
+    isRegisterSsoUserModalOpen: false,
+    ssoUserToEdit: null,
+    ssoUserToClone: null,
 };
 
 export const certificatesSlice = createSlice({
@@ -68,6 +79,9 @@ export const certificatesSlice = createSlice({
         },
         stateFilterSet: (state, action: PayloadAction<CertificatesState[]>) => {
             state.stateFilter = action.payload;
+        },
+        managementTypeFilterSet: (state, action: PayloadAction<CertificatesManagementType[]>) => {
+            state.managementTypeFilter = action.payload;
         },
         sortModeSet: (state, action: PayloadAction<CertificatesSortMode>) => {
             state.sortMode = action.payload;
@@ -92,6 +106,24 @@ export const certificatesSlice = createSlice({
         },
         isReplaceServerModalOpenToggled: (state) => {
             state.isReplaceServerModalOpen = !state.isReplaceServerModalOpen;
+        },
+        isRegisterSsoServerModalOpenToggled: (state) => {
+            state.isRegisterSsoServerModalOpen = !state.isRegisterSsoServerModalOpen;
+        },
+        isRegisterSsoUserModalOpenToggled: (state) => {
+            state.isRegisterSsoUserModalOpen = !state.isRegisterSsoUserModalOpen;
+            state.ssoUserToEdit = null;
+            state.ssoUserToClone = null;
+        },
+        ssoUserEditModalOpen: (state, action: PayloadAction<CertificateItem>) => {
+            state.ssoUserToEdit = action.payload;
+            state.ssoUserToClone = null;
+            state.isRegisterSsoUserModalOpen = true;
+        },
+        ssoUserCloneModalOpen: (state, action: PayloadAction<CertificateItem>) => {
+            state.ssoUserToClone = action.payload;
+            state.ssoUserToEdit = null;
+            state.isRegisterSsoUserModalOpen = true;
         },
     },
     extraReducers: (builder) => {

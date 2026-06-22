@@ -23,18 +23,18 @@ describe("ConnectionStrings", () => {
         const { screen } = await rtlRender_WithWaitForLoad(<DefaultConnectionStrings />);
 
         expect(screen.queryByText(selectors.emptyList)).not.toBeInTheDocument();
-        expect(screen.queryAllByClassName("rich-panel-name")).toHaveLength(11);
+        expect(screen.queryAllByClassName("rich-panel-name")).toHaveLength(12);
     });
 
     it("can render action buttons when has access database admin", async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<DefaultConnectionStrings databaseAccess="DatabaseAdmin" />);
 
         // one on the top + one per connection string
-        expect(screen.queryAllByRole("button", { name: selectors.addNew })).toHaveLength(11);
+        expect(screen.queryAllByRole("button", { name: selectors.addNew })).toHaveLength(12);
 
         // one per connection string
-        expect(screen.queryAllByRole("button", { name: selectors.edit })).toHaveLength(11);
-        expect(screen.queryAllByRole("button", { name: selectors.delete })).toHaveLength(11);
+        expect(screen.queryAllByRole("button", { name: selectors.edit })).toHaveLength(12);
+        expect(screen.queryAllByRole("button", { name: selectors.delete })).toHaveLength(12);
     });
 
     it("can hide action buttons when has access below database admin", async () => {

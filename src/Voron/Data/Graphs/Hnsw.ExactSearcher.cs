@@ -20,6 +20,7 @@ public partial class Hnsw
             private readonly ContextBoundNativeList<long>? _nodesToScan;
             private PriorityQueue<long, float> _pq;
             private long _vectorReadCounter = 0;
+            private bool _initialized;
             
             public ExactSearcher(SearchState searchState, Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
             {
@@ -42,48 +43,65 @@ public partial class Hnsw
                 _candidates.Dispose();
             }
 
-            public IEnumerable<bool> Search()
+            public bool MoveNextBatch()
             {
-                _pq = new PriorityQueue<long, float>();
-                Span<byte> vector = _vector.Span;
-                IEnumerable<long> toScan = _nodesToScan.HasValue ? _nodesToScan.Value.Iterate() : AllNodes();
-                foreach (long nodeId in toScan)
+                if (_initialized == false)
                 {
-                    CandidatesProcessed++;
-                    var nodeIndex = _searchState.GetNodeIndexById(nodeId);
-                    if ((_searchState.GetNodeByIndex(nodeIndex).PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone)
-                        continue; // no entries, can skip
-
-                    var distance = _searchState.QueryDistance(_vector.Span, nodeIndex, ref _vectorReadCounter);
-                    if (_pq.Count < NumberOfCandidates || _hasFilterMatch)
-                    {
-                        _pq.Enqueue(nodeId, -distance);
-                    }
-                    else
-                    {
-                        _pq.EnqueueDequeue(nodeId, -distance);
-                    }
+                    Initialize();
+                    _initialized = true;
                 }
 
-                while (_pq.Count > 0)
+                if (_pq.Count == 0)
                 {
                     _candidates.Count = 0;
-                    while (_candidates.Count < NumberOfCandidates && _pq.TryDequeue(out var nodeId, out _))
-                    {
-                        _candidates.AddByRefUnsafe() = _searchState.GetNodeIndexById(nodeId);
-                    }
-
-                    _candidates.Inner.Reverse();
-                    yield return true;
+                    return false;
                 }
 
                 _candidates.Count = 0;
-
-                IEnumerable<long> AllNodes()
+                while (_candidates.Count < NumberOfCandidates && _pq.TryDequeue(out var nodeId, out _))
                 {
-                    for (long nodeId = 1; nodeId <= _searchState.Options.CountOfVectors; nodeId++)
-                        yield return nodeId;
+                    _candidates.AddByRefUnsafe() = _searchState.GetNodeIndexById(nodeId);
                 }
+
+                _candidates.Inner.Reverse();
+                return true;
+            }
+
+            private void Initialize()
+            {
+                // Reset the visited set for this traversal and record the query vector so the
+                // per-node QueryDistance cache is either reused (same vector) or invalidated
+                // (different vector) — OnQueryVector decides based on Memory identity.
+                ++_searchState._visitsCounter;
+                _searchState.OnQueryVector(_vector);
+
+                _pq = new PriorityQueue<long, float>();
+                if (_nodesToScan.HasValue)
+                {
+                    foreach (long nodeId in _nodesToScan.Value.Iterate())
+                        ScanNode(nodeId);
+                }
+                else
+                {
+                    long count = _searchState.Options.CountOfVectors;
+                    for (long nodeId = 1; nodeId <= count; nodeId++)
+                        ScanNode(nodeId);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void ScanNode(long nodeId)
+            {
+                CandidatesProcessed++;
+                var nodeIndex = _searchState.GetNodeIndexById(nodeId);
+                if ((_searchState.GetNodeByIndex(nodeIndex).PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone)
+                    return;
+
+                var distance = _searchState.QueryDistance(_vector.Span, nodeIndex, ref _vectorReadCounter);
+                if (_pq.Count < NumberOfCandidates || _hasFilterMatch)
+                    _pq.Enqueue(nodeId, -distance);
+                else
+                    _pq.EnqueueDequeue(nodeId, -distance);
             }
 
             public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates)

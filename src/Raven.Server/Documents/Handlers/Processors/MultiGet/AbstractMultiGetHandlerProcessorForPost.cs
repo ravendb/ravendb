@@ -3,12 +3,12 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IO;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Exceptions;
@@ -61,9 +61,12 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
                 var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
 
                 var features = new FeatureCollection(HttpContext.Features);
-                features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
+                features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());  
                 features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(memoryStream));
-                var httpContext = new DefaultHttpContext(features);
+                var httpContext = new DefaultHttpContext(features)
+                {
+                    RequestAborted = HttpContext.RequestAborted
+                };
                 var host = HttpContext.Request.Host;
                 var scheme = HttpContext.Request.Scheme;
                 StringBuilder trafficWatchStringBuilder = null;

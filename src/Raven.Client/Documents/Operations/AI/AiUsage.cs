@@ -91,6 +91,10 @@ public class AiUsage : IDynamicJson
         
         writer.WritePropertyName(nameof(CachedTokens));
         writer.WriteInteger(CachedTokens);
+        writer.WriteComma();
+
+        writer.WritePropertyName(nameof(ReasoningTokens));
+        writer.WriteInteger(ReasoningTokens);
         writer.WriteEndObject();
     }
 

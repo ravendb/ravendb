@@ -77,7 +77,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = "show my orders"
                 }, changeVector: null);
 
-                await handler.HandleRequest(context, CancellationToken.None);
+                await handler.HandleRequestAsync(context, CancellationToken.None);
 
                 Assert.NotNull(capturedPromptCacheKey);
                 Assert.Equal("conversations/1-A", capturedPromptCacheKey);
@@ -149,7 +149,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = "show my orders"
                 }, changeVector: null);
 
-                await handler.HandleRequest(context, CancellationToken.None);
+                await handler.HandleRequestAsync(context, CancellationToken.None);
 
                 Assert.False(promptCacheKeySeen, "prompt_cache_key should not be sent for Google provider");
             }
@@ -222,7 +222,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     UserPrompt = "show my orders"
                 }, changeVector: null);
 
-                await handler.HandleRequest(context, CancellationToken.None);
+                await handler.HandleRequestAsync(context, CancellationToken.None);
 
                 Assert.False(promptCacheKeySeen, "prompt_cache_key should not be sent when EnablePromptCache is explicitly false");
             }

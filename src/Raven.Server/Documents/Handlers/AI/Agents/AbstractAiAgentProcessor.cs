@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var streaming = RequestHandler.GetBoolValueQueryString("streaming", required: false) ?? false;
             var changeVector = RequestHandler.GetChangeVectorStringQueryString("changeVector", required: false);
             var debugOverride = RequestHandler.GetBoolValueQueryString("debug", required: false);
+            var cancelPendingActionTools = RequestHandler.GetBoolValueQueryString("cancelPendingActionTools", required: false) ?? false;
 
             AiAgentConfiguration configuration = GetAiAgentConfiguration(agentId);
 
@@ -46,13 +47,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
             };
 
-            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, debugOverride, token);
+            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, debugOverride, cancelPendingActionTools, token);
         }
 
         protected async Task ExecuteInternalAsync(ConversationHandler handler, DocumentsOperationContext context, AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector,
-            bool streaming, bool? debugOverride, OperationCancelToken token)
+            bool streaming, bool? debugOverride, bool cancelPendingActionTools, OperationCancelToken token)
         {
-            handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery(), debugOverride);
+            handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery(), debugOverride, cancelPendingActionTools);
             AiInternalConversationResult r;
 
             if (streaming)
@@ -61,13 +62,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 HttpContext.Response.Headers.ContentType = "text/event-stream";
                 RequestHandler.DisableResponseBuffering();
 
-                r = await handler.HandleStreamingRequest(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
+                r = await handler.HandleStreamingRequestAsync(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
             }
             else
             {
                 try
                 {
-                    r = await handler.HandleRequest(context, token.Token);
+                    r = await handler.HandleRequestAsync(context, token.Token);
                 }
                 catch (ConcurrencyException)
                 {

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Corax;
@@ -11,13 +13,16 @@ using Raven.Server.Indexing;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Graphs;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -26,10 +31,25 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     private const bool DisableDictionaryTraining = false; // [DEBUG ONLY]: disable training.
     private readonly RavenLogger _logger;
     private readonly CoraxDocumentConverterBase _converter;
+
+    private Dictionary<Slice, HnswIndexCache> _hnswCaches;
+    private IndexTransactionCache _currentCache;
+    private StorageEnvironment _environment;
+    private Action<LowLevelTransaction> _newTransactionCreatedHandler;
+    internal IndexWriter ActiveWriter;
+    internal Dictionary<Slice, HashSet<long>> PendingDirtyVectorSets;
+
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
         _logger = RavenLogManager.Instance.GetLoggerForIndex<CoraxIndexPersistence>(index);
         _converter = CreateConverter(index);
+    }
+
+    private int GetMaxNodesForVectorCache()
+    {
+        var cacheSizeBytes = _index.Configuration.CoraxVectorSearchCacheSize.GetValue(SizeUnit.Bytes);
+        var bytesPerNode = HnswIndexCache.EstimateBytesPerNode(_index.Configuration.CoraxVectorDefaultNumberOfEdges);
+        return (int)Math.Min(cacheSizeBytes / bytesPerNode, int.MaxValue);
     }
 
     private CoraxDocumentConverterBase CreateConverter(Index index)
@@ -99,7 +119,19 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void Dispose()
     {
+        if (_environment != null && _newTransactionCreatedHandler != null)
+        {
+            _environment.NewTransactionCreated -= _newTransactionCreatedHandler;
+            _newTransactionCreatedHandler = null;
+            _environment = null;
+        }
         _converter?.Dispose();
+        if (_hnswCaches != null)
+        {
+            foreach (var kv in _hnswCaches)
+                kv.Value.Dispose();
+            _hnswCaches = null;
+        }
     }
 
     public override bool RequireOnBeforeExecuteIndexing()
@@ -176,23 +208,109 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void Initialize(StorageEnvironment environment)
     {
+        using (var roTx = environment.ReadTransaction())
+            WarmInitialCaches(roTx);
+        _currentCache = BuildSnapshotWrapper();
+
+        _environment = environment;
+        _newTransactionCreatedHandler = tx => tx.ImmutableExternalState = Volatile.Read(ref _currentCache);
+        environment.NewTransactionCreated += _newTransactionCreatedHandler;
     }
-    
+
     public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
     {
-        //lucene method
     }
 
     internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
     {
-        //lucene method
-
         return null;
     }
 
     internal override void RecreateSearcher(Transaction asOfTx)
     {
-        //lucene method
+        var dirty = PendingDirtyVectorSets;
+        PendingDirtyVectorSets = null;
+        if (dirty == null)
+            return;
+
+        var maxNodes = GetMaxNodesForVectorCache();
+        if (maxNodes <= 0)
+        {
+            // Cache disabled at runtime (CacheSizeInMb set to 0): stop publishing the caches and drop
+            // our references so new read transactions resolve from disk and a later re-enable rebuilds
+            // from scratch rather than serving entries that missed the commits made while disabled.
+            // In-flight readers keep their captured snapshot; the dropped instances release their native
+            // memory via finalization once those transactions complete.
+            if (_hnswCaches != null)
+            {
+                Volatile.Write(ref _currentCache, null);
+                Volatile.Write(ref _hnswCaches, null);
+            }
+            return;
+        }
+
+        var llt = asOfTx.LowLevelTransaction;
+        Dictionary<Slice, HnswIndexCache> freshlyAdded = null;
+        foreach (var kv in dirty)
+        {
+            if (_hnswCaches != null && _hnswCaches.TryGetValue(kv.Key, out var cache))
+            {
+                cache.ApplyCommit(llt, kv.Key, kv.Value);
+                continue;
+            }
+
+            var fresh = HnswIndexCache.WarmFromScratch(llt, kv.Key, maxNodes);
+            if (fresh is null)
+                continue;
+            (freshlyAdded ??= new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance))[kv.Key] = fresh;
+        }
+
+        if (freshlyAdded is null)
+            return;
+
+        // Copy-on-write: in-flight readers that captured the previous _hnswCaches reference
+        // keep observing it unchanged; new transactions pick up the replacement via the
+        // NewTransactionCreated subscription. Single-writer here (post-commit hook is serial).
+        var grown = _hnswCaches is null
+            ? new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance)
+            : new Dictionary<Slice, HnswIndexCache>(_hnswCaches, SliceComparer.Instance);
+        foreach (var kv in freshlyAdded)
+            grown[kv.Key] = kv.Value;
+
+        Volatile.Write(ref _hnswCaches, grown);
+        Volatile.Write(ref _currentCache, new IndexTransactionCache { VectorNodeCaches = grown });
+    }
+
+    private void WarmInitialCaches(Transaction tx)
+    {
+        var maxNodes = GetMaxNodesForVectorCache();
+        if (maxNodes <= 0)
+            return;
+
+        // Vector fields are read from the index definition, not the fields mapping: field discovery during
+        // initialization must stay independent of analyzer construction.
+        var vectorFieldNames = _converter?.GetVectorFieldNames();
+        if (vectorFieldNames is null)
+            return;
+
+        var llt = tx.LowLevelTransaction;
+        foreach (var fieldName in vectorFieldNames)
+        {
+            Debug.Assert(fieldName.HasValue && fieldName.Size > 0,
+                "Vector field name must be allocated and non-empty for cache keying");
+            var cache = HnswIndexCache.WarmFromScratch(llt, fieldName, maxNodes);
+            if (cache is null)
+                continue;
+            _hnswCaches ??= new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance);
+            _hnswCaches[fieldName] = cache;
+        }
+    }
+
+    private IndexTransactionCache BuildSnapshotWrapper()
+    {
+        return _hnswCaches is null
+            ? null
+            : new IndexTransactionCache { VectorNodeCaches = _hnswCaches };
     }
 
     internal override void RecreateSuggestionsSearchers(Transaction asOfTx)

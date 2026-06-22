@@ -545,9 +545,11 @@ namespace Raven.Server
             void ConfigureMetrics(MeterProviderBuilder builder)
             {
                 var configuration = Configuration.Monitoring.OpenTelemetry;
+                var serviceName = configuration.ServiceName;
+                var serviceNamespace = configuration.ServiceNamespace;
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
-                        .AddService("server", "ravendb", serviceInstanceId: serviceInstanceId));
+                        .AddService(serviceName, serviceNamespace, serviceInstanceId: serviceInstanceId));
                 if (configuration.AspNetCoreInstrumentationMetersEnabled)
                     builder.AddAspNetCoreInstrumentation();
                 if (configuration.RuntimeInstrumentationMetersEnabled)
@@ -1581,7 +1583,8 @@ namespace Raven.Server
                         NotAfter = Certificate.ServerCertificate.NotAfter,
                         NotBefore = Certificate.ServerCertificate.NotBefore,
                         Name = "Old Server Certificate - can delete",
-                        SecurityClearance = SecurityClearance.ClusterNode
+                        SecurityClearance = SecurityClearance.ClusterNode,
+                        Usage = CertificateUsage.RavenServer
                     }, $"{raftRequestId}/put-old-certificate"));
 
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint,
@@ -1593,7 +1596,8 @@ namespace Raven.Server
                         NotAfter = newCertificate.NotAfter,
                         NotBefore = newCertificate.NotBefore,
                         Name = "Server Certificate",
-                        SecurityClearance = SecurityClearance.ClusterNode
+                        SecurityClearance = SecurityClearance.ClusterNode,
+                        Usage = CertificateUsage.RavenServer
                     }, $"{raftRequestId}/put-new-certificate"));
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
@@ -1821,6 +1825,10 @@ namespace Raven.Server
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
+
+            public bool IsSsoAuthenticated;
+            public string SsoUserIdentity;
+            public string SsoServerPublicKeyPinningHash;
 
             public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
@@ -2058,6 +2066,11 @@ namespace Raven.Server
                         MaybeAllowConnectionBasedOnPinningHash(certificate, ctx, ref authenticationStatus, ref cert, connectionInfo);
                     }
 
+                    if (cert == null && ServerStore.LicenseManager.LicenseStatus.HasSso)
+                    {
+                        MaybeAllowConnectionBasedOnSsoServer(certificate, ctx, ref authenticationStatus, ref cert, connectionInfo, log);
+                    }
+
                     if (cert != null)
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
@@ -2066,7 +2079,12 @@ namespace Raven.Server
 
                         var hasTwoFactorKey = cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
 
-                        authenticationStatus.RequiresTwoFactor = hasTwoFactorKey;
+                        // SSO-authenticated connections skip RavenDB's 2FA by design: RavenDB cannot enforce a
+                        // second factor on the identity provider's side, so multi-factor enforcement is the SSO
+                        // server's responsibility. This means a high-clearance (Operator/ClusterAdmin) SSO user gets
+                        // that access with no RavenDB-side second factor, so the SSO provider MUST be configured to
+                        // require MFA for those identities. The Studio surfaces a warning when creating such a user.
+                        authenticationStatus.RequiresTwoFactor = hasTwoFactorKey && authenticationStatus.IsSsoAuthenticated == false;
 
                         if (authenticationStatus.RequiresTwoFactor && TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint) == false)
                         {
@@ -2138,7 +2156,8 @@ namespace Raven.Server
                 Thumbprint = certificate.Thumbprint,
                 PublicKeyPinningHash = pinningHash,
                 NotAfter = certificate.NotAfter,
-                NotBefore = certificate.NotBefore
+                NotBefore = certificate.NotBefore,
+                Usage = certWithSameHash.Usage
             };
 
             cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
@@ -2170,6 +2189,163 @@ namespace Raven.Server
             cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
         }
 
+        private void MaybeAllowConnectionBasedOnSsoServer(X509Certificate2 certificate,
+            TransactionOperationContext ctx,
+            ref AuthenticateConnection authenticationStatus,
+            ref BlittableJsonReaderObject cert,
+            object connectionInfo,
+            StringBuilder log)
+        {
+            // The SSO user identity is carried in a custom OID extension on the client certificate and does not
+            // depend on which SSO server signed it - read it first, before any table scan. A certificate without
+            // this extension cannot be an SSO client certificate, so we skip the SSO lookup entirely.
+            var ssoUserIdExtension = certificate.Extensions[Raven.Client.Constants.Certificates.SsoUserIdExtensionOid];
+            if (ssoUserIdExtension == null)
+                return;
+
+            var payload = CertificateUtils.DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
+            if (payload.IsEmpty)
+            {
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {GetRemoteAddress(connectionInfo)} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"has a malformed or unrecognized SSO user ID extension.");
+                return;
+            }
+
+            // Find the single SSO server whose certificate signed this client certificate. There is typically a
+            // single SSO server cert, so iterating and parsing them inline per request is cheap.
+            CertificateDefinition signingSsoServer = null;
+            foreach (var ssoServerDef in ServerStore.Cluster.GetSsoServerCertificates(ctx))
+            {
+                if (ssoServerDef.Disabled || string.IsNullOrEmpty(ssoServerDef.Certificate))
+                    continue;
+
+                using var ssoServerCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(ssoServerDef.Certificate));
+
+                using var chain = new X509Chain(false);
+                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                chain.ChainPolicy.DisableCertificateDownloads = true;
+                chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+
+                // CustomRootTrust requires the chain to terminate at a self-signed certificate in CustomTrustStore,
+                // but the SSO server certificate may itself be CA-signed (e.g. issued by Let's Encrypt). In that case
+                // the chain builder does not stop at it — it continues upward through the CA's intermediates until it
+                // reaches the CA root, which is not in our CustomTrustStore, causing Build() to return false with
+                // UntrustedRoot. AllowUnknownCertificateAuthority suppresses that failure so Build() succeeds.
+                // IgnoreInvalidBasicConstraints and IgnoreWrongUsage cover the case where the SSO server
+                // certificate lacks the CA basic constraint or the certificate-signing key usage
+                // (e.g. in certificates issued by Let's Encrypt).
+                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority
+                                                      | X509VerificationFlags.IgnoreInvalidBasicConstraints
+                                                      | X509VerificationFlags.IgnoreWrongUsage;
+                chain.ChainPolicy.CustomTrustStore.Add(ssoServerCert);
+
+                if (chain.Build(certificate) == false || chain.ChainElements.Count < 2)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info($"Failed to validate certificate chain for SSO server '{ssoServerDef.Name}' with thumbprint '{ssoServerCert.Thumbprint}'");
+                    }
+
+                    foreach (var chainStatus in chain.ChainStatus)
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug($"SSO chain status for '{ssoServerDef.Name}': {chainStatus.Status} - {chainStatus.StatusInformation}");
+
+                        log?.AppendLine($"Chain status: {chainStatus.Status} - {chainStatus.StatusInformation}");
+                    }
+                    continue;
+                }
+
+                // A successful Build() only proves the client cert chains to *some* issuer - because
+                // AllowUnknownCertificateAuthority suppresses the untrusted-root error, any certificate signed by a
+                // CA the host trusts builds a chain of length >= 2 even though it never went through this SSO server.
+                // Pin the immediate issuer to the registered SSO server's public key so only certificates actually
+                // signed by it are accepted.
+                var issuer = chain.ChainElements[1].Certificate;
+                if (CertificateUtils.PinningHashEquals(issuer.GetPublicKeyPinningHash(), ssoServerDef.PublicKeyPinningHash) == false)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Client certificate '{certificate.Thumbprint}' chained successfully but its issuer does not match SSO server '{ssoServerDef.Name}' - skipping.");
+                    continue;
+                }
+
+                // Chain validated - this cert was signed by this SSO server cert. A client certificate is signed by
+                // exactly one SSO server, so there is no point in checking the rest.
+                signingSsoServer = ssoServerDef;
+                break;
+            }
+
+            if (signingSsoServer == null)
+                return;
+
+            var ssoUserIdentity = payload.GetDisplayIdentity();
+            var ssoServerPinningHash = signingSsoServer.PublicKeyPinningHash;
+
+            if (string.IsNullOrEmpty(ssoServerPinningHash))
+                return;
+
+            // Single client-table lookup. NOTE: GetSsoClientCertificateByIdentity still does a full scan of the
+            // certificates table for SsoClient entries; a usage-typed secondary index is a possible future
+            // optimization if the number of SSO users grows large.
+            var ssoUserDef = ServerStore.Cluster.GetSsoClientCertificateByIdentity(ctx, payload);
+            if (ssoUserDef == null)
+            {
+                string remoteAddress = GetRemoteAddress(connectionInfo);
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"signed by SSO server '{signingSsoServer.Name}'. SSO identity '{ssoUserIdentity}' is not registered in the cluster - rejecting.");
+
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
+                return;
+            }
+
+            if (ssoUserDef.Disabled)
+            {
+                string remoteAddress = GetRemoteAddress(connectionInfo);
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"signed by SSO server '{signingSsoServer.Name}'. SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) is disabled - rejecting.");
+
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
+                return;
+            }
+
+            if (ssoUserDef.AllowAnySsoServer == false &&
+                (ssoUserDef.SsoServerPublicKeyPinningHashes == null ||
+                 ssoUserDef.SsoServerPublicKeyPinningHashes.Any(h => CertificateUtils.PinningHashEquals(h, ssoServerPinningHash)) == false))
+            {
+                string remoteAddress = GetRemoteAddress(connectionInfo);
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                        $"signed by SSO server '{signingSsoServer.Name}' (hash '{ssoServerPinningHash}'). " +
+                        $"SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) exists but is not bound to this SSO server - rejecting.");
+
+                authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
+                return;
+            }
+
+            authenticationStatus.IsSsoAuthenticated = true;
+            authenticationStatus.SsoUserIdentity = ssoUserIdentity;
+            authenticationStatus.SsoServerPublicKeyPinningHash = ssoServerPinningHash;
+
+            cert = ctx.ReadObject(ssoUserDef.ToJson(), "SSO/User/Certificate/Definition");
+
+            if (_auditLogger.IsAuditEnabled)
+                _auditLogger.Audit(
+                    $"Connection from {GetRemoteAddress(connectionInfo)} with SSO-authenticated certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})'. " +
+                    $"SSO user: '{ssoUserDef.Name}' ({ssoUserIdentity}), SSO server: '{signingSsoServer.Name}' ({signingSsoServer.Thumbprint}). " +
+                    $"Security Clearance: {ssoUserDef.SecurityClearance}, " +
+                    $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, ssoUserDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+        }
+
         private static string GetRemoteAddress(object connectionInfo)
         {
             string remoteAddress = null;
@@ -2179,7 +2355,7 @@ namespace Raven.Server
                     remoteAddress = tcp.Client.RemoteEndPoint.ToString();
                     break;
 
-                case HttpConnectionFeature http:
+                case IHttpConnectionFeature http:
                     remoteAddress = $"{http.RemoteIpAddress}:{http.RemotePort}";
                     break;
             }

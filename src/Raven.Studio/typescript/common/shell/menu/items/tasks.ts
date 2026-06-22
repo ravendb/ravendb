@@ -404,6 +404,19 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
                 alternativeTitles: ["Create RabbitMQ Sink Task"],
             }
         }),
+        new leafMenuItem({
+            route: 'databases/tasks/editAzureServiceBusSinkTask',
+            moduleId: require('viewmodels/database/tasks/editAzureServiceBusSinkTask'),
+            title: 'Azure Service Bus Sink Task',
+            nav: false,
+            css: "icon-plus",
+            dynamicHash: appUrls.editAzureServiceBusSinkTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks',
+            search: {
+                overrideTitle: "Add New Azure Service Bus Sink Task",
+                alternativeTitles: ["Create Azure Service Bus Sink Task"],
+            }
+        }),
         new separatorMenuItem(),
         new leafMenuItem({
             route: 'databases/tasks/tasksErrors',

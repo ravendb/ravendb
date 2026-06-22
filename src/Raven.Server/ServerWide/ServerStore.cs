@@ -177,6 +177,8 @@ namespace Raven.Server.ServerWide
 
         private readonly List<AlertRaised> _storeAlertForLateRaise;
 
+        private bool _dismissHighReadAheadAlert;
+
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
@@ -807,6 +809,40 @@ namespace Raven.Server.ServerWide
                     Logger.Info("An error occurred while trying to determine Is Swapping On Hdd Instead Of Ssd", e);
             }
 
+            try
+            {
+                var thresholdKb = Configuration.Storage.ReadAheadKbAlertThreshold;
+                if (thresholdKb != null)
+                {
+                    var highReadAheadDevices = PlatformSpecific.MemoryInformation.GetBlockDevicesWithHighReadAhead(thresholdKb.Value);
+                    if (highReadAheadDevices is { Count: > 0 })
+                    {
+                        var deviceList = string.Join(", ", highReadAheadDevices.Select(x => $"{x.DeviceName} ({x.ReadAheadValue})"));
+                        var alert = AlertRaised.Create(
+                            null,
+                            "High read_ahead_kb Detected",
+                            $"One or more block devices have read_ahead_kb set above {thresholdKb.Value} KB: {deviceList}. " +
+                            "This can cause excessive I/O during random-access workloads. " +
+                            "Check the device(s) backing RavenDB's data and consider lowering it there. Please follow the documentation for guidance.",
+                            AlertReason.HighReadAheadKb,
+                            NotificationSeverity.Warning);
+                        if (NotificationCenter.IsInitialized)
+                            NotificationCenter.Add(alert);
+                        else
+                            _storeAlertForLateRaise.Add(alert);
+                    }
+                    else if (highReadAheadDevices != null)
+                    {
+                        _dismissHighReadAheadAlert = true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("An error occurred while raising the high read_ahead_kb alert", e);
+            }
+
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
@@ -814,6 +850,7 @@ namespace Raven.Server.ServerWide
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
+            options.UseSequentialReadAheadHintForJournalRecovery = Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
 
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
@@ -888,6 +925,9 @@ namespace Raven.Server.ServerWide
             {
                 NotificationCenter.Add(alertRaised);
             }
+
+            if (_dismissHighReadAheadAlert)
+                NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.HighReadAheadKb, null), sendNotificationEvenIfDoesntExist: false);
 
             CheckSwapOrPageFileAndRaiseNotification();
             _storeAlertForLateRaise.Clear();

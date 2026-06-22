@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -21,6 +22,13 @@ namespace Sparrow.Server.Platform
                 if (PlatformDetails.RunningOnPosix)
                     return CheckPageFileOnHdd.PosixIsSwappingOnHddInsteadOfSsd();
                 return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
+            }
+
+            public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead(int thresholdKb)
+            {
+                if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
+                    return null;
+                return CheckBlockDeviceKernelSettings.GetBlockDevicesWithHighReadAhead(thresholdKb);
             }
         }
 
@@ -56,7 +64,7 @@ namespace Sparrow.Server.Platform
                     Win32MemoryProtectMethods.MemoryProtection.READWRITE);
 
                 if (allocate4KbAlignedMemory == null)
-                    ThrowFailedToAllocate();
+                    ThrowFailedToAllocate(size);
 
                 return allocate4KbAlignedMemory;
             }
@@ -87,9 +95,10 @@ namespace Sparrow.Server.Platform
             }
 
             [DoesNotReturn]
-            private static void ThrowFailedToAllocate()
+            private static void ThrowFailedToAllocate(long size)
             {
-                throw new Win32Exception("Could not allocate memory");
+                var error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(error, $"Could not allocate memory (allocation size: {size} bytes). {Marshal.GetPInvokeErrorMessage(error)}");
             }
 
             [DoesNotReturn]

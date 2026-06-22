@@ -33,6 +33,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
         var modelType = RequestHandler.GetEnumQueryString<AiModelType>("modelType");
 
         InMemoryLoggerProvider logger = null;
+        bool acceptsImageInput = false;
         try
         {
             using (var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken())
@@ -103,7 +104,8 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                         using (var client = ChatCompletionClient.CreateChatCompletionClient( ServerStore.ContextPool, aiConnectionString))
                         {
                             var schema = ChatCompletionClient.GetSchemaFromSampleObject("{\"answer\":\"the answer to the user's prompt\"}");
-                            await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, HttpContext.RequestAborted);
+                            await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, token.Token);
+                            acceptsImageInput = await client.TestAcceptsImageInputAsync(token.Token);
                         }
 
                         break;
@@ -111,7 +113,11 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                         throw new ArgumentOutOfRangeException("Invalid model type: " + aiConnectionString.ModelType);
                     }
 
-                var result = new DynamicJsonValue { [nameof(NodeConnectionTestResult.Success)] = true };
+                var result = new DynamicJsonValue
+                {
+                    [nameof(NodeConnectionTestResult.Success)] = true,
+                    [nameof(NodeConnectionTestResult.AcceptsImageInput)] = acceptsImageInput
+                };
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {

@@ -95,6 +95,7 @@ const ravenCloudSource = yup.object({
 const amazonS3Source = yup.object({
     isUseCustomHost: yup.boolean(),
     isForcePathStyle: yup.boolean(),
+    isDisableChecksumValidation: yup.boolean(),
     customHost: yup.string().when(["isUseCustomHost", "$sourceType"], {
         is: (isUseCustomHost: boolean, sourceType: RestoreSource) => isUseCustomHost && sourceType === "amazonS3",
         then: (schema) => schema.trim().strict().required(),
