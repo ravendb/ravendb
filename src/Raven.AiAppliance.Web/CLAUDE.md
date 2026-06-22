@@ -6,6 +6,8 @@ Frontend for Raven AI Appliance. It is a Vite + React + TypeScript app and is fi
 
 - First read nearby code and follow existing project patterns. Prefer project libraries, generated clients, hooks, shadcn components, and established helpers over custom solutions.
 - Keep code boring, readable, and explicit. Avoid clever shortcuts, magic values, over-abstraction, and premature optimization.
+- Let code be self-explanatory. Add a comment only for non-obvious _why_ (intent, edge cases, workarounds), never to restate what the code already shows. Prefer clear names over explanatory comments.
+- Do not declare a `let` only to assign it inside `try`/`catch`. Extract a small helper that returns from the `try` (and throws a friendly error in `catch`) so the caller keeps a `const`.
 - Avoid `useEffect` unless it is genuinely needed. Prefer derived state, event handlers, React Query, React Hook Form, Zod, and existing framework mechanisms.
 - Do not add `useMemo`/`useCallback` just for routine render optimization; React Compiler is enabled.
 - API code should use the generated server API by default. Add custom services only when generated API is not enough.
