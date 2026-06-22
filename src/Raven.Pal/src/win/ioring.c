@@ -72,10 +72,10 @@ struct IoRingSetup
 
 struct IoRingSetup IoRing;
 
-int32_t hresult_to_detailed_error(HRESULT hr)
+static int32_t hresult_to_detailed_error(HRESULT hr)
 {
-    // We need translate HRESULT code into Win32 error code to have correct handling inside RavenDB.
-    // If we do not have possibility to convert it into Win32 then return the original value.
+    // We need to translate HRESULT codes into Win32 error codes to have correct handling inside RavenDB.
+    // If we cannot convert to Win32, return the original value.
     if (HRESULT_FACILITY(hr) == FACILITY_WIN32)
     {
         return HRESULT_CODE(hr);

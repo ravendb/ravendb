@@ -67,7 +67,7 @@ int32_t _open_pager_file(int fd,
                          int64_t *memory_size,
                          int32_t *detailed_error_code)
 {
-    int8_t errno_available = true;
+    bool errno_available = true;
     int32_t rc = SUCCESS;
     struct handle *handle_ptr = NULL;
     void *mem = NULL;
