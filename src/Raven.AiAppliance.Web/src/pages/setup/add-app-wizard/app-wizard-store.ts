@@ -27,6 +27,11 @@ export type SetupWizardState = {
     setAllMapTablesExpanded: (paths: Record<string, boolean>) => void;
     removeMapTableUiState: (path: string) => void;
     resetMapTablesUiState: () => void;
+    isMapTablesRawView: boolean;
+    mapTablesRawContent: string;
+    openMapTablesRawView: (content: string) => void;
+    closeMapTablesRawView: () => void;
+    setMapTablesRawContent: (content: string) => void;
 };
 
 const initialState: Pick<
@@ -39,6 +44,8 @@ const initialState: Pick<
     | "mapTablesKey"
     | "mapActiveTable"
     | "mapExpandedPaths"
+    | "isMapTablesRawView"
+    | "mapTablesRawContent"
 > = {
     discoverResult: null,
     discoverSchemas: [],
@@ -48,6 +55,8 @@ const initialState: Pick<
     mapTablesKey: null,
     mapActiveTable: null,
     mapExpandedPaths: {},
+    isMapTablesRawView: false,
+    mapTablesRawContent: "",
 };
 
 export const useSetupWizardStore = create<SetupWizardState>((set) => ({
@@ -83,5 +92,9 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
                 ),
             ),
         })),
-    resetMapTablesUiState: () => set({ mapActiveTable: null, mapExpandedPaths: {} }),
+    resetMapTablesUiState: () =>
+        set({ mapActiveTable: null, mapExpandedPaths: {}, isMapTablesRawView: false, mapTablesRawContent: "" }),
+    openMapTablesRawView: (content) => set({ isMapTablesRawView: true, mapTablesRawContent: content }),
+    closeMapTablesRawView: () => set({ isMapTablesRawView: false, mapTablesRawContent: "" }),
+    setMapTablesRawContent: (content) => set({ mapTablesRawContent: content }),
 }));

@@ -2,6 +2,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
+import { useParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/api/api";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { sampleAgentSuggestion } from "@/mocks/apps-mocks";
@@ -73,7 +76,18 @@ function CapabilityWizardAtStep({ initialStep }: { initialStep: AgentStepId }) {
 
 // useCapabilitySteps reads the form via context, so it must run inside the provider above.
 function CapabilityWizardStepBody({ initialStep }: { initialStep: AgentStepId }) {
+    const { slug = "" } = useParams();
     const steps = useCapabilitySteps();
+    const createdAgent = useCapabilityWizardStore((state) => state.createdAgent);
+
+    // Mirror the real component: the optional channels step reads "Skip for now" until a channel
+    // is connected. Lets the Channels / ChannelsEmpty stories show each label.
+    const channelsQuery = useQuery({
+        ...api.queries.channels.list(slug),
+        enabled: Boolean(createdAgent),
+    });
+    const hasChannels =
+        createdAgent != null && (channelsQuery.data ?? []).some((channel) => channel.agentId === createdAgent.agentId);
 
     return (
         <FormWizard
@@ -81,7 +95,7 @@ function CapabilityWizardStepBody({ initialStep }: { initialStep: AgentStepId })
             flow={CAPABILITY_FLOW}
             initialStep={initialStep}
             cancel={() => {}}
-            completion={{ type: "action", label: "Finish", onComplete: () => {} }}
+            completion={{ type: "action", label: hasChannels ? "Finish" : "Skip for now", onComplete: () => {} }}
         />
     );
 }
