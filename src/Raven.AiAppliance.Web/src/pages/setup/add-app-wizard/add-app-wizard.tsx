@@ -21,9 +21,7 @@ export function AddAppWizard() {
         mode: "onChange",
         defaultValues: getDefaultValues(),
         resolver: async (values, context, options) => {
-            const flow = getAppFlow({
-                dataSource: values.dataSource?.source,
-            });
+            const flow = getAppFlow({ dataSource: values.dataSource?.source });
             return zodResolver(buildAppSchemaForFlow(flow))(values, context, options);
         },
     });
@@ -73,9 +71,7 @@ function AddAppWizardBody() {
         name: "dataSource.source",
     });
 
-    const flow = getAppFlow({
-        dataSource,
-    });
+    const flow = getAppFlow({ dataSource });
 
     return (
         <FormWizard

@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
+import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
 import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
 import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
@@ -27,6 +28,7 @@ export function VerifySchemaStep() {
     const { setValue, getValues, formState } = useFormContext<AppFormData>();
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
     const discoverSchemas = useSetupWizardStore((state) => state.discoverSchemas);
+    const isLocked = useSetupWizardStore((state) => state.importState) === "locked";
     const discoverMutation = useDiscoverTablesMutation();
 
     const [activeTab, setActiveTab] = useState<VerifyTab>("verified");
@@ -94,6 +96,7 @@ export function VerifySchemaStep() {
 
     return (
         <div className="grid gap-4">
+            <ImportedConfigAlert />
             <MessageList messages={discoverResult?.errors} tone="destructive" />
             <MessageList messages={discoverResult?.warnings} tone="warning" />
 
@@ -118,6 +121,7 @@ export function VerifySchemaStep() {
                             variant="outline"
                             className="ml-auto"
                             onClick={() => setIsSchemasSheetOpen(true)}
+                            disabled={isLocked}
                         >
                             <PlusIcon aria-hidden="true" />
                             Customize schemas
@@ -161,6 +165,7 @@ export function VerifySchemaStep() {
                             search={search}
                             rowSelection={rowSelection}
                             onRowSelectionChange={handleRowSelectionChange}
+                            disabled={isLocked}
                         />
                     ) : (
                         <NeedsConfigTablesTable tables={needsConfigTables} search={search} />

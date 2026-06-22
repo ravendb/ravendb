@@ -4,12 +4,24 @@ import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-sto
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { useFormContext } from "react-hook-form";
 
+export function computeConnectKey(
+    connection: Pick<AppFormData["externalConnection"], "provider" | "connectionString">,
+): string {
+    return JSON.stringify({ provider: connection.provider, connectionString: connection.connectionString });
+}
+
 export function useConnectSourceStep() {
     const { getValues } = useFormContext<AppFormData>();
     const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
 
     return async () => {
+        const store = useSetupWizardStore.getState();
         const formValues = getValues("externalConnection");
+        const connectKey = computeConnectKey(formValues);
+
+        if (connectKey === store.connectKey) {
+            return;
+        }
 
         const connectResult = await api.services.setup.connect({
             connectionString: formValues.connectionString,
@@ -20,10 +32,11 @@ export function useConnectSourceStep() {
             throw Error(connectResult.errors?.join("\n") || "Connection failed.");
         }
 
-        // The first discovery always uses the connection's default schema. Custom
-        // schemas can be picked later on the verify step.
-        const discoverResult = await discoverTables(formValues, []);
+        const schemas = store.discoverSchemas;
+        const discoverResult = await discoverTables(formValues, schemas);
 
-        setDiscoverResult(discoverResult, []);
+        setDiscoverResult(discoverResult, schemas);
+        store.setConnectKey(connectKey);
+        store.invalidateMapping();
     };
 }

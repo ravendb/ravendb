@@ -2,15 +2,23 @@ import { create } from "zustand";
 import type { DiscoverResponse } from "@/api/generated/server-api";
 import type { MapActiveTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 
+export type ImportState = "none" | "locked" | "unlocked";
+
 export type SetupWizardState = {
     reset: () => void;
     discoverResult: DiscoverResponse | null;
-    /** Schemas used for the last discovery. Empty means the connection's default schema. */
     discoverSchemas: string[];
     setDiscoverResult: (result: DiscoverResponse, discoverSchemas: string[]) => void;
-    /** Fingerprint of the inputs used to generate mapTables.tables, so re-entering the map step keeps user edits. */
+    importState: ImportState;
+    lockImportedConfig: () => void;
+    unlockImportedConfig: () => void;
+    connectKey: string | null;
+    setConnectKey: (key: string) => void;
     appliedMapKey: string | null;
     setAppliedMapKey: (key: string) => void;
+    mapTablesKey: string | null;
+    setMapTablesKey: (key: string) => void;
+    invalidateMapping: () => void;
     mapActiveTable: MapActiveTable | null;
     setMapActiveTable: (table: MapActiveTable | null) => void;
     mapExpandedPaths: Record<string, boolean>;
@@ -23,11 +31,21 @@ export type SetupWizardState = {
 
 const initialState: Pick<
     SetupWizardState,
-    "discoverResult" | "discoverSchemas" | "appliedMapKey" | "mapActiveTable" | "mapExpandedPaths"
+    | "discoverResult"
+    | "discoverSchemas"
+    | "importState"
+    | "connectKey"
+    | "appliedMapKey"
+    | "mapTablesKey"
+    | "mapActiveTable"
+    | "mapExpandedPaths"
 > = {
     discoverResult: null,
     discoverSchemas: [],
+    importState: "none",
+    connectKey: null,
     appliedMapKey: null,
+    mapTablesKey: null,
     mapActiveTable: null,
     mapExpandedPaths: {},
 };
@@ -40,7 +58,12 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
             discoverResult: result,
             discoverSchemas,
         }),
+    lockImportedConfig: () => set({ importState: "locked" }),
+    unlockImportedConfig: () => set({ importState: "unlocked" }),
+    setConnectKey: (key) => set({ connectKey: key }),
     setAppliedMapKey: (key) => set({ appliedMapKey: key }),
+    setMapTablesKey: (key) => set({ mapTablesKey: key }),
+    invalidateMapping: () => set({ appliedMapKey: null }),
     setMapActiveTable: (table) => set({ mapActiveTable: table }),
     toggleMapTableExpanded: (path) =>
         set((state) => ({
