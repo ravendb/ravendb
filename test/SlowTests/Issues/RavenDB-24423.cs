@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using Corax.Pipeline;
+using Corax.Pipeline.Parsing;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -86,7 +85,7 @@ public class RavenDB_24423(ITestOutputHelper output) : RavenTestBase(output)
 
             defaultAnalyzer.Execute(sourceString.AsSpan(), ref localBuffer, ref localTokens);
 
-            var lowerRune = Rune.ToLowerInvariant(rune);
+            var lowerRune = ScalarTransformers.ToLowerInvariantLikeLucene(rune);
             var lowerStr = lowerRune.ToString();
             var lowerBytes = Encodings.Utf8.GetBytes(lowerStr);
             Assert.Equal(lowerBytes.Length, (int)localTokens[0].Length);

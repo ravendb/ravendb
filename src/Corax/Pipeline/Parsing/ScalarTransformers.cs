@@ -10,6 +10,12 @@ namespace Corax.Pipeline.Parsing
 {
     internal static class ScalarTransformers
     {
+        // Lucene's LowerCaseKeywordTokenizer lowercases per UTF-16 code unit. Surrogate code units have no case
+        // mapping, so characters outside the BMP (i.e. encoded as surrogate pairs) are left unchanged by Lucene.
+        // To keep Corax terms byte-for-byte identical to Lucene, we must NOT case fold non-BMP runes here.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Rune ToLowerInvariantLikeLucene(Rune rune) => rune.IsBmp ? Rune.ToLowerInvariant(rune) : rune;
+
         public static int ToLowercaseAscii(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
             nint pos = 0;
@@ -120,8 +126,8 @@ namespace Corax.Pipeline.Parsing
                         throw new InvalidDataException($"Invalid UTF8 stream received. Operation Status: {opStatus}");
                     
                     sourceSpan = sourceSpan.Slice(bytesSourceConsumed);
-                    
-                    rune = Rune.ToLowerInvariant(rune);
+
+                    rune = ToLowerInvariantLikeLucene(rune);
                     if (rune.TryEncodeToUtf8(dest.Slice(destPos + destUsed), out int bytesWritten) == false)
                         throw new InvalidDataException($"Destination buffer is too small. Buffer Size: {dest.Length}, Write Position: {destPos + destUsed}");
                     
@@ -208,9 +214,9 @@ namespace Corax.Pipeline.Parsing
                 var opStatus = Rune.DecodeFromUtf8(source.Slice((int)sourcePos), out var rune, out int bytesConsumed);
                 if (opStatus != OperationStatus.Done)
                     throw new InvalidDataException($"Invalid UTF8 stream received. Operation Status: {opStatus}");
-                
-                rune = Rune.ToLowerInvariant(rune);
-                
+
+                rune = ToLowerInvariantLikeLucene(rune);
+
                 // Encode the rune into UTF8
                 if (rune.TryEncodeToUtf8(dest.Slice((int)destPos), out int bytesWritten) == false)
                     throw new InvalidDataException($"Destination buffer is too small. Buffer Size: {dest.Length}, Write Position: {destPos}");
