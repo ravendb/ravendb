@@ -6,7 +6,7 @@ import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-valida
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { useFormContext } from "react-hook-form";
 
-export function computeMapTablesKey(tables: AppFormData["mapTables"]["tables"]): string {
+function computeMapTablesKey(tables: AppFormData["mapTables"]["tables"]): string {
     return JSON.stringify(mapFormTablesToDto(tables));
 }
 
