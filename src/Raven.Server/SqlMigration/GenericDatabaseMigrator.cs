@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -596,17 +597,19 @@ namespace Raven.Server.SqlMigration
         {
             // Case-insensitive column lookup: source identifiers can differ in case from the configured mapping.
             var columnSchema = tableSchema.Columns.Find(x => string.Equals(x.Name, column, StringComparison.OrdinalIgnoreCase));
+            if (columnSchema == null)
+                throw new InvalidOperationException($"Primary key column '{column}' was not found in the schema of table '{tableSchema.Schema}.{tableSchema.TableName}'.");
+
             var raw = primaryKeyValue[index];
 
-            if (columnSchema?.Type != ColumnType.Number)
+            if (columnSchema.Type != ColumnType.Number)
                 return raw;
 
-            // Widen the numeric parse: integer keys may be bigint (beyond int range), so try long first,
-            // then decimal for fixed-point/scaled keys. Leave the original value if it isn't numeric.
-            var text = raw?.ToString();
-            if (long.TryParse(text, out var asLong))
+            // Widen the numeric parse with invariant culture: integer keys may be bigint (beyond int range), so try
+            // long first, then decimal for fixed-point/scaled keys. Leave the original value if it isn't numeric.
+            if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var asLong))
                 return asLong;
-            if (decimal.TryParse(text, out var asDecimal))
+            if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var asDecimal))
                 return asDecimal;
             return raw;
         }
