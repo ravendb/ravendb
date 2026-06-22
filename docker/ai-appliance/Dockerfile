@@ -18,11 +18,11 @@
 #   4. web-build              — dotnet publish of Raven.AiAppliance.
 #   5. runtime                — aspnet base image, s6-overlay v3, both artifacts copied in.
 #
-# Security posture is intentionally minimal: RavenDB starts with
-# Setup.Mode=Unsecured, Studio binds to 0.0.0.0:8080 inside the container,
-# and the web app listens on plain HTTP. The full POC layers TLS + API-key
-# auth on top. External exposure is controlled by whether the host port is
-# published, not by the server's bind address.
+# Security posture: the nginx :443 TLS/SNI front and operator API-key auth are built in (Phase 1).
+# On first run, before activation, RavenDB starts unsecured on loopback and the web app is reachable
+# over plain HTTP; once the setup package is applied the appliance restarts into secure mode (mTLS
+# passthrough for db.*; terminated dashboard./api./public.*). External exposure is governed by which
+# host ports are published, not by the servers' bind addresses.
 
 # Pin base images to specific patch versions matching the repo's pinned
 # toolchain: global.json declares SDK 10.0.300, and Raven.AiAppliance.csproj

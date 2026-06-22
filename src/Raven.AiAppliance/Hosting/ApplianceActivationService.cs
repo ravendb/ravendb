@@ -122,9 +122,17 @@ public sealed class ApplianceActivationService(
             .OrderBy(p => p, StringComparer.Ordinal)
             .FirstOrDefault();
         if (adminPfx is null)
+        {
+            logger.LogWarning(
+                "No admin client certificate (admin.client.certificate.*.pfx) found under {Path}; " +
+                "skipping the admin-thumbprint marker — RavenDB will not trust the admin cert and the " +
+                "secure store may fail to authenticate (appliance can hang in Restarting).",
+                opts.SetupPackagePath);
             return;
+        }
 
-        using var cert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: default);
+        // Empty password matches the setup-wizard PFXs (the s6 scripts load them with `-passin pass:`).
+        using var cert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: "");
         File.WriteAllText(Path.Combine(opts.SetupPackagePath, "admin-thumbprint"), cert.Thumbprint);
     }
 
@@ -134,6 +142,9 @@ public sealed class ApplianceActivationService(
         // and exit ourselves; s6 brings us back, and the second start wires the secure IDocumentStore
         // against PublicServerUrl + the admin cert. Single-writer flow (guarded by TryMarkRedeeming);
         // the CAS bool is discarded intentionally.
+        // Contract: a non-empty RavenDbS6Service means an s6-supervised host — that supervisor is what
+        // brings both processes back after StopApplication below. The unsupervised path keys off an empty
+        // RavenDbS6Service and never reaches here.
         bootstrap.TryMarkRestarting();
 
         try
@@ -146,7 +157,9 @@ public sealed class ApplianceActivationService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Could not signal s6 to restart RavenDB; relying on .NET host restart only.");
+            // s6-svc missing while RavenDbS6Service is set is a misconfiguration: nothing restarts the
+            // host after StopApplication below, so it strands. Log loud (Error, not Warning).
+            logger.LogError(ex, "Could not signal s6 to restart RavenDB ({Service}); an s6 supervisor must restart the host.", opts.RavenDbS6Service);
         }
 
         logger.LogInformation("Activation complete; restarting .NET host to bind the secure IDocumentStore.");

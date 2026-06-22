@@ -40,13 +40,21 @@ public interface IBootstrapState
     string? Reason { get; }
 
     /// <summary>
+    /// <c>true</c> when the process started with the setup package already on disk — i.e. this is the
+    /// post-restart secure process, not the first / unsecured start. Readiness gates its bootstrap
+    /// <see cref="BootstrapPhase.Ready"/> flip on this so it can't race an activation that is mid
+    /// extract-and-restart (where the package exists on disk but the store is still unsecured).
+    /// </summary>
+    bool StartedWithSetupPackage { get; }
+
+    /// <summary>
     /// Attempts to transition from <see cref="BootstrapPhase.NeedsActivation"/>
     /// to <see cref="BootstrapPhase.Redeeming"/>. Returns <c>true</c> if this
     /// caller won the race; <c>false</c> if another redemption is already in
-    /// flight or has completed. Implementations must use an atomic
-    /// compare-and-swap so concurrent <c>POST /api/bootstrap/redeem-license</c>
-    /// calls (e.g. an operator double-click) don't both extract zips into
-    /// <c>/setup/</c>.
+    /// flight or has completed. Redemption is startup-driven (the
+    /// <c>QUILL_LICENSE_KEY</c> token), so the atomic compare-and-swap keeps it
+    /// single-writer across concurrent / repeated starts and never extracts the
+    /// setup package into <c>/setup/</c> more than once.
     /// </summary>
     bool TryMarkRedeeming();
 
@@ -87,17 +95,20 @@ public sealed class BootstrapStateFlag : IBootstrapState
 {
     private int _phase;
     private string? _reason;
+    private readonly bool _startedWithSetupPackage;
 
     public BootstrapStateFlag(IOptions<ApplianceOptions> options)
     {
         var setupSettings = Path.Combine(options.Value.SetupPackagePath, "A", "settings.json");
-        _phase = File.Exists(setupSettings)
+        _startedWithSetupPackage = File.Exists(setupSettings);
+        _phase = _startedWithSetupPackage
             ? (int)BootstrapPhase.Restarting
             : (int)BootstrapPhase.NeedsActivation;
     }
 
     public BootstrapPhase Phase => (BootstrapPhase)Volatile.Read(ref _phase);
     public string? Reason => Volatile.Read(ref _reason);
+    public bool StartedWithSetupPackage => _startedWithSetupPackage;
 
     public bool TryMarkRedeeming()
     {
