@@ -695,7 +695,11 @@ public class SharedJournalTests(ITestOutputHelper output) : RavenTestBase(output
     {
         while (task.IsCompleted is false)
         {
-            mre.Wait();
+            // bounded wait so the loop re-checks task.IsCompleted; the branch can complete and the
+            // merge/completion Set can be consumed-and-reset before we observe it, so a plain mre.Wait()
+            // here deadlocks once the last signal is lost (RavenDB-26610)
+            if (mre.Wait(TimeSpan.FromMilliseconds(100)) == false)
+                continue;
             mre.Reset();
             using (var tx = root.WriteTransaction())
             {
