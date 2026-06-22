@@ -234,7 +234,9 @@ public static class AppsEndpoints
         {
             logger.LogWarning(ex,
                 "Agent provisioning rejected by RavenDB for app slug={Slug} name={Name}", app.Slug, body.Name);
-            return Results.BadRequest(new ApiErrorResponse($"agent configuration rejected: {ex.Message}"));
+            // Generic body: a raw RavenException message can carry server internals (paths, DB names,
+            // inner-exception detail). The full reason is in the server log above.
+            return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
         }
     }
 
