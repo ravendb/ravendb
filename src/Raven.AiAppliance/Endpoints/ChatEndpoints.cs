@@ -49,9 +49,10 @@ public static class ChatEndpoints
             // versions of this handler.
             return;
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            await WriteBadRequestAsync(ctx, $"invalid JSON body: {e.Message}");
+            // Generic message only — a raw parser/exception message is internal detail we don't echo.
+            await WriteBadRequestAsync(ctx, "invalid JSON body");
             return;
         }
 
