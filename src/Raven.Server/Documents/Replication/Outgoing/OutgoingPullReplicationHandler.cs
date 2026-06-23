@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 : PullReplicationChangeVectorWireMode.SendLegacyCompatible;
         }
 
-        internal virtual bool ShouldSkipPreventableSinkToHubDeletion(ReplicationBatchItem item) => false;
+        internal abstract bool ShouldSkipPreventableSinkToHubDeletion(ReplicationBatchItem item);
     }
 
     internal sealed class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler
@@ -131,6 +131,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             // we are on the hub, and we set the last sent change vector to the one that the other side has, so we won't send anything that it already has
             LastAcceptedChangeVector = ChangeVectorUtils.MergeVectors(LastAcceptedChangeVector, response.Reply.LastConfirmedChangeVector);
         }
+
+        internal override bool ShouldSkipPreventableSinkToHubDeletion(ReplicationBatchItem item) => false;
 
         public override string FromToString => $"{base.FromToString} (pull definition: {PullReplicationDefinitionName})";
     }
@@ -206,9 +208,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
         }
 
         internal override bool ShouldSkipPreventableSinkToHubDeletion(ReplicationBatchItem item) =>
-            _node.Mode == PullReplicationMode.SinkToHub &&
             OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-            _database.ForTestingPurposes?.ForceSendTombstones != true &&
-            item.IsPreventableSinkToHubDeletion();
+            item.IsPreventableSinkToHubDeletion() &&
+            _database.ForTestingPurposes?.ForceSendTombstones != true;
     }
 }
