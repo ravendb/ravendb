@@ -7,11 +7,11 @@ import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wiz
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
 import { FormCombobox } from "@/components/form/form-combobox";
+import { Field, FieldLabel } from "@/components/shadcn/ui/field";
 
 export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
     const { slug = "" } = useParams();
-    const { control, setValue } = useFormContext<AgentFormData>();
-
+    const { control } = useFormContext<AgentFormData>();
     const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list(slug));
     const items = connectionStringsQuery.data?.items ?? [];
 
@@ -23,32 +23,47 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
             onRetry={connectionStringsQuery.refetch}
             loadingLabel="Loading connection strings..."
         >
-            <div className="flex items-end gap-3">
-                <FormCombobox
-                    control={control}
-                    name="connection.connectionStringName"
-                    label="Connection string"
-                    className="flex-1"
-                    placeholder={items.length > 0 ? "Select..." : "No connection strings yet"}
-                    disabled={isBusy || items.length === 0}
-                    options={items.map((item) => ({
-                        value: item.name,
-                        label: `${item.name} · ${item.provider}`,
-                    }))}
-                    addons={
-                        <AddAiConnectionString
-                            slug={slug}
-                            modelType="Chat"
-                            onCreated={(name) =>
-                                setValue("connection.connectionStringName", name, {
-                                    shouldValidate: true,
-                                    shouldDirty: true,
-                                })
-                            }
-                        />
-                    }
-                />
-            </div>
+            {items.length === 0 ? (
+                <Field>
+                    <FieldLabel>Connection string</FieldLabel>
+                    <div>
+                        <AddButton slug={slug} />
+                    </div>
+                </Field>
+            ) : (
+                <div className="flex items-end gap-3">
+                    <FormCombobox
+                        control={control}
+                        name="connection.connectionStringName"
+                        label="Connection string"
+                        className="flex-1"
+                        placeholder="Select..."
+                        disabled={isBusy}
+                        options={items.map((item) => ({
+                            value: item.name,
+                            label: `${item.name} · ${item.provider}`,
+                        }))}
+                        addons={<AddButton slug={slug} />}
+                    />
+                </div>
+            )}
         </ApiState>
+    );
+}
+
+function AddButton({ slug }: { slug: string }) {
+    const { setValue } = useFormContext<AgentFormData>();
+
+    return (
+        <AddAiConnectionString
+            slug={slug}
+            modelType="Chat"
+            onCreated={(name) =>
+                setValue("connection.connectionStringName", name, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                })
+            }
+        />
     );
 }

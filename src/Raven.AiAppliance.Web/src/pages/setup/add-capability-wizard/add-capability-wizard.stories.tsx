@@ -8,6 +8,7 @@ import { api } from "@/api/api";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { sampleAgentSuggestion } from "@/mocks/apps-mocks";
+import { aiConnectionStringsMocks } from "@/mocks/ai-connection-strings-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
 import { AddCapabilityWizard } from "./add-capability-wizard";
 import { suggestionToAgentConfiguration } from "./agent-config-form";
@@ -106,6 +107,12 @@ export const ChooseCapability: Story = {
 
 export const ConnectProvider: Story = {
     render: () => <CapabilityWizardAtStep initialStep="connection" />,
+};
+
+// No connection strings yet: the step hides the selector and shows only the "Add" button.
+export const ConnectProviderEmpty: Story = {
+    render: () => <CapabilityWizardAtStep initialStep="connection" />,
+    parameters: { msw: { handlers: { aiConnectionStrings: [aiConnectionStringsMocks.list({ items: [] })] } } },
 };
 
 export const CreateAgent: Story = {
