@@ -281,7 +281,8 @@ public class AiAgentErrors : RavenTestBase
                 Assert.Contains($"The model `{p.Model}` does not exist or you do not have access to it", e.Message);
                 break;
             case GoogleSettings:
-                Assert.Contains($"models/{p.Model} is not found", e.Message);
+                Assert.True(e.Message.Contains($"models/{p.Model} is not found"),
+                    $"Expected a model-not-found error for '{p.Model}', but got: {e.Message}");
                 break;
             default:
                 throw new InvalidOperationException($"Unknown provider '{p.GetType().Name}'");

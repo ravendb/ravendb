@@ -678,7 +678,8 @@ namespace Raven.Server.Utils.Cli
                     Thumbprint = cert.Thumbprint,
                     PublicKeyPinningHash = cert.GetPublicKeyPinningHash(),
                     NotAfter = cert.NotAfter,
-                    NotBefore = cert.NotBefore
+                    NotBefore = cert.NotBefore,
+                    Usage = CertificateUsage.RavenServer
                 };
 
                 try
@@ -766,7 +767,8 @@ namespace Raven.Server.Utils.Cli
                     Thumbprint = cert.Thumbprint,
                     PublicKeyPinningHash = cert.GetPublicKeyPinningHash(),
                     NotAfter = cert.NotAfter,
-                    NotBefore = cert.NotBefore
+                    NotBefore = cert.NotBefore,
+                    Usage = CertificateUsage.Client
                 };
 
                 try
@@ -810,7 +812,8 @@ namespace Raven.Server.Utils.Cli
                 Permissions = new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance = SecurityClearance.ClusterAdmin,
                 Password = args.Count == 4 ? args[3] : null,
-                NotAfter = DateTime.UtcNow.AddMonths(months)
+                NotAfter = DateTime.UtcNow.AddMonths(months),
+                Usage = CertificateUsage.Client
             };
 
             byte[] outputBytes;

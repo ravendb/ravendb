@@ -505,19 +505,22 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
     private void EnterFallbackMode()
     {
+        var now = Database.Time.GetUtcNow();
         if (Statistics.LastConsumeErrorTime == null)
+        {
             FallbackTime = TimeSpan.FromSeconds(5);
+        }
         else
         {
             // double the fallback time (but don't cross QueueSink.MaxFallbackTimeInSec)
-            var secondsSinceLastError =
-                (Database.Time.GetUtcNow() - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
+            var secondsSinceLastError = (now - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
 
             FallbackTime = TimeSpan.FromSeconds(Math.Min(
                 Database.Configuration.QueueSink
                     .MaxFallbackTime.AsTimeSpan.TotalSeconds,
                 Math.Max(5, secondsSinceLastError * 2)));
         }
+        Statistics.LastConsumeErrorTime = now;
     }
 
     public QueueSinkPerformanceStats[] GetPerformanceStats()

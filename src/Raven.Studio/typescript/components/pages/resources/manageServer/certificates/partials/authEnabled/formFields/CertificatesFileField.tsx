@@ -28,7 +28,7 @@ export default function CertificatesFileField({ infoPopoverBody }: { infoPopover
             <FormLabel>
                 Certificate File
                 <PopoverWithHoverWrapper message={infoPopoverBody}>
-                    <Icon icon="info" color="info" id="certificateFilePopover" />
+                    <Icon icon="info" color="info" margin="ms-1" className="small" id="certificateFilePopover" />
                 </PopoverWithHoverWrapper>
             </FormLabel>
             <input id="filePicker" type="file" onChange={selectFile} className="d-none" />

@@ -1,0 +1,473 @@
+import { yupResolver } from "@hookform/resolvers/yup";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { FormGroup, FormInput, FormLabel, FormRadio, FormSelect, FormSwitch } from "components/common/Form";
+import { FlexGrow } from "components/common/FlexGrow";
+import { Icon } from "components/common/Icon";
+import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
+import Modal from "components/common/Modal";
+import RichAlert from "components/common/RichAlert";
+import SelectCreatable from "components/common/select/SelectCreatable";
+import { SelectOption } from "components/common/select/Select";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useServices } from "components/hooks/useServices";
+import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
+import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
+import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
+import {
+    SsoIdentifierDto,
+    SsoProvider,
+} from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { exhaustiveStringTuple, tryHandleSubmit } from "components/utils/common";
+import { FormProvider, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
+import Button from "react-bootstrap/Button";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import Card from "react-bootstrap/Card";
+import Collapse from "react-bootstrap/Collapse";
+import Form from "react-bootstrap/Form";
+import * as yup from "yup";
+
+// exhaustiveStringTuple makes the compiler enforce that every SsoProvider is listed here.
+const ssoProviders = exhaustiveStringTuple<SsoProvider>()("Github", "Google", "Microsoft", "Windows");
+
+const ssoProviderOptions: SelectOption[] = ssoProviders.map((p) => ({ value: p, label: p }));
+
+const identifierPlaceholderByProvider: Record<SsoProvider, string> = {
+    Windows: "Username",
+    Google: "email@gmail.com",
+    Github: "Username or email",
+    Microsoft: "Username or email",
+};
+
+type SsoUserFormClearance = "ValidUser" | "Operator" | "ClusterAdmin";
+
+// Narrow the server's broad SecurityClearance union down to the three values the SSO user form supports,
+// defaulting anything else (or nothing) to "ValidUser" - avoids an unchecked `as` cast.
+function toFormSecurityClearance(
+    clearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance | undefined
+): SsoUserFormClearance {
+    return clearance === "Operator" || clearance === "ClusterAdmin" ? clearance : "ValidUser";
+}
+
+export default function CertificatesRegisterSsoUserModal() {
+    const dispatch = useAppDispatch();
+    const { manageServerService } = useServices();
+    const { reportEvent } = useEventsCollector();
+
+    const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const allDatabaseNames = useAppSelector(databaseSelectors.allDatabaseNames);
+    const hasReadOnlyCertificates = useAppSelector(licenseSelectors.statusValue("HasReadOnlyCertificates"));
+    const ssoServerCertificates = useAppSelector(certificatesSelectors.ssoServerCertificates);
+    const ssoUserToEdit = useAppSelector(certificatesSelectors.ssoUserToEdit);
+    const ssoUserToClone = useAppSelector(certificatesSelectors.ssoUserToClone);
+
+    const isEditing = ssoUserToEdit != null;
+    const isCloning = ssoUserToClone != null;
+
+    const sourceForDefaults = ssoUserToEdit ?? ssoUserToClone;
+
+    const form = useForm<FormData>({
+        resolver: yupResolver(schema),
+        defaultValues: {
+            displayName: sourceForDefaults?.Name ?? "",
+            ssoIdentifiers:
+                sourceForDefaults?.SsoIdentifiers?.length > 0
+                    ? sourceForDefaults.SsoIdentifiers.map((id) => ({
+                          provider: id.Provider,
+                          domain: id.Domain ?? "",
+                          identifier: id.Identifier,
+                      }))
+                    : [{ provider: "Github", domain: "", identifier: "" }],
+            ssoServerPublicKeyPinningHashes: sourceForDefaults?.SsoServerPublicKeyPinningHashes ?? [],
+            allowAnySso: sourceForDefaults?.AllowAnySsoServer ?? false,
+            securityClearance: toFormSecurityClearance(sourceForDefaults?.SecurityClearance),
+            databasePermissions:
+                sourceForDefaults != null ? certificatesUtils.mapDatabasePermissionsFromDto(sourceForDefaults) : [],
+        },
+    });
+
+    const { control, formState, handleSubmit, reset } = form;
+    const formValues = useWatch({ control });
+
+    const permissionsFieldArray = useFieldArray({ control, name: "databasePermissions" });
+    const identifiersFieldArray = useFieldArray({ control, name: "ssoIdentifiers" });
+
+    const handleClose = () => dispatch(certificatesActions.isRegisterSsoUserModalOpenToggled());
+
+    const handleSubmitForm: SubmitHandler<FormData> = async (formData) => {
+        return tryHandleSubmit(async () => {
+            const permissions =
+                formData.securityClearance === "Operator" || formData.securityClearance === "ClusterAdmin"
+                    ? null
+                    : Object.fromEntries(
+                          formData.databasePermissions.map(({ databaseName, accessLevel }) => [
+                              databaseName,
+                              accessLevel,
+                          ])
+                      );
+
+            const ssoIdentifiers: SsoIdentifierDto[] = formData.ssoIdentifiers.map((id) => ({
+                Provider: id.provider,
+                Domain: id.provider === "Windows" && id.domain ? id.domain : undefined,
+                Identifier: id.identifier,
+            }));
+
+            if (isEditing) {
+                reportEvent("certificates", "edit-sso-user");
+
+                await manageServerService.updateCertificate(
+                    {
+                        Name: formData.displayName,
+                        Thumbprint: ssoUserToEdit.Thumbprint,
+                        SecurityClearance: formData.securityClearance,
+                        Permissions: permissions,
+                        TwoFactorAuthenticationKey: null,
+                        SsoServerPublicKeyPinningHashes: formData.allowAnySso
+                            ? []
+                            : formData.ssoServerPublicKeyPinningHashes,
+                        AllowAnySsoServer: formData.allowAnySso,
+                        SsoIdentifiers: ssoIdentifiers,
+                    },
+                    false
+                );
+            } else {
+                reportEvent("certificates", "register-sso-user");
+
+                await manageServerService.registerSsoUserEntry({
+                    Name: formData.displayName,
+                    Usage: "SsoClient",
+                    SsoIdentifiers: ssoIdentifiers,
+                    SsoServerPublicKeyPinningHashes: formData.allowAnySso
+                        ? []
+                        : formData.ssoServerPublicKeyPinningHashes,
+                    AllowAnySsoServer: formData.allowAnySso,
+                    SecurityClearance: formData.securityClearance,
+                    Permissions: permissions ?? {},
+                });
+            }
+
+            reset(formData);
+            dispatch(certificatesActions.fetchData());
+            handleClose();
+        });
+    };
+
+    const ssoServerOptions = ssoServerCertificates.map((cert) => ({
+        value: cert.PublicKeyPinningHash,
+        label: cert.Name,
+    })) satisfies SelectOption[];
+
+    return (
+        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+            <FormProvider {...form}>
+                <Form onSubmit={handleSubmit(handleSubmitForm)}>
+                    <Modal.Header className="vstack gap-4" onCloseClick={handleClose}>
+                        <div className="text-center">
+                            <Icon
+                                icon="user"
+                                addon={isEditing ? "edit" : isCloning ? "copy" : "plus"}
+                                className="fs-1"
+                                color="primary"
+                                margin="m-0"
+                            />
+                        </div>
+                        <div className="text-center lead">
+                            {isEditing ? "Edit SSO user" : isCloning ? "Clone SSO user" : "Add SSO user"}
+                        </div>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <FormGroup>
+                            <FormLabel>Display name</FormLabel>
+                            <FormInput
+                                control={control}
+                                type="text"
+                                name="displayName"
+                                placeholder="e.g. Alice Smith"
+                            />
+                        </FormGroup>
+                        <FormGroup>
+                            <div className="hstack gap-1 mb-1">
+                                <FormLabel className="mb-0 d-flex align-items-center gap-1">
+                                    Identifiers{" "}
+                                    <ConditionalPopover
+                                        conditions={{
+                                            isActive: true,
+                                            message: (
+                                                <>
+                                                    Map this user to one or more identity providers.
+                                                    <br />
+                                                    The incoming SSO certificate extension will be matched against these
+                                                    entries.
+                                                    <br />
+                                                    For Windows, specify the domain as well.
+                                                </>
+                                            ),
+                                        }}
+                                        popoverPlacement="right"
+                                    >
+                                        <Icon icon="info" margin="m-0" className="small" color="info" />
+                                    </ConditionalPopover>
+                                </FormLabel>
+                                <FlexGrow />
+                                <Button
+                                    variant="link"
+                                    size="sm"
+                                    onClick={() =>
+                                        identifiersFieldArray.append({
+                                            provider: "Github",
+                                            domain: "",
+                                            identifier: "",
+                                        })
+                                    }
+                                >
+                                    <Icon icon="plus" margin="me-1" />
+                                    Add
+                                </Button>
+                            </div>
+                            <div className="vstack gap-2">
+                                {identifiersFieldArray.fields.map((field, idx) => {
+                                    const provider = formValues.ssoIdentifiers?.[idx]?.provider;
+                                    return (
+                                        <Card key={field.id}>
+                                            <div className="hstack gap-2 align-items-stretch">
+                                                <div style={{ minWidth: "130px" }}>
+                                                    <FormSelect
+                                                        control={control}
+                                                        name={`ssoIdentifiers.${idx}.provider`}
+                                                        options={ssoProviderOptions}
+                                                        placeholder="Provider"
+                                                    />
+                                                </div>
+                                                {provider === "Windows" && (
+                                                    <FormInput
+                                                        control={control}
+                                                        type="text"
+                                                        name={`ssoIdentifiers.${idx}.domain`}
+                                                        placeholder="Domain (e.g. CORP)"
+                                                    />
+                                                )}
+                                                <FormInput
+                                                    control={control}
+                                                    type="text"
+                                                    name={`ssoIdentifiers.${idx}.identifier`}
+                                                    placeholder={
+                                                        identifierPlaceholderByProvider[provider] ?? "Username or email"
+                                                    }
+                                                />
+                                                <Button
+                                                    variant="danger"
+                                                    onClick={() => identifiersFieldArray.remove(idx)}
+                                                    disabled={identifiersFieldArray.fields.length === 1}
+                                                >
+                                                    <Icon icon="trash" margin="m-0" />
+                                                </Button>
+                                            </div>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        </FormGroup>
+                        <FormGroup>
+                            <FormLabel>Security clearance</FormLabel>
+                            <FormSelect
+                                control={control}
+                                name="securityClearance"
+                                options={
+                                    [
+                                        {
+                                            value: "ClusterAdmin",
+                                            label: "Cluster Admin",
+                                            isDisabled: !isClusterAdminOrClusterNode,
+                                        },
+                                        { value: "Operator", label: "Operator" },
+                                        { value: "ValidUser", label: "User" },
+                                    ] satisfies SelectOption[]
+                                }
+                            />
+                            {(formValues.securityClearance === "Operator" ||
+                                formValues.securityClearance === "ClusterAdmin") && (
+                                <RichAlert variant="warning" className="mt-2">
+                                    SSO logins bypass RavenDB&apos;s two-factor authentication — RavenDB cannot enforce
+                                    a second factor on the identity provider&apos;s side. Make sure your SSO provider
+                                    requires MFA for identities granted{" "}
+                                    <strong>
+                                        {formValues.securityClearance === "ClusterAdmin" ? "Cluster Admin" : "Operator"}
+                                    </strong>{" "}
+                                    clearance.
+                                </RichAlert>
+                            )}
+                        </FormGroup>
+                        <hr />
+                        <FormGroup>
+                            <div className="hstack justify-content-between align-items-center mb-1">
+                                <FormLabel className="mb-0">Authorizing SSO</FormLabel>
+                                <FormSwitch control={control} name="allowAnySso">
+                                    Allow any SSO to authorize
+                                </FormSwitch>
+                            </div>
+                            <Collapse in={!formValues.allowAnySso}>
+                                <div>
+                                    <FormSelect
+                                        control={control}
+                                        name="ssoServerPublicKeyPinningHashes"
+                                        isMulti
+                                        placeholder="Select one or more SSO servers..."
+                                        options={ssoServerOptions}
+                                    />
+                                </div>
+                            </Collapse>
+                        </FormGroup>
+                        <hr />
+                        <FormLabel>Database permissions</FormLabel>
+                        {(formValues.securityClearance === "Operator" ||
+                            formValues.securityClearance === "ClusterAdmin") && (
+                            <FormGroup>
+                                <RichAlert variant="info">
+                                    With security clearance set to{" "}
+                                    <strong>
+                                        {formValues.securityClearance === "ClusterAdmin" ? "Cluster Admin" : "Operator"}
+                                    </strong>
+                                    , the user will have access to all databases.
+                                </RichAlert>
+                            </FormGroup>
+                        )}
+                        <Collapse in={formValues.securityClearance === "ValidUser"}>
+                            <div>
+                                <FormGroup>
+                                    <div className="hstack gap-2">
+                                        <SelectCreatable
+                                            className="flex-grow-1"
+                                            placeholder="Select (or enter a database)"
+                                            isClearable
+                                            options={allDatabaseNames
+                                                .filter(
+                                                    (x) =>
+                                                        !(formValues.databasePermissions ?? [])
+                                                            .map((p) => p.databaseName)
+                                                            .includes(x)
+                                                )
+                                                .map((x) => ({ value: x, label: x }))}
+                                            onChange={(value) =>
+                                                permissionsFieldArray.append({
+                                                    databaseName: value.value,
+                                                    accessLevel: "ReadWrite",
+                                                })
+                                            }
+                                            isClearedAfterSelect
+                                            isDisabled={formState.isSubmitting}
+                                        />
+                                    </div>
+                                </FormGroup>
+                                <FormGroup className="vstack gap-2">
+                                    {permissionsFieldArray.fields.map((field, idx) => (
+                                        <Card key={field.id} className="hstack rounded px-3 py-1 well">
+                                            {field.databaseName}
+                                            <FlexGrow />
+                                            <div className="hstack gap-3">
+                                                <FormRadio
+                                                    control={control}
+                                                    name={`databasePermissions.${idx}.accessLevel`}
+                                                    value="Admin"
+                                                    className="text-success"
+                                                    color="secondary"
+                                                >
+                                                    Admin
+                                                </FormRadio>
+                                                <FormRadio
+                                                    control={control}
+                                                    name={`databasePermissions.${idx}.accessLevel`}
+                                                    value="ReadWrite"
+                                                    className="text-warning"
+                                                    color="secondary"
+                                                >
+                                                    Read/Write
+                                                </FormRadio>
+                                                <ConditionalPopover
+                                                    conditions={{
+                                                        isActive: !hasReadOnlyCertificates,
+                                                        message: (
+                                                            <LicenseRestrictedMessage>
+                                                                Current license doesn&apos;t include
+                                                                <br />
+                                                                <strong className="text-info">
+                                                                    <Icon icon="access-read" margin="m-0" /> Read-only
+                                                                    certificates
+                                                                </strong>
+                                                            </LicenseRestrictedMessage>
+                                                        ),
+                                                    }}
+                                                >
+                                                    <FormRadio
+                                                        control={control}
+                                                        name={`databasePermissions.${idx}.accessLevel`}
+                                                        value="Read"
+                                                        className="text-info"
+                                                        color="secondary"
+                                                        disabled={!hasReadOnlyCertificates}
+                                                    >
+                                                        Read
+                                                    </FormRadio>
+                                                </ConditionalPopover>
+                                            </div>
+                                            <Button
+                                                variant="link"
+                                                className="px-0 ms-3"
+                                                onClick={() => permissionsFieldArray.remove(idx)}
+                                            >
+                                                <Icon icon="trash" margin="m-0" className="text-danger" />
+                                            </Button>
+                                        </Card>
+                                    ))}
+                                </FormGroup>
+                            </div>
+                        </Collapse>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="link" onClick={handleClose} className="link-muted">
+                            Cancel
+                        </Button>
+                        <ButtonWithSpinner
+                            type="submit"
+                            variant="primary"
+                            className="rounded-pill"
+                            isSpinning={formState.isSubmitting}
+                        >
+                            {isEditing ? "Save changes" : "Add user"}
+                        </ButtonWithSpinner>
+                    </Modal.Footer>
+                </Form>
+            </FormProvider>
+        </Modal>
+    );
+}
+
+const ssoIdentifierSchema = yup.object({
+    provider: yup.string<SsoProvider>().required("Provider is required"),
+    domain: yup.string().when("provider", {
+        is: "Windows",
+        then: (s) => s.required("Domain is required for Windows"),
+        otherwise: (s) => s.optional(),
+    }),
+    identifier: yup.string().required("Identifier is required"),
+});
+
+const schema = yup.object({
+    displayName: yup.string().required("Display name is required"),
+    ssoIdentifiers: yup.array().of(ssoIdentifierSchema).min(1, "At least one identifier is required").required(),
+    ssoServerPublicKeyPinningHashes: yup
+        .array()
+        .of(yup.string())
+        .when("allowAnySso", {
+            is: false,
+            then: (s) => s.min(1, "Select at least one authorizing SSO server, or enable 'Allow any SSO to authorize'"),
+            otherwise: (s) => s.optional(),
+        }),
+    allowAnySso: yup.boolean().required(),
+    securityClearance: yup.string<"ValidUser" | "Operator" | "ClusterAdmin">().required(),
+    databasePermissions: certificatesUtils.databasePermissionsSchema,
+});
+
+type FormData = yup.InferType<typeof schema>;

@@ -168,5 +168,8 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Schema Validation")]
         SchemaValidation,
+
+        [Description("SSO")]
+        Sso,
     }
 }

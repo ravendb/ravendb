@@ -13,7 +13,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             ["server_encoding"] = "UTF8", // Cannot be modified after startup
             ["server_version"] = "13.3", // Cannot be modified after startup
             ["application_name"] = "",
-            ["DataStyle"] = "ISO, DMY",
+            ["DateStyle"] = "ISO, DMY",
             ["integer_datetimes"] = "on", // Cannot be modified after startup
             ["IntervalStyle"] = "postgres",
             ["is_superuser"] = "on",

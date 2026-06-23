@@ -378,7 +378,10 @@ namespace Raven.Client.Documents.Changes
         public string DatabaseName { get; set; }
         public string CustomInfo { get; set; }
         public string ClientIP { get; set; }
+        public string ProxyIP { get; set; }
         public string CertificateThumbprint { get; set; }
+        public string CertificateName { get; set; }
+        public string SsoUserIdentity { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -389,7 +392,10 @@ namespace Raven.Client.Documents.Changes
                 [nameof(DatabaseName)] = DatabaseName,
                 [nameof(CustomInfo)] = CustomInfo,
                 [nameof(ClientIP)] = ClientIP,
-                [nameof(CertificateThumbprint)] = CertificateThumbprint
+                [nameof(ProxyIP)] = ProxyIP,
+                [nameof(CertificateThumbprint)] = CertificateThumbprint,
+                [nameof(CertificateName)] = CertificateName,
+                [nameof(SsoUserIdentity)] = SsoUserIdentity,
             };
 
             return json;

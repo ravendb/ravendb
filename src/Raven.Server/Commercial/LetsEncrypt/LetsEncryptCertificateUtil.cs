@@ -31,7 +31,8 @@ public sealed class LetsEncryptCertificateUtil
             SecurityClearance = SecurityClearance.ClusterAdmin,
             Thumbprint = selfSignedCertificate.Thumbprint,
             PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
-            NotAfter = selfSignedCertificate.NotAfter
+            NotAfter = selfSignedCertificate.NotAfter,
+            Usage = CertificateUsage.Client
         };
 
         return (certBytes, newCertDef, selfSignedCertificate);
