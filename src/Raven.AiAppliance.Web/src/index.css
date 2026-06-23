@@ -279,6 +279,30 @@
         caret-color: var(--color-foreground);
     }
 
+    /* Native number steppers ignore our class-based dark mode (we never set color-scheme),
+       so the up/down arrows render dark-on-dark and vanish on dark inputs. Scope color-scheme
+       to number inputs to recolor the steppers without touching scrollbars or other controls. */
+    input[type="number"] {
+        color-scheme: light;
+    }
+
+    .dark input[type="number"] {
+        color-scheme: dark;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        margin-left: 0.25rem;
+        opacity: 0.6;
+    }
+
+    input[type="number"]:hover::-webkit-inner-spin-button,
+    input[type="number"]:focus-within::-webkit-inner-spin-button,
+    input[type="number"]:hover::-webkit-outer-spin-button,
+    input[type="number"]:focus-within::-webkit-outer-spin-button {
+        opacity: 1;
+    }
+
     ::-webkit-scrollbar {
         width: 10px;
         height: 10px;
