@@ -87,30 +87,17 @@ namespace Raven.Server.Documents.Replication.Senders
             }
         }
 
-        protected override void SendEmptyBatchHeartbeat(DocumentsOperationContext context, bool wasInterrupted, ChangeVector completedSourceFrontier)
+        protected override void SendEmptyBatchHeartbeat(ChangeVector databaseChangeVector, ChangeVector completedSourceFrontier)
         {
-            if (ShouldUseBaseEmptyBatchHeartbeat(wasInterrupted, completedSourceFrontier))
+            if (_pullReplicationHandler.ChangeVectorWireMode == PullReplicationChangeVectorWireMode.SendLegacyCompatible)
             {
-                base.SendEmptyBatchHeartbeat(context, wasInterrupted, completedSourceFrontier);
+                base.SendEmptyBatchHeartbeat(databaseChangeVector, completedSourceFrontier);
                 return;
             }
 
             // Pull replication progress is carried by the completed source frontier when this scan actually advanced it.
             // Idle pull heartbeats deliberately avoid sending the source database CV.
-            _parent.SendHeartbeat(
-                databaseChangeVector: null,
-                lastSentSourceChangeVector: completedSourceFrontier?.IsNullOrEmpty == false ? completedSourceFrontier.AsString() : null);
-        }
-
-        private bool ShouldUseBaseEmptyBatchHeartbeat(bool wasInterrupted, ChangeVector completedSourceFrontier)
-        {
-            if (wasInterrupted)
-                return true;
-
-            if (completedSourceFrontier?.IsNullOrEmpty == false)
-                return false;
-
-            return _pullReplicationHandler.ChangeVectorWireMode == PullReplicationChangeVectorWireMode.SendLegacyCompatible;
+            _parent.SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: completedSourceFrontier?.AsString());
         }
 
         public override void Dispose()
