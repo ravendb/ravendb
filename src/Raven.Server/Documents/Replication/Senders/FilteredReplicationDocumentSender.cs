@@ -27,12 +27,12 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
-            switch (_pullReplicationHandler.ChangeVectorTransmission)
+            switch (_pullReplicationHandler.ChangeVectorWireMode)
             {
-                case PullReplicationChangeVectorTransmission.SendAsIs:
+                case PullReplicationChangeVectorWireMode.SendAsIs:
                     break;
 
-                case PullReplicationChangeVectorTransmission.SendVersionOnly:
+                case PullReplicationChangeVectorWireMode.SendLegacyCompatible:
                     item.ChangeVector = documentsContext.GetChangeVector(item.ChangeVector).Version;
 
                     var timeSeriesItem = item as TimeSeriesReplicationItem;
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Replication.Senders
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(_pullReplicationHandler.ChangeVectorTransmission), _pullReplicationHandler.ChangeVectorTransmission, "Unknown pull replication change-vector transmission.");
+                    throw new ArgumentOutOfRangeException(nameof(_pullReplicationHandler.ChangeVectorWireMode), _pullReplicationHandler.ChangeVectorWireMode, "Unknown pull replication change-vector wire mode.");
             }
 
             base.WriteReplicationItem(documentsContext, item, stats);
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
 
-            if (_pullReplicationHandler.CanFilterOutSourceItemsByPreventingSinkToHubDeletions && item.IsPreventableSinkToHubDeletion())
+            if (_pullReplicationHandler.ShouldSkipPreventableSinkToHubDeletion(item))
                 return true;
 
             return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
@@ -89,13 +89,28 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override void SendEmptyBatchHeartbeat(DocumentsOperationContext context, bool wasInterrupted, ChangeVector completedSourceFrontier)
         {
-            if (wasInterrupted || _pullReplicationHandler.CanFilterOutSourceItems == false)
+            if (ShouldUseBaseEmptyBatchHeartbeat(wasInterrupted, completedSourceFrontier))
             {
                 base.SendEmptyBatchHeartbeat(context, wasInterrupted, completedSourceFrontier);
                 return;
             }
 
-            _parent.SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: completedSourceFrontier.AsString());
+            // Pull replication progress is carried by the completed source frontier when this scan actually advanced it.
+            // Idle pull heartbeats deliberately avoid sending the source database CV.
+            _parent.SendHeartbeat(
+                databaseChangeVector: null,
+                lastSentSourceChangeVector: completedSourceFrontier?.IsNullOrEmpty == false ? completedSourceFrontier.AsString() : null);
+        }
+
+        private bool ShouldUseBaseEmptyBatchHeartbeat(bool wasInterrupted, ChangeVector completedSourceFrontier)
+        {
+            if (wasInterrupted)
+                return true;
+
+            if (completedSourceFrontier?.IsNullOrEmpty == false)
+                return false;
+
+            return _pullReplicationHandler.ChangeVectorWireMode == PullReplicationChangeVectorWireMode.SendLegacyCompatible;
         }
 
         public override void Dispose()

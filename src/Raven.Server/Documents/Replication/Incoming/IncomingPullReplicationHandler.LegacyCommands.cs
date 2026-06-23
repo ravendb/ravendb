@@ -8,9 +8,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 {
     public abstract partial class IncomingPullReplicationHandler
     {
-        internal abstract class MergedFlatPullReplicationCommand : MergedDocumentReplicationCommand
+        internal abstract class MergedLegacyPullReplicationCommand : MergedDocumentReplicationCommand
         {
-            protected MergedFlatPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
+            protected MergedLegacyPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
             {
             }
 
@@ -22,11 +22,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         }
 
-        internal sealed class MergedFlatPullReplicationOnHubCommand : MergedFlatPullReplicationCommand
+        internal sealed class MergedLegacyPullReplicationOnHubCommand : MergedLegacyPullReplicationCommand
         {
             private readonly bool _preventIncomingSinkDeletions;
 
-            public MergedFlatPullReplicationOnHubCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool preventIncomingSinkDeletions) : base(replicationInfo, lastEtag)
+            public MergedLegacyPullReplicationOnHubCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool preventIncomingSinkDeletions) : base(replicationInfo, lastEtag)
             {
                 _preventIncomingSinkDeletions = preventIncomingSinkDeletions;
             }
@@ -41,9 +41,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal sealed class MergedFlatPullReplicationOnSinkCommand : MergedFlatPullReplicationCommand
+        internal sealed class MergedLegacyPullReplicationOnSinkCommand : MergedLegacyPullReplicationCommand
         {
-            public MergedFlatPullReplicationOnSinkCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
+            public MergedLegacyPullReplicationOnSinkCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
             {
             }
 
