@@ -1,7 +1,11 @@
 import React from "react";
 import { AboutViewFloating, AccordionItemWrapper } from "components/common/AboutView";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function TasksErrorsAboutView() {
+    const taskErrorsOverviewDocsLink = useRavenLink({ hash: "17261M" });
+
     return (
         <AboutViewFloating>
             <AccordionItemWrapper
@@ -77,6 +81,11 @@ export default function TasksErrorsAboutView() {
                         The task health will recover gradually as new batches complete successfully.
                     </li>
                 </ul>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={taskErrorsOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Task Errors Overview
+                </a>
             </AccordionItemWrapper>
         </AboutViewFloating>
     );

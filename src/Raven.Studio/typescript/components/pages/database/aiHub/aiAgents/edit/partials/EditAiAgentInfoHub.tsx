@@ -1,6 +1,11 @@
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function EditAiAgentInfoHub() {
+    const aiAgentsOverviewDocsLink = useRavenLink({ hash: "XNWAXB" });
+    const aiAgentsCreateAgentDocsLink = useRavenLink({ hash: "72VEQI" });
+
     return (
         <AboutViewFloating>
             <AccordionItemWrapper
@@ -53,6 +58,15 @@ export default function EditAiAgentInfoHub() {
                         </li>
                     </ul>
                 </div>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={aiAgentsOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - AI Agents Overview
+                </a>
+                <br />
+                <a href={aiAgentsCreateAgentDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Create AI Agent
+                </a>
             </AccordionItemWrapper>
         </AboutViewFloating>
     );
