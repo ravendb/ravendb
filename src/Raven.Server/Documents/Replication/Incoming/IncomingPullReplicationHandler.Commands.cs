@@ -16,9 +16,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             return result.ChangeVector;
         }
 
-        internal sealed class MergedCompositePullReplicationOnSinkCommand : MergedDocumentReplicationCommand
+        internal sealed class MergedPullReplicationOnSinkCommand : MergedDocumentReplicationCommand
         {
-            public MergedCompositePullReplicationOnSinkCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
+            public MergedPullReplicationOnSinkCommand(DataForReplicationCommand replicationInfo, long lastEtag) : base(replicationInfo, lastEtag)
             {
             }
 
@@ -28,11 +28,11 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
         }
 
-        internal sealed class MergedCompositePullReplicationOnHubCommand : MergedDocumentReplicationCommand
+        internal sealed class MergedPullReplicationOnHubCommand : MergedDocumentReplicationCommand
         {
             private readonly bool _preventIncomingSinkDeletions;
 
-            public MergedCompositePullReplicationOnHubCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool preventIncomingSinkDeletions) : base(replicationInfo, lastEtag)
+            public MergedPullReplicationOnHubCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool preventIncomingSinkDeletions) : base(replicationInfo, lastEtag)
             {
                 _preventIncomingSinkDeletions = preventIncomingSinkDeletions;
             }

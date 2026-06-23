@@ -101,8 +101,7 @@ namespace SlowTests.Server.Replication
 
             var handler = await AssertOutgoingPullHandlerAsSinkAsync(
                 sinkStore,
-                PullReplicationChangeVectorShape.Composite,
-                PullReplicationChangeVectorTransmission.SendAsIs);
+                PullReplicationChangeVectorWireMode.SendAsIs);
 
             Assert.False(handler.IsConnectionDisposed);
             Assert.Contains("|", GetChangeVectorFor(hubStore, acceptedBeforeDeleteId));
@@ -120,8 +119,7 @@ namespace SlowTests.Server.Replication
 
             handler = await AssertOutgoingPullHandlerAsSinkAsync(
                 sinkStore,
-                PullReplicationChangeVectorShape.Composite,
-                PullReplicationChangeVectorTransmission.SendAsIs);
+                PullReplicationChangeVectorWireMode.SendAsIs);
 
             Assert.False(handler.IsConnectionDisposed);
             Assert.Contains("|", GetChangeVectorFor(hubStore, acceptedAfterDeleteId));
@@ -909,21 +907,18 @@ namespace SlowTests.Server.Replication
 
         private async Task<OutgoingPullReplicationHandlerAsSink> AssertOutgoingPullHandlerAsSinkAsync(
             DocumentStore store,
-            PullReplicationChangeVectorShape expectedShape,
-            PullReplicationChangeVectorTransmission expectedTransmission)
+            PullReplicationChangeVectorWireMode expectedWireMode)
         {
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             var handler = await AssertWaitForNotNullAsync(
                 () => Task.FromResult(database.ReplicationLoader.OutgoingHandlers
                     .OfType<OutgoingPullReplicationHandlerAsSink>()
                     .FirstOrDefault(x =>
-                        x.ChangeVectorShape == expectedShape &&
-                        x.ChangeVectorTransmission == expectedTransmission &&
+                        x.ChangeVectorWireMode == expectedWireMode &&
                         x.IsConnectionDisposed == false)),
                 timeout: 30_000);
 
-            Assert.Equal(expectedShape, handler.ChangeVectorShape);
-            Assert.Equal(expectedTransmission, handler.ChangeVectorTransmission);
+            Assert.Equal(expectedWireMode, handler.ChangeVectorWireMode);
             return handler;
         }
 

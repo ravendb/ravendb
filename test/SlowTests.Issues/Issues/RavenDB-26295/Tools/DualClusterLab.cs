@@ -42,6 +42,7 @@ public sealed class DualClusterLab : IAsyncDisposable
     private FilteredRoundTripReplicationGate _filteredRoundTripFirstHopGate;
     private FilteredRoundTripReplicationGate _filteredRoundTripReturnGate;
     private bool _filteredRoundTripTaskConfigured;
+    private bool _filteredRoundTripReturnLegUnfiltered;
     private bool _allowedTicketThenFilteredOutUserStored;
 
     public DualClusterLab(
@@ -244,7 +245,9 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     private DocumentDatabase Database(ClusterSide side, LabNode node) => _databases[Key(side, node)];
 
-    public string GetDatabaseIdFor(LabNode node) => Database(RequiredFilteredPassReceiveSide, node).DbBase64Id;
+    public string GetDatabaseIdFor(ClusterSide side, LabNode node) => Database(side, node).DbBase64Id;
+
+    public string GetDatabaseIdFor(LabNode node) => GetDatabaseIdFor(RequiredFilteredPassReceiveSide, node);
 
     public string GetDatabaseChangeVector(ClusterSide side, LabNode node)
     {
@@ -1379,10 +1382,12 @@ public sealed class DualClusterLab : IAsyncDisposable
     public Task BlockInternalReplicationUntilBlockedAsync(LabNode from, params LabNode[] to) =>
         BlockInternalReplicationUntilBlockedAsync(RequiredFilteredPassReceiveSide, from, to);
 
-    public async Task ConfigureFilteredRoundTripReplicationAsync(ClusterSide? receiveSide)
+    public async Task ConfigureFilteredRoundTripReplicationAsync(ClusterSide? receiveSide, bool returnLegUnfiltered = false)
     {
         if (receiveSide == null)
             return;
+
+        _filteredRoundTripReturnLegUnfiltered = returnLegUnfiltered;
 
         InstallFilteredRoundTripOwnershipHooks(receiveSide.Value);
         InstallFilteredRoundTripRemoteUrlHooks(receiveSide.Value);
@@ -1479,13 +1484,13 @@ public sealed class DualClusterLab : IAsyncDisposable
         await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(
             FilteredRoundTripHubName,
             new ReplicationHubAccess
-            {
-                Name = HubAccessName,
-                CertificateBase64 = Convert.ToBase64String(
-                    HubCluster.Certificates.ClientCertificate2.Value.Export(X509ContentType.Cert)),
-                AllowedSinkToHubPaths = ["tickets/*"],
-                AllowedHubToSinkPaths = ["tickets/*"]
-            }));
+                {
+                    Name = HubAccessName,
+                    CertificateBase64 = Convert.ToBase64String(
+                        HubCluster.Certificates.ClientCertificate2.Value.Export(X509ContentType.Cert)),
+                    AllowedSinkToHubPaths = GetFilteredRoundTripAllowedSinkToHubPaths(),
+                    AllowedHubToSinkPaths = GetFilteredRoundTripAllowedHubToSinkPaths()
+                }));
     }
 
     private async Task CreateFilteredRoundTripSinkTaskAsync()
@@ -1516,9 +1521,25 @@ public sealed class DualClusterLab : IAsyncDisposable
             CertificateWithPrivateKey = PullCertificate,
             PinToMentorNode = true,
             MentorNode = NodeTag(ClusterSide.Sink, LabNode.A),
-            AllowedSinkToHubPaths = [RequiredFilteredRoundTripPath + "/*"],
-            AllowedHubToSinkPaths = [RequiredFilteredRoundTripPath + "/*"]
+            AllowedSinkToHubPaths = GetFilteredRoundTripAllowedSinkToHubPaths(),
+            AllowedHubToSinkPaths = GetFilteredRoundTripAllowedHubToSinkPaths()
         }));
+    }
+
+    private string[] GetFilteredRoundTripAllowedHubToSinkPaths()
+    {
+        if (_filteredRoundTripReturnLegUnfiltered && RequiredFilteredPassReceiveSide == ClusterSide.Sink)
+            return ["*"];
+
+        return [RequiredFilteredRoundTripPath + "/*"];
+    }
+
+    private string[] GetFilteredRoundTripAllowedSinkToHubPaths()
+    {
+        if (_filteredRoundTripReturnLegUnfiltered && RequiredFilteredPassReceiveSide == ClusterSide.Hub)
+            return ["*"];
+
+        return [RequiredFilteredRoundTripPath + "/*"];
     }
 
     private void AssertFilteredOutUserDidNotReach(ClusterSide side, LabNode node)
