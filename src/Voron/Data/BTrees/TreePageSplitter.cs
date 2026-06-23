@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 using Voron.Data.Compression;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
@@ -167,6 +168,14 @@ namespace Voron.Data.BTrees
 
                     TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
                     Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
+
+                    using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out Slice stolenKey))
+                    {
+                        if (SliceComparer.CompareInline(_newKey, stolenKey) <= 0)
+                            VoronUnrecoverableErrorException.Raise(_tx,
+                                $"Sequential-insert split optimization of branch page {_page.PageNumber} attempted with a non-sequential key (new key '{_newKey}' does not sort after the last entry '{stolenKey}'), tree: {_tree.Name}");
+                    }
+
                     rightPage.AddPageRefNode(0, Slices.BeforeAllKeys, node->PageNumber);
                     pos = AddNodeToPage(rightPage, 1);
 
@@ -191,6 +200,17 @@ namespace Voron.Data.BTrees
             }
             else
             {
+                if (_page.NumberOfEntries > 0)
+                {
+                    TreeNodeHeader* lastNode = _page.GetNode(_page.NumberOfEntries - 1);
+                    using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, lastNode, out Slice lastKey))
+                    {
+                        if (SliceComparer.CompareInline(_newKey, lastKey) <= 0)
+                            VoronUnrecoverableErrorException.Raise(_tx,
+                                $"Sequential-insert split optimization of leaf page {_page.PageNumber} attempted with a non-sequential key (new key '{_newKey}' does not sort after the last entry '{lastKey}'), tree: {_tree.Name}");
+                    }
+                }
+
                 AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
                 pos = AddNodeToPage(rightPage, 0);
             }

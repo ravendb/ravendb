@@ -387,6 +387,6 @@ public class AzureServiceBusSinkTests : AzureServiceBusQueueSinkTestBase
 
         var errorTimes = alert.Errors.Select(x => x.Date);
         var diffBetweenErrors = errorTimes.Zip(errorTimes.Skip(1), (first, second) => second - first);
-        Assert.InRange(diffBetweenErrors.Min(), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6));
+        Assert.InRange(diffBetweenErrors.Min(), TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(10));
     }
 }

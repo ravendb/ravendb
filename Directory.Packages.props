@@ -107,6 +107,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
     <PackageVersion Include="Parquet.Net" Version="5.5.0" />
+    <PackageVersion Include="pgsqlparser" Version="1.0.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.1" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.14" />

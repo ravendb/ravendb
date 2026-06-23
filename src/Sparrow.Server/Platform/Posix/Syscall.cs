@@ -192,6 +192,12 @@ namespace Sparrow.Server.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int madvise(IntPtr addr, UIntPtr length, MAdvFlags madvFlags);
 
+        // posix_fadvise advice value; POSIX_FADV_SEQUENTIAL doubles the kernel read-ahead window for the file.
+        public const int POSIX_FADV_SEQUENTIAL = 2;
+
+        [DllImport(LIBC_6, EntryPoint = "posix_fadvise", SetLastError = false)]
+        public static extern int posix_fadvise(int fd, long offset, long len, int advice);
+
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int ftruncate(int fd, IntPtr size);
 

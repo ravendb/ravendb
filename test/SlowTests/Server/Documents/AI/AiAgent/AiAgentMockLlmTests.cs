@@ -99,7 +99,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     CreationOptions = new AiConversationCreationOptions(),
                     UserPrompt = "fetch my orders"
                 }, changeVector: null);
-                var r = await handler.HandleRequest(context, CancellationToken.None);
+                var r = await handler.HandleRequestAsync(context, CancellationToken.None);
 
                 var response = r.Response.ToString();
 

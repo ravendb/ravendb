@@ -267,27 +267,27 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     private void WarmInitialCaches(Transaction tx)
     {
-        var mapping = _converter?.GetKnownFieldsForQuerying();
-        if (mapping is null)
-            return;
-
         var maxNodes = GetMaxNodesForVectorCache();
         if (maxNodes <= 0)
             return;
 
+        // Vector fields are read from the index definition, not the fields mapping: field discovery during
+        // initialization must stay independent of analyzer construction.
+        var vectorFieldNames = _converter?.GetVectorFieldNames();
+        if (vectorFieldNames is null)
+            return;
+
         var llt = tx.LowLevelTransaction;
         ImmutableDictionary<Slice, HnswIndexCache>.Builder builder = null;
-        foreach (var field in mapping)
+        foreach (var fieldName in vectorFieldNames)
         {
-            if (field.VectorOptions is null)
-                continue;
-            var cache = HnswIndexCache.WarmFromScratch(llt, field.FieldName, maxNodes);
+            Debug.Assert(fieldName.HasValue && fieldName.Size > 0,
+                "Vector field name must be allocated and non-empty for cache keying");
+            var cache = HnswIndexCache.WarmFromScratch(llt, fieldName, maxNodes);
             if (cache is null)
                 continue;
             builder ??= ImmutableDictionary.CreateBuilder<Slice, HnswIndexCache>(SliceComparer.Instance);
-            Debug.Assert(field.FieldName.HasValue && field.FieldName.Size > 0,
-                "Vector field name must be allocated and non-empty for cache keying");
-            builder[field.FieldName] = cache;
+            builder[fieldName] = cache;
         }
 
         if (builder != null)

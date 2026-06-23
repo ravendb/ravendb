@@ -478,13 +478,16 @@ namespace Raven.Server.Documents
         {
             var (fst, snd) = SplitCounterDocument(context, values, dbIds, originalNames);
 
-            using (Slice.From(context.Allocator, changeVector, out var cv))
+            var firstEtag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+            var firstChangeVector = ChangeVector.MergeWithNewDatabaseChangeVector(context, new ChangeVector(changeVector, context), firstEtag);
+
+            using (Slice.From(context.Allocator, firstChangeVector, out var cv))
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             {
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(countersGroupKey);
-                    tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
+                    tvb.Add(Bits.SwapBytes(firstEtag));
                     tvb.Add(cv);
                     tvb.Add(fst.BasePointer, fst.Size);
                     tvb.Add(collectionSlice);
@@ -1073,6 +1076,9 @@ namespace Raven.Server.Documents
                             }
 
                             var etag = _documentsStorage.GenerateNextEtag();
+                            if (putCountersData.Modified)
+                                changeVectorToSave = ChangeVector.MergeWithNewDatabaseChangeVector(context, changeVectorToSave, etag);
+
                             using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
                             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                             using (table.Allocate(out TableValueBuilder tvb))

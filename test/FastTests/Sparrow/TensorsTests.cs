@@ -13,7 +13,8 @@ namespace FastTests.Sparrow
 {
     public unsafe class TensorsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        private const float Eps = 1e-6f;
+        // not tighter than 1e-5: ARM64 SIMD/FMA reductions diverge from the scalar reference by ~1e-6 over ~1k elements
+        private const float Eps = 1e-5f;
 
         // Test that for identical vectors, we get maximum similarity (and so a distance of zero).
         [RavenFact(RavenTestCategory.Core)]

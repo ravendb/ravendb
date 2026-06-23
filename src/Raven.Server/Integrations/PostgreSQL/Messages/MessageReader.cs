@@ -47,9 +47,6 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
                 msgLen -= valLenInBytes;
             }
 
-            if (clientOptions.TryGetValue("client_encoding", out var encoding) && encoding.Equals("UTF8", StringComparison.OrdinalIgnoreCase) == false)
-                throw new PgFatalException(PgErrorCodes.FeatureNotSupported, "Only UTF8 encoding is supported, but got: " + encoding);
-
             if (clientOptions.TryGetValue("database", out _) == false)
                 throw new PgFatalException(PgErrorCodes.ConnectionException, "The database wasn't specified, but is mandatory");
 

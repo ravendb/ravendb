@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -19,9 +20,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 
 public class RavenDB_24407 : RavenTestBase
 {
+
     public RavenDB_24407(ITestOutputHelper output) : base(output)
     {
     }
+
     private class OutputSampleObject
     {
         public static OutputSampleObject Instance = new();
@@ -78,228 +81,253 @@ public class RavenDB_24407 : RavenTestBase
     public async Task CanResumeConversationWithSummarization(Options options, GenAiConfiguration config, bool summarization, bool withHistory)
     {
         using var store = GetDocumentStore(options);
-        using (var session = store.OpenAsyncSession())
+
+        var diagSb = new StringBuilder().AppendLine("Debug Info: ");
+        var diagDatabase = await GetDatabase(store.Database);
+        var diagStart = DateTime.UtcNow;
+        var diagDisposeLogged = 0;
+
+        diagDatabase.ForTestingPurposesOnly().DisposeLog = (name, step) =>
         {
-            await session.StoreAsync(new Drink
+            if (Interlocked.Exchange(ref diagDisposeLogged, 1) != 0)
+                return; // only the first step ("Starting dispose") is the actual Cancel-call frame
+            var msg = $"[RavenDB-26226] '{name}' DISPOSE (actual Cancel call site, step='{step}') at +{(DateTime.UtcNow - diagStart).TotalSeconds:F1}s:{Environment.NewLine}{Environment.StackTrace}";
+            diagSb.AppendLine(msg);
+        };
+
+        try 
+        {
+            using (var session = store.OpenAsyncSession())
             {
-                Id = "drinks/1",
-                Name = "coca cola",
-                Price = 10,
-                Tags = ["sweet", "cold", "carbonated"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/2",
-                Name = "sprite",
-                Price = 10,
-                Tags = ["sweet", "sour", "cold", "carbonated"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/3",
-                Name = "fanta orange",
-                Price = 11,
-                Tags = ["sweet", "fruity", "cold", "carbonated"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/4",
-                Name = "sparkling water",
-                Price = 8,
-                Tags = ["bitter", "cold", "carbonated"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/5",
-                Name = "beer",
-                Price = 18,
-                Tags = ["bitter", "alcoholic", "cold"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/6",
-                Name = "lager beer",
-                Price = 20,
-                Tags = ["bitter", "alcoholic", "cold", "light"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/7",
-                Name = "red wine",
-                Price = 95,
-                Tags = ["bitter", "sour", "very alcoholic"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/8",
-                Name = "whiskey",
-                Price = 140,
-                Tags = ["bitter", "very alcoholic", "strong"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/9",
-                Name = "vodka",
-                Price = 120,
-                Tags = ["very alcoholic", "strong"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/10",
-                Name = "mojito",
-                Price = 55,
-                Tags = ["sweet", "sour", "alcoholic", "mint"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/11",
-                Name = "lemonade",
-                Price = 14,
-                Tags = ["sweet", "sour", "cold"]
-            });
-
-            await session.StoreAsync(new Drink
-            {
-                Id = "drinks/12",
-                Name = "iced tea",
-                Price = 13,
-                Tags = ["sweet", "cold", "tea"]
-            });
-
-            await session.SaveChangesAsync();
-        }
-
-        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-        const string systemPrompt = """
-                                    You are a shopping assistant.
-
-                                    Rules:
-                                    - Use DrinkSearch for recommendations.
-                                    - Never invent drink pairings, only use the tool results.
-                                    """;
-        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
-        agent.Identifier = "shopping-assistant";
-
-        agent.Queries =
-        [
-            new AiAgentToolQuery
+                await session.StoreAsync(new Drink
                 {
-                    Name = "DrinkSearch",
-                    Description =  "semantic search the store drinks catalog",
-                    Query = "from Drinks where vector.search(embedding.text(Name), $query) limit 5",
-                    ParametersSampleObject = "{\"query\": [\"Term or phrase to search in the catalog, for example: sweet and low alcoholic drink\"]}"
-                }
-        ];
-        agent.MaxModelIterationsPerCall = 5;
+                    Id = "drinks/1",
+                    Name = "coca cola",
+                    Price = 10,
+                    Tags = ["sweet", "cold", "carbonated"]
+                });
 
-        var identifier = (await store.AI.CreateAgentAsync<OutputSampleObject>(agent, OutputSampleObject.Instance)).Identifier;
-        // start chat
-        var chat = store.AI.Conversation(
-            identifier,
-            "chats/",
-            new AiConversationCreationOptions());
-
-        chat.SetUserPrompt("What sweet alcoholic drink do you recommend? recommend 1 drink please");
-        var r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
-        Assert.NotNull(r.Answer);
-
-        // resume
-        chat.SetUserPrompt("is it sweet?");
-        var r2 = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
-
-        Assert.NotNull(r2.Answer);
-        Assert.NotEqual(r.Answer, r2.Answer);
-
-        var chatDoc = await GetChat(store, chat.Id);
-        Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
-        Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-        Assert.Equal(0, chatDoc.LinkedConversations.Count);
-
-        // resume - with summarization
-        if (summarization)
-        {
-            agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
-            {
-                Tokens = new AiAgentSummarizationByTokens()
+                await session.StoreAsync(new Drink
                 {
-                    MaxTokensBeforeSummarization = 0
-                }
-            };
-        }
-        else
-        {
-            agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
-            {
-                Truncate = new AiAgentTruncateChat()
+                    Id = "drinks/2",
+                    Name = "sprite",
+                    Price = 10,
+                    Tags = ["sweet", "sour", "cold", "carbonated"]
+                });
+
+                await session.StoreAsync(new Drink
                 {
-                    MessagesLengthBeforeTruncate = 2,
-                    MessagesLengthAfterTruncate = 2
-                }
-            };
-        }
-        if (withHistory)
-            agent.ChatTrimming.History = new();
-        
-        await store.AI.CreateAgentAsync(agent, OutputSampleObject.Instance);
+                    Id = "drinks/3",
+                    Name = "fanta orange",
+                    Price = 11,
+                    Tags = ["sweet", "fruity", "cold", "carbonated"]
+                });
 
-        chat.SetUserPrompt("is it bitter?");
-        r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/4",
+                    Name = "sparkling water",
+                    Price = 8,
+                    Tags = ["bitter", "cold", "carbonated"]
+                });
 
-        Assert.NotNull(r.Answer);
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/5",
+                    Name = "beer",
+                    Price = 18,
+                    Tags = ["bitter", "alcoholic", "cold"]
+                });
 
-        chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(2, chatDoc.Messages.Count);
-        Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-        AssertNoOrphanToolMessages(chatDoc);
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/6",
+                    Name = "lager beer",
+                    Price = 20,
+                    Tags = ["bitter", "alcoholic", "cold", "light"]
+                });
 
-        if (withHistory)
-        {
-            Assert.True(chatDoc.LinkedConversations.Count > 0);
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/7",
+                    Name = "red wine",
+                    Price = 95,
+                    Tags = ["bitter", "sour", "very alcoholic"]
+                });
 
-            var historyChat = await GetChat(store, chatDoc.LinkedConversations.First());
-            var lastMsg = historyChat.Messages.Last();
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/8",
+                    Name = "whiskey",
+                    Price = 140,
+                    Tags = ["bitter", "very alcoholic", "strong"]
+                });
 
-            await AssertWithDumpAsync(lastMsg.Role, async () => await DumpAllAsync(store, chatDoc, chatDoc.LinkedConversations));
-        }
-        else
-        {
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/9",
+                    Name = "vodka",
+                    Price = 120,
+                    Tags = ["very alcoholic", "strong"]
+                });
+
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/10",
+                    Name = "mojito",
+                    Price = 55,
+                    Tags = ["sweet", "sour", "alcoholic", "mint"]
+                });
+
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/11",
+                    Name = "lemonade",
+                    Price = 14,
+                    Tags = ["sweet", "sour", "cold"]
+                });
+
+                await session.StoreAsync(new Drink
+                {
+                    Id = "drinks/12",
+                    Name = "iced tea",
+                    Price = 13,
+                    Tags = ["sweet", "cold", "tea"]
+                });
+
+                await session.SaveChangesAsync();
+            }
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            const string systemPrompt = """
+                                        You are a shopping assistant.
+
+                                        Rules:
+                                        - Use DrinkSearch for recommendations.
+                                        - Never invent drink pairings, only use the tool results.
+                                        """;
+            var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
+            agent.Identifier = "shopping-assistant";
+
+            agent.Queries =
+            [
+                new AiAgentToolQuery
+                    {
+                        Name = "DrinkSearch",
+                        Description =  "semantic search the store drinks catalog",
+                        Query = "from Drinks where vector.search(embedding.text(Name), $query) limit 5",
+                        ParametersSampleObject = "{\"query\": [\"Term or phrase to search in the catalog, for example: sweet and low alcoholic drink\"]}"
+                    }
+            ];
+            agent.MaxModelIterationsPerCall = 5;
+
+            var identifier = (await store.AI.CreateAgentAsync<OutputSampleObject>(agent, OutputSampleObject.Instance)).Identifier;
+            // start chat
+            var chat = store.AI.Conversation(
+                identifier,
+                "chats/",
+                new AiConversationCreationOptions());
+
+            chat.SetUserPrompt("What sweet alcoholic drink do you recommend? recommend 1 drink please");
+            var r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
+            Assert.NotNull(r.Answer);
+
+            // resume
+            chat.SetUserPrompt("is it sweet?");
+            var r2 = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
+
+            Assert.NotNull(r2.Answer);
+            Assert.NotEqual(r.Answer, r2.Answer);
+
+            var chatDoc = await GetChat(store, chat.Id);
+            Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
+            Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
             Assert.Equal(0, chatDoc.LinkedConversations.Count);
+
+            // resume - with summarization
+            if (summarization)
+            {
+                agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
+                {
+                    Tokens = new AiAgentSummarizationByTokens()
+                    {
+                        MaxTokensBeforeSummarization = 0
+                    }
+                };
+            }
+            else
+            {
+                agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
+                {
+                    Truncate = new AiAgentTruncateChat()
+                    {
+                        MessagesLengthBeforeTruncate = 2,
+                        MessagesLengthAfterTruncate = 2
+                    }
+                };
+            }
+            if (withHistory)
+                agent.ChatTrimming.History = new();
+            
+            await store.AI.CreateAgentAsync(agent, OutputSampleObject.Instance);
+
+            chat.SetUserPrompt("is it bitter?");
+            r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
+
+            Assert.NotNull(r.Answer);
+
+            chatDoc = await GetChat(store, chat.Id);
+            Assert.Equal(2, chatDoc.Messages.Count);
+            Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+            AssertNoOrphanToolMessages(chatDoc);
+
+            if (withHistory)
+            {
+                Assert.True(chatDoc.LinkedConversations.Count > 0);
+
+                var historyChat = await GetChat(store, chatDoc.LinkedConversations.First());
+                var lastMsg = historyChat.Messages.Last();
+
+                await AssertWithDumpAsync(lastMsg.Role, async () => await DumpAllAsync(store, chatDoc, chatDoc.LinkedConversations));
+            }
+            else
+            {
+                Assert.Equal(0, chatDoc.LinkedConversations.Count);
+            }
+
+            // resume - still with summarization
+
+            chat.SetUserPrompt("is it super alcoholic?");
+            r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
+
+            Assert.NotNull(r.Answer);
+
+            chatDoc = await GetChat(store, chat.Id);
+            Assert.Equal(2, chatDoc.Messages.Count);
+            Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+            AssertNoOrphanToolMessages(chatDoc);
+
+            // resume
+            agent.ChatTrimming = null;
+            await store.AI.CreateAgentAsync<OutputSampleObject>(agent, OutputSampleObject.Instance);
+
+            chat.SetUserPrompt("can you give me another alternative?");
+            r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
+
+            Assert.NotNull(r.Answer);
+
+            chatDoc = await GetChat(store, chat.Id);
+            Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
         }
-
-        // resume - still with summarization
-
-        chat.SetUserPrompt("is it super alcoholic?");
-        r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
-
-        Assert.NotNull(r.Answer);
-
-        chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(2, chatDoc.Messages.Count);
-        Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-        AssertNoOrphanToolMessages(chatDoc);
-
-        // resume
-        agent.ChatTrimming = null;
-        await store.AI.CreateAgentAsync<OutputSampleObject>(agent, OutputSampleObject.Instance);
-
-        chat.SetUserPrompt("can you give me another alternative?");
-        r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
-
-        Assert.NotNull(r.Answer);
-
-        chatDoc = await GetChat(store, chat.Id);
-        Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
+        catch (Exception e)
+        {
+            throw new AggregateException(diagSb.ToString(), e);
+        }
+        finally
+        {
+            diagDatabase.ForTestingPurposes = null;
+        }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

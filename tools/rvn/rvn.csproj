@@ -53,6 +53,7 @@
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\WelcomeMessage.cs" Link="Server\Utils\Cli\WelcomeMessage.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\ConsoleMessage.cs" Link="Server\Utils\Cli\ConsoleMessage.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\CertificateUtils.cs" Link="Server\Utils\CertificateUtils.cs" />
+    <Compile Include="..\..\src\Raven.Server\Utils\SsoExtensionPayload.cs" Link="Server\Utils\SsoExtensionPayload.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\SettingsZipFileHelper.cs" Link="Server\Commercial\LetsEncrypt\SettingsZipFileHelper.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\RavenDnsRecordHelper.cs" Link="Server\Commercial\LetsEncrypt\RavenDnsRecordHelper.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\LetsEncryptCertificateUtil.cs" Link="Server\Commercial\LetsEncrypt\LetsEncryptCertificateUtil.cs" />

@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -249,6 +249,8 @@ namespace Voron.Impl.Journal
             
             LastTransactionHeader = current;
 
+            DiscardProcessedTransactionPages(transactionSizeIn4Kb);
+
             return true;
         }
 
@@ -364,6 +366,24 @@ namespace Voron.Impl.Journal
                 _firstSkippedTx = current->TransactionId;
             else
                 _lastSkippedTx = current->TransactionId;
+
+            DiscardProcessedTransactionPages(transactionSizeIn4Kb);
+        }
+
+        // Release each processed transaction's fully-contained pages via madvise(MADV_DONTNEED) (DiscardPages)
+        // to keep the resident set bounded while many databases do the startup recovery
+        private void DiscardProcessedTransactionPages(long transactionSizeIn4Kb)
+        {
+            const long fourKb = 4L * Constants.Size.Kilobyte;
+            var txStartOffset = (_readAt4Kb - transactionSizeIn4Kb) * fourKb;
+            var txEndOffset = _readAt4Kb * fourKb; // exclusive
+
+            var firstFullPage = (txStartOffset + Constants.Storage.PageSize - 1) / Constants.Storage.PageSize;
+            var lastFullPageExclusive = txEndOffset / Constants.Storage.PageSize;
+            if (lastFullPageExclusive <= firstFullPage)
+                return;
+
+            _journalPager.DiscardPages(_journalPagerState, firstFullPage, lastFullPageExclusive - firstFullPage);
         }
 
         private bool IsAlreadySyncTransaction(long transactionId)

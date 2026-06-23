@@ -2366,6 +2366,8 @@ namespace Raven.Server.Documents
             internal int BulkInsert_StreamReadTimeout;
             internal Action BulkInsert_OnHeartBeat;
 
+            internal Action<EtlProcess, ExtractedItem, int> OnEtlItemExtracted; // (process, item, batchId == EtlPerformanceStats.Id)
+
             internal Action<ConversationDocument> BeforeAiAgentTalk;
 
             internal Func<AiAgentConfiguration, LazyStringValue, bool> ShouldAiAgentAddMutualParameterForSubAgentReq;

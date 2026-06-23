@@ -102,11 +102,14 @@ function getManageServerMenuItem() {
         new leafMenuItem({
             route: 'admin/settings/certificates',
             moduleId: reactUtils.bridgeToReact(Certificates.default, "nonShardedView"),
-            title: "Certificates",
+            title: "User Access Management",
             nav: true,
             css: 'icon-certificate',
             dynamicHash: appUrl.forCertificates,
-            requiredAccess: "Operator"
+            requiredAccess: "Operator",
+            search: {
+                alternativeTitles: ["Certificates"],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideTasks',
