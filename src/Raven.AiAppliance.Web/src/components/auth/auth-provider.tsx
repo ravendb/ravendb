@@ -2,21 +2,31 @@ import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { AuthContext } from "@/components/auth/auth-context";
-
-const authStatusQueryKey = ["auth", "status"];
+import { AUTH_STATUS_QUERY_KEY, UNAUTHENTICATED_STATUS } from "@/lib/auth-query";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const queryClient = useQueryClient();
     const statusQuery = useQuery({
-        queryKey: authStatusQueryKey,
+        queryKey: AUTH_STATUS_QUERY_KEY,
         queryFn: () => api.services.auth.status(),
     });
     const isAuthenticated = statusQuery.data?.authenticated === true;
 
     async function login(apiKey: string) {
         const status = await api.services.auth.login({ apiKey });
-        queryClient.setQueryData(authStatusQueryKey, status);
+        queryClient.setQueryData(AUTH_STATUS_QUERY_KEY, status);
         return status;
+    }
+
+    async function logout() {
+        await api.services.auth.logout();
+        queryClient.removeQueries({
+            predicate: (query) => {
+                const root = query.queryKey[0];
+                return root !== "auth" && root !== "bootstrap";
+            },
+        });
+        queryClient.setQueryData(AUTH_STATUS_QUERY_KEY, UNAUTHENTICATED_STATUS);
     }
 
     return (
@@ -25,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated,
                 isLoading: statusQuery.isPending,
                 login,
+                logout,
             }}
         >
             {children}

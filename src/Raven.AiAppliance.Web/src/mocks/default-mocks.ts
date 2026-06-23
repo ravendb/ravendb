@@ -35,7 +35,7 @@ export const defaultApiMocks = {
         appsMocks.setupTry(),
         appsMocks.suggestAgent(),
     ],
-    auth: [authMocks.status(), authMocks.login()],
+    auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
     chat: [chatMocks.stream()],

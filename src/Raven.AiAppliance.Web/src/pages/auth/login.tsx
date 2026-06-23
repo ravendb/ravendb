@@ -1,16 +1,25 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
+import { CircleAlert } from "lucide-react";
 import { z } from "zod";
-import { FormInput } from "@/components/form/form-input";
-import { Button } from "@/components/shadcn/ui/button";
+import { isApiError } from "@/api/http-client";
 import { useAuth } from "@/components/auth/auth-context";
+import { AuthScreenLayout } from "@/components/auth/auth-screen-layout";
+import { FormInput } from "@/components/form/form-input";
+import { Alert, AlertTitle } from "@/components/shadcn/ui/alert";
+import { Button } from "@/components/shadcn/ui/button";
+import { Spinner } from "@/components/shadcn/ui/spinner";
 import { appRoutes } from "@/lib/app-routes";
+
+const INVALID_KEY_MESSAGE = "That API key wasn't accepted. Double-check it and try again.";
+const SIGN_IN_ERROR_MESSAGE = "We couldn't sign you in. Please try again in a moment.";
 
 export function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
+    const [formError, setFormError] = useState<string | null>(null);
     const {
         control,
         formState: { isSubmitting },
@@ -23,45 +32,68 @@ export function Login() {
     });
 
     async function handleLogin(values: LoginFormValues) {
+        setFormError(null);
+
         try {
             const status = await login(values.apiKey);
+
             if (status.authenticated) {
-                navigate(appRoutes.dashboard(), {
-                    replace: true,
-                });
+                navigate(appRoutes.dashboard(), { replace: true });
                 return;
             }
 
-            toast.error("Invalid API key. Check the key and try again.");
-        } catch {
-            toast.error("Sign in failed. Please try again later.");
+            setFormError(INVALID_KEY_MESSAGE);
+        } catch (error) {
+            setFormError(isApiError(error) && error.status === 401 ? INVALID_KEY_MESSAGE : SIGN_IN_ERROR_MESSAGE);
         }
     }
 
     return (
-        <main className="flex min-h-svh items-center justify-center px-4 py-8">
-            <div className="w-full max-w-lg">
-                <div className="mb-5 flex items-center justify-center gap-2">
-                    <div className="flex size-6 items-center justify-center rounded-lg bg-primary" />
-                    <span className="text-sm font-medium">RavenDB Appliance</span>
-                </div>
+        <AuthScreenLayout>
+            <section className="w-full rounded-xl border bg-card p-6 shadow-sm">
+                <header className="space-y-1.5 text-center">
+                    <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Enter the operator API key to manage this appliance.
+                    </p>
+                </header>
 
-                <section className="rounded-xl border bg-card px-6 py-7">
-                    <div className="text-center">
-                        <h1 className="text-xl font-semibold">Sign in</h1>
-                        <p className="mt-3 text-sm text-muted-foreground">Enter the API key for this appliance.</p>
-                    </div>
+                {formError && (
+                    <Alert variant="destructive" className="mt-5 border-destructive/30 bg-destructive/5">
+                        <CircleAlert />
+                        <AlertTitle>{formError}</AlertTitle>
+                    </Alert>
+                )}
 
-                    <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
-                        <FormInput control={control} name="apiKey" label="API key" type="password" />
+                <form className="mt-5 space-y-4" onSubmit={handleSubmit(handleLogin)} noValidate>
+                    <FormInput
+                        control={control}
+                        name="apiKey"
+                        label="API key"
+                        type="password"
+                        placeholder="Operator API key"
+                        autoComplete="off"
+                        autoFocus
+                        spellCheck={false}
+                    />
 
-                        <Button className="w-full" disabled={isSubmitting} type="submit">
-                            {isSubmitting ? "Signing in..." : "Continue"}
-                        </Button>
-                    </form>
-                </section>
-            </div>
-        </main>
+                    <Button className="w-full" disabled={isSubmitting} type="submit">
+                        {isSubmitting ? (
+                            <>
+                                <Spinner />
+                                Signing in…
+                            </>
+                        ) : (
+                            "Continue"
+                        )}
+                    </Button>
+                </form>
+            </section>
+
+            <p className="mt-6 max-w-sm text-center text-xs text-muted-foreground">
+                The operator API key was issued when this appliance was provisioned.
+            </p>
+        </AuthScreenLayout>
     );
 }
 

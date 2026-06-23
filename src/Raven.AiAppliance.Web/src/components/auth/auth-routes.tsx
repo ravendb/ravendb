@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router";
 import { useAuth } from "@/components/auth/auth-context";
+import { AuthScreenLayout } from "@/components/auth/auth-screen-layout";
+import { Spinner } from "@/components/shadcn/ui/spinner";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
     const { isAuthenticated, isLoading } = useAuth();
@@ -32,8 +34,11 @@ export function RedirectAuthenticated({ children }: { children: ReactNode }) {
 
 function AuthLoading() {
     return (
-        <div className="grid min-h-svh place-items-center bg-background px-4 text-sm text-muted-foreground">
-            Checking authentication...
-        </div>
+        <AuthScreenLayout>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Spinner className="size-4" />
+                Checking authentication…
+            </div>
+        </AuthScreenLayout>
     );
 }
