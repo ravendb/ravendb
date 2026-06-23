@@ -234,11 +234,12 @@ public class ChatCompletionClient : IDisposable
             }
 
             var choice = (BlittableJsonReaderObject)choices[0];
-            var refusalDelta = _settings.GetRefusalOnStreaming(choice);
+            var hasDelta = choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta);
+            var refusalDelta = _settings.GetRefusal(choice, delta);
             if (string.IsNullOrEmpty(refusalDelta) == false)
                 refusalSb.Append(refusalDelta);
-            
-            if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
+
+            if (hasDelta)
             {
                 if (TryGetDeltaContent(delta, out LazyStringValue content))
                 {
@@ -434,6 +435,14 @@ public class ChatCompletionClient : IDisposable
 
             if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false)
             {
+                // Some providers (e.g. Gemini's OpenAI-compatible API) express a refusal as a choice with no
+                // message - only a finish_reason such as "content_filter: PROHIBITED_CONTENT". Surface that as
+                // a refusal instead of failing with "No message property".
+                _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
+                var refusal = client.GetRefusal(_choice0, message: null);
+                if (string.IsNullOrEmpty(refusal) == false)
+                    RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
+
                 throw UnexpectedResponseException.Create(message: "No message property in choice", response, responseContent);
             }
 

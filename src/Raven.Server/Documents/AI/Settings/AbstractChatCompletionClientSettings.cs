@@ -98,24 +98,15 @@ internal abstract class AbstractChatCompletionClientSettings
 
     public abstract AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response);
 
+    // OpenAI's default: an explicit `refusal` field on the message (non-streaming) or on the delta
+    // (streaming - GetRefusalOnStreaming passes the delta here as the "message"). Providers whose refusal
+    // shape differs (Azure, Google) override this.
     public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
     {
         _ = choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal)
-            || message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal);
+            || (message != null && message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal));
 
         return refusal;
-    }
-
-    public virtual string GetRefusalOnStreaming(BlittableJsonReaderObject choice0)
-    {
-        // each inherited class should collect by its own response structure, by its 'GetRefusal'
-        // OpenAi:
-        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
-        {
-            if (delta.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal))
-                return refusal;
-        }
-        return null;
     }
 
     public virtual ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)

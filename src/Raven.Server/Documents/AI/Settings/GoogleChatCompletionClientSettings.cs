@@ -191,35 +191,17 @@ internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletion
 
     public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
     {
-        // Google’s OpenAI‑compatible API does not include a "refusal" field in safety‑blocked responses.
-        // When the model refuses to answer (e.g., due to safety rules), the response looks like:
-        //
-        // {
-        //     "choices": [
-        //         {
-        //             "index": 0,
-        //             "message": { "role": "assistant" }
-        //         }
-        //     ],
-        //     "usage": { "completion_tokens": 0, ... }
-        // }
-        //
-        // The "message" object contains no "content" and no "refusal" metadata.
-        // Because there is nothing to extract from the JSON, we return a fixed refusal message.
-        return "The model refused to answer";
+        // Gemini's OpenAI-compatible API exposes a refusal purely through the choice's finish_reason
+        // (e.g. "content_filter: PROHIBITED_CONTENT") - identically for streaming and non-streaming, with no
+        // "message"/"refusal" field.
+        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason)
+            && finishReason != null
+            && finishReason.StartsWith("content_filter", StringComparison.OrdinalIgnoreCase))
+            return finishReason;
+
+        return base.GetRefusal(choice0, message);
     }
 
-    public override string GetRefusalOnStreaming(BlittableJsonReaderObject choice0)
-    {
-        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason) == false || 
-            string.IsNullOrWhiteSpace(finishReason))
-            return null;
-
-        if (finishReason != "stop")
-            return $"The model refused to answer (finish_reason: '{finishReason}')";
-        
-        return null;
-    }
     public override async ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)
     {
         /*

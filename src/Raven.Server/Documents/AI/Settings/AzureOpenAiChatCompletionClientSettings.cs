@@ -54,26 +54,20 @@ internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompl
 
     public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
     {
-        var refusal = base.GetRefusal(choice0, message);
-        _ = string.IsNullOrEmpty(refusal)
-            && choice0.TryGet(FiltersConstants.ContentFilterResults, out BlittableJsonReaderObject filtersObj)
-            && GetFiltersMessage(filtersObj, out refusal);
-
-        return refusal;
-    }
-
-    public override string GetRefusalOnStreaming(BlittableJsonReaderObject choice0)
-    {
-        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason) == false
-            || string.Equals(finishReason, "content_filter", StringComparison.OrdinalIgnoreCase) == false)
-            return null;
-        
+        // Azure annotates the filtered categories/severities in content_filter_results - prefer that detail.
         if (choice0.TryGet(FiltersConstants.ContentFilterResults, out BlittableJsonReaderObject filtersObj)
             && filtersObj != null
             && GetFiltersMessage(filtersObj, out var refusal))
             return refusal;
-    
-        return "Response blocked due to content policy";
+
+        // Azure also signals a content-policy block via finish_reason == "content_filter".
+        // (A block usually arrives as a non-200 status, handled by ParseError; this covers the in-body case.)
+        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason)
+            && string.Equals(finishReason, "content_filter", StringComparison.OrdinalIgnoreCase))
+            return "Response blocked due to content policy";
+
+        // Otherwise fall back to the OpenAI default (explicit refusal field).
+        return base.GetRefusal(choice0, message);
     }
 
     internal static bool GetFiltersMessage(BlittableJsonReaderObject filtersObj, out string message)
