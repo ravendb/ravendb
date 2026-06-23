@@ -78,17 +78,18 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context, DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return ChangeVectorShape switch
+            return ChangeVectorWireMode switch
             {
-                PullReplicationChangeVectorShape.Flat => new MergedFlatPullReplicationOnSinkCommand(data, lastDocumentEtag),
-                PullReplicationChangeVectorShape.Composite => new MergedCompositePullReplicationOnSinkCommand(data, lastDocumentEtag),
-                _ => throw new ArgumentOutOfRangeException(nameof(ChangeVectorShape), ChangeVectorShape, "Unknown pull replication change-vector shape.")
+                PullReplicationChangeVectorWireMode.SendLegacyCompatible => new MergedLegacyPullReplicationOnSinkCommand(data, lastDocumentEtag),
+                PullReplicationChangeVectorWireMode.SendAsIs => new MergedPullReplicationOnSinkCommand(data, lastDocumentEtag),
+                _ => throw new ArgumentOutOfRangeException(nameof(ChangeVectorWireMode), ChangeVectorWireMode, "Unknown pull replication change-vector wire mode.")
             };
         }
 
         protected override void MergeSourceChangeVectorFromHeartbeat(DocumentsOperationContext documentsContext, string changeVector)
         {
-            if (ChangeVectorShape == PullReplicationChangeVectorShape.Composite)
+            // SendAsIs keeps receiver-local Order; source progress is tracked by pull cursors, not by absorbing the source DB CV.
+            if (ChangeVectorWireMode == PullReplicationChangeVectorWireMode.SendAsIs)
                 return;
 
             if (string.IsNullOrEmpty(changeVector))

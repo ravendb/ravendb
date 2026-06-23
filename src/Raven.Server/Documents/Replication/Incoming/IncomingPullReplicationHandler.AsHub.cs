@@ -58,11 +58,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context, DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return ChangeVectorShape switch
+            return ChangeVectorWireMode switch
             {
-                PullReplicationChangeVectorShape.Flat => new MergedFlatPullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
-                PullReplicationChangeVectorShape.Composite => new MergedCompositePullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
-                _ => throw new ArgumentOutOfRangeException(nameof(ChangeVectorShape), ChangeVectorShape, "Unknown pull replication change-vector shape.")
+                PullReplicationChangeVectorWireMode.SendLegacyCompatible => new MergedLegacyPullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
+                PullReplicationChangeVectorWireMode.SendAsIs => new MergedPullReplicationOnHubCommand(data, lastDocumentEtag, PreventIncomingSinkDeletions),
+                _ => throw new ArgumentOutOfRangeException(nameof(ChangeVectorWireMode), ChangeVectorWireMode, "Unknown pull replication change-vector wire mode.")
             };
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -7,6 +7,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Commands;
@@ -18,6 +19,15 @@ using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
+namespace Raven.Server.Documents.Replication
+{
+    public enum PullReplicationChangeVectorWireMode
+    {
+        SendAsIs,
+        SendLegacyCompatible
+    }
+}
+
 namespace Raven.Server.Documents.Replication.Outgoing
 {
     public abstract class OutgoingPullReplicationHandler : DatabaseOutgoingReplicationHandler
@@ -28,7 +38,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public string CertificateThumbprint;
 
-        internal PullReplicationChangeVectorTransmission ChangeVectorTransmission { get; private set; } = PullReplicationChangeVectorTransmission.SendVersionOnly;
+        internal PullReplicationChangeVectorWireMode ChangeVectorWireMode { get; private set; } = PullReplicationChangeVectorWireMode.SendLegacyCompatible;
 
         protected OutgoingPullReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo) :
             base(parent, database, node, connectionInfo)
@@ -44,9 +54,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             var request = base.GetInitialHandshakeRequest();
 
-            if (CanFilterOutSourceItems)
-                request[nameof(ReplicationLatestEtagRequest.CanFilterOutSourceItems)] = true;
-
             if (_database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors)
                 request[nameof(ReplicationLatestEtagRequest.SupportsPullReplicationCompositeChangeVectors)] = true;
 
@@ -59,22 +66,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
             // this is used when the other side lets us know what paths it is going to accept from us
             // it supplements (but does not extend) what we are willing to send out 
             _destinationAcceptablePaths = response.Reply.AcceptablePaths;
-            ChangeVectorTransmission = PullReplicationChangeVectorModeSelector.GetChangeVectorTransmission(
-                localSupportsCompositeChangeVectors: _database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors,
-                remoteSupportsCompositeChangeVectors: response.Reply.SupportsPullReplicationCompositeChangeVectors);
+            ChangeVectorWireMode = _database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors &&
+                                   response.Reply.SupportsPullReplicationCompositeChangeVectors
+                ? PullReplicationChangeVectorWireMode.SendAsIs
+                : PullReplicationChangeVectorWireMode.SendLegacyCompatible;
         }
 
-        internal PullReplicationChangeVectorShape ChangeVectorShape =>
-            PullReplicationChangeVectorModeSelector.GetChangeVectorShape(
-                canFilterOutSourceItems: CanFilterOutSourceItems,
-                transmission: ChangeVectorTransmission);
-
-        internal bool CanFilterOutSourceItems =>
-            PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(PathsToSend) ||
-            PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(_destinationAcceptablePaths) ||
-            CanFilterOutSourceItemsByPreventingSinkToHubDeletions;
-
-        internal virtual bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions => false;
+        internal virtual bool ShouldSkipPreventableSinkToHubDeletion(ReplicationBatchItem item) => false;
     }
 
     internal sealed class OutgoingPullReplicationHandlerAsHub : OutgoingPullReplicationHandler
@@ -207,9 +205,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _parent.Server.SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
-        internal override bool CanFilterOutSourceItemsByPreventingSinkToHubDeletions =>
+        internal override bool ShouldSkipPreventableSinkToHubDeletion(ReplicationBatchItem item) =>
             _node.Mode == PullReplicationMode.SinkToHub &&
             OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-            _database.ForTestingPurposes?.ForceSendTombstones != true;
+            _database.ForTestingPurposes?.ForceSendTombstones != true &&
+            item.IsPreventableSinkToHubDeletion();
     }
 }

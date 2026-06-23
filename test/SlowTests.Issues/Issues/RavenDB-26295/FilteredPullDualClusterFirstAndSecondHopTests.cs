@@ -112,6 +112,58 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
     }
 
     [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task AsymmetricFilteredHubToSinkAndUnfilteredSinkToHub_ShouldUseReceiverLocalOrderAndKeepHubDbCvClean(Options options)
+    {
+        const string itemName = "asymmetric-document";
+        const ClusterSide filteredPassReceiveSide = ClusterSide.Hub;
+
+        await using var lab = await CreateDualClusterLabAsync(
+            options,
+            filteredPassReceiveSide,
+            itemName,
+            filteredRoundTripReturnLegUnfiltered: true);
+
+        await lab.BlockInternalReplicationUntilBlockedAsync(from: LabNode.B, to: [LabNode.A, LabNode.C]);
+        await lab.StoreAllowedTicketThenFilteredOutUserAsync(LabNode.B);
+        await lab.StoreFilteredRoundTripTicketAsync(LabNode.B);
+
+        var originalIncomingChangeVector = lab.GetFilteredRoundTripDocument(LabNode.B).ChangeVector;
+        var hubBDatabaseId = lab.GetDatabaseIdFor(ClusterSide.Hub, LabNode.B);
+        var hubADatabaseId = lab.GetDatabaseIdFor(ClusterSide.Hub, LabNode.A);
+        var sinkADatabaseId = lab.GetDatabaseIdFor(ClusterSide.Sink, LabNode.A);
+        var hubBEtagInPassedChangeCv = GetEtag(originalIncomingChangeVector, hubBDatabaseId);
+
+        var hubADbCvBeforePass = lab.GetDatabaseChangeVector(ClusterSide.Hub, LabNode.A);
+        var hubCDbCvBeforePass = lab.GetDatabaseChangeVector(ClusterSide.Hub, LabNode.C);
+
+        await lab.PassThroughFilteredReplicationAsync();
+
+        var hubADocument = lab.GetFilteredRoundTripDocument(LabNode.A);
+        Assert.True(hubADocument.Exists, $"Expected asymmetric pass document '{lab.FilteredRoundTripTicketId}' to reach HA.");
+
+        var hubADbCvAfterPass = lab.GetDatabaseChangeVector(ClusterSide.Hub, LabNode.A);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "asymmetric filtered/unfiltered document pass", hubADbCvBeforePass, hubADbCvAfterPass, hubADocument.ChangeVector, originalIncomingChangeVector, hubBDatabaseId);
+        AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "asymmetric filtered/unfiltered document pass", hubADbCvAfterPass, hubADocument.ChangeVector, originalIncomingChangeVector, hubBDatabaseId, hubBEtagInPassedChangeCv);
+        AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "asymmetric filtered/unfiltered document pass", hubADocument.ChangeVector, originalIncomingChangeVector, hubBDatabaseId, hubBEtagInPassedChangeCv);
+        AssertItemOrderCoversLocalDatabaseId(filteredPassReceiveSide, LabNode.A, "asymmetric filtered/unfiltered document pass", hubADocument.ChangeVector, hubADatabaseId);
+        AssertItemOrderDoesNotCarryDatabaseId(filteredPassReceiveSide, LabNode.A, "asymmetric filtered/unfiltered document pass", hubADocument.ChangeVector, sinkADatabaseId, "SA");
+        AssertDatabaseChangeVectorDoesNotCarryDatabaseId(filteredPassReceiveSide, LabNode.A, "asymmetric filtered/unfiltered document pass", hubADbCvAfterPass, sinkADatabaseId, "SA");
+
+        await lab.WaitForExpectedFilteredRoundTripItemAsync(LabNode.C);
+
+        var hubCDocument = lab.GetFilteredRoundTripDocument(LabNode.C);
+        Assert.True(hubCDocument.Exists, $"Expected asymmetric pass document '{lab.FilteredRoundTripTicketId}' to reach HC through internal replication.");
+
+        var hubCDbCvAfterPass = lab.GetDatabaseChangeVector(ClusterSide.Hub, LabNode.C);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "asymmetric filtered/unfiltered document internal hop", hubCDbCvBeforePass, hubCDbCvAfterPass, hubCDocument.ChangeVector, originalIncomingChangeVector, hubBDatabaseId);
+        AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "asymmetric filtered/unfiltered document internal hop", hubCDbCvAfterPass, hubCDocument.ChangeVector, originalIncomingChangeVector, hubBDatabaseId, hubBEtagInPassedChangeCv);
+        AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "asymmetric filtered/unfiltered document internal hop", hubCDocument.ChangeVector, originalIncomingChangeVector, hubBDatabaseId, hubBEtagInPassedChangeCv);
+        AssertItemOrderDoesNotCarryDatabaseId(filteredPassReceiveSide, LabNode.C, "asymmetric filtered/unfiltered document internal hop", hubCDocument.ChangeVector, sinkADatabaseId, "SA");
+        AssertDatabaseChangeVectorDoesNotCarryDatabaseId(filteredPassReceiveSide, LabNode.C, "asymmetric filtered/unfiltered document internal hop", hubCDbCvAfterPass, sinkADatabaseId, "SA");
+    }
+
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Hub])]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Sink])]
     public async Task ConflictDocument_ShouldNotInflateDatabaseChangeVectorAndShouldReplicateThroughInternalReplication(Options options, ClusterSide filteredPassReceiveSide)
@@ -1776,6 +1828,39 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"itemCV='{itemChangeVector ?? "<null>"}', originalIncomingCV='{originalIncomingChangeVector ?? "<null>"}'.");
     }
 
+    private static void AssertItemOrderCoversLocalDatabaseId(
+        ClusterSide filteredPassReceiveSide,
+        LabNode node,
+        string itemDescription,
+        string itemChangeVector,
+        string localDatabaseId)
+    {
+        var actualOrderEtag = GetOrderEtag(itemChangeVector, localDatabaseId);
+
+        Assert.True(
+            actualOrderEtag > 0,
+            $"Expected {itemDescription} on {NodeTag(filteredPassReceiveSide, node)} to carry receiver-local Order. " +
+            $"Expected order etag > 0 for localDatabaseId='{localDatabaseId ?? "<null>"}', actual order etag={actualOrderEtag}. " +
+            $"itemCV='{itemChangeVector ?? "<null>"}'.");
+    }
+
+    private static void AssertItemOrderDoesNotCarryDatabaseId(
+        ClusterSide filteredPassReceiveSide,
+        LabNode node,
+        string itemDescription,
+        string itemChangeVector,
+        string databaseId,
+        string databaseDescription)
+    {
+        var actualOrderEtag = GetOrderEtag(itemChangeVector, databaseId);
+
+        Assert.True(
+            actualOrderEtag == 0,
+            $"Expected {itemDescription} on {NodeTag(filteredPassReceiveSide, node)} not to carry {databaseDescription} database id in Order. " +
+            $"Expected order etag=0 for databaseId='{databaseId ?? "<null>"}', actual order etag={actualOrderEtag}. " +
+            $"itemCV='{itemChangeVector ?? "<null>"}'.");
+    }
+
     private static void AssertDatabaseChangeVectorCoversLocalItemOrder(
         ClusterSide filteredPassReceiveSide,
         LabNode node,
@@ -1818,6 +1903,23 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"Expected DB CV etag < {nodeBEtagInPassedChangeCv}, actual DB CV etag={actualDatabaseEtag}. " +
             $"This points to filtered item lineage leaking into regular database change vector progress. " +
             $"dbCV='{databaseChangeVector ?? "<null>"}', itemCV='{itemChangeVector ?? "<null>"}', originalIncomingCV='{originalIncomingChangeVector ?? "<null>"}'.");
+    }
+
+    private static void AssertDatabaseChangeVectorDoesNotCarryDatabaseId(
+        ClusterSide filteredPassReceiveSide,
+        LabNode node,
+        string itemDescription,
+        string databaseChangeVector,
+        string databaseId,
+        string databaseDescription)
+    {
+        var actualDatabaseEtag = GetEtag(databaseChangeVector, databaseId);
+
+        Assert.True(
+            actualDatabaseEtag == 0,
+            $"Expected {NodeTag(filteredPassReceiveSide, node)} DB CV after {itemDescription} not to carry {databaseDescription} database id. " +
+            $"Expected DB CV etag=0 for databaseId='{databaseId ?? "<null>"}', actual DB CV etag={actualDatabaseEtag}. " +
+            $"dbCV='{databaseChangeVector ?? "<null>"}'.");
     }
 
     private static void AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(
