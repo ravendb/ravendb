@@ -44,6 +44,30 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Mint_url_uses_the_public_subdomain()
+    {
+        using var h = await HarnessAsync();
+
+        // Minted from the operator host (dashboard.*), but the embed surface lives on public.* —
+        // the leading DNS label is swapped so the paste-ready link points at the public host.
+        var req = new HttpRequestMessage(HttpMethod.Post, $"/api/apps/{h.Slug}/embed-links")
+        {
+            Content = JsonContent.Create(
+                new { agentId = "demo-agent", parameters = new Dictionary<string, string>(), ttlSeconds = 3600, maxInvocations = 50 }),
+        };
+        req.Headers.Host = "dashboard.egor-ai.example";
+
+        var resp = await h.Client.SendAsync(req);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var token = json.GetProperty("token").GetString();
+        var url = json.GetProperty("url").GetString();
+        Assert.StartsWith("http://public.egor-ai.example/embed/", url);
+        Assert.EndsWith($"/embed/{token}", url);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Mint_unknown_agent_returns_404()
     {
         using var h = await HarnessAsync(provisionChannel: false);

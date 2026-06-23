@@ -56,10 +56,18 @@ public static class EmbedEndpoints
         var (_, _, channel) = resolved.Value;
 
         // frame-ancestors from the configured origins; empty list = embeddable
-        // anywhere (M1 contract). 'self' is always included so the appliance's own
-        // UI can preview the widget.
+        // anywhere (M1 contract). 'self' (the public.* embed host) plus the operator
+        // dashboard origin are always included so the appliance's own UI can preview
+        // the widget cross-origin (the dashboard frames the public.* page).
         if (channel.AllowedOrigins.Length > 0)
-            ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors 'self' {string.Join(' ', channel.AllowedOrigins)}";
+        {
+            // 'self' (the public.* embed host) + the operator dashboard origin so the in-appliance
+            // preview can frame the widget cross-origin, then the channel's configured origins. Skip the
+            // dashboard origin when a configured origin already lists it (single-host dev collapses them).
+            var dashboardOrigin = $"{ctx.Request.Scheme}://{ApplianceHost.WithSubdomain(ctx.Request.Host, "dashboard").ToUriComponent()}";
+            var head = Array.IndexOf(channel.AllowedOrigins, dashboardOrigin) >= 0 ? "'self'" : $"'self' {dashboardOrigin}";
+            ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors {head} {string.Join(' ', channel.AllowedOrigins)}";
+        }
 
         // Keep the bearer token out of cross-origin referer logs.
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
