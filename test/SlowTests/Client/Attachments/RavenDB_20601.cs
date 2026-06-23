@@ -39,7 +39,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2, server);
+                await EnsureReplicatingAsync(store1, store2);
 
                 var d = await BreakReplication(server.ServerStore, store1.Database);
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -65,7 +65,7 @@ namespace SlowTests.Client.Attachments
 
                 d.Mend();
 
-                await EnsureReplicatingAsync(store1, store2, server);
+                await EnsureReplicatingAsync(store1, store2);
             }
         }
 
@@ -138,7 +138,7 @@ namespace SlowTests.Client.Attachments
 
                 await SetupReplicationAsync(store1, store2);
 
-                await EnsureReplicatingAsync(store1, store2, server);
+                await EnsureReplicatingAsync(store1, store2);
                 var d = await BreakReplication(server.ServerStore, store1.Database);
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
@@ -178,7 +178,7 @@ namespace SlowTests.Client.Attachments
 
                 d.Mend();
 
-                await EnsureReplicatingAsync(store1, store2, server);
+                await EnsureReplicatingAsync(store1, store2);
             }
         }
     }

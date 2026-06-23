@@ -13,9 +13,11 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
@@ -24,12 +26,12 @@ using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -175,35 +177,27 @@ namespace Tests.Infrastructure
             }
         }
 
-        public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst, RavenServer server = null)
+        public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst)
         {
             var sharding = await Sharding.GetShardingConfigurationAsync(src);
             if (sharding == null)
             {
-                var srcDb = await Databases.GetDocumentDatabaseInstanceFor(server, src);
-                await EnsureReplicatingAndAckedAsync(srcDb, src, dst, src.Database, "marker/" + Guid.NewGuid(), timeoutMs: 15 * 1000);
+                await EnsureReplicatingAndAckedAsync(src, dst, src.Database, "marker/" + Guid.NewGuid(), timeoutMs: 15 * 1000);
                 return;
             }
 
             foreach (var shardNumber in sharding.Shards.Keys)
             {
-                var srcServers = server == null ? GetServers().Where(s => src.Urls.Contains(s.WebUrl)).ToList() : [server];
-                if (srcServers.Count == 0)
-                    throw new InvalidOperationException("Source server not found, do you use a custom server?");
-
                 var database = ShardHelper.ToShardName(src.Database, shardNumber);
-                var shardDb = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(database, srcServers);
                 var id = $"marker/{Guid.NewGuid()}${Sharding.GetRandomIdForShard(sharding, shardNumber)}";
-                await EnsureReplicatingAndAckedAsync(shardDb, src, dst, database, id, timeoutMs: 30 * 1000);
+                await EnsureReplicatingAndAckedAsync(src, dst, database, id, timeoutMs: 30 * 1000);
             }
         }
 
-        private async Task EnsureReplicatingAndAckedAsync(DocumentDatabase srcDb, IDocumentStore src, IDocumentStore dst, string database, string markerId, int timeoutMs)
+        private async Task EnsureReplicatingAndAckedAsync(IDocumentStore src, IDocumentStore dst, string database, string markerId, int timeoutMs)
         {
-            long lastEtagBefore = 0;
-            using (srcDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-                lastEtagBefore = srcDb.DocumentsStorage.ReadLastEtag(ctx.Transaction.InnerTransaction);
+            var stats = await GetDatabaseStatisticsAsync(src, database);
+            var lastEtagBefore = stats.LastDatabaseEtag ?? 0;
 
             using (var s = src.OpenSession(database))
             {
@@ -212,34 +206,119 @@ namespace Tests.Infrastructure
             }
 
             Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, markerId, timeoutMs));
-            var r = await WaitForValueAsync(() => GetMinimalEtagForExternalReplication(srcDb) >= lastEtagBefore, true);
-            Assert.True(r, $"'{srcDb.Name}' did not get the replication ack from '{dst.Database}' up to etag {lastEtagBefore} (current: {GetMinimalEtagForExternalReplication(srcDb)}).");
+            var r = await WaitForValueAsync(async () => await GetMinimalEtagForExternalReplication(src, database, stats) >= lastEtagBefore, true);
+            var current = await GetMinimalEtagForExternalReplication(src, database, stats);
+            Assert.True(r, $"'{src.Database}' did not get the replication ack from '{dst.Database}' up to etag {lastEtagBefore} (current: {current}).");
         }
 
-        private long GetMinimalEtagForExternalReplication(DocumentDatabase database)
+        private static async Task<long> GetMinimalEtagForExternalReplication(IDocumentStore src, string database, DatabaseStatistics stats)
         {
             var minEtag = long.MaxValue;
-            var server = database.ServerStore;
-            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            var replicationResult = await src.Maintenance.ForDatabase(database).SendAsync(new GetOngoingTasksInfoOperation(OngoingTaskType.Replication));
+            foreach (var externalReplication in replicationResult.OngoingTasks.OfType<OngoingTaskReplication>())
             {
-                var dbRecord = server.Cluster.ReadRawDatabaseRecord(ctx, database.Name);
-                var externals = dbRecord.ExternalReplications;
-                if (externals != null)
-                {
-                    foreach (var external in externals)
-                    {
-                        if (external.Disabled)
-                            continue;
+                if (externalReplication.TaskState == OngoingTaskState.Disabled)
+                    continue;
 
-                        var state = ReplicationLoader.GetExternalReplicationState(server, database.Name, external.TaskId, ctx);
-                        var myEtag = ChangeVectorUtils.GetEtagById(state.SourceChangeVector, database.DbBase64Id);
-                        minEtag = Math.Min(myEtag, minEtag);
-                    }
-                }
+                var myEtag = ChangeVectorUtils.GetEtagById(externalReplication.SourceDatabaseChangeVector, stats.DatabaseId);
+                minEtag = Math.Min(myEtag, minEtag);
             }
 
             return minEtag;
+        }
+
+        public sealed class GetOngoingTasksInfoOperation : IMaintenanceOperation<OngoingTasksResult>
+        {
+            private readonly OngoingTaskType _type;
+
+            public GetOngoingTasksInfoOperation(OngoingTaskType type)
+            {
+                _type = type;
+
+                if (type == OngoingTaskType.PullReplicationAsHub)
+                {
+                    throw new ArgumentException(nameof(OngoingTaskType.PullReplicationAsHub) + " type is not supported. Please use " + nameof(GetPullReplicationTasksInfoOperation) + " instead.");
+                }
+            }
+
+
+            public RavenCommand<OngoingTasksResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+            {
+                return new GetOngoingTasksInfoCommand(_type);
+            }
+
+            internal sealed class GetOngoingTasksInfoCommand : RavenCommand<OngoingTasksResult>
+            {
+                private readonly OngoingTaskType _type;
+                public GetOngoingTasksInfoCommand(OngoingTaskType type)
+                {
+                    _type = type;
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/tasks?type={_type}";
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Get
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+                {
+                    var result = new OngoingTasksResult();
+
+                    if (response == null)
+                    {
+                        Result = result;
+                        return;
+                    }
+
+                    if (response.TryGet(nameof(OngoingTasksResult.SubscriptionsCount), out int subscriptionsCount))
+                        result.SubscriptionsCount = subscriptionsCount;
+
+                    if (response.TryGetMember(nameof(OngoingTasksResult.OngoingTasks), out var tasks) &&
+                        tasks is BlittableJsonReaderArray tasksArray)
+                    {
+                        foreach (BlittableJsonReaderObject taskJson in tasksArray)
+                        {
+                            if (taskJson.TryGet(nameof(OngoingTask.TaskType), out OngoingTaskType taskType) == false)
+                                continue;
+
+                            if (taskType != _type)
+                                continue;
+
+                            result.OngoingTasks.Add(DeserializeTask(taskType, taskJson));
+                        }
+                    }
+
+                    Result = result;
+                }
+
+                private static OngoingTask DeserializeTask(OngoingTaskType taskType, BlittableJsonReaderObject taskJson)
+                {
+                    return taskType switch
+                    {
+                        OngoingTaskType.Replication => JsonDeserializationClient.GetOngoingTaskReplicationResult(taskJson),
+                        OngoingTaskType.RavenEtl => JsonDeserializationClient.GetOngoingTaskRavenEtlResult(taskJson),
+                        OngoingTaskType.SqlEtl => JsonDeserializationClient.GetOngoingTaskSqlEtlResult(taskJson),
+                        OngoingTaskType.OlapEtl => JsonDeserializationClient.GetOngoingTaskOlapEtlResult(taskJson),
+                        OngoingTaskType.ElasticSearchEtl => JsonDeserializationClient.GetOngoingTaskElasticSearchEtlResult(taskJson),
+                        OngoingTaskType.QueueEtl => JsonDeserializationClient.GetOngoingTaskQueueEtlResult(taskJson),
+                        OngoingTaskType.Backup => JsonDeserializationClient.GetOngoingTaskBackupResult(taskJson),
+                        OngoingTaskType.Subscription => JsonDeserializationClient.GetOngoingTaskSubscriptionResult(taskJson),
+                        OngoingTaskType.PullReplicationAsSink => JsonDeserializationClient.OngoingTaskPullReplicationAsSinkResult(taskJson),
+                        OngoingTaskType.PullReplicationAsHub => JsonDeserializationClient.OngoingTaskPullReplicationAsHubResult(taskJson),
+                        OngoingTaskType.QueueSink => JsonDeserializationClient.GetOngoingTaskQueueSinkResult(taskJson),
+                        _ => throw new ArgumentOutOfRangeException(nameof(taskType), taskType, "Unknown task type")
+                    };
+                }
+
+                public override bool IsReadRequest => false;
+            }
         }
 
         protected static async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, TimeSpan timeout)
