@@ -25,7 +25,6 @@ using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
-using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Extensions;
@@ -574,13 +573,11 @@ namespace Raven.Server.Documents.Replication
                 var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
                 newIncoming.Failed += RetryPullReplication;
 
-                _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
+                CompletePullReplicationAsSinkHandoff(source, destination, newIncoming);
 
                 PoolOfThreads.PooledThread.ResetCurrentThreadName();
                 Thread.CurrentThread.Name = ThreadNames.GetNameToUse(ThreadNames.ForPullReplicationAsSink($"Pull Replication as Sink from {destination.Database} at {destination.Url}", destination.Database, destination.Url));
 
-                _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
-                IncomingReplicationAdded?.Invoke(newIncoming);
                 newIncoming.DoIncomingReplication();
 
                 void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
@@ -601,6 +598,34 @@ namespace Raven.Server.Documents.Replication
                     AddAndStartOutgoingReplication(destination);
                 }
             }
+        }
+
+        private void CompletePullReplicationAsSinkHandoff(DatabaseOutgoingReplicationHandler source, ReplicationNode destination, IncomingReplicationHandler newIncoming)
+        {
+            _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
+            IncomingReplicationAdded?.Invoke(newIncoming);
+
+            // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
+            RemoveOutgoingHandler(source);
+
+            if (_outgoingFailureInfo.TryRemove(destination, out ConnectionShutdownInfo info))
+                _reconnectQueue.TryRemove(info);
+
+            foreach (var reconnect in _reconnectQueue.ToList())
+            {
+                if (destination.IsEqualTo(reconnect.Node))
+                    _reconnectQueue.TryRemove(reconnect);
+            }
+        }
+
+        private void RemoveOutgoingHandler(DatabaseOutgoingReplicationHandler instance)
+        {
+            instance.Failed -= OnOutgoingSendingFailed;
+            instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+            instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
+
+            if (_outgoing.TryRemove(instance))
+                OutgoingReplicationRemoved?.Invoke(instance);
         }
 
         private void OnAttachmentStreamsReceived(IncomingReplicationHandler source, int attachmentsStreamCount)
@@ -1179,7 +1204,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var incoming in _incoming)
             {
                 var instance = incoming.Value as IncomingReplicationHandler;
-                if (toRemove.Any(conn => conn.Url == incoming.Value.ConnectionInfo.SourceUrl))
+                if (toRemove.Any(conn => ShouldDropIncomingConnection(conn, incoming.Value)))
                 {
                     if (_incoming.TryRemove(incoming.Value.ConnectionInfo.SourceDatabaseId, out _))
                         IncomingReplicationRemoved?.Invoke(instance);
@@ -1187,6 +1212,30 @@ namespace Raven.Server.Documents.Replication
                     instancesToDispose.Add(incoming.Value);
                 }
             }
+        }
+
+        private static bool ShouldDropIncomingConnection(ReplicationNode connectionToRemove, IAbstractIncomingReplicationHandler incoming)
+        {
+            if (incoming is IncomingPullReplicationHandlerAsSink pullAsSink &&
+                connectionToRemove is PullReplicationAsSink { Mode: PullReplicationMode.HubToSink } pullReplicationAsSink)
+            {
+                return IsSameHubToSinkPullReplicationTask(pullAsSink, pullReplicationAsSink);
+            }
+
+            return connectionToRemove.Url == incoming.ConnectionInfo.SourceUrl;
+        }
+
+        private static bool IsSameHubToSinkPullReplicationTask(IncomingPullReplicationHandlerAsSink incoming, PullReplicationAsSink destination)
+        {
+            var incomingParams = incoming.IncomingPullReplicationParams;
+            if (incomingParams.Mode != PullReplicationMode.HubToSink)
+                return false;
+
+            if (incomingParams.TaskId != 0 && destination.TaskId != 0)
+                return incomingParams.TaskId == destination.TaskId;
+
+            return string.Equals(incomingParams.Name, destination.HubName, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(incomingParams.SourceDatabaseName, destination.Database, StringComparison.OrdinalIgnoreCase);
         }
 
         private void DisposeConnections(List<IDisposable> instancesToDispose)
@@ -1802,12 +1851,7 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
-                instance.Failed -= OnOutgoingSendingFailed;
-                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-                instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
-
-                _outgoing.TryRemove(instance);
-                OutgoingReplicationRemoved?.Invoke(instance);
+                RemoveOutgoingHandler(instance);
 
                 if (instance is OutgoingPullReplicationHandler)
                     _externalDestinations.Remove(instance.Destination as ExternalReplication);
