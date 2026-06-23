@@ -595,7 +595,8 @@ namespace Raven.Server.SqlMigration
 
         public object ValueAsObject(SqlTableSchema tableSchema, string column, string[] primaryKeyValue, int index)
         {
-            // Case-insensitive column lookup: source identifiers can differ in case from the configured mapping.
+            // Case-insensitive match resolves the column type only; the emitted identifier keeps the configured
+            // casing (case-sensitive in Postgres once quoted).
             var columnSchema = tableSchema.Columns.Find(x => string.Equals(x.Name, column, StringComparison.OrdinalIgnoreCase));
             if (columnSchema == null)
                 throw new InvalidOperationException($"Primary key column '{column}' was not found in the schema of table '{tableSchema.Schema}.{tableSchema.TableName}'.");
@@ -606,12 +607,13 @@ namespace Raven.Server.SqlMigration
                 return raw;
 
             // Widen the numeric parse with invariant culture: integer keys may be bigint (beyond int range), so try
-            // long first, then decimal for fixed-point/scaled keys. Leave the original value if it isn't numeric.
+            // long first, then decimal for fixed-point/scaled keys.
             if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var asLong))
                 return asLong;
             if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var asDecimal))
                 return asDecimal;
-            return raw;
+
+            throw new InvalidOperationException($"Primary key value '{raw}' for numeric column '{column}' of table '{tableSchema.Schema}.{tableSchema.TableName}' is not a valid number.");
         }
 
         protected IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 

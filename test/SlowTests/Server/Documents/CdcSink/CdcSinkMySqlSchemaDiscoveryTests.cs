@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -109,6 +110,42 @@ namespace SlowTests.Server.Documents.CdcSink
             // but they are ordinary columns present in the binlog row image - they must stay capturable.
             Assert.True(products.Columns.Single(c => c.Name == "created_at").IsCdcCapturable);
             Assert.True(products.Columns.Single(c => c.Name == "expr_default").IsCdcCapturable);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task DiscoversCrossDatabaseForeignKey()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.MySQL_MySqlConnector, out var connectionString, out _, dataSet: null, includeData: false);
+
+            var otherDb = "cdc_xdb_" + Guid.NewGuid().ToString("N");
+            try
+            {
+                ExecuteMySql(connectionString, $"CREATE DATABASE `{otherDb}`");
+                ExecuteMySql(connectionString, $"CREATE TABLE `{otherDb}`.parent_other (id INT PRIMARY KEY)");
+                ExecuteMySql(connectionString, $@"
+                    CREATE TABLE child_main (
+                        cid INT PRIMARY KEY,
+                        ref INT NOT NULL,
+                        CONSTRAINT fk_cross FOREIGN KEY (ref) REFERENCES `{otherDb}`.parent_other(id)
+                    );");
+
+                var discovery = CdcSinkSchemaDiscovery.For("MySqlConnector.MySqlConnectorFactory");
+                var schema = await discovery.DiscoverAsync(connectionString, schemas: null, CancellationToken.None);
+
+                var child = Assert.Single(schema.Tables);
+                Assert.Equal("child_main", child.SourceTableName);
+
+                var fk = Assert.Single(child.ForeignKeys);
+                Assert.Equal(new[] { "ref" }, fk.Columns);
+                Assert.Equal(otherDb, fk.ReferencedSchema);
+                Assert.Equal("parent_other", fk.ReferencedTable);
+                Assert.Equal(new[] { "id" }, fk.ReferencedColumns);
+            }
+            finally
+            {
+                ExecuteMySql(connectionString, "DROP TABLE IF EXISTS child_main");
+                ExecuteMySql(connectionString, $"DROP DATABASE IF EXISTS `{otherDb}`");
+            }
         }
     }
 }

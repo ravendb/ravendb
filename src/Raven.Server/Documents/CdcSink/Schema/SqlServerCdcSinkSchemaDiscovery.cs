@@ -170,6 +170,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
                 }
             }
 
+            // keyColumnUsage is keyed by TABLE_SCHEMA; these rows key by CONSTRAINT_SCHEMA / UNIQUE_CONSTRAINT_SCHEMA.
+            // They line up because a constraint is co-located with its table, so CONSTRAINT_SCHEMA == its TABLE_SCHEMA.
             await using var refCmd = conn.CreateCommand();
             refCmd.CommandText = Queries.SelectReferentialConstraintsQuery;
             await using var refReader = await refCmd.ExecuteReaderAsync(ct);
