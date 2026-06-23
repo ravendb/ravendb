@@ -411,6 +411,127 @@ namespace SlowTests.Server.Replication
         }
 
         [RavenFact(RavenTestCategory.Replication)]
+        public async Task DisableHubToSinkPullReplicationOnSinkShouldDropIncomingHandler()
+        {
+            DoNotReuseServer();
+
+            var hubPort = GetReservedPort();
+            var hubSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = $"http://127.0.0.1:{hubPort}",
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://localhost:{hubPort}"
+            };
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            var connectionStringName = $"ConnectionString-{definitionName}";
+            const int timeout = 10_000;
+
+            using (var sinkServer = GetNewServer())
+            using (var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings }))
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                // The sink connects to the hub through the bound URL, but the hub advertises PublicServerUrl
+                // in the handshake. URL-based cleanup cannot treat those strings as the task identity.
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().SelectPullReplicationRemoteUrls = (_, _, _) => hub.Urls;
+
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                }));
+
+                await sink.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = connectionStringName,
+                    Database = hub.Database,
+                    TopologyDiscoveryUrls = hub.Urls
+                }));
+
+                var sinkTask = await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink(hub.Database, connectionStringName, definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                }));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "before-disable" }, "users/before-disable");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/before-disable", u => u.Name == "before-disable", timeout), sink.Identifier);
+
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected an active IncomingPullReplicationHandlerAsSink before disabling the sink task.");
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+
+                Assert.False(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), false, timeout),
+                    "Disabling the HubToSink pull replication task on the sink should dispose the active incoming pull handler.");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task SuccessfulHubToSinkPullReplicationHandoffShouldClearQueuedReconnect()
+        {
+            DoNotReuseServer();
+
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "60",
+                [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1"
+            };
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            const int timeout = 20_000;
+
+            using (var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings }))
+            using (var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings }))
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var pullDefinition = new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
+
+                var failTcpInfoLookup = true;
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().SelectPullReplicationRemoteUrls = (_, _, remoteUrls) =>
+                    failTcpInfoLookup ? ["http://127.0.0.1:1234"] : remoteUrls;
+
+                var pullReplication = new PullReplicationAsSink(hub.Database, $"ConnectionString-{hub.Database}", definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                var sinkTask = await AddWatcherToReplicationTopology(sink, pullReplication, hub.Urls);
+
+                Assert.True(WaitForValue(() => HasHubToSinkReconnectQueued(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected the sink to queue a HubToSink reconnect attempt after the first outgoing TCP info lookup fails.");
+
+                var queuedDestination = GetQueuedHubToSinkDestination(sinkDatabase, sinkTask.TaskId);
+                Assert.NotNull(queuedDestination);
+
+                failTcpInfoLookup = false;
+                sinkDatabase.ReplicationLoader.AddAndStartOutgoingReplication(queuedDestination);
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "after-handoff" }, "users/after-handoff");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/after-handoff", u => u.Name == "after-handoff", timeout), sink.Identifier);
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected the sink to complete a successful outgoing-to-incoming HubToSink handoff.");
+
+                Assert.False(HasHubToSinkReconnectQueued(sinkDatabase, sinkTask.TaskId),
+                    "A successful HubToSink handoff should clear the queued reconnect for the same sink task.");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task DisablePullReplicationOnHub()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -1559,6 +1680,23 @@ namespace SlowTests.Server.Replication
                     catch { /* cancelled */ }
                 }
             });
+        }
+
+        private static bool HasIncomingHubToSinkPullHandler(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.IncomingHandlers
+                .OfType<IncomingPullReplicationHandlerAsSink>()
+                .Any(x => x.IncomingPullReplicationParams.TaskId == taskId && x.IncomingPullReplicationParams.Mode == PullReplicationMode.HubToSink);
+        }
+
+        private static bool HasHubToSinkReconnectQueued(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.ReconnectQueue.OfType<PullReplicationAsSink>().Any(x => x.TaskId == taskId && x.Mode == PullReplicationMode.HubToSink);
+        }
+
+        private static PullReplicationAsSink GetQueuedHubToSinkDestination(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.ReconnectQueue.OfType<PullReplicationAsSink>().FirstOrDefault(x => x.TaskId == taskId && x.Mode == PullReplicationMode.HubToSink);
         }
 
         private class AsyncGate
