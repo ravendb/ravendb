@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public readonly ReplicationLoader.PullReplicationParams IncomingPullReplicationParams;
         public readonly string CertificateThumbprint;
 
-        protected readonly PullReplicationChangeVectorShape ChangeVectorShape;
+        protected readonly PullReplicationChangeVectorWireMode ChangeVectorWireMode;
 
         private readonly AllowedPathsValidator _allowedPathsValidator;
 
@@ -43,14 +43,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                 TaskId = incomingPullReplicationParams?.TaskId ?? 0
             };
 
-            // Sender-side filtering is declared in the handshake; receiver-side filtering is derived from this side's pull replication rules.
-            var changeVectorTransmission = PullReplicationChangeVectorModeSelector.GetChangeVectorTransmission(
-                localSupportsCompositeChangeVectors: parent.Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors,
-                remoteSupportsCompositeChangeVectors: sourceHandshakeRequest.SupportsPullReplicationCompositeChangeVectors);
-
-            ChangeVectorShape = PullReplicationChangeVectorModeSelector.GetChangeVectorShape(
-                canFilterOutSourceItems: sourceHandshakeRequest.CanFilterOutSourceItems || CanReceiverFilterOutSourceItems(IncomingPullReplicationParams),
-                transmission: changeVectorTransmission);
+            ChangeVectorWireMode = parent.Database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors &&
+                                   sourceHandshakeRequest.SupportsPullReplicationCompositeChangeVectors
+                ? PullReplicationChangeVectorWireMode.SendAsIs
+                : PullReplicationChangeVectorWireMode.SendLegacyCompatible;
 
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
@@ -114,17 +110,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     }
                 }
             }
-        }
-
-        private bool CanReceiverFilterOutSourceItems(ReplicationLoader.PullReplicationParams pullReplicationParams)
-        {
-            if (pullReplicationParams == null)
-                return false;
-
-            if (PullReplicationPathFilterUtils.CanFilterOutByAllowedPaths(pullReplicationParams.AllowedPaths))
-                return true;
-
-            return PreventIncomingSinkDeletions;
         }
 
         protected static void RemoveExpiresFromSinkBatchItem(DocumentsOperationContext ctx, ReplicationBatchItem item, bool preventIncomingSinkDeletions)

@@ -168,7 +168,9 @@ public abstract class FilteredPullDualClusterTestBase : ReplicationTestBase
         ClusterSide? filteredPassReceiveSide = null,
         string itemName = null,
         int hubNodeCount = 3,
-        int sinkNodeCount = 3)
+        int sinkNodeCount = 3,
+        bool configureFilteredRoundTrip = true,
+        bool filteredRoundTripReturnLegUnfiltered = false)
     {
         if (hubNodeCount < 1 || hubNodeCount > NodesOnEachClusterSide.Length)
             throw new ArgumentOutOfRangeException(nameof(hubNodeCount), hubNodeCount, $"Hub node count must be between 1 and {NodesOnEachClusterSide.Length}.");
@@ -227,7 +229,8 @@ public abstract class FilteredPullDualClusterTestBase : ReplicationTestBase
         await lab.ConfigurePerNodeHubDefinitionsAsync();
         await lab.SeedInternalReplicationAsync();
         await lab.WaitForInternalHandlersAsync();
-        await lab.ConfigureFilteredRoundTripReplicationAsync(filteredPassReceiveSide);
+        if (configureFilteredRoundTrip)
+            await lab.ConfigureFilteredRoundTripReplicationAsync(filteredPassReceiveSide, filteredRoundTripReturnLegUnfiltered);
 
         return lab;
     }
