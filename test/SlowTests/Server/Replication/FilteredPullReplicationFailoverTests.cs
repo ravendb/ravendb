@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -3159,18 +3160,24 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                     session.Store(new User { Name = $"User{i}" }, $"users/{i}");
                 session.SaveChanges();
             }
+            var (sourceDatabaseId, sourceLastEtag) = await GetDatabaseIdAndLastEtagAsync(hubStore);
 
             var pullReplication = new PullReplicationAsSink(hubStore.Database, $"ConnectionString-{hubStore.Database}", name)
             {
                 MentorNode = "A"
             };
-            await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubStore.Urls);
+            var result = await AddWatcherToReplicationTopology((DocumentStore)sinkStore, pullReplication, hubStore.Urls);
 
             Assert.True(await WaitForDocumentInClusterAsync<User>(
                 sinkNodes.Where(n => n.ServerStore.NodeTag == "A").ToList(),
                 sinkDB, "users/1023", u => true, TimeSpan.FromSeconds(30)));
 
             var sinkNodeA = sinkNodes.Single(n => n.ServerStore.NodeTag == "A");
+            Assert.True(WaitForValue(
+                () => HubCursorCovers(sinkNodeA.ServerStore, sinkDB, result.TaskId, sourceDatabaseId, sourceLastEtag),
+                true, 30_000),
+                $"HubCursor should cover source database '{sourceDatabaseId}' etag {sourceLastEtag} before sink node failover.");
+
             var (dataDir, url, _) = await DisposeServerAndWaitForFinishOfDisposalAsync(sinkNodeA);
 
             using (var session = hubStore.OpenSession())
@@ -3899,6 +3906,36 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 }
             }, true, 30_000),
             $"HubCursor must include external DB '{externalDb.DbBase64Id}' etag after filtered-only batch");
+        }
+    }
+
+    private async Task<(string DatabaseId, long LastEtag)> GetDatabaseIdAndLastEtagAsync(IDocumentStore store)
+    {
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        return GetDatabaseIdAndLastEtag(database);
+    }
+
+    private static (string DatabaseId, long LastEtag) GetDatabaseIdAndLastEtag(DocumentDatabase database)
+    {
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            return (database.DbBase64Id, database.DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction));
+        }
+    }
+
+    private static bool HubCursorCovers(Raven.Server.ServerWide.ServerStore serverStore, string databaseName, long taskId, string sourceDatabaseId, long sourceEtag)
+    {
+        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var key = ExternalReplicationState.GenerateItemName(databaseName, taskId, ExternalReplicationState.ReplicationStateType.HubCursor);
+            var blittable = serverStore.Cluster.Read(context, key);
+            if (blittable == null)
+                return false;
+
+            var state = JsonDeserializationCluster.ExternalReplicationState(blittable);
+            return ChangeVectorUtils.GetEtagById(state.SourceChangeVector, sourceDatabaseId) >= sourceEtag;
         }
     }
 
