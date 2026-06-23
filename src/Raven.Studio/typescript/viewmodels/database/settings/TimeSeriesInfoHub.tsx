@@ -27,8 +27,6 @@ export function TimeSeriesInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     In this view, you can add a <strong>Time Series Configuration per collection</strong> to

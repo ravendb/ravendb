@@ -3,13 +3,7 @@ import AboutViewFloating, { AccordionItemWrapper } from "components/common/About
 export default function AiTasksInfoHub() {
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <p>
                     In this view, you can manage AI tasks - <br />
                     create new tasks, edit existing ones, or delete them as needed.

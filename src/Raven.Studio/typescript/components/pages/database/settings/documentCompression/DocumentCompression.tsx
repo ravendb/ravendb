@@ -190,13 +190,7 @@ export default function DocumentCompression() {
                     </Col>
                     <Col sm={12} lg={4}>
                         <AboutViewAnchored defaultOpen={hasDocumentsCompression ? null : "licensing"}>
-                            <AccordionItemWrapper
-                                targetId="aboutView"
-                                icon="about"
-                                color="info"
-                                heading="About this view"
-                                description="Get additional info on what this feature can offer you"
-                            >
+                            <AccordionItemWrapper targetId="aboutView" icon="about" color="info">
                                 <ul>
                                     <li>
                                         Enable documents compression to achieve efficient data storage.

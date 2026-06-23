@@ -3,13 +3,7 @@ import AboutViewFloating, { AccordionItemWrapper } from "components/common/About
 export default function EditAiAgentInfoHub() {
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <div>
                     In this view, you can define an AI Agent - <br /> a natural language{" "}
                     <strong>conversational assistant</strong> powered by an LLM.

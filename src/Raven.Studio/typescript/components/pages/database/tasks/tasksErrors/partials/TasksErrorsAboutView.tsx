@@ -4,12 +4,7 @@ import { AboutViewFloating, AccordionItemWrapper } from "components/common/About
 export default function TasksErrorsAboutView() {
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper icon="about" color="info">
                 <p>
                     This view displays recent errors from your ongoing tasks, including <strong>ETL tasks</strong>{" "}
                     (RavenDB, SQL, OLAP, ElasticSearch, Kafka, RabbitMQ, Azure Queue Storage, Amazon SQS, Snowflake) and{" "}

@@ -8,13 +8,7 @@ export function ServerSettingsInfoHub() {
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     The <strong>Server Settings</strong> view displays all configuration keys for the server.
                 </p>

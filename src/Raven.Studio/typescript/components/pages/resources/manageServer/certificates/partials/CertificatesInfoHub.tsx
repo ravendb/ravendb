@@ -24,13 +24,7 @@ export function CertificatesInfoHub() {
 
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>Manage your server and client certificates from this view.</p>
                 <div>
                     <strong>Server certificates</strong>:
