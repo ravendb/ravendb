@@ -94,7 +94,7 @@ public class RavenDB_25401 : RavenTestBase
                     .Append(", streamed='").Append(streamed).Append('\'')
                     .Append(", prompt=").AppendLine(prompt);
             }
-            catch (RefusedToAnswerException e)
+            catch (RefusedToAnswerException)
             {
                 refusalSurfaced = true;
                 break;
