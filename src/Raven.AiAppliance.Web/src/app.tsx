@@ -6,6 +6,7 @@ import { isAppRouteHandle } from "@/routes";
 import { api } from "@/api/api";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { CommandPalette } from "@/components/layout/command-palette";
+import { UserMenu } from "@/components/layout/user-menu";
 import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
@@ -116,6 +117,7 @@ function App() {
                     >
                         <Sparkles className="size-4" aria-hidden="true" />
                     </Link>
+                    <UserMenu />
                 </nav>
             </header>
 

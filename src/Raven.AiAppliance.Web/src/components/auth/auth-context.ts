@@ -5,6 +5,7 @@ export type AuthContextValue = {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (apiKey: string) => Promise<AuthStatusResponse>;
+    logout: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
