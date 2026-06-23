@@ -4,7 +4,7 @@ import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
+import { ExpandableText } from "@/components/data/expandable-text";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { SuggestionPicker } from "@/pages/setup/add-capability-wizard/suggestion-picker";
@@ -36,18 +36,11 @@ export function AgentSuggestionTab() {
                     <SummaryRow label="Agent name">{config.name || "—"}</SummaryRow>
                     <SummaryRow label="System prompt">
                         {systemPrompt ? (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span className="block max-w-md cursor-default">{systemPrompt}</span>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-sm whitespace-normal">
-                                        {systemPrompt}
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                            <ExpandableText maxLines={3} className="text-justify text-sm whitespace-pre-wrap">
+                                {systemPrompt}
+                            </ExpandableText>
                         ) : (
-                            "—"
+                            <span className="text-sm text-muted-foreground">—</span>
                         )}
                     </SummaryRow>
                     <SummaryRow label="Connection string">{connectionStringName || "—"}</SummaryRow>
@@ -106,7 +99,7 @@ function PromptEditor() {
 
 function SummaryRow({ label, children }: { label: string; children: ReactNode }) {
     return (
-        <div className="flex min-h-12 items-center justify-between gap-4 py-3">
+        <div className="flex min-h-12 items-center justify-between gap-12 py-3">
             <span className="shrink-0 text-sm font-medium">{label}</span>
             <div className="flex min-w-0 justify-end text-sm">{children}</div>
         </div>
