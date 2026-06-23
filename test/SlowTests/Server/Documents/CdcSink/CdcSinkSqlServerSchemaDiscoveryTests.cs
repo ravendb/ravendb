@@ -11,6 +11,7 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.CdcSink
 {
+    [Collection(nameof(CdcSinkSqlServerTests))]
     public class CdcSinkSqlServerSchemaDiscoveryTests : CdcSinkIntegrationTestBase
     {
         public CdcSinkSqlServerSchemaDiscoveryTests(ITestOutputHelper output) : base(output)
