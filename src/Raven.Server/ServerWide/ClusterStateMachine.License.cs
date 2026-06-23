@@ -329,7 +329,7 @@ public sealed partial class ClusterStateMachine
 
     private void AssertStaticIndexesCount(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
     {
-        if (databaseRecord.Indexes == null)
+        if (databaseRecord.Indexes == null || databaseRecord.Indexes.Count == 0)
             return;
 
         var maxStaticIndexesPerDatabase = licenseStatus.MaxNumberOfStaticIndexesPerDatabase;
@@ -360,7 +360,7 @@ public sealed partial class ClusterStateMachine
     {
         var maxAutoIndexesPerDatabase = licenseStatus.MaxNumberOfAutoIndexesPerDatabase;
 
-        if (databaseRecord.AutoIndexes == null)
+        if (databaseRecord.AutoIndexes == null || databaseRecord.AutoIndexes.Count == 0)
             return;
 
         if (maxAutoIndexesPerDatabase is >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
@@ -490,6 +490,9 @@ public sealed partial class ClusterStateMachine
 
     private void AssertSorters(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
     {
+        if (databaseRecord.Sorters == null || databaseRecord.Sorters.Count == 0)
+            return;
+
         var maxCustomSortersPerDatabase = licenseStatus.MaxNumberOfCustomSortersPerDatabase;
         if (maxCustomSortersPerDatabase is >= 0 && databaseRecord.Sorters.Count > maxCustomSortersPerDatabase)
         {
@@ -515,6 +518,9 @@ public sealed partial class ClusterStateMachine
 
     private void AssertAnalyzers(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
     {
+        if (databaseRecord.Analyzers == null || databaseRecord.Analyzers.Count == 0)
+            return;
+
         var maxAnalyzersPerDatabase = licenseStatus.MaxNumberOfCustomAnalyzersPerDatabase;
         if (maxAnalyzersPerDatabase is >= 0 && databaseRecord.Analyzers.Count > maxAnalyzersPerDatabase)
         {
@@ -937,13 +943,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertPullReplicationAsSinkLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.SinkPullReplications.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasPullReplicationAsSink)
-            return;
-
-        if (databaseRecord.SinkPullReplications.Count == 0)
             return;
 
         if (databaseRecord.SinkPullReplications.All(x => x.Disabled))
@@ -954,13 +960,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertPullReplicationAsHubLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.HubPullReplications.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasPullReplicationAsHub)
-            return;
-
-        if (databaseRecord.HubPullReplications.Count == 0)
             return;
 
         if (databaseRecord.HubPullReplications.All(x => x.Disabled))
@@ -971,6 +977,9 @@ public sealed partial class ClusterStateMachine
 
     private void AssertExternalReplicationLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
     {
+        if (databaseRecord.ExternalReplications.Count == 0 && updateDatabaseCommand == null)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
@@ -1012,13 +1021,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertRavenEtlLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.RavenEtls.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasRavenEtl)
-            return;
-
-        if (databaseRecord.RavenEtls.Count == 0)
             return;
 
         if (databaseRecord.RavenEtls.All(x => x.Disabled))
@@ -1029,13 +1038,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertSqlEtlLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.SqlEtls.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasSqlEtl)
-            return;
-
-        if (databaseRecord.SqlEtls.Count == 0)
             return;
 
         if (databaseRecord.SqlEtls.All(x => x.Disabled))
@@ -1046,13 +1055,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertOlapEtlLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.OlapEtls.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasOlapEtl)
-            return;
-
-        if (databaseRecord.OlapEtls.Count == 0)
             return;
 
         if (databaseRecord.OlapEtls.All(x => x.Disabled))
@@ -1063,13 +1072,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertQueueEtlLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.QueueEtls.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasQueueEtl)
-            return;
-
-        if (databaseRecord.QueueEtls.Count == 0)
             return;
 
         if (databaseRecord.QueueEtls.All(x => x.Disabled))
@@ -1080,13 +1089,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertElasticSearchEtlLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.ElasticSearchEtls.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasElasticSearchEtl)
-            return;
-
-        if (databaseRecord.ElasticSearchEtls.Count == 0)
             return;
 
         if (databaseRecord.ElasticSearchEtls.All(x => x.Disabled))
@@ -1097,13 +1106,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertSnowflakeEtl(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.SnowflakeEtls.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasSnowflakeEtl)
-            return;
-
-        if (databaseRecord.SnowflakeEtls.Count == 0)
             return;
 
         if (databaseRecord.SnowflakeEtls.All(x => x.Disabled))
@@ -1114,13 +1123,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertEmbeddingsGeneration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.AiConnectionStrings.Count == 0 || databaseRecord.EmbeddingsGenerations.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasEmbeddingsGeneration)
-            return;
-
-        if (databaseRecord.AiConnectionStrings.Count == 0 || databaseRecord.EmbeddingsGenerations.Count == 0)
             return;
 
         if (databaseRecord.EmbeddingsGenerations.All(x => x.Disabled))
@@ -1141,13 +1150,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertGenAi(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.GenAis.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasGenAi)
-            return;
-
-        if (databaseRecord.GenAis.Count == 0)
             return;
 
         if (databaseRecord.GenAis.All(x => x.Disabled))
@@ -1158,13 +1167,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertAiAgent(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.AiAgents.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasAiAgent)
-            return;
-
-        if (databaseRecord.AiAgents.Count == 0)
             return;
 
         if (databaseRecord.AiAgents.All(x => x.Disabled))
@@ -1175,16 +1184,16 @@ public sealed partial class ClusterStateMachine
 
     private void AssertTimeSeriesConfigurationLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.TimeSeries == null || databaseRecord.TimeSeries.Collections.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasTimeSeriesRollupsAndRetention)
             return;
 
-        if (databaseRecord.TimeSeries == null)
-            return;
-
-        if (databaseRecord.TimeSeries.Collections.Count == 0 || databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
+        if (databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
             return;
 
         throw new LicenseLimitException(LimitType.TimeSeriesRollupsAndRetention, "Your license doesn't support adding Time Series Rollups And Retention feature.");
@@ -1192,13 +1201,13 @@ public sealed partial class ClusterStateMachine
 
     private void AssertDocumentsCompressionLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.DocumentsCompression == null)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         if (licenseStatus.HasDocumentsCompression)
-            return;
-
-        if (databaseRecord.DocumentsCompression == null)
             return;
 
         if (databaseRecord.DocumentsCompression.CompressAllCollections == false &&
@@ -1211,6 +1220,9 @@ public sealed partial class ClusterStateMachine
 
     private void AssertAdditionalAssembliesFromNuGetLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.Indexes == null || databaseRecord.Indexes.Count == 0)
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
