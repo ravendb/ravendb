@@ -191,9 +191,12 @@ public static class EmbedLinksEndpoints
             await cfg.SaveChangesAsync(ct);
         }
 
-        // Include PathBase so the URL is correct when the appliance is hosted under a sub-path.
-        // Scheme/Host are correct behind the nginx :443 front via UseForwardedHeaders (Program.cs).
-        var url = $"{ctx.Request.Scheme}://{ctx.Request.Host}{ctx.Request.PathBase}/embed/{token}";
+        // The embed surface is served on the public.* subdomain only, so mint the link there regardless
+        // of which operator host (dashboard.* / api.*) issued the request — the leading DNS label is
+        // swapped to public.*. PathBase keeps the URL correct under sub-path hosting; Scheme/Host come
+        // from UseForwardedHeaders behind the nginx :443 front (Program.cs).
+        var publicHost = ApplianceHost.WithSubdomain(ctx.Request.Host, "public");
+        var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/embed/{token}";
         logger.LogInformation(
             "Minted embed link slug={Slug} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
             app.Slug, config.Identifier, ttlSeconds, maxInvocations);
