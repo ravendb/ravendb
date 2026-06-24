@@ -2,10 +2,11 @@
 // https://github.com/TanStack/table/issues/5567
 "use no memo";
 
-import { useRef } from "react";
-import { flexRender, type Table as ReactTable } from "@tanstack/react-table";
+import { useRef, type CSSProperties, type ReactNode } from "react";
+import { flexRender, type Header, type Table as ReactTable } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+import { useAutoSizeColumns } from "@/components/table/use-auto-size-columns";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_TABLE_HEIGHT_IN_PX = 360;
@@ -22,6 +23,12 @@ interface VirtualDataTableProps<TData> {
     rowHeightInPx?: number;
     getCellClassName?: (cellId: string) => string;
     getRowState?: (rowId: string) => string;
+    /** Floating content laid over the table region, e.g. a selection toolbar pinned to the bottom edge. */
+    overlay?: ReactNode;
+}
+
+function getColumnStyle(size: number): CSSProperties {
+    return { width: size, flexGrow: 0, flexShrink: 0 };
 }
 
 export function VirtualDataTable<TData>({
@@ -34,7 +41,16 @@ export function VirtualDataTable<TData>({
     rowHeightInPx = DEFAULT_ROW_HEIGHT_IN_PX,
     getCellClassName,
     getRowState,
+    overlay,
 }: VirtualDataTableProps<TData>) {
+    // Enable resizing for the whole table so the drag handles and content-based auto-sizing
+    // work without every caller having to opt in.
+    table.setOptions((prev) => ({
+        ...prev,
+        enableColumnResizing: true,
+        columnResizeMode: "onChange",
+    }));
+
     const tableContainerRef = useRef<HTMLDivElement>(null);
     const rows = table.getRowModel().rows;
 
@@ -45,9 +61,11 @@ export function VirtualDataTable<TData>({
         overscan,
     });
 
+    useAutoSizeColumns(table, tableContainerRef, rows.length);
+
     if (rows.length === 0) {
         return (
-            <div className={cn("overflow-hidden rounded-lg border", className)}>
+            <div className={cn("min-w-0 overflow-hidden rounded-lg border", className)}>
                 <table className="w-full caption-bottom text-sm">
                     <VirtualTableHeader table={table} />
                     <TableBody>
@@ -63,9 +81,10 @@ export function VirtualDataTable<TData>({
     }
 
     return (
-        <div className={cn("overflow-hidden rounded-lg border", className)}>
-            <div ref={tableContainerRef} className="overflow-auto" style={{ height: heightInPx }}>
-                <table className="grid w-full caption-bottom text-sm">
+        // min-w-0 lets the table shrink inside flex/grid parents instead of forcing them to overflow.
+        <div className={cn("relative min-w-0", className)}>
+            <div ref={tableContainerRef} className="overflow-auto rounded-lg border" style={{ height: heightInPx }}>
+                <table className="grid min-w-full caption-bottom text-sm" style={{ width: table.getTotalSize() }}>
                     <VirtualTableHeader table={table} />
                     <TableBody
                         className="relative grid"
@@ -95,12 +114,16 @@ export function VirtualDataTable<TData>({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className={cn("flex items-center", getCellClassName?.(cell.id))}
-                                            style={{
-                                                width: cell.column.getSize(),
-                                            }}
+                                            data-column-id={cell.column.id}
+                                            className={cn(
+                                                "flex items-center overflow-hidden",
+                                                getCellClassName?.(cell.id),
+                                            )}
+                                            style={getColumnStyle(cell.column.getSize())}
                                         >
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            <span className="truncate">
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </span>
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -109,6 +132,7 @@ export function VirtualDataTable<TData>({
                     </TableBody>
                 </table>
             </div>
+            {overlay}
         </div>
     );
 }
@@ -121,18 +145,35 @@ function VirtualTableHeader<TData>({ table }: { table: ReactTable<TData> }) {
                     {headerGroup.headers.map((header) => (
                         <TableHead
                             key={header.id}
-                            className="flex items-center"
-                            style={{
-                                width: header.getSize(),
-                            }}
+                            data-column-id={header.column.id}
+                            className="group relative flex items-center overflow-hidden"
+                            style={getColumnStyle(header.getSize())}
                         >
-                            {header.isPlaceholder
-                                ? null
-                                : flexRender(header.column.columnDef.header, header.getContext())}
+                            <span className="truncate">
+                                {header.isPlaceholder
+                                    ? null
+                                    : flexRender(header.column.columnDef.header, header.getContext())}
+                            </span>
+                            {header.column.getCanResize() && <ColumnResizer header={header} />}
                         </TableHead>
                     ))}
                 </TableRow>
             ))}
         </TableHeader>
+    );
+}
+
+function ColumnResizer<TData>({ header }: { header: Header<TData, unknown> }) {
+    return (
+        <div
+            role="separator"
+            aria-orientation="vertical"
+            onMouseDown={header.getResizeHandler()}
+            onTouchStart={header.getResizeHandler()}
+            className={cn(
+                "absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none bg-border opacity-0 transition-opacity select-none group-hover:opacity-100",
+                header.column.getIsResizing() && "bg-primary opacity-100",
+            )}
+        />
     );
 }
