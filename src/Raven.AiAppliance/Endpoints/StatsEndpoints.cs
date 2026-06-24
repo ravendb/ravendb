@@ -38,6 +38,13 @@ public static class StatsEndpoints
             .RequireAuthorization()
             .Produces<TokensByAppResponse>();
 
+        // Enriched apps list for the Dashboard table (mock-api `listApps()`).
+        app.MapGet("/api/dashboard/apps", GetDashboardAppsAsync)
+            .WithTags("stats")
+            .WithName("stats.dashboard.apps")
+            .RequireAuthorization()
+            .Produces<AppliancAppResponse[]>();
+
         var group = app.MapGroup("/api/apps/{slug}").WithTags("stats").RequireAuthorization();
 
         group.MapGet("/overview", GetAppOverviewAsync)
@@ -68,6 +75,13 @@ public static class StatsEndpoints
         group.MapGet("/conversations/{*conversationId}", GetConversationByIdAsync)
             .WithName("stats.conversations.get")
             .Produces<ConversationDto>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
+        // CDC "Events" tab (mock-api `listActivity`). Deferred — no event log yet, so
+        // this returns an empty feed (a real audit log is a separate ticket).
+        group.MapGet("/activity", GetActivityAsync)
+            .WithName("stats.activity")
+            .Produces<ActivityEventDto[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapGet("/conversations/stats", GetConversationStatsAsync)
@@ -108,6 +122,14 @@ public static class StatsEndpoints
     {
         var byApp = await MetricsReadService.GetTokensByAppAsync(store, ct);
         return Results.Ok(byApp);
+    }
+
+    private static async Task<IResult> GetDashboardAppsAsync(
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var apps = await MetricsReadService.GetDashboardAppsAsync(store, ct);
+        return Results.Ok(apps);
     }
 
     private static async Task<IResult> GetAppUsageAsync(
@@ -168,6 +190,19 @@ public static class StatsEndpoints
         return conversation is null
             ? Results.NotFound(new ApiErrorResponse($"no conversation '{conversationId}'"))
             : Results.Ok(conversation);
+    }
+
+    private static async Task<IResult> GetActivityAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        // Deferred: no event-log source yet (see impl handoff) — empty feed.
+        return Results.Ok(Array.Empty<ActivityEventDto>());
     }
 
     private static async Task<IResult> GetAppOverviewAsync(

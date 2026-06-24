@@ -7,9 +7,12 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.ServerWide.Operations;
 
 namespace Raven.AiAppliance.Metrics;
 
@@ -289,6 +292,8 @@ internal static class MetricsReadService
         MaintenanceOperationExecutor maintenance, CancellationToken ct)
     {
         var stats = await maintenance.SendAsync(new GetCollectionStatisticsOperation(), ct);
+        // name + doc count is what the prototype's "Top source tables" renders;
+        // lagSeconds/lastWriteAt are CDC-perf data (RavenDB-26780) — left empty.
         return stats.Collections
             .Where(c => c.Key.StartsWith('@') == false)
             .OrderByDescending(c => c.Value)
@@ -332,6 +337,94 @@ internal static class MetricsReadService
 
     private static string BucketLabel(DateTime bucketUtc, UsageGranularity granularity) =>
         granularity == UsageGranularity.Hour ? bucketUtc.ToString("yyyy-MM-ddTHH:00") : bucketUtc.ToString("yyyy-MM-dd");
+
+    /// <summary>
+    /// Enriched apps list behind the prototype's <c>listApps()</c> (Dashboard table):
+    /// per-app counts (documents/agents/channels/tables), CDC <c>source.type</c>, and
+    /// a derived <c>status</c>, via fan-out. <c>writesPerMonth</c> is null (no counter).
+    /// </summary>
+    public static async Task<List<AppliancAppResponse>> GetDashboardAppsAsync(IDocumentStore store, CancellationToken ct)
+    {
+        var apps = await LoadAllAppsAsync(store, ct);
+        var result = new List<AppliancAppResponse>(apps.Count);
+        foreach (var app in apps)
+            result.Add(await EnrichAppAsync(store, app, ct));
+        return result;
+    }
+
+    private static async Task<AppliancAppResponse> EnrichAppAsync(IDocumentStore store, App app, CancellationToken ct)
+    {
+        var maintenance = store.Maintenance.ForDatabase(app.Database);
+        var stats = await maintenance.SendAsync(new GetStatisticsOperation(), ct);
+        var agents = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
+        var agentsCount = agents.AiAgents?.Count ?? 0;
+
+        List<Channel> channels;
+        using (var session = store.OpenAsyncSession(app.Database))
+            channels = (await session.Advanced.LoadStartingWithAsync<Channel>(
+                Channel.IdPrefix, pageSize: 1024, token: ct)).ToList();
+        var enabledChannels = channels.Count(c => c.Enabled);
+        var channelsLabel = channels.Count == 0
+            ? null
+            : string.Join(", ", channels.Select(c => ChannelTypeLabel(c.Type)).Distinct());
+
+        // CDC config → tablesCount + source.type (CDC conn string → SQL FactoryName).
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
+        var cdc = record?.CdcSinks?.FirstOrDefault();
+        var tablesCount = cdc?.Tables?.Count ?? 0;
+        var sourceType = "";
+        if (cdc?.ConnectionStringName is { } csName)
+        {
+            var conn = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
+            if (conn.SqlConnectionStrings is not null && conn.SqlConnectionStrings.TryGetValue(csName, out var sql))
+                sourceType = MapSourceType(sql.FactoryName);
+        }
+
+        var (status, subtitle) = DeriveAppStatus(agentsCount, channels.Count, enabledChannels, cdc?.Disabled ?? false);
+
+        return new AppliancAppResponse(
+            Id: app.Id ?? $"{AppIdPrefix}{app.Slug}",
+            Name: app.AppName,
+            Slug: app.Slug,
+            Status: status,
+            Source: new AppSource(sourceType, ConnectionString: ""),
+            TablesCount: tablesCount,
+            DocumentsCount: stats.CountOfDocuments,
+            CapabilitiesCount: agentsCount,
+            ChannelsCount: channels.Count,
+            AdaptersCount: 0,
+            AgentsCount: agentsCount,
+            WritesPerMonth: null,
+            ChannelsLabel: channelsLabel,
+            StatusSubtitle: subtitle,
+            CreatedAt: app.CreatedAt,
+            UpdatedAt: app.CreatedAt);
+    }
+
+    private static string MapSourceType(string? factory)
+    {
+        var f = (factory ?? "").ToLowerInvariant();
+        if (f.Contains("npgsql")) return "PostgreSQL";
+        if (f.Contains("sqlclient")) return "SQL Server";
+        if (f.Contains("mysql")) return "MySQL";
+        if (f.Contains("oracle")) return "Oracle";
+        return "";
+    }
+
+    private static string ChannelTypeLabel(ChannelType type) => type switch
+    {
+        ChannelType.IFrame => "Web widget",
+        _ => type.ToString(),
+    };
+
+    private static (string Status, string? Subtitle) DeriveAppStatus(
+        int agentsCount, int channelsCount, int enabledChannels, bool cdcDisabled)
+    {
+        if (agentsCount == 0) return ("setup", "No AI agent yet");
+        if (cdcDisabled) return ("warning", "Data sync paused");
+        if (channelsCount > 0 && enabledChannels == 0) return ("warning", "All channels disabled");
+        return ("running", null);
+    }
 
     public static async Task<DashboardResponse> GetDashboardStatsAsync(
         IDocumentStore store, DateTime nowUtc, CancellationToken ct)
@@ -476,10 +569,11 @@ internal static class MetricsReadService
         IDocumentStore store, string database, DateTime nowUtc, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);
+        var channelByConversation = await BuildConversationChannelMapAsync(session, ct);
         var docs = await session.Advanced.LoadStartingWithAsync<ConversationDoc>(
             ConversationIdPrefix, pageSize: 1024, token: ct);
         return docs
-            .Select(d => ShapeConversation(d, nowUtc, includeTranscript: false))
+            .Select(d => ShapeConversation(d, nowUtc, includeTranscript: false, channelByConversation))
             .OrderByDescending(c => c.LastActivityAt)
             .ToList();
     }
@@ -490,12 +584,44 @@ internal static class MetricsReadService
     {
         using var session = store.OpenAsyncSession(database);
         var doc = await session.LoadAsync<ConversationDoc>(conversationId, ct);
-        return doc is null ? null : ShapeConversation(doc, nowUtc, includeTranscript: true);
+        if (doc is null) return null;
+        var channelByConversation = await BuildConversationChannelMapAsync(session, ct);
+        return ShapeConversation(doc, nowUtc, includeTranscript: true, channelByConversation);
     }
 
-    private static ConversationDto ShapeConversation(ConversationDoc doc, DateTime nowUtc, bool includeTranscript)
+    /// <summary>conversationId → channel display-name, for iframe conversations only,
+    /// reverse-mapped via <c>EmbedLink.ConversationId</c> → <c>WidgetId</c> →
+    /// <c>Channel.DisplayName</c>. Telegram/WhatsApp aren't implemented, so their
+    /// conversations have no mapping (channelName stays empty).</summary>
+    private static async Task<Dictionary<string, string>> BuildConversationChannelMapAsync(
+        IAsyncDocumentSession session, CancellationToken ct)
+    {
+        var channels = await session.Advanced.LoadStartingWithAsync<Channel>(
+            Channel.IdPrefix, pageSize: 1024, token: ct);
+        var nameByWidget = channels
+            .Where(c => c.Id is not null)
+            .ToDictionary(c => c.Id![Channel.IdPrefix.Length..],
+                c => string.IsNullOrWhiteSpace(c.DisplayName) ? c.Id![Channel.IdPrefix.Length..] : c.DisplayName,
+                StringComparer.OrdinalIgnoreCase);
+
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (nameByWidget.Count == 0)
+            return map;
+
+        var links = await session.Advanced.LoadStartingWithAsync<EmbedLink>(
+            EmbedLink.IdPrefix, pageSize: 1024, token: ct);
+        foreach (var link in links)
+            if (link.ConversationId is { } cid && link.WidgetId is { } wid
+                && nameByWidget.TryGetValue(wid, out var name))
+                map[cid] = name;
+        return map;
+    }
+
+    private static ConversationDto ShapeConversation(
+        ConversationDoc doc, DateTime nowUtc, bool includeTranscript, Dictionary<string, string> channelByConversation)
     {
         var agentName = doc.Agent ?? "";
+        var channelName = doc.Id is { } id && channelByConversation.TryGetValue(id, out var cn) ? cn : "";
         var chrono = (doc.Messages ?? [])
             .Select(m => new ConversationTurn(m.role ?? "", TextOf(m.content), m.date))
             .OrderBy(t => t.At ?? doc.CreatedAt)
@@ -509,7 +635,7 @@ internal static class MetricsReadService
         var state = age < TimeSpan.FromHours(1) ? "active" : age < TimeSpan.FromHours(24) ? "idle" : "closed";
 
         return new ConversationDto(
-            doc.Id ?? "", ChannelName: "", agentName,
+            doc.Id ?? "", channelName, agentName,
             AgentInitials(agentName), AgentColor(agentName),
             prms, lastExchange, includeTranscript ? chrono : null,
             state, doc.LastMessageAt, doc.CreatedAt, MaxDuration: null);

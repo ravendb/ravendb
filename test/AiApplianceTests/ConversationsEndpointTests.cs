@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Raven.AiAppliance.Channels;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
 using Xunit;
@@ -29,6 +30,22 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         await SeedConversationAsync(store, perAppDb, "chats/old", "billing", now.AddDays(-3),
             turns: [("user", "where is my refund")]);
 
+        // An iframe channel + embed link attributing chats/recent to it.
+        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+        using (var session = store.OpenAsyncSession(perAppDb))
+        {
+            await session.StoreAsync(new EmbedLink
+            {
+                WidgetId = "wgt1",
+                AgentId = "order-support",
+                ExpiresAt = now.AddHours(1),
+                MaxInvocations = 5,
+                ConversationId = "chats/recent",
+                CreatedAt = now.AddMinutes(-10),
+            }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
+            await session.SaveChangesAsync();
+        }
+
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
@@ -43,9 +60,10 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         Assert.Equal("active", first.GetProperty("state").GetString());          // 10 min ago
         Assert.Equal(2, first.GetProperty("lastExchange").GetArrayLength());
         Assert.Equal("agent", first.GetProperty("lastExchange")[0].GetProperty("role").GetString()); // newest first
-        Assert.Equal("", first.GetProperty("channelName").GetString());          // no channel link yet
+        Assert.Equal("wgt1", first.GetProperty("channelName").GetString());      // attributed via EmbedLink
 
         Assert.Equal("closed", list[1].GetProperty("state").GetString());        // 3 days ago
+        Assert.Equal("", list[1].GetProperty("channelName").GetString());        // no embed link → unattributed
 
         // Detail — full transcript, chronological.
         var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats/recent");
