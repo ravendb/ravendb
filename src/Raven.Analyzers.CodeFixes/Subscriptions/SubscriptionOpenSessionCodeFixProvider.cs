@@ -54,7 +54,7 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
 
             context.RegisterCodeFix(
                 CodeAction.Create(
-                    title: $"Use batch.{memberName.Identifier.Text}",
+                    title: $"Use {batchParamName}.{memberName.Identifier.Text}",
                     createChangedDocument: ct => ReplaceReceiverWithBatchAsync(
                         context.Document, memberAccess, batchParamName, ct),
                     equivalenceKey: nameof(SubscriptionOpenSessionCodeFixProvider)),

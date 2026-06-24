@@ -41,6 +41,31 @@ class Document { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task OpenSession_Transforms_Using_Actual_Run_Parameter_Name()
+        {
+            // The Run lambda parameter is not named "batch"; the rewrite must use the actual name.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(x =>
+        {
+            var session = store.OpenSession();
+            var doc = session.Load<Document>(""id"");
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source);
+
+            Assert.Contains("var session = x.OpenSession()", fixed_code);
+        }
+
+        [Fact]
         public async Task OpenSessionWithOptions_Transforms_To_Batch()
         {
             const string source = CommonUsings + @"

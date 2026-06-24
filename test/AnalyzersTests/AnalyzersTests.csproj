@@ -7,6 +7,10 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+    <!-- The test harness (RavenAnalyzerTest / RavenCodeFixTest) scans Raven.Client's output
+         directory for co-located dependencies to add as MetadataReferences, so every referenced
+         DLL must be copied into the test output. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <!-- Analyzer tests do not follow the usual RavenDB test base-class conventions
          because they need no running server. They are not referenced from SlowTests
          and therefore are not scanned by TestsInheritanceTests. -->
