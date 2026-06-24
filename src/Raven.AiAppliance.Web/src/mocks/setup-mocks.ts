@@ -122,7 +122,7 @@ export const discoveryWithAllStates: DiscoverResponse = {
                     isCdcCapturable: true,
                 },
             ],
-            primaryKeyColumns: ["Id"],
+            primaryKeyColumns: ["Id", "TenantId", "ExternalReferenceId", "RegionCode"],
             foreignKeys: [],
             isCdcEnabled: true,
             warnings: [],

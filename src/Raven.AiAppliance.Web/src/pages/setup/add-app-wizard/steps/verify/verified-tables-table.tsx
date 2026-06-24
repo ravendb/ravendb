@@ -57,35 +57,36 @@ export function VerifiedTablesTable({
 
     return (
         <TooltipProvider>
-            <div className={cn("relative", selectedCount > 0 && "mb-4")}>
-                <VirtualDataTable
-                    table={table}
-                    columnCount={VERIFIED_COLUMNS.length}
-                    emptyMessage="No tables match the current filter."
-                    heightInPx={300}
-                    getRowState={(rowId) => (rowSelection[rowId] ? "selected" : "")}
-                />
-                {selectedCount > 0 && (
-                    <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 translate-y-1/2 items-center gap-2.5 rounded-full border bg-card px-4 py-2 text-sm shadow-md">
-                        <span className="whitespace-nowrap text-muted-foreground">
-                            {selectedCount} out of {totalTableCount} tables selected
-                        </span>
-                        {!disabled && (
-                            <>
-                                <div className="h-4 w-px bg-border" />
-                                <button
-                                    type="button"
-                                    className="flex items-center gap-1.5 whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
-                                    onClick={() => onRowSelectionChange({})}
-                                >
-                                    <XIcon className="size-3.5" aria-hidden="true" />
-                                    Deselect all
-                                </button>
-                            </>
-                        )}
-                    </div>
-                )}
-            </div>
+            <VirtualDataTable
+                table={table}
+                columnCount={VERIFIED_COLUMNS.length}
+                emptyMessage="No tables match the current filter."
+                heightInPx={300}
+                className={cn(selectedCount > 0 && "mb-4")}
+                getRowState={(rowId) => (rowSelection[rowId] ? "selected" : "")}
+                overlay={
+                    selectedCount > 0 && (
+                        <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 translate-y-1/2 items-center gap-2.5 rounded-full border bg-card px-4 py-2 text-sm shadow-md">
+                            <span className="whitespace-nowrap text-muted-foreground">
+                                {selectedCount} out of {totalTableCount} tables selected
+                            </span>
+                            {!disabled && (
+                                <>
+                                    <div className="h-4 w-px bg-border" />
+                                    <button
+                                        type="button"
+                                        className="flex items-center gap-1.5 whitespace-nowrap text-foreground transition-colors hover:text-muted-foreground"
+                                        onClick={() => onRowSelectionChange({})}
+                                    >
+                                        <XIcon className="size-3.5" aria-hidden="true" />
+                                        Deselect all
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )
+                }
+            />
         </TooltipProvider>
     );
 }

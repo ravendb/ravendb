@@ -11,10 +11,9 @@ const TABLE_NAME_COLUMN: ColumnDef<DiscoverTableResponse> = {
     accessorFn: (table) => getTableLabel(table),
     header: "Table name",
     id: "tableName",
-    size: 300,
     cell: ({ row, getValue }) => (
-        <span className="flex items-center gap-1.5 font-mono">
-            {getValue<string>()}
+        <span className="flex min-w-0 items-center gap-1.5 font-mono">
+            <span className="truncate">{getValue<string>()}</span>
             {row.original.warnings.length > 0 && (
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -38,7 +37,6 @@ const PRIMARY_KEY_COLUMN: ColumnDef<DiscoverTableResponse> = {
     accessorFn: (table) => table.primaryKeyColumns.join(", "),
     header: "Primary key",
     id: "primaryKey",
-    size: 100,
     cell: ({ getValue }) => <span className="font-mono">{getValue<string>()}</span>,
 };
 
@@ -46,7 +44,6 @@ const COLUMNS_COUNT_COLUMN: ColumnDef<DiscoverTableResponse> = {
     accessorFn: (table) => table.columns.length,
     header: "Columns count",
     id: "columnsCount",
-    size: 130,
     cell: ({ getValue }) => <span className="tabular-nums">{getValue<number>()}</span>,
 };
 
@@ -71,6 +68,7 @@ export const VERIFIED_COLUMNS: ColumnDef<DiscoverTableResponse>[] = [
         ),
         enableSorting: false,
         enableHiding: false,
+        enableResizing: false,
         size: 40,
     },
     TABLE_NAME_COLUMN,
