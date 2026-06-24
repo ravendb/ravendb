@@ -171,6 +171,61 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
+        public async Task InitialLoad_FeedsPerformanceStats()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE employees (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    department VARCHAR(200) NOT NULL
+                )");
+
+            ExecuteMySql(connectionString, "INSERT INTO employees (name, department) VALUES ('Alice', 'Engineering')");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-performance-stats",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Employees",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "employees",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" },
+                            new CdcColumnMapping { Column = "department", Name = "Department" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                return (await session.LoadAsync<Employee>("Employees/1"))?.Name;
+            }, "Alice", timeout: 60_000);
+
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+            var process = db.CdcSinkLoader.Processes.Single(p => p.Name == config.Name);
+            
+            var perf = process.GetPerformanceStats();
+            Assert.NotEmpty(perf);
+            Assert.Contains(perf, s => s.Started != default);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();
