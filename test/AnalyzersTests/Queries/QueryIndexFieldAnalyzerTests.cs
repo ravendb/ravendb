@@ -105,6 +105,26 @@ class Test
 
         [Theory]
         [MemberData(nameof(IndexMapVariants))]
+        public async Task Where_References_Same_Non_Indexed_Field_Twice_Reports_One_Diagnostic(string index)
+        {
+            string source = CommonUsings + OrderClass + index + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>().Where(x => x.Price > 0 || x.Price < 0);
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+        }
+
+        [Theory]
+        [MemberData(nameof(IndexMapVariants))]
         public async Task OrderBy_On_Indexed_Field_No_Diagnostic(string index)
         {
             string source = CommonUsings + OrderClass + index + @"
