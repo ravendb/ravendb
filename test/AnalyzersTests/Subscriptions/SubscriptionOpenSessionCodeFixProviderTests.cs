@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using AnalyzersTests.Framework;
-using Raven.Analyzers;
 using Raven.Analyzers.CodeFixes.Subscriptions;
 using Raven.Analyzers.Subscriptions;
 using Xunit;
