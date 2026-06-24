@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -9,26 +10,27 @@ using Microsoft.Extensions.Logging;
 namespace AiApplianceTests.E2E.Fixtures;
 
 /// In-process stand-in for the internal AI service on api.ravendb.net. Hosts the
-/// two AI-Helper endpoints, captures the last request body for each so tests can
-/// assert license and thumbprint were attached, and returns a per-test-configurable
-/// (status, body) pair. Mirrors <see cref="MockLicenseApi"/>. The caller disposes;
-/// the bound base URL is exposed for the appliance via ApplianceOptions.AiApiUrl.
+/// consolidated /api/v1/ai/assist endpoint and dispatches on the request's
+/// OperationType ("CdcConfigSetup" / "AgentConfigSetup"), capturing the last request
+/// body per operation so tests can assert license and thumbprint were attached, and
+/// returns a per-test-configurable (status, body) pair. Mirrors <see cref="MockLicenseApi"/>.
+/// The caller disposes; the bound base URL is exposed for the appliance via ApplianceOptions.AiApiUrl.
 public sealed class MockAiApi : IAsyncDisposable
 {
     private readonly WebApplication _app;
 
     public string BaseAddress { get; }
 
-    /// Last raw request body received on /api/v1/ai/setup/cdc-config.
+    /// Last raw request body received with OperationType "CdcConfigSetup".
     public string? LastCdcRequestBody { get; private set; }
 
-    /// Last raw request body received on /api/v1/ai/setup/agent-config.
+    /// Last raw request body received with OperationType "AgentConfigSetup".
     public string? LastAgentRequestBody { get; private set; }
 
-    /// Response served for cdc-config (HTTP status code + JSON body).
+    /// Response served for the CdcConfigSetup operation (HTTP status code + JSON body).
     public (int Status, string Body) CdcResponse { get; set; } = (200, "{}");
 
-    /// Response served for agent-config (HTTP status code + JSON body).
+    /// Response served for the AgentConfigSetup operation (HTTP status code + JSON body).
     public (int Status, string Body) AgentResponse { get; set; } = (200, "{}");
 
     private MockAiApi(WebApplication app, string baseAddress)
@@ -49,22 +51,29 @@ public sealed class MockAiApi : IAsyncDisposable
         // after the app is built (same shape as MockLicenseApi's closure).
         MockAiApi instance = null!;
 
-        app.MapPost("/api/v1/ai/setup/cdc-config", async (HttpContext ctx) =>
+        // Consolidated entrypoint: the operation is selected by OperationType in the body,
+        // matching internals' /ai/assist routing.
+        app.MapPost("/api/v1/ai/assist", async (HttpContext ctx) =>
         {
             // leaveOpen: true so disposing the reader does not dispose the
             // pipeline-owned request body stream.
             using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);
-            instance.LastCdcRequestBody = await reader.ReadToEndAsync();
-            return Results.Content(instance.CdcResponse.Body, "application/json",
-                statusCode: instance.CdcResponse.Status);
-        });
+            var body = await reader.ReadToEndAsync();
 
-        app.MapPost("/api/v1/ai/setup/agent-config", async (HttpContext ctx) =>
-        {
-            using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);
-            instance.LastAgentRequestBody = await reader.ReadToEndAsync();
-            return Results.Content(instance.AgentResponse.Body, "application/json",
-                statusCode: instance.AgentResponse.Status);
+            var operationType = (string?)JsonNode.Parse(body)?["OperationType"];
+            switch (operationType)
+            {
+                case "CdcConfigSetup":
+                    instance.LastCdcRequestBody = body;
+                    return Results.Content(instance.CdcResponse.Body, "application/json",
+                        statusCode: instance.CdcResponse.Status);
+                case "AgentConfigSetup":
+                    instance.LastAgentRequestBody = body;
+                    return Results.Content(instance.AgentResponse.Body, "application/json",
+                        statusCode: instance.AgentResponse.Status);
+                default:
+                    return Results.BadRequest($"Unknown OperationType '{operationType}'.");
+            }
         });
 
         await app.StartAsync();

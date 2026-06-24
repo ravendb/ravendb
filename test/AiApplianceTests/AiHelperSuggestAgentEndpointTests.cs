@@ -39,6 +39,8 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
         Assert.Equal(2, node["configurations"]!.AsArray().Count);
 
         var sent = JsonNode.Parse(mockAi.LastAgentRequestBody!)!;
+        // OperationType routes the consolidated /ai/assist endpoint; internals reads the exact enum name.
+        Assert.Equal("AgentConfigSetup", (string?)sent["OperationType"]);
         Assert.Equal("from-data", (string?)sent["Mode"]);
         Assert.NotNull(sent["CdcConfig"]);
 

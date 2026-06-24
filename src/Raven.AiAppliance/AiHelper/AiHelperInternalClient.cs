@@ -21,8 +21,9 @@ public sealed class AiHelperInternalClient(
     IDocumentStore store,
     IApplianceLicenseProvider licenseProvider) : IAiHelperClient
 {
-    private const string CdcConfigPath = "/api/v1/ai/setup/cdc-config";
-    private const string AgentConfigPath = "/api/v1/ai/setup/agent-config";
+    // Single consolidated AI-Helper entrypoint on internals; the operation is selected by
+    // OperationType on each request DTO (CdcConfigSetup / AgentConfigSetup).
+    private const string AssistPath = "/api/v1/ai/assist";
 
     public async Task<SuggestCdcInternalResult> SuggestCdcAsync(
         object? schema, object? samples, string prompt, CancellationToken ct)
@@ -39,7 +40,7 @@ public sealed class AiHelperInternalClient(
             Prompt = prompt,
         };
 
-        var (transport, content) = await SendAsync(CdcConfigPath, request, ct);
+        var (transport, content) = await SendAsync(AssistPath, request, ct);
         if (transport != AiHelperStatus.Success)
             return new SuggestCdcInternalResult(transport, Configuration: null, [], 0, 0);
 
@@ -72,7 +73,7 @@ public sealed class AiHelperInternalClient(
             Prompt = prompt,
         };
 
-        var (transport, content) = await SendAsync(AgentConfigPath, request, ct);
+        var (transport, content) = await SendAsync(AssistPath, request, ct);
         if (transport != AiHelperStatus.Success)
             return new SuggestAiAgentInternalResult(transport, [], [], 0, 0);
 
@@ -151,6 +152,8 @@ public sealed class AiHelperInternalClient(
 
     private sealed class SuggestCdcApiRequest
     {
+        // Routes the request on internals' consolidated /ai/assist endpoint; sent as the exact enum name.
+        public string OperationType { get; set; } = "CdcConfigSetup";
         public ApplianceLicense License { get; set; } = null!;
         public string? CertificateThumbprint { get; set; }
         public object? Schema { get; set; }
@@ -160,6 +163,8 @@ public sealed class AiHelperInternalClient(
 
     private sealed class SuggestAiAgentApiRequest
     {
+        // Routes the request on internals' consolidated /ai/assist endpoint; sent as the exact enum name.
+        public string OperationType { get; set; } = "AgentConfigSetup";
         public ApplianceLicense License { get; set; } = null!;
         public string? CertificateThumbprint { get; set; }
         public CdcSinkConfiguration CdcConfig { get; set; } = null!;
