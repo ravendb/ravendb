@@ -98,6 +98,13 @@ namespace AnalyzersTests.Policy
             foreach (string fileName in new[] { "AnalyzerReleases.Shipped.md", "AnalyzerReleases.Unshipped.md" })
             {
                 string path = FindRepoFile(Path.Combine("src", "Raven.Analyzers", fileName));
+
+                // Duplicates are tracked per file: the same rule may legitimately appear in both
+                // Shipped (its original release) and Unshipped (under Changed Rules), in which case
+                // the Unshipped value must win. But two rows for the same id inside one file is a
+                // copy-paste mistake, so fail fast instead of silently overwriting.
+                var seenInFile = new HashSet<string>(StringComparer.Ordinal);
+
                 foreach (string raw in File.ReadAllLines(path))
                 {
                     string line = raw.Trim();
@@ -112,6 +119,9 @@ namespace AnalyzersTests.Policy
                     string severityText = columns[2].Trim();
                     if (!Enum.TryParse(severityText, out DiagnosticSeverity severity))
                         continue;
+
+                    if (seenInFile.Add(id) == false)
+                        throw new InvalidOperationException($"Duplicate rule id '{id}' found in {fileName}.");
 
                     result[id] = severity;
                 }

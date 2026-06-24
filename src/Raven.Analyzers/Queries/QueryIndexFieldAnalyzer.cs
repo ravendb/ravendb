@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -135,6 +136,11 @@ namespace Raven.Analyzers.Queries
             if (body == null)
                 return;
 
+            // A field can be referenced several times in the same lambda (e.g. o.Price > 0 ||
+            // o.Price < 0); report it only once so we don't emit duplicate diagnostics for one
+            // logical issue.
+            var reportedFields = new HashSet<string>(StringComparer.Ordinal);
+
             foreach (MemberAccessExpressionSyntax memberAccess in
                 body.DescendantNodesAndSelf().OfType<MemberAccessExpressionSyntax>())
             {
@@ -144,7 +150,7 @@ namespace Raven.Analyzers.Queries
                     continue;
 
                 string fieldName = memberAccess.Name.Identifier.Text;
-                if (!indexedFields.Contains(fieldName))
+                if (!indexedFields.Contains(fieldName) && reportedFields.Add(fieldName))
                 {
                     reportDiagnostic(Diagnostic.Create(
                         DiagnosticDescriptors.QueryFieldNotIndexed,

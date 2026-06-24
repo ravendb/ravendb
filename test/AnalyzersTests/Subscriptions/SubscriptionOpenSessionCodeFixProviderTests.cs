@@ -225,5 +225,33 @@ class Document { public string Id { get; set; } }
             await Assert.ThrowsAsync<System.InvalidOperationException>(
                 () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
         }
+
+        [Fact]
+        public async Task OpenSession_InNestedAnonymousMethod_FixBails()
+        {
+            // store.OpenSession() inside a nested anonymous method (delegate { ... }) may outlive
+            // the batch, just like a nested lambda; the fix refuses to rewrite it.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            System.Action action = delegate
+            {
+                var session = store.OpenSession();
+            };
+            action();
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+        }
     }
 }
