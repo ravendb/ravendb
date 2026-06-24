@@ -20,7 +20,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$proj = Join-Path $PSScriptRoot 'Raven.Analyzers.Playground.csproj'
+$proj = Join-Path $PSScriptRoot 'Raven.Analyzers.csproj'
 
 function Invoke-CleanBuild {
     param([bool]$UseAnalyzers)

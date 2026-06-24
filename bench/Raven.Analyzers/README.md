@@ -1,8 +1,8 @@
-# Raven.Analyzers.Playground
+# Raven.Analyzers
 
-A standalone sample project for developing and testing the RavenDB Roslyn analyzers
-(RVN001–RVN014) against real code. It is **not** part of `RavenDB.sln` and is never
-built by CI.
+A standalone project for developing, testing, and benchmarking the RavenDB Roslyn analyzers
+(RVN001 to RVN014) against real code. It lives under `bench/` and has its own
+`Raven.Analyzers.sln`. It is **not** part of `RavenDB.sln` and is never built by CI.
 
 ## What's here
 
@@ -18,7 +18,7 @@ built by CI.
 ## Build and see warnings
 
 ```powershell
-dotnet build samples/Raven.Analyzers.Playground -c Release
+dotnet build bench/Raven.Analyzers -c Release
 ```
 
 Expected output: 14+ `warning RVN###` lines (one or more per `Examples/` file) followed
@@ -26,7 +26,7 @@ by a `Total analyzer execution time:` table printed by `<ReportAnalyzer>`.
 
 ## Open in the IDE
 
-Open `Raven.Analyzers.Playground.sln` in Rider or Visual Studio. Squiggles appear on
+Open `Raven.Analyzers.sln` in Rider or Visual Studio. Squiggles appear on
 every `Examples/RVN###_*.cs` file immediately after the analyzers are built. Hover over
 a squiggle to see the diagnostic message and click the help-link to open the documentation.
 
@@ -51,7 +51,7 @@ behaviour, restart the Roslyn worker: in Rider use
 one with — and prints a side-by-side timing report.
 
 ```powershell
-pwsh samples/Raven.Analyzers.Playground/compare.ps1
+pwsh bench/Raven.Analyzers/compare.ps1
 ```
 
 Sample output:
@@ -78,7 +78,7 @@ time" is what the C# compiler measures as pure analyzer execution (excluding I/O
 To run just the baseline (no analyzer diagnostics, fastest possible compile):
 
 ```powershell
-dotnet build samples/Raven.Analyzers.Playground -c Release /p:UseRavenAnalyzers=false /t:Rebuild
+dotnet build bench/Raven.Analyzers -c Release /p:UseRavenAnalyzers=false /t:Rebuild
 ```
 
 ## Rule reference
