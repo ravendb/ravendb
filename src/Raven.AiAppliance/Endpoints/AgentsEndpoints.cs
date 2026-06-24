@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
+using Raven.AiAppliance.Metrics;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -47,18 +48,30 @@ public static class AgentsEndpoints
         var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
             .ToDictionary(pair => pair.Key, pair => AiConnectionStringModel.Resolve(pair.Value), StringComparer.OrdinalIgnoreCase);
 
+        // Usage (invocations + last-invoked) from the conversation index.
+        var activity = await MetricsReadService.GetAgentActivityAsync(store, app.Database, ct);
+
         var items = (agents.AiAgents ?? [])
-            .Select(agent => new AgentSummaryResponse(
-                agent.Identifier,
-                string.IsNullOrWhiteSpace(agent.Name) ? agent.Identifier : agent.Name,
-                agent.ConnectionStringName is { } name && modelByConnectionString.TryGetValue(name, out var model)
-                    ? model
-                    : null,
-                agent.Disabled,
-                (agent.Parameters ?? [])
-                    .Select(parameter => parameter.Name)
-                    .Where(parameterName => string.IsNullOrWhiteSpace(parameterName) == false)
-                    .ToArray()))
+            .Select(agent =>
+            {
+                var (invocations, lastInvokedAt) = activity.TryGetValue(agent.Identifier, out var act)
+                    ? act
+                    : (0L, (DateTime?)null);
+                return new AgentSummaryResponse(
+                    agent.Identifier,
+                    string.IsNullOrWhiteSpace(agent.Name) ? agent.Identifier : agent.Name,
+                    agent.ConnectionStringName is { } name && modelByConnectionString.TryGetValue(name, out var model)
+                        ? model
+                        : null,
+                    agent.Disabled,
+                    (agent.Parameters ?? [])
+                        .Select(parameter => parameter.Name)
+                        .Where(parameterName => string.IsNullOrWhiteSpace(parameterName) == false)
+                        .ToArray(),
+                    invocations,
+                    SuccessRate: 0,
+                    lastInvokedAt);
+            })
             .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
