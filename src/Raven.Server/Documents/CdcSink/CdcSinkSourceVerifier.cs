@@ -25,6 +25,16 @@ public static class CdcSinkSourceVerifier
     /// </summary>
     internal static async Task AnnotateAsync(SqlConnectionString connection, CdcSinkSourceSchema schema, CancellationToken token = default)
     {
+        // Reject providers we can't do CDC for before any connection work - no point creating or
+        // opening a connection to a source we will not verify.
+        if (connection.FactoryName is not ("Npgsql" or "Microsoft.Data.SqlClient" or "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory"))
+        {
+            schema.Errors.Add(
+                $"CDC is not supported for provider '{connection.FactoryName}'. " +
+                "Supported providers: Npgsql (PostgreSQL), Microsoft.Data.SqlClient (SQL Server), MySql.Data.MySqlClient / MySqlConnector (MySQL/MariaDB).");
+            return;
+        }
+
         DbProviderFactory factory;
         try
         {
@@ -74,7 +84,6 @@ public static class CdcSinkSourceVerifier
                         await VerifyPostgreSqlAsync(dbConnection, schema, token);
                         break;
 
-                    case "System.Data.SqlClient":
                     case "Microsoft.Data.SqlClient":
                         await VerifySqlServerAsync(dbConnection, schema, token);
                         break;
@@ -82,12 +91,6 @@ public static class CdcSinkSourceVerifier
                     case "MySql.Data.MySqlClient":
                     case "MySqlConnector.MySqlConnectorFactory":
                         await VerifyMySqlAsync(dbConnection, schema, token);
-                        break;
-
-                    default:
-                        schema.Errors.Add(
-                            $"CDC is not supported for provider '{connection.FactoryName}'. " +
-                            "Supported providers: Npgsql (PostgreSQL), System.Data.SqlClient / Microsoft.Data.SqlClient (SQL Server), MySql.Data.MySqlClient / MySqlConnector (MySQL/MariaDB).");
                         break;
                 }
             }

@@ -1,0 +1,45 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+
+.node-tag-stack {
+    display: inline-flex;
+    align-items: center;
+
+    .node-tag-stack-item {
+        position: relative;
+        display: inline-flex;
+
+        &:not(:first-child) {
+            margin-left: -0.45rem;
+        }
+    }
+}
+
+tr.clickable-row {
+    cursor: pointer;
+    transition: none;
+
+    &:hover {
+        filter: colors.$hover-filter-var;
+        transition: bs5variables.$transition-base;
+    }
+}
+
+.node-table-chevron {
+    transition: transform 0.15s ease;
+    color: colors.$border-color-light-var;
+
+    &.expanded {
+        transform: rotate(90deg);
+    }
+}
+
+// A parent-row value whose per-node replicas diverge, shown as a "min-max" range. The dotted
+// underline + help cursor hint that the tooltip explains it; the text color is inherited so it
+// keeps any contextual styling (e.g. danger on an errors column).
+.node-range-diverged {
+    text-decoration: underline dotted;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
+    cursor: help;
+}

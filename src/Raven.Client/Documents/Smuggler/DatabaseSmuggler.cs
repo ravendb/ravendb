@@ -459,7 +459,9 @@ namespace Raven.Client.Documents.Smuggler
             private readonly TaskCompletionSource _tcs;
             private readonly DatabaseSmuggler _parent;
 
-            public StreamContentWithConfirmation(Stream content, TaskCompletionSource tcs, DatabaseSmuggler parent = null) : base(content)
+            // StreamContent disposes the stream it wraps (on .NET Framework, once the request is sent). The Smuggler owns the
+            // import stream's lifetime itself (see leaveOpen / DisposeStreamOnce in ImportInternalAsync), so wrap it to prevent that.
+            public StreamContentWithConfirmation(Stream content, TaskCompletionSource tcs, DatabaseSmuggler parent = null) : base(new LeaveOpenStream(content))
             {
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
                 _parent = parent;

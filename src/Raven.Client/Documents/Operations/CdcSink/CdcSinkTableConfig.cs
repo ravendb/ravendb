@@ -4,6 +4,10 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.CdcSink;
 
+/// <summary>
+/// Maps a single source SQL table to a RavenDB collection: column mappings,
+/// primary key, optional transform patch, delete handling, and embedded/linked tables.
+/// </summary>
 public class CdcSinkTableConfig : IDynamicJson
 {
     /// <summary>
@@ -49,6 +53,9 @@ public class CdcSinkTableConfig : IDynamicJson
     /// </summary>
     public CdcSinkOnDeleteConfig OnDelete { get; set; }
 
+    /// <summary>
+    /// When true, this table is skipped: no initial load and no change capture.
+    /// </summary>
     public bool Disabled { get; set; }
 
     /// <summary>

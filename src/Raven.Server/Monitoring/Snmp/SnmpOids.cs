@@ -1288,6 +1288,14 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of active Gen AI tasks for all databases")]
                 public const string TotalNumberOfActiveGenAiTasks = "5.1.11.28";
 
+                [SnmpDataType(SnmpType.Integer32)]
+                [Description("Number of enabled CDC Sink tasks for all databases")]
+                public const string TotalNumberOfCdcSinkTasks = "5.1.11.29";
+
+                [SnmpDataType(SnmpType.Integer32)]
+                [Description("Number of active CDC Sink tasks for all databases")]
+                public const string TotalNumberOfActiveCdcSinkTasks = "5.1.11.30";
+
                 [SnmpDataType(SnmpType.Gauge32)]
                 [Description("Number of documents processed per second by all ETL tasks across all databases (one minute rate)")]
                 public const string TotalEtlDocumentsProcessedPerSec = "5.1.12.1";

@@ -114,6 +114,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Before')");
 
+            await WaitForCdcCapture(connectionString);
+
             var sqlCs = SetupSqlConnectionString(store, connectionString);
             var config = new CdcSinkConfiguration
             {

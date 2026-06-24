@@ -26,6 +26,7 @@ using Raven.Server.Documents.Queries.Highlightings;
 using Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Indexing;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -108,7 +109,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes),
             };
-            
+
+            // Pick up the per-field HNSW vector node caches that CoraxIndexPersistence attached
+            // to this transaction's ImmutableExternalState at creation time. The transaction
+            // holds the only reference the IndexSearcher needs; once the transaction disposes
+            // and no other transaction is still keeping the cache alive, GC reclaims it.
+            if (readTransaction.LowLevelTransaction.ImmutableExternalState is IndexTransactionCache txCache
+                && txCache.VectorNodeCaches is { Count: > 0 } vectorCaches)
+            {
+                IndexSearcher.AttachVectorNodeCaches(vectorCaches);
+            }
+
             if (index is {_forTestingPurposes: {CoraxConfiguration: not null}})
                 IndexSearcher.SetTestingConfiguration(index._forTestingPurposes.CoraxConfiguration);
             

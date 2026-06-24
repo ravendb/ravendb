@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.CdcSink
             return sqlCs;
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task InitialLoad_RootTable()
         {
             using var store = GetDocumentStore();
@@ -121,7 +121,70 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
+        public async Task InitialLoad_GuidPrimaryKey_GeneratesDocIdFromGuid()
+        {
+            // The initial load must derive document IDs from a non-serial primary key. A UUID PK
+            // exercises the GUID->string doc-ID path (vs. the common SERIAL case) - each row must
+            // map to "{Collection}/{guid}".
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            const string guid1 = "11111111-1111-1111-1111-111111111111";
+            const string guid2 = "22222222-2222-2222-2222-222222222222";
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE widgets (
+                    id   UUID PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, $@"
+                INSERT INTO widgets (id, name) VALUES ('{guid1}', 'Alpha');
+                INSERT INTO widgets (id, name) VALUES ('{guid2}', 'Beta');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-guid-pk-initial-load",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Widgets",
+                        SourceTableSchema = "public",
+                        SourceTableName = "widgets",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var count = await WaitForDocumentCountAsync(store, "Widgets", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var docs = await session.Query<Item>(collectionName: "Widgets").ToListAsync();
+                Assert.Equal(2, docs.Count);
+
+                // The document ID is derived from the GUID primary key, not a synthetic sequence.
+                var ids = docs.Select(d => d.Id).ToList();
+                Assert.Contains(ids, id => string.Equals(id, $"Widgets/{guid1}", StringComparison.OrdinalIgnoreCase));
+                Assert.Contains(ids, id => string.Equals(id, $"Widgets/{guid2}", StringComparison.OrdinalIgnoreCase));
+                Assert.Equal("Alpha", docs.Single(d => string.Equals(d.Id, $"Widgets/{guid1}", StringComparison.OrdinalIgnoreCase)).Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task InitialLoad_WithColumnMapping()
         {
             using var store = GetDocumentStore();
@@ -173,7 +236,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();
@@ -225,7 +288,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("Streamed Event", newDoc.Description);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task CdcStreaming_Update()
         {
             using var store = GetDocumentStore();
@@ -281,7 +344,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Updated Content", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task CdcStreaming_Delete()
         {
             using var store = GetDocumentStore();
@@ -343,7 +406,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedArray()
         {
             using var store = GetDocumentStore();
@@ -437,7 +500,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PatchWithDollarRow()
         {
             using var store = GetDocumentStore();
@@ -494,7 +557,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task LinkedTable()
         {
             using var store = GetDocumentStore();
@@ -559,7 +622,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("Customers/42", doc.Customer);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedArray_CdcStreaming_Insert()
         {
             // Verify that CDC streaming (not just initial load) works for embedded tables
@@ -650,7 +713,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedArray_Delete()
         {
             using var store = GetDocumentStore();
@@ -757,7 +820,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedArray_Delete_NonCompositePK()
         {
             // Embedded table has a simple auto-increment PK (id) that does NOT include
@@ -857,7 +920,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedArray_Update()
         {
             using var store = GetDocumentStore();
@@ -955,7 +1018,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// OldRow and NewRow; CdcSinkProcess.CreateEmbeddedUpdateEvents must produce a Delete
         /// against the old parent and an Upsert against the new parent in the same transaction.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedArray_Reparent_OnJoinColumnChange()
         {
             using var store = GetDocumentStore();
@@ -1051,7 +1114,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task ThreeWayNesting()
         {
             // Company → Department → Employee (3 levels deep)
@@ -1220,7 +1283,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task MultipleUpdates_SameRow_SameTransaction()
         {
             using var store = GetDocumentStore();
@@ -1275,7 +1338,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 3, timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Transaction_InsertUpdateDeleteInsert_SameRow()
         {
             using var store = GetDocumentStore();
@@ -1329,7 +1392,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Final", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Transaction_MultipleDistinctRootDocuments()
         {
             using var store = GetDocumentStore();
@@ -1405,7 +1468,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Transaction_MultipleRootAndEmbedded()
         {
             using var store = GetDocumentStore();
@@ -1495,7 +1558,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PropertyRetention_OnUpdate()
         {
             // Verify that fields set directly in RavenDB are preserved when a CDC update arrives
@@ -1561,7 +1624,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task UpdateParentAndEmbeddedTogether()
         {
             using var store = GetDocumentStore();
@@ -1678,7 +1741,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task MetadataExpires_ViaPatch()
         {
             using var store = GetDocumentStore();
@@ -1728,7 +1791,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task BinaryColumn_RootAttachment()
         {
             using var store = GetDocumentStore();
@@ -1787,7 +1850,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PatchScript_CombinedRootAndEmbedded()
         {
             // Root patch computes a derived field; embedded patch runs on child rows
@@ -1872,7 +1935,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedArray_AddAndRemoveInSameTransaction()
         {
             using var store = GetDocumentStore();
@@ -1965,7 +2028,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task ChildBeforeParent()
         {
             // Insert the embedded child row before the parent row exists.
@@ -2059,7 +2122,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PatchScript_ModifiesMappedData()
         {
             // Patch script reads unmapped columns from $row and modifies mapped columns
@@ -2108,7 +2171,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(120.00, doc.TotalPrice, 2);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task BinaryColumn_EmbeddedAttachment()
         {
             using var store = GetDocumentStore();
@@ -2201,7 +2264,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task DeleteAttachment_OnEmbeddedDelete()
         {
             using var store = GetDocumentStore();
@@ -2291,7 +2354,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PatchOnDelete_RootTable_ArchivePattern()
         {
             // Instead of deleting the document, PatchOnDelete marks it as archived.
@@ -2367,7 +2430,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PatchOnDelete_EmbeddedTable()
         {
             // When an embedded row is deleted, PatchOnDelete runs on the parent doc
@@ -2464,7 +2527,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task ThreeWayNesting_WithPatches_InsertDeleteOrdering()
         {
             // 3-level nesting with patches at root and department level.
@@ -2639,7 +2702,7 @@ namespace SlowTests.Server.Documents.CdcSink
             public List<Employee> Employees { get; set; }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EmbeddedPatch_OldRowData_DeltaComputation()
         {
             // Tests that $old is available in embedded patches for delta computations.
@@ -2749,7 +2812,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task OnDelete_Root_PatchOnly_AuditThenDelete()
         {
             // OnDelete.Patch without IgnoreDeletes: patch runs, then document is deleted
@@ -2808,7 +2871,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task OnDelete_Root_IgnoreDeletesOnly_SilentIgnore()
         {
             // OnDelete.IgnoreDeletes without Patch: DELETE event is silently discarded
@@ -2868,7 +2931,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task OnDelete_Root_ConditionalDelete()
         {
             // IgnoreDeletes + Patch with conditional del(): only delete sent orders
@@ -2940,7 +3003,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task OnDelete_Embedded_IgnoreDeletesOnly()
         {
             // Embedded OnDelete.IgnoreDeletes without Patch: item stays in array
@@ -3035,7 +3098,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task OnDelete_Embedded_PatchAndIgnoreDeletes_Archive()
         {
             // Embedded IgnoreDeletes + Patch: patch runs on parent, item stays in array
@@ -3128,7 +3191,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task OnDelete_Root_InsertThenDeleteInSameTransaction()
         {
             // INSERT then DELETE with OnDelete.Patch in same transaction
@@ -3192,7 +3255,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Patch_AuditTrail_InsertUpdateDeleteInsertUpdate()
         {
             // Verifies that Patch and OnDelete.Patch record a full audit trail of
@@ -3308,7 +3371,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// - CDC streaming works for both tables after the edit
         /// - The publication is updated to cover both tables
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task EditTask_AddSecondTable_InitialLoadAndCdcWorkForBoth()
         {
             using var store = GetDocumentStore();
@@ -3482,7 +3545,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// are handled correctly in both initial load and CDC streaming paths. These types
         /// don't have direct .NET equivalents and must be converted to strings or arrays for JSON storage.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task ComplexTypes_Json_Jsonb_Array_TsVector_Inet()
         {
             using var store = GetDocumentStore();
@@ -3617,7 +3680,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// arrive as JS arrays of strings, and pgvector arrives as a JS array of numbers.
         /// The patch script uses these to compute derived properties on the document.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PatchScript_ComplexTypes_Json_Array_Vector()
         {
             using var store = GetDocumentStore();
@@ -3778,7 +3841,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// kept out of the document body.
         /// Also verifies that BYTEA columns continue to work as binary attachments.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task TextAndBinaryColumns_AsAttachments()
         {
             using var store = GetDocumentStore();
@@ -3905,7 +3968,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// columns, inserts a row (initial load), then updates it (CDC stream), and
         /// asserts that every non-name field has the same serialized value in both cases.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task PostgresTypeConsistency_InitialLoadVsCdcStream_DateAndOtherTypes()
         {
             using var store = GetDocumentStore();
@@ -4012,7 +4075,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// Before the fix, ConvertStringToType parsed NUMERIC as double (15-17 significant digits),
         /// silently losing precision for values like 1234567890.123456789.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task NumericPrecision_InitialLoadAndCdcStream_NoLoss()
         {
             using var store = GetDocumentStore();
@@ -4106,7 +4169,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// Tests both initial load and CDC streaming to confirm both paths handle
         /// JSON columns identically.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task JsonColumns_StoredAsNativeJsonObjects()
         {
             using var store = GetDocumentStore();
@@ -4214,7 +4277,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Smallint_ProducesIntegerJsonType_FromBothInitialLoadAndStreaming()
         {
             using var store = GetDocumentStore();
@@ -4294,7 +4357,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Integer_StaysIntegerJsonType_FromBothPaths()
         {
             // Regression guard: widening sbyte/byte/short/ushort/int/uint -> long in
@@ -4352,7 +4415,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Smallint_NullStaysNull_FromBothPaths()
         {
             using var store = GetDocumentStore();
@@ -4418,7 +4481,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Null(small3);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Boolean_StaysBoolJsonType_FromBothInitialLoadAndStreaming()
         {
             // Cross-provider Bug #1 regression smoke. Both Postgres paths produce CLR bool today
@@ -4476,7 +4539,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task Numeric_StaysDecimal_FromBothPaths()
         {
             // Regression guard: NUMERIC values pass through both paths as CLR decimal today

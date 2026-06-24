@@ -40,6 +40,10 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public bool Active { get; private set; }
 
+        // Count of in-flight sessions (for tests / diagnostics). Converges to 0 after connections
+        // close; a steady non-zero points at a regression of the ContinueWith cleanup below.
+        public int InFlightConnectionCount => _connections.Count;
+
         public void Execute()
         {
             HandleServerActivation();
@@ -180,7 +184,20 @@ namespace Raven.Server.Integrations.PostgreSQL
                         if (client == null)
                             continue;
 
-                        _connections.TryAdd(client, HandleConnection(client));
+                        // Capture the accepted client into a fresh local so the continuation
+                        // sees this iteration's instance, not the outer `client` variable that
+                        // the next AcceptTcpClientAsync will overwrite.
+                        var capturedClient = client;
+                        var task = HandleConnection(capturedClient);
+                        _connections.TryAdd(capturedClient, task);
+                        // Remove the dictionary entry when the session finishes, else the (TcpClient, Task)
+                        // tuple leaks for the server's lifetime - one per connection. The socket is freed
+                        // (PgSession.Run disposes it); the dictionary wrappers aren't.
+                        _ = task.ContinueWith(static (_, state) =>
+                        {
+                            var (connections, key) = ((ConcurrentDictionary<TcpClient, Task>, TcpClient))state;
+                            connections.TryRemove(key, out _);
+                        }, (_connections, capturedClient), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                     }
                 }
                 finally

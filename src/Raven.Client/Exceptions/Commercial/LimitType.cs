@@ -121,6 +121,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Server Wide Analyzers")]
         ServerWideAnalyzers,
 
+        [Description("Server Wide Connection Strings")]
+        ServerWideConnectionStrings,
+
         [Description("Index Cleanup")]
         IndexCleanup,
 
@@ -171,5 +174,8 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Schema Validation")]
         SchemaValidation,
+
+        [Description("SSO")]
+        Sso,
     }
 }

@@ -259,19 +259,40 @@ public class CdcSinkTableProcessor
 
     public string GetParentDocumentId(object[] values) => BuildId(RootJoinIndices, values);
 
+    // Distinct SQL-NULL marker for an id segment. A real value can never produce a lone backslash
+    // (escaping always doubles it), so this can't collide with the literal string "null".
+    private const string NullKeySentinel = "\\0";
+
     private string BuildId(int[] indices, object[] values)
     {
         _sb.Clear();
         _sb.Append(CollectionName);
 
         for (int i = 0; i < indices.Length; i++)
-        {
-            _sb.Append('/');
-            var val = values[indices[i]];
-            _sb.Append(val is null or DBNull ? "null" : val);
-        }
+            AppendKeySegment(values[indices[i]]);
 
         return _sb.ToString();
+    }
+
+    // Appends "/<segment>" to _sb, escaping '/' and '\' so compound keys cannot collide
+    // (e.g. ["a/b","c"] vs ["a","b/c"] both used to map to one id) and mapping SQL NULL to a
+    // sentinel distinct from the literal string "null". Used by BOTH the document-id builder and
+    // the linked-reference builder so a reference always matches the target document's id.
+    private void AppendKeySegment(object value)
+    {
+        _sb.Append('/');
+        if (value is null or DBNull)
+        {
+            _sb.Append(NullKeySentinel);
+            return;
+        }
+
+        foreach (var c in value.ToString())
+        {
+            if (c is '/' or '\\')
+                _sb.Append('\\');
+            _sb.Append(c);
+        }
     }
 
     public DynamicJsonValue MapColumns(object[] values, JsonOperationContext context)
@@ -418,8 +439,7 @@ public class CdcSinkTableProcessor
                 var v = values[joinIndices[i]];
                 if (v is not null and not DBNull)
                     allNull = false;
-                _sb.Append('/');
-                _sb.Append(v is null or DBNull ? "null" : v);
+                AppendKeySegment(v);
             }
 
             doc[linked.PropertyName] = allNull ? null : _sb.ToString();

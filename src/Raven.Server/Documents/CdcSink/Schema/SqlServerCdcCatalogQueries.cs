@@ -31,7 +31,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
                 WHERE source_object_id = OBJECT_ID(@fullTableName)
                 ORDER BY create_date ASC";
 
-            CdcSinkProcess.AddParameter(cmd, "@fullTableName", $"{schema}.{tableName}");
+            // Bracket-quote each part so OBJECT_ID resolves names that need delimiters (reserved
+            // words like [Order], or names with dots/spaces); ] is escaped as ]] per SQL Server rules.
+            CdcSinkProcess.AddParameter(cmd, "@fullTableName", $"[{schema.Replace("]", "]]")}].[{tableName.Replace("]", "]]")}]");
 
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))

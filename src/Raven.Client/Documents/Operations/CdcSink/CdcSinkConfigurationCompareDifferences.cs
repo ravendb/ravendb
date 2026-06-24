@@ -15,4 +15,7 @@ internal enum CdcSinkConfigurationCompareDifferences
     TableConfig = 1 << 6,
     ConfigurationDisabled = 1 << 7,
     MentorNode = 1 << 8,
+    PinToMentorNode = 1 << 9,
+    SkipInitialLoad = 1 << 10,
+    Postgres = 1 << 11,
 }

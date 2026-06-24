@@ -26,6 +26,16 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function EditCdcSinkTaskTableEditor() {
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
+    const viewSheet = useViewSheet();
+
+    // The test panel lives in the global split-view sheet, opened for the active root table. When no
+    // table is active anymore - e.g. one was removed, which clears the selection - close the sheet so it
+    // can't linger with a frozen index path that now points past the end (crash) or at a shifted table.
+    useEffect(() => {
+        if (!activeTable) {
+            viewSheet.close();
+        }
+    }, [activeTable, viewSheet]);
 
     if (!activeTable) {
         return <EmptySet className="text-muted">Select a table to view its configuration details.</EmptySet>;

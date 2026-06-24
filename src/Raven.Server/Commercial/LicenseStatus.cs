@@ -195,6 +195,8 @@ namespace Raven.Server.Commercial
 
         public bool HasEncryptedBackups => Enabled(LicenseAttribute.EncryptedBackup);
 
+        public bool HasSso => Enabled(LicenseAttribute.Sso);
+
         public bool CanAutoRenewLetsEncryptCertificate
         {
             get
@@ -256,6 +258,8 @@ namespace Raven.Server.Commercial
 
         public bool HasServerWideAnalyzers => Enabled(LicenseAttribute.ServerWideAnalyzers);
 
+        public bool HasServerWideConnectionStrings => Enabled(LicenseAttribute.ServerWideConnectionStrings);
+
         public bool HasIndexCleanup => Enabled(LicenseAttribute.IndexCleanup);
 
         public bool HasPeriodicBackup => Enabled(LicenseAttribute.PeriodicBackup);
@@ -266,8 +270,7 @@ namespace Raven.Server.Commercial
 
         public bool HasQueueSink => Enabled(LicenseAttribute.QueueSink);
 
-        // TODO: Remove hardcoding once we have the attribute in place and enabled for relevant licenses
-        public bool HasCdcSink => true; // Enabled(LicenseAttribute.CdcSink); 
+        public bool HasCdcSink => Enabled(LicenseAttribute.CdcSink);
 
         public bool HasDataArchival => Enabled(LicenseAttribute.DataArchival);
 
@@ -347,6 +350,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
                 [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
                 [nameof(HasEncryptedBackups)] = HasEncryptedBackups,
+                [nameof(HasSso)] = HasSso,
                 [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate,
                 [nameof(IsCloud)] = IsCloud,
                 [nameof(HasDocumentsCompression)] = HasDocumentsCompression,
@@ -370,6 +374,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasServerWideExternalReplications)] = HasServerWideExternalReplications,
                 [nameof(HasServerWideCustomSorters)] = HasServerWideCustomSorters,
                 [nameof(HasServerWideAnalyzers)] = HasServerWideAnalyzers,
+                [nameof(HasServerWideConnectionStrings)] = HasServerWideConnectionStrings,
                 [nameof(HasIndexCleanup)] = HasIndexCleanup,
                 [nameof(HasPeriodicBackup)] = HasPeriodicBackup,
                 [nameof(HasClientConfiguration)] = HasClientConfiguration,

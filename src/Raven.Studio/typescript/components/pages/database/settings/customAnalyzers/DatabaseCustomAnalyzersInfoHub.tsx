@@ -63,7 +63,6 @@ export function DatabaseCustomAnalyzersInfoHub({ databaseAnalyzersCount }: Datab
                     <ul>
                         <li>The custom analyzers added here can be used only by indexes in this database.</li>
                         <li>The server-wide custom analyzers listed can also be used in this database.</li>
-                        <li>Note: custom analyzers are not supported by Corax indexes.</li>
                     </ul>
                 </div>
                 <div>

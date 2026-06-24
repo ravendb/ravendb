@@ -7,7 +7,7 @@ import _ from "lodash";
 
 type AiConnectionString = Raven.Client.Documents.Operations.AI.AiConnectionString;
 type AiConnectorType = Raven.Client.Documents.Operations.AI.AiConnectorType;
-type AiConnectionSetting = Exclude<keyof AiConnectionString, "Type" | "Identifier" | "ModelType" | "Name">;
+type AiConnectionSetting = Exclude<keyof AiConnectionString, "Type" | "Identifier" | "ModelType" | "Name" | "UsedBy">;
 
 const getConnectorType = (connection: AiConnectionString): AiConnectorType => {
     const mapping: Record<AiConnectionSetting, AiConnectorType> = {
@@ -295,6 +295,7 @@ const schema = yupObjectSchema<FormData>({
             }),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("mistralAiSettings"),
     }),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 function getDefaultValues(initialConnection: AiConnection, isForNewConnection: boolean): FormData {
@@ -369,7 +370,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }
 
 export const aiConnectionStringUtils = {

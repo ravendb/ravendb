@@ -1588,6 +1588,18 @@ namespace Raven.Server.Commercial
             return true;
         }
 
+        public void AssertCanUseSso()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasSso == false)
+            {
+                var details = $"Your current license ({LicenseStatus.Type}) does not allow using SSO";
+                throw GenerateLicenseLimit(LimitType.Sso, details);
+            }
+        }
+
         public void AssertCanAddExternalReplication(TimeSpan delayReplicationFor)
         {
             if (IsValid(out var licenseLimit) == false)

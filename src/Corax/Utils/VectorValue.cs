@@ -41,7 +41,7 @@ public struct VectorValue : IDisposable
     }
 
     public void OverrideLength(int len) => _length = len;
-    
+
     public void Dispose()
     {
         _memoryScope?.Dispose();

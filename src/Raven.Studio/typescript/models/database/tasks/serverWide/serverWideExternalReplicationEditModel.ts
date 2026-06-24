@@ -24,6 +24,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
         const connectionStringObject: Raven.Client.Documents.Operations.ETL.RavenConnectionString = {
             Database: "server-wide",
             TopologyDiscoveryUrls: dto.TopologyDiscoveryUrls,
+            UsedBy: [],
             Type: "Raven",
             Name: undefined
         };

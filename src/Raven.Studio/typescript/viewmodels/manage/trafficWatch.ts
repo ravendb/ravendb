@@ -449,38 +449,28 @@ class trafficWatch extends viewModelBase {
     private formatSource(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase, asHtml: boolean): string {
         const thumbprint = item.CertificateThumbprint;
         const cert = thumbprint ? this.certificatesCache.get(thumbprint) : null;
-        const certName = cert?.name;
-        
+        const displayName = item.CertificateName ?? cert?.name;
+        const ssoIdentity = item.SsoUserIdentity;
+
         if (asHtml) {
-            if (cert) {
-                return (
-                    `<div class="data-container data-container-lg">
-                        <div>
-                            <div class="data-label">Source: </div>
-                            <div class="data-value">${generalUtils.escapeHtml(item.ClientIP)}</div>
-                        </div>
-                        <div>
-                            <div class="data-label">Certificate: </div>
-                            <div class="data-value">${generalUtils.escapeHtml(cert.name)}</div>
-                        </div>
-                        <div>
-                            <div class="data-label">Thumbprint: </div>
-                            <div class="data-value">${generalUtils.escapeHtml(thumbprint)}</div>
-                        </div>
-                    </div>`);
-            }
-            return (
-                `<div class="data-container">
-                     <div>
-                        <div class="data-label">Source: </div>
-                        <div class="data-value">${generalUtils.escapeHtml(item.ClientIP)}</div>
-                     </div>
-                 </div>`);
+            const row = (label: string, value: string) =>
+                `<div><div class="data-label">${label}: </div><div class="data-value">${generalUtils.escapeHtml(value)}</div></div>`;
+
+            let html = `<div class="data-container data-container-lg">`;
+            html += row("Source", item.ClientIP);
+            if (item.ProxyIP) { html += row("Proxy", item.ProxyIP); }
+            if (ssoIdentity) { html += row("SSO user", ssoIdentity); }
+            if (displayName) { html += row("Certificate", displayName); }
+            if (thumbprint) { html += row("Thumbprint", thumbprint); }
+            html += `</div>`;
+            return html;
         } else {
-            if (cert) {
-                return `Source: ${item.ClientIP}, Certificate Name = ${generalUtils.escapeHtml(certName)}, Certificate Thumbprint = ${thumbprint}`;
-            }
-            return `Source: ${item.ClientIP}`;
+            const parts = [`Source: ${item.ClientIP}`];
+            if (item.ProxyIP) { parts.push(`Proxy = ${item.ProxyIP}`); }
+            if (ssoIdentity) { parts.push(`SSO user = ${ssoIdentity}`); }
+            if (displayName) { parts.push(`Certificate Name = ${displayName}`); }
+            if (thumbprint) { parts.push(`Certificate Thumbprint = ${thumbprint}`); }
+            return parts.join(", ");
         }
     }
 
@@ -586,8 +576,15 @@ class trafficWatch extends viewModelBase {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
-                    x => trafficWatch.isSecureServer ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${x.ClientIP}` : x.ClientIP,
-                    "Source", "8%", {
+                    x => {
+                        const ip = x.SsoUserIdentity
+                            ? `${x.ClientIP}${x.ProxyIP ? " ▸ " + x.ProxyIP : ""}`
+                            : x.ClientIP;
+                        return trafficWatch.isSecureServer
+                            ? `<span class="icon-certificate text-info margin-right margin-right-xs"></span>${ip}`
+                            : ip;
+                    },
+                    "Source", "10%", {
                     extraClass: rowHighlightRules,
                     useRawValue: () => true
                 }),

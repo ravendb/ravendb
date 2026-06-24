@@ -110,21 +110,27 @@ namespace Raven.Server.Routing
                     // here, because there is a single connection, but better to be safe
                     if (Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
                     {
+                        var remoteAddr = $"{context.Connection.RemoteIpAddress}:{context.Connection.RemotePort}";
+                        var ipInfo = remoteAddr;
+                        var (clientIp, proxyIp) = SsoForwardedForHelper.GetIps(context, feature);
+                        if (proxyIp != null) // SSO-authenticated connection with a valid forwarded chain
+                            ipInfo = $"{remoteAddr}, {Constants.Headers.XForwardedFor}: {clientIp}";
+
                         if (feature.WrongProtocolMessage != null)
                         {
-                            auditLog.Audit($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                            auditLog.Audit($"Connection from {ipInfo} " +
                                            $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
                         }
                         else
                         {
-                            auditLog.Audit($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                            auditLog.Audit($"Connection from {ipInfo} " +
                                 $"with certificate '{feature.Certificate?.GetDisplayName()} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
 
                             var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
                             if (conLifetime != null)
                             {
-                                var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
+                                var msg = $"Connection {ipInfo} closed. Was used with: " +
                                  $"certificate '{feature.Certificate?.GetDisplayName()} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                  $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
 
@@ -492,7 +498,7 @@ namespace Raven.Server.Routing
                     return;
                 }
 
-                var message = GetFailedAuthorizationMessage(context, resourceType, database, feature?.Certificate, feature?.Status ?? AuthenticationStatus.None, authorizationStatus, out var statusCode);
+                var message = GetFailedAuthorizationMessage(context, resourceType, database, feature, feature?.Status ?? AuthenticationStatus.None, authorizationStatus, out var statusCode);
 
                 context.Response.StatusCode = (int)statusCode;
 
@@ -504,8 +510,9 @@ namespace Raven.Server.Routing
             }
         }
 
-        public static string GetFailedAuthorizationMessage(HttpContext context, ResourceType resourceType, string database, X509Certificate2 certificate, AuthenticationStatus authenticationStatus, AuthorizationStatus authorizationStatus, out HttpStatusCode statusCode)
+        public static string GetFailedAuthorizationMessage(HttpContext context, ResourceType resourceType, string database, AuthenticateConnection feature, AuthenticationStatus authenticationStatus, AuthorizationStatus authorizationStatus, out HttpStatusCode statusCode)
         {
+            var certificate = feature?.Certificate;
             string message;
             statusCode = HttpStatusCode.Forbidden;
             if (certificate == null || authenticationStatus is AuthenticationStatus.None or AuthenticationStatus.NoCertificateProvided)
@@ -519,7 +526,11 @@ namespace Raven.Server.Routing
                 if (string.IsNullOrWhiteSpace(name))
                     name = certificate.ToString(false);
 
-                name += $"(Thumbprint: {certificate.Thumbprint})";
+                var details = $"Thumbprint: {certificate.Thumbprint}";
+                if (string.IsNullOrEmpty(feature?.SsoUserIdentity) == false)
+                    details += $", SSO identity: {feature.SsoUserIdentity}";
+
+                name += $"({details})";
 
                 if (authenticationStatus == AuthenticationStatus.UnfamiliarCertificate)
                 {

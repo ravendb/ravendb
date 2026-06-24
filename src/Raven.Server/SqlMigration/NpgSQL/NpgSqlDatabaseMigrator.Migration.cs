@@ -20,6 +20,17 @@ namespace Raven.Server.SqlMigration.NpgSQL
         {
             return $"{schema}.{tableName}";
         }
+
+        // CDC test-mapping path only (see GenericDatabaseMigrator): Postgres folds unquoted
+        // identifiers to lower-case, so mixed-case / reserved-word / special-char names must be
+        // double-quoted (embedded quotes doubled). QuoteTable/QuoteColumn above stay raw to
+        // preserve the existing SQL-import behaviour.
+        protected override string QuoteColumnForRowFetch(string columnName) => PgQuoteIdentifier(columnName);
+
+        protected override string QuoteTableForRowFetch(string schema, string tableName) =>
+            $"{PgQuoteIdentifier(schema)}.{PgQuoteIdentifier(tableName)}";
+
+        private static string PgQuoteIdentifier(string identifier) => "\"" + identifier.Replace("\"", "\"\"") + "\"";
         
         private ColumnType MapColumnType(string type)
         {

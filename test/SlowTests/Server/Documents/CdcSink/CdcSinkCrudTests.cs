@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.CdcSink
             return new SqlConnectionString
             {
                 Name = name,
-                FactoryName = "System.Data.SqlClient",
+                FactoryName = "Microsoft.Data.SqlClient",
                 ConnectionString = "Server=localhost;Database=TestDb;User Id=sa;Password=pass;"
             };
         }

@@ -28,10 +28,16 @@ import {
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useAppUrls } from "hooks/useAppUrls";
+import appUrl from "common/appUrl";
 import { CounterBadge } from "components/common/CounterBadge";
 import IconName from "../../../../../../typings/server/icons";
 import { TaskItemProps } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
 import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
+import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import {
+    serverWideConnectionStringPrefix,
+    getServerWideShortName,
+} from "components/pages/database/settings/connectionStrings/connectionStringsUtils";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -215,10 +221,17 @@ export function OngoingTaskActions(props: OngoingTaskActionsProps) {
 export function ConnectionStringItem(props: {
     canEdit: boolean;
     connectionStringName: string;
-    connectionStringsUrl: string;
+    connectionStringType: StudioConnectionType;
+    databaseName: string;
     connectionStringDefined: boolean;
 }) {
-    const { canEdit, connectionStringDefined, connectionStringName, connectionStringsUrl } = props;
+    const { canEdit, connectionStringDefined, connectionStringName, connectionStringType, databaseName } = props;
+
+    const isServerWide = connectionStringName?.startsWith(serverWideConnectionStringPrefix);
+
+    const connectionStringsUrl = isServerWide
+        ? appUrl.forServerWideConnectionStrings(connectionStringType, getServerWideShortName(connectionStringName))
+        : appUrl.forConnectionStrings(databaseName, connectionStringType, connectionStringName);
 
     if (connectionStringDefined) {
         return (

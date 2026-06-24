@@ -62,15 +62,15 @@ public class RavenDB_21412 : RavenTestBase
             var total = new TotalNumberOfOngoingTasks(Server.ServerStore);
             var test = new TestOngoingTasks(Server.ServerStore, "1");
 
-            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 0, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 0, expectedQueueSinkCount: 0);
+            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 0, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 0, expectedQueueSinkCount: 0, expectedCdcSinkCount: 0);
 
             var sub = await store.Subscriptions.CreateAsync<Company>();
-            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 0, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 1, expectedQueueSinkCount: 0);
+            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 0, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 1, expectedQueueSinkCount: 0, expectedCdcSinkCount: 0);
             await store.Subscriptions.DisableAsync(sub);
-            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 0, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 0, expectedQueueSinkCount: 0);
+            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 0, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 0, expectedQueueSinkCount: 0, expectedCdcSinkCount: 0);
 
             await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(new PeriodicBackupConfiguration { FullBackupFrequency = "* * * * *", LocalSettings = new LocalSettings { FolderPath = NewDataPath() } }));
-            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 1, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 0, expectedQueueSinkCount: 0);
+            AssertCounts(test, total, expectedOlapCount: 0, expectedElasticCount: 0, expectedExternalCount: 0, expectedBackupCount: 1, expectedQueueCount: 0, expectedRavenCount: 0, expectedSinkCount: 0, expectedSqlCount: 0, expectedSubscriptionCount: 0, expectedQueueSinkCount: 0, expectedCdcSinkCount: 0);
         }
     }
 
@@ -86,7 +86,8 @@ public class RavenDB_21412 : RavenTestBase
         int expectedSinkCount,
         int expectedSqlCount,
         int expectedSubscriptionCount,
-        int expectedQueueSinkCount)
+        int expectedQueueSinkCount,
+        int expectedCdcSinkCount)
     {
         test.GetCountFunc = (_, database) => OngoingTasksBase.GetNumberOfOlapEtls(database);
         Assert.Equal(expectedOlapCount, ((Integer32)test.Data).ToInt32());
@@ -118,7 +119,10 @@ public class RavenDB_21412 : RavenTestBase
         test.GetCountFunc = (_, database) => OngoingTasksBase.GetNumberOfQueueSinks(database);
         Assert.Equal(expectedQueueSinkCount, ((Integer32)test.Data).ToInt32());
 
-        Assert.Equal(expectedOlapCount + expectedElasticCount + expectedExternalCount + expectedBackupCount + expectedQueueCount + expectedRavenCount + expectedSinkCount + expectedSqlCount + expectedSubscriptionCount + expectedQueueSinkCount, ((Integer32)total.Data).ToInt32());
+        test.GetCountFunc = (_, database) => OngoingTasksBase.GetNumberOfCdcSinks(database);
+        Assert.Equal(expectedCdcSinkCount, ((Integer32)test.Data).ToInt32());
+
+        Assert.Equal(expectedOlapCount + expectedElasticCount + expectedExternalCount + expectedBackupCount + expectedQueueCount + expectedRavenCount + expectedSinkCount + expectedSqlCount + expectedSubscriptionCount + expectedQueueSinkCount + expectedCdcSinkCount, ((Integer32)total.Data).ToInt32());
     }
 
     private class TestOngoingTasks : OngoingTasksBase

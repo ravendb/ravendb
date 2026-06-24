@@ -28,6 +28,9 @@ public class CdcSinkSourceColumn : IDynamicJson
     /// </summary>
     public CdcColumnType SuggestedType { get; set; }
 
+    /// <summary>
+    /// True when this column participates in the source table's primary key.
+    /// </summary>
     public bool IsPrimaryKey { get; set; }
 
     /// <summary>

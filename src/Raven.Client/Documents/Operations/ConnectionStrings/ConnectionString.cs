@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,6 +9,9 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
     public abstract class ConnectionString : IDynamicJson
     {
         public string Name { get; set; }
+
+        [ForceJsonSerialization]
+        internal List<ConnectionStringUsage> UsedBy { get; set; } = new List<ConnectionStringUsage>();
 
         public bool Validate(List<string> errors)
         {
@@ -29,8 +33,20 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         {
             return new DynamicJsonValue
             {
-                [nameof(Name)] = Name
+                [nameof(Name)] = Name,
             };
+        }
+
+        /// <summary>
+        /// Produces the JSON returned to the Studio/clients on GET, including the server-computed
+        /// <see cref="UsedBy"/> metadata. The plain <see cref="ToJson"/> is used for persistence and
+        /// intentionally omits <see cref="UsedBy"/> so it is never stored or propagated.
+        /// </summary>
+        internal DynamicJsonValue ToStudioJson()
+        {
+            var json = ToJson();
+            json[nameof(UsedBy)] = new DynamicJsonArray(UsedBy.Select(x => x.ToJson()));
+            return json;
         }
 
         public virtual DynamicJsonValue ToAuditJson()
@@ -59,6 +75,48 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
             return connectionStringType;
         }
+    }
+
+    internal class ConnectionStringUsage : IDynamicJson
+    {
+        public ConnectionStringUsageKind Kind { get; set; }
+
+        /// <summary>
+        /// The numeric task id, for ongoing tasks (ETL, replication, sinks). <c>null</c> for AI agents.
+        /// </summary>
+        public long? Id { get; set; }
+
+        /// <summary>
+        /// The string identifier, for AI agents. <c>null</c> for ongoing tasks.
+        /// </summary>
+        public string Identifier { get; set; }
+
+        public string Name { get; set; }
+
+        public virtual DynamicJsonValue ToJson() => new DynamicJsonValue
+        {
+            [nameof(Kind)] = Kind.ToString(),
+            [nameof(Id)] = Id,
+            [nameof(Identifier)] = Identifier,
+            [nameof(Name)] = Name,
+        };
+    }
+
+    internal enum ConnectionStringUsageKind
+    {
+        RavenEtl,
+        SqlEtl,
+        OlapEtl,
+        ElasticSearchEtl,
+        QueueEtl,
+        SnowflakeEtl,
+        QueueSink,
+        ExternalReplication,
+        PullReplicationAsSink,
+        EmbeddingsGeneration,
+        GenAi,
+        AiAgent,
+        CdcSink
     }
 
     public enum ConnectionStringType

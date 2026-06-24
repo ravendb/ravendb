@@ -9,9 +9,9 @@ import { ConnectionFormData, EditConnectionStringFormProps, SqlConnection } from
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import { Icon } from "components/common/Icon";
@@ -37,6 +37,7 @@ export default function SqlConnectionString({
     onSave,
 }: SqlConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Sql"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { control, handleSubmit, trigger } = useForm<FormData>({
@@ -50,7 +51,6 @@ export default function SqlConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
     const [syntaxHelpElement, setSyntaxHelpElement] = useState<HTMLElement>();
 
@@ -60,7 +60,9 @@ export default function SqlConnectionString({
             return;
         }
 
-        return tasksService.testSqlConnectionString(databaseName, formValues.connectionString, formValues.factoryName);
+        return isServerWide
+            ? tasksService.testServerWideSqlConnectionString(formValues.connectionString, formValues.factoryName)
+            : tasksService.testSqlConnectionString(databaseName, formValues.connectionString, formValues.factoryName);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
@@ -158,10 +160,14 @@ export default function SqlConnectionString({
                     </ButtonWithSpinner>
                 </div>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editSqlEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );
@@ -260,6 +266,7 @@ const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     connectionString: yup.string().nullable().required(),
     factoryName: yup.string<SqlConnectionStringFactoryName>().nullable().required(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);
@@ -273,5 +280,5 @@ function getDefaultValues(initialConnection: SqlConnection, isForNewConnection: 
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

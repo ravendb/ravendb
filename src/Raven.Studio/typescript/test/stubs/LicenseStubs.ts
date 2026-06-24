@@ -59,6 +59,7 @@ export class LicenseStubs {
                 ServerWideExternalReplications: true,
                 ServerWideCustomSorters: true,
                 ServerWideAnalyzers: true,
+                ServerWideConnectionStrings: true,
                 IndexCleanup: true,
                 PeriodicBackup: true,
                 ClientConfiguration: true,
@@ -122,6 +123,7 @@ export class LicenseStubs {
             HasServerWideExternalReplications: true,
             HasServerWideCustomSorters: true,
             HasServerWideAnalyzers: true,
+            HasServerWideConnectionStrings: true,
             HasIndexCleanup: true,
             HasPeriodicBackup: true,
             HasClientConfiguration: true,
@@ -149,6 +151,7 @@ export class LicenseStubs {
             MaxNumberOfCustomAnalyzersPerDatabase: null,
             MaxNumberOfCustomAnalyzersPerCluster: null,
             CanSetupDefaultRevisionsConfiguration: true,
+            HasSso: true,
         };
     }
 

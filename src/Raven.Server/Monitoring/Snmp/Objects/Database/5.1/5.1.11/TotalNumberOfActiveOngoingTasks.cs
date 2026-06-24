@@ -25,6 +25,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             count += GetNumberOfActiveSubscriptions(context, rachisState, nodeTag, database);
             count += GetNumberOfActiveEmbeddingsGenerationTasks(rachisState, nodeTag, database);
             count += GetNumberOfActiveGenAiTasks(rachisState, nodeTag, database);
+            count += GetNumberOfActiveCdcSinks(rachisState, nodeTag, database);
 
             return count;
         }

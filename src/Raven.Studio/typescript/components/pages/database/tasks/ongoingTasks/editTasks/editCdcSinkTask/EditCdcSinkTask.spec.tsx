@@ -176,6 +176,31 @@ describe("Edit CDC Sink task", () => {
 
         expect(await screen.findByText(selectors.tableWarningMessage)).toBeInTheDocument();
     });
+
+    it("closes the test panel without crashing when its table is removed", async () => {
+        const Story = composeStory(stories.EditTask, stories.default);
+
+        const { screen, user, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+
+        // Select the configured root table, then open its test panel.
+        await fireClick((await screen.findByText("orders")).closest("button"));
+        await fireClick((await screen.findByText(/^Test$/)).closest("button"));
+        expect(await screen.findByText("Test mapping")).toBeInTheDocument();
+
+        // Remove the table via its actions menu while the test panel is still open.
+        await act(async () => {
+            await user.click(screen.getByTitle("Table actions"));
+        });
+        await act(async () => {
+            await user.click(await screen.findByText(/^Remove$/));
+        });
+
+        // The page must not crash, and the orphaned test panel must be closed.
+        await waitFor(() => expect(screen.queryByText("Test mapping")).not.toBeInTheDocument());
+        expect(screen.getByText(selectors.editTaskTitle)).toBeInTheDocument();
+    });
 });
 
 async function discoverTables(

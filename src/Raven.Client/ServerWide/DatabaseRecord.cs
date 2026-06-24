@@ -520,6 +520,8 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Snowflake ETL task with that name");
             if (QueueSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Queue Sink task with that name");
+            if (CdcSinks.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a CDC Sink task with that name");
             if (EmbeddingsGenerations.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an Embeddings Generation task with that name");
             if (GenAis.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))

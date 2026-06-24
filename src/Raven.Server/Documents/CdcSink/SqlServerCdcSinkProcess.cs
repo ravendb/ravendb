@@ -174,19 +174,62 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    private static async Task VerifyAgentIsRunning(DbConnection conn, CancellationToken ct)
+    private async Task VerifyAgentIsRunning(DbConnection conn, CancellationToken ct)
     {
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE program_name LIKE N'SQLAgent%'";
-        var result = await cmd.ExecuteScalarAsync(ct);
-        if (result is int count && count > 0)
+        // Azure SQL Database (EngineEdition 5) has no classic SQL Server Agent - its CDC change
+        // capture runs on a managed scheduler - so the Agent-session check does not apply there.
+        const int azureSqlDatabaseEngineEdition = 5;
+        try
+        {
+            await using var editionCmd = conn.CreateCommand();
+            editionCmd.CommandText = "SELECT CAST(SERVERPROPERTY('EngineEdition') AS int)";
+            if (await editionCmd.ExecuteScalarAsync(ct) is int engineEdition && engineEdition == azureSqlDatabaseEngineEdition)
+                return;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Couldn't read the engine edition - fall through to the best-effort Agent check.
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] Could not read SQL Server EngineEdition while checking the Agent; continuing. {ex.Message}");
+        }
+
+        int agentSessions;
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE program_name LIKE N'SQLAgent%'";
+            agentSessions = await cmd.ExecuteScalarAsync(ct) as int? ?? 0;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Reading sys.dm_exec_sessions needs VIEW SERVER STATE; an under-privileged login can't
+            // see Agent sessions even when the Agent is running. We can't verify - don't block.
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] Could not verify SQL Server Agent status (insufficient permissions?); continuing. {ex.Message}");
+            return;
+        }
+
+        if (agentSessions > 0)
             return;
 
-        throw new InvalidOperationException(
-            "SQL Server Agent is not running. CDC change capture requires the Agent to process " +
-            "capture jobs that populate the change tables. Without it, no CDC events will be delivered. " +
-            "For Docker containers, start with: -e 'MSSQL_AGENT_ENABLED=true'. " +
-            "For on-premises installations, start the SQL Server Agent service.");
+        // The Agent isn't visible. On-prem this usually means it is genuinely stopped, but an
+        // under-privileged login may simply not see the session. Warn instead of failing the task so
+        // capture can still proceed if the Agent is in fact running; without it the change tables just
+        // won't be populated and the counts won't advance, which the alert explains.
+        var alert = AlertRaised.Create(
+            Database.Name, Tag,
+            "SQL Server Agent does not appear to be running (or is not visible to this login). CDC change " +
+            "capture relies on the Agent to process the capture jobs that populate the change tables; if it " +
+            "is genuinely stopped, no CDC events will be delivered. For Docker containers start with " +
+            "-e 'MSSQL_AGENT_ENABLED=true'; for on-premises installations start the SQL Server Agent service.",
+            AlertReason.CdcSink_Error,
+            NotificationSeverity.Warning,
+            key: $"{Tag}/{Name}/sql-agent-not-running");
+
+        Database.NotificationCenter.Add(alert);
+
+        if (Logger.IsInfoEnabled)
+            Logger.Info($"[{Name}] SQL Server Agent not detected; proceeding (capture may not advance if it is truly stopped).");
     }
 
     protected override async IAsyncEnumerable<CdcEvent> GetCdcEvents([EnumeratorCancellation] CancellationToken ct)
@@ -325,10 +368,16 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
                 foreach (var (_, _, _, evt) in buffer)
                     yield return evt;
-
-                yield return new CdcEvent(CdcEventType.TransactionCommit, null, Convert.ToHexString(lsnInfo.MaxLsn));
-                lastLsn = lsnInfo.MaxLsn;
             }
+
+            // Advance the checkpoint to MaxLsn even when the configured tables had no changes in this
+            // range. We only reach here when the source LSN moved (FromLsn <= MaxLsn, guarded above), so
+            // an empty buffer means other CDC tables (or none) moved the database-wide LSN. Persisting
+            // past the empty range stops a restart from re-scanning it and keeps the saved position ahead
+            // of the CDC cleanup horizon - otherwise a long idle stretch risks the purge gap that
+            // VerifyNoGapsInLsn can only detect after the fact.
+            yield return new CdcEvent(CdcEventType.TransactionCommit, null, Convert.ToHexString(lsnInfo.MaxLsn));
+            lastLsn = lsnInfo.MaxLsn;
         }
     }
 
@@ -461,8 +510,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         public string Query;
         /// <summary>Column names in the same order as the SELECT list (excludes CDC metadata columns).</summary>
         public string[] Columns;
-        /// <summary>True if a newer capture instance exists for this table (we're draining the old one).</summary>
-        public bool HasNewerInstance;
     }
 
     private async Task<List<CaptureInstanceInfo>> ResolveCaptureInstances(CancellationToken ct)
@@ -474,12 +521,14 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         foreach (var tableInfo in allTables)
         {
-            // Find all capture instances for this table, ordered oldest first.
-            // We drain the oldest before switching to newer ones.
+            // Read from the OLDEST capture instance. After a schema change adds a second capture
+            // instance, this sink keeps reading the old one - changes to the original columns keep
+            // flowing, but newly added columns are NOT captured until an admin drops the old instance
+            // (sys.sp_cdc_disable_table @capture_instance), after which the new one becomes the oldest
+            // and is picked up here.
             var instances = await SqlServerCdcCatalogQueries.FetchCaptureInstancesAsync(conn, tableInfo.Schema, tableInfo.TableName, ct);
 
             var captureInstance = instances.Count > 0 ? instances[0] : $"{tableInfo.Schema}_{tableInfo.TableName}";
-            var hasNewerInstance = instances.Count > 1;
 
             // Fetch the captured column names so we can build an explicit SELECT
             // and read by ordinal instead of calling GetName()/skipping __$ at runtime
@@ -518,7 +567,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 CaptureInstance = captureInstance,
                 Query = query,
                 Columns = columnsArray,
-                HasNewerInstance = hasNewerInstance,
             });
 
             DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnsArray);

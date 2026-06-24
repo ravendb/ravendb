@@ -506,13 +506,15 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
     private void EnterFallbackMode()
     {
+        var now = Database.Time.GetUtcNow();
         if (Statistics.LastConsumeErrorTime == null)
+        {
             FallbackTime = TimeSpan.FromSeconds(5);
+        }
         else
         {
             // double the fallback time (but don't cross QueueSink.MaxFallbackTimeInSec)
-            var secondsSinceLastError =
-                (Database.Time.GetUtcNow() - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
+            var secondsSinceLastError = (now - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
 
             // Jitter: add up to 10% random variation to avoid synchronized retries
             // across multiple processes when a shared source goes down.
@@ -523,6 +525,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             var jitter = baseSeconds * Random.Shared.NextDouble() * 0.1;
             FallbackTime = TimeSpan.FromSeconds(baseSeconds + jitter);
         }
+        Statistics.LastConsumeErrorTime = now;
     }
 
     public QueueSinkPerformanceStats[] GetPerformanceStats()

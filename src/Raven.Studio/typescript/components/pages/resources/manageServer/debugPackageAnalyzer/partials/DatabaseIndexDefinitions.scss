@@ -1,0 +1,16 @@
+@use "Content/scss/sizes";
+
+.database-index-definitions {
+    .rich-panel-item {
+        border-radius: sizes.$border-radius-sm;
+        overflow: hidden;
+    }
+
+    .rich-panel-name {
+        font-size: 1.125rem;
+    }
+
+    .rich-panel-item + .rich-panel-item {
+        margin-top: sizes.$gutter-xs;
+    }
+}

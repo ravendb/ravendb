@@ -818,7 +818,7 @@ function filterOngoingTask(sharedInfo: OngoingTaskSharedInfo, filter: OngoingTas
         (sharedInfo.taskType === "KafkaQueueSink" ||
             sharedInfo.taskType === "RabbitQueueSink" ||
             sharedInfo.taskType === "AzureServiceBusQueueSink" ||
-               sharedInfo.taskType === "CdcSink");
+            sharedInfo.taskType === "CdcSink");
 
     const isBackupTypeMatching = filter.types.includes("Backup") && sharedInfo.taskType === "Backup";
 

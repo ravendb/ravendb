@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
         private static readonly Slice GlobalFullChangeVectorSlice;
         private readonly Action<LogLevel, string> _addToInitLog;
 
-        private readonly RavenLogger _logger;
+        protected readonly RavenLogger _logger;
         private readonly string _name;
 
         private static readonly Slice FixCountersLastKeySlice;
@@ -197,6 +197,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = DocumentDatabase.Configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = DocumentDatabase.Configuration.Storage.DiscardVirtualMemory;
+            options.UseSequentialReadAheadHintForJournalRecovery = DocumentDatabase.Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
             options.TimeToSyncAfterFlushInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.AddToInitLog = _addToInitLog;
             options.Encryption.MasterKey = DocumentDatabase.MasterKey?.ToArray();
