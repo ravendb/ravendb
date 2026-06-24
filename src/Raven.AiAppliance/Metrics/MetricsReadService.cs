@@ -1,10 +1,13 @@
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
+using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
 
 namespace Raven.AiAppliance.Metrics;
@@ -90,6 +93,12 @@ internal static class MetricsReadService
     // Same per-token cost factor the prototype uses for the cost tile.
     private const double CostPerToken = 0.000015;
 
+    // Series key for tokens whose agent has no resolvable connection-string model.
+    private const string UnknownModel = "unknown";
+
+    // Cap on the "top tables" (collections) list returned for the App Usage page.
+    private const int TopTablesLimit = 10;
+
     // Stable-ish palette so each capability series gets a colour without config.
     private static readonly string[] SeriesPalette =
         ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#22d3ee", "#a855f7", "#84cc16"];
@@ -106,6 +115,7 @@ internal static class MetricsReadService
         IDocumentStore store, string database, DateTime startUtc, DateTime endUtc, CancellationToken ct)
     {
         var granularity = (endUtc - startUtc).TotalDays <= 2 ? UsageGranularity.Hour : UsageGranularity.Day;
+        var maintenance = store.Maintenance.ForDatabase(database);
 
         using var session = store.OpenAsyncSession(database);
         var rows = await QueryMetricRowsInRangeAsync(session, startUtc, endUtc, ct);
@@ -135,25 +145,12 @@ internal static class MetricsReadService
                 tokByBucket.Select(t => t * CostPerToken).ToArray()),
             CdcWrites: new MetricCard(0, 0, [])); // CDC blocked on RavenDB-26780.
 
-        // tokensByCapability: per-bucket tokens per agent (capability ≈ agent).
-        var agents = rows.Select(r => r.Agent ?? "").Distinct()
-            .OrderBy(a => a, StringComparer.OrdinalIgnoreCase).ToArray();
-        var capKeys = agents
-            .Select((a, idx) => new SeriesKey(a, a, SeriesPalette[idx % SeriesPalette.Length])).ToArray();
-        var capPoints = new Dictionary<string, object>[buckets.Count];
-        for (var b = 0; b < buckets.Count; b++)
-        {
-            var point = new Dictionary<string, object> { ["t"] = BucketLabel(buckets[b], granularity) };
-            foreach (var a in agents) point[a] = 0L;
-            capPoints[b] = point;
-        }
-        foreach (var row in rows)
-        {
-            var i = BucketIndex(buckets, row.Bucket, granularity);
-            if (i < 0) continue;
-            var key = row.Agent ?? "";
-            capPoints[i][key] = (long)capPoints[i][key] + row.Tokens;
-        }
+        // Per-bucket token series: by capability (agent) and by model (resolved via
+        // each agent's connection string). Same shape, different key.
+        var modelByAgent = await ResolveAgentModelsAsync(maintenance, ct);
+        var tokensByCapability = BuildTokenSeries(rows, buckets, granularity, agent => agent);
+        var tokensByModel = BuildTokenSeries(rows, buckets, granularity,
+            agent => modelByAgent.GetValueOrDefault(agent, UnknownModel));
 
         var topCapabilities = rows
             .GroupBy(r => r.Agent ?? "")
@@ -168,15 +165,133 @@ internal static class MetricsReadService
             .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var empty = new SeriesData([], []);
+        var conversationsByChannel = await BuildConversationsByChannelAsync(
+            session, buckets, startUtc, endUtc, granularity, ct);
+        var topTables = await BuildTopTablesAsync(maintenance, ct);
+
         return new AppUsageResponse(
             granularity, metrics,
-            TokensByCapability: new SeriesData(capPoints, capKeys),
-            TokensByModel: empty,            // no model recorded on @conversations
-            ConversationsByChannel: empty,   // no channel link on @conversations
-            CdcWrites: [],                   // RavenDB-26780
-            TopTables: [],                   // RavenDB-26780
+            TokensByCapability: tokensByCapability,
+            TokensByModel: tokensByModel,
+            ConversationsByChannel: conversationsByChannel,
+            CdcWrites: [],                   // RavenDB-26780 (CDC perf stats)
+            TopTables: topTables,
             TopCapabilities: topCapabilities);
+    }
+
+    /// <summary>Builds a multi-series token chart from the hour-bucket rows: one
+    /// series per distinct <paramref name="keyOf"/>(agent), per-bucket token sums.
+    /// Used for both tokensByCapability (key = agent) and tokensByModel (key = the
+    /// agent's resolved model).</summary>
+    private static SeriesData BuildTokenSeries(
+        IReadOnlyList<ConversationMetricsIndex.Result> rows, List<DateTime> buckets,
+        UsageGranularity granularity, Func<string, string> keyOf)
+    {
+        var keys = rows.Select(r => keyOf(r.Agent ?? "")).Distinct()
+            .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
+        var seriesKeys = keys
+            .Select((k, idx) => new SeriesKey(k, k, SeriesPalette[idx % SeriesPalette.Length])).ToArray();
+
+        var points = new Dictionary<string, object>[buckets.Count];
+        for (var b = 0; b < buckets.Count; b++)
+        {
+            var point = new Dictionary<string, object> { ["t"] = BucketLabel(buckets[b], granularity) };
+            foreach (var k in keys) point[k] = 0L;
+            points[b] = point;
+        }
+        foreach (var row in rows)
+        {
+            var i = BucketIndex(buckets, row.Bucket, granularity);
+            if (i < 0) continue;
+            var key = keyOf(row.Agent ?? "");
+            points[i][key] = (long)points[i][key] + row.Tokens;
+        }
+        return new SeriesData(points, seriesKeys);
+    }
+
+    /// <summary>agentId → model, joining the AI agents (each carries a
+    /// <c>ConnectionStringName</c>) with the database's AI connection strings
+    /// (each carries the provider model). Agents with no resolvable model are
+    /// omitted (callers fall back to <see cref="UnknownModel"/>).</summary>
+    private static async Task<Dictionary<string, string>> ResolveAgentModelsAsync(
+        MaintenanceOperationExecutor maintenance, CancellationToken ct)
+    {
+        var agents = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
+        var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
+        var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
+            .ToDictionary(p => p.Key, p => AiConnectionStringModel.Resolve(p.Value), StringComparer.OrdinalIgnoreCase);
+
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var agent in agents.AiAgents ?? [])
+        {
+            if (agent.ConnectionStringName is { } name
+                && modelByConnectionString.TryGetValue(name, out var model)
+                && string.IsNullOrWhiteSpace(model) == false)
+            {
+                map[agent.Identifier] = model!;
+            }
+        }
+        return map;
+    }
+
+    /// <summary>conversations-per-channel over time, iframe only: each
+    /// <see cref="EmbedLink"/> (one per conversation) bucketed by its
+    /// <c>CreatedAt</c> and attributed to its channel via <c>WidgetId</c>.
+    /// Telegram/WhatsApp aren't implemented, so they don't appear.</summary>
+    private static async Task<SeriesData> BuildConversationsByChannelAsync(
+        IAsyncDocumentSession session, List<DateTime> buckets, DateTime startUtc, DateTime endUtc,
+        UsageGranularity granularity, CancellationToken ct)
+    {
+        var channels = await session.Advanced.LoadStartingWithAsync<Channel>(
+            Channel.IdPrefix, pageSize: 1024, token: ct);
+        var nameByWidget = channels
+            .Where(c => c.Id is not null)
+            .ToDictionary(c => c.Id![Channel.IdPrefix.Length..],
+                c => string.IsNullOrWhiteSpace(c.DisplayName) ? c.Id![Channel.IdPrefix.Length..] : c.DisplayName,
+                StringComparer.OrdinalIgnoreCase);
+        if (nameByWidget.Count == 0)
+            return new SeriesData([], []);
+
+        var keys = nameByWidget.Values.Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
+        var seriesKeys = keys
+            .Select((k, idx) => new SeriesKey(k, k, SeriesPalette[idx % SeriesPalette.Length])).ToArray();
+
+        var points = new Dictionary<string, object>[buckets.Count];
+        for (var b = 0; b < buckets.Count; b++)
+        {
+            var point = new Dictionary<string, object> { ["t"] = BucketLabel(buckets[b], granularity) };
+            foreach (var k in keys) point[k] = 0L;
+            points[b] = point;
+        }
+
+        var links = await session.Advanced.LoadStartingWithAsync<EmbedLink>(
+            EmbedLink.IdPrefix, pageSize: 1024, token: ct);
+        foreach (var link in links)
+        {
+            if (link.CreatedAt < startUtc || link.CreatedAt > endUtc) continue;
+            if (link.WidgetId is null || nameByWidget.TryGetValue(link.WidgetId, out var channelName) == false) continue;
+            var i = BucketIndex(buckets, link.CreatedAt, granularity);
+            if (i < 0) continue;
+            points[i][channelName] = (long)points[i][channelName] + 1L;
+        }
+        return new SeriesData(points, seriesKeys);
+    }
+
+    /// <summary>"Top tables" = the app's business collections by document count
+    /// (egor: collection stats stand in for CDC source-table stats until
+    /// RavenDB-26780). <c>lagSeconds</c>/<c>lastWriteAt</c> are CDC-perf data, left
+    /// empty for now.</summary>
+    private static async Task<TopTable[]> BuildTopTablesAsync(
+        MaintenanceOperationExecutor maintenance, CancellationToken ct)
+    {
+        var stats = await maintenance.SendAsync(new GetCollectionStatisticsOperation(), ct);
+        return stats.Collections
+            .Where(c => c.Key.StartsWith('@') == false)
+            .OrderByDescending(c => c.Value)
+            .ThenBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
+            .Take(TopTablesLimit)
+            .Select(c => new TopTable(c.Key, c.Value, LagSeconds: 0, LastWriteAt: ""))
+            .ToArray();
     }
 
     private static double Delta(long now, long prev) =>
