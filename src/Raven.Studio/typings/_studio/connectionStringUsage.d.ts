@@ -17,6 +17,7 @@ declare module Raven.Client.Documents.Operations.ConnectionStrings {
         | "QueueEtl"
         | "SnowflakeEtl"
         | "QueueSink"
+        | "CdcSink"
         | "ExternalReplication"
         | "PullReplicationAsSink"
         | "EmbeddingsGeneration"

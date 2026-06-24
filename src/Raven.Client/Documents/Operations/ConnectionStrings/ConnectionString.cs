@@ -115,7 +115,8 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         PullReplicationAsSink,
         EmbeddingsGeneration,
         GenAi,
-        AiAgent
+        AiAgent,
+        CdcSink
     }
 
     public enum ConnectionStringType

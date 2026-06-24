@@ -81,6 +81,8 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
                 return getQueueEtlUrl(databaseName, id);
             case "QueueSink":
                 return getQueueSinkUrl(databaseName, id);
+            case "CdcSink":
+                return appUrl.forEditCdcSink(databaseName, id);
             default:
                 return assertUnreachable(usage.kind);
         }

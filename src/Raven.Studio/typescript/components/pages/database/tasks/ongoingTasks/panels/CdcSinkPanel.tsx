@@ -33,9 +33,7 @@ type CdcSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskCdcSinkInfo>;
 
 function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Sql", data.shared.connectionStringName);
 
     const lastBatchTime = formatDate(data.shared.lastBatchTime);
     const lastActivityTime = formatDate(data.shared.lastActivityTime);
@@ -63,7 +61,8 @@ function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
                         connectionStringDefined
                         canEdit={canEdit}
                         connectionStringName={data.shared.connectionStringName}
-                        connectionStringsUrl={connectionStringsUrl}
+                        connectionStringType="Sql"
+                        databaseName={databaseName}
                     />
                     <RichPanelDetailItem label="Factory name">{data.shared.factoryName}</RichPanelDetailItem>
                     <RichPanelDetailItem label="Skip initial load">

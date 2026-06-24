@@ -116,6 +116,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             foreach (var t in rawRecord.QueueEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.QueueEtl, t.TaskId, t.Name);
             foreach (var t in rawRecord.SnowflakeEtls) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.SnowflakeEtl, t.TaskId, t.Name);
             foreach (var t in rawRecord.QueueSinks) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.QueueSink, t.TaskId, t.Name);
+            foreach (var t in rawRecord.CdcSinks) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.CdcSink, t.TaskId, t.Name);
             foreach (var t in rawRecord.EmbeddingsGenerations) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.EmbeddingsGeneration, t.TaskId, t.Name);
             foreach (var t in rawRecord.GenAis) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.GenAi, t.TaskId, t.Name);
             foreach (var t in rawRecord.ExternalReplications) AddTask(t.ConnectionStringName, ConnectionStringUsageKind.ExternalReplication, t.TaskId, t.Name);

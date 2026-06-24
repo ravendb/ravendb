@@ -321,6 +321,8 @@ namespace Raven.Server.Web.System
                     AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.SnowflakeEtl, t.TaskId, t.Name);
                 foreach (var t in db.QueueSinks)
                     AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.QueueSink, t.TaskId, t.Name);
+                foreach (var t in db.CdcSinks)
+                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.CdcSink, t.TaskId, t.Name);
                 foreach (var t in db.EmbeddingsGenerations)
                     AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.EmbeddingsGeneration, t.TaskId, t.Name);
                 foreach (var t in db.GenAis)
