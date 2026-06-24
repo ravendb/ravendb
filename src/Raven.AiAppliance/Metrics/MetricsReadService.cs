@@ -29,6 +29,9 @@ internal static class MetricsReadService
     private const string AppIdPrefix = "apps/";
     private const int AppPageSize = 1024;
 
+    // Conversation docs (@conversations collection) are id-prefixed "chats/".
+    private const string ConversationIdPrefix = "chats/";
+
     // The global usage series is a contiguous hourly sparkline over the last day.
     private const int UsageWindowHours = 24;
 
@@ -440,6 +443,93 @@ internal static class MetricsReadService
             .OrderBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
             .Select(c => new DataCollectionDto(slug, c.Key, c.Value, []))
             .ToList();
+    }
+
+    /// <summary>Conversations for the Conversations list — shaped from
+    /// <c>@conversations</c> docs (id-prefixed <c>chats/</c>), newest activity first,
+    /// last-exchange preview only (no full transcript).</summary>
+    public static async Task<List<ConversationDto>> GetConversationsAsync(
+        IDocumentStore store, string database, DateTime nowUtc, CancellationToken ct)
+    {
+        using var session = store.OpenAsyncSession(database);
+        var docs = await session.Advanced.LoadStartingWithAsync<ConversationDoc>(
+            ConversationIdPrefix, pageSize: 1024, token: ct);
+        return docs
+            .Select(d => ShapeConversation(d, nowUtc, includeTranscript: false))
+            .OrderByDescending(c => c.LastActivityAt)
+            .ToList();
+    }
+
+    /// <summary>One conversation with its full chronological transcript, or null.</summary>
+    public static async Task<ConversationDto?> GetConversationAsync(
+        IDocumentStore store, string database, string conversationId, DateTime nowUtc, CancellationToken ct)
+    {
+        using var session = store.OpenAsyncSession(database);
+        var doc = await session.LoadAsync<ConversationDoc>(conversationId, ct);
+        return doc is null ? null : ShapeConversation(doc, nowUtc, includeTranscript: true);
+    }
+
+    private static ConversationDto ShapeConversation(ConversationDoc doc, DateTime nowUtc, bool includeTranscript)
+    {
+        var agentName = doc.Agent ?? "";
+        var chrono = (doc.Messages ?? [])
+            .Select(m => new ConversationTurn(m.role ?? "", TextOf(m.content), m.date))
+            .OrderBy(t => t.At ?? doc.CreatedAt)
+            .ToArray();
+        var lastExchange = chrono.TakeLast(2).Reverse().ToArray();  // newest first, at most 2
+        var prms = (doc.Parameters ?? new Dictionary<string, object>())
+            .Select(kv => new ConversationParam(kv.Key, kv.Value?.ToString() ?? ""))
+            .ToArray();
+
+        var age = nowUtc - doc.LastMessageAt;
+        var state = age < TimeSpan.FromHours(1) ? "active" : age < TimeSpan.FromHours(24) ? "idle" : "closed";
+
+        return new ConversationDto(
+            doc.Id ?? "", ChannelName: "", agentName,
+            AgentInitials(agentName), AgentColor(agentName),
+            prms, lastExchange, includeTranscript ? chrono : null,
+            state, doc.LastMessageAt, doc.CreatedAt, MaxDuration: null);
+    }
+
+    // Content is string | array-of-parts | object on the server doc; use the string
+    // form directly and JSON-stringify the rest (best-effort) — see impl handoff.
+    private static string TextOf(object? content) => content switch
+    {
+        null => "",
+        string s => s,
+        _ => content.ToString() ?? "",
+    };
+
+    private static string AgentInitials(string name)
+    {
+        var parts = name.Split([' ', '-', '_'], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant();
+        return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+    }
+
+    private static string AgentColor(string name)
+    {
+        var hash = 0;
+        foreach (var c in name) hash = unchecked(hash * 31 + c);
+        return SeriesPalette[Math.Abs(hash % SeriesPalette.Length)];
+    }
+
+    private sealed class ConversationDoc
+    {
+        public string? Id { get; set; }
+        public string? Agent { get; set; }
+        public Dictionary<string, object>? Parameters { get; set; }
+        public List<ConversationMessageDoc>? Messages { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime LastMessageAt { get; set; }
+    }
+
+    private sealed class ConversationMessageDoc
+    {
+        public string? role { get; set; }
+        public object? content { get; set; }
+        public DateTime date { get; set; }
     }
 
     /// <summary>Loads every registered app from the config DB by id prefix, paging

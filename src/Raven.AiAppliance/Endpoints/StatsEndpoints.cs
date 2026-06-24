@@ -57,6 +57,19 @@ public static class StatsEndpoints
             .Produces<DataCollectionDto[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
+        // Conversations list + detail (mock-api `listConversations` / `getConversation`).
+        // The {*conversationId} catch-all carries the "chats/..." id (it contains a slash);
+        // the literal "/conversations/stats" route still wins by routing precedence.
+        group.MapGet("/conversations", GetConversationsListAsync)
+            .WithName("stats.conversations.list")
+            .Produces<ConversationDto[]>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/conversations/{*conversationId}", GetConversationByIdAsync)
+            .WithName("stats.conversations.get")
+            .Produces<ConversationDto>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
         group.MapGet("/conversations/stats", GetConversationStatsAsync)
             .WithName("stats.conversations")
             .Produces<ConversationStatsResponse>()
@@ -126,6 +139,35 @@ public static class StatsEndpoints
 
         var collections = await MetricsReadService.GetCollectionsAsync(store, slug, app.Database, ct);
         return Results.Ok(collections);
+    }
+
+    private static async Task<IResult> GetConversationsListAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var items = await MetricsReadService.GetConversationsAsync(store, app.Database, DateTime.UtcNow, ct);
+        return Results.Ok(items);
+    }
+
+    private static async Task<IResult> GetConversationByIdAsync(
+        string slug,
+        string conversationId,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var conversation = await MetricsReadService.GetConversationAsync(store, app.Database, conversationId, DateTime.UtcNow, ct);
+        return conversation is null
+            ? Results.NotFound(new ApiErrorResponse($"no conversation '{conversationId}'"))
+            : Results.Ok(conversation);
     }
 
     private static async Task<IResult> GetAppOverviewAsync(

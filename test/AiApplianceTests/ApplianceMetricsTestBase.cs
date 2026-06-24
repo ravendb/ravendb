@@ -90,7 +90,8 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
     /// (the collection the AI agent runtime owns) so the metric index can aggregate
     /// it without running a live turn.</summary>
     protected static async Task SeedConversationAsync(
-        IDocumentStore store, string database, string id, string agent, DateTime createdAt, int messages = 1, long tokens = 0)
+        IDocumentStore store, string database, string id, string agent, DateTime createdAt,
+        int messages = 1, long tokens = 0, (string Role, string Text)[]? turns = null)
     {
         using var session = store.OpenAsyncSession(database);
         var conversation = new SeedConversation
@@ -100,8 +101,12 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
             LastMessageAt = createdAt,
             TotalUsage = new SeedUsage { TotalTokens = tokens },
         };
-        for (var i = 0; i < messages; i++)
-            conversation.Messages.Add(new SeedMessage { date = createdAt });
+        if (turns is not null)
+            foreach (var (role, text) in turns)
+                conversation.Messages.Add(new SeedMessage { date = createdAt, role = role, content = text });
+        else
+            for (var i = 0; i < messages; i++)
+                conversation.Messages.Add(new SeedMessage { date = createdAt });
 
         await session.StoreAsync(conversation, id);
         session.Advanced.GetMetadataFor(conversation)[Constants.Documents.Metadata.Collection] = "@conversations";
@@ -120,6 +125,8 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
     private sealed class SeedMessage
     {
         public DateTime date { get; set; }
+        public string? role { get; set; }
+        public object? content { get; set; }
     }
 
     private sealed class SeedUsage
