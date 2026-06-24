@@ -138,6 +138,13 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<dynamic>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
+            // Stream one row under the current (pre-drop) schema and wait for it, so the process
+            // observes a current-schema TableMapEvent and upgrades ValidTableId off the catch-up
+            // sentinel. Without this, the post-drop (smaller) TableMapEvent is treated as an
+            // old-schema catch-up event and skipped rather than flagged as a schema change.
+            ExecuteMySql(connectionString, "INSERT INTO items (id, name, extra) VALUES (50, 'Streamed', 'present')");
+            Assert.NotNull(await WaitForDocumentAsync<dynamic>(store, "Items/50", timeoutMs: 60_000));
+
             var errorTask = await WaitForNextProcessError(store, "test-schema-drop-col");
 
             // Drop the column — TableMapEvent will have fewer columns
