@@ -19,6 +19,7 @@ using Raven.AiAppliance.Auth;
 using Raven.AiAppliance.Endpoints;
 using Raven.AiAppliance.Hosting;
 using Raven.AiAppliance.Infrastructure;
+using Raven.AiAppliance.Licensing;
 using Raven.Client.Documents;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -93,6 +94,8 @@ builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+// License & Usage pages are mock-backed until the real license API (RavenDB-26661/26783) lands.
+builder.Services.AddSingleton<ILicenseStatsProvider, MockLicenseStatsProvider>();
 if (!isOpenApiDocumentGeneration)
 {
     builder.Services.AddHostedService<RavenReadinessService>();
@@ -323,6 +326,7 @@ EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
 AgentsEndpoints.Map(app);
 StatsEndpoints.Map(app);
+SettingsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
 // Must precede MapSpaFallback: /embed/* is a {*path:nonfile} match that the
