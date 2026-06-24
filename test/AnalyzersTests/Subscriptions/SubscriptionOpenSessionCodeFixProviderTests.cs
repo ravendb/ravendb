@@ -142,6 +142,64 @@ class Document { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task OpenSession_InNonStaticLocalFunction_Transforms_To_Batch()
+        {
+            // A non-static local function captures the Run lambda's batch parameter, so the
+            // rewrite to batch.OpenSession() is valid and the fix applies.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            void Process()
+            {
+                var session = store.OpenSession();
+                var doc = session.Load<Document>(""id"");
+            }
+            Process();
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source);
+
+            Assert.Contains("var session = batch.OpenSession()", fixed_code);
+        }
+
+        [Fact]
+        public async Task OpenSession_InStaticLocalFunction_FixBails()
+        {
+            // A static local function cannot capture batch, so the analyzer does not flag it and
+            // no code action is registered. ApplyFixAsync throws when there is nothing to apply.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            static void Process(IDocumentStore s)
+            {
+                var session = s.OpenSession();
+            }
+            Process(store);
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+        }
+
+        [Fact]
         public async Task OpenSession_InNestedLambda_FixBails()
         {
             // store.OpenSession() inside a nested lambda may outlive the batch; the fix refuses to

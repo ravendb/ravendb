@@ -67,11 +67,18 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
 
             while (current != null)
             {
-                if (current is MethodDeclarationSyntax or
-                               LocalFunctionStatementSyntax or
-                               ClassDeclarationSyntax or
-                               StructDeclarationSyntax or
-                               RecordDeclarationSyntax)
+                // A non-static local function captures the Run lambda's batch parameter, so the
+                // rewrite to batch.OpenSession() is valid inside it: keep walking up. A static
+                // local function cannot capture batch, so the rewrite would not compile — bail.
+                if (current is LocalFunctionStatementSyntax localFunction)
+                {
+                    if (localFunction.Modifiers.Any(SyntaxKind.StaticKeyword))
+                        return null;
+                }
+                else if (current is MethodDeclarationSyntax or
+                                    ClassDeclarationSyntax or
+                                    StructDeclarationSyntax or
+                                    RecordDeclarationSyntax)
                 {
                     return null;
                 }
