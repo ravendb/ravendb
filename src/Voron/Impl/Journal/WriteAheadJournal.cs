@@ -2285,7 +2285,7 @@ namespace Voron.Impl.Journal
             
             if (freedPages is { Count: > 0 })
             {
-                var totalAllocatedBytes = pagesRequired * Constants.Storage.PageSize;
+                var totalAllocatedBytes = (long)pagesRequired * Constants.Storage.PageSize;
                 var availableSpace = totalAllocatedBytes - (write - txHeaderPtr);
                 
                 var encodedFreePagesSize = EncodeFreePages(freedPages, write, availableSpace, tx.Allocator);
