@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
@@ -176,28 +180,44 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.LowPriorityFlushAndSync", ConfigurationEntryScope.ServerWideOnly)]
         public bool LowPriorityFlushAndSync { get; set; }
-
-        [Description("EXPERT: The queue size to use for I/O ring operations, using -1 will disable I/O ring entirely")]
+        
+        [Description("EXPERT: The queue size to use for I/O ring operations. Use -1 to disable I/O ring entirely, which is only honored when Storage.WriteMode=Auto.")]
         [DefaultValue(1024)]
         [ConfigurationEntry("Storage.IoRingQueueSize", ConfigurationEntryScope.ServerWideOnly)]
         public int IoRingQueueSize { get; set; }
-
 
         [Description("EXPERT: The write mode for writing to the data file (Auto/VectoredFileIo,FileIo,IoRing,Mmap).")]
         [DefaultValue(Pal.RvnWriteMode.Auto)]
         [ConfigurationEntry("Storage.WriteMode", ConfigurationEntryScope.ServerWideOnly)]
         public Pal.RvnWriteMode WriteMode { get; set; }
 
-        [Description("Max number of recyclable journals that will be reused. ")]
-        [DefaultValue(32)]
-        [MinValue(0)]
-        [ConfigurationEntry("Storage.MaxNumberOfRecyclableJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int MaxNumberOfRecyclableJournals { get; set; }
-
         [Description("Threshold (in KB) for the block device read_ahead_kb alert raised on server startup on Linux. If any block device's read_ahead_kb exceeds this value, a warning alert is raised. Set to null to disable the check.")]
         [DefaultValue(128)]
         [MinValue(0)]
         [ConfigurationEntry("Storage.ReadAheadKbAlertThresholdInKb", ConfigurationEntryScope.ServerWideOnly)]
         public int? ReadAheadKbAlertThreshold { get; set; }
+
+        public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
+        {
+            base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
+
+            if (type != ResourceType.Server)
+                return;
+
+            ValidateIoRingConfiguration();
+        }
+
+        private void ValidateIoRingConfiguration()
+        {
+            if (WriteMode == Pal.RvnWriteMode.IoRing && IoRingQueueSize == -1)
+            {
+                var sizeKey = RavenConfiguration.GetKey(x => x.Storage.IoRingQueueSize);
+                var modeKey = RavenConfiguration.GetKey(x => x.Storage.WriteMode);
+                throw new InvalidOperationException(
+                    $"'{modeKey}' is set to '{Pal.RvnWriteMode.IoRing}' but '{sizeKey}' is -1, which disables I/O ring. " +
+                    $"Disabling I/O ring is only supported with '{modeKey}={Pal.RvnWriteMode.Auto}'. " +
+                    $"Either set '{modeKey}={Pal.RvnWriteMode.Auto}' or use a positive '{sizeKey}'.");
+            }
+        }
     }
 }
