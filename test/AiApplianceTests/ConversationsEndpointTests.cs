@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Raven.AiAppliance.Channels;
@@ -72,6 +73,33 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         Assert.Equal(2, transcript.GetArrayLength());
         Assert.Equal("user", transcript[0].GetProperty("role").GetString());
         Assert.Equal("hello", transcript[0].GetProperty("text").GetString());
+
+        // I1: outbound timestamps are UTC, ISO-8601 with a trailing Z (so the browser parses as UTC).
+        Assert.EndsWith("Z\"", detail.GetProperty("lastActivityAt").GetRawText());
+        Assert.EndsWith("Z\"", detail.GetProperty("startedAt").GetRawText());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task GetConversation_returns_404_for_non_conversation_or_unknown_id()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        // A real, non-conversation doc in the per-app DB (channels/wgt1).
+        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // M5: an id without the chats/ prefix must not load some other doc and shape it
+        // as a conversation — it must 404.
+        var nonConversation = await client.GetAsync("/api/apps/my-app/conversations/channels/wgt1");
+        Assert.Equal(HttpStatusCode.NotFound, nonConversation.StatusCode);
+
+        // An unknown chats/ id also 404s.
+        var unknown = await client.GetAsync("/api/apps/my-app/conversations/chats/does-not-exist");
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]

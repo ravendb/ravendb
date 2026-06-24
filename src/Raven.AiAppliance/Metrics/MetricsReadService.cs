@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
@@ -40,63 +41,8 @@ internal static class MetricsReadService
     // The global usage series is a contiguous hourly sparkline over the last day.
     private const int UsageWindowHours = 24;
 
-    /// <summary>
-    /// Global usage series behind the prototype's <c>getUsage()</c>: one
-    /// <see cref="UsagePoint"/> per hour over the last 24h (contiguous, zero-filled),
-    /// summed across every app DB. <c>invocations</c> = agent turns (messages),
-    /// <c>tokens</c> = token usage, both per hour.
-    /// </summary>
-    public static async Task<List<UsagePoint>> GetUsageAsync(
-        IDocumentStore store, DateTime nowUtc, CancellationToken ct)
-    {
-        var nowHour = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, 0, 0, DateTimeKind.Utc);
-        var since = nowHour.AddHours(-(UsageWindowHours - 1));
-
-        var invocations = new long[UsageWindowHours];
-        var tokens = new long[UsageWindowHours];
-
-        foreach (var app in await LoadAllAppsAsync(store, ct))
-        {
-            using var session = store.OpenAsyncSession(app.Database);
-            var rows = await QueryMetricRowsAsync(session, since, ct);
-            foreach (var row in rows)
-            {
-                var bucket = (int)Math.Round((row.Bucket - since).TotalHours);
-                if (bucket < 0 || bucket >= UsageWindowHours)
-                    continue;
-                invocations[bucket] += row.Messages;
-                tokens[bucket] += row.Tokens;
-            }
-        }
-
-        var points = new List<UsagePoint>(UsageWindowHours);
-        for (var i = 0; i < UsageWindowHours; i++)
-            points.Add(new UsagePoint(since.AddHours(i), invocations[i], tokens[i]));
-        return points;
-    }
-
-    /// <summary>
-    /// Per-app token totals behind the prototype's <c>getTokensByApp()</c>: all-time
-    /// token usage summed from each app's <c>@conversations</c> (fan-out), sorted by
-    /// tokens descending. <c>refreshedMinutesAgo</c> is 0 — computed live per request.
-    /// </summary>
-    public static async Task<TokensByAppResponse> GetTokensByAppAsync(IDocumentStore store, CancellationToken ct)
-    {
-        var apps = await LoadAllAppsAsync(store, ct);
-        var rows = new List<AppTokens>(apps.Count);
-        foreach (var app in apps)
-        {
-            using var session = store.OpenAsyncSession(app.Database);
-            var metricRows = await QueryAllMetricRowsAsync(session, ct);
-            rows.Add(new AppTokens(app.Slug, metricRows.Sum(r => r.Tokens)));
-        }
-
-        var sorted = rows
-            .OrderByDescending(a => a.Tokens)
-            .ThenBy(a => a.Slug, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        return new TokensByAppResponse(sorted, RefreshedMinutesAgo: 0);
-    }
+    // Per-app fan-out (dashboard/usage) runs bounded-parallel and isolates failures.
+    private const int MaxFanoutConcurrency = 8;
 
     // Same per-token cost factor the prototype uses for the cost tile.
     private const double CostPerToken = 0.000015;
@@ -110,6 +56,67 @@ internal static class MetricsReadService
     // Stable-ish palette so each capability series gets a colour without config.
     private static readonly string[] SeriesPalette =
         ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#22d3ee", "#a855f7", "#84cc16"];
+
+    /// <summary>
+    /// Global usage series behind the prototype's <c>getUsage()</c>: one
+    /// <see cref="UsagePoint"/> per hour over the last 24h (contiguous, zero-filled),
+    /// summed across every app DB. <c>invocations</c> = agent turns (messages),
+    /// <c>tokens</c> = token usage, both per hour.
+    /// </summary>
+    public static async Task<List<UsagePoint>> GetUsageAsync(
+        IDocumentStore store, DateTime nowUtc, ILogger? log, CancellationToken ct)
+    {
+        var nowHour = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, 0, 0, DateTimeKind.Utc);
+        var since = nowHour.AddHours(-(UsageWindowHours - 1));
+
+        var invocations = new long[UsageWindowHours];
+        var tokens = new long[UsageWindowHours];
+
+        var apps = await LoadAllAppsAsync(store, ct);
+        var perApp = await ForEachAppAsync(apps, log, async app =>
+        {
+            using var session = store.OpenAsyncSession(app.Database);
+            return await QueryMetricRowsAsync(session, since, ct);
+        }, ct);
+
+        foreach (var rows in perApp)
+            foreach (var row in rows)
+            {
+                var bucket = (int)Math.Round((row.Bucket - since).TotalHours);
+                if (bucket < 0 || bucket >= UsageWindowHours)
+                    continue;
+                invocations[bucket] += row.Messages;
+                tokens[bucket] += row.Tokens;
+            }
+
+        var points = new List<UsagePoint>(UsageWindowHours);
+        for (var i = 0; i < UsageWindowHours; i++)
+            points.Add(new UsagePoint(since.AddHours(i), invocations[i], tokens[i]));
+        return points;
+    }
+
+    /// <summary>
+    /// Per-app token totals behind the prototype's <c>getTokensByApp()</c>: all-time
+    /// token usage summed from each app's <c>@conversations</c> (fan-out), sorted by
+    /// tokens descending. <c>refreshedMinutesAgo</c> is 0 — computed live per request.
+    /// </summary>
+    public static async Task<TokensByAppResponse> GetTokensByAppAsync(
+        IDocumentStore store, ILogger? log, CancellationToken ct)
+    {
+        var apps = await LoadAllAppsAsync(store, ct);
+        var rows = await ForEachAppAsync(apps, log, async app =>
+        {
+            using var session = store.OpenAsyncSession(app.Database);
+            var metricRows = await QueryAllMetricRowsAsync(session, ct);
+            return new AppTokens(app.Slug, metricRows.Sum(r => r.Tokens));
+        }, ct);
+
+        var sorted = rows
+            .OrderByDescending(a => a.Tokens)
+            .ThenBy(a => a.Slug, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return new TokensByAppResponse(sorted, RefreshedMinutesAgo: 0);
+    }
 
     /// <summary>
     /// Per-app usage analytics behind <c>getAppUsage({appId,start,end})</c>. Phase-1
@@ -128,9 +135,12 @@ internal static class MetricsReadService
         using var session = store.OpenAsyncSession(database);
         var rows = await QueryMetricRowsInRangeAsync(session, startUtc, endUtc, ct);
 
-        // Previous equal-length window drives the percent delta on each card.
+        // Previous equal-length window drives the percent delta on each card. Its upper
+        // bound is exclusive so a row whose bucket == startUtc isn't counted in both
+        // windows (review M4).
         var windowLength = endUtc - startUtc;
-        var prevRows = await QueryMetricRowsInRangeAsync(session, startUtc - windowLength, startUtc, ct);
+        var prevRows = await QueryMetricRowsInRangeAsync(
+            session, startUtc - windowLength, startUtc, ct, endInclusive: false);
 
         long convNow = rows.Sum(r => r.Conversations), tokNow = rows.Sum(r => r.Tokens);
         long convPrev = prevRows.Sum(r => r.Conversations), tokPrev = prevRows.Sum(r => r.Tokens);
@@ -153,10 +163,29 @@ internal static class MetricsReadService
                 tokByBucket.Select(t => t * CostPerToken).ToArray()),
             CdcWrites: new MetricCard(0, 0, [])); // CDC blocked on RavenDB-26780.
 
-        // Per-bucket token series: by capability (agent) and by model (resolved via
-        // each agent's connection string). Same shape, different key.
-        var modelByAgent = await ResolveAgentModelsAsync(maintenance, ct);
-        var tokensByCapability = BuildTokenSeries(rows, buckets, granularity, agent => agent);
+        // Resolve the agents once: connection-string model for tokensByModel, and the
+        // display name for human-facing series labels / topCapabilities (review M2).
+        var agentDefs = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
+        var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
+        var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
+            .ToDictionary(p => p.Key, p => AiConnectionStringModel.Resolve(p.Value), StringComparer.OrdinalIgnoreCase);
+        var modelByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var nameByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var agent in agentDefs.AiAgents ?? [])
+        {
+            nameByAgent[agent.Identifier] = string.IsNullOrWhiteSpace(agent.Name) ? agent.Identifier : agent.Name;
+            if (agent.ConnectionStringName is { } name
+                && modelByConnectionString.TryGetValue(name, out var model)
+                && string.IsNullOrWhiteSpace(model) == false)
+            {
+                modelByAgent[agent.Identifier] = model!;
+            }
+        }
+        string NameOf(string agentId) => nameByAgent.GetValueOrDefault(agentId, agentId);
+
+        // Per-bucket token series: by capability (agent) and by model. Same shape,
+        // different key; the capability series labels with the agent display name.
+        var tokensByCapability = BuildTokenSeries(rows, buckets, granularity, agent => agent, NameOf);
         var tokensByModel = BuildTokenSeries(rows, buckets, granularity,
             agent => modelByAgent.GetValueOrDefault(agent, UnknownModel));
 
@@ -166,7 +195,7 @@ internal static class MetricsReadService
             {
                 var invocations = g.Sum(r => r.Conversations);
                 var total = g.Sum(r => r.Tokens);
-                return new TopCapability(g.Key, invocations, invocations == 0 ? 0 : total / invocations,
+                return new TopCapability(NameOf(g.Key), invocations, invocations == 0 ? 0 : total / invocations,
                     total, Math.Round(total * CostPerToken, 2));
             })
             .OrderByDescending(c => c.TotalTokens)
@@ -193,12 +222,15 @@ internal static class MetricsReadService
     /// agent's resolved model).</summary>
     private static SeriesData BuildTokenSeries(
         IReadOnlyList<ConversationMetricsIndex.Result> rows, List<DateTime> buckets,
-        UsageGranularity granularity, Func<string, string> keyOf)
+        UsageGranularity granularity, Func<string, string> keyOf, Func<string, string>? labelOf = null)
     {
+        // The series key is the stable data key (used in each bucket's points dict); the
+        // label is the human-facing name. Default the label to the key (review M2).
+        var label = labelOf ?? (k => k);
         var keys = rows.Select(r => keyOf(r.Agent ?? "")).Distinct()
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
         var seriesKeys = keys
-            .Select((k, idx) => new SeriesKey(k, k, SeriesPalette[idx % SeriesPalette.Length])).ToArray();
+            .Select((k, idx) => new SeriesKey(k, label(k), SeriesPalette[idx % SeriesPalette.Length])).ToArray();
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
@@ -215,31 +247,6 @@ internal static class MetricsReadService
             points[i][key] = (long)points[i][key] + row.Tokens;
         }
         return new SeriesData(points, seriesKeys);
-    }
-
-    /// <summary>agentId → model, joining the AI agents (each carries a
-    /// <c>ConnectionStringName</c>) with the database's AI connection strings
-    /// (each carries the provider model). Agents with no resolvable model are
-    /// omitted (callers fall back to <see cref="UnknownModel"/>).</summary>
-    private static async Task<Dictionary<string, string>> ResolveAgentModelsAsync(
-        MaintenanceOperationExecutor maintenance, CancellationToken ct)
-    {
-        var agents = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
-        var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
-        var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
-            .ToDictionary(p => p.Key, p => AiConnectionStringModel.Resolve(p.Value), StringComparer.OrdinalIgnoreCase);
-
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var agent in agents.AiAgents ?? [])
-        {
-            if (agent.ConnectionStringName is { } name
-                && modelByConnectionString.TryGetValue(name, out var model)
-                && string.IsNullOrWhiteSpace(model) == false)
-            {
-                map[agent.Identifier] = model!;
-            }
-        }
-        return map;
     }
 
     /// <summary>conversations-per-channel over time, iframe only: each
@@ -344,13 +351,11 @@ internal static class MetricsReadService
     /// per-app counts (documents/agents/channels/tables), CDC <c>source.type</c>, and
     /// a derived <c>status</c>, via fan-out. <c>writesPerMonth</c> is null (no counter).
     /// </summary>
-    public static async Task<List<AppliancAppResponse>> GetDashboardAppsAsync(IDocumentStore store, CancellationToken ct)
+    public static async Task<List<AppliancAppResponse>> GetDashboardAppsAsync(
+        IDocumentStore store, ILogger? log, CancellationToken ct)
     {
         var apps = await LoadAllAppsAsync(store, ct);
-        var result = new List<AppliancAppResponse>(apps.Count);
-        foreach (var app in apps)
-            result.Add(await EnrichAppAsync(store, app, ct));
-        return result;
+        return await ForEachAppAsync(apps, log, app => EnrichAppAsync(store, app, ct), ct);
     }
 
     /// <summary>Single enriched app (mock-api <c>getApp(id)</c>), or null if not found.</summary>
@@ -406,8 +411,8 @@ internal static class MetricsReadService
             WritesPerMonth: null,
             ChannelsLabel: channelsLabel,
             StatusSubtitle: subtitle,
-            CreatedAt: app.CreatedAt,
-            UpdatedAt: app.CreatedAt);
+            CreatedAt: Utc(app.CreatedAt),
+            UpdatedAt: Utc(app.CreatedAt));
     }
 
     private static string MapSourceType(string? factory)
@@ -436,21 +441,23 @@ internal static class MetricsReadService
     }
 
     public static async Task<DashboardResponse> GetDashboardStatsAsync(
-        IDocumentStore store, DateTime nowUtc, CancellationToken ct)
+        IDocumentStore store, DateTime nowUtc, ILogger? log, CancellationToken ct)
     {
         var apps = await LoadAllAppsAsync(store, ct);
 
-        // Read-time fan-out: fold every app's rows into one shared set of windows.
+        // Read-time fan-out: each app contributes its rows; fold them after. A single
+        // bad tenant DB is skipped, not fatal for the whole dashboard (review I2).
+        var perApp = await ForEachAppAsync(apps, log, async app =>
+        {
+            using var session = store.OpenAsyncSession(app.Database);
+            return await QueryMetricRowsAsync(session, nowUtc.AddDays(-30), ct);
+        }, ct);
+
         var last24h = new WindowAccumulator();
         var last7d = new WindowAccumulator();
         var last30d = new WindowAccumulator();
-
-        foreach (var app in apps)
-        {
-            using var session = store.OpenAsyncSession(app.Database);
-            var rows = await QueryMetricRowsAsync(session, nowUtc.AddDays(-30), ct);
+        foreach (var rows in perApp)
             FoldInto(rows, nowUtc, ref last24h, ref last7d, ref last30d);
-        }
 
         return new DashboardResponse(apps.Count, last24h.ToWindow(), last7d.ToWindow(), last30d.ToWindow());
     }
@@ -562,7 +569,9 @@ internal static class MetricsReadService
                 .GroupBy(r => r.Agent ?? "")
                 .ToDictionary(
                     g => g.Key,
-                    g => (g.Sum(r => r.Conversations), (DateTime?)g.Max(r => r.Bucket)),
+                    // The index Bucket is built with DateTimeKind.Unspecified; mark it UTC
+                    // so it serializes with the Z designator (review I1).
+                    g => (g.Sum(r => r.Conversations), (DateTime?)Utc(g.Max(r => r.Bucket))),
                     StringComparer.OrdinalIgnoreCase);
         }
         catch (IndexDoesNotExistException)
@@ -594,6 +603,12 @@ internal static class MetricsReadService
     public static async Task<ConversationDto?> GetConversationAsync(
         IDocumentStore store, string slug, string database, string conversationId, DateTime nowUtc, CancellationToken ct)
     {
+        // Only conversation docs are addressable here; reject other ids (e.g. the
+        // catch-all capturing "channels/x") so we don't shape a non-conversation
+        // doc and return nonsense instead of 404 (review M5).
+        if (conversationId.StartsWith(ConversationIdPrefix, StringComparison.Ordinal) == false)
+            return null;
+
         using var session = store.OpenAsyncSession(database);
         var doc = await session.LoadAsync<ConversationDoc>(conversationId, ct);
         if (doc is null) return null;
@@ -638,7 +653,7 @@ internal static class MetricsReadService
         // tool/internal scaffolding, and normalize the assistant role to "agent".
         var chrono = (doc.Messages ?? [])
             .Where(m => m.role is "user" or "assistant")
-            .Select(m => new ConversationTurn(m.role == "assistant" ? "agent" : "user", TextOf(m.content), m.date))
+            .Select(m => new ConversationTurn(m.role == "assistant" ? "agent" : "user", TextOf(m.content), Utc(m.date)))
             .OrderBy(t => t.At ?? doc.CreatedAt)
             .ToArray();
         var lastExchange = chrono.TakeLast(2).Reverse().ToArray();  // newest first, at most 2
@@ -653,7 +668,7 @@ internal static class MetricsReadService
             doc.Id ?? "", slug, channelName, agentName,
             AgentInitials(agentName), AgentColor(agentName),
             prms, lastExchange, includeTranscript ? chrono : null,
-            state, doc.LastMessageAt, doc.CreatedAt, MaxDuration: null);
+            state, Utc(doc.LastMessageAt), Utc(doc.CreatedAt), MaxDuration: null);
     }
 
     // Message content is a string, an array-of-parts ([{type:"text",text}]), or an
@@ -737,6 +752,44 @@ internal static class MetricsReadService
         return apps;
     }
 
+    // Normalize an outbound timestamp to UTC so System.Text.Json emits the Z designator
+    // (an Unspecified DateTime serializes without it → the browser parses it as local).
+    private static DateTime Utc(DateTime d) => d.Kind switch
+    {
+        DateTimeKind.Utc => d,
+        DateTimeKind.Local => d.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
+    };
+
+    /// <summary>Runs <paramref name="body"/> for each app with bounded concurrency,
+    /// isolating per-app failures: a tenant whose DB is missing/offline/compacting is
+    /// logged and skipped so one bad tenant can't 500 a global fan-out endpoint
+    /// (review I2/I3). Returns only the successful results.</summary>
+    private static async Task<List<T>> ForEachAppAsync<T>(
+        IReadOnlyList<App> apps, ILogger? log, Func<App, Task<T>> body, CancellationToken ct)
+    {
+        using var gate = new SemaphoreSlim(MaxFanoutConcurrency);
+        var tasks = apps.Select(async app =>
+        {
+            await gate.WaitAsync(ct);
+            try
+            {
+                return (Ok: true, Value: await body(app));
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                log?.LogWarning(e, "Dashboard fan-out: skipping app {Slug} ({Database})", app.Slug, app.Database);
+                return (Ok: false, Value: default(T)!);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+        var results = await Task.WhenAll(tasks);
+        return results.Where(r => r.Ok).Select(r => r.Value).ToList();
+    }
+
     // All three index reads degrade to empty when the index isn't deployed on an app
     // DB yet (provisioned before this feature, or a brief post-create window) — so the
     // stats endpoints return empty windows instead of HTTP 500 (review SF3).
@@ -756,7 +809,10 @@ internal static class MetricsReadService
         catch (IndexDoesNotExistException) { return []; }
     }
 
-    /// <summary>Fetches every hour-bucket row (no time filter) for all-time totals.</summary>
+    /// <summary>Fetches every hour-bucket row (no time filter) for all-time totals.
+    /// Intentionally unbounded: conversations carry an Expires TTL, so the reduced row
+    /// count stays small. No <c>.Take()</c> cap — a silent cap would under-count the
+    /// all-time aggregates rather than fail loudly (review M8).</summary>
     private static async Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
         IAsyncDocumentSession session, CancellationToken ct)
     {
@@ -769,18 +825,21 @@ internal static class MetricsReadService
         catch (IndexDoesNotExistException) { return []; }
     }
 
-    /// <summary>Fetches hour-bucket rows whose bucket falls within [start, end].</summary>
+    /// <summary>Fetches hour-bucket rows whose bucket falls within the window:
+    /// [start, end] when <paramref name="endInclusive"/> (default), else [start, end).</summary>
     private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
-        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
+        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct, bool endInclusive = true)
     {
         try
         {
-            return await session.Advanced
+            var query = session.Advanced
                 .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
                 .WhereGreaterThanOrEqual(r => r.Bucket, start)
-                .AndAlso()
-                .WhereLessThanOrEqual(r => r.Bucket, end)
-                .ToListAsync(ct);
+                .AndAlso();
+            query = endInclusive
+                ? query.WhereLessThanOrEqual(r => r.Bucket, end)
+                : query.WhereLessThan(r => r.Bucket, end);
+            return await query.ToListAsync(ct);
         }
         catch (IndexDoesNotExistException) { return []; }
     }

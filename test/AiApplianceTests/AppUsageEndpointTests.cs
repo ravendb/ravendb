@@ -147,6 +147,98 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         Assert.Equal(1, products.GetProperty("writes").GetInt64());
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task AppUsage_series_labels_use_agent_display_names()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
+        await SeedAgentAsync(store, perAppDb, name: "Customer Support");
+        var agents = await store.Maintenance.ForDatabase(perAppDb).SendAsync(new GetAiAgentsOperation());
+        var agentId = agents.AiAgents![0].Identifier;
+
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(store, perAppDb, "chats/a", agentId, now.AddDays(-1), tokens: 100_000);
+        await Indexes.WaitForIndexingAsync(store, perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var start = Uri.EscapeDataString(now.AddDays(-7).ToString("o"));
+        var end = Uri.EscapeDataString(now.ToString("o"));
+        var json = await client.GetFromJsonAsync<JsonElement>($"/api/apps/my-app/usage?start={start}&end={end}");
+
+        // M2: the series key stays the stable agent id; the label is the human name.
+        var capKeys = json.GetProperty("tokensByCapability").GetProperty("keys");
+        Assert.Equal(1, capKeys.GetArrayLength());
+        Assert.Equal(agentId, capKeys[0].GetProperty("key").GetString());
+        Assert.Equal("Customer Support", capKeys[0].GetProperty("label").GetString());
+
+        // topCapabilities renders the display name too.
+        Assert.Equal("Customer Support", json.GetProperty("topCapabilities")[0].GetProperty("name").GetString());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task AppUsage_delta_excludes_previous_window_boundary()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
+
+        // Align the window to an hour boundary so a row can sit exactly on `start`.
+        var raw = DateTime.UtcNow;
+        var nowHour = new DateTime(raw.Year, raw.Month, raw.Day, raw.Hour, 0, 0, DateTimeKind.Utc);
+        var start = nowHour.AddDays(-1);  // window [start, nowHour]; previous window [start-1d, start)
+
+        await SeedConversationAsync(store, perAppDb, "chats/cur", "support", start.AddHours(2), messages: 1, tokens: 10);
+        await SeedConversationAsync(store, perAppDb, "chats/boundary", "support", start, messages: 1, tokens: 10);
+        await SeedConversationAsync(store, perAppDb, "chats/prev", "support", start.AddHours(-2), messages: 1, tokens: 10);
+        await Indexes.WaitForIndexingAsync(store, perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var startQ = Uri.EscapeDataString(start.ToString("o"));
+        var endQ = Uri.EscapeDataString(nowHour.ToString("o"));
+        var json = await client.GetFromJsonAsync<JsonElement>($"/api/apps/my-app/usage?start={startQ}&end={endQ}");
+
+        var conv = json.GetProperty("metrics").GetProperty("conversations");
+        Assert.Equal(2, conv.GetProperty("value").GetDouble());  // boundary + inside-current
+        // M4: the boundary row belongs to the current window only, not both. delta = (2-1)/1*100.
+        // (Before the fix the boundary double-counts into prev → prev=2 → delta=0.)
+        Assert.Equal(100.0, conv.GetProperty("delta").GetDouble());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task AppUsage_uses_hour_granularity_for_short_ranges()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
+
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(store, perAppDb, "chats/a", "support", now.AddHours(-3), messages: 1, tokens: 1000);
+        await Indexes.WaitForIndexingAsync(store, perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var start = Uri.EscapeDataString(now.AddDays(-1).ToString("o"));  // 1-day range ≤ 2 → hour
+        var end = Uri.EscapeDataString(now.ToString("o"));
+        var json = await client.GetFromJsonAsync<JsonElement>($"/api/apps/my-app/usage?start={start}&end={end}");
+
+        Assert.Equal("hour", json.GetProperty("granularity").GetString());
+        Assert.Equal(1000, json.GetProperty("metrics").GetProperty("tokens").GetProperty("value").GetDouble());
+        var points = json.GetProperty("tokensByCapability").GetProperty("points");
+        Assert.Contains("T", points[0].GetProperty("t").GetString());  // hourly bucket label (yyyy-MM-ddTHH:00)
+    }
+
     private sealed class Product
     {
         public string Name { get; set; } = "";
