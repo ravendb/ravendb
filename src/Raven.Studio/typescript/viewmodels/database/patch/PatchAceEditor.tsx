@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import AceEditor from "components/common/ace/AceEditor";
 import { LanguageService } from "components/models/aceEditor";
 import SampleQueriesTabs from "components/common/sampleQueries/SampleQueriesTabs";
@@ -13,10 +13,9 @@ export interface PatchAceEditorProps {
     languageService: LanguageService;
 }
 
-const SamplesToggle = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
-    ({ onClick, ...props }, ref) => (
+function SamplesToggle({ onClick, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+    return (
         <Button
-            ref={ref}
             size="sm"
             title="Browse samples"
             onClick={onClick}
@@ -26,21 +25,19 @@ const SamplesToggle = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<H
         >
             <Icon icon="help" margin="m-0" />
         </Button>
-    )
-);
-SamplesToggle.displayName = "SamplesToggle";
+    );
+}
 
 interface SamplesDropdownProps {
     onLoadScript: (script: string) => void;
-    toggleRef?: React.Ref<HTMLElement>;
     show?: boolean;
     onToggle?: (show: boolean) => void;
 }
 
-function SamplesDropdown({ onLoadScript, toggleRef, show, onToggle }: SamplesDropdownProps) {
+function SamplesDropdown({ onLoadScript, show, onToggle }: SamplesDropdownProps) {
     return (
         <Dropdown drop="start" className="patch-samples-action" show={show} onToggle={onToggle}>
-            <Dropdown.Toggle as={SamplesToggle} ref={toggleRef as React.Ref<HTMLButtonElement>} />
+            <Dropdown.Toggle as={SamplesToggle} />
             <Dropdown.Menu className="patch-samples-dropdown-menu p-0">
                 <SampleQueriesTabs scripts={scripts} methodGroups={methodGroups} onSelect={onLoadScript} />
             </Dropdown.Menu>
@@ -53,12 +50,6 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
     const [showSamples, setShowSamples] = useState(false);
     const aceRef = useRef<ReactAce>(null);
 
-    const debouncedSyntaxCheck = useRef(
-        _.debounce((editor: AceAjax.Editor) => {
-            languageService.syntaxCheck(editor);
-        }, 500)
-    );
-
     useEffect(() => {
         const subscription = query.subscribe((newValue) => {
             setValue(newValue);
@@ -69,9 +60,6 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
     const handleChange = useCallback(
         (newValue: string) => {
             query(newValue);
-            if (aceRef.current?.editor) {
-                debouncedSyntaxCheck.current(aceRef.current.editor as unknown as AceAjax.Editor);
-            }
         },
         [query]
     );
