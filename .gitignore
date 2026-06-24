@@ -149,6 +149,7 @@ src/Sparrow.Server/Utils/VxSort/codegen/__pycache__/
 /UpgradeLog.htm
 
 /bench/Vector.Benchmark/vectors
+/bench/Raven.Analyzers/analyzers-benchmark-result.json
 /.cache
 
 .cursorignore
