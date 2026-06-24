@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
@@ -352,6 +353,14 @@ internal static class MetricsReadService
         return result;
     }
 
+    /// <summary>Single enriched app (mock-api <c>getApp(id)</c>), or null if not found.</summary>
+    public static async Task<AppliancAppResponse?> GetDashboardAppAsync(
+        IDocumentStore store, string slug, CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        return app is null ? null : await EnrichAppAsync(store, app, ct);
+    }
+
     private static async Task<AppliancAppResponse> EnrichAppAsync(IDocumentStore store, App app, CancellationToken ct)
     {
         var maintenance = store.Maintenance.ForDatabase(app.Database);
@@ -383,7 +392,7 @@ internal static class MetricsReadService
         var (status, subtitle) = DeriveAppStatus(agentsCount, channels.Count, enabledChannels, cdc?.Disabled ?? false);
 
         return new AppliancAppResponse(
-            Id: app.Id ?? $"{AppIdPrefix}{app.Slug}",
+            Id: app.Slug,  // the prototype routes by app.id; slug is the routing key (id==slug)
             Name: app.AppName,
             Slug: app.Slug,
             Status: status,
@@ -566,27 +575,30 @@ internal static class MetricsReadService
     /// <c>@conversations</c> docs (id-prefixed <c>chats/</c>), newest activity first,
     /// last-exchange preview only (no full transcript).</summary>
     public static async Task<List<ConversationDto>> GetConversationsAsync(
-        IDocumentStore store, string database, DateTime nowUtc, CancellationToken ct)
+        IDocumentStore store, string slug, string database, DateTime nowUtc, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);
         var channelByConversation = await BuildConversationChannelMapAsync(session, ct);
+        // NOTE (review SF5): single 1024-doc page ordered by id (not LastMessageAt) — for
+        // apps with >1024 conversations this truncates and may miss the newest. Index-backed
+        // pagination is a deferred follow-up.
         var docs = await session.Advanced.LoadStartingWithAsync<ConversationDoc>(
             ConversationIdPrefix, pageSize: 1024, token: ct);
         return docs
-            .Select(d => ShapeConversation(d, nowUtc, includeTranscript: false, channelByConversation))
+            .Select(d => ShapeConversation(d, slug, nowUtc, includeTranscript: false, channelByConversation))
             .OrderByDescending(c => c.LastActivityAt)
             .ToList();
     }
 
     /// <summary>One conversation with its full chronological transcript, or null.</summary>
     public static async Task<ConversationDto?> GetConversationAsync(
-        IDocumentStore store, string database, string conversationId, DateTime nowUtc, CancellationToken ct)
+        IDocumentStore store, string slug, string database, string conversationId, DateTime nowUtc, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);
         var doc = await session.LoadAsync<ConversationDoc>(conversationId, ct);
         if (doc is null) return null;
         var channelByConversation = await BuildConversationChannelMapAsync(session, ct);
-        return ShapeConversation(doc, nowUtc, includeTranscript: true, channelByConversation);
+        return ShapeConversation(doc, slug, nowUtc, includeTranscript: true, channelByConversation);
     }
 
     /// <summary>conversationId → channel display-name, for iframe conversations only,
@@ -618,12 +630,15 @@ internal static class MetricsReadService
     }
 
     private static ConversationDto ShapeConversation(
-        ConversationDoc doc, DateTime nowUtc, bool includeTranscript, Dictionary<string, string> channelByConversation)
+        ConversationDoc doc, string slug, DateTime nowUtc, bool includeTranscript, Dictionary<string, string> channelByConversation)
     {
         var agentName = doc.Agent ?? "";
         var channelName = doc.Id is { } id && channelByConversation.TryGetValue(id, out var cn) ? cn : "";
+        // Only user/assistant turns are end-user-facing; drop the system prompt and
+        // tool/internal scaffolding, and normalize the assistant role to "agent".
         var chrono = (doc.Messages ?? [])
-            .Select(m => new ConversationTurn(m.role ?? "", TextOf(m.content), m.date))
+            .Where(m => m.role is "user" or "assistant")
+            .Select(m => new ConversationTurn(m.role == "assistant" ? "agent" : "user", TextOf(m.content), m.date))
             .OrderBy(t => t.At ?? doc.CreatedAt)
             .ToArray();
         var lastExchange = chrono.TakeLast(2).Reverse().ToArray();  // newest first, at most 2
@@ -635,19 +650,41 @@ internal static class MetricsReadService
         var state = age < TimeSpan.FromHours(1) ? "active" : age < TimeSpan.FromHours(24) ? "idle" : "closed";
 
         return new ConversationDto(
-            doc.Id ?? "", channelName, agentName,
+            doc.Id ?? "", slug, channelName, agentName,
             AgentInitials(agentName), AgentColor(agentName),
             prms, lastExchange, includeTranscript ? chrono : null,
             state, doc.LastMessageAt, doc.CreatedAt, MaxDuration: null);
     }
 
-    // Content is string | array-of-parts | object on the server doc; use the string
-    // form directly and JSON-stringify the rest (best-effort) — see impl handoff.
-    private static string TextOf(object? content) => content switch
+    // Message content is a string, an array-of-parts ([{type:"text",text}]), or an
+    // object. RavenDB deserializes a JSON array/object into CLR object[] /
+    // dictionaries, so handle those directly; a JSON round-trip is the fallback.
+    private static string TextOf(object? content)
     {
-        null => "",
-        string s => s,
-        _ => content.ToString() ?? "",
+        switch (content)
+        {
+            case null: return "";
+            case string s: return s;
+            case IEnumerable<object> parts: return string.Concat(parts.Select(TextOf));
+            case IDictionary<string, object> dict:
+                return dict.TryGetValue("text", out var t) ? t?.ToString() ?? "" : "";
+        }
+        try
+        {
+            using var json = JsonDocument.Parse(JsonSerializer.Serialize(content));
+            return ExtractText(json.RootElement);
+        }
+        catch (JsonException) { return content.ToString() ?? ""; }
+    }
+
+    private static string ExtractText(JsonElement el) => el.ValueKind switch
+    {
+        JsonValueKind.String => el.GetString() ?? "",
+        JsonValueKind.Array => string.Concat(el.EnumerateArray().Select(ExtractText)),
+        JsonValueKind.Object => el.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String
+            ? t.GetString() ?? ""
+            : "",
+        _ => "",
     };
 
     private static string AgentInitials(string name)
@@ -700,36 +737,52 @@ internal static class MetricsReadService
         return apps;
     }
 
+    // All three index reads degrade to empty when the index isn't deployed on an app
+    // DB yet (provisioned before this feature, or a brief post-create window) — so the
+    // stats endpoints return empty windows instead of HTTP 500 (review SF3).
+
     /// <summary>Fetches the hour-bucket rows from the widest window (server-side
     /// filter keeps the row count bounded) for client-side folding/grouping.</summary>
-    private static Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsAsync(
+    private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsAsync(
         IAsyncDocumentSession session, DateTime since, CancellationToken ct)
     {
-        return session.Advanced
-            .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-            .WhereGreaterThanOrEqual(row => row.Bucket, since)
-            .ToListAsync(ct);
+        try
+        {
+            return await session.Advanced
+                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
+                .WhereGreaterThanOrEqual(row => row.Bucket, since)
+                .ToListAsync(ct);
+        }
+        catch (IndexDoesNotExistException) { return []; }
     }
 
     /// <summary>Fetches every hour-bucket row (no time filter) for all-time totals.</summary>
-    private static Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
+    private static async Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
         IAsyncDocumentSession session, CancellationToken ct)
     {
-        return session.Advanced
-            .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-            .ToListAsync(ct);
+        try
+        {
+            return await session.Advanced
+                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
+                .ToListAsync(ct);
+        }
+        catch (IndexDoesNotExistException) { return []; }
     }
 
     /// <summary>Fetches hour-bucket rows whose bucket falls within [start, end].</summary>
-    private static Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
+    private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
         IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
     {
-        return session.Advanced
-            .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-            .WhereGreaterThanOrEqual(r => r.Bucket, start)
-            .AndAlso()
-            .WhereLessThanOrEqual(r => r.Bucket, end)
-            .ToListAsync(ct);
+        try
+        {
+            return await session.Advanced
+                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
+                .WhereGreaterThanOrEqual(r => r.Bucket, start)
+                .AndAlso()
+                .WhereLessThanOrEqual(r => r.Bucket, end)
+                .ToListAsync(ct);
+        }
+        catch (IndexDoesNotExistException) { return []; }
     }
 
     private static (ConversationWindow Last24h, ConversationWindow Last7d, ConversationWindow Last30d) FoldWindows(

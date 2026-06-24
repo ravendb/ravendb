@@ -40,7 +40,7 @@ internal sealed class ConversationMetricsIndex : AbstractIndexCreationTask
                       Agent = c.Agent,
                       Bucket = new DateTime(c.CreatedAt.Year, c.CreatedAt.Month, c.CreatedAt.Day, c.CreatedAt.Hour, 0, 0),
                       Conversations = 1,
-                      Messages = c.Messages.Count,
+                      Messages = c.Messages.Count(m => m.role == ""user""),
                       Tokens = c.TotalUsage.TotalTokens
                   }"
             },

@@ -25,9 +25,14 @@ public static class SettingsEndpoints
         group.MapGet("/usage", (int? year, int? month, ILicenseStatsProvider provider) =>
             {
                 var now = DateTime.UtcNow;
-                return Results.Ok(provider.GetMonthlyWrites(year ?? now.Year, month ?? now.Month, now));
+                var y = year ?? now.Year;
+                var m = month ?? now.Month;
+                if (m is < 1 or > 12 || y is < 1 or > 9999)
+                    return Results.BadRequest(new ApiErrorResponse("year must be 1-9999 and month 1-12"));
+                return Results.Ok(provider.GetMonthlyWrites(y, m, now));
             })
             .WithName("settings.usage")
-            .Produces<MonthlyWritesResponse>();
+            .Produces<MonthlyWritesResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
     }
 }

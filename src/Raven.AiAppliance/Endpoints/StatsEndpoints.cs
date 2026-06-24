@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Raven.AiAppliance.Contracts;
@@ -44,6 +45,14 @@ public static class StatsEndpoints
             .WithName("stats.dashboard.apps")
             .RequireAuthorization()
             .Produces<AppliancAppResponse[]>();
+
+        // Single enriched app (mock-api `getApp(id)`).
+        app.MapGet("/api/dashboard/apps/{slug}", GetDashboardAppAsync)
+            .WithTags("stats")
+            .WithName("stats.dashboard.app")
+            .RequireAuthorization()
+            .Produces<AppliancAppResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         var group = app.MapGroup("/api/apps/{slug}").WithTags("stats").RequireAuthorization();
 
@@ -132,10 +141,21 @@ public static class StatsEndpoints
         return Results.Ok(apps);
     }
 
+    private static async Task<IResult> GetDashboardAppAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await MetricsReadService.GetDashboardAppAsync(store, slug, ct);
+        return app is null
+            ? Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"))
+            : Results.Ok(app);
+    }
+
     private static async Task<IResult> GetAppUsageAsync(
         string slug,
-        DateTime? start,
-        DateTime? end,
+        string? start,
+        string? end,
         IDocumentStore store,
         CancellationToken ct)
     {
@@ -143,12 +163,21 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var endUtc = (end ?? DateTime.UtcNow).ToUniversalTime();
-        var startUtc = (start ?? endUtc.AddDays(-7)).ToUniversalTime();
+        // Parse query dates as UTC: a bare (no-offset) value is assumed UTC, an offset
+        // value is converted to UTC — so naive dates aren't read as server-local and
+        // shifted (the buckets are UTC). (review N4)
+        var endUtc = ParseUtc(end) ?? DateTime.UtcNow;
+        var startUtc = ParseUtc(start) ?? endUtc.AddDays(-7);
 
         var usage = await MetricsReadService.GetAppUsageAsync(store, app.Database, startUtc, endUtc, ct);
         return Results.Ok(usage);
     }
+
+    private static DateTime? ParseUtc(string? value) =>
+        DateTime.TryParse(value, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var dt)
+            ? dt
+            : null;
 
     private static async Task<IResult> GetCollectionsAsync(
         string slug,
@@ -172,7 +201,7 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var items = await MetricsReadService.GetConversationsAsync(store, app.Database, DateTime.UtcNow, ct);
+        var items = await MetricsReadService.GetConversationsAsync(store, slug, app.Database, DateTime.UtcNow, ct);
         return Results.Ok(items);
     }
 
@@ -186,7 +215,7 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var conversation = await MetricsReadService.GetConversationAsync(store, app.Database, conversationId, DateTime.UtcNow, ct);
+        var conversation = await MetricsReadService.GetConversationAsync(store, slug, app.Database, conversationId, DateTime.UtcNow, ct);
         return conversation is null
             ? Results.NotFound(new ApiErrorResponse($"no conversation '{conversationId}'"))
             : Results.Ok(conversation);

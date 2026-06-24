@@ -105,9 +105,37 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
             foreach (var (role, text) in turns)
                 conversation.Messages.Add(new SeedMessage { date = createdAt, role = role, content = text });
         else
+            // Default messages are user prompts (the index counts user messages as invocations).
             for (var i = 0; i < messages; i++)
-                conversation.Messages.Add(new SeedMessage { date = createdAt });
+                conversation.Messages.Add(new SeedMessage { date = createdAt, role = "user" });
 
+        await session.StoreAsync(conversation, id);
+        session.Advanced.GetMetadataFor(conversation)[Constants.Documents.Metadata.Collection] = "@conversations";
+        await session.SaveChangesAsync();
+    }
+
+    /// <summary>Seeds a <c>@conversations</c> doc shaped like the real AI-runtime output:
+    /// a <c>system</c> prompt message, <c>user</c>/<c>assistant</c> turns (assistant
+    /// <c>content</c> as an array-of-parts), and a <c>tool</c> message — to exercise
+    /// transcript role-filtering + array-content extraction. One user turn → invocations = 1.</summary>
+    protected static async Task SeedRealisticConversationAsync(
+        IDocumentStore store, string database, string id, string agent, DateTime createdAt, long tokens = 0)
+    {
+        using var session = store.OpenAsyncSession(database);
+        var conversation = new SeedConversation
+        {
+            Agent = agent,
+            CreatedAt = createdAt,
+            LastMessageAt = createdAt,
+            TotalUsage = new SeedUsage { TotalTokens = tokens },
+            Messages =
+            [
+                new SeedMessage { date = createdAt, role = "system", content = "You are a helpful assistant." },
+                new SeedMessage { date = createdAt, role = "user", content = "hello" },
+                new SeedMessage { date = createdAt, role = "assistant", content = new object[] { new { type = "text", text = "hi there" } } },
+                new SeedMessage { date = createdAt, role = "tool", content = "{\"result\":42}" },
+            ],
+        };
         await session.StoreAsync(conversation, id);
         session.Advanced.GetMetadataFor(conversation)[Constants.Documents.Metadata.Collection] = "@conversations";
         await session.SaveChangesAsync();

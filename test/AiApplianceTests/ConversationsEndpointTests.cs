@@ -26,7 +26,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
 
         var now = DateTime.UtcNow;
         await SeedConversationAsync(store, perAppDb, "chats/recent", "order-support", now.AddMinutes(-10),
-            turns: [("user", "hello"), ("agent", "hi there")]);
+            turns: [("user", "hello"), ("assistant", "hi there")]);
         await SeedConversationAsync(store, perAppDb, "chats/old", "billing", now.AddDays(-3),
             turns: [("user", "where is my refund")]);
 
@@ -55,6 +55,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
 
         var first = list[0];
         Assert.Equal("chats/recent", first.GetProperty("id").GetString());
+        Assert.Equal("my-app", first.GetProperty("appId").GetString());
         Assert.Equal("order-support", first.GetProperty("agentName").GetString());
         Assert.Equal("OS", first.GetProperty("agentInitials").GetString());
         Assert.Equal("active", first.GetProperty("state").GetString());          // 10 min ago
@@ -71,5 +72,30 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         Assert.Equal(2, transcript.GetArrayLength());
         Assert.Equal("user", transcript[0].GetProperty("role").GetString());
         Assert.Equal("hello", transcript[0].GetProperty("text").GetString());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Conversation_detail_filters_scaffolding_and_extracts_array_content()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        // Real-shaped doc: system prompt + user + assistant(array content) + tool message.
+        await SeedRealisticConversationAsync(store, perAppDb, "chats/real", "order-support", DateTime.UtcNow.AddMinutes(-5));
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats/real");
+        var transcript = detail.GetProperty("transcript");
+
+        // system + tool scaffolding dropped → only user + agent remain.
+        Assert.Equal(2, transcript.GetArrayLength());
+        Assert.Equal("user", transcript[0].GetProperty("role").GetString());
+        Assert.Equal("hello", transcript[0].GetProperty("text").GetString());
+        Assert.Equal("agent", transcript[1].GetProperty("role").GetString());      // assistant → agent
+        Assert.Equal("hi there", transcript[1].GetProperty("text").GetString());   // array-of-parts extracted, not raw JSON
     }
 }

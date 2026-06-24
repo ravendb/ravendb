@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Raven.Client.Documents;
@@ -50,5 +51,16 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         Assert.True(usage.GetProperty("monthlyUsed").GetInt64() > 0);
         Assert.Equal("May 2026", usage.GetProperty("monthLabel").GetString());
         Assert.Equal("2026-05-01", usage.GetProperty("days")[0].GetProperty("date").GetString());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task MonthlyWrites_rejects_invalid_month()
+    {
+        var store = GetDocumentStore();
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.GetAsync("/api/settings/usage?year=2026&month=13");
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 }
