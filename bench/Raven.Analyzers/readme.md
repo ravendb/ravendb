@@ -47,33 +47,61 @@ behaviour, restart the Roslyn worker: in Rider use
 
 ## Measure overhead
 
-`compare.ps1` runs two clean builds back to back — one without analyzers (baseline) and
-one with — and prints a side-by-side timing report.
+`compare.ps1` runs each case as several clean builds (5 by default) and reports the median,
+so one slow or fast build does not skew the result. The two cases are interleaved
+(without, with, without, with, ...) so a transient IO or CPU hiccup tends to hit both rather
+than just one. Pass `-Runs n` to change the count.
 
 ```powershell
 pwsh bench/Raven.Analyzers/compare.ps1
+pwsh bench/Raven.Analyzers/compare.ps1 -Runs 3
 ```
 
 Sample output:
 
 ```
-Building WITHOUT analyzers (baseline)...
-Building WITH analyzers...
+Benchmarking, interleaving 5 runs per case (without, with, ...)
+  run 1/5: without analyzers...
+  run 1/5: with analyzers...
+  ...
 
-=== Build timing comparison ===
-Wall-clock, without analyzers              2.847 s
-Wall-clock, with analyzers                 4.213 s
-Wall-clock delta                           1.366 s  (+48.0%)
-Reported total analyzer time               1.201 s
+=== Build timing comparison (median of 5 runs) ===
+Median wall-clock, without analyzers       2.847 s
+Median wall-clock, with analyzers          4.213 s
+Median wall-clock delta                    1.366 s  (+48.0%)
+Median reported analyzer time              1.201 s
 
-Top analyzers by cost:
+Baseline samples (s)                       2.812, 2.847, 2.901, 2.788, 2.863
+With-analyzers samples (s)                 4.190, 4.213, 4.255, 4.198, 4.241
+
+Top analyzers by cost (median run):
   0.312  26  Raven.Analyzers.Queries.QueryIndexFieldAnalyzer
   0.287  24  Raven.Analyzers.Indexes.IndexDefinitionAnalyzer
   0.198  16  Raven.Analyzers.Queries.QueryProjectionFieldAnalyzer
+
+Result written to .../bench/Raven.Analyzers/analyzers-benchmark-result.json
+  FAIL: relative overhead 48.0% (threshold 20%)
 ```
 
-The "wall-clock delta" is the overhead added to a cold build. The "Reported total analyzer
-time" is what the C# compiler measures as pure analyzer execution (excluding I/O and linking).
+The "median wall-clock delta" is the overhead added to a cold build. The "median reported
+analyzer time" is what the C# compiler measures as pure analyzer execution (excluding I/O and
+linking). The per-run samples are shown so you can see the spread behind each median.
+
+The script also writes `analyzers-benchmark-result.json` next to itself (git-ignored):
+
+```json
+{
+  "without": 2.847,
+  "with": 4.213,
+  "overheadAbsolute": 1.366,
+  "overheadRelative": 47.98,
+  "success": false
+}
+```
+
+`without` and `with` are the median wall-clock seconds, `overheadAbsolute` is their difference
+in seconds, `overheadRelative` is that difference as a percentage, and `success` is `true` when
+`overheadRelative` is under 20%.
 
 To run just the baseline (no analyzer diagnostics, fastest possible compile):
 
