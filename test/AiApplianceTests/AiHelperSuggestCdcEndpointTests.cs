@@ -43,6 +43,8 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         // Auth attachment: the appliance license (read from license.json) must ride on the
         // outgoing request verbatim. Thumbprint is null on the unsecured test store.
         var sent = JsonNode.Parse(mockAi.LastCdcRequestBody!)!;
+        // OperationType routes the consolidated /ai/assist endpoint; internals reads the exact enum name.
+        Assert.Equal("CdcConfigSetup", (string?)sent["OperationType"]);
         var license = sent["License"]!;
         Assert.Equal("lic-1", (string?)license["Id"]);
         Assert.Equal("test", (string?)license["Name"]);
