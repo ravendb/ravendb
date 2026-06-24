@@ -26,7 +26,10 @@ namespace AnalyzersTests.Policy
             HashSet<string> declaredIds = new(AllDiagnosticIds(), StringComparer.Ordinal);
             List<string> policyIds = DiagnosticDescriptors.Policies.Select(p => p.Id).ToList();
 
-            Assert.True(policyIds.ToHashSet().Count == declaredIds.Count, $"Diagnostic ids with more than one policy entry exist!");
+            // Duplicate policy entries only: compare the policy list against its own distinct set so this
+            // check is about duplicates alone. Missing or stray ids are caught by the set-equality below,
+            // which produces a useful diff instead of a misleading "more than one policy entry" message.
+            Assert.True(policyIds.Count == policyIds.ToHashSet().Count, "Diagnostic ids with more than one policy entry exist!");
 
             // Set equality between the declared ids and the policy registry. A new rule that forgets to
             // go through Create (so it has no policy entry), or a stray entry, fails here.
