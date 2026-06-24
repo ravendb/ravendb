@@ -894,6 +894,7 @@ namespace Raven.Server.Documents.Replication
 
             _pullReplicationCompositeChangeVectorsSupported = supportsPullReplicationCompositeChangeVectors;
 
+            List<PullReplicationAsSink> incomingPullReplicationAsSinkToReconnect = null;
             foreach (var (key, repl) in _incoming)
             {
                 if (repl is IncomingPullReplicationHandler == false)
@@ -903,6 +904,20 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Resetting {repl.ConnectionInfo} because pull replication composite change-vector support changed. Will be reconnected.");
+                    if (repl is IncomingPullReplicationHandlerAsSink pullAsSink)
+                    {
+                        var destination = _externalDestinations
+                            .OfType<PullReplicationAsSink>()
+                            .FirstOrDefault(x => x.Disabled == false &&
+                                                 x.Mode == PullReplicationMode.HubToSink &&
+                                                 IsSameHubToSinkPullReplicationTask(pullAsSink, x));
+                        if (destination != null)
+                        {
+                            incomingPullReplicationAsSinkToReconnect ??= new List<PullReplicationAsSink>();
+                            incomingPullReplicationAsSinkToReconnect.Add(destination);
+                        }
+                    }
+
                     repl.Dispose();
                     _incoming.TryRemove(key, out _);
                 }
@@ -913,6 +928,9 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
+            if (incomingPullReplicationAsSinkToReconnect != null && Database.DisableOngoingTasks == false)
+                Task.Run(() => StartOutgoingConnections(incomingPullReplicationAsSinkToReconnect));
+
             var shouldTryReconnect = false;
             foreach (var repl in _outgoing)
             {
@@ -921,8 +939,12 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                    QueueOutgoingForImmediateReconnect(repl);
-                    shouldTryReconnect = true;
+                    if (repl is OutgoingPullReplicationHandlerAsHub == false)
+                    {
+                        QueueOutgoingForImmediateReconnect(repl);
+                        shouldTryReconnect = true;
+                    }
+
                     repl.Dispose();
                     _outgoing.TryRemove(repl);
                 }

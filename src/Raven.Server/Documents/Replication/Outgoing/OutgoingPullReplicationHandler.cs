@@ -10,6 +10,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -96,6 +97,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
             SupportedFeatures = supportedVersions;
             _stream = stream;
             _replicationScope = replicationScope;
+            if (replicationScope is TcpConnectionOptions tcpConnectionOptions)
+                _tcpConnectionOptions = tcpConnectionOptions;
+
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
             _longRunningSendingWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,

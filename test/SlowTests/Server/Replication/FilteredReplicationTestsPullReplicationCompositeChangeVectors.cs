@@ -568,6 +568,44 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
     }
 
     [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+    public async Task LiveFeatureToggleReopensFilteredPullReplicationWhenSinkSeesFeatureBeforeHub()
+    {
+        var certificates = Certificates.SetupServerAuthentication();
+        using var hub = GetDocumentStore(new Options
+        {
+            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+            AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+            ModifyDatabaseRecord = StripPullReplicationCompositeChangeVectorsToken
+        });
+        using var sink = GetDocumentStore(new Options
+        {
+            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+            AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+            ModifyDatabaseRecord = StripPullReplicationCompositeChangeVectorsToken
+        });
+        using var pullCert = ExportCertificate(certificates.ClientCertificate1.Value);
+
+        await SetupFilteredHubToSinkPullReplicationAsync(hub, sink, pullCert);
+
+        await StoreTestItemAsync(hub, "items/include/before-toggle-sink-first", "before-toggle-sink-first");
+        Assert.True(WaitForDocument(sink, "items/include/before-toggle-sink-first", 30_000));
+        Assert.DoesNotContain("|", GetChangeVectorFor(sink, "items/include/before-toggle-sink-first"));
+
+        await SetPullReplicationCompositeChangeVectorsFeatureAsync(sink, enabled: true);
+        await SetPullReplicationCompositeChangeVectorsFeatureAsync(hub, enabled: true);
+
+        var handler = await AssertOutgoingPullHandlerAsHubAsync(
+            hub,
+            FilteredPullName,
+            PullReplicationChangeVectorWireMode.SendAsIs);
+        Assert.False(handler.IsConnectionDisposed);
+
+        await StoreTestItemAsync(hub, "items/include/after-toggle-sink-first", "after-toggle-sink-first");
+        Assert.True(WaitForDocument(sink, "items/include/after-toggle-sink-first", 30_000));
+        Assert.Contains("|", GetChangeVectorFor(sink, "items/include/after-toggle-sink-first"));
+    }
+
+    [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
     public async Task LiveFeatureToggleFallsBackToLegacyLaneWhenFeatureIsDisabled()
     {
         const string pullName = "filtered-toggle-disable";
