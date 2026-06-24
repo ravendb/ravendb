@@ -172,17 +172,14 @@
     the target, building the analyzer projects redundantly and racing on their shared bin/ outputs.
   -->
   <Target Name="BuildAnalyzerProjects" BeforeTargets="GenerateNuspec" Condition="'$(TargetFramework)' == ''">
-    <!-- Restore first: these projects are not referenced by Raven.Client, so without an
-         explicit Restore here a clean machine has no project.assets.json and Build fails. -->
-    <MSBuild Projects="..\Raven.Analyzers\Raven.Analyzers.csproj"
-             Properties="Configuration=$(Configuration)"
-             Targets="Restore" />
+    <!-- Only the code-fixes project is restored/built explicitly: it has a ProjectReference to
+         Raven.Analyzers, so MSBuild restores and builds the analyzer project transitively (its
+         Raven.Analyzers.dll lands in its own bin/). These projects are not referenced by
+         Raven.Client, so without an explicit Restore here a clean machine has no
+         project.assets.json and Build fails. -->
     <MSBuild Projects="..\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj"
              Properties="Configuration=$(Configuration)"
              Targets="Restore" />
-    <MSBuild Projects="..\Raven.Analyzers\Raven.Analyzers.csproj"
-             Properties="Configuration=$(Configuration)"
-             Targets="Build" />
     <MSBuild Projects="..\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj"
              Properties="Configuration=$(Configuration)"
              Targets="Build" />

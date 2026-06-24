@@ -95,6 +95,12 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                     return null;
                 }
 
+                // A nested anonymous method (delegate { ... }) is the same kind of deferred
+                // scope as a nested lambda and may outlive the batch, so bail here too rather
+                // than offer a rewrite that could be wrong.
+                if (current is AnonymousMethodExpressionSyntax)
+                    return null;
+
                 current = current.Parent;
             }
 
