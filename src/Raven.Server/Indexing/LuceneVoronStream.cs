@@ -11,28 +11,35 @@ namespace Raven.Server.Indexing;
 
 public sealed class LuceneVoronStream : VoronStream
 {
-    // A single, reusable handler shared across every transaction this stream is bound to.
-    // It captures only 'this' (so it can write the Llt field) and crucially does NOT capture any
-    // LowLevelTransaction - otherwise it would pin the disposed transaction and reintroduce the
-    // retention that RavenDB-26186 set out to remove. The transaction to compare against comes from
-    // the OnDispose argument instead.
+    // A single, reusable handler shared across every transaction this stream is bound to (used for both
+    // += and -=, so detaching removes the exact same delegate instance). It is bound to the
+    // CleanupTransaction method rather than a lambda on purpose: a method cannot capture enclosing locals,
+    // so it is impossible to accidentally capture - and thereby pin - a LowLevelTransaction here and
+    // reintroduce the retention that RavenDB-26186 set out to remove.
     private readonly Action<IPagerLevelTransactionState> _cleanupHandler;
 
     public LuceneVoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt) : base(name, chunksDetails, llt)
     {
-        // LowLevelTransaction.Dispose() invokes OnDispose with itself as the argument, so the handler
-        // receives the exact transaction being disposed. The compare-exchange nulls Llt only when it still
-        // points to that transaction, which makes a stale handler (one whose transaction was already replaced
-        // by UpdateCurrentTransaction) a safe no-op, and is race-safe against a concurrent in-flight read.
-        //
-        // Lucene caches VoronStream instances (via SegmentReader) per thread, so they can outlive the
-        // transaction that created them. Nulling Llt on dispose lets the GC collect the disposed
-        // LowLevelTransaction and its associated structures (page positions, journal references, etc.),
-        // which can be substantial depending on the indexing batch size.
-        // When the stream is reused, UpdateCurrentTransaction will set a fresh transaction.
-        _cleanupHandler = txBeingDisposed => Interlocked.CompareExchange(ref Llt, null, (LowLevelTransaction)txBeingDisposed);
+        _cleanupHandler = CleanupTransaction;
 
         Llt.Transaction.LowLevelTransaction.OnDispose += _cleanupHandler;
+    }
+
+    // Nulls Llt when the transaction it currently points at is disposed. LowLevelTransaction.Dispose() invokes
+    // OnDispose with itself as the argument, so we receive the exact transaction being disposed; the compare-exchange
+    // nulls Llt only when it still points to that transaction. That makes a stale handler (one whose transaction was
+    // already replaced by UpdateCurrentTransaction) a safe no-op, and is race-safe against a concurrent in-flight read.
+    //
+    // Why null Llt at all: Lucene caches VoronStream instances (via SegmentReader) per thread, so they can outlive the
+    // transaction that created them. Nulling Llt on dispose lets the GC collect the disposed LowLevelTransaction and its
+    // associated structures (page positions, journal references, etc.), which can be substantial depending on the
+    // indexing batch size. When the stream is reused, UpdateCurrentTransaction sets a fresh transaction.
+    //
+    // This is a method, not a lambda, so it cannot capture (and thereby pin) a LowLevelTransaction. The transaction to
+    // compare against always comes from the argument, never a captured variable.
+    private void CleanupTransaction(IPagerLevelTransactionState txBeingDisposed)
+    {
+        Interlocked.CompareExchange(ref Llt, null, (LowLevelTransaction)txBeingDisposed);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
