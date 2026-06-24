@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { CopyableCode } from "@/components/data/copyable-code";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import {
     buildMintEmbedLinkUrl,
     DEFAULT_MAX_INVOCATIONS,
@@ -14,9 +15,16 @@ import {
 import { InlineCode } from "@/components/data/inline-code";
 
 const OPEN_STORAGE_KEY = "quill-embed-api-docs-open";
+const SHELL_STORAGE_KEY = "quill-embed-api-docs-shell";
+
+type Shell = "bash" | "powershell";
 
 function readIsOpen() {
     return localStorage.getItem(OPEN_STORAGE_KEY) !== "false";
+}
+
+function readShell(): Shell {
+    return localStorage.getItem(SHELL_STORAGE_KEY) === "powershell" ? "powershell" : "bash";
 }
 
 type EmbedLinkApiDocsProps = {
@@ -27,13 +35,20 @@ type EmbedLinkApiDocsProps = {
 
 export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApiDocsProps) {
     const hasParameters = parameterNames.length > 0;
-    const request = buildRequestSnippet(slug, agentId, parameterNames);
+    const requests = buildRequestSnippets(slug, agentId, parameterNames);
 
     const [isOpen, setIsOpen] = useState(readIsOpen);
+    const [shell, setShell] = useState<Shell>(readShell);
 
     const onOpenChange = (open: boolean) => {
         localStorage.setItem(OPEN_STORAGE_KEY, String(open));
         setIsOpen(open);
+    };
+
+    const onShellChange = (value: string) => {
+        const next = value as Shell;
+        localStorage.setItem(SHELL_STORAGE_KEY, next);
+        setShell(next);
     };
 
     const fields = [
@@ -57,7 +72,7 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
     ];
 
     return (
-        <Collapsible open={isOpen} onOpenChange={onOpenChange} className="rounded-md border bg-surface2 p-4">
+        <Collapsible open={isOpen} onOpenChange={onOpenChange} className="rounded-md border bg-card p-4">
             <h2 className="text-sm font-semibold">
                 <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none">
                     Generate links via the API
@@ -76,7 +91,18 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
                     {hasParameters ? " and the parameter values" : ""}.
                 </p>
 
-                <CopyableCode code={request} copyLabel="Copy API request" />
+                <Tabs value={shell} onValueChange={onShellChange} className="gap-3">
+                    <TabsList>
+                        <TabsTrigger value="bash">macOS / Linux</TabsTrigger>
+                        <TabsTrigger value="powershell">Windows (PowerShell)</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="bash">
+                        <CopyableCode code={requests.bash} copyLabel="Copy API request" />
+                    </TabsContent>
+                    <TabsContent value="powershell">
+                        <CopyableCode code={requests.powershell} copyLabel="Copy API request" />
+                    </TabsContent>
+                </Tabs>
 
                 <dl className="grid gap-2 text-sm">
                     {fields.map((field) => (
@@ -96,7 +122,7 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
     );
 }
 
-function buildRequestSnippet(slug: string, agentId: string, parameterNames: string[]) {
+function buildRequestSnippets(slug: string, agentId: string, parameterNames: string[]) {
     const body: Record<string, unknown> = {
         agentId,
         ttlSeconds: DEFAULT_TTL_SECONDS,
@@ -111,11 +137,21 @@ function buildRequestSnippet(slug: string, agentId: string, parameterNames: stri
         .map((line, index) => (index === 0 ? line : `  ${line}`))
         .join("\n");
 
-    return [
-        "curl -X POST \\",
-        `  "${buildMintEmbedLinkUrl(slug)}" \\`,
-        `  -H "X-Api-Key: <your QUILL_API_KEY>" \\`,
-        `  -H "Content-Type: application/json" \\`,
-        `  -d '${indentedBody}'`,
-    ].join("\n");
+    const url = buildMintEmbedLinkUrl(slug);
+
+    // bash continues lines with "\", PowerShell with a backtick; PowerShell also needs curl.exe so
+    // it doesn't resolve to the Invoke-WebRequest alias on Windows PowerShell 5.1.
+    const snippet = (curl: string, continuation: string) =>
+        [
+            `${curl} -X POST ${continuation}`,
+            `  "${url}" ${continuation}`,
+            `  -H "X-Api-Key: <your QUILL_API_KEY>" ${continuation}`,
+            `  -H "Content-Type: application/json" ${continuation}`,
+            `  -d '${indentedBody}'`,
+        ].join("\n");
+
+    return {
+        bash: snippet("curl", "\\"),
+        powershell: snippet("curl.exe", "`"),
+    };
 }
