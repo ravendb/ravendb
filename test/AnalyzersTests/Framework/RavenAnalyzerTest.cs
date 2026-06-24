@@ -29,13 +29,16 @@ namespace AnalyzersTests.Framework
         internal static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync<TAnalyzer>(string source)
             where TAnalyzer : DiagnosticAnalyzer, new()
         {
-            SyntaxTree tree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Latest));
+            // Match the project's settings (LangVersion=preview, Nullable=enable) so snippets compile
+            // and behave the same way the analyzers see them at build time.
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Preview));
 
             CSharpCompilation compilation = CSharpCompilation.Create(
                 assemblyName: "TestAssembly",
                 syntaxTrees: [tree],
                 references: DefaultReferences.Value,
-                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                    .WithNullableContextOptions(NullableContextOptions.Enable));
 
             // Fail fast if the compilation has errors — analyzer diagnostics are meaningless otherwise
             ImmutableArray<Diagnostic> compileErrors = compilation.GetDiagnostics()

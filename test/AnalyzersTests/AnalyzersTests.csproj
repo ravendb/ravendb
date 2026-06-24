@@ -13,6 +13,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Use the same xUnit settings as the rest of the test suite. -->
+    <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Analyzers\Raven.Analyzers.csproj" />
     <ProjectReference Include="..\..\src\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj" />
     <!-- Reference Raven.Client so the test harness can add it as a MetadataReference

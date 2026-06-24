@@ -32,13 +32,20 @@ namespace AnalyzersTests.Framework
             where TAnalyzer : DiagnosticAnalyzer, new()
             where TFix : CodeFixProvider, new()
         {
-            SyntaxTree tree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Latest));
+            // Match the project's settings (LangVersion=preview, Nullable=enable) so snippets compile
+            // and behave the same way the analyzers and code fixes see them at build time.
+            CSharpParseOptions parseOptions = new(LanguageVersion.Preview);
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(source, parseOptions);
+
+            CSharpCompilationOptions compilationOptions =
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                    .WithNullableContextOptions(NullableContextOptions.Enable);
 
             CSharpCompilation compilation = CSharpCompilation.Create(
                 assemblyName: "TestAssembly",
                 syntaxTrees: [tree],
                 references: DefaultReferences.Value,
-                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+                options: compilationOptions);
 
             // Fail fast if the compilation has errors
             ImmutableArray<Diagnostic> compileErrors = compilation.GetDiagnostics()
@@ -57,7 +64,11 @@ namespace AnalyzersTests.Framework
             CompilationWithAnalyzers compilationWithAnalyzers =
                 compilation.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(analyzer));
 
-            ImmutableArray<Diagnostic> diagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync();
+            // Order by source position: analyzer diagnostics aren't ordered (more so under concurrent
+            // execution), so picking the "first" must be deterministic to keep the fix tests stable.
+            ImmutableArray<Diagnostic> diagnostics =
+                [.. (await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync())
+                    .OrderBy(d => d.Location.SourceSpan.Start)];
 
             if (diagnostics.IsEmpty)
                 throw new InvalidOperationException("Expected at least one diagnostic from the analyzer.");
@@ -70,7 +81,11 @@ namespace AnalyzersTests.Framework
                 name: "TestProject",
                 assemblyName: "TestAssembly",
                 language: LanguageNames.CSharp)
-                .WithMetadataReferences(DefaultReferences.Value);
+                .WithMetadataReferences(DefaultReferences.Value)
+                // Parse/compile the workspace document the same way as the analyzer compilation so
+                // diagnostic spans line up and newer syntax parses identically.
+                .WithParseOptions(parseOptions)
+                .WithCompilationOptions(compilationOptions);
 
             Project project = workspace.AddProject(projectInfo);
 

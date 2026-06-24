@@ -47,7 +47,7 @@
     </PropertyGroup>
     <WriteLinesToFile
         File="$(_RavenProductVersionFile)"
-        Lines="namespace Raven.Analyzers.Shared { static partial class SeverityPolicy { internal const string ProductVersion = &quot;$(RavenProductVersion)&quot;%3B } }"
+        Lines="namespace Raven.Analyzers.Shared { public static partial class SeverityPolicy { internal const string ProductVersion = &quot;$(RavenProductVersion)&quot;%3B } }"
         Overwrite="true"
         WriteOnlyWhenDifferent="true" />
     <ItemGroup>

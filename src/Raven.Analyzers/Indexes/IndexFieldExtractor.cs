@@ -26,26 +26,11 @@ namespace Raven.Analyzers.Indexes
     /// </summary>
     internal static class IndexFieldExtractor
     {
-        public static IndexFieldSet Extract(INamedTypeSymbol indexClass, Compilation compilation)
-        {
-            return ExtractCore(indexClass, compilation, bailOnStoreAllFields: true);
-        }
-
         /// <summary>
-        /// Like <see cref="Extract"/> but does NOT bail when <c>StoreAllFields</c> is present.
-        /// Used when the caller already knows StoreAllFields was called and wants the map
-        /// projection field names to serve as the stored-field set.
+        /// Extracts the field names projected by the index <c>Map</c>. <c>StoreAllFields</c> affects
+        /// field <em>storage</em>, not which fields the Map projects, so it does not influence this set.
         /// </summary>
-        internal static IndexFieldSet ExtractMapFieldsIgnoringStoreAll(
-            INamedTypeSymbol indexClass, Compilation compilation)
-        {
-            return ExtractCore(indexClass, compilation, bailOnStoreAllFields: false);
-        }
-
-        private static IndexFieldSet ExtractCore(
-            INamedTypeSymbol indexClass,
-            Compilation compilation,
-            bool bailOnStoreAllFields)
+        public static IndexFieldSet Extract(INamedTypeSymbol indexClass, Compilation compilation)
         {
             // Must have source syntax in this compilation
             if (indexClass.DeclaringSyntaxReferences.IsEmpty)
@@ -72,7 +57,7 @@ namespace Raven.Analyzers.Indexes
                         continue;
 
                     // Bail if the constructor uses dynamic field creation
-                    if (ContainsDynamicFieldCalls(ctorBody, bailOnStoreAllFields))
+                    if (ContainsDynamicFieldCalls(ctorBody))
                         return IndexFieldSet.Bail;
 
                     IndexFieldInspection result = ExtractFromCtorBody(ctorBody, model, allFields);
@@ -85,7 +70,7 @@ namespace Raven.Analyzers.Indexes
         }
 
 
-        private static bool ContainsDynamicFieldCalls(SyntaxNode body, bool bailOnStoreAllFields = true)
+        private static bool ContainsDynamicFieldCalls(SyntaxNode body)
         {
             foreach (InvocationExpressionSyntax inv in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
             {
@@ -100,9 +85,6 @@ namespace Raven.Analyzers.Indexes
                 {
                     return true;
                 }
-
-                if (bailOnStoreAllFields && name == KnownTypes.StoreAllFieldsMethodName)
-                    return true;
             }
             return false;
         }
