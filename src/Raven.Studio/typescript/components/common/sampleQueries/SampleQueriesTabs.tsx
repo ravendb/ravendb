@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Nav from "react-bootstrap/Nav";
 import Card from "react-bootstrap/Card";
@@ -18,6 +18,14 @@ export interface SampleQueriesTabsProps {
 
 export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: SampleQueriesTabsProps) {
     const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
+    const tabContentRef = useRef<HTMLDivElement>(null);
+
+    const handleTabSelect = (tab: ActiveTab) => {
+        setActiveTab(tab);
+        if (tabContentRef.current) {
+            tabContentRef.current.scrollTop = 0;
+        }
+    };
 
     return (
         <Card className="panel-bg-1 border border-color-light sample-queries-tabs">
@@ -26,7 +34,7 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                 unmountOnExit
                 id="sample-queries-tabs"
                 activeKey={activeTab}
-                onSelect={(tab) => setActiveTab(tab as ActiveTab)}
+                onSelect={(tab) => handleTabSelect(tab as ActiveTab)}
             >
                 <Nav variant="pills" className="gap-1 panel-bg-2 p-2">
                     <Nav.Item>
@@ -42,7 +50,7 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                         </Nav.Link>
                     </Nav.Item>
                 </Nav>
-                <Tab.Content>
+                <Tab.Content ref={tabContentRef}>
                     <Tab.Pane eventKey="scripts">
                         <SampleScriptsList scripts={scripts} onSelect={onSelect} />
                     </Tab.Pane>

@@ -34,6 +34,10 @@
 }
 
 .methods-table {
+    h6 {
+        letter-spacing: 0.08em;
+    }
+
     code {
         color: colors.$info-var;
         background-color: rgba(var(--bs-info-rgb), 0.1);
@@ -106,10 +110,10 @@
 .patch-samples-dropdown-menu {
     // .bs3 .dropdown-menu sets min-width: 100% (specificity 0,2,0) — beat it with same level
     .bs3 & {
-        min-width: 560px;
+        min-width: 650px;
     }
 
-    min-width: 560px;
+    min-width: 650px;
 
     // The Nav (tab pills) stays fixed at the top as the dropdown's navigation.
     // Only the Tab.Content scrolls, so the "Search by signature" StickyHeader
