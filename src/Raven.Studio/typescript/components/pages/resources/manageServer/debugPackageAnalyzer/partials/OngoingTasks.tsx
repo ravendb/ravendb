@@ -43,6 +43,7 @@ const taskTypeLabels: Record<TaskCountField, string> = {
     KafkaSinkCount: "Kafka Sink",
     RabbitMqSinkCount: "RabbitMQ Sink",
     AzureServiceBusSinkCount: "Azure Service Bus Sink",
+    CdcSinkCount: "CDC Sink",
     PeriodicBackupCount: "Backup",
     SubscriptionCount: "Subscription",
     EmbeddingsGenerationCount: "Embeddings Generation",
