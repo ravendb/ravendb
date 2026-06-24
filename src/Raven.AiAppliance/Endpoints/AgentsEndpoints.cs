@@ -45,7 +45,7 @@ public static class AgentsEndpoints
         // connection strings (one round trip, indexed by name).
         var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
         var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
-            .ToDictionary(pair => pair.Key, pair => ResolveModel(pair.Value), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(pair => pair.Key, pair => AiConnectionStringModel.Resolve(pair.Value), StringComparer.OrdinalIgnoreCase);
 
         var items = (agents.AiAgents ?? [])
             .Select(agent => new AgentSummaryResponse(
@@ -64,16 +64,4 @@ public static class AgentsEndpoints
 
         return Results.Ok(items);
     }
-
-    /// <summary>The chat model lives on whichever provider settings the
-    /// connection string has set (the "exactly one provider" rule means at most
-    /// one is non-null). Embedded settings carry no model.</summary>
-    private static string? ResolveModel(AiConnectionString cs) =>
-        cs.OpenAiSettings?.Model
-        ?? cs.AzureOpenAiSettings?.Model
-        ?? cs.OllamaSettings?.Model
-        ?? cs.GoogleSettings?.Model
-        ?? cs.HuggingFaceSettings?.Model
-        ?? cs.MistralAiSettings?.Model
-        ?? cs.VertexSettings?.Model;
 }

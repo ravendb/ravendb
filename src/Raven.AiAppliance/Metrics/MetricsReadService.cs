@@ -64,6 +64,156 @@ internal static class MetricsReadService
         return points;
     }
 
+    /// <summary>
+    /// Per-app token totals behind the prototype's <c>getTokensByApp()</c>: all-time
+    /// token usage summed from each app's <c>@conversations</c> (fan-out), sorted by
+    /// tokens descending. <c>refreshedMinutesAgo</c> is 0 — computed live per request.
+    /// </summary>
+    public static async Task<TokensByAppResponse> GetTokensByAppAsync(IDocumentStore store, CancellationToken ct)
+    {
+        var apps = await LoadAllAppsAsync(store, ct);
+        var rows = new List<AppTokens>(apps.Count);
+        foreach (var app in apps)
+        {
+            using var session = store.OpenAsyncSession(app.Database);
+            var metricRows = await QueryAllMetricRowsAsync(session, ct);
+            rows.Add(new AppTokens(app.Slug, metricRows.Sum(r => r.Tokens)));
+        }
+
+        var sorted = rows
+            .OrderByDescending(a => a.Tokens)
+            .ThenBy(a => a.Slug, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return new TokensByAppResponse(sorted, RefreshedMinutesAgo: 0);
+    }
+
+    // Same per-token cost factor the prototype uses for the cost tile.
+    private const double CostPerToken = 0.000015;
+
+    // Stable-ish palette so each capability series gets a colour without config.
+    private static readonly string[] SeriesPalette =
+        ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#22d3ee", "#a855f7", "#84cc16"];
+
+    /// <summary>
+    /// Per-app usage analytics behind <c>getAppUsage({appId,start,end})</c>. Phase-1
+    /// subset from <see cref="ConversationMetricsIndex"/>: conversations/tokens/cost
+    /// KPI cards (value + delta-vs-previous-window + per-bucket sparkline),
+    /// <c>tokensByCapability</c>, and <c>topCapabilities</c>. cdcWrites/topTables
+    /// (RavenDB-26780), tokensByModel (no model recorded) and conversationsByChannel
+    /// (no channel link) return empty skeletons — see the impl handoff.
+    /// </summary>
+    public static async Task<AppUsageResponse> GetAppUsageAsync(
+        IDocumentStore store, string database, DateTime startUtc, DateTime endUtc, CancellationToken ct)
+    {
+        var granularity = (endUtc - startUtc).TotalDays <= 2 ? UsageGranularity.Hour : UsageGranularity.Day;
+
+        using var session = store.OpenAsyncSession(database);
+        var rows = await QueryMetricRowsInRangeAsync(session, startUtc, endUtc, ct);
+
+        // Previous equal-length window drives the percent delta on each card.
+        var windowLength = endUtc - startUtc;
+        var prevRows = await QueryMetricRowsInRangeAsync(session, startUtc - windowLength, startUtc, ct);
+
+        long convNow = rows.Sum(r => r.Conversations), tokNow = rows.Sum(r => r.Tokens);
+        long convPrev = prevRows.Sum(r => r.Conversations), tokPrev = prevRows.Sum(r => r.Tokens);
+
+        var buckets = BuildBuckets(startUtc, endUtc, granularity);
+        var convByBucket = new long[buckets.Count];
+        var tokByBucket = new long[buckets.Count];
+        foreach (var row in rows)
+        {
+            var i = BucketIndex(buckets, row.Bucket, granularity);
+            if (i < 0) continue;
+            convByBucket[i] += row.Conversations;
+            tokByBucket[i] += row.Tokens;
+        }
+
+        var metrics = new AppUsageMetrics(
+            Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
+            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
+            Cost: new MetricCard(Math.Round(tokNow * CostPerToken, 2), Delta(tokNow, tokPrev),
+                tokByBucket.Select(t => t * CostPerToken).ToArray()),
+            CdcWrites: new MetricCard(0, 0, [])); // CDC blocked on RavenDB-26780.
+
+        // tokensByCapability: per-bucket tokens per agent (capability ≈ agent).
+        var agents = rows.Select(r => r.Agent ?? "").Distinct()
+            .OrderBy(a => a, StringComparer.OrdinalIgnoreCase).ToArray();
+        var capKeys = agents
+            .Select((a, idx) => new SeriesKey(a, a, SeriesPalette[idx % SeriesPalette.Length])).ToArray();
+        var capPoints = new Dictionary<string, object>[buckets.Count];
+        for (var b = 0; b < buckets.Count; b++)
+        {
+            var point = new Dictionary<string, object> { ["t"] = BucketLabel(buckets[b], granularity) };
+            foreach (var a in agents) point[a] = 0L;
+            capPoints[b] = point;
+        }
+        foreach (var row in rows)
+        {
+            var i = BucketIndex(buckets, row.Bucket, granularity);
+            if (i < 0) continue;
+            var key = row.Agent ?? "";
+            capPoints[i][key] = (long)capPoints[i][key] + row.Tokens;
+        }
+
+        var topCapabilities = rows
+            .GroupBy(r => r.Agent ?? "")
+            .Select(g =>
+            {
+                var invocations = g.Sum(r => r.Conversations);
+                var total = g.Sum(r => r.Tokens);
+                return new TopCapability(g.Key, invocations, invocations == 0 ? 0 : total / invocations,
+                    total, Math.Round(total * CostPerToken, 2));
+            })
+            .OrderByDescending(c => c.TotalTokens)
+            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var empty = new SeriesData([], []);
+        return new AppUsageResponse(
+            granularity, metrics,
+            TokensByCapability: new SeriesData(capPoints, capKeys),
+            TokensByModel: empty,            // no model recorded on @conversations
+            ConversationsByChannel: empty,   // no channel link on @conversations
+            CdcWrites: [],                   // RavenDB-26780
+            TopTables: [],                   // RavenDB-26780
+            TopCapabilities: topCapabilities);
+    }
+
+    private static double Delta(long now, long prev) =>
+        prev == 0 ? 0 : Math.Round((now - prev) / (double)prev * 100, 1);
+
+    private static double[] ToDoubles(long[] values)
+    {
+        var result = new double[values.Length];
+        for (var i = 0; i < values.Length; i++)
+            result[i] = values[i];
+        return result;
+    }
+
+    private static TimeSpan Step(UsageGranularity granularity) =>
+        granularity == UsageGranularity.Hour ? TimeSpan.FromHours(1) : TimeSpan.FromDays(1);
+
+    private static List<DateTime> BuildBuckets(DateTime start, DateTime end, UsageGranularity granularity)
+    {
+        var step = Step(granularity);
+        var cur = granularity == UsageGranularity.Hour
+            ? new DateTime(start.Year, start.Month, start.Day, start.Hour, 0, 0, DateTimeKind.Utc)
+            : new DateTime(start.Year, start.Month, start.Day, 0, 0, 0, DateTimeKind.Utc);
+        var buckets = new List<DateTime>();
+        while (cur <= end) { buckets.Add(cur); cur = cur.Add(step); }
+        if (buckets.Count == 0) buckets.Add(cur);
+        return buckets;
+    }
+
+    private static int BucketIndex(List<DateTime> buckets, DateTime bucketUtc, UsageGranularity granularity)
+    {
+        var idx = (int)Math.Floor((bucketUtc - buckets[0]) / Step(granularity));
+        return idx >= 0 && idx < buckets.Count ? idx : -1;
+    }
+
+    private static string BucketLabel(DateTime bucketUtc, UsageGranularity granularity) =>
+        granularity == UsageGranularity.Hour ? bucketUtc.ToString("yyyy-MM-ddTHH:00") : bucketUtc.ToString("yyyy-MM-dd");
+
     public static async Task<DashboardResponse> GetDashboardStatsAsync(
         IDocumentStore store, DateTime nowUtc, CancellationToken ct)
     {
@@ -159,6 +309,24 @@ internal static class MetricsReadService
         return new AgentStatsResponse(configuredAgents, last24h, last7d, last30d, perAgent);
     }
 
+    /// <summary>
+    /// Mirrored collections behind <c>listCollections(appId)</c>: each business
+    /// collection with its current document count. System (<c>@</c>-prefixed)
+    /// collections are excluded; <c>fields</c> is empty for now (schemaless).
+    /// </summary>
+    public static async Task<List<DataCollectionDto>> GetCollectionsAsync(
+        IDocumentStore store, string slug, string database, CancellationToken ct)
+    {
+        var stats = await store.Maintenance.ForDatabase(database)
+            .SendAsync(new GetCollectionStatisticsOperation(), ct);
+
+        return stats.Collections
+            .Where(c => c.Key.StartsWith('@') == false)
+            .OrderBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(c => new DataCollectionDto(slug, c.Key, c.Value, []))
+            .ToList();
+    }
+
     /// <summary>Loads every registered app from the config DB by id prefix, paging
     /// so installations with more than one page are fully returned.</summary>
     private static async Task<List<App>> LoadAllAppsAsync(IDocumentStore store, CancellationToken ct)
@@ -185,6 +353,27 @@ internal static class MetricsReadService
         return session.Advanced
             .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
             .WhereGreaterThanOrEqual(row => row.Bucket, since)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>Fetches every hour-bucket row (no time filter) for all-time totals.</summary>
+    private static Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
+        IAsyncDocumentSession session, CancellationToken ct)
+    {
+        return session.Advanced
+            .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
+            .ToListAsync(ct);
+    }
+
+    /// <summary>Fetches hour-bucket rows whose bucket falls within [start, end].</summary>
+    private static Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
+        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
+    {
+        return session.Advanced
+            .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
+            .WhereGreaterThanOrEqual(r => r.Bucket, start)
+            .AndAlso()
+            .WhereLessThanOrEqual(r => r.Bucket, end)
             .ToListAsync(ct);
     }
 
