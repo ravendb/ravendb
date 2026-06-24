@@ -6,7 +6,7 @@ export default function PatchSamplesAboutView() {
     const docsLink = useRavenLink({ hash: "TODO" });
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating className="me-2">
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
