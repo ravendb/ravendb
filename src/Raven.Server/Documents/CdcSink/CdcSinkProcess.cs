@@ -572,11 +572,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             // Return values from the completed batch back to per-table pools.
             // Done here (after await) rather than inside SubmitBatch so that pool
             // access stays on the caller's flow and never races with RentValues.
-            if (lastBatchOps != null)
-            {
-                DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                lastBatchOps = null;
-            }
+            ReturnBatchValuesAndClear(ref lastBatchOps);
 
             // previousCtx (if any) backed batches that are all guaranteed complete now - we just
             // awaited the most recent one - and it is never the live StreamingJsonContext, so it is
@@ -701,11 +697,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             // Stream ended — flush remaining ops, then wait for the final batch to complete
             await FlushBatch(decodeInFlight: false);
             (string finalCheckpoint, int _) = await lastBatch;
-            if (lastBatchOps != null)
-            {
-                DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                lastBatchOps = null;
-            }
+            ReturnBatchValuesAndClear(ref lastBatchOps);
             if (finalCheckpoint is not null) // force a flush, ensure the last LSN is acknowledged for PostgreSQL and similar providers.
                 await OnBatchFlushed(finalCheckpoint, Database.Configuration.CdcSink.MaxBatchSize + 1);
         }
@@ -797,6 +789,19 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// the batch has been written).
     /// </summary>
     private readonly record struct InitialLoadBatch(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context);
+
+    /// <summary>
+    /// Returns a completed batch's values to their per-table pools and clears the reference, so a
+    /// batch can never be returned twice (a double-return corrupts the pool).
+    /// </summary>
+    private void ReturnBatchValuesAndClear(ref List<CdcSinkDocumentOp> ops)
+    {
+        if (ops == null)
+            return;
+
+        DocumentProcessor.ReturnBatchValues(ops);
+        ops = null;
+    }
 
     private async Task<InitialLoadBatch> ReadOneBatch(
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
@@ -1000,10 +1005,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     currentBatchCtx = null;
 
                     await lastBatch;
-                    if (lastBatchOps != null)
-                    {
-                        DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                    }
+                    ReturnBatchValuesAndClear(ref lastBatchOps);
                     previousBatchCtx?.Dispose();
                     previousBatchCtx = null;
 
@@ -1016,11 +1018,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 }
 
                 await lastBatch;
-                if (lastBatchOps != null)
-                {
-                    DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                    lastBatchOps = null;
-                }
+                ReturnBatchValuesAndClear(ref lastBatchOps);
                 previousBatchCtx?.Dispose();
 
                 var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>

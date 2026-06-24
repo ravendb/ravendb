@@ -118,20 +118,15 @@ public class CdcSinkLoader : IDisposable
             // must not poison the remaining sinks on a database-record change. Alert and continue.
             try
             {
-                var connectionStringNotFound = false;
-
-                if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
-                    config.Initialize(sqlConnection);
-                else
-                    connectionStringNotFound = true;
-
-                if (connectionStringNotFound)
+                if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection) == false)
                 {
                     LogConfigurationError(config,
                         new List<string> { $"Connection string named '{config.ConnectionStringName}' was not found." });
 
                     continue;
                 }
+
+                config.Initialize(sqlConnection);
 
                 if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
