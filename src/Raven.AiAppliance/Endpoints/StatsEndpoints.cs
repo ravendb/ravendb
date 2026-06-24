@@ -31,11 +31,30 @@ public static class StatsEndpoints
             .RequireAuthorization()
             .Produces<UsagePoint[]>();
 
+        // Per-app token-usage breakdown (mock-api `getTokensByApp()`).
+        app.MapGet("/api/usage/by-app", GetTokensByAppAsync)
+            .WithTags("stats")
+            .WithName("stats.usage.byApp")
+            .RequireAuthorization()
+            .Produces<TokensByAppResponse>();
+
         var group = app.MapGroup("/api/apps/{slug}").WithTags("stats").RequireAuthorization();
 
         group.MapGet("/overview", GetAppOverviewAsync)
             .WithName("stats.overview")
             .Produces<AppOverviewResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
+        // Per-app usage analytics (mock-api `getAppUsage({appId,start,end})`).
+        group.MapGet("/usage", GetAppUsageAsync)
+            .WithName("stats.appUsage")
+            .Produces<AppUsageResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
+        // Mirrored data collections with document counts (mock-api `listCollections(appId)`).
+        group.MapGet("/collections", GetCollectionsAsync)
+            .WithName("stats.collections")
+            .Produces<DataCollectionDto[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapGet("/conversations/stats", GetConversationStatsAsync)
@@ -68,6 +87,45 @@ public static class StatsEndpoints
     {
         var usage = await MetricsReadService.GetUsageAsync(store, DateTime.UtcNow, ct);
         return Results.Ok(usage);
+    }
+
+    private static async Task<IResult> GetTokensByAppAsync(
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var byApp = await MetricsReadService.GetTokensByAppAsync(store, ct);
+        return Results.Ok(byApp);
+    }
+
+    private static async Task<IResult> GetAppUsageAsync(
+        string slug,
+        DateTime? start,
+        DateTime? end,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var endUtc = (end ?? DateTime.UtcNow).ToUniversalTime();
+        var startUtc = (start ?? endUtc.AddDays(-7)).ToUniversalTime();
+
+        var usage = await MetricsReadService.GetAppUsageAsync(store, app.Database, startUtc, endUtc, ct);
+        return Results.Ok(usage);
+    }
+
+    private static async Task<IResult> GetCollectionsAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var collections = await MetricsReadService.GetCollectionsAsync(store, slug, app.Database, ct);
+        return Results.Ok(collections);
     }
 
     private static async Task<IResult> GetAppOverviewAsync(
