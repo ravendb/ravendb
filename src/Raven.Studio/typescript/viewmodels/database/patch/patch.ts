@@ -25,6 +25,7 @@ import getIndexNamesCommand = require("commands/database/index/getIndexNamesComm
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import PatchAceEditor = require("viewmodels/database/patch/PatchAceEditor");
+import PatchSamplesAboutView = require("viewmodels/database/patch/PatchSamplesAboutView");
 
 class patchList {
 
@@ -157,6 +158,7 @@ class patch extends shardViewModelBase {
     inSaveMode = ko.observable<boolean>();
 
     patchAceEditorView: ReactInKnockout<typeof PatchAceEditor.default>;
+    infoHubView: ReactInKnockout<typeof PatchSamplesAboutView.default>;
 
     spinners = {
         save: ko.observable<boolean>(false),
@@ -197,6 +199,10 @@ class patch extends shardViewModelBase {
                 query: this.patchDocument().query,
                 languageService: this.languageService,
             },
+        }));
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: PatchSamplesAboutView.default,
         }));
     }
 
