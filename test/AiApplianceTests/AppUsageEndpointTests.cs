@@ -140,7 +140,8 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
             channelTotal += point.GetProperty("wgt1").GetInt64();
         Assert.Equal(2, channelTotal);
 
-        // topTables — the business collection with its doc count.
+        // topTables — the business collection with its doc count (lastWriteAt is
+        // CDC-perf data, not rendered by the prototype; stays empty).
         var products = json.GetProperty("topTables").EnumerateArray()
             .Single(t => t.GetProperty("name").GetString() == "Products");
         Assert.Equal(1, products.GetProperty("writes").GetInt64());
