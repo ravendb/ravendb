@@ -211,7 +211,65 @@ class Order { public string Id { get; set; } }
             Assert.Contains("OpenSession", d.GetMessage());
         }
 
+        [Fact]
+        public async Task OpenSession_In_NonStatic_LocalFunction_Inside_RunLambda_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Order> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            void Process()
+            {
+                using var session = store.OpenSession();
+            }
+            Process();
+        });
+    }
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SubscriptionOpenSessionAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.SubscriptionStoreOpenSession, d.Id);
+            Assert.Contains("OpenSession", d.GetMessage());
+        }
+
         // ── No-flag cases ────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task OpenSession_In_Static_LocalFunction_Inside_RunLambda_No_Diagnostic()
+        {
+            // A static local function cannot capture the Run lambda's batch parameter, so the
+            // session cannot be opened via batch. The call is not the targeted anti-pattern.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Order> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            static void Process(IDocumentStore s)
+            {
+                using var session = s.OpenSession();
+            }
+            Process(store);
+        });
+    }
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SubscriptionOpenSessionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
 
         [Fact]
         public async Task BatchOpenSession_Correct_Usage_No_Diagnostic()

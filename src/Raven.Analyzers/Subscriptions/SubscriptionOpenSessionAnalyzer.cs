@@ -85,11 +85,19 @@ namespace Raven.Analyzers.Subscriptions
 
             while (current != null)
             {
-                if (current is MethodDeclarationSyntax or
-                               LocalFunctionStatementSyntax or
-                               ClassDeclarationSyntax or
-                               StructDeclarationSyntax or
-                               RecordDeclarationSyntax)
+                // A non-static local function captures the enclosing Run lambda's batch
+                // parameter, so an OpenSession inside it is still convertible to
+                // batch.OpenSession(): treat it as transparent and keep walking up. A static
+                // local function cannot capture batch, so it is a real scope boundary.
+                if (current is LocalFunctionStatementSyntax localFunction)
+                {
+                    if (localFunction.Modifiers.Any(SyntaxKind.StaticKeyword))
+                        return false;
+                }
+                else if (current is MethodDeclarationSyntax or
+                                    ClassDeclarationSyntax or
+                                    StructDeclarationSyntax or
+                                    RecordDeclarationSyntax)
                 {
                     return false;
                 }
