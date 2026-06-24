@@ -152,4 +152,40 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         var resp = await client.GetAsync("/api/usage");
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
     }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_skips_unhealthy_app_db_and_returns_partial()
+    {
+        var store = GetDocumentStore();
+        var (healthyDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "healthy", database: healthyDb);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: healthyDb);
+        // A registered app whose database was never created — the fan-out must skip it, not 500.
+        await SeedAppAsync(store, slug: "broken", database: "missing-" + Guid.NewGuid().ToString("N"));
+
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(store, healthyDb, "chats/a", "support", now.AddHours(-1), messages: 3, tokens: 120);
+        await Indexes.WaitForIndexingAsync(store, healthyDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // I2: one bad tenant DB must not 500 the whole endpoint — healthy data still returns.
+        var usageResp = await client.GetAsync("/api/usage");
+        Assert.Equal(HttpStatusCode.OK, usageResp.StatusCode);
+        var points = await usageResp.Content.ReadFromJsonAsync<JsonElement>();
+        long invocations = 0, tokens = 0;
+        foreach (var p in points.EnumerateArray())
+        {
+            invocations += p.GetProperty("invocations").GetInt64();
+            tokens += p.GetProperty("tokens").GetInt64();
+        }
+        Assert.Equal(3, invocations);
+        Assert.Equal(120, tokens);
+
+        // The global dashboard fan-out is resilient too.
+        var dashResp = await client.GetAsync("/api/dashboard");
+        Assert.Equal(HttpStatusCode.OK, dashResp.StatusCode);
+    }
 }

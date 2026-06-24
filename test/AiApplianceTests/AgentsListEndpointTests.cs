@@ -42,5 +42,6 @@ public class AgentsListEndpointTests(ITestOutputHelper output) : ApplianceMetric
         Assert.Equal(2, agent.GetProperty("invocations").GetInt64());          // two conversations
         Assert.Equal("gpt-4o-mini", agent.GetProperty("model").GetString());   // from the connection string
         Assert.Equal(JsonValueKind.String, agent.GetProperty("lastInvokedAt").ValueKind); // present
+        Assert.EndsWith("Z\"", agent.GetProperty("lastInvokedAt").GetRawText()); // I1: UTC, ISO-8601 with Z
     }
 }

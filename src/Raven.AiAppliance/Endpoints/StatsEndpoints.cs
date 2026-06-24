@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Metrics;
@@ -111,33 +112,41 @@ public static class StatsEndpoints
 
     private static async Task<IResult> GetDashboardAsync(
         IDocumentStore store,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var dashboard = await MetricsReadService.GetDashboardStatsAsync(store, DateTime.UtcNow, ct);
+        var dashboard = await MetricsReadService.GetDashboardStatsAsync(
+            store, DateTime.UtcNow, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(dashboard);
     }
 
     private static async Task<IResult> GetUsageAsync(
         IDocumentStore store,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var usage = await MetricsReadService.GetUsageAsync(store, DateTime.UtcNow, ct);
+        var usage = await MetricsReadService.GetUsageAsync(
+            store, DateTime.UtcNow, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(usage);
     }
 
     private static async Task<IResult> GetTokensByAppAsync(
         IDocumentStore store,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var byApp = await MetricsReadService.GetTokensByAppAsync(store, ct);
+        var byApp = await MetricsReadService.GetTokensByAppAsync(
+            store, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(byApp);
     }
 
     private static async Task<IResult> GetDashboardAppsAsync(
         IDocumentStore store,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var apps = await MetricsReadService.GetDashboardAppsAsync(store, ct);
+        var apps = await MetricsReadService.GetDashboardAppsAsync(
+            store, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(apps);
     }
 
