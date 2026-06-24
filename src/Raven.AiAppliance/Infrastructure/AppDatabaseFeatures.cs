@@ -1,4 +1,5 @@
 using Raven.AiAppliance.Channels;
+using Raven.AiAppliance.Metrics;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Revisions;
@@ -28,10 +29,16 @@ internal static class AppDatabaseFeatures
 {
     private const int MinimumRevisionsToKeep = 10;
 
-    /// <summary>Per-app DB: Expiration + Revisions on the EmbedLinks collection.</summary>
+    /// <summary>Per-app DB: Expiration + Revisions on the EmbedLinks collection,
+    /// plus the dashboard metric indexes.</summary>
     public static async Task ConfigureAsync(IDocumentStore store, string database, CancellationToken ct)
     {
         await EnableExpirationAsync(store, database, ct);
+
+        // Dashboard stats read from these indexes; deploy at provision so the
+        // stats endpoints never hit a missing-index error on a real app.
+        // PutIndexesOperation (called by ExecuteAsync) compares definition hashes — no rebuild if unchanged.
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: database, token: ct);
 
         // The collection name is derived from the CLR type (EmbedLink -> "EmbedLinks"),
         // NOT the lowercase "embed-links/" doc-id prefix — keying the config on the
