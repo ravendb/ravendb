@@ -9,6 +9,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { ChannelActiveLinks } from "@/pages/apps/channels/channel-active-links";
+import { EmbedLinkApiDocs } from "@/pages/apps/channels/embed-link-api-docs";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { SectionCard } from "@/pages/apps/section-card";
 
@@ -67,24 +68,31 @@ export function AppChannelDetail() {
                             </div>
 
                             {isIFrame ? (
-                                <SectionCard
-                                    title="Active links"
-                                    action={
-                                        <GenerateEmbedLinkDialog
-                                            slug={slug}
-                                            agentId={channel.agentId}
-                                            displayName={channel.displayName}
-                                            parameterNames={agent?.parameters ?? []}
-                                            trigger={
-                                                <Button size="sm" variant="outline" disabled={!channel.enabled}>
-                                                    Generate link
-                                                </Button>
-                                            }
-                                        />
-                                    }
-                                >
-                                    <ChannelActiveLinks slug={slug} widgetId={channel.widgetId} />
-                                </SectionCard>
+                                <>
+                                    <EmbedLinkApiDocs
+                                        slug={slug}
+                                        agentId={channel.agentId}
+                                        parameterNames={agent?.parameters ?? []}
+                                    />
+                                    <SectionCard
+                                        title="Active links"
+                                        action={
+                                            <GenerateEmbedLinkDialog
+                                                slug={slug}
+                                                agentId={channel.agentId}
+                                                displayName={channel.displayName}
+                                                parameterNames={agent?.parameters ?? []}
+                                                trigger={
+                                                    <Button size="sm" variant="outline" disabled={!channel.enabled}>
+                                                        Generate link
+                                                    </Button>
+                                                }
+                                            />
+                                        }
+                                    >
+                                        <ChannelActiveLinks slug={slug} widgetId={channel.widgetId} />
+                                    </SectionCard>
+                                </>
                             ) : (
                                 <Alert>Embed links apply to web widget channels only.</Alert>
                             )}

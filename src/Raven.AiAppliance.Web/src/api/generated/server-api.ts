@@ -705,7 +705,8 @@ export interface components {
         JsonElement: unknown;
         LoginRequest: {
             apiKey: string;
-        };        MapRequest: {
+        };
+        MapRequest: {
             /** Format: int64 */
             taskId?: null | number;
             disabled?: null | boolean;

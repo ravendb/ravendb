@@ -1,0 +1,121 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { CopyableCode } from "@/components/data/copyable-code";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
+import {
+    buildMintEmbedLinkUrl,
+    DEFAULT_MAX_INVOCATIONS,
+    DEFAULT_TTL_SECONDS,
+    MAX_INVOCATIONS,
+    MAX_TTL_SECONDS,
+    MIN_INVOCATIONS,
+    MIN_TTL_SECONDS,
+} from "@/pages/apps/channels/embed-link-utils";
+import { InlineCode } from "@/components/data/inline-code";
+
+const OPEN_STORAGE_KEY = "quill-embed-api-docs-open";
+
+function readIsOpen() {
+    return localStorage.getItem(OPEN_STORAGE_KEY) !== "false";
+}
+
+type EmbedLinkApiDocsProps = {
+    slug: string;
+    agentId: string;
+    parameterNames: string[];
+};
+
+export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApiDocsProps) {
+    const hasParameters = parameterNames.length > 0;
+    const request = buildRequestSnippet(slug, agentId, parameterNames);
+
+    const [isOpen, setIsOpen] = useState(readIsOpen);
+
+    const onOpenChange = (open: boolean) => {
+        localStorage.setItem(OPEN_STORAGE_KEY, String(open));
+        setIsOpen(open);
+    };
+
+    const fields = [
+        { name: "agentId", description: "The agent this channel is bound to (already filled in)." },
+        {
+            name: "ttlSeconds",
+            description: `Link lifetime in seconds, ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} (default ${DEFAULT_TTL_SECONDS.toLocaleString()}).`,
+        },
+        {
+            name: "maxInvocations",
+            description: `Chats allowed before the link stops, ${MIN_INVOCATIONS}–${MAX_INVOCATIONS.toLocaleString()} (default ${DEFAULT_MAX_INVOCATIONS}).`,
+        },
+        ...(hasParameters
+            ? [
+                  {
+                      name: "parameters",
+                      description: `Values bound into the link for this agent (${parameterNames.join(", ")}); omitting a required one returns 400.`,
+                  },
+              ]
+            : []),
+    ];
+
+    return (
+        <Collapsible open={isOpen} onOpenChange={onOpenChange} className="rounded-md border bg-surface2 p-4">
+            <h2 className="text-sm font-semibold">
+                <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 rounded-sm text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none">
+                    Generate links via the API
+                    <ChevronDown
+                        className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+                        aria-hidden="true"
+                    />
+                </CollapsibleTrigger>
+            </h2>
+
+            <CollapsibleContent className="mt-4 grid gap-4">
+                <p className="text-sm text-muted-foreground">
+                    Mint links from your own backend by POSTing to the embed-links endpoint, authenticated with your
+                    operator key in the <InlineCode>X-Api-Key</InlineCode> header. The app and agent are already filled
+                    in below — swap in your <InlineCode>QUILL_API_KEY</InlineCode>
+                    {hasParameters ? " and the parameter values" : ""}.
+                </p>
+
+                <CopyableCode code={request} copyLabel="Copy API request" />
+
+                <dl className="grid gap-2 text-sm">
+                    {fields.map((field) => (
+                        <div key={field.name} className="grid gap-x-3 sm:grid-cols-[8rem_1fr]">
+                            <dt className="font-mono text-xs font-medium">{field.name}</dt>
+                            <dd className="text-muted-foreground">{field.description}</dd>
+                        </div>
+                    ))}
+                </dl>
+
+                <p className="text-xs text-muted-foreground">
+                    The response returns a <InlineCode>url</InlineCode> — use it as-is in an{" "}
+                    <InlineCode>&lt;iframe src&gt;</InlineCode>. It is served only on the public embed host.
+                </p>
+            </CollapsibleContent>
+        </Collapsible>
+    );
+}
+
+function buildRequestSnippet(slug: string, agentId: string, parameterNames: string[]) {
+    const body: Record<string, unknown> = {
+        agentId,
+        ttlSeconds: DEFAULT_TTL_SECONDS,
+        maxInvocations: DEFAULT_MAX_INVOCATIONS,
+    };
+    if (parameterNames.length > 0) {
+        body.parameters = Object.fromEntries(parameterNames.map((name) => [name, "<value>"]));
+    }
+
+    const indentedBody = JSON.stringify(body, null, 2)
+        .split("\n")
+        .map((line, index) => (index === 0 ? line : `  ${line}`))
+        .join("\n");
+
+    return [
+        "curl -X POST \\",
+        `  "${buildMintEmbedLinkUrl(slug)}" \\`,
+        `  -H "X-Api-Key: <your QUILL_API_KEY>" \\`,
+        `  -H "Content-Type: application/json" \\`,
+        `  -d '${indentedBody}'`,
+    ].join("\n");
+}

@@ -22,6 +22,13 @@ import {
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { EmbedLinkPreview } from "@/pages/apps/channels/embed-link-preview";
+import {
+    DEFAULT_MAX_INVOCATIONS,
+    MAX_INVOCATIONS,
+    MAX_TTL_SECONDS,
+    MIN_INVOCATIONS,
+    MIN_TTL_SECONDS,
+} from "@/pages/apps/channels/embed-link-utils";
 
 type GenerateEmbedLinkDialogProps = {
     slug: string;
@@ -33,13 +40,6 @@ type GenerateEmbedLinkDialogProps = {
     trigger: ReactNode;
 };
 
-// Server-enforced bounds (see the embed-links mint contract). Mirrored here so the
-// form surfaces range errors before the request rather than after a 400.
-const MIN_TTL_SECONDS = 60;
-const MAX_TTL_SECONDS = 2_592_000;
-const MIN_INVOCATIONS = 1;
-const MAX_INVOCATIONS = 1_000_000;
-const DEFAULT_MAX_INVOCATIONS = 100;
 const DEFAULT_TTL_PRESET = "3600";
 
 const ttlPresetSchema = z.enum(["3600", "14400", "86400", "604800", "custom"]);
