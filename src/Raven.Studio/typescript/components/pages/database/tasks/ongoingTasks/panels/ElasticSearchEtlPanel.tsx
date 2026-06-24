@@ -33,7 +33,7 @@ type ElasticSearchEtlPanelProps = EtlPanelBaseProps<OngoingTaskElasticSearchEtlI
 export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editElasticSearchEtl(data.shared.taskId)();
 
     const {
@@ -50,11 +50,6 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        databaseName,
-        "ElasticSearch",
-        data.shared.connectionStringName
-    );
 
     return (
         <RichPanel>
@@ -101,7 +96,8 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="ElasticSearch"
+                    databaseName={databaseName}
                 />
                 {data.shared.nodesUrls.map((nodeUrl) => (
                     <RichPanelDetailItem label="Node URL" key={nodeUrl}>

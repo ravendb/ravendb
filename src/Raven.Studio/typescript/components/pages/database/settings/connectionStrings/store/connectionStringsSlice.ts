@@ -5,23 +5,18 @@ import { Connection, StudioConnectionType } from "../connectionStringsTypes";
 import { RootState } from "components/store";
 import { ConnectionStringsUrlParameters } from "../ConnectionStrings";
 import {
-    mapElasticSearchConnectionsFromDto,
-    mapKafkaConnectionsFromDto,
-    mapOlapConnectionsFromDto,
-    mapRabbitMqConnectionsFromDto,
-    mapAzureQueueStorageConnectionsFromDto,
-    mapRavenConnectionsFromDto,
-    mapSqlConnectionsFromDto,
-    mapSnowflakeConnectionsFromDto,
-    mapAmazonSqsConnectionsFromDto,
-    mapAzureServiceBusConnectionsFromDto,
-    mapAiConnectionsFromDto,
+    mapAllConnectionsFromDto,
+    mapServerWideConnectionsFromDto,
+    ServerWideConnectionStringDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-export type ConnectionStringsViewContext = "connectionStrings" | "aiConnectionStrings" | "aiTask";
+export type ConnectionStringsViewContext =
+    | "connectionStrings"
+    | "aiConnectionStrings"
+    | "aiTask"
+    | "serverWideConnectionStrings";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
@@ -76,9 +71,8 @@ export const connectionStringsSlice = createSlice({
         connectionAdded: (state, { payload: connection }: PayloadAction<Connection>) => {
             const newConnection: Connection = {
                 ...connection,
-                usedByTasks: connection.usedByTasks ?? [],
+                usedBy: connection.usedBy ?? [],
             };
-
             state.connections[connection.type].push(newConnection);
         },
         connectionEdited: (state, { payload }: PayloadAction<{ oldName: string; newConnection: Connection }>) => {
@@ -99,47 +93,10 @@ export const connectionStringsSlice = createSlice({
     extraReducers: (builder) => {
         builder
             .addCase(fetchData.fulfilled, (state, { payload }) => {
-                const { connectionStringsDto, ongoingTasksDto } = payload;
-                const ongoingTasks = ongoingTasksDto.OngoingTasks;
+                const { connectionStringsDto } = payload;
+                const { urlParameters } = state;
 
-                const { connections, urlParameters } = state;
-
-                connections.Sql = mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings, ongoingTasks);
-                connections.Snowflake = mapSnowflakeConnectionsFromDto(
-                    connectionStringsDto.SnowflakeConnectionStrings,
-                    ongoingTasks
-                );
-                connections.Olap = mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings, ongoingTasks);
-
-                connections.Raven = mapRavenConnectionsFromDto(
-                    connectionStringsDto.RavenConnectionStrings,
-                    ongoingTasks
-                );
-                connections.ElasticSearch = mapElasticSearchConnectionsFromDto(
-                    connectionStringsDto.ElasticSearchConnectionStrings,
-                    ongoingTasks
-                );
-                connections.Kafka = mapKafkaConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.RabbitMQ = mapRabbitMqConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.AzureQueueStorage = mapAzureQueueStorageConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.AmazonSqs = mapAmazonSqsConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.AzureServiceBus = mapAzureServiceBusConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.Ai = mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings, ongoingTasks);
+                state.connections = mapAllConnectionsFromDto(connectionStringsDto);
                 state.loadStatus = "success";
 
                 if (payload.hasDatabaseAdminAccess && urlParameters.name && urlParameters.type) {
@@ -155,14 +112,38 @@ export const connectionStringsSlice = createSlice({
             })
             .addCase(fetchData.rejected, (state) => {
                 state.loadStatus = "failure";
+            })
+            .addCase(fetchServerWideData.fulfilled, (state, { payload }) => {
+                const { urlParameters } = state;
+
+                state.connections = mapServerWideConnectionsFromDto(payload.serverWideDto);
+                state.loadStatus = "success";
+
+                if (payload.hasOperatorAccess && urlParameters.name && urlParameters.type) {
+                    const foundConnection = state.connections?.[urlParameters.type]?.find(
+                        (x) => x?.name === urlParameters.name
+                    );
+
+                    state.initialEditConnection = foundConnection ?? null;
+                }
+            })
+            .addCase(fetchServerWideData.pending, (state) => {
+                state.loadStatus = "loading";
+            })
+            .addCase(fetchServerWideData.rejected, (state) => {
+                state.loadStatus = "failure";
             });
     },
 });
 
 interface FetchDataResult {
-    ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;
     connectionStringsDto: GetConnectionStringsResult;
     hasDatabaseAdminAccess: boolean;
+}
+
+interface FetchServerWideDataResult {
+    serverWideDto: ServerWideConnectionStringDto[];
+    hasOperatorAccess: boolean;
 }
 
 const fetchData = createAsyncThunk<
@@ -176,24 +157,33 @@ const fetchData = createAsyncThunk<
 
     const db = databaseSelectors.databaseByName(databaseName)(state);
 
-    const ongoingTasksDto = await services.tasksService.getOngoingTasks(
-        databaseName,
-        DatabaseUtils.getFirstLocation(db, state.cluster.localNodeTag)
-    );
     const connectionStringsDto = await services.tasksService.getConnectionStrings(db.name);
 
     const hasDatabaseAdminAccess = accessManagerSelectors.getHasDatabaseAdminAccess(state)(db.name);
 
     return {
-        ongoingTasksDto,
         connectionStringsDto,
         hasDatabaseAdminAccess,
     };
 });
 
+const fetchServerWideData = createAsyncThunk<FetchServerWideDataResult, void, { state: RootState }>(
+    connectionStringsSlice.name + "/fetchServerWideConnectionStrings",
+    async (_, { getState }) => {
+        const state = getState();
+
+        const { Results } = await services.tasksService.getServerWideConnectionStrings();
+
+        const hasOperatorAccess = accessManagerSelectors.isOperatorOrAbove(state);
+
+        return { serverWideDto: Results, hasOperatorAccess };
+    }
+);
+
 export const connectionStringsActions = {
     ...connectionStringsSlice.actions,
     fetchData,
+    fetchServerWideData,
 };
 
 export const connectionStringSelectors = {
@@ -202,4 +192,5 @@ export const connectionStringSelectors = {
     initialEditConnection: (store: RootState) => store.connectionStrings.initialEditConnection,
     isEmpty: (store: RootState) => _.isEqual(store.connectionStrings.connections, initialState.connections),
     viewContext: (store: RootState) => store.connectionStrings.viewContext,
+    isServerWide: (store: RootState) => store.connectionStrings.viewContext === "serverWideConnectionStrings",
 };

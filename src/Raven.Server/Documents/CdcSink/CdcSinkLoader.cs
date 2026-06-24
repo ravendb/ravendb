@@ -88,9 +88,18 @@ public class CdcSinkLoader : IDisposable
 
             foreach (var process in newProcesses)
             {
-                process.Start();
+                // Isolate per-process startup: a throw while starting one sink must not prevent
+                // the remaining sinks from starting on a database-record change.
+                try
+                {
+                    process.Start();
 
-                OnProcessAdded(process);
+                    OnProcessAdded(process);
+                }
+                catch (Exception e)
+                {
+                    LogConfigurationError(process.Configuration, new List<string> { $"Failed to start the CDC Sink process. Error: {e}" });
+                }
 
                 _uniqueConfigurationNames.Add(process.Configuration.Name);
             }
@@ -102,30 +111,44 @@ public class CdcSinkLoader : IDisposable
     {
         foreach (var config in configurations)
         {
-            var connectionStringNotFound = false;
+            CdcSinkProcess process;
 
-            if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
-                config.Initialize(sqlConnection);
-            else
-                connectionStringNotFound = true;
-
-            if (connectionStringNotFound)
+            // Isolate per-configuration handling: a failure while preparing one sink (e.g. an
+            // unsupported provider in CreateProcess, or a transient error reading process state)
+            // must not poison the remaining sinks on a database-record change. Alert and continue.
+            try
             {
-                LogConfigurationError(config,
-                    new List<string> { $"Connection string named '{config.ConnectionStringName}' was not found." });
+                var connectionStringNotFound = false;
 
+                if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
+                    config.Initialize(sqlConnection);
+                else
+                    connectionStringNotFound = true;
+
+                if (connectionStringNotFound)
+                {
+                    LogConfigurationError(config,
+                        new List<string> { $"Connection string named '{config.ConnectionStringName}' was not found." });
+
+                    continue;
+                }
+
+                if (ValidateConfiguration(config, uniqueNames) == false)
+                    continue;
+
+                var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
+                var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
+                if (whoseTaskIsIt != _serverStore.NodeTag)
+                    continue;
+
+                process = CreateProcess(config, _database);
+            }
+            catch (Exception e)
+            {
+                LogConfigurationError(config, new List<string> { $"Failed to create the CDC Sink process. Error: {e}" });
                 continue;
             }
 
-            if (ValidateConfiguration(config, uniqueNames) == false)
-                continue;
-
-            var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
-            var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
-            if (whoseTaskIsIt != _serverStore.NodeTag)
-                continue;
-
-            var process = CreateProcess(config, _database);
             if (process != null)
                 yield return process;
         }
@@ -136,7 +159,7 @@ public class CdcSinkLoader : IDisposable
         return configuration.Connection?.FactoryName switch
         {
             "Npgsql" => new PostgresCdcSinkProcess(configuration, database),
-            "System.Data.SqlClient" or "Microsoft.Data.SqlClient" => new SqlServerCdcSinkProcess(configuration, database),
+            "Microsoft.Data.SqlClient" => new SqlServerCdcSinkProcess(configuration, database),
             "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory" => new MySqlCdcSinkProcess(configuration, database),
             _ => throw new NotSupportedException($"CDC is not supported for provider '{configuration.Connection?.FactoryName}'")
         };

@@ -70,7 +70,7 @@ namespace SlowTests.Server.Documents.CdcSink
         // Schema Evolution Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_AddColumn_ProcessRecoversAndContinues()
         {
             using var store = GetDocumentStore();
@@ -104,7 +104,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("After", doc2.Name);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_RemoveColumn_ProcessRecoversAfterRetry()
         {
             using var store = GetDocumentStore();
@@ -166,7 +166,7 @@ namespace SlowTests.Server.Documents.CdcSink
         // Connection Failure Recovery Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task ConnectionFailure_RecoversAfterReplicationConnectionKilled()
         {
             using var store = GetDocumentStore(new Options
@@ -227,7 +227,7 @@ namespace SlowTests.Server.Documents.CdcSink
         // LSN Gap Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task LsnGap_DetectedWhenSlotRecreated()
         {
             using var store = GetDocumentStore();
@@ -301,7 +301,7 @@ namespace SlowTests.Server.Documents.CdcSink
         // Extended Schema Evolution Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_AddColumnAtEnd_NoInterruption()
         {
             using var store = GetDocumentStore();
@@ -337,7 +337,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Null(process?.FallbackTime);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_RemoveUnmappedColumn_NoInterruption()
         {
             using var store = GetDocumentStore();
@@ -373,7 +373,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Null(process?.FallbackTime);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_RemoveMappedColumn_EntersFallback()
         {
             using var store = GetDocumentStore();
@@ -424,7 +424,7 @@ namespace SlowTests.Server.Documents.CdcSink
             await errorTask.WaitAsync(TimeSpan.FromSeconds(15));
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_ChangeColumnType_ContinuesTransparently()
         {
             using var store = GetDocumentStore();
@@ -454,7 +454,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("After Type Change", doc2.Name);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_RenameColumn_EntersFallback()
         {
             using var store = GetDocumentStore();
@@ -484,7 +484,7 @@ namespace SlowTests.Server.Documents.CdcSink
             await errorTask.WaitAsync(TimeSpan.FromSeconds(15));
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_MultipleChanges_RecoversThroughAll()
         {
             using var store = GetDocumentStore();
@@ -535,7 +535,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Null(process?.FallbackTime);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task SchemaEvolution_AddAndRemoveSameCount()
         {
             using var store = GetDocumentStore();

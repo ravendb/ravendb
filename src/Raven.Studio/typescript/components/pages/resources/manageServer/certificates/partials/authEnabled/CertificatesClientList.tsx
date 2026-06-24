@@ -10,18 +10,27 @@ export default function CertificatesClientList() {
     const serverCertificateForCommunicationThumbprint = useAppSelector(
         certificatesSelectors.serverCertificateForCommunicationThumbprint
     );
+    const hasActiveFilter = useAppSelector(certificatesSelectors.hasActiveFilter);
 
     const allClientCertsCount = useAppSelector(certificatesSelectors.certificates).filter(
         (cert) =>
             !cert.Thumbprints.includes(serverCertificateThumbprint) &&
-            !cert.Thumbprints.includes(serverCertificateForCommunicationThumbprint)
+            !cert.Thumbprints.includes(serverCertificateForCommunicationThumbprint) &&
+            cert.Usage !== "SsoServer" &&
+            cert.Usage !== "SsoClient"
     ).length;
 
     const filteredCertificates = useAppSelector(certificatesSelectors.filteredCertificates).filter(
         (cert) =>
             !cert.Thumbprints.includes(serverCertificateThumbprint) &&
-            !cert.Thumbprints.includes(serverCertificateForCommunicationThumbprint)
+            !cert.Thumbprints.includes(serverCertificateForCommunicationThumbprint) &&
+            cert.Usage !== "SsoServer" &&
+            cert.Usage !== "SsoClient"
     );
+
+    if (hasActiveFilter && !filteredCertificates.length) {
+        return null;
+    }
 
     return (
         <div>

@@ -15,6 +15,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Logging;
@@ -34,6 +35,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private readonly List<CdcSinkDocumentOp> _ops;
     private readonly string _configurationName;
     private readonly string _lastLsn;
+    private readonly string _defaultSchema;
     private readonly Dictionary<string, CdcSinkTableLoadState> _tableLoadUpdates;
     private readonly PatchRequest _patchRequest;
     private readonly CdcSinkStatsScope _statsScope;
@@ -115,12 +117,14 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         CdcSinkStatsScope statsScope,
         CdcSinkProcessStatistics statistics,
         RavenLogger logger,
+        string defaultSchema = null,
         DocumentGrouper grouper = null)
     {
         _database = database;
         _ops = ops;
         _configurationName = configurationName;
         _lastLsn = lastLsn;
+        _defaultSchema = defaultSchema;
         _tableLoadUpdates = tableLoadUpdates;
         _patchRequest = patchRequest;
         _statsScope = statsScope;
@@ -133,42 +137,72 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         using var _ = _statistics?.NewBatch();
         int batchErrors = 0;
+        // Per-execution success count. The TxMerger can re-run ExecuteCmd (via
+        // RunEachOperationIndependently) when a merged batch fails, so the cumulative
+        // ProcessedSuccessfully field must NOT gate LSN advancement: otherwise a previous
+        // attempt's successes could advance the checkpoint on a re-run that produced only
+        // errors, skipping past the failed items (silent data gap).
+        int processedThisExecution = 0;
 
-        foreach (var (documentId, ops) in _grouper.GroupByDocumentId(_ops))
+        try
         {
-            try
+            foreach (var (documentId, ops) in _grouper.GroupByDocumentId(_ops))
             {
-                ProcessDocumentGroup(context, documentId, ops);
-                ProcessedSuccessfully += ops.Count;
-                _statistics?.ConsumeSuccess(ops.Count);
-                _statsScope?.RecordProcessedMessage();
+                try
+                {
+                    ProcessDocumentGroup(context, documentId, ops);
+                    processedThisExecution += ops.Count;
+                    ProcessedSuccessfully += ops.Count;
+                    _statistics?.ConsumeSuccess(ops.Count);
+                    _statsScope?.RecordProcessedMessage();
+                }
+                catch (Exception e) when (IsTolerablePerDocumentError(e))
+                {
+                    batchErrors++;
+
+                    if (_logger?.IsErrorEnabled == true)
+                        _logger.Error($"Failed to process CDC operations for document '{documentId}'.", e);
+
+                    _statsScope?.RecordScriptProcessingError();
+
+                    // RecordPartialConsumeError tracks cumulative error/success counts and throws
+                    // InvalidOperationException when the error ratio is too high (>=100 errors AND
+                    // errors > successes), preventing LSN advancement for a poisoned stream.
+                    _statistics?.RecordPartialConsumeError(e.ToString(), documentId);
+                }
             }
-            catch (Exception e)
+
+            if (batchErrors == 0 || processedThisExecution > 0)
             {
-                batchErrors++;
-
-                if (_logger?.IsErrorEnabled == true)
-                    _logger.Error($"Failed to process CDC operations for document '{documentId}'.", e);
-
-                _statsScope?.RecordScriptProcessingError();
-
-                // RecordPartialConsumeError tracks cumulative error/success counts and throws
-                // InvalidOperationException when the error ratio is too high (>=100 errors AND
-                // errors > successes), preventing LSN advancement for a poisoned stream.
-                _statistics?.RecordPartialConsumeError(e.ToString(), documentId);
+                // Advance LSN only when THIS execution made progress: either the entire batch
+                // succeeded, or some items were processed successfully and the error ratio is
+                // still tolerable (if it weren't, RecordPartialConsumeError would have thrown above).
+                UpdateState(context);
             }
+
+            return _ops.Count;
         }
-
-        if (batchErrors == 0 || ProcessedSuccessfully > 0)
+        finally
         {
-            // Advance LSN only when the entire batch succeeded, or when some items
-            // were processed successfully and the error ratio is still tolerable
-            // (if it weren't tolerable, RecordPartialConsumeError would have thrown above).
-            UpdateState(context);
+            // Always clear so the grouper is reusable even if UpdateState (or any other
+            // statement above) throws and the TxMerger re-runs this command.
+            _grouper.Clear();
         }
+    }
 
-        _grouper.Clear();
-        return _ops.Count;
+    /// <summary>
+    /// Distinguishes an expected, deterministic per-document failure (script error, data-mapping
+    /// issue) - which we tolerate, alert on, and skip so the rest of the batch proceeds - from an
+    /// unexpected/systemic one. Unexpected failures (out of memory, disk full, cancellation) must
+    /// NOT be swallowed: swallowing them would let UpdateState advance the LSN past the dropped
+    /// group, silently losing those source rows. Letting them propagate fails the whole batch so
+    /// the TxMerger retries it without advancing the checkpoint.
+    /// </summary>
+    private static bool IsTolerablePerDocumentError(Exception e)
+    {
+        return e is OperationCanceledException == false &&
+               e.IsOutOfMemory() == false &&
+               e.IsRavenDiskFullException() == false;
     }
 
     /// <summary>
@@ -320,16 +354,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
         // If document is null and we have pending embeds, create a stub
         if (currentDoc == null && pendingEmbeds is { Count: > 0 })
-        {
-            var stub = new DynamicJsonValue
-            {
-                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.Collection] = collectionName,
-                }
-            };
-            currentDoc = context.ReadObject(stub, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
-        }
+            currentDoc = CreateDocumentStub(context, documentId, collectionName);
 
         currentDoc = FlushPendingEmbeds(context, documentId, currentDoc, pendingEmbeds, ref patches, includeOnDelete: true);
 
@@ -376,6 +401,22 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 DeleteAttachments(context, documentId, attachmentColumns, prefix);
             }
         }
+    }
+
+    /// <summary>
+    /// Creates an empty document with only the collection metadata set, so embedded-table ops can be
+    /// attached to a parent that does not exist yet in RavenDB.
+    /// </summary>
+    private static BlittableJsonReaderObject CreateDocumentStub(DocumentsOperationContext context, string documentId, string collectionName)
+    {
+        var stub = new DynamicJsonValue
+        {
+            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Collection] = collectionName,
+            }
+        };
+        return context.ReadObject(stub, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
     }
 
     private void StoreAttachments(
@@ -504,6 +545,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         if (pendingEmbeds == null || pendingEmbeds.Count == 0)
             return currentDoc;
+
+        // The parent document may not exist yet (e.g. a group like [EmbeddedModify, Delete] arrives
+        // for a root that was never created). Embedded ops navigate/mutate the parent, so create a
+        // collection stub to attach them to - without it, ApplyEmbeddedOperation would dereference a
+        // null document and throw NullReferenceException.
+        currentDoc ??= CreateDocumentStub(context, documentId, pendingEmbeds[0].Processor.CollectionName);
 
         // Fast path: single op, no batching overhead needed
         if (pendingEmbeds.Count == 1)
@@ -1181,23 +1228,35 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (candidateVal is int candidateInt)
                 return existingLong == candidateInt;
             if (candidateVal is double candidateDouble)
-                return existingLong == candidateDouble;
+                return IntegralDoubleEquals(candidateDouble, existingLong);
         }
 
         if (existingVal is double existingDouble)
         {
             if (candidateVal is double candDouble)
-                return existingDouble == candDouble;
+                return existingDouble.Equals(candDouble); // exact PK identity (no epsilon); .Equals avoids the == float-compare pitfall
             if (candidateVal is long candLong)
-                return existingDouble == candLong;
+                return IntegralDoubleEquals(existingDouble, candLong);
             if (candidateVal is int candInt)
-                return existingDouble == candInt;
+                return IntegralDoubleEquals(existingDouble, candInt);
         }
 
         if (existingVal is bool existingBool && candidateVal is bool candidateBool)
             return existingBool == candidateBool;
 
         return string.Equals(existingVal.ToString(), candidateVal.ToString(), stringComparison);
+    }
+
+    // Equal only when the double is finite, within long range, and has no fractional part (so it
+    // round-trips to the same integer). Primary-key identities require exact matching - NO epsilon,
+    // since two distinct-but-close keys must never collide - and a direct long==double comparison
+    // is lossy once |value| exceeds 2^53.
+    private static bool IntegralDoubleEquals(double d, long l)
+    {
+        if (double.IsFinite(d) == false || d < -9223372036854775808.0 || d >= 9223372036854775808.0)
+            return false;
+        var asLong = (long)d;
+        return asLong == d && asLong == l;
     }
 
     /// <summary>
@@ -1541,6 +1600,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             Ops = serializedOps,
             ConfigurationName = _configurationName,
             LastLsn = _lastLsn,
+            DefaultSchema = _defaultSchema,
             TableLoadUpdates = _tableLoadUpdates,
         };
     }
@@ -1567,6 +1627,13 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         public List<SerializedCdcSinkOp> Ops { get; set; }
         public string ConfigurationName { get; set; }
         public string LastLsn { get; set; }
+
+        /// <summary>
+        /// The provider default schema resolved when the batch was created, persisted so tx-log
+        /// replay can rebuild the document processor with the correct schema even when the live
+        /// process is gone (re-deriving from it would yield "" and mis-key the processors).
+        /// </summary>
+        public string DefaultSchema { get; set; }
         public Dictionary<string, CdcSinkTableLoadState> TableLoadUpdates { get; set; }
 
         public DocumentMergedTransactionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
@@ -1580,7 +1647,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     $"Cannot replay CDC Sink batch: configuration '{ConfigurationName}' was not found. " +
                     "It may have been deleted since the batch was originally executed.");
             var process = database.CdcSinkLoader.Processes.FirstOrDefault(p => string.Equals(p.Name, ConfigurationName, StringComparison.OrdinalIgnoreCase));
-            var defaultSchema = process?.DefaultSchema ?? "";
+            // Prefer the schema persisted in the Dto — during tx-log replay the live process may be
+            // gone, so re-deriving from it would yield "" and mis-key the rebuilt processors.
+            var defaultSchema = DefaultSchema ?? process?.DefaultSchema ?? "";
             var docProcessor = new CdcSinkDocumentProcessor(config, defaultSchema);
 
             var ops = new List<CdcSinkDocumentOp>(Ops.Count);
@@ -1628,7 +1697,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
             return new CdcSinkBatchCommand(database, ops, ConfigurationName, LastLsn,
                 tableLoadUpdates: TableLoadUpdates, patchRequest: docProcessor.CombinedPatchRequest,
-                statsScope: null, statistics: null, logger: null);
+                statsScope: null, statistics: null, logger: null, defaultSchema: defaultSchema);
         }
     }
 }

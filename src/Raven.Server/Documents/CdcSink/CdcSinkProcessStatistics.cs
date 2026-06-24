@@ -13,6 +13,13 @@ public class CdcSinkProcessStatistics
     private readonly string _processName;
     private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
+    // Mutated from both the process thread (RecordConsumeError) and the TxMerger thread
+    // (ConsumeSuccess / RecordPartialConsumeError / NewBatch). All mutations take this lock so the
+    // counters' compound threshold checks stay atomic and the error queues aren't corrupted by
+    // concurrent Enqueue/Clear. Cross-thread reads of the int/bool counters for monitoring are
+    // intentionally lock-free (atomic reads; a slightly stale value is acceptable there).
+    private readonly object _lock = new();
+
     public CdcSinkProcessStatistics(string processTag, string processName, AbstractDatabaseNotificationCenter notificationCenter)
     {
         _processTag = processTag;
@@ -38,49 +45,58 @@ public class CdcSinkProcessStatistics
 
     public void ConsumeSuccess(int items)
     {
-        WasLatestConsumeSuccessful = true;
-        ConsumeSuccesses += items;
+        lock (_lock)
+        {
+            WasLatestConsumeSuccessful = true;
+            ConsumeSuccesses += items;
+        }
     }
 
     public void RecordConsumeError(string error, int count = 1)
     {
-        WasLatestConsumeSuccessful = false;
+        lock (_lock)
+        {
+            WasLatestConsumeSuccessful = false;
 
-        ConsumeErrors += count;
+            ConsumeErrors += count;
 
-        ConsumeErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo(error));
+            ConsumeErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo(error));
 
-        LastConsumeErrorTime = SystemTime.UtcNow;
+            LastConsumeErrorTime = SystemTime.UtcNow;
 
-        if (ConsumeErrors <= ConsumeSuccesses)
-            return;
+            if (ConsumeErrors <= ConsumeSuccesses)
+                return;
 
-        var message = $"Consume error ratio is too high (errors: {ConsumeErrors}, successes: {ConsumeSuccesses}). " +
-                      "Could not tolerate consume error ratio and stopped current CDC Sink batch.";
+            var message = $"Consume error ratio is too high (errors: {ConsumeErrors}, successes: {ConsumeSuccesses}). " +
+                          "Could not tolerate consume error ratio and stopped current CDC Sink batch.";
 
-        CreateAlertIfAnyConsumeErrors(message);
+            CreateAlertIfAnyConsumeErrors(message);
 
-        throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {error}");
+            throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {error}");
+        }
     }
 
     public void RecordScriptExecutionError(Exception e)
     {
-        ScriptExecutionErrors++;
+        lock (_lock)
+        {
+            ScriptExecutionErrors++;
 
-        ScriptExecutionErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo(e.ToString()));
+            ScriptExecutionErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo(e.ToString()));
 
-        if (ScriptExecutionErrors < 100)
-            return;
+            if (ScriptExecutionErrors < 100)
+                return;
 
-        if (ScriptExecutionErrors <= ConsumeSuccesses)
-            return;
+            if (ScriptExecutionErrors <= ConsumeSuccesses)
+                return;
 
-        var message = $"Script execution error ratio is too high (errors: {ScriptExecutionErrors}, successes: {ConsumeSuccesses}). " +
-                      "Could not tolerate script execution error ratio and stopped current batch.";
+            var message = $"Script execution error ratio is too high (errors: {ScriptExecutionErrors}, successes: {ConsumeSuccesses}). " +
+                          "Could not tolerate script execution error ratio and stopped current batch.";
 
-        CreateAlertIfAnyScriptExecutionErrors(message);
+            CreateAlertIfAnyScriptExecutionErrors(message);
 
-        throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {e}");
+            throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {e}");
+        }
     }
 
     /// <summary>
@@ -91,26 +107,29 @@ public class CdcSinkProcessStatistics
     /// </summary>
     public void RecordPartialConsumeError(string error, string documentId)
     {
-        WasLatestConsumeSuccessful = false;
+        lock (_lock)
+        {
+            WasLatestConsumeSuccessful = false;
 
-        ConsumeErrors++;
+            ConsumeErrors++;
 
-        ConsumeErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo($"Document '{documentId}': {error}"));
+            ConsumeErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo($"Document '{documentId}': {error}"));
 
-        LastConsumeErrorTime = SystemTime.UtcNow;
+            LastConsumeErrorTime = SystemTime.UtcNow;
 
-        if (ConsumeErrors < 100)
-            return;
+            if (ConsumeErrors < 100)
+                return;
 
-        if (ConsumeErrors <= ConsumeSuccesses)
-            return;
+            if (ConsumeErrors <= ConsumeSuccesses)
+                return;
 
-        var message = $"Consume error ratio is too high (errors: {ConsumeErrors}, successes: {ConsumeSuccesses}). " +
-                      "Could not tolerate consume error ratio and stopped current CDC Sink batch.";
+            var message = $"Consume error ratio is too high (errors: {ConsumeErrors}, successes: {ConsumeSuccesses}). " +
+                          "Could not tolerate consume error ratio and stopped current CDC Sink batch.";
 
-        CreateAlertIfAnyConsumeErrors(message);
+            CreateAlertIfAnyConsumeErrors(message);
 
-        throw new InvalidOperationException($"{message}. Current stats: {this}. Document: '{documentId}'. Error: {error}");
+            throw new InvalidOperationException($"{message}. Current stats: {this}. Document: '{documentId}'. Error: {error}");
+        }
     }
 
     private void CreateAlertIfAnyConsumeErrors(string preMessage = null)
@@ -135,13 +154,19 @@ public class CdcSinkProcessStatistics
 
     public IDisposable NewBatch()
     {
-        ConsumeErrorsInCurrentBatch.Clear();
-        ScriptExecutionErrorsInCurrentBatch.Clear();
+        lock (_lock)
+        {
+            ConsumeErrorsInCurrentBatch.Clear();
+            ScriptExecutionErrorsInCurrentBatch.Clear();
+        }
 
         return new DisposableAction(() =>
         {
-            CreateAlertIfAnyConsumeErrors();
-            CreateAlertIfAnyScriptExecutionErrors();
+            lock (_lock)
+            {
+                CreateAlertIfAnyConsumeErrors();
+                CreateAlertIfAnyScriptExecutionErrors();
+            }
         });
     }
 }

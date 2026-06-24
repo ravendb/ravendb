@@ -35,7 +35,7 @@ type GenAiPanelProps = EtlPanelBaseProps<OngoingTaskGenAiInfo>;
 export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editGenAi(data.shared.taskId)();
 
     const {
@@ -52,7 +52,6 @@ export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScript
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Ai", data.shared.connectionStringName);
 
     const identifier = data.shared.identifier;
     const nextBatchStartingPoint = data.shared.nextBatchStartingPoint;
@@ -126,7 +125,8 @@ export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScript
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Ai"
+                    databaseName={databaseName}
                 />
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
                 <EtlPanelErrors

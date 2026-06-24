@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>RavenDB</Authors>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.9</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -28,16 +28,14 @@
     <Compile Include="..\Usings.Server.cs">
       <Link>Properties\Usings.Server.cs</Link>
     </Compile>
-    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_3.csv" />
-    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4.csv" />
-    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_0.csv" />
-    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_3.csv" />
-    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4_1_2.csv" />
-    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_5.csv" />
-    <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\types_query.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\version_query.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\version_current_setting_query.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\current_setting_query.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_type.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_proc.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_class.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_namespace.csv" />
+    <EmbeddedResource Include="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_range.csv" />
     <EmbeddedResource Include="Web\Assets\Unsafe.html" />
     <EmbeddedResource Include="Web\Assets\AuthError.html" />
     <EmbeddedResource Include="..\..\LICENSE.txt" Link="Commercial\RavenDB.license.txt" />
@@ -50,16 +48,14 @@
     <Compile Remove="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_3.csv" />
-    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4.csv" />
-    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_0.csv" />
-    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_3.csv" />
-    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_4_1_2.csv" />
-    <None Remove="Integrations\PostgreSQL\Npgsql\npgsql_types_5.csv" />
-    <None Remove="Integrations\PostgreSQL\Npgsql\types_query.csv" />
     <None Remove="Integrations\PostgreSQL\Npgsql\version_query.csv" />
     <None Remove="Integrations\PostgreSQL\Npgsql\version_current_setting_query.csv" />
     <None Remove="Integrations\PostgreSQL\Npgsql\current_setting_query.csv" />
+    <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_type.csv" />
+    <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_proc.csv" />
+    <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_class.csv" />
+    <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_namespace.csv" />
+    <None Remove="Integrations\PostgreSQL\VirtualCatalog\Tables\Data\pg_range.csv" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />
@@ -194,6 +190,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="Parquet.Net" />
+    <PackageReference Include="pgsqlparser" />
     <PackageReference Include="Polly" />
     <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="Raven.CodeAnalysis">

@@ -22,7 +22,7 @@ namespace Raven.Server.SqlMigration.MySQL
         public override string SelectReferentialConstraintsQuery { get; } =
             "SELECT CONSTRAINT_SCHEMA, UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, TABLE_NAME, REFERENCED_TABLE_NAME " +
             "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS " +
-            "WHERE UNIQUE_CONSTRAINT_SCHEMA = @schema ";
+            "WHERE CONSTRAINT_SCHEMA = @schema ";
 
         public override string SelectKeyColumnUsageQuery { get; } =
             "SELECT CONSTRAINT_SCHEMA, CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_COLUMN_NAME " +

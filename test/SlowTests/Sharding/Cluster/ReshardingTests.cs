@@ -614,13 +614,12 @@ namespace SlowTests.Sharding.Cluster
 
                 var id = $"users/1${suffix}";
                 var oldLocation = await Sharding.GetShardNumberForAsync(store, id);
-                var lastProcessedEtag = 0L;
 
                 var oldLocationShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
                 using (oldLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, lastProcessedEtag).ToList();
+                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
                     Assert.Equal(3, tombs.Count);
 
                     foreach (var tomb in tombs)
@@ -630,8 +629,6 @@ namespace SlowTests.Sharding.Cluster
                         Assert.NotNull(replicationItem);
                         Assert.False(replicationItem.Flags.Contain(DocumentFlags.Artificial));
                         Assert.False(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
-
-                        lastProcessedEtag = replicationItem.Etag;
                     }
                 }
 
@@ -646,14 +643,17 @@ namespace SlowTests.Sharding.Cluster
                 using (oldLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, lastProcessedEtag + 1).ToList();
-                    Assert.Equal(1, tombs.Count);
+                    var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
+                    Assert.Equal(4, tombs.Count);
 
-                    var replicationItem = tombs[0] as DocumentReplicationItem;
+                    foreach (var tomb in tombs)
+                    {
+                        var replicationItem = tomb as DocumentReplicationItem;
 
-                    Assert.NotNull(replicationItem);
-                    Assert.True(replicationItem.Flags.Contain(DocumentFlags.Artificial));
-                    Assert.True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
+                        Assert.NotNull(replicationItem);
+                        Assert.True(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                        Assert.True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
+                    }
                 }
 
                 var newLocation = await Sharding.GetShardNumberForAsync(store, id);
@@ -747,7 +747,7 @@ namespace SlowTests.Sharding.Cluster
                 using (context.OpenReadTransaction())
                 {
                     var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(context, lastProcessedEtag + 1).ToList();
-                    Assert.Equal(1, tombs.Count);
+                    Assert.Equal(4, tombs.Count);
 
                     var replicationItem = tombs[0] as DocumentReplicationItem;
 
@@ -784,6 +784,104 @@ namespace SlowTests.Sharding.Cluster
 
                 await Sharding.EnsureNoDatabaseChangeVectorLeakAsync(store.Database);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task BucketDeletionShouldMarkExistingRevisionAndAttachmentTombstonesAsArtificial()
+        {
+            // RavenDB-19197: pre-existing revision + attachment tombstones left in a bucket before it migrates
+            // must also be re-stamped Artificial|FromResharding during source cleanup (not just document
+            // tombstones) - MarkTombstonesAsArtificial routes each type to the table that owns its StorageId.
+            using (var store = Sharding.GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration { Disabled = false }
+                }));
+
+                const string suffix = "eu";
+                var id = $"users/1${suffix}";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "v1" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                // add an attachment, then create a few revisions
+                await using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Attachments.Store(id, "file.bin", stream);
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 2; i <= 4; i++)
+                {
+                    using var session = store.OpenAsyncSession();
+                    var user = await session.LoadAsync<User>(id);
+                    user.Name = $"v{i}";
+                    await session.SaveChangesAsync();
+                }
+
+                var oldLocation = await Sharding.GetShardNumberForAsync(store, id);
+                var bucket = await Sharding.GetBucketAsync(store, id);
+                var oldShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
+
+                // create the PRE-EXISTING non-document tombstones, BEFORE migration:
+                //   - delete the attachment -> plain attachment tombstone (null collection, Attachments.Tombstones)
+                //   - delete the revisions  -> plain revision tombstone(s) (Revisions.Tombstones)
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Attachments.Delete(id, "file.bin");
+                    await session.SaveChangesAsync();
+                }
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(id));
+
+                // sanity: before migration the bucket holds PLAIN (non-artificial) revision + attachment tombstones
+                var before = CountTombstonesByTypeAndFlag(oldShard, bucket);
+                Assert.True(before.plainAttachment > 0, $"expected a plain attachment tombstone before migration {before}");
+                Assert.True(before.plainRevision > 0, $"expected a plain revision tombstone before migration {before}");
+                Assert.Equal(0, before.artificialAttachment);
+                Assert.Equal(0, before.artificialRevision);
+
+                // migrate the bucket (the live doc moves; source cleanup runs MarkTombstonesAsArtificial)
+                await Sharding.Resharding.MoveShardForId(store, id);
+
+                // after migration: the pre-existing revision + attachment tombstones must be Artificial|FromResharding
+                var after = CountTombstonesByTypeAndFlag(oldShard, bucket);
+                Assert.Equal(0, after.plainAttachment);
+                Assert.Equal(0, after.plainRevision);
+                Assert.True(after.artificialAttachment > 0,
+                    $"RavenDB-19197: pre-existing attachment tombstone was not tagged Artificial|FromResharding after migration {after}.");
+                Assert.True(after.artificialRevision > 0,
+                    $"RavenDB-19197: pre-existing revision tombstone was not tagged Artificial|FromResharding after migration {after}.");
+            }
+        }
+
+        private static (int plainRevision, int artificialRevision, int plainAttachment, int artificialAttachment)
+            CountTombstonesByTypeAndFlag(DocumentDatabase db, int bucket)
+        {
+            var storage = (ShardedDocumentsStorage)db.DocumentsStorage;
+            int plainRevision = 0, artificialRevision = 0, plainAttachment = 0, artificialAttachment = 0;
+            using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var tomb in storage.RetrieveTombstonesByBucketFrom(context, bucket, 0))
+                {
+                    var artificial = tomb.Flags.Contain(DocumentFlags.Artificial) && tomb.Flags.Contain(DocumentFlags.FromResharding);
+                    switch (tomb.Type)
+                    {
+                        case Tombstone.TombstoneType.Revision:
+                            if (artificial) artificialRevision++; else plainRevision++;
+                            break;
+                        case Tombstone.TombstoneType.Attachment:
+                            if (artificial) artificialAttachment++; else plainAttachment++;
+                            break;
+                    }
+                }
+            }
+            return (plainRevision, artificialRevision, plainAttachment, artificialAttachment);
         }
 
         [RavenFact(RavenTestCategory.Sharding)]

@@ -21,6 +21,7 @@ using Raven.Server.Json;
 using Sparrow.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -44,6 +45,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
 
+    // Set when the process is stopped/disposed. HandleDatabaseRecordChange can dispose a process
+    // (disposing _cts) before swapping it out of the loader's _processes array, so an in-flight
+    // ongoing-tasks request may still call GetConnectionStatus() on it. Reading _cts.Token after
+    // disposal throws ObjectDisposedException - guard against that with this flag.
+    private readonly MultipleUseFlag _disposed = new MultipleUseFlag();
+
     protected readonly RavenLogger Logger;
 
     private CdcSinkStatsAggregator _lastStats;
@@ -65,6 +72,22 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected CancellationToken CancellationToken => _cts.Token;
 
+    /// <summary>
+    /// Reads the cancellation state without throwing if <see cref="_cts"/> has already been
+    /// disposed by a concurrent Stop/Dispose. A disposed token source is treated as cancelled.
+    /// </summary>
+    private bool IsCancellationRequestedSafe()
+    {
+        try
+        {
+            return _cts.IsCancellationRequested;
+        }
+        catch (ObjectDisposedException)
+        {
+            return true;
+        }
+    }
+
     public DocumentDatabase Database { get; }
 
     /// <summary>
@@ -84,6 +107,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// The last exception thrown by RunInternalAsync (null if the process hasn't failed).
     /// </summary>
     internal Exception LastProcessException { get; private set; }
+
+    /// <summary>
+    /// True once the process hit a permanent configuration/schema error (a <see cref="CdcSinkFaultedException"/>)
+    /// and stopped retrying. Correcting the configuration recreates the process, which clears this.
+    /// </summary>
+    public bool IsFaulted { get; private set; }
 
     public CdcSinkProcessStatistics Statistics { get; }
 
@@ -124,7 +153,10 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     public OngoingTaskConnectionStatus GetConnectionStatus()
     {
-        if (Configuration.Disabled || CancellationToken.IsCancellationRequested)
+        // The process may be disposed concurrently (reconfiguration) while still referenced by an
+        // in-flight ongoing-tasks request - reading CancellationToken (_cts.Token) after disposal
+        // would throw. Treat a disposed process as not active.
+        if (_disposed.IsRaised() || Configuration.Disabled || IsCancellationRequestedSafe())
             return OngoingTaskConnectionStatus.NotActive;
 
         if (FallbackTime != null)
@@ -163,29 +195,65 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     private async Task RunWithRetryAsync(CancellationToken ct)
     {
+        // Record which node owns this CDC Sink so the mentor-node resolution keeps it sticky to this
+        // node across topology changes. Once per start is enough - unlike ETL/QueueSink we don't persist
+        // progress in this state (the LSN/GTID checkpoint lives in the CdcSinkTaskState document), so
+        // there is nothing to refresh per batch.
+        await TryUpdateProcessStateForStickiness();
+
         while (true)
         {
+            // Reading the token (IsCancellationRequested / WaitHandle) can throw ObjectDisposedException
+            // if Stop/Dispose disposed _cts concurrently - treat that as a cancellation and exit.
             try
             {
                 if (ct.IsCancellationRequested)
                     return;
+
+                if (FallbackTime != null)
+                {
+                    if (ct.WaitHandle.WaitOne(FallbackTime.Value))
+                        return;
+
+                    FallbackTime = null;
+                }
             }
             catch (ObjectDisposedException)
             {
                 return;
             }
 
-            if (FallbackTime != null)
-            {
-                if (ct.WaitHandle.WaitOne(FallbackTime.Value))
-                    return;
-
-                FallbackTime = null;
-            }
-
             try
             {
                 await RunInternalAsync(ct);
+            }
+            catch (Exception e) when (IsPermanentFault(e))
+            {
+                // A permanent configuration/schema error (e.g. a configured table that doesn't resolve in the
+                // processor mapping). Retrying can't fix it, so move to a faulted state and STOP the loop instead
+                // of falling back and hammering the source forever. Correcting the configuration recreates the
+                // process (CdcSinkLoader.HandleDatabaseRecordChange) for a fresh, un-faulted start.
+                IsFaulted = true;
+                LastProcessException = e;
+
+                // Unlike the transient path below, a faulted process will not retry - so initial-load waiters
+                // must observe the failure here rather than hang forever.
+                _initialLoadTcs.TrySetException(e);
+                ProcessError?.Invoke(e);
+
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"[{Name}] CDC Sink process faulted; it will not retry until the configuration is corrected.", e);
+
+                Database.NotificationCenter.Add(AlertRaised.Create(
+                    Database.Name, Tag,
+                    $"[{Name}] CDC Sink process faulted (configuration error): {e.Message}",
+                    AlertReason.CdcSink_Error,
+                    NotificationSeverity.Error,
+                    key: $"{Tag}/{Name}",
+                    details: new ExceptionDetails(e)));
+
+                Statistics.RecordConsumeError(e.ToString());
+                return;
             }
             catch (OperationCanceledException)
             {
@@ -220,6 +288,46 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
     }
 
+    // A CdcSinkFaultedException anywhere in the exception chain marks a permanent configuration/schema error
+    // that retrying cannot fix; everything else is treated as transient and retried after fallback.
+    private static bool IsPermanentFault(Exception e)
+    {
+        for (var current = e; current != null; current = current.InnerException)
+        {
+            if (current is CdcSinkFaultedException)
+                return true;
+        }
+
+        return false;
+    }
+
+    // Records which node currently owns this CDC Sink so the mentor-node resolution keeps the task
+    // sticky to it (UpdateCdcSinkProcessStateCommand's apply rejects writes from a node that isn't the
+    // responsible one). Best-effort: a transient failure must not stop the task - on failover the new
+    // owner records its own state on start.
+    private async Task TryUpdateProcessStateForStickiness()
+    {
+        try
+        {
+            var state = new CdcSinkProcessState
+            {
+                ConfigurationName = Configuration.Name,
+                NodeTag = Database.ServerStore.NodeTag
+            };
+
+            var command = new UpdateCdcSinkProcessStateCommand(
+                Database.Name, state, Database.ServerStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
+
+            var (index, _) = await Database.ServerStore.SendToLeaderAsync(command);
+            await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
+        }
+        catch (Exception e)
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] Could not record CDC Sink process state for node stickiness; the task still runs. {e}");
+        }
+    }
+
     protected void AddPerformanceStats(CdcSinkStatsAggregator stats)
     {
         _lastStats = stats;
@@ -240,6 +348,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         _cts?.Dispose();
         _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
+        _disposed.Lower();
 
         // Callers should re-read the InitialLoadCompleted property after this Start() returns.
         _initialLoadTcs.TrySetCanceled();
@@ -279,7 +388,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             Logger.Info(msg);
         }
 
-        _cts.Cancel();
+        _cts.SafeCancel(Logger, $"{Tag} process '{Name}'");
 
         var longRunningWork = _longRunningWork;
         _longRunningWork = null;
@@ -287,6 +396,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         if (longRunningWork != PoolOfThreads.LongRunningWork.Current)
             longRunningWork.Join(int.MaxValue);
 
+        // Raise BEFORE disposing _cts so a concurrent GetConnectionStatus() sees the process as
+        // not-active rather than reading the disposed token source.
+        _disposed.Raise();
         _cts.Dispose();
     }
 
@@ -331,7 +443,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             tableLoadUpdates: tableLoadUpdates,
             patchRequest: DocumentProcessor.CombinedPatchRequest,
             statsScope: null, statistics: Statistics, logger: Logger,
-            grouper: grouper);
+            grouper: grouper, defaultSchema: DefaultSchema);
 
         var start = Stopwatch.GetTimestamp();
         await Database.TxMerger.Enqueue(command);
@@ -434,14 +546,24 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         int grouperIndex = 0;
         string lastCheckpoint = null;
 
-        // Context rotation: blittable objects created by ProcessRow reference the context's
-        // memory. We allocate a new context per batch so the previous one stays alive until
-        // the TxMerger finishes writing it.
+        // Context lifetime. Blittables produced by the decode (ProcessRow/DecodeRow inside
+        // GetCdcEvents) reference the memory of whatever context was StreamingJsonContext at decode
+        // time; they live on in `pending`/`batch` until the TxMerger finishes writing the batch they
+        // end up in. We therefore allocate a fresh streaming context (rotate) ONLY at points where
+        // the current context has no live reference that would outlive the rotation:
+        //   * no row is being decoded right now - a MoveNextAsync in flight (the Task.WhenAny flush
+        //     path) is actively writing into the current context, and
+        //   * `pending` is empty - uncommitted ops still reference the current context and will be
+        //     submitted in a later batch.
+        // When either holds we keep the same context and defer the rotation to the next safe flush.
+        // A retired context (previousCtx) backs every batch submitted since the last rotation; since
+        // batches are awaited in submit order, it is safe to dispose once the most recent batch that
+        // used it (lastBatch) has completed - which is exactly the next FlushBatch's `await lastBatch`.
         IDisposable previousCtx = null;
         var currentCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
         StreamingJsonContext = ctx;
 
-        async Task FlushBatch()
+        async Task FlushBatch(bool decodeInFlight)
         {
             (string completedCheckpoint, int rows) = await lastBatch;
             if (completedCheckpoint is not null)
@@ -456,25 +578,38 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 lastBatchOps = null;
             }
 
-            // Rotate context: previous batch's blittables stay alive in previousCtx
-            // until the next FlushBatch call disposes it after awaiting lastBatch.
-            // Safe to dispose the context, since we just awaited on the previous batch's completion that used it
-            previousCtx?.Dispose();
-            previousCtx = currentCtx;
-            currentCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out ctx);
-            StreamingJsonContext = ctx;
-
-            if (batch.Count is 0)
+            // previousCtx (if any) backed batches that are all guaranteed complete now - we just
+            // awaited the most recent one - and it is never the live StreamingJsonContext, so it is
+            // safe to dispose. Null it out so a deferred rotation doesn't double-dispose.
+            if (previousCtx != null)
             {
-                // drop  reference to the last batch, in case it holds any resources / memory
-                lastBatch = emptyTask;
-                return;
+                previousCtx.Dispose();
+                previousCtx = null;
             }
 
-            lastBatchOps = batch;
-            lastBatch = SubmitBatch(batch, lastCheckpoint, grouper: groupers[grouperIndex]);
-            grouperIndex ^= 1; // alternate between the two groupers
-            batch = [];
+            if (batch.Count is not 0)
+            {
+                lastBatchOps = batch;
+                lastBatch = SubmitBatch(batch, lastCheckpoint, grouper: groupers[grouperIndex]);
+                grouperIndex ^= 1; // alternate between the two groupers
+                batch = [];
+            }
+            else
+            {
+                // drop reference to the last batch, in case it holds any resources / memory
+                lastBatch = emptyTask;
+            }
+
+            // Rotate only when the current context has no reference that would outlive it: no decode
+            // is mid-flight and no uncommitted ops remain. Otherwise keep it and rotate at the next
+            // safe flush; the just-submitted batch then shares the context with that deferred work,
+            // and the context is retired (and later disposed) only once we can prove no one reads it.
+            if (decodeInFlight == false && pending.Count == 0)
+            {
+                previousCtx = currentCtx;
+                currentCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out ctx);
+                StreamingJsonContext = ctx;
+            }
         }
 
         try
@@ -492,32 +627,45 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 {
                     var moveTask = moveNext.AsTask();
 
-                    // Race: wait for either the next event or the previous batch to complete.
-                    // This allows flushing accumulated ops while the source is idle or slow.
-                    await Task.WhenAny(moveTask, lastBatch);
-
-                    if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
-                        await FlushBatch();
-
-                    if (moveTask.IsCompleted == false)
+                    try
                     {
-                        // Source is idle — clear array contents immediately to release
-                        // references for GC, but keep the arrays in the pool for reuse.
-                        DocumentProcessor.ClearValuePoolArrays();
+                        // Race: wait for either the next event or the previous batch to complete.
+                        // This allows flushing accumulated ops while the source is idle or slow.
+                        await Task.WhenAny(moveTask, lastBatch);
 
-                        // If still idle after 1 minute, release the pooled arrays entirely.
-                        var completed = await moveTask.WaitFor(TimeSpan.FromMinutes(1), ct);
-                        if (completed != moveTask)
-                            DocumentProcessor.ClearValuePools();
+                        // A decode (moveTask) is in flight here writing into StreamingJsonContext,
+                        // so FlushBatch must NOT rotate/free that context out from under it.
+                        if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
+                            await FlushBatch(decodeInFlight: true);
+
+                        if (moveTask.IsCompleted == false)
+                        {
+                            // Source is idle - clear array contents immediately to release
+                            // references for GC, but keep the arrays in the pool for reuse.
+                            DocumentProcessor.ClearValuePoolArrays();
+
+                            // If still idle after 1 minute, release the pooled arrays entirely.
+                            var completed = await moveTask.WaitFor(TimeSpan.FromMinutes(1), ct);
+                            if (completed != moveTask)
+                                DocumentProcessor.ClearValuePools();
+                        }
+
+                        moveNextResult = await moveTask;
                     }
-
-                    moveNextResult = await moveTask;
+                    catch
+                    {
+                        // The decode may still be running (e.g. FlushBatch above threw). Drain it
+                        // before unwinding so the async enumerator can be disposed and so the
+                        // streaming context is never freed while a decode is still writing into it.
+                        await DrainSafely(moveTask);
+                        throw;
+                    }
                 }
                 else
                 {
                     moveNextResult = await moveNext;
                 }
-                
+
                 if (moveNextResult is false)
                     break; // enumerator is completed (cancelled, probably)
 
@@ -536,14 +684,23 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                         lastCheckpoint = evt.Checkpoint;
                         break;
                 }
+
+                // Bound memory: when events arrive fast enough that MoveNextAsync keeps completing
+                // synchronously, the Task.WhenAny flush path above is skipped, so `batch` would grow
+                // without bound until the source goes idle. Flush completed transactions here once the
+                // batch reaches the size limit. (A single transaction is never split; this only bounds
+                // cross-transaction accumulation. This is also a race-free flush point - no decode is
+                // in flight here, unlike the WhenAny path.)
+                if (ShouldFlushBatch(batch.Count))
+                    await FlushBatch(decodeInFlight: false);
             }
 
             if (pending.Count > 0 && Logger.IsDebugEnabled)
                 Logger.Debug($"[{Name}] Discarding {pending.Count} pending op(s) from incomplete transaction at stream end.");
 
             // Stream ended — flush remaining ops, then wait for the final batch to complete
-            await FlushBatch();
-            (string finalCheckpoint, int rows) = await lastBatch;
+            await FlushBatch(decodeInFlight: false);
+            (string finalCheckpoint, int _) = await lastBatch;
             if (lastBatchOps != null)
             {
                 DocumentProcessor.ReturnBatchValues(lastBatchOps);
@@ -554,9 +711,33 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
         finally
         {
+            // The in-flight TxMerger batch reads previousCtx/currentCtx; wait for it to finish
+            // before freeing them so the exception/cancellation path never disposes a context that
+            // is still being written. (Any in-flight decode was already drained inside the loop.)
+            await DrainSafely(lastBatch);
+
             previousCtx?.Dispose();
             currentCtx?.Dispose();
             StreamingJsonContext = null;
+        }
+    }
+
+    /// <summary>
+    /// Awaits a possibly-in-flight task, swallowing any fault/cancellation. Used on disposal/teardown
+    /// paths to ensure a batch or decode has finished touching a context before it is freed, without
+    /// masking the exception that triggered the teardown.
+    /// </summary>
+    private static async Task DrainSafely(Task task)
+    {
+        if (task is null)
+            return;
+        try
+        {
+            await task;
+        }
+        catch
+        {
+            // The task already faulted or was cancelled; disposal must still proceed.
         }
     }
 
@@ -610,7 +791,14 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// </summary>
     protected abstract object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo);
 
-    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context)> ReadOneBatch(
+    /// <summary>
+    /// Result of a single initial-load batch read: the decoded ops, the keyset-pagination resume
+    /// keys, and the context whose memory the ops' blittables reference (the caller disposes it once
+    /// the batch has been written).
+    /// </summary>
+    private readonly record struct InitialLoadBatch(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context);
+
+    private async Task<InitialLoadBatch> ReadOneBatch(
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
         string[] lastKeys, int maxBatchSize, CancellationToken ct)
     {
@@ -629,54 +817,79 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         // is responsible for disposing it after the batch has been processed.
         var ctxHolder = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
 
-        var ops = new List<CdcSinkDocumentOp>();
-        var processor = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
-
-        // On first batch for this table, set source column names from the reader if not already set
-        bool columnNamesSet = processor.SourceColumnNames != null;
-
-        while (await reader.ReadAsync(ct))
+        try
         {
-            if (columnNamesSet == false)
+            var ops = new List<CdcSinkDocumentOp>();
+            CdcSinkTableProcessor processor;
+            try
             {
-                var columnNames = new string[reader.FieldCount];
+                processor = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
+            }
+            catch (InvalidOperationException e)
+            {
+                // A configured table that doesn't resolve in the mapping is a permanent configuration error,
+                // not a transient failure - fault the process so it stops retrying until the config is fixed,
+                // rather than re-running the initial load forever against a mapping that can never match.
+                throw new CdcSinkFaultedException(
+                    $"Initial load cannot start for table '{tableInfo.Schema}.{tableInfo.TableName}': it does not resolve " +
+                    "in the task's table mapping. Fix the table configuration; the task will restart.", e);
+            }
+
+            // On first batch for this table, set source column names from the reader if not already set
+            bool columnNamesSet = processor.SourceColumnNames != null;
+
+            while (await reader.ReadAsync(ct))
+            {
+                if (columnNamesSet == false)
+                {
+                    var columnNames = new string[reader.FieldCount];
+                    for (int i = 0; i < reader.FieldCount; i++)
+                        columnNames[i] = reader.GetName(i);
+                    processor.SetSourceColumnNames(columnNames);
+                    columnNamesSet = true;
+                }
+                else
+                {
+                    string[] sourceColumnNames = processor.SourceColumnNames;
+                    if (sourceColumnNames != null && reader.FieldCount != sourceColumnNames.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"Column count mismatch for table {tableInfo.FullName}: " +
+                            $"expected {sourceColumnNames.Length} columns but SELECT * returned {reader.FieldCount}. " +
+                            "The table schema may have changed. The process will retry with updated column metadata.");
+                    }
+                }
+
+                var values = processor.RentValues();
                 for (int i = 0; i < reader.FieldCount; i++)
-                    columnNames[i] = reader.GetName(i);
-                processor.SetSourceColumnNames(columnNames);
-                columnNamesSet = true;
-            }
-            else if (reader.FieldCount != processor.SourceColumnNames.Length)
-            {
-                throw new InvalidOperationException(
-                    $"Column count mismatch for table {tableInfo.FullName}: " +
-                    $"expected {processor.SourceColumnNames.Length} columns but SELECT * returned {reader.FieldCount}. " +
-                    "The table schema may have changed. The process will retry with updated column metadata.");
+                {
+                    values[i] = reader.IsDBNull(i) ? null : ConvertInitialLoadValue(reader, i, tableInfo);
+                }
+
+                ops.Add(DocumentProcessor.ProcessRow(processor, CdcSinkOperation.Upsert, values, jsonParsingCtx));
             }
 
-            var values = processor.RentValues();
-            for (int i = 0; i < reader.FieldCount; i++)
+            // Extract last keys from the last non-null op's RawValues for keyset pagination resume.
+            string[] newLastKeys = null;
+            for (int j = ops.Count - 1; j >= 0; j--)
             {
-                values[i] = reader.IsDBNull(i) ? null : ConvertInitialLoadValue(reader, i, tableInfo);
+                if (ops[j]?.RawValues == null)
+                    continue;
+                var lastValues = ops[j].RawValues;
+                var pkIndices = ops[j].Processor.PrimaryKeyIndices;
+                newLastKeys = new string[pkColumns.Count];
+                for (int i = 0; i < pkColumns.Count; i++)
+                    newLastKeys[i] = lastValues[pkIndices[i]]?.ToString() ?? "";
+                break;
             }
 
-            ops.Add(DocumentProcessor.ProcessRow(processor, CdcSinkOperation.Upsert, values, jsonParsingCtx));
+            return new InitialLoadBatch(ops, newLastKeys, ctxHolder);
         }
-
-        // Extract last keys from the last non-null op's RawValues for keyset pagination resume.
-        string[] newLastKeys = null;
-        for (int j = ops.Count - 1; j >= 0; j--)
+        catch
         {
-            if (ops[j]?.RawValues == null)
-                continue;
-            var lastValues = ops[j].RawValues;
-            var pkIndices = ops[j].Processor.PrimaryKeyIndices;
-            newLastKeys = new string[pkColumns.Count];
-            for (int i = 0; i < pkColumns.Count; i++)
-                newLastKeys[i] = lastValues[pkIndices[i]]?.ToString() ?? "";
-            break;
+            ctxHolder.Dispose();
+            throw;
         }
-
-        return (ops, newLastKeys, ctxHolder);
     }
 
 
@@ -790,7 +1003,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     if (lastBatchOps != null)
                     {
                         DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                        lastBatchOps = null;
                     }
                     previousBatchCtx?.Dispose();
                     previousBatchCtx = null;
@@ -825,6 +1037,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
         finally
         {
+            // The in-flight submitted batch reads previousBatchCtx; wait for it to finish before
+            // disposing so the exception/cancellation path never frees a context the TxMerger is
+            // still writing. (The initial-load decode in ReadOneBatch is fully awaited before each
+            // submit, so unlike the streaming loop there is never a decode in flight here.)
+            await DrainSafely(lastBatch);
             previousBatchCtx?.Dispose();
             currentBatchCtx?.Dispose();
         }
@@ -879,6 +1096,10 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     public virtual void Dispose()
     {
+        // Mark disposed up front so a concurrent GetConnectionStatus() bails out before touching _cts,
+        // even on the never-started path where Stop() returns early but _cts is still disposed below.
+        _disposed.Raise();
+
         var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
 
         exceptionAggregator.Execute(() => Stop("Dispose"));

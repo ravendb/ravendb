@@ -82,6 +82,10 @@ export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSink
         handleSubmit();
     }, [path]);
 
+    if (!table) {
+        return null;
+    }
+
     return (
         <ViewSheet className="h-100">
             <InnerForm onSubmit={handleSubmit} className="vstack h-100">

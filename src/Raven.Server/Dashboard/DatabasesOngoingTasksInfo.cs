@@ -82,7 +82,8 @@ namespace Raven.Server.Dashboard
                 [nameof(AzureServiceBusSinkCount)] = AzureServiceBusSinkCount,
                 [nameof(SnowflakeEtlCount)] = SnowflakeEtlCount,
                 [nameof(EmbeddingsGenerationCount)] = EmbeddingsGenerationCount,
-                [nameof(GenAiCount)] = GenAiCount
+                [nameof(GenAiCount)] = GenAiCount,
+                [nameof(CdcSinkCount)] = CdcSinkCount
             };
         }
     }

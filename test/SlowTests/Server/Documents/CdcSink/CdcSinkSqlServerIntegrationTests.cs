@@ -385,6 +385,71 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task InitialLoad_GuidPrimaryKey_GeneratesDocIdFromGuid()
+        {
+            // The initial load must derive document IDs from a non-serial primary key. A UNIQUEIDENTIFIER
+            // PK exercises the GUID->string doc-ID path (vs. the common INT IDENTITY case) - each row must
+            // map to "{Collection}/{guid}".
+            using var store = GetDocumentStore();
+            var schema = CreateTestSchema();
+
+            const string guid1 = "11111111-1111-1111-1111-111111111111";
+            const string guid2 = "22222222-2222-2222-2222-222222222222";
+
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].widgets (
+                    id   UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+                    name NVARCHAR(200) NOT NULL
+                )");
+
+            ExecuteMsSql($@"
+                INSERT INTO [{schema}].widgets (id, name) VALUES ('{guid1}', 'Alpha');
+                INSERT INTO [{schema}].widgets (id, name) VALUES ('{guid2}', 'Beta');");
+
+            EnableCdcOnTables((schema, "widgets"));
+
+            var sqlCs = SetupSqlConnectionString(store);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-guid-pk-initial-load",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Widgets",
+                        SourceTableSchema = schema,
+                        SourceTableName = "widgets",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var count = await WaitForDocumentCountAsync(store, "Widgets", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var docs = await session.Query<Item>(collectionName: "Widgets").ToListAsync();
+                Assert.Equal(2, docs.Count);
+
+                // The document ID is derived from the GUID primary key, not a synthetic sequence.
+                var ids = docs.Select(d => d.Id).ToList();
+                Assert.Contains(ids, id => string.Equals(id, $"Widgets/{guid1}", StringComparison.OrdinalIgnoreCase));
+                Assert.Contains(ids, id => string.Equals(id, $"Widgets/{guid2}", StringComparison.OrdinalIgnoreCase));
+                Assert.Equal("Alpha", docs.Single(d => string.Equals(d.Id, $"Widgets/{guid1}", StringComparison.OrdinalIgnoreCase)).Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task InitialLoad_WithColumnMapping()
         {
             using var store = GetDocumentStore();

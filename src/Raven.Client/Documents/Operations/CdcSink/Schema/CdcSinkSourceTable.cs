@@ -21,8 +21,14 @@ public class CdcSinkSourceTable : IDynamicJson
     /// </summary>
     public string SourceTableName { get; set; }
 
+    /// <summary>
+    /// Source columns of this table, in discovery order.
+    /// </summary>
     public List<CdcSinkSourceColumn> Columns { get; set; } = new();
 
+    /// <summary>
+    /// Names of the columns that make up this table's primary key.
+    /// </summary>
     public List<string> PrimaryKeyColumns { get; set; } = new();
 
     /// <summary>

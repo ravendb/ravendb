@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
         // --- Tests ---
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task InitialLoad_RootTable()
         {
             using var store = GetDocumentStore();
@@ -170,7 +170,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();
@@ -219,7 +219,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Widget", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task CdcStreaming_Update()
         {
             using var store = GetDocumentStore();
@@ -279,7 +279,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "archived", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task CdcStreaming_Delete()
         {
             using var store = GetDocumentStore();
@@ -337,7 +337,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, true, timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task JsonColumns_StoredAsNativeJsonObjects()
         {
             using var store = GetDocumentStore();
@@ -438,7 +438,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedArray()
         {
             using var store = GetDocumentStore();
@@ -533,7 +533,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task PatchWithDollarRow()
         {
             using var store = GetDocumentStore();
@@ -590,7 +590,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task PatchScript_ModifiesMappedData()
         {
             using var store = GetDocumentStore();
@@ -638,7 +638,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(120.00, doc.TotalPrice, 2);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task PatchOnDelete_RootTable_ArchivePattern()
         {
             using var store = GetDocumentStore();
@@ -711,7 +711,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task OnDelete_Root_ConditionalDelete()
         {
             // IgnoreDeletes + Patch with conditional del(): only delete sent orders
@@ -782,7 +782,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task PropertyRetention_OnUpdate()
         {
             // Verify that fields set directly in RavenDB are preserved when a CDC update arrives
@@ -853,7 +853,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task InitialLoad_WithColumnMapping()
         {
             using var store = GetDocumentStore();
@@ -905,7 +905,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task LinkedTable()
         {
             using var store = GetDocumentStore();
@@ -976,7 +976,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc2);
             Assert.Equal(123456789.01m, doc2.Total);
         }
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedPatch_OldRowData_DeltaComputation()
         {
             // Tests that $old is available in embedded patches for delta computations.
@@ -1089,7 +1089,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedArray_CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();
@@ -1177,7 +1177,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedArray_Delete()
         {
             using var store = GetDocumentStore();
@@ -1280,7 +1280,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedArray_Delete_NonCompositePK()
         {
             using var store = GetDocumentStore();
@@ -1378,7 +1378,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedArray_Update()
         {
             using var store = GetDocumentStore();
@@ -1484,7 +1484,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// CdcSinkProcess.CreateEmbeddedUpdateEvents must produce a Delete against the old
         /// parent and an Upsert against the new parent in the same transaction.
         /// </summary>
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedArray_Reparent_OnJoinColumnChange()
         {
             using var store = GetDocumentStore();
@@ -1586,7 +1586,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EmbeddedArray_AddAndRemoveInSameTransaction()
         {
             using var store = GetDocumentStore();
@@ -1685,7 +1685,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task PatchScript_CombinedRootAndEmbedded()
         {
             using var store = GetDocumentStore();
@@ -1777,7 +1777,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task PatchOnDelete_EmbeddedTable()
         {
             using var store = GetDocumentStore();
@@ -1871,7 +1871,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal(1, order.DeleteCount);
             }
         }
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task OnDelete_Root_IgnoreDeletesOnly_SilentIgnore()
         {
             using var store = GetDocumentStore();
@@ -1933,7 +1933,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task OnDelete_Root_PatchOnly_AuditThenDelete()
         {
             using var store = GetDocumentStore();
@@ -1992,7 +1992,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task OnDelete_Root_InsertThenDeleteInSameTransaction()
         {
             using var store = GetDocumentStore();
@@ -2050,7 +2050,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Null(item1);
             }
         }
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task OnDelete_Embedded_IgnoreDeletesOnly()
         {
             using var store = GetDocumentStore();
@@ -2152,7 +2152,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task OnDelete_Embedded_PatchAndIgnoreDeletes_Archive()
         {
             using var store = GetDocumentStore();
@@ -2249,7 +2249,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task Patch_AuditTrail_InsertUpdateDeleteInsertUpdate()
         {
             using var store = GetDocumentStore();
@@ -2346,7 +2346,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task BinaryColumn_RootAttachment()
         {
             using var store = GetDocumentStore();
@@ -2409,7 +2409,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task BinaryColumn_EmbeddedAttachment()
         {
             using var store = GetDocumentStore();
@@ -2508,7 +2508,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task DeleteAttachment_OnEmbeddedDelete()
         {
             using var store = GetDocumentStore();
@@ -2605,7 +2605,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task TextAndBinaryColumns_AsAttachments()
         {
             using var store = GetDocumentStore();
@@ -2706,7 +2706,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Updated article body after CDC streaming.", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task MetadataExpires_ViaPatch()
         {
             using var store = GetDocumentStore();
@@ -2761,7 +2761,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task ThreeWayNesting()
         {
             using var store = GetDocumentStore();
@@ -2933,7 +2933,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task ChildBeforeParent()
         {
             using var store = GetDocumentStore();
@@ -3024,7 +3024,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task MultipleUpdates_SameRow_SameTransaction()
         {
             using var store = GetDocumentStore();
@@ -3081,7 +3081,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 3, timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task Transaction_InsertUpdateDeleteInsert_SameRow()
         {
             using var store = GetDocumentStore();
@@ -3135,7 +3135,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Final", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task Transaction_MultipleDistinctRootDocuments()
         {
             using var store = GetDocumentStore();
@@ -3192,7 +3192,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task Transaction_MultipleRootAndEmbedded()
         {
             using var store = GetDocumentStore();
@@ -3286,7 +3286,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task UpdateParentAndEmbeddedTogether()
         {
             using var store = GetDocumentStore();
@@ -3407,7 +3407,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task EditTask_AddSecondTable_InitialLoadAndCdcWorkForBoth()
         {
             using var store = GetDocumentStore();
@@ -3554,7 +3554,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Alice Smith", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task ThreeWayNesting_WithPatches_InsertDeleteOrdering()
         {
             using var store = GetDocumentStore();
@@ -3708,7 +3708,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task TinyInt1_ProducesBooleanJsonType_FromBothInitialLoadAndStreaming()
         {
             using var store = GetDocumentStore();
@@ -3783,7 +3783,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task Bit1_StaysBoolean_FromBothPaths()
         {
             // Bug: MySQL BIT(1) is stored as a 1-bit value but MySqlConnector returns it
@@ -3866,7 +3866,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(false, active2);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task TinyInt1_FalseValue_RoundTripsFromStreaming()
         {
             using var store = GetDocumentStore();
@@ -3920,7 +3920,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(false, active);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task TinyInt1_NullStaysNull_FromStreaming()
         {
             using var store = GetDocumentStore();
@@ -3982,7 +3982,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Null(active2);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task TinyInt1_UpdateFromOneToZero_FlipsBool_FromStreaming()
         {
             using var store = GetDocumentStore();
@@ -4045,7 +4045,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(false, active);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task TinyInt4_StaysInteger_FromBothPaths()
         {
             // Regression guard: tinyint(N) where N != 1 is NOT a boolean. Its values must remain
@@ -4105,7 +4105,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task Smallint_StaysIntegerJsonType_FromBothPaths()
         {
             // Cross-provider Bug #3 regression smoke. MySqlConnector returns Int16 for SMALLINT,

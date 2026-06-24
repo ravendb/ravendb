@@ -210,9 +210,10 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have at least one column mapping");
 
             ValidatePrimaryKeyColumnsExist(embedded.SourceTableName, embedded.PrimaryKeyColumns, embedded.Columns, errors);
-            ValidateColumnsAndPropertyNames(embedded.SourceTableName, embedded.Columns, embedded.EmbeddedTables, linkedTables: null, errors);
+            ValidateColumnsAndPropertyNames(embedded.SourceTableName, embedded.Columns, embedded.EmbeddedTables, embedded.LinkedTables, errors);
 
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
+            ValidateLinkedTables(embedded.LinkedTables, embedded.SourceTableName, errors);
         }
     }
 
@@ -344,6 +345,17 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (config.Disabled != Disabled)
             differences |= CdcSinkConfigurationCompareDifferences.ConfigurationDisabled;
 
+        if (config.PinToMentorNode != PinToMentorNode)
+            differences |= CdcSinkConfigurationCompareDifferences.PinToMentorNode;
+
+        if (config.SkipInitialLoad != SkipInitialLoad)
+            differences |= CdcSinkConfigurationCompareDifferences.SkipInitialLoad;
+
+        // Publication/slot names are part of the runtime identity; a change must reset the process.
+        if (string.Equals(config.Postgres?.PublicationName, Postgres?.PublicationName, StringComparison.Ordinal) == false ||
+            string.Equals(config.Postgres?.SlotName, Postgres?.SlotName, StringComparison.Ordinal) == false)
+            differences |= CdcSinkConfigurationCompareDifferences.Postgres;
+
         return differences;
     }
 
@@ -428,6 +440,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
             if (HaveEmbeddedTablesChanged(l.EmbeddedTables, r.EmbeddedTables))
                 return true;
+
+            if (HaveLinkedTablesChanged(l.LinkedTables, r.LinkedTables))
+                return true;
         }
 
         return false;
@@ -445,14 +460,14 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         {
             tables.Add(new TableInfo
             {
-                Schema = table.SourceTableSchema ?? defaultSchema,
+                Schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema,
                 TableName = table.SourceTableName,
                 PrimaryKeyColumns = table.PrimaryKeyColumns,
             });
             ForEachEmbeddedTable(table.EmbeddedTables, e =>
                 tables.Add(new TableInfo
                 {
-                    Schema = e.SourceTableSchema ?? defaultSchema,
+                    Schema = string.IsNullOrEmpty(e.SourceTableSchema) ? defaultSchema : e.SourceTableSchema,
                     TableName = e.SourceTableName,
                     PrimaryKeyColumns = e.PrimaryKeyColumns,
                 }));
@@ -492,11 +507,14 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     private static bool HaveColumnsChanged(List<CdcColumnMapping> local, List<CdcColumnMapping> remote)
     {
-        if ((local?.Count ?? 0) != (remote?.Count ?? 0))
+        if (local == null && remote == null)
+            return false;
+
+        if (local == null || remote == null)
             return true;
 
-        if (local == null)
-            return false;
+        if (local.Count != remote.Count)
+            return true;
 
         var sortedLocal = local.OrderBy(x => x.Column, StringComparer.OrdinalIgnoreCase).ToList();
         var sortedRemote = remote.OrderBy(x => x.Column, StringComparer.OrdinalIgnoreCase).ToList();

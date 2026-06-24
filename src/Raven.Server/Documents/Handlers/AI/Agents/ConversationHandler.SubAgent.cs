@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
     {
         private readonly Dictionary<string, AiAgentActionRequest> _childUserCalls = [];
 
-        private async Task HandleSubAgentCalls(JsonOperationContext context, Dictionary<string, SubAgentActionResponse> subAgentsActions)
+        private async Task HandleSubAgentCallsAsync(JsonOperationContext context, Dictionary<string, SubAgentActionResponse> subAgentsActions, CancellationToken token)
         {
             if (subAgentsActions?.Count > 0 == false)
                 return;
@@ -32,11 +33,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             foreach (var (conversationId, subAgent) in subAgentsActions)
             {
                 var call = new AiToolCall(subAgent.ParentId /*Parent call*/, subAgent.Agent, Arguments: null);
-                var r = CreateAgentRequest(subAgent.Agent, conversationId, prompt: null, subAgent.Responses, creationOptions: new DynamicJsonValue());
+                var r = CreateAgentRequest(subAgent.Agent, conversationId, prompt: null, subAgent.Responses, creationOptions: new DynamicJsonValue(), _cancelPendingActionTools);
                 reqs.GetOrAdd(conversationId).Add((call, r));
             }
 
-            await ExecuteSubAgentAndQueryRequestsAsync(context, reqs);
+            await ExecuteSubAgentAndQueryRequestsAsync(context, reqs, token);
+
+            if (_cancelPendingActionTools)
+                return;
 
             if (_childUserCalls.Count > 0)
                 return;
@@ -48,7 +52,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 activeToolCalls.Add(call);
             }
 
-            await HandleQueryAndAgentCallsAsync(context, activeToolCalls);
+            await HandleQueryAndAgentCallsAsync(context, activeToolCalls, token);
         }
 
         private void BuildAgentRequest(JsonOperationContext context, ConversationDocument document, AiToolCall call, AiAgentToolSubAgent agent, Dictionary<string, List<(AiToolCall, DynamicJsonValue)>> reqs)
@@ -116,7 +120,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return context.ReadObject(callParameters, "call/params");
         }
 
-        protected virtual DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
+        protected virtual DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions, bool cancelPendingActionTools = false)
         {
             var queryStringBuilder = new StringBuilder("?")
                 .Append("&conversationId=").Append(Uri.EscapeDataString(conversationId))
@@ -125,6 +129,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             // Always propagate the parent's current debug state to the sub-agent so the child
             // doesn't keep `Debug=true` sticky once the parent flips it off.
             queryStringBuilder.Append($"&debug={_document.Debug}");
+
+            // When the parent is cancelling pending actions, propagate it so the sub-agent cancels
+            // its own still-open action calls (recursively across all nesting levels).
+            queryStringBuilder.Append($"&cancelPendingActionTools={cancelPendingActionTools}");
 
             var queryString = queryStringBuilder.ToString();
 

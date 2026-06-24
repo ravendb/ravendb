@@ -470,6 +470,10 @@ namespace Voron.Impl.Compaction
             var lastSlice = Slices.BeforeAllKeys;
             long lastFixedIndex = 0L;
 
+            // RavenDB-26217: rows already copied under 'lastSlice'. A non-unique secondary index can hold
+            // many rows per key, so on resume we skip exactly these instead of a constant 1.
+            long committedUnderLastSlice = 0L;
+
             Report(copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
             using (var txw = compactedEnv.WriteTransaction(context))
             {
@@ -501,11 +505,17 @@ namespace Voron.Impl.Compaction
                         {
                             // We have a variable size index, use it
 
-                            // In case we continue an existing compaction, skip to the next slice
-                            var skip = 0;
-                            // can't use SliceComparer.Compare here
+                            // On resume, skip the rows already copied under 'lastSlice'.
+                            var skip = 0L;
                             if (lastSlice.Options != Slices.BeforeAllKeys.Options)
-                                skip = 1;
+                                skip = committedUnderLastSlice;
+
+                            // Track the run of rows sharing the current secondary-index key so we can resume
+                            // exactly if the batch breaks mid-run. The allocator is reset on each key change.
+                            using var currentKeyAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
+                            var currentKey = lastSlice;
+                            var committedUnderCurrentKey = committedUnderLastSlice;
+                            var haveCurrentKey = lastSlice.Options != Slices.BeforeAllKeys.Options;
 
                             foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, skip))
                             {
@@ -514,13 +524,27 @@ namespace Voron.Impl.Compaction
                                 copiedEntries++;
                                 transactionSize += tvr.Result.Reader.Size;
 
+                                // Count rows under the current key (SliceComparer compares bytes; ByteString '==' is reference equality).
+                                if (haveCurrentKey && SliceComparer.AreEqual(currentKey, tvr.Key))
+                                {
+                                    committedUnderCurrentKey++;
+                                }
+                                else
+                                {
+                                    currentKeyAllocator.Reset();
+                                    currentKey = tvr.Key.Clone(currentKeyAllocator);
+                                    committedUnderCurrentKey = 1;
+                                    haveCurrentKey = true;
+                                }
+
                                 ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
 
-                                // The transaction has surpassed the allowed
-                                // size before a flush
-                                if (lastSlice.Equals(tvr.Key) == false && transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
+                                // Transaction surpassed the allowed size before a flush. Breaking mid-run is
+                                // safe: we record how many rows of this key were copied to resume past them.
+                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                                 {
                                     lastSlice = tvr.Key.Clone(lastSliceAllocator);
+                                    committedUnderLastSlice = committedUnderCurrentKey;
                                     break;
                                 }
                                 innerTxr.ForgetAbout(tvr.Result.Reader.Id);

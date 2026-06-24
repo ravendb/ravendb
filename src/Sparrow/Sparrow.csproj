@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFrameworks>net10.0;net8.0;netstandard2.1;netstandard2.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>$(NoWarn);SYSLIB5003</NoWarn> <!-- ARM SVE intrinsics are experimental in .NET 10 -->
     <AssemblyName>Sparrow</AssemblyName>
     <PackageId>Sparrow</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>

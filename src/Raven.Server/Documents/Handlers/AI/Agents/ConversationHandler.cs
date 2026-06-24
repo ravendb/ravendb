@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -51,10 +52,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private string _changeVector;
     private string _raftId;
     private bool? _debugOverride;
+    private bool _cancelPendingActionTools;
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
     public required RavenServer.AuthenticateConnection Authentication;
-    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null)
+    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null, bool cancelPendingActionTools = false)
     {
         _conversationId = conversationId;
         _request = body;
@@ -63,9 +65,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         _raftId = raftId;
         _debugOverride = debugOverride;
         _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
+        _cancelPendingActionTools = cancelPendingActionTools;
     }
 
-    protected virtual async Task InitializeDocument(DocumentsOperationContext context)
+    protected virtual async Task InitializeDocumentAsync(DocumentsOperationContext context, CancellationToken token)
     {
         var agentId = _configuration.Identifier;
 
@@ -103,7 +106,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             if (_document.InitialOperations(context, _configuration) is { } queries)
             {
                 // run initial tool calls...
-                await HandleQueryAndAgentCallsAsync(context, queries);
+                await HandleQueryAndAgentCallsAsync(context, queries, token);
             }
         }
         else
@@ -362,7 +365,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         JsonOperationContext context,
         string firstStreamPropertyPath,
         Func<Memory<byte>, Task> streaming,
-        CancellationToken token = default)
+        CancellationToken token)
     {
         using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath, streaming);
         return await RunInternalAsync(context, talker, token);
@@ -370,7 +373,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         
     public async Task<AiInternalConversationResult> TalkAsync(
         JsonOperationContext context,
-        CancellationToken token = default)
+        CancellationToken token)
     {
         using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath: null, streaming: null);
         return await RunInternalAsync(context, talker, token);
@@ -401,6 +404,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         {
             while (shouldContinueConversation)
             {
+                token.ThrowIfCancellationRequested();
+
                 var attachments = _request.Attachments ?? new List<AiAttachment>();
 
                 database.ForTestingPurposes?.BeforeAiAgentTalk?.Invoke(talker.Document);
@@ -446,7 +451,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
                 else
                 {
-                    var iterations = await HandleQueryAndAgentCallsAsync(context, r.ToolCalls);
+                    var iterations = await HandleQueryAndAgentCallsAsync(context, r.ToolCalls, token);
                     toolsIterations += iterations;
                     if (TryGetUserTools(context, r.ToolCalls))
                     {
@@ -455,7 +460,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     else
                     {
                         //should close the tool calls that were handled internally
-                        HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList());
+                        HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList(), token);
                     }
                 }
 
@@ -503,8 +508,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }, "user/attachments-msg"), usage: null); // usage: null
     }
 
-    private void HandleInternalSystemActions(JsonOperationContext context, List<AiAgentActionRequest> toolCalls)
+    private void HandleInternalSystemActions(JsonOperationContext context, List<AiAgentActionRequest> toolCalls, CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
+
         if (ConversationHandlerAttachments.NeedsReadTransactionForInternalActions(toolCalls) == false)
             return;
 
@@ -804,7 +811,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    public Task<int> HandleQueryAndAgentCallsAsync(JsonOperationContext context, List<AiToolCall> toolCalls)
+    public Task<int> HandleQueryAndAgentCallsAsync(JsonOperationContext context, List<AiToolCall> toolCalls, CancellationToken token)
     {
         if (toolCalls == null || toolCalls.Count == 0)
             return Task.FromResult(0);
@@ -826,7 +833,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (reqs.Count is 0)
             return Task.FromResult(0);
 
-        return ExecuteSubAgentAndQueryRequestsAsync(context, reqs);
+        return ExecuteSubAgentAndQueryRequestsAsync(context, reqs, token);
     }
 
     private static void RemoveNonEssentialFieldsFromMetadata(BlittableJsonReaderArray queryResult)
@@ -916,14 +923,35 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return database.DocumentsStorage.DocumentPut.BuildDocumentId(id, database.DocumentsStorage.GenerateNextEtag(), out _);
     }
 
-    private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
+    private async Task<bool> TryHandleActionResponsesAsync(JsonOperationContext context, CancellationToken token)
     {
+        if (_cancelPendingActionTools)
+        {
+            var cancelledActionResponses = new List<AiAgentActionResponse>();
+            foreach (var actionCall in _document.OpenActionCalls)
+            {
+                var id = actionCall.Key;
+                cancelledActionResponses.Add(new AiAgentActionResponse
+                {
+                    ToolId = id,
+                    Content = "This action was canceled by the user"
+                });
+            }
+
+            context.ReadObject(new DynamicJsonValue()
+                {
+                    ["array"] = new DynamicJsonArray(cancelledActionResponses.Select(x => x.ToJson()))
+                }, "ai-agent/action-responses")
+                .TryGet("array", out BlittableJsonReaderArray actionResponses);
+            _request.ActionResponses = actionResponses;
+        }
+
         var hasActionResponse = _request.ActionResponses is { Length: > 0 } ;
         var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) ||
                             _request.ArtificialActions is { Length: > 0 } || // equivalent to user prompt, since it is both tool & response in one shot
                             _request.Attachments is { Count: > 0 }; // Attachments-only request counts as enough "user input" (no text prompt required) to advance with the conversation.
 
-        if (hasActionResponse && hasUserPrompt)
+        if (hasActionResponse && hasUserPrompt && _cancelPendingActionTools == false)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' with open action calls and user prompt.");
 
         Dictionary<string, SubAgentActionResponse> subAgentsActions = null;
@@ -960,13 +988,18 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
                 else
                 {
-                    var childToolId = split[1];
-                    Debug.Assert(action.Type == AiAgentActionRequestType.SubAgent, "action.Type != AiAgentActionRequestType.SubAgent");
-
                     subAgentsActions ??= new Dictionary<string, SubAgentActionResponse>();
 
                     // Aggregate sub-agent responses per root tool call (one group per sub-agent call).
                     var subAgent = GetOrAddSubAgentsActionResponses(subAgentsActions, action, rootToolId); // get or add from subAgentsActions
+
+                    if (_cancelPendingActionTools)
+                    {
+                        continue;
+                    }
+
+                    var childToolId = split[1];
+                    Debug.Assert(action.Type == AiAgentActionRequestType.SubAgent, "action.Type != AiAgentActionRequestType.SubAgent");
 
                     subAgent.Responses.Add(new AiAgentActionResponse
                     {
@@ -976,7 +1009,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
             }
 
-            await HandleSubAgentCalls(context, subAgentsActions);
+            await HandleSubAgentCallsAsync(context, subAgentsActions, token);
         }
 
         if (_request.ArtificialActions != null)
@@ -1008,12 +1041,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     return false;
                 }
             }
-            HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList());
+            HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList(), token);
         }
 
         if (hasActionResponse == false && hasUserPrompt == false && _request.Attachments == null)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' without open action calls or user prompt.");
-
 
         if (RequestBody.HasUserPrompt(_request.Content))
         {
@@ -1036,13 +1068,13 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private async Task<int> ExecuteSubAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
+    private async Task<int> ExecuteSubAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs, CancellationToken token)
     {
         List<Task<SubConversationResult>> tasks = [];
         foreach (var (conversationId, conversationReqs) in reqs)
         {
             _document.SubConversationIds.Add(conversationId);
-            tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs));
+            tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs, token));
         }
 
         try
@@ -1107,7 +1139,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private async Task<SubConversationResult> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
+    private async Task<SubConversationResult> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests, CancellationToken token)
     {
         IDisposable disposable = null;
 
@@ -1117,7 +1149,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
             var result = new SubConversationResult(disposable);
 
-            await foreach (var (getRequestResult, i) in ExecuteMultiRequestsAsync(context, new DynamicJsonArray(requests.Select(x => x.Req))))
+            await foreach (var (getRequestResult, i) in ExecuteMultiRequestsAsync(context, new DynamicJsonArray(requests.Select(x => x.Req)), token))
             {
                 var currentCall = requests[i].Call;
                 var toolCall = FindToolFrom(_configuration, currentCall.Name);
@@ -1180,7 +1212,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequestsAsync(JsonOperationContext context, DynamicJsonArray reqs)
+    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequestsAsync(JsonOperationContext context, DynamicJsonArray reqs, [EnumeratorCancellation] CancellationToken token)
     {
         var multiGetHandler = new MultiGetHandler();
         multiGetHandler.Init(new RequestHandlerContext
@@ -1188,6 +1220,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             Database = database,
             RavenServer = server.Server,
             HttpContext = new DefaultHttpContext()
+            {
+                RequestAborted = token
+            }
         });
 
         multiGetHandler.HttpContext.Features.Set<IHttpAuthenticationFeature>(Authentication);
@@ -1196,6 +1231,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
         using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
+            token.ThrowIfCancellationRequested();
             await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
             memoryStream.Position = 0;
             using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
@@ -1220,29 +1256,29 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    public async Task<AiInternalConversationResult> HandleRequest(
+    public async Task<AiInternalConversationResult> HandleRequestAsync(
         DocumentsOperationContext context,
         CancellationToken token)
     {
-        await InitializeDocument(context);
+        await InitializeDocumentAsync(context, token);
 
-        if (await TryHandleActionResponses(context) is false)
+        if (await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
 
         return await TalkAsync(context, token: token);
     }
 
-    public async Task<AiInternalConversationResult> HandleStreamingRequest(
+    public async Task<AiInternalConversationResult> HandleStreamingRequestAsync(
         DocumentsOperationContext context,
         Stream outputStream,
         string streamPropertyPath,
         CancellationToken token)
     {
-        await InitializeDocument(context);
+        await InitializeDocumentAsync(context, token);
 
-        if (await TryHandleActionResponses(context) is false)
+        if (await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
-
+        
         await using var writer = new AsyncBlittableJsonTextWriter(context, outputStream);
         return await StreamingTalkAsync(context, streamPropertyPath, async (data) =>
         {

@@ -18,6 +18,9 @@ public class CdcSinkSourceSchema : IDynamicJson
     /// </summary>
     public string CatalogName { get; set; }
 
+    /// <summary>
+    /// Discovered source tables, each annotated with CDC capturability hints.
+    /// </summary>
     public List<CdcSinkSourceTable> Tables { get; set; } = new();
 
     /// <summary>

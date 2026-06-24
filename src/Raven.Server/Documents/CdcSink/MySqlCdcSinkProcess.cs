@@ -65,18 +65,16 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
         /// <summary>
         /// The TableId from the last TableMapEvent that matched our expected schema.
-        /// <see cref="TableIdReplayingOldEvents"/>: replaying from an old GTID, skip mismatches (old-schema events expected).
-        /// <see cref="TableIdExpectCurrentSchema"/>: checkpoint is recent, throw on mismatch (schema changed since we started).
-        /// Any other value: cached real TableId from the last matching TableMapEvent.
+        /// <see cref="TableIdReplayingOldEvents"/>: no current-schema event seen yet - skip mismatched
+        /// TableMapEvents (old-schema events from the catch-up window are expected).
+        /// Any other value: the real TableId from the last matching TableMapEvent; a later mismatch is
+        /// then treated as a genuine schema change and throws (re-resolved via restart).
         /// </summary>
         public long ValidTableId { get; set; } = TableIdReplayingOldEvents;
     }
 
-    /// <summary>No valid schema seen yet — replaying from old GTID, skip mismatched TableMapEvents.</summary>
+    /// <summary>No current-schema event seen yet - skip mismatched (old-schema) TableMapEvents from the catch-up window.</summary>
     private const long TableIdReplayingOldEvents = -1;
-
-    /// <summary>Checkpoint is at a recent position — any TableMapEvent mismatch is a real schema change, throw.</summary>
-    private const long TableIdExpectCurrentSchema = -2;
 
     /// <summary>
     /// Maps MySQL INFORMATION_SCHEMA.DATA_TYPE strings to binlog ColumnType byte values.
@@ -160,12 +158,11 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         await ResolveColumnNames(ct);
         await HandleInitialLoad(ct);
 
-        // After initial load, the checkpoint is at a recent GTID position.
-        // Mark all tables as expecting the current schema (-2) so that
-        // TableMapEvent mismatches throw immediately instead of being
-        // silently skipped. 
-        foreach (var table in _resolvedTables.Values)
-            table.ValidTableId = TableIdExpectCurrentSchema;
+        // Tables remain in the replay state (ValidTableId == TableIdReplayingOldEvents, the default):
+        // streaming resumes from the GTID captured when initial load BEGAN, so there is always a
+        // catch-up window whose old-schema TableMapEvents must be skipped rather than crash-looping the
+        // task on an ALTER. The first current-schema TableMapEvent upgrades ValidTableId to the real id,
+        // after which a genuine schema change (mismatch) is detected and re-resolved via restart.
 
         _initialLoadTcs.TrySetResult();
         await ProcessCdcStream(ct);
@@ -486,12 +483,20 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                 options.ServerId = Random.Shared.NextInt64(2, int.MaxValue);
                 options.Blocking = true;
                 options.HeartbeatInterval = TimeSpan.FromSeconds(30);
+                // Map the connection string's SslMode (MySqlConnector) onto the binlog client's SslMode
+                // (MySqlCdc) 1:1 so the streaming connection uses the SAME trust posture as the
+                // initial-load connection (which honors the connection string directly). Every known
+                // value is mapped explicitly; an unknown value fails CLOSED (throws) rather than
+                // silently disabling SSL.
                 options.SslMode = csBuilder.SslMode switch
                 {
-                    MySqlSslMode.Required or MySqlSslMode.VerifyCA or MySqlSslMode.VerifyFull
-                        => SslMode.RequireVerifyCa,
+                    MySqlSslMode.None or MySqlSslMode.Disabled => SslMode.Disabled,
                     MySqlSslMode.Preferred => SslMode.IfAvailable,
-                    _ => SslMode.Disabled,
+                    MySqlSslMode.Required => SslMode.Require,
+                    MySqlSslMode.VerifyCA => SslMode.RequireVerifyCa,
+                    MySqlSslMode.VerifyFull => SslMode.RequireVerifyFull,
+                    _ => throw new InvalidOperationException(
+                        $"Unsupported MySQL SslMode '{csBuilder.SslMode}' for the CDC Sink streaming connection.")
                 };
 
                 var gtidToResume = savedGtid ?? _serverGtid;
@@ -507,11 +512,10 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                 }
             });
 
-            var defaultSchema = GetDefaultSchema();
-
             // MySQL streams binlog events for ALL databases on the server, not just ours.
-            // Only cache TableMapEvents for configured tables in our database — row events
-            // for uncached table IDs are skipped automatically by the TryGetValue check.
+            // Only cache TableMapEvents for configured tables — matched by (schema, name) against
+            // _resolvedTables, so tables on a non-default schema stream too. Row events for uncached
+            // table IDs are skipped automatically by the TryGetValue check.
             var tableMapCache = new Dictionary<long, TableInfo>();
 
             await foreach (var (header, binlogEvent) in client.Replicate(ct))
@@ -523,8 +527,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                 switch (binlogEvent)
                 {
                     case TableMapEvent tableMap:
-                        if (string.Equals(tableMap.DatabaseName, defaultSchema, StringComparison.OrdinalIgnoreCase)
-                            && _resolvedTables.TryGetValue((tableMap.DatabaseName, tableMap.TableName), out var info))
+                        if (_resolvedTables.TryGetValue((tableMap.DatabaseName, tableMap.TableName), out var info))
                         {
                             // Schema change detection via TableId tracking + prefix comparison.
                             //
@@ -655,36 +658,42 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var col = columns[i];
             var value = cells[i];
 
-            values[i] = value switch
+            if (value is null or DBNull)
             {
-                null or DBNull => null,
-
+                values[i] = null;
+            }
+            else if (col.Category is MySqlColumnCategory.Boolean)
+            {
                 // tinyint(1) / bit(1) columns. MySqlCdc returns sbyte for tinyint(1) and
                 // bool[1] for bit(1); the initial-load path goes through CoerceToBoolean too,
                 // keeping a single source of truth for "what counts as a booleanish CLR value".
                 // CoerceToBoolean throws on unrecognised types so future library drift surfaces
                 // as a loud CDC process error rather than silent stringification.
-                var v when col.Category is MySqlColumnCategory.Boolean
-                    => CoerceToBoolean(v, col),
+                values[i] = CoerceToBoolean(value, col);
+            }
+            else
+            {
+                values[i] = value switch
+                {
+                    // MySqlCdc may return numeric types as strings (BCD-encoded internally).
+                    // Parse to decimal so they flow as numbers through the pipeline and patch scripts.
+                    string s when col.Category is MySqlColumnCategory.Decimal
+                        && decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec)
+                        => dec,
 
-                // MySqlCdc may return numeric types as strings (BCD-encoded internally).
-                // Parse to decimal so they flow as numbers through the pipeline and patch scripts.
-                string s when col.Category is MySqlColumnCategory.Decimal
-                    && decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec)
-                    => dec,
+                    // MySQL stores JSON in a proprietary binary format in the binlog.
+                    // Use MySqlCdc's JsonParser to convert to a JSON string.
+                    byte[] bytes when col.Category is MySqlColumnCategory.Json
+                        => MySqlCdc.Providers.MySql.JsonParser.Parse(bytes),
 
-                // MySQL stores JSON in a proprietary binary format in the binlog.
-                // Use MySqlCdc's JsonParser to convert to a JSON string.
-                byte[] bytes when col.Category is MySqlColumnCategory.Json
-                    => MySqlCdc.Providers.MySql.JsonParser.Parse(bytes),
+                    // MySQL's binlog uses the same BLOB type codes for TEXT and BLOB columns.
+                    // TEXT columns should be UTF-8 decoded; true binary columns pass through.
+                    byte[] bytes when col.Category is MySqlColumnCategory.Text
+                        => System.Text.Encoding.UTF8.GetString(bytes),
 
-                // MySQL's binlog uses the same BLOB type codes for TEXT and BLOB columns.
-                // TEXT columns should be UTF-8 decoded; true binary columns pass through.
-                byte[] bytes when col.Category is MySqlColumnCategory.Text
-                    => System.Text.Encoding.UTF8.GetString(bytes),
-
-                _ => ConvertMySqlValue(value),
-            };
+                    _ => ConvertMySqlValue(value),
+                };
+            }
         }
 
         return values;

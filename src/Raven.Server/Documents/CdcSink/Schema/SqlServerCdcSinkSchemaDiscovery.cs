@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.CdcSink.Schema
             Dictionary<(string Schema, string Table), CdcSinkSourceTable> tableLookup,
             CancellationToken ct)
         {
-            var keyColumnUsage = new Dictionary<string, (string Schema, string Table, List<string> Columns)>();
+            var keyColumnUsage = new Dictionary<(string Schema, string ConstraintName), (string Schema, string Table, List<string> Columns)>();
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = Queries.SelectKeyColumnUsageQuery;
@@ -161,26 +161,30 @@ namespace Raven.Server.Documents.CdcSink.Schema
                     var tableName = reader["TABLE_NAME"].ToString();
                     var columnName = reader["COLUMN_NAME"].ToString();
 
-                    if (keyColumnUsage.TryGetValue(constraintName, out var entry) == false)
+                    if (keyColumnUsage.TryGetValue((schemaName, constraintName), out var entry) == false)
                     {
                         entry = (schemaName, tableName, new List<string>());
-                        keyColumnUsage[constraintName] = entry;
+                        keyColumnUsage[(schemaName, constraintName)] = entry;
                     }
                     entry.Columns.Add(columnName);
                 }
             }
 
+            // keyColumnUsage is keyed by TABLE_SCHEMA; these rows key by CONSTRAINT_SCHEMA / UNIQUE_CONSTRAINT_SCHEMA.
+            // They line up because a constraint is co-located with its table, so CONSTRAINT_SCHEMA == its TABLE_SCHEMA.
             await using var refCmd = conn.CreateCommand();
             refCmd.CommandText = Queries.SelectReferentialConstraintsQuery;
             await using var refReader = await refCmd.ExecuteReaderAsync(ct);
             while (await refReader.ReadAsync(ct))
             {
+                var fkSchema = refReader["CONSTRAINT_SCHEMA"].ToString();
                 var fkConstraint = refReader["CONSTRAINT_NAME"].ToString();
+                var uniqueSchema = refReader["UNIQUE_CONSTRAINT_SCHEMA"].ToString();
                 var uniqueConstraint = refReader["UNIQUE_CONSTRAINT_NAME"].ToString();
 
-                if (keyColumnUsage.TryGetValue(fkConstraint, out var fkEntry) == false)
+                if (keyColumnUsage.TryGetValue((fkSchema, fkConstraint), out var fkEntry) == false)
                     continue;
-                if (keyColumnUsage.TryGetValue(uniqueConstraint, out var pkEntry) == false)
+                if (keyColumnUsage.TryGetValue((uniqueSchema, uniqueConstraint), out var pkEntry) == false)
                     continue;
                 if (tableLookup.TryGetValue((fkEntry.Schema, fkEntry.Table), out var fkTable) == false)
                     continue;

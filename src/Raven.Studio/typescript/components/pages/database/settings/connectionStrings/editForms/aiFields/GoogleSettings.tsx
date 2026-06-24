@@ -13,6 +13,7 @@ import {
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useFormContext, useWatch } from "react-hook-form";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
@@ -26,6 +27,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -35,13 +37,16 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, {
+        const settings = {
             AiVersion: formValues.googleSettings.aiVersion,
             ApiKey: formValues.googleSettings.apiKey,
             EnablePromptCache: formValues.googleSettings.enablePromptCache,
             Model: formValues.googleSettings.model,
             Endpoint: formValues.googleSettings.endpoint,
-        });
+        };
+        return isServerWide
+            ? tasksService.testServerWideAiConnectionString("Google", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, settings);
     });
 
     return (

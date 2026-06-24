@@ -163,7 +163,7 @@ namespace Voron.Data
                 Llt.TryReleasePage(LastPage.PageNumber);
             }
 
-            LastPage = Llt.GetPage(pageNumber);
+            LastPage = Llt.GetPageWithoutCache(pageNumber);
         }
 
         public override long Seek(long offset, SeekOrigin origin)

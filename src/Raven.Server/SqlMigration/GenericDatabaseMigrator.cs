@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -525,6 +526,15 @@ namespace Raven.Server.SqlMigration
 
         protected abstract string QuoteTable(string schema, string tableName);
         protected abstract string QuoteColumn(string columnName);
+
+        // Identifier quoting for the CDC test-mapping row-fetch path (BuildSelectFirstRowsQuery /
+        // BuildSelectByPrimaryKeyQuery). Defaults to QuoteTable/QuoteColumn, which already quote
+        // correctly for SQL Server ([..]) and MySQL (`..`). Postgres overrides these because its
+        // QuoteTable/QuoteColumn deliberately emit RAW identifiers for the long-standing SQL-import
+        // path; the test-mapping path needs exact-case double-quoting instead.
+        protected virtual string QuoteTableForRowFetch(string schema, string tableName) => QuoteTable(schema, tableName);
+        protected virtual string QuoteColumnForRowFetch(string columnName) => QuoteColumn(columnName);
+
         protected abstract string FactoryName { get; }
 
         protected IDataProvider<string> CreateObjectLinkDataProvider(ReferenceInformation refInfo)
@@ -585,10 +595,25 @@ namespace Raven.Server.SqlMigration
 
         public object ValueAsObject(SqlTableSchema tableSchema, string column, string[] primaryKeyValue, int index)
         {
-            var type = tableSchema.Columns.Find(x => x.Name == column).Type;
-            var value = type == ColumnType.Number ? (object)int.Parse(primaryKeyValue[index].ToString()) : primaryKeyValue[index];
+            // Case-insensitive match resolves the column type only; the emitted identifier keeps the configured
+            // casing (case-sensitive in Postgres once quoted).
+            var columnSchema = tableSchema.Columns.Find(x => string.Equals(x.Name, column, StringComparison.OrdinalIgnoreCase));
+            if (columnSchema == null)
+                throw new InvalidOperationException($"Primary key column '{column}' was not found in the schema of table '{tableSchema.Schema}.{tableSchema.TableName}'.");
 
-            return value;
+            var raw = primaryKeyValue[index];
+
+            if (columnSchema.Type != ColumnType.Number)
+                return raw;
+
+            // Widen the numeric parse with invariant culture: integer keys may be bigint (beyond int range), so try
+            // long first, then decimal for fixed-point/scaled keys.
+            if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var asLong))
+                return asLong;
+            if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var asDecimal))
+                return asDecimal;
+
+            throw new InvalidOperationException($"Primary key value '{raw}' for numeric column '{column}' of table '{tableSchema.Schema}.{tableSchema.TableName}' is not a valid number.");
         }
 
         protected IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
@@ -786,9 +811,9 @@ namespace Raven.Server.SqlMigration
             // SQL Server rejects ORDER BY inside an un-TOP'd subquery, so ORDER BY has to live
             // at the same level as the row-limit. Build the dialect-aware shape via BuildLimitedSelectQuery.
             var orderBy = orderByColumns != null && orderByColumns.Count > 0
-                ? " order by " + string.Join(", ", orderByColumns.Select(QuoteColumn))
+                ? " order by " + string.Join(", ", orderByColumns.Select(QuoteColumnForRowFetch))
                 : string.Empty;
-            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), whereClause: string.Empty, orderBy, maxRows);
+            return BuildLimitedSelectQuery(QuoteTableForRowFetch(tableSchema, tableName), whereClause: string.Empty, orderBy, maxRows);
         }
 
         /// <summary>
@@ -820,7 +845,7 @@ namespace Raven.Server.SqlMigration
                 parameter.ParameterName = $"p{idx}";
                 parameter.Value = ValueAsObject(typedTableSchema, column, pkValueArray, idx) ?? DBNull.Value;
                 cmd.Parameters.Add(parameter);
-                return $"{QuoteColumn(column)} = @p{idx}";
+                return $"{QuoteColumnForRowFetch(column)} = @p{idx}";
             }));
 
             // Apply the dialect-aware row cap even though the handler only accepts maxRows=1 for
@@ -828,7 +853,7 @@ namespace Raven.Server.SqlMigration
             // on the source (mis-configured CDC task, or a source table without a true PK), in
             // which case the WHERE alone could still match multiple rows. The server-side cap
             // must hold regardless of source metadata quality.
-            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), whereClause, orderByClause: string.Empty, maxRows);
+            return BuildLimitedSelectQuery(QuoteTableForRowFetch(tableSchema, tableName), whereClause, orderByClause: string.Empty, maxRows);
         }
     }
 }

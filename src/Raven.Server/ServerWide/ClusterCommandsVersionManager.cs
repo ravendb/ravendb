@@ -181,7 +181,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateServerPublishedUrlsCommand)] = 60_000,
             [nameof(PutShardedSubscriptionBatchCommand)] = 60_000,
             
-            [nameof(AddQueueSinkCommand)] = 60_000,
+            [nameof(AddQueueSinkCommand)] = 60_000,            
             [nameof(UpdateQueueSinkCommand)] = 60_000,
             [nameof(RemoveQueueSinkProcessStateCommand)] = 60_000,
             [nameof(UpdateQueueSinkProcessStateCommand)] = 60_000,
@@ -211,6 +211,7 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteAiAgentCommand)] = 71_001,
 
             [nameof(EditRemoteAttachmentsCommand)] = EditRemoteAttachmentsCommand.CommandVersion,
+
             [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
 
             [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] =  72_000,
@@ -220,6 +221,10 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateCdcSinkCommand)] = 72_001,
             [nameof(RemoveCdcSinkProcessStateCommand)] = 72_001,
             [nameof(UpdateCdcSinkProcessStateCommand)] = 72_001,
+
+
+            [nameof(PutServerWideConnectionStringCommand)] = 72_001,
+            [nameof(RemoveServerWideConnectionStringCommand)] = 72_001
         };
 
         public bool CanPutCommand(string command)

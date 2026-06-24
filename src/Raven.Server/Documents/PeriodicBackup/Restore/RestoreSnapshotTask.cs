@@ -14,6 +14,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Json;
@@ -96,6 +97,27 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
                 databaseRecord.ExternalReplications = filtered;
             }
+        }
+
+        private static void FilterOutServerWideConnectionStrings(DatabaseRecord databaseRecord)
+        {
+            FilterOutServerWideConnectionStrings(databaseRecord.RavenConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.SqlConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.OlapConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.ElasticSearchConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.QueueConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.SnowflakeConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.AiConnectionStrings);
+        }
+
+        private static void FilterOutServerWideConnectionStrings<T>(Dictionary<string, T> connectionStrings)
+        {
+            var keysToRemove = connectionStrings.Keys
+                .Where(k => k.StartsWith(ServerWideConnectionString.NamePrefix, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (var key in keysToRemove)
+                connectionStrings.Remove(key);
         }
         
         private static void RemoveSubscriptionFromDatabaseValues(RestoreSettings restoreSettings)
@@ -246,6 +268,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                                     restoreSettings = JsonDeserializationServer.RestoreSettings(json);
                                     FilterOutServerWideTasks(restoreSettings.DatabaseRecord);
+                                    FilterOutServerWideConnectionStrings(restoreSettings.DatabaseRecord);
                                     RemoveSubscriptionFromDatabaseValues(restoreSettings);
                                     restoreSettings.DatabaseRecord.DatabaseName = RestoreConfiguration.DatabaseName;
                                     DatabaseHelper.Validate(RestoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord, ServerStore.Configuration);

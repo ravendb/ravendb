@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.CdcSink
         // Schema Evolution Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task SchemaEvolution_AddColumn_DetectedViaTableMapEvent()
         {
             // MySQL sends TableMapEvent before each row event. When a column is added,
@@ -96,7 +96,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("After", doc2.Name);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task SchemaEvolution_RemoveColumn_DetectedViaTableMapEvent()
         {
             using var store = GetDocumentStore();
@@ -159,7 +159,7 @@ namespace SlowTests.Server.Documents.CdcSink
         // Connection Failure Recovery Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task ConnectionFailure_RecoversAfterStopAndRestart()
         {
             using var store = GetDocumentStore();
@@ -216,7 +216,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("During Stop", doc2.Name);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task SchemaChange_FalsePositive_OnStableSchemaWithDateColumn()
         {
 

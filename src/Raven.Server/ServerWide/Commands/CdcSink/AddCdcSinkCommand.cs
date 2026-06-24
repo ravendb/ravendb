@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.ServerWide;
@@ -34,9 +33,9 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
 
             EnsureTaskNameIsNotUsed(record, Configuration.Name);
 
-            AutoFillPostgresSettings(record);
-
             Configuration.TaskId = etag;
+
+            AutoFillPostgresSettings(record, etag);
 
             cdcSinks ??= [];
             cdcSinks.Add(Configuration);
@@ -44,11 +43,12 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
 
         /// <summary>
         /// Auto-fills PublicationName and SlotName when the user didn't provide them.
-        /// Uses a shared GUID with the rvn_cdc_ prefix to generate readable, unique names
-        /// that fit within PostgreSQL's 63-character identifier limit.
-        /// Only applies to PostgreSQL connections.
+        /// Derives both from the raft <paramref name="etag"/> (the task id) so the names are
+        /// identical on every cluster node: this runs inside the deterministic Raft apply path.
+        /// The etag is unique per command, and "rvn_cdc_p_" + etag stays well
+        /// within PostgreSQL's 63-character identifier limit. Only applies to PostgreSQL connections.
         /// </summary>
-        private void AutoFillPostgresSettings(DatabaseRecord record)
+        private void AutoFillPostgresSettings(DatabaseRecord record, long etag)
         {
             if (Configuration.ConnectionStringName == null)
                 return;
@@ -61,14 +61,9 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
 
             Configuration.Postgres ??= new CdcSinkPostgresSettings();
 
-            if (Configuration.Postgres.PublicationName == null || Configuration.Postgres.SlotName == null)
-            {
-                // Use the same GUID for both so they're clearly paired.
-                // "rvn_cdc_p_" + 32 hex chars = 42 chars (well under the 63-char PG limit)
-                var id = Guid.NewGuid().ToString("N"); // 32 hex chars, no dashes
-                Configuration.Postgres.PublicationName ??= $"rvn_cdc_p_{id}";
-                Configuration.Postgres.SlotName ??= $"rvn_cdc_s_{id}";
-            }
+            // Same etag for both so they're clearly paired.
+            Configuration.Postgres.PublicationName ??= $"rvn_cdc_p_{etag}";
+            Configuration.Postgres.SlotName ??= $"rvn_cdc_s_{etag}";
         }
 
 

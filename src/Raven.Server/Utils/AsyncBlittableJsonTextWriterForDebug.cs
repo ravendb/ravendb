@@ -179,7 +179,7 @@ namespace Raven.Server.Utils
             _inner.WritePropertyName(prop);
         }
 
-        public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
+        public ValueTask<long> MaybeFlushAsync(CancellationToken token = default)
         {
             return _inner.MaybeFlushAsync(token);
         }
