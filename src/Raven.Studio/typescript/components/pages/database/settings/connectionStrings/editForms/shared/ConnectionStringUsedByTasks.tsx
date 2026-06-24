@@ -58,29 +58,29 @@ export default function ConnectionStringUsedByTasks({ tasks, connectionType }: C
 
         switch (usage.kind) {
             case "RavenEtl":
-                return id != null ? appUrl.forEditRavenEtl(databaseName, id) : null;
+                return appUrl.forEditRavenEtl(databaseName, id);
             case "SqlEtl":
-                return id != null ? appUrl.forEditSqlEtl(databaseName, id) : null;
+                return appUrl.forEditSqlEtl(databaseName, id);
             case "OlapEtl":
-                return id != null ? appUrl.forEditOlapEtl(databaseName, id) : null;
+                return appUrl.forEditOlapEtl(databaseName, id);
             case "ElasticSearchEtl":
-                return id != null ? appUrl.forEditElasticSearchEtl(databaseName, id) : null;
+                return appUrl.forEditElasticSearchEtl(databaseName, id);
             case "SnowflakeEtl":
-                return id != null ? appUrl.forEditSnowflakeEtl(databaseName, id) : null;
+                return appUrl.forEditSnowflakeEtl(databaseName, id);
             case "ExternalReplication":
-                return id != null ? appUrl.forEditExternalReplication(databaseName, id) : null;
+                return appUrl.forEditExternalReplication(databaseName, id);
             case "PullReplicationAsSink":
-                return id != null ? appUrl.forEditReplicationSink(databaseName, id) : null;
+                return appUrl.forEditReplicationSink(databaseName, id);
             case "EmbeddingsGeneration":
-                return id != null ? appUrl.forEditEmbeddingsGeneration(databaseName, id) : null;
+                return appUrl.forEditEmbeddingsGeneration(databaseName, id);
             case "GenAi":
-                return id != null ? appUrl.forEditGenAi(databaseName, id) : null;
+                return appUrl.forEditGenAi(databaseName, id);
             case "AiAgent":
-                return usage.identifier ? appUrl.forEditAiAgent(databaseName, usage.identifier) : null;
+                return appUrl.forEditAiAgent(databaseName, usage.identifier);
             case "QueueEtl":
-                return id != null ? getQueueEtlUrl(databaseName, id) : null;
+                return getQueueEtlUrl(databaseName, id);
             case "QueueSink":
-                return id != null ? getQueueSinkUrl(databaseName, id) : null;
+                return getQueueSinkUrl(databaseName, id);
             default:
                 return assertUnreachable(usage.kind);
         }

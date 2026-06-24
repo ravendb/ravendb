@@ -31,9 +31,10 @@ type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 type AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
 
-function mapUsedByFromDto<
-    T extends { UsedBy?: Array<{ Kind: any; Id?: number; Identifier?: string; Name: string; DatabaseName?: string }> },
->(dto: T, includeDatabaseName = false): ConnectionStringUsage[] {
+function mapUsedByFromDto(
+    dto: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionString,
+    includeDatabaseName = false
+): ConnectionStringUsage[] {
     return (dto.UsedBy ?? []).map(
         (t) =>
             ({
