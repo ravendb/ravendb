@@ -9,7 +9,7 @@ interface StickyHeaderProps extends HTMLAttributes<HTMLDivElement> {
 
 export function StickyHeader({ flush, children, className, ...rest }: StickyHeaderProps) {
     return (
-        <div {...rest} className={classNames("sticky-header", className, flush && "sticky-header--flush")}>
+        <div {...rest} className={classNames("sticky-header", className, flush && "m-0 p-0")}>
             {children}
         </div>
     );
