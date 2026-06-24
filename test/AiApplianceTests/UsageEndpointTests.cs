@@ -1,5 +1,7 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Raven.AiAppliance.Auth;
 using Raven.AiAppliance.Metrics;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
@@ -93,5 +95,61 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         // Both apps' last-hour conversations are summed into the one global series.
         Assert.Equal(6, totalInvocations);  // 2 + 4 messages
         Assert.Equal(120, totalTokens);     // 50 + 70 tokens
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_invocations_count_user_messages_only()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
+
+        // Real-shaped doc: one user message + system/assistant/tool scaffolding.
+        await SeedRealisticConversationAsync(store, perAppDb, "chats/r", "demo", DateTime.UtcNow.AddHours(-1));
+        await Indexes.WaitForIndexingAsync(store, perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var points = await client.GetFromJsonAsync<JsonElement>("/api/usage");
+        long invocations = 0;
+        foreach (var p in points.EnumerateArray())
+            invocations += p.GetProperty("invocations").GetInt64();
+        Assert.Equal(1, invocations);  // only the user message counts (not system/assistant/tool)
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_degrades_to_empty_when_index_not_deployed()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        // The metrics index is intentionally NOT deployed on this app DB.
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.GetAsync("/api/usage");
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());  // not 500
+        var points = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        long invocations = 0;
+        foreach (var p in points.EnumerateArray())
+            invocations += p.GetProperty("invocations").GetInt64();
+        Assert.Equal(0, invocations);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_requires_authentication()
+    {
+        var store = GetDocumentStore();
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+
+        var resp = await client.GetAsync("/api/usage");
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
     }
 }

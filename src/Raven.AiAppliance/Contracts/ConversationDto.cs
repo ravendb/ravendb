@@ -9,6 +9,7 @@ namespace Raven.AiAppliance.Contracts;
 /// </summary>
 public sealed record ConversationDto(
     string Id,
+    string AppId,
     string ChannelName,
     string AgentName,
     string AgentInitials,

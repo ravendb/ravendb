@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Raven.Client.Documents;
@@ -30,6 +31,7 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output) : ApplianceMet
         var apps = await client.GetFromJsonAsync<JsonElement>("/api/dashboard/apps");
         var app = apps.EnumerateArray().Single(a => a.GetProperty("slug").GetString() == "my-app");
 
+        Assert.Equal("my-app", app.GetProperty("id").GetString());               // id == slug (routing key)
         Assert.Equal(1, app.GetProperty("agentsCount").GetInt32());
         Assert.Equal(1, app.GetProperty("channelsCount").GetInt32());
         Assert.Equal("running", app.GetProperty("status").GetString());          // agents>0, channel enabled, no CDC pause
@@ -55,5 +57,26 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output) : ApplianceMet
         var app = apps.EnumerateArray().Single(a => a.GetProperty("slug").GetString() == "fresh-app");
         Assert.Equal("setup", app.GetProperty("status").GetString());
         Assert.Equal(0, app.GetProperty("agentsCount").GetInt32());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task DashboardApp_single_returns_enriched_app_or_404()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await SeedAgentAsync(store, perAppDb, name: "Support");
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var app = await client.GetFromJsonAsync<JsonElement>("/api/dashboard/apps/my-app");
+        Assert.Equal("my-app", app.GetProperty("id").GetString());     // id == slug (N2)
+        Assert.Equal("my-app", app.GetProperty("slug").GetString());
+        Assert.Equal(1, app.GetProperty("agentsCount").GetInt32());
+
+        var missing = await client.GetAsync("/api/dashboard/apps/does-not-exist");
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
     }
 }
