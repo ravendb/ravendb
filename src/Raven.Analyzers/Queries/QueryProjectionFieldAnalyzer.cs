@@ -124,7 +124,7 @@ namespace Raven.Analyzers.Queries
             if (storedSet.Status == StoredFieldsStatus.AllStored)
             {
                 IndexFieldSet mapFields = mapFieldCache.GetOrAdd(indexClass,
-                    ic => IndexFieldExtractor.ExtractMapFieldsIgnoringStoreAll(ic, model.Compilation));
+                    ic => IndexFieldExtractor.Extract(ic, model.Compilation));
                 if (mapFields.Status == IndexFieldInspection.BailCannotAnalyze)
                     return;
                 storedFields = mapFields.Fields;

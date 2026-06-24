@@ -102,7 +102,17 @@ namespace Raven.Analyzers.Indexes
                         methodName = idName.Identifier.Text;
 
                     if (methodName == KnownTypes.StoreAllFieldsMethodName)
-                        return StoredFieldsStatus.AllStored;
+                    {
+                        // StoreAllFields(FieldStorage.Yes) stores every field; StoreAllFields(No)
+                        // stores nothing. Only the explicit Yes form means "all stored"; for No keep
+                        // scanning individual Store(...) calls, and bail if the argument can't be read.
+                        SeparatedSyntaxList<ArgumentSyntax> storeAllArgs = invocation.ArgumentList.Arguments;
+                        if (storeAllArgs.Count == 1 && IsFieldStorageYes(storeAllArgs[0].Expression))
+                            return StoredFieldsStatus.AllStored;
+                        if (storeAllArgs.Count == 1 && IsFieldStorageNo(storeAllArgs[0].Expression))
+                            continue;
+                        return StoredFieldsStatus.BailCannotAnalyze;
+                    }
 
                     if (methodName == KnownTypes.StoreMethodName)
                     {
@@ -155,6 +165,13 @@ namespace Raven.Analyzers.Indexes
             // FieldStorage.Yes — a member access where the member name is "Yes"
             return expr is MemberAccessExpressionSyntax ma
                 && ma.Name.Identifier.ValueText == "Yes";
+        }
+
+        private static bool IsFieldStorageNo(ExpressionSyntax expr)
+        {
+            // FieldStorage.No — a member access where the member name is "No"
+            return expr is MemberAccessExpressionSyntax ma
+                && ma.Name.Identifier.ValueText == "No";
         }
 
         /// <summary>

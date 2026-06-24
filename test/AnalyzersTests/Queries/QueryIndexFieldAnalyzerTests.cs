@@ -123,6 +123,60 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
+        [Fact]
+        public async Task Where_On_Non_Indexed_Field_With_StoreAllFields_Reports_Diagnostic()
+        {
+            // StoreAllFields affects storage, not which fields the Map indexes, so it must not
+            // suppress RVN007 for a field that is not part of the Map projection.
+            string source = CommonUsings + OrderClass + @"
+class StoreAllIndex : AbstractIndexCreationTask<Order>
+{
+    public StoreAllIndex()
+    {
+        Map = orders => from o in orders select new { o.Name, o.Status };
+        StoreAllFields(FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, StoreAllIndex>().Where(x => x.Price > 0);
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task Where_On_Indexed_Field_With_StoreAllFields_No_Diagnostic()
+        {
+            string source = CommonUsings + OrderClass + @"
+class StoreAllIndex : AbstractIndexCreationTask<Order>
+{
+    public StoreAllIndex()
+    {
+        Map = orders => from o in orders select new { o.Name, o.Status };
+        StoreAllFields(FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, StoreAllIndex>().Where(x => x.Name == ""test"");
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
         [Theory]
         [MemberData(nameof(IndexMapVariants))]
         public async Task OrderBy_On_Indexed_Field_No_Diagnostic(string index)

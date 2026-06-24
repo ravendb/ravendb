@@ -190,6 +190,38 @@ class Test
             Assert.Contains("Ghost", d.GetMessage());
         }
 
+        [Fact]
+        public async Task ProjectInto_StoreAllFields_No_Does_Not_Treat_Fields_As_Stored_Reports_Diagnostic()
+        {
+            // StoreAllFields(FieldStorage.No) stores nothing, so a projected field that is only in the
+            // Map (not stored, not on the source document) is not retrievable under FromIndexOrThrow.
+            const string source = CommonUsings + OrderClass + @"
+class Dto { public string Name { get; set; } }
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+        StoreAllFields(FieldStorage.No);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+            .ProjectInto<Dto>();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("Name", d.GetMessage());
+        }
+
         // ── ProjectInto — FromIndex / FromIndexOrThrow ────────────────────────
 
         [Fact]

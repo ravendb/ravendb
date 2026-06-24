@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using AnalyzersTests.Framework;
-using Raven.Analyzers;
 using Raven.Analyzers.CodeFixes.Sessions;
 using Raven.Analyzers.Sessions;
 using Xunit;
