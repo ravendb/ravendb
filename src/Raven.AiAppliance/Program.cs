@@ -322,6 +322,7 @@ ChannelsEndpoints.Map(app);
 EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
 AgentsEndpoints.Map(app);
+StatsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
 // Must precede MapSpaFallback: /embed/* is a {*path:nonfile} match that the

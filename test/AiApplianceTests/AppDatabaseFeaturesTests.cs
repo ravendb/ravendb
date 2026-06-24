@@ -1,6 +1,7 @@
 using FastTests;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Infrastructure;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
@@ -40,6 +41,17 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
         // No age floor: with one, RavenDB keeps every revision younger than it, so a
         // high-cap link would accumulate ~1 revision/turn. Keep-newest-10 bounds it.
         Assert.Null(coll.MinimumRevisionAgeToKeep);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task ConfigureAsync_deploys_conversation_metrics_index()
+    {
+        var store = GetDocumentStore();
+
+        await AppDatabaseFeatures.ConfigureAsync(store, store.Database, CancellationToken.None);
+
+        var indexNames = await store.Maintenance.SendAsync(new GetIndexNamesOperation(0, 50));
+        Assert.Contains("Conversations/Metrics", indexNames);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
