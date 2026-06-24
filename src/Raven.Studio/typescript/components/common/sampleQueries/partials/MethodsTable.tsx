@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
@@ -10,10 +10,11 @@ import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
 
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
+    search: string;
+    onSearchChange: (value: string) => void;
 }
 
-export default function MethodsTable({ methodGroups }: MethodsTableProps) {
-    const [search, setSearch] = useState("");
+export default function MethodsTable({ methodGroups, search, onSearchChange }: MethodsTableProps) {
 
     const filteredGroups = methodGroups
         .map((group) => ({
@@ -29,7 +30,7 @@ export default function MethodsTable({ methodGroups }: MethodsTableProps) {
                     type="search"
                     placeholder="Search by signature"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => onSearchChange(e.target.value)}
                 />
             </StickyHeader>
             {filteredGroups.map((group) => (
