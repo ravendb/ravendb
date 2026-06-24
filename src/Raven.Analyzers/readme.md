@@ -49,7 +49,12 @@ build against a build with the analyzers enabled, which measures the analyzer ov
 It lives under `bench/` alongside the other benchmark projects (and inherits
 `bench/Directory.Build.props`), so its `compare.ps1` runs as a regular benchmark. It has its
 own `Raven.Analyzers.sln`, is not part of `RavenDB.sln`, and is not built by CI. See
-`bench/Raven.Analyzers/README.md` for how to build it and read the output.
+`bench/Raven.Analyzers/readme.md` for how to build it and read the output.
+
+`compare.ps1` interleaves several clean builds per case (5 by default) and reports the median.
+It writes `analyzers-benchmark-result.json` next to the script (git-ignored) with `without`,
+`with`, `overheadAbsolute`, `overheadRelative` (percent), and `success`. `success` is the gate:
+it is `true` when the relative overhead the analyzers add to a cold build stays under 20%.
 
 Test and CI plans for the analyzers, including how this project is used as an integration
 smoke check, are tracked in HRINT-4901.
