@@ -120,6 +120,30 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task SchemaNameWithQuote_IsHandledByTheSchemaFilter()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            // The schema filter is bound as a query parameter, so a single quote in the
+            // schema name must round-trip instead of breaking the discovery SQL.
+            const string schema = "o'brien";
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE SCHEMA ""o'brien"";
+                CREATE TABLE ""o'brien"".widgets (id SERIAL PRIMARY KEY, name VARCHAR(100));
+                CREATE TABLE public.unrelated (id SERIAL PRIMARY KEY, junk VARCHAR(100));
+            ");
+
+            var discovery = CdcSinkSchemaDiscovery.For("Npgsql");
+            var result = await discovery.DiscoverAsync(connectionString, new[] { schema }, CancellationToken.None);
+
+            var table = Assert.Single(result.Tables);
+            Assert.Equal(schema, table.SourceTableSchema);
+            Assert.Equal("widgets", table.SourceTableName);
+            Assert.Equal(new[] { "id" }, table.PrimaryKeyColumns);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task GeneratedColumnsAreMarkedNotCapturable()
         {
             using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
