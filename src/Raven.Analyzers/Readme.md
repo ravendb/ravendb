@@ -40,6 +40,20 @@ The split follows the [RS1038](https://github.com/dotnet/roslyn-analyzers/issues
 
 `KnownTypes` and `SyntaxHelpers` in `Raven.Analyzers` are `internal` but made available to `Raven.Analyzers.CodeFixes` via `[assembly: InternalsVisibleTo("Raven.Analyzers.CodeFixes")]` in `Properties/AssemblyInfo.cs`.
 
+## Sandbox and benchmarking
+
+The `bench/Raven.Analyzers` project exercises every rule against real code. It is the fastest
+way to see diagnostics in an IDE, and it carries a `compare.ps1` script that times a baseline
+build against a build with the analyzers enabled, which measures the analyzer overhead.
+
+It lives under `bench/` alongside the other benchmark projects (and inherits
+`bench/Directory.Build.props`), so its `compare.ps1` runs as a regular benchmark. It has its
+own `Raven.Analyzers.sln`, is not part of `RavenDB.sln`, and is not built by CI. See
+`bench/Raven.Analyzers/README.md` for how to build it and read the output.
+
+Test and CI plans for the analyzers, including how this project is used as an integration
+smoke check, are tracked in HRINT-4901.
+
 ## RVN001: Map or Reduce assigned outside constructor
 
 **Triggered by:** assigning the `Map` or `Reduce` property of an index class inside a regular method (not a constructor).
