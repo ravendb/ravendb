@@ -18,6 +18,7 @@ export interface SampleQueriesTabsProps {
 
 export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: SampleQueriesTabsProps) {
     const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
+    const [methodSearch, setMethodSearch] = useState("");
     const tabContentRef = useRef<HTMLDivElement>(null);
 
     const handleTabSelect = (tab: ActiveTab) => {
@@ -55,7 +56,7 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                         <SampleScriptsList scripts={scripts} onSelect={onSelect} />
                     </Tab.Pane>
                     <Tab.Pane eventKey="methods">
-                        <MethodsTable methodGroups={methodGroups} />
+                        <MethodsTable methodGroups={methodGroups} search={methodSearch} onSearchChange={setMethodSearch} />
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>
