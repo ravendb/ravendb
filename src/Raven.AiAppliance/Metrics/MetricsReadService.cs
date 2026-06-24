@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Indexes;
 
 namespace Raven.AiAppliance.Metrics;
 
@@ -443,6 +444,29 @@ internal static class MetricsReadService
             .OrderBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
             .Select(c => new DataCollectionDto(slug, c.Key, c.Value, []))
             .ToList();
+    }
+
+    /// <summary>Per-agent activity from the conversation index: invocations
+    /// (conversation count) and last-invoked (latest hour bucket). Returns empty
+    /// when the index isn't deployed yet, so callers degrade to zeroes.</summary>
+    public static async Task<Dictionary<string, (long Invocations, DateTime? LastInvokedAt)>> GetAgentActivityAsync(
+        IDocumentStore store, string database, CancellationToken ct)
+    {
+        try
+        {
+            using var session = store.OpenAsyncSession(database);
+            var rows = await QueryAllMetricRowsAsync(session, ct);
+            return rows
+                .GroupBy(r => r.Agent ?? "")
+                .ToDictionary(
+                    g => g.Key,
+                    g => (g.Sum(r => r.Conversations), (DateTime?)g.Max(r => r.Bucket)),
+                    StringComparer.OrdinalIgnoreCase);
+        }
+        catch (IndexDoesNotExistException)
+        {
+            return new Dictionary<string, (long, DateTime?)>(StringComparer.OrdinalIgnoreCase);
+        }
     }
 
     /// <summary>Conversations for the Conversations list — shaped from
