@@ -45,14 +45,14 @@ public static class StatsEndpoints
             .WithTags("stats")
             .WithName("stats.dashboard.apps")
             .RequireAuthorization()
-            .Produces<AppliancAppResponse[]>();
+            .Produces<ApplianceAppResponse[]>();
 
         // Single enriched app (mock-api `getApp(id)`).
         app.MapGet("/api/dashboard/apps/{slug}", GetDashboardAppAsync)
             .WithTags("stats")
             .WithName("stats.dashboard.app")
             .RequireAuthorization()
-            .Produces<AppliancAppResponse>()
+            .Produces<ApplianceAppResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         var group = app.MapGroup("/api/apps/{slug}").WithTags("stats").RequireAuthorization();
@@ -177,6 +177,11 @@ public static class StatsEndpoints
         // shifted (the buckets are UTC). (review N4)
         var endUtc = ParseUtc(end) ?? DateTime.UtcNow;
         var startUtc = ParseUtc(start) ?? endUtc.AddDays(-7);
+
+        // Reject an inverted/empty window so we don't build negative-length buckets and
+        // compute deltas off a backwards range (review C3).
+        if (startUtc >= endUtc)
+            return Results.BadRequest(new ApiErrorResponse("start must be before end"));
 
         var usage = await MetricsReadService.GetAppUsageAsync(store, app.Database, startUtc, endUtc, ct);
         return Results.Ok(usage);
