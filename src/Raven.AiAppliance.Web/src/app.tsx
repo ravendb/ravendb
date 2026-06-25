@@ -6,6 +6,7 @@ import { isAppRouteHandle } from "@/routes";
 import { api } from "@/api/api";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { CommandPalette } from "@/components/layout/command-palette";
+import { TrialBanner } from "@/components/layout/trial-banner";
 import { UserMenu } from "@/components/layout/user-menu";
 import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -63,6 +64,8 @@ function App() {
                 isSidebarEffectivelyCollapsed && "app-shell--collapsed",
             )}
         >
+            <TrialBanner />
+
             <header className="app-shell__header relative px-3 py-2">
                 <div className="flex min-w-0 items-center gap-3">
                     <Link
