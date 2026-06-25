@@ -18,6 +18,13 @@ internal abstract class AbstractTaskErrorsHandlerProcessorBase<TRequestHandler, 
 
     protected static TaskErrors BuildTaskErrors(
         string taskName,
+        IEnumerable<TaskProcessErrorTableValue> processErrors,
+        IEnumerable<TaskItemErrorTableValue> itemErrors,
+        TaskCategory taskCategory)
+        => BuildTaskErrors(taskName, process: null, processErrors, itemErrors, taskCategory);
+
+    protected static TaskErrors BuildTaskErrors(
+        string taskName,
         EtlProcess process,
         IEnumerable<TaskProcessErrorTableValue> processErrors,
         IEnumerable<TaskItemErrorTableValue> itemErrors,

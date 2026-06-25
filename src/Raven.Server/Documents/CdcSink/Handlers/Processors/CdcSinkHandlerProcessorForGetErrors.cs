@@ -35,9 +35,8 @@ internal sealed class CdcSinkHandlerProcessorForGetErrors : AbstractTaskErrorsHa
             ? storage.ReadAllErrorsGroupedByTask(TaskCategory)
             : storage.ReadErrorsForTasks(TaskCategory, taskNames);
 
-        // CDC sinks are not ETL processes, so there is no EtlType/EtlSubType to enrich with.
         foreach (var (taskName, processErrors, itemErrors) in errorsByTask)
-            response.Results.Add(BuildTaskErrors(taskName, process: null, processErrors, itemErrors, TaskCategory));
+            response.Results.Add(BuildTaskErrors(taskName, processErrors, itemErrors, TaskCategory));
 
         await WriteTaskErrorsResponseAsync(response, "cdc-sink/errors");
     }
