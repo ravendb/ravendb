@@ -38,17 +38,17 @@ function SheetDetailRow({ children, className }: SheetDetailRowProps) {
     );
 }
 
-interface EtlErrorDetailsSheetProps {
+interface TaskErrorDetailsSheetProps {
     error: FlatError;
     allErrors?: FlatError[];
     initialIndex?: number;
 }
 
-export default function EtlErrorDetailsSheet({
+export default function TaskErrorDetailsSheet({
     error: initialError,
     allErrors = [],
     initialIndex = 0,
-}: EtlErrorDetailsSheetProps) {
+}: TaskErrorDetailsSheetProps) {
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const [currentIndex, setCurrentIndex] = useState(initialIndex);

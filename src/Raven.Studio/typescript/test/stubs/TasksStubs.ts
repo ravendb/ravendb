@@ -26,7 +26,7 @@ import OngoingTaskSnowflakeEtl = Raven.Client.Documents.Operations.OngoingTasks.
 import EmbeddingsGeneration = Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration;
 import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -1459,7 +1459,7 @@ namespace Orders
         };
     }
 
-    static etlErrors(): EtlErrors[] {
+    static taskErrors(): TaskErrors[] {
         return [
             {
                 TaskName: "AzureETL/T1",

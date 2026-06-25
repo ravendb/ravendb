@@ -51,7 +51,7 @@ export const Default: StoryObj<OlapProps> = {
         } else {
             tasksService.withGetTasks(mockedValue);
         }
-        tasksService.withEtlErrors([]);
+        tasksService.withTaskErrors([]);
         tasksService.withEtlStats([]);
         mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 

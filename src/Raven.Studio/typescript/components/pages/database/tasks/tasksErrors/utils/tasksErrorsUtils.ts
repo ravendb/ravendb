@@ -4,10 +4,10 @@ import appUrl from "common/appUrl";
 import assertUnreachable from "components/utils/assertUnreachable";
 import TaskUtils from "components/utils/TaskUtils";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 import { ThemeColor } from "components/models/common";
 
-export type EtlErrorStep = Raven.Server.Documents.ETL.TaskErrorStep;
+export type TaskErrorStep = Raven.Server.Documents.ETL.TaskErrorStep;
 export type EtlHealthStatus = Raven.Server.Documents.ETL.EtlProcessHealthStatus;
 
 export type GroupByType = "task" | "none";
@@ -47,22 +47,22 @@ export function getEtlEditLink(databaseName: string, taskId: number, etlType: St
     }
 }
 
-export type TaskErrorsWithLocation = EtlErrors & databaseLocationSpecifier;
+export type TaskErrorsWithLocation = TaskErrors & databaseLocationSpecifier;
 
-export interface EtlTransformationWithErrors {
+export interface TransformationWithErrors {
     transformationName: string;
-    processErrors: (EtlErrors["ProcessErrors"][number] & databaseLocationSpecifier)[];
-    itemErrors: (EtlErrors["ItemErrors"][number] & databaseLocationSpecifier)[];
+    processErrors: (TaskErrors["ProcessErrors"][number] & databaseLocationSpecifier)[];
+    itemErrors: (TaskErrors["ItemErrors"][number] & databaseLocationSpecifier)[];
 }
 
-export interface EtlTaskWithErrors {
+export interface TaskWithErrors {
     etlName: string;
     etlType?: StudioEtlType;
     category?: TaskCategory;
-    transformations: EtlTransformationWithErrors[];
+    transformations: TransformationWithErrors[];
 }
 
-export interface EtlError {
+export interface TaskError {
     etlName: string;
     transformationName: string;
     healthStatus: EtlHealthStatus;
@@ -72,10 +72,10 @@ export interface EtlError {
 }
 
 export type FlatError = (
-    | (EtlTransformationWithErrors["itemErrors"][number] & { errorType: "Item" })
-    | (EtlTransformationWithErrors["processErrors"][number] & { errorType: "Process" })
+    | (TransformationWithErrors["itemErrors"][number] & { errorType: "Item" })
+    | (TransformationWithErrors["processErrors"][number] & { errorType: "Process" })
 ) &
-    EtlError;
+    TaskError;
 
 export interface TasksFiltersState {
     searchText: string;
@@ -93,7 +93,7 @@ export function parseProcessName(processName: string): [etlName: string, transfo
     return [processName.slice(0, slashIndex), processName.slice(slashIndex + 1)];
 }
 
-export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats: EtlTaskStats[]): EtlTaskWithErrors[] {
+export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats: EtlTaskStats[]): TaskWithErrors[] {
     if (!processes?.length) {
         return [];
     }
@@ -102,7 +102,7 @@ export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats
         .filter((p: TaskErrorsWithLocation) => _.size(p?.ProcessErrors) || _.size(p?.ItemErrors))
         .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName)[0])
         .map(
-            (group: TaskErrorsWithLocation[], etlName: string): EtlTaskWithErrors => ({
+            (group: TaskErrorsWithLocation[], etlName: string): TaskWithErrors => ({
                 etlName,
                 etlType: resolveEtlType(etlStats, etlName),
                 category: _.first(group)?.Category,
@@ -112,7 +112,7 @@ export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats
                         (
                             transformationGroup: TaskErrorsWithLocation[],
                             transformationName: string
-                        ): EtlTransformationWithErrors => ({
+                        ): TransformationWithErrors => ({
                             transformationName,
                             processErrors: transformationGroup.flatMap((p) =>
                                 p.ProcessErrors.map((e) => ({ ...e, nodeTag: p.nodeTag, shardNumber: p.shardNumber }))
@@ -129,8 +129,8 @@ export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats
 }
 
 export function flattenTransformationErrors(
-    itemErrors: EtlTransformationWithErrors["itemErrors"],
-    processErrors: EtlTransformationWithErrors["processErrors"]
+    itemErrors: TransformationWithErrors["itemErrors"],
+    processErrors: TransformationWithErrors["processErrors"]
 ) {
     return [
         ...itemErrors.map((e) => ({ ...e, errorType: "Item" as const, AffectedDocumentsCount: 1 })),
@@ -138,7 +138,7 @@ export function flattenTransformationErrors(
     ];
 }
 
-export function flattenAllTasksErrors(tasksWithErrors: EtlTaskWithErrors[], etlStats: EtlTaskStats[]): FlatError[] {
+export function flattenAllTasksErrors(tasksWithErrors: TaskWithErrors[], etlStats: EtlTaskStats[]): FlatError[] {
     return tasksWithErrors.flatMap((task) => {
         const taskStats = etlStats.find((s) => s.TaskName === task.etlName);
         const taskId = taskStats?.TaskId;
@@ -225,7 +225,7 @@ export function healthStatusToBadge(status?: EtlHealthStatus): HealthStatusBadge
     }
 }
 
-export function getStepIcon(step: EtlErrorStep): IconName {
+export function getStepIcon(step: TaskErrorStep): IconName {
     switch (step) {
         case "Transformation":
             return "replace";

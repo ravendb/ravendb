@@ -30,8 +30,8 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import {
     EtlHealthStatus,
-    EtlTaskWithErrors,
-    EtlTransformationWithErrors,
+    TaskWithErrors,
+    TransformationWithErrors,
     FlatError,
     flattenTransformationErrors,
     getEtlEditLink,
@@ -158,8 +158,8 @@ function useTasksErrorsPanelTableColumns(availableWidth: number, hasProcessError
 
 interface NestedTaskPanelDetailsTableProps {
     width: number;
-    itemErrors: EtlTransformationWithErrors["itemErrors"];
-    processErrors: EtlTransformationWithErrors["processErrors"];
+    itemErrors: TransformationWithErrors["itemErrors"];
+    processErrors: TransformationWithErrors["processErrors"];
     etlName: string;
     transformationName: string;
     healthStatus: EtlHealthStatus;
@@ -216,7 +216,7 @@ function NestedTaskPanelDetailsTable({
     );
 }
 
-interface NestedTaskPanelDetailsProps extends EtlTransformationWithErrors {
+interface NestedTaskPanelDetailsProps extends TransformationWithErrors {
     width: number;
     etlName: string;
     healthStatus: EtlHealthStatus;
@@ -277,7 +277,7 @@ function NestedTaskPanelDetails({
     );
 }
 
-interface TaskPanelProps extends EtlTaskWithErrors {
+interface TaskPanelProps extends TaskWithErrors {
     etlStats: EtlTaskStats[];
     onRefresh: () => void;
 }

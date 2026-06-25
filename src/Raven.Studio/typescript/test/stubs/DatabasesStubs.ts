@@ -17,7 +17,7 @@ import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 
 export class DatabasesStubs {
     static nonShardedSingleNodeDatabaseDto() {
@@ -1475,7 +1475,7 @@ return docs[0];`,
         };
     }
 
-    static etlErrors(): EtlErrors[] {
+    static taskErrors(): TaskErrors[] {
         return [
             {
                 ProcessErrors: [],

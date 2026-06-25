@@ -12,10 +12,10 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import moment from "moment";
 import genUtils from "common/generalUtils";
-import EtlErrorDetailsSheet from "./EtlErrorDetailsSheet";
+import TaskErrorDetailsSheet from "./TaskErrorDetailsSheet";
 import {
     AI_ONLY_TASK_TYPES,
-    EtlErrorStep,
+    TaskErrorStep,
     EtlHealthStatus,
     FlatError,
     getEtlEditLink,
@@ -29,7 +29,7 @@ import colorsManager from "common/colorsManager";
 
 export { CellWithCopyWrapper };
 
-export const CellErrorStepWrapper = ({ getValue }: CellContext<FlatError, EtlErrorStep>) => {
+export const CellErrorStepWrapper = ({ getValue }: CellContext<FlatError, TaskErrorStep>) => {
     const value = getValue();
 
     if (!value) {
@@ -104,7 +104,7 @@ export const CellValueButtonWrapper = (args: CellContext<FlatError, unknown>) =>
         const index = currentIndex >= 0 ? currentIndex : 0;
         open({
             component: (
-                <EtlErrorDetailsSheet
+                <TaskErrorDetailsSheet
                     key={index}
                     error={args.row.original}
                     allErrors={allErrors}

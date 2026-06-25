@@ -11,7 +11,7 @@ import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.Replic
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import { mockJQueryError } from "test/mocks/utils";
 import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 export default class MockTasksService extends AutoMockService<TasksService> {
@@ -215,8 +215,8 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getAiModels, dto, SharedStubs.aiModels());
     }
 
-    withEtlErrors(dto?: MockedValue<EtlErrors[]>) {
-        return this.mockResolvedValue(this.mocks.getEtlErrors, dto, TasksStubs.etlErrors());
+    withTaskErrors(dto?: MockedValue<TaskErrors[]>) {
+        return this.mockResolvedValue(this.mocks.getTaskErrors, dto, TasksStubs.taskErrors());
     }
 
     withEtlStats(dto?: MockedValue<EtlTaskStats[]>) {
