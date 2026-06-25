@@ -22,16 +22,6 @@ type PreviewEmbedLinkDialogProps = {
     trigger: ReactNode;
 };
 
-/**
- * Re-opens the minted-link result view for an already-generated link, so the
- * operator can copy its URL/snippet and see a live preview without minting again.
- * The summary doesn't carry the absolute URL, so we rebuild it from the token.
- *
- * Sending a message in the live preview spends a real invocation server-side (see
- * embed-link-preview.tsx), so the link's usage count goes stale while the dialog is
- * open. There's no cross-origin signal from the iframe, so we refresh the list when
- * the dialog closes to pick up any invocations spent during the preview.
- */
 export function PreviewEmbedLinkDialog({ slug, link, trigger }: PreviewEmbedLinkDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const queryClient = useQueryClient();
@@ -57,7 +47,6 @@ export function PreviewEmbedLinkDialog({ slug, link, trigger }: PreviewEmbedLink
 
                 <EmbedLinkPreview
                     url={buildEmbedUrl(link.token)}
-                    token={link.token}
                     expiresAt={link.expiresAt}
                     maxInvocations={link.maxInvocations}
                 />

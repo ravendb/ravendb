@@ -230,13 +230,7 @@ export function GenerateEmbedLinkDialog({
 function MintedLink({ result, onGenerateAnother }: { result: MintEmbedLinkResponse; onGenerateAnother: () => void }) {
     return (
         <>
-            <EmbedLinkPreview
-                url={result.url}
-                token={result.token}
-                expiresAt={result.expiresAt}
-                maxInvocations={result.maxInvocations}
-            />
-
+            <EmbedLinkPreview url={result.url} expiresAt={result.expiresAt} maxInvocations={result.maxInvocations} />
             <DialogFooter>
                 <Button type="button" variant="secondary" onClick={onGenerateAnother}>
                     Generate another

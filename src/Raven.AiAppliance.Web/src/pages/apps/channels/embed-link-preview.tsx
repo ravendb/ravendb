@@ -5,26 +5,13 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import { formatDateTime, copyToClipboard } from "@/lib/utils";
 
 type EmbedLinkPreviewProps = {
-    /** Absolute, paste-ready embed URL for the customer's cross-origin <iframe src>. */
     url: string;
-    /** The opaque bearer token — drives the relative inline preview. */
-    token: string;
     expiresAt: string;
     maxInvocations: number;
 };
 
-/**
- * The minted-link result view shared by the "Generate embed link" dialog and the
- * per-link preview dialog: the paste-ready URL (copy + open), the iframe snippet,
- * the TTL/cap line, and an inline live preview. Renders its own grid container, so
- * place a sibling footer next to it inside a `DialogContent`.
- */
-export function EmbedLinkPreview({ url, token, expiresAt, maxInvocations }: EmbedLinkPreviewProps) {
+export function EmbedLinkPreview({ url, expiresAt, maxInvocations }: EmbedLinkPreviewProps) {
     const iframeSnippet = `<iframe src="${url}" width="400" height="600"></iframe>`;
-    // The url is absolute (paste-ready for the customer). The inline preview loads the
-    // token relatively so it works behind the dev /embed proxy and same-origin in
-    // production, regardless of the absolute host the URL points at.
-    const previewUrl = `/embed/${token}`;
 
     return (
         <div className="grid min-w-0 gap-4">
@@ -48,26 +35,15 @@ export function EmbedLinkPreview({ url, token, expiresAt, maxInvocations }: Embe
                     </InputGroupAddon>
                 </InputGroup>
             </Field>
-
             <Field>
                 <FieldLabel>Embed snippet</FieldLabel>
                 <CopyableCode code={iframeSnippet} copyLabel="Copy embed snippet" />
             </Field>
-
             <p className="text-xs text-muted-foreground">
                 Expires {formatDateTime(expiresAt)} · up to {maxInvocations.toLocaleString()} chats.
             </p>
-
-            {/* Rendered at the widget's real 400px width (matching the snippet) so the preview
-                looks exactly as embedded. The embed page styles itself light-only, so the
-                backdrop stays white in dark mode too.
-                KNOWN LIMITATION (RavenDB-26775): this previews the *real* minted token, so
-                sending a message here spends one of the link's invocations and pins its
-                single server-owned conversation — the end user then inherits that history and
-                a reduced budget. Merely opening the preview is harmless (only POST /chat
-                counts). A dedicated un-counted preview surface is deferred. */}
             <iframe
-                src={previewUrl}
+                src={url}
                 title="Embed preview"
                 className="mx-auto h-[min(600px,55vh)] w-full max-w-[400px] rounded-lg border bg-white"
             />
