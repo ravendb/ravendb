@@ -104,11 +104,6 @@ const AboutViewFloating = (props: AboutViewProps) => {
     );
 };
 
-export const aboutViewDefaults = {
-    heading: "About this view",
-    description: "Learn more about this view",
-};
-
 interface AccordionItemWrapperProps {
     icon: IconName;
     color: ThemeColor;
@@ -126,8 +121,8 @@ const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
     const {
         icon,
         color,
-        heading = aboutViewDefaults.heading,
-        description = aboutViewDefaults.description,
+        heading = "About this view",
+        description = "Learn more about this view",
         children,
         pill,
         pillText,
