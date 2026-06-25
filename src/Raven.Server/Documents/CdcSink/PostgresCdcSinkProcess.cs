@@ -407,6 +407,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         var result = new List<CdcSinkEmbeddedTableConfig>();
         foreach (var root in rootTables)
         {
+            // A disabled root table isn't captured, so don't touch its embedded tables' source-side REPLICA IDENTITY.
+            if (root.Disabled)
+                continue;
+
             CdcSinkConfiguration.ForEachEmbeddedTable(root.EmbeddedTables, e =>
             {
                 if (e.OnDelete?.IgnoreDeletes == true)

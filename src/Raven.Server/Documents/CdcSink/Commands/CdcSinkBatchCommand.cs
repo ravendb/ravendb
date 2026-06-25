@@ -1650,7 +1650,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             // Prefer the schema persisted in the Dto — during tx-log replay the live process may be
             // gone, so re-deriving from it would yield "" and mis-key the rebuilt processors.
             var defaultSchema = DefaultSchema ?? process?.DefaultSchema ?? "";
-            var docProcessor = new CdcSinkDocumentProcessor(config, defaultSchema);
+            // includeDisabledTables: a batch persisted while a table was enabled may be replayed after the
+            // table was disabled - the replay must still resolve that table's processor to restore the ops.
+            var docProcessor = new CdcSinkDocumentProcessor(config, defaultSchema, includeDisabledTables: true);
 
             var ops = new List<CdcSinkDocumentOp>(Ops.Count);
             for (int i = 0; i < Ops.Count; i++)
