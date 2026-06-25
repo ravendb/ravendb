@@ -64,10 +64,6 @@ interface TaskTypeRichPanelItemProps {
 }
 
 function TaskTypeRichPanelItem({ category, etlType }: TaskTypeRichPanelItemProps) {
-    if (category !== "CdcSink" && !etlType) {
-        return null;
-    }
-
     const { icon, label } = getTaskTypeDisplay(category, etlType);
 
     return (
