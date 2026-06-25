@@ -40,7 +40,8 @@ class Order { public string Id { get; set; } }
             // Should transform to lazy API
             Assert.Contains("session.Advanced.Lazily.Load<User>(userId)", fixed_code);
             Assert.Contains("session.Advanced.Lazily.Load<Order>(orderId)", fixed_code);
-            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+            // Reading the first .Value dispatches the whole batch, so no explicit Execute call.
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
             Assert.Contains("var user = lazyUser.Value;", fixed_code);
             Assert.Contains("var order = lazyOrder.Value;", fixed_code);
         }
@@ -99,7 +100,7 @@ class User { public string Id { get; set; } }
             Assert.Contains(".Lazily()", fixed_code);
             // Load should use Lazily.Load
             Assert.Contains("session.Advanced.Lazily.Load<User>(managerId)", fixed_code);
-            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
             // Value extractions
             Assert.Contains("var employees = lazyEmployees.Value.ToList();", fixed_code);
             Assert.Contains("var manager = lazyManager.Value;", fixed_code);
@@ -150,8 +151,8 @@ class Order { public string Id { get; set; } }
             // Async sessions expose IAsyncLazySessionOperations.LoadAsync, returning Lazy<Task<T>>.
             Assert.Contains("session.Advanced.Lazily.LoadAsync<User>(userId)", fixed_code);
             Assert.Contains("session.Advanced.Lazily.LoadAsync<Order>(orderId)", fixed_code);
-            // Execute should be async
-            Assert.Contains("await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync()", fixed_code);
+            // Awaiting the first .Value dispatches the whole batch async, so no explicit Execute call.
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
             // .Value is a Task<T> for async loads, so it must be awaited.
             Assert.Contains("var user = await lazyUser.Value;", fixed_code);
             Assert.Contains("var order = await lazyOrder.Value;", fixed_code);
@@ -199,14 +200,15 @@ class User { public string Id { get; set; } }
 
             string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
 
-            // Query should use .Lazily() (the async ToListAsync becomes the sync Lazily registration)
-            Assert.Contains(".Lazily()", fixed_code);
+            // Async query must register via LazilyAsync (returns Lazy<Task<IEnumerable<T>>>) so the
+            // batch is dispatched asynchronously when the .Value is awaited.
+            Assert.Contains(".LazilyAsync()", fixed_code);
             // Load on async session should use Lazily.LoadAsync (returning Lazy<Task<T>>)
             Assert.Contains("session.Advanced.Lazily.LoadAsync<User>(managerId)", fixed_code);
-            // Execute should be async
-            Assert.Contains("await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync()", fixed_code);
-            // Query .Value is IEnumerable<T> — call ToList() as before.
-            Assert.Contains("var employees = lazyEmployees.Value.ToList();", fixed_code);
+            // Awaiting the first .Value dispatches the whole batch async, so no explicit Execute call.
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
+            // Async query .Value is Task<IEnumerable<T>> — await then materialize: (await x.Value).ToList().
+            Assert.Contains("var employees = (await lazyEmployees.Value).ToList();", fixed_code);
             // Async load .Value is Task<T> — must be awaited.
             Assert.Contains("var manager = await lazyManager.Value;", fixed_code);
         }
@@ -235,7 +237,7 @@ class Order { public string Id { get; set; } }
             // lazyUser is taken → must use lazyUser2
             Assert.Contains("lazyUser2", fixed_code);
             Assert.DoesNotContain("var lazyUser =", fixed_code.Replace("var lazyUser = 42;", ""));
-            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
             Assert.Contains("var user = lazyUser2.Value;", fixed_code);
         }
 
@@ -260,7 +262,7 @@ class Order { public string Id { get; set; } }
             string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
 
             // Comment must appear exactly once — on the renamed lazy declaration, not copied
-            // onto the synthesised Execute call or the .Value extraction statement.
+            // onto a .Value extraction statement.
             int commentCount = 0;
             int searchFrom = 0;
             while (true)
@@ -273,14 +275,15 @@ class Order { public string Id { get; set; } }
             }
             Assert.Equal(1, commentCount);
 
-            // Comment must sit before the Lazily.Load call, not before the Execute or Value lines.
+            // Comment must sit before the Lazily.Load call, which in turn precedes the .Value
+            // extraction section (registrations never contain ".Value").
             int commentPos = fixed_code.IndexOf("// load the user", System.StringComparison.Ordinal);
             int lazyLoadPos = fixed_code.IndexOf("Lazily.Load<User>", System.StringComparison.Ordinal);
-            int executePos  = fixed_code.IndexOf("ExecuteAllPendingLazyOperations", System.StringComparison.Ordinal);
+            int firstValuePos = fixed_code.IndexOf(".Value", System.StringComparison.Ordinal);
             Assert.True(commentPos < lazyLoadPos, "Comment should precede the Lazily.Load line");
-            Assert.True(lazyLoadPos < executePos,  "Lazily.Load should precede the Execute call");
+            Assert.True(lazyLoadPos < firstValuePos, "Lazily.Load should precede the .Value extraction");
 
-            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
         }
 
         [Fact]
@@ -316,7 +319,7 @@ class Order { public string Id { get; set; } }
             }
             Assert.Equal(1, commentCount);
 
-            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
         }
 
         [Fact]
@@ -369,17 +372,20 @@ class Order { public string Id { get; set; } }
                 Assert.True(count == 1, $"Expected comment to appear exactly once but found {count}: {comment}");
             }
 
-            // No comment must appear after the execute statement (the synthesised section is comment-free).
-            int executePos = fixed_code.IndexOf("ExecuteAllPendingLazyOperations", System.StringComparison.Ordinal);
-            Assert.True(executePos >= 0, "ExecuteAllPendingLazyOperations not found in fixed output");
-            string afterExecute = fixed_code.Substring(executePos);
-            Assert.DoesNotContain("//", afterExecute);
+            // No comment must appear in the synthesised .Value extraction section. Registrations use
+            // ".Lazily"/".Lazily.Load" and never ".Value", so the first ".Value" marks where the
+            // comment-free extraction section starts.
+            int firstValuePos = fixed_code.IndexOf(".Value", System.StringComparison.Ordinal);
+            Assert.True(firstValuePos >= 0, ".Value extraction not found in fixed output");
+            string afterFirstValue = fixed_code.Substring(firstValuePos);
+            Assert.DoesNotContain("//", afterFirstValue);
 
             // Extractions must be on separate lines — not jammed onto one line.
             Assert.DoesNotContain("Value;        var", fixed_code);
             Assert.DoesNotContain("Value;    var", fixed_code);
 
-            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+            // The simplified fix relies on .Value to dispatch the batch — no explicit Execute call.
+            Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
         }
     }
 }
