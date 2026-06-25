@@ -2,7 +2,9 @@ import { ReactNode } from "react";
 
 export interface MethodEntry {
     signature: string;
+    returnType?: ReactNode;
     description: ReactNode;
+    sampleScript?: string;
 }
 
 export interface MethodGroup {
