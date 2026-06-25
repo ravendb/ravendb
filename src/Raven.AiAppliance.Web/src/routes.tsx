@@ -3,6 +3,7 @@ import {
     Cable,
     Database,
     Home,
+    KeyRound,
     LayoutGrid,
     LineChart,
     MessagesSquare,
@@ -23,8 +24,11 @@ import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
 import { AppSettings } from "@/pages/apps/app-settings";
+import { AppUsage } from "@/pages/apps/app-usage";
 import { Login } from "@/pages/auth/login";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
+import { DashboardLicense } from "@/pages/dashboard/license";
+import { DashboardUsage } from "@/pages/dashboard/usage";
 import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
 import { AiPage } from "@/pages/utility/ai-page";
 import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
@@ -51,13 +55,14 @@ export type NavigationItem = {
 type DashboardNavigationDefinition = {
     label: string;
     icon: LucideIcon;
-    section?: "database" | "data-prep" | "settings";
+    section?: "database" | "data-prep" | "settings" | "license-billing";
 };
 
 type AppRouteDefinitionBase = {
     title: string;
     subtitle?: string;
     navigation?: DashboardNavigationDefinition;
+    isPageTitleHidden?: boolean;
     element: ReactNode;
 };
 
@@ -80,6 +85,28 @@ const dashboardPages: AppRouteDefinition[] = [
             icon: LayoutGrid,
         },
         element: <DashboardHome />,
+    },
+    {
+        path: "usage",
+        title: "Usage",
+        navigation: {
+            label: "Usage",
+            icon: LineChart,
+            section: "license-billing",
+        },
+        isPageTitleHidden: true,
+        element: <DashboardUsage />,
+    },
+    {
+        path: "license",
+        title: "License",
+        navigation: {
+            label: "License",
+            icon: KeyRound,
+            section: "license-billing",
+        },
+        isPageTitleHidden: true,
+        element: <DashboardLicense />,
     },
 ];
 
@@ -169,7 +196,7 @@ const appPages: AppRouteDefinition[] = [
             icon: LineChart,
             section: "settings",
         },
-        element: <AppApiUnavailable feature="Usage" />,
+        element: <AppUsage />,
     },
     {
         path: "settings",
@@ -183,17 +210,26 @@ const appPages: AppRouteDefinition[] = [
     },
 ];
 
+function toDashboardNavigationItem(page: AppRouteDefinition): NavigationItem {
+    return {
+        ...page.navigation!,
+        to: page.index ? appRouteBuilders.dashboard() : `/${page.path}`,
+        isEnd: Boolean(page.index),
+    };
+}
+
 export const navigationItems = dashboardPages.flatMap((page) =>
-    page.navigation
-        ? [
-              {
-                  ...page.navigation,
-                  to: page.index ? appRouteBuilders.dashboard() : `/${page.path}`,
-                  isEnd: Boolean(page.index),
-              },
-          ]
-        : [],
+    page.navigation && !page.navigation.section ? [toDashboardNavigationItem(page)] : [],
 ) satisfies NavigationItem[];
+
+const dashboardNavigationSectionDefinitions = [{ section: "license-billing", label: "License & Billing" }] as const;
+
+export const dashboardNavigationSections = dashboardNavigationSectionDefinitions.map(({ section, label }) => ({
+    label,
+    items: dashboardPages.flatMap((page) =>
+        page.navigation?.section === section ? [toDashboardNavigationItem(page)] : [],
+    ),
+})) satisfies Array<{ label: string; items: NavigationItem[] }>;
 
 const appNavigationSectionDefinitions = [
     { section: "database", label: "Database" },
@@ -225,6 +261,7 @@ function toRouteObject(page: AppRouteDefinition, appScoped = false): RouteObject
         title: page.title,
         subtitle: page.subtitle,
         appScoped: appScoped,
+        isPageTitleHidden: page.isPageTitleHidden,
     } satisfies AppRouteHandle;
 
     if (page.index) {

@@ -1,7 +1,7 @@
 import { NavLink, useMatch } from "react-router";
 import type { ReactNode } from "react";
 import { CircleHelp, PanelLeftClose, PanelLeftOpen, Users } from "lucide-react";
-import { appNavigationSections, navigationItems, type NavigationItem } from "@/routes";
+import { appNavigationSections, dashboardNavigationSections, navigationItems, type NavigationItem } from "@/routes";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { appRoutes } from "@/lib/app-routes";
@@ -33,6 +33,14 @@ export function AppSidebar({ slug, hasActiveApp, isCollapsed, isToggleVisible, o
                             <SidebarNavLink key={item.label} item={item} isCollapsed={isCollapsed} />
                         ))}
                     </SidebarGroup>
+
+                    {dashboardNavigationSections.map((section) => (
+                        <SidebarGroup key={section.label} label={section.label} isCollapsed={isCollapsed}>
+                            {section.items.map((item) => (
+                                <SidebarNavLink key={item.label} item={item} isCollapsed={isCollapsed} />
+                            ))}
+                        </SidebarGroup>
+                    ))}
 
                     {hasActiveApp &&
                         appNavigationSections.map((section) => (

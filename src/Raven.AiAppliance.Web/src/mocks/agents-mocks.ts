@@ -13,6 +13,9 @@ export const sampleAgents: AgentSummaryResponse[] = [
         model: "claude-opus-4-8",
         disabled: false,
         parameters: ["customerId"],
+        invocations: 128,
+        successRate: 0.94,
+        lastInvokedAt: "2026-06-25T09:00:00Z",
     },
     {
         agentId: "agents/faq",
@@ -20,5 +23,8 @@ export const sampleAgents: AgentSummaryResponse[] = [
         model: "claude-haiku-4-5",
         disabled: true,
         parameters: [],
+        invocations: 0,
+        successRate: 0,
+        lastInvokedAt: null,
     },
 ];

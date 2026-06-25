@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
+import { RawDataPreview } from "@/components/data/raw-data-preview";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
@@ -13,10 +14,12 @@ import { DeleteAiConnectionStringDialog } from "@/pages/apps/settings/delete-ai-
 
 export function AppSettings() {
     const { slug = "" } = useParams();
+    const licenseQuery = useQuery(api.queries.settings.license());
 
     return (
         <div className="space-y-5">
             <AiConnectionStringsSection slug={slug} />
+            <RawDataPreview title="settings.license" query={licenseQuery} />
         </div>
     );
 }

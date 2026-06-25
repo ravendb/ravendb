@@ -5,6 +5,7 @@ import { api } from "@/api/api";
 import type { AgentSummaryResponse, AppResponse, ChannelSummaryResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { PagePanel } from "@/components/data/page-panel";
+import { RawDataPreview } from "@/components/data/raw-data-preview";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
@@ -15,65 +16,77 @@ import { cn } from "@/lib/utils";
 
 export function DashboardHome() {
     const appsQuery = useQuery(api.queries.apps.list());
+    const dashboardQuery = useQuery(api.queries.stats.dashboard());
+    const usageQuery = useQuery(api.queries.stats.usage());
+    const tokensByAppQuery = useQuery(api.queries.stats.tokensByApp());
+    const dashboardAppsQuery = useQuery(api.queries.stats.dashboardApps());
 
     return (
         <PagePanel>
-            <ApiState
-                isLoading={appsQuery.isPending}
-                isError={appsQuery.isError}
-                errorTitle="Could not load apps"
-                onRetry={appsQuery.refetch}
-                loadingLabel="Loading apps..."
-            >
-                {appsQuery.data && appsQuery.data.length > 0 ? (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-sm font-semibold">Apps</h2>
-                                <Badge variant="secondary" className="font-mono">
-                                    {appsQuery.data.length}
-                                </Badge>
+            <div className="space-y-8">
+                <div className="space-y-6">
+                    <RawDataPreview title="stats.dashboard" query={dashboardQuery} />
+                    <RawDataPreview title="stats.usage" query={usageQuery} />
+                    <RawDataPreview title="stats.tokensByApp" query={tokensByAppQuery} />
+                    <RawDataPreview title="stats.dashboardApps" query={dashboardAppsQuery} />
+                </div>
+                <ApiState
+                    isLoading={appsQuery.isPending}
+                    isError={appsQuery.isError}
+                    errorTitle="Could not load apps"
+                    onRetry={appsQuery.refetch}
+                    loadingLabel="Loading apps..."
+                >
+                    {appsQuery.data && appsQuery.data.length > 0 ? (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-sm font-semibold">Apps</h2>
+                                    <Badge variant="secondary" className="font-mono">
+                                        {appsQuery.data.length}
+                                    </Badge>
+                                </div>
+                                <Button asChild size="sm">
+                                    <Link to={appRoutes.addApp()}>
+                                        <Plus className="size-3.5" aria-hidden="true" />
+                                        Add app
+                                    </Link>
+                                </Button>
                             </div>
-                            <Button asChild size="sm">
-                                <Link to={appRoutes.addApp()}>
-                                    <Plus className="size-3.5" aria-hidden="true" />
-                                    Add app
-                                </Link>
-                            </Button>
+                            <div className="overflow-hidden rounded-lg border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="hover:bg-transparent">
+                                            <TableHead className="w-[30%] text-xs font-medium text-muted-foreground">
+                                                App
+                                            </TableHead>
+                                            <TableHead className="text-xs font-medium text-muted-foreground">
+                                                Agents
+                                            </TableHead>
+                                            <TableHead className="text-xs font-medium text-muted-foreground">
+                                                Channels
+                                            </TableHead>
+                                            <TableHead className="text-xs font-medium text-muted-foreground">
+                                                Created
+                                            </TableHead>
+                                            <TableHead className="w-[22%] text-xs font-medium text-muted-foreground">
+                                                Status
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {appsQuery.data.map((app) => (
+                                            <AppRow key={app.slug} app={app} />
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
-                        <div className="overflow-hidden rounded-lg border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="hover:bg-transparent">
-                                        <TableHead className="w-[30%] text-xs font-medium text-muted-foreground">
-                                            App
-                                        </TableHead>
-                                        <TableHead className="text-xs font-medium text-muted-foreground">
-                                            Agents
-                                        </TableHead>
-                                        <TableHead className="text-xs font-medium text-muted-foreground">
-                                            Channels
-                                        </TableHead>
-                                        <TableHead className="text-xs font-medium text-muted-foreground">
-                                            Created
-                                        </TableHead>
-                                        <TableHead className="w-[22%] text-xs font-medium text-muted-foreground">
-                                            Status
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {appsQuery.data.map((app) => (
-                                        <AppRow key={app.slug} app={app} />
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-                ) : (
-                    <EmptyAppsState />
-                )}
-            </ApiState>
+                    ) : (
+                        <EmptyAppsState />
+                    )}
+                </ApiState>
+            </div>
         </PagePanel>
     );
 }
