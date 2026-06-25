@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export function SectionCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
     return (
-        <section>
+        <section className="min-w-0">
             <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold">{title}</h2>
                 {action}

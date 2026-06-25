@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { UploadIcon } from "lucide-react";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
@@ -36,13 +35,7 @@ export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
     };
 
     const handleFileSelected = (file: File) => {
-        importMutation.mutate(file, {
-            onSuccess: () => {
-                setIsOpen(false);
-                importMutation.reset();
-                toast.success("Configuration imported");
-            },
-        });
+        importMutation.mutate(file);
     };
 
     return (
