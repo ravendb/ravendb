@@ -525,7 +525,7 @@ public void Subscribe(SubscriptionWorker<Order> worker)
 
 **Triggered by:** a method that contains two or more independent materializing session operations — `session.Load<T>(id)` or `session.Query<T>()...ToList()` / `.First()` / etc. — each of which causes a separate HTTP round-trip to the RavenDB server.
 
-RavenDB's lazy API queues operations and sends them as a single multi-get HTTP request. Use `session.Advanced.Lazily.Load<T>(id)` and `query.Lazily()` to register operations lazily, then call `session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()` (or `await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync()` for async contexts) to execute the batch.
+RavenDB's lazy API queues operations and sends them as a single multi-get HTTP request. Use `session.Advanced.Lazily.Load<T>(id)` and `query.Lazily()` to register operations lazily, then read the values. Reading the first `.Value` (or awaiting it in async code) dispatches every pending lazy operation in one round-trip — no explicit call is needed. You can still force the batch without reading a value via `session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()` (or `...ExecuteAllPendingLazyOperationsAsync()`), but that is optional.
 
 Operations that depend on an earlier result cannot be made lazy — the analyzer only flags calls where the argument is provably independent of prior session results (a parameter, field, constant, or simple local not derived from a session call).
 
@@ -542,8 +542,7 @@ void GetData(IDocumentSession session, string userId, string orderId)
 {
     var lazyUser  = session.Advanced.Lazily.Load<User>(userId);
     var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);
-    session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
-    var user  = lazyUser.Value;
+    var user  = lazyUser.Value; // first .Value dispatches the whole batch
     var order = lazyOrder.Value;
 }
 ```
@@ -561,8 +560,7 @@ void GetData(IDocumentSession session, string managerId)
 {
     var lazyEmployees = session.Query<Employee>().Where(e => e.Active).Lazily();
     var lazyManager   = session.Advanced.Lazily.Load<User>(managerId);
-    session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
-    var employees = lazyEmployees.Value.ToList();
+    var employees = lazyEmployees.Value.ToList(); // first .Value dispatches the whole batch
     var manager   = lazyManager.Value;
 }
 ```
@@ -580,11 +578,10 @@ async Task GetDataAsync(IAsyncDocumentSession session, string userId, string ord
 // ✅ Good: one round-trip
 async Task GetDataAsync(IAsyncDocumentSession session, string userId, string orderId)
 {
-    var lazyUser  = session.Advanced.Lazily.Load<User>(userId);
-    var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);
-    await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
-    var user  = lazyUser.Value;
-    var order = lazyOrder.Value;
+    var lazyUser  = session.Advanced.Lazily.LoadAsync<User>(userId);
+    var lazyOrder = session.Advanced.Lazily.LoadAsync<Order>(orderId);
+    var user  = await lazyUser.Value; // awaiting the first .Value dispatches the whole batch async
+    var order = await lazyOrder.Value;
 }
 ```
 
