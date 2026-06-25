@@ -11,8 +11,8 @@ export default function TasksErrorsAboutView() {
             <AccordionItemWrapper icon="about" color="info">
                 <p>
                     This view displays recent errors from your ongoing tasks, including <strong>ETL tasks</strong>{" "}
-                    (RavenDB, SQL, OLAP, ElasticSearch, Kafka, RabbitMQ, Azure Queue Storage, Amazon SQS, Snowflake) and{" "}
-                    <strong>AI tasks</strong> (Embeddings Generation, GenAI).
+                    (RavenDB, SQL, OLAP, ElasticSearch, Kafka, RabbitMQ, Azure Queue Storage, Amazon SQS, Snowflake),{" "}
+                    <strong>AI tasks</strong> (Embeddings Generation, GenAI), and <strong>CDC Sinks</strong>.
                 </p>
                 <h4>Error types</h4>
                 <ul>

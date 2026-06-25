@@ -106,12 +106,12 @@ export function DeleteErrorsModal(props: DeleteErrorsModalProps) {
                     )
                 )
             );
-            messagePublisher.reportSuccess("ETL errors were deleted.");
+            messagePublisher.reportSuccess("Task errors were deleted.");
             footer.default.refreshStats();
             toggle();
             onRefresh();
         } catch (e) {
-            messagePublisher.reportError("Failed to delete ETL errors.", e?.responseText, e?.statusText);
+            messagePublisher.reportError("Failed to delete task errors.", e?.responseText, e?.statusText);
         }
     });
 

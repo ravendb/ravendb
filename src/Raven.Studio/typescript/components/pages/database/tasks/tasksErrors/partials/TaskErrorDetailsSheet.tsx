@@ -71,7 +71,7 @@ export default function TaskErrorDetailsSheet({
             <ViewSheet.Header>
                 <h3 className="mb-0">
                     <Icon icon="warning" color="warning" />
-                    ETL error details
+                    Task error details
                 </h3>
             </ViewSheet.Header>
             <ViewSheet.Body className="m-2">
