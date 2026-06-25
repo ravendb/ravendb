@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -9,12 +10,13 @@ using Microsoft.Extensions.Logging;
 
 namespace AiApplianceTests.E2E.Fixtures;
 
-/// In-process stand-in for the internal AI service on api.ravendb.net. Hosts the
-/// consolidated /api/v1/ai/assist endpoint and dispatches on the request's
-/// OperationType ("CdcConfigSetup" / "AgentConfigSetup"), capturing the last request
-/// body per operation so tests can assert license and thumbprint were attached, and
-/// returns a per-test-configurable (status, body) pair. Mirrors <see cref="MockLicenseApi"/>.
-/// The caller disposes; the bound base URL is exposed for the appliance via ApplianceOptions.AiApiUrl.
+/// In-process stand-in for the bundled RavenDB's /quill/ai/assist proxy hop (which in production
+/// injects the license + cert and forwards to api.ravendb.net). Hosts the consolidated
+/// /quill/ai/assist endpoint and dispatches on the request's OperationType ("CdcConfigSetup" /
+/// "AgentConfigSetup"), capturing the last request body per operation so tests can assert the
+/// appliance's request shape, and returns a per-test-configurable (status, body) pair. Mirrors
+/// <see cref="MockLicenseApi"/>. The caller disposes; the bound base URL is exposed for the
+/// appliance via ApplianceOptions.AiApiUrl.
 public sealed class MockAiApi : IAsyncDisposable
 {
     private readonly WebApplication _app;
@@ -51,30 +53,47 @@ public sealed class MockAiApi : IAsyncDisposable
         // after the app is built (same shape as MockLicenseApi's closure).
         MockAiApi instance = null!;
 
-        // Consolidated entrypoint: the operation is selected by OperationType in the body,
-        // matching internals' /ai/assist routing.
-        app.MapPost("/api/v1/ai/assist", async (HttpContext ctx) =>
+        // Consolidated entrypoint: the operation is selected by OperationType in the body. Mapped on
+        // both paths so one mock can stand in for either hop: /quill/ai/assist (the appliance's next
+        // hop, the bundled RavenDB proxy) and /api/v1/ai/assist (what that proxy forwards to upstream).
+        // Inline async block lambdas (not a shared method/local-function) so minimal APIs bind them as
+        // IResult-returning route handlers that actually write the response.
+        foreach (var path in new[] { "/quill/ai/assist", "/api/v1/ai/assist" })
         {
-            // leaveOpen: true so disposing the reader does not dispose the
-            // pipeline-owned request body stream.
-            using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);
-            var body = await reader.ReadToEndAsync();
-
-            var operationType = (string?)JsonNode.Parse(body)?["OperationType"];
-            switch (operationType)
+            app.MapPost(path, async (HttpContext ctx) =>
             {
-                case "CdcConfigSetup":
-                    instance.LastCdcRequestBody = body;
-                    return Results.Content(instance.CdcResponse.Body, "application/json",
-                        statusCode: instance.CdcResponse.Status);
-                case "AgentConfigSetup":
-                    instance.LastAgentRequestBody = body;
-                    return Results.Content(instance.AgentResponse.Body, "application/json",
-                        statusCode: instance.AgentResponse.Status);
-                default:
-                    return Results.BadRequest($"Unknown OperationType '{operationType}'.");
-            }
-        });
+                // leaveOpen: true so disposing the reader does not dispose the
+                // pipeline-owned request body stream.
+                using var reader = new StreamReader(ctx.Request.Body, leaveOpen: true);
+                var body = await reader.ReadToEndAsync();
+
+                string? operationType;
+                try
+                {
+                    operationType = (string?)JsonNode.Parse(body)?["OperationType"];
+                }
+                catch (JsonException)
+                {
+                    // A non-JSON / empty body throws rather than parsing to null; surface it as the
+                    // bad-input 400 the default branch already models instead of a 500.
+                    return Results.BadRequest("Malformed JSON body.");
+                }
+
+                switch (operationType)
+                {
+                    case "CdcConfigSetup":
+                        instance.LastCdcRequestBody = body;
+                        return Results.Content(instance.CdcResponse.Body, "application/json",
+                            statusCode: instance.CdcResponse.Status);
+                    case "AgentConfigSetup":
+                        instance.LastAgentRequestBody = body;
+                        return Results.Content(instance.AgentResponse.Body, "application/json",
+                            statusCode: instance.AgentResponse.Status);
+                    default:
+                        return Results.BadRequest($"Unknown OperationType '{operationType}'.");
+                }
+            });
+        }
 
         await app.StartAsync();
 

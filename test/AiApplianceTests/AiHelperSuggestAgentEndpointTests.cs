@@ -39,20 +39,13 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
         Assert.Equal(2, node["configurations"]!.AsArray().Count);
 
         var sent = JsonNode.Parse(mockAi.LastAgentRequestBody!)!;
-        // OperationType routes the consolidated /ai/assist endpoint; internals reads the exact enum name.
         Assert.Equal("AgentConfigSetup", (string?)sent["OperationType"]);
         Assert.Equal("from-data", (string?)sent["Mode"]);
         Assert.NotNull(sent["CdcConfig"]);
 
-        // Auth attachment: the appliance license (read from license.json) must ride on the
-        // outgoing request verbatim.
-        var license = sent["License"]!;
-        Assert.Equal("lic-1", (string?)license["Id"]);
-        Assert.Equal("test", (string?)license["Name"]);
-        Assert.Equal("k1", (string?)license["Keys"]![0]);
-
-        // CertificateThumbprint is best-effort (store.Certificate?.Thumbprint), null on the
-        // unsecured test store. The secured-cert path is exercised by the E2E flow.
+        // License + CertificateThumbprint are injected by the bundled RavenDB /quill/ai/assist
+        // proxy now, so the appliance must NOT attach them itself.
+        Assert.Null(sent["License"]);
         Assert.Null(sent["CertificateThumbprint"]);
     }
 
@@ -247,7 +240,6 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
     private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl)
     {
         var setupPath = NewDataPath(forceCreateDir: true);
-        File.WriteAllText(Path.Combine(setupPath, "license.json"), """{"Id":"lic-1","Name":"test","Keys":["k1"]}""");
 
         return new ApplianceWebApplicationFactory(
             licenseApiUrl: "http://unused-in-unit-tests",

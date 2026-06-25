@@ -40,15 +40,12 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         Assert.Equal("Lines", (string?)table["embeddedTables"]![0]!["propertyName"]);
         Assert.Equal("Customer", (string?)table["linkedTables"]![0]!["propertyName"]);
 
-        // Auth attachment: the appliance license (read from license.json) must ride on the
-        // outgoing request verbatim. Thumbprint is null on the unsecured test store.
+        // OperationType still rides on the request (the proxy reads the exact enum name to route).
+        // License + CertificateThumbprint are now injected by the bundled RavenDB /quill/ai/assist
+        // proxy, so the appliance must NOT attach them itself.
         var sent = JsonNode.Parse(mockAi.LastCdcRequestBody!)!;
-        // OperationType routes the consolidated /ai/assist endpoint; internals reads the exact enum name.
         Assert.Equal("CdcConfigSetup", (string?)sent["OperationType"]);
-        var license = sent["License"]!;
-        Assert.Equal("lic-1", (string?)license["Id"]);
-        Assert.Equal("test", (string?)license["Name"]);
-        Assert.Equal("k1", (string?)license["Keys"]![0]);
+        Assert.Null(sent["License"]);
         Assert.Null(sent["CertificateThumbprint"]);
 
         // Generate-only: the suggest call must not persist a map configuration;
@@ -119,24 +116,6 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
 
         var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, resp.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Surfaces_invalid_credentials_when_license_absent_without_calling()
-    {
-        var store = GetDocumentStore();
-        await using var mockAi = await MockAiApi.StartAsync();
-
-        using var factory = NewApplianceFactory(store, mockAi.BaseAddress, withLicense: false);
-        var client = factory.CreateClient();
-        await SeedDiscoveredSchemaAsync(client);
-
-        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
-        Assert.Equal("InvalidCredentials", (string?)node["status"]);
-        Assert.Null(mockAi.LastCdcRequestBody); // no upstream call without a license
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
@@ -226,11 +205,9 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
     }
 
-    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl, bool withLicense = true)
+    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl)
     {
         var setupPath = NewDataPath(forceCreateDir: true);
-        if (withLicense)
-            File.WriteAllText(Path.Combine(setupPath, "license.json"), """{"Id":"lic-1","Name":"test","Keys":["k1"]}""");
 
         return new ApplianceWebApplicationFactory(
             licenseApiUrl: "http://unused-in-unit-tests",
