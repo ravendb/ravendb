@@ -8,33 +8,28 @@ using Sparrow.Json;
 namespace Raven.AiAppliance.AiHelper;
 
 /// <summary>
-/// Typed client for the AI-Helper endpoints on the internal AI service (api.ravendb.net).
-/// Attaches the appliance license (from <see cref="IApplianceLicenseProvider"/>) and the
-/// client-cert thumbprint (<c>IDocumentStore.Certificate</c>) to each request, then maps
-/// transport outcomes (401/429/non-2xx) to <see cref="AiHelperStatus"/>. Request/response
-/// payloads are serialized through <c>store.Conventions.Serialization</c>, keeping the wire
-/// shape byte-identical to the RavenDB-based internal service.
-/// Registered as a typed <c>HttpClient</c> with <c>BaseAddress</c> set to <c>ApplianceOptions.AiApiUrl</c>.
+/// Typed client for the AI-Helper endpoints, proxied through the bundled RavenDB server's
+/// <c>/quill/ai/assist</c> handler. That handler injects the license + client-cert thumbprint from
+/// its own ServerStore and forwards to api.ravendb.net, so the appliance never reaches the external
+/// API directly. Maps transport outcomes (401/429/non-2xx) to <see cref="AiHelperStatus"/>.
+/// Request/response payloads are serialized through <c>store.Conventions.Serialization</c>, keeping
+/// the wire shape byte-identical to the RavenDB-based internal service.
+/// Registered as a typed <c>HttpClient</c> whose <c>BaseAddress</c> is the bundled RavenDB node and
+/// whose handler presents the admin client cert.
 /// </summary>
 public sealed class AiHelperInternalClient(
     HttpClient httpClient,
-    IDocumentStore store,
-    IApplianceLicenseProvider licenseProvider) : IAiHelperClient
+    IDocumentStore store) : IAiHelperClient
 {
-    // Single consolidated AI-Helper entrypoint on internals; the operation is selected by
+    // Proxy entrypoint on the bundled RavenDB server; the operation is selected by
     // OperationType on each request DTO (CdcConfigSetup / AgentConfigSetup).
-    private const string AssistPath = "/api/v1/ai/assist";
+    private const string AssistPath = "/quill/ai/assist";
 
     public async Task<SuggestCdcInternalResult> SuggestCdcAsync(
         object? schema, object? samples, string prompt, CancellationToken ct)
     {
-        if (TryBuildAuth(out var license, out var thumbprint) == false)
-            return new SuggestCdcInternalResult(AiHelperStatus.InvalidCredentials, Configuration: null, [], 0, 0);
-
         var request = new SuggestCdcApiRequest
         {
-            License = license,
-            CertificateThumbprint = thumbprint,
             Schema = schema,
             Samples = samples,
             Prompt = prompt,
@@ -60,13 +55,8 @@ public sealed class AiHelperInternalClient(
     public async Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(
         CdcSinkConfiguration cdcConfig, object? collectionsSample, string mode, string? prompt, CancellationToken ct)
     {
-        if (TryBuildAuth(out var license, out var thumbprint) == false)
-            return new SuggestAiAgentInternalResult(AiHelperStatus.InvalidCredentials, [], [], 0, 0);
-
         var request = new SuggestAiAgentApiRequest
         {
-            License = license,
-            CertificateThumbprint = thumbprint,
             CdcConfig = cdcConfig,
             CollectionsSample = collectionsSample,
             Mode = mode,
@@ -88,14 +78,6 @@ public sealed class AiHelperInternalClient(
             wire.Rationale ?? [],
             wire.InputTokenCount,
             wire.OutputTokenCount);
-    }
-
-    /// The license is the required credential. The cert thumbprint is attached when available
-    /// (null on an unsecured store) and validated by the internal service.
-    private bool TryBuildAuth(out ApplianceLicense license, out string? thumbprint)
-    {
-        thumbprint = store.Certificate?.Thumbprint;
-        return licenseProvider.TryGetLicense(out license);
     }
 
     private async Task<(AiHelperStatus Transport, string Content)> SendAsync(string path, object request, CancellationToken ct)
@@ -152,10 +134,9 @@ public sealed class AiHelperInternalClient(
 
     private sealed class SuggestCdcApiRequest
     {
-        // Routes the request on internals' consolidated /ai/assist endpoint; sent as the exact enum name.
+        // OperationType routes the consolidated assist endpoint (sent as the exact enum name).
+        // License + CertificateThumbprint are injected by the RavenDB /quill/ai/assist proxy.
         public string OperationType { get; set; } = "CdcConfigSetup";
-        public ApplianceLicense License { get; set; } = null!;
-        public string? CertificateThumbprint { get; set; }
         public object? Schema { get; set; }
         public object? Samples { get; set; }
         public string Prompt { get; set; } = null!;
@@ -163,10 +144,9 @@ public sealed class AiHelperInternalClient(
 
     private sealed class SuggestAiAgentApiRequest
     {
-        // Routes the request on internals' consolidated /ai/assist endpoint; sent as the exact enum name.
+        // OperationType routes the consolidated assist endpoint (sent as the exact enum name).
+        // License + CertificateThumbprint are injected by the RavenDB /quill/ai/assist proxy.
         public string OperationType { get; set; } = "AgentConfigSetup";
-        public ApplianceLicense License { get; set; } = null!;
-        public string? CertificateThumbprint { get; set; }
         public CdcSinkConfiguration CdcConfig { get; set; } = null!;
         public object? CollectionsSample { get; set; }
         public string Mode { get; set; } = null!;

@@ -80,21 +80,16 @@ public sealed class ApplianceOptions
     public string LicenseApiUrl { get; set; } = DefaultLicenseApiUrl;
 
     /// <summary>
-    /// Default internal AI service endpoint. The AI Helper proxies LLM-backed config
-    /// generation to <c>{AiApiUrl}/api/v1/ai/setup/*</c>; production uses this as-is,
-    /// tests point it at an in-process <c>MockAiApi</c>.
-    /// </summary>
-    public const string DefaultAiApiUrl = "https://api.ravendb.net";
-
-    /// <summary>
-    /// Internal AI service endpoint for the AI Helper. Bound from <c>RAVEN_AI_API_URL</c>.
-    /// <see cref="UrlAttribute"/> + the options pipeline's <c>ValidateOnStart</c> reject a
-    /// malformed value (missing scheme, whitespace) at boot, so <c>new Uri(AiApiUrl)</c>
-    /// cannot throw a <see cref="UriFormatException"/> on the first
-    /// <c>AiHelperInternalClient</c> resolution.
+    /// AI-Helper endpoint override. Bound from <c>RAVEN_AI_API_URL</c>. Left unset in production:
+    /// the AI Helper proxies through the bundled RavenDB (<c>/quill/ai/assist</c>), so the base
+    /// address is derived from the store's own node URL. Tests set this to an in-process mock that
+    /// stands in for that proxy hop. <see cref="UrlAttribute"/> + the options pipeline's
+    /// <c>ValidateOnStart</c> reject a malformed value. A null (unset) value passes validation and
+    /// means "derive from the store"; an explicit empty string would fail <see cref="UrlAttribute"/>,
+    /// so leave it unset rather than blank.
     /// </summary>
     [Url]
-    public string AiApiUrl { get; set; } = DefaultAiApiUrl;
+    public string? AiApiUrl { get; set; }
 
     /// <summary>
     /// Silent grace period before the first readiness probe fires. RavenDB
