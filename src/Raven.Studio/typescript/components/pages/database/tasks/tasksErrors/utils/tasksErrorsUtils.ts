@@ -246,7 +246,7 @@ export function getStepIcon(step: TaskErrorStep): IconName {
     }
 }
 
-export function getEtlTypeIcon(value: StudioEtlType): IconName {
+function getEtlTypeIcon(value: StudioEtlType): IconName {
     switch (value) {
         case "Raven":
             return "ravendb-etl";
@@ -275,7 +275,7 @@ export function getEtlTypeIcon(value: StudioEtlType): IconName {
     }
 }
 
-export function getEtlTypeLabel(etlType: StudioEtlType): string {
+function getEtlTypeLabel(etlType: StudioEtlType): string {
     switch (etlType) {
         case "Raven":
             return "RavenDB ETL";
