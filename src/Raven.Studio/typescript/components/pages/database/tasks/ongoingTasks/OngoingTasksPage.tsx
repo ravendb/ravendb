@@ -130,13 +130,13 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
         [db.name]
     );
 
-    const getEtlErrors = useCallback(
-        (location: databaseLocationSpecifier) => tasksService.getEtlErrors(db.name, location),
+    const getTaskErrors = useCallback(
+        (location: databaseLocationSpecifier) => tasksService.getTaskErrors(db.name, location),
         [db.name]
     );
 
     const { result: etlStatsResult } = useDatabaseWideAsync(getEtlStats);
-    const { result: etlErrorsResult } = useDatabaseWideAsync(getEtlErrors);
+    const { result: taskErrorsResult } = useDatabaseWideAsync(getTaskErrors);
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
@@ -286,7 +286,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
     ];
 
     const flatEtlStats: EtlTaskStats[] = etlStatsResult.flatMap((x) => x.data ?? []);
-    const flatEtlErrors: TaskErrorsWithLocation[] = etlErrorsResult.flatMap((x) =>
+    const flatTaskErrors: TaskErrorsWithLocation[] = taskErrorsResult.flatMap((x) =>
         (x.data ?? []).map((e) => ({
             ...e,
             nodeTag: x.location.nodeTag,
@@ -526,7 +526,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                         data={x}
                                         showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
-                                        etlErrors={flatEtlErrors}
+                                        taskErrors={flatTaskErrors}
                                     />
                                 ))}
                                 {embeddingsGenerations.map((x) => (
@@ -536,7 +536,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                         data={x}
                                         showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
-                                        etlErrors={flatEtlErrors}
+                                        taskErrors={flatTaskErrors}
                                     />
                                 ))}
                             </div>
@@ -666,7 +666,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -676,7 +676,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -686,7 +686,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -696,7 +696,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -706,7 +706,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -716,7 +716,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -726,7 +726,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -736,7 +736,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -746,7 +746,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -777,7 +777,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 {...sharedPanelProps}
                                                 key={taskKey(x.shared)}
                                                 data={x}
-                                                taskErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                             />
                                         ))}
                                     </div>

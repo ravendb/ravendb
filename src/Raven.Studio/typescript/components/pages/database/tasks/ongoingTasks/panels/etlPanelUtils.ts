@@ -18,7 +18,7 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 import {
     TaskErrorsWithLocation,
     getTaskHealthStatus,
@@ -47,8 +47,8 @@ export interface EtlPanelProgress {
     label: string;
 }
 
-export function getTaskErrorCount(etlErrors: EtlErrors[], taskName: string): number {
-    return filterTaskErrors(etlErrors, taskName).reduce(
+export function getTaskErrorCount(taskErrors: TaskErrors[], taskName: string): number {
+    return filterTaskErrors(taskErrors, taskName).reduce(
         (acc, e) => acc + e.ProcessErrors.length + e.ItemErrors.length,
         0
     );
@@ -59,7 +59,7 @@ export interface TaskErrorsByLocation extends databaseLocationSpecifier {
 }
 
 export function getTaskErrorCountByLocation(
-    etlErrors: TaskErrorsWithLocation[],
+    taskErrors: TaskErrorsWithLocation[],
     taskName: string,
     locations: databaseLocationSpecifier[]
 ): TaskErrorsByLocation[] {
@@ -68,7 +68,7 @@ export function getTaskErrorCountByLocation(
         locations.map((l) => [locationKey(l), { nodeTag: l.nodeTag, shardNumber: l.shardNumber, errorCount: 0 }])
     );
 
-    for (const e of filterTaskErrors(etlErrors, taskName)) {
+    for (const e of filterTaskErrors(taskErrors, taskName)) {
         const count = e.ProcessErrors.length + e.ItemErrors.length;
         if (count === 0) {
             continue;
@@ -85,8 +85,8 @@ export function getTaskErrorCountByLocation(
     return [...counts.values()];
 }
 
-function filterTaskErrors<T extends EtlErrors>(etlErrors: T[], taskName: string): T[] {
-    return etlErrors.filter((e) => {
+function filterTaskErrors<T extends TaskErrors>(taskErrors: T[], taskName: string): T[] {
+    return taskErrors.filter((e) => {
         const slashIndex = e.TaskName.indexOf("/");
         const etlName = slashIndex === -1 ? e.TaskName : e.TaskName.slice(0, slashIndex);
         return etlName === taskName;
@@ -129,11 +129,11 @@ export function computeEtlPanelProgress(
 export type EtlPanelBaseProps<T extends AnyEtlOngoingTaskInfo> = BaseOngoingTaskPanelProps<T> &
     ICanShowTransformationScriptPreview & {
         etlStats?: EtlTaskStats[];
-        etlErrors?: TaskErrorsWithLocation[];
+        taskErrors?: TaskErrorsWithLocation[];
     };
 
 export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBaseProps<T>, editUrl: string) {
-    const { data, showItemPreview, etlStats, etlErrors } = props;
+    const { data, showItemPreview, etlStats, taskErrors } = props;
 
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const { appUrl } = useAppUrls();
@@ -151,9 +151,9 @@ export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBase
 
     const taskHealth = getTaskHealthStatus(etlStats ?? [], data.shared.taskName);
     const healthBadge = healthStatusToBadge(taskHealth);
-    const errorCount = getTaskErrorCount(etlErrors ?? [], data.shared.taskName);
+    const errorCount = getTaskErrorCount(taskErrors ?? [], data.shared.taskName);
     const errorsByLocation = getTaskErrorCountByLocation(
-        etlErrors ?? [],
+        taskErrors ?? [],
         data.shared.taskName,
         data.responsibleLocations
     );

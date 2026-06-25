@@ -14,7 +14,7 @@ import { useAsync, useAsyncCallback } from "react-async-hook";
 import studioSettings from "common/settings/studioSettings";
 import messagePublisher from "common/messagePublisher";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import { EtlTaskWithErrors, EtlTransformationWithErrors, TaskCategory } from "../utils/tasksErrorsUtils";
+import { TaskWithErrors, TransformationWithErrors, TaskCategory } from "../utils/tasksErrorsUtils";
 import footer from "common/shell/footer";
 
 function useDeleteConfirmation(isRequireTypedConfirm: boolean) {
@@ -39,14 +39,14 @@ type DeleteErrorsModalProps =
           etlName: string;
           etlType?: StudioEtlType;
           category?: TaskCategory;
-          transformations: EtlTransformationWithErrors[];
+          transformations: TransformationWithErrors[];
           errorsCount: number;
       }
     | {
           mode: "all";
           toggle: () => void;
           onRefresh: () => void;
-          tasksWithErrors: EtlTaskWithErrors[];
+          tasksWithErrors: TaskWithErrors[];
       };
 
 export function DeleteErrorsModal(props: DeleteErrorsModalProps) {
@@ -97,7 +97,7 @@ export function DeleteErrorsModal(props: DeleteErrorsModalProps) {
             await Promise.all(
                 locations.flatMap((location) =>
                     requestsPerTask.map((req) =>
-                        tasksService.deleteEtlErrors(db.name, {
+                        tasksService.deleteTaskErrors(db.name, {
                             type: req.type,
                             name: req.processNames,
                             nodeTag: location.nodeTag,

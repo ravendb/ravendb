@@ -25,7 +25,7 @@ export const FullView: StoryObj<{ isAiOnly: boolean }> = {
 
         tasksService.withGetTasks();
         tasksService.withGetEtlProgress();
-        tasksService.withEtlErrors();
+        tasksService.withTaskErrors();
         tasksService.withEtlStats();
         tasksService.withGetExternalReplicationProgress();
         tasksService.withGetInternalReplicationProgress();

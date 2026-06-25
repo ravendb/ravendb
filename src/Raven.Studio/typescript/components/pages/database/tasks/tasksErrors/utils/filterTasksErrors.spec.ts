@@ -1,7 +1,7 @@
-import { EtlTaskWithErrors, TasksFiltersState } from "./tasksErrorsUtils";
+import { TaskWithErrors, TasksFiltersState } from "./tasksErrorsUtils";
 import { filterTasksWithErrors } from "components/pages/database/tasks/tasksErrors/utils/filterTasksErrors";
 
-function makeTask(overrides: Partial<EtlTaskWithErrors> = {}): EtlTaskWithErrors {
+function makeTask(overrides: Partial<TaskWithErrors> = {}): TaskWithErrors {
     return {
         etlName: "MyTask",
         etlType: "Raven",

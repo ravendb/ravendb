@@ -20,7 +20,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import {
     EtlHealthStatus,
-    EtlTaskWithErrors,
+    TaskWithErrors,
     FlatError,
     flattenAllTasksErrors,
     SHOW_WIDTH_SIZE,
@@ -148,7 +148,7 @@ function useGroupByNoneTableColumns(availableWidth: number, hasProcessErrors: bo
 }
 
 interface GroupByNoneTableProps {
-    tasksWithErrors: EtlTaskWithErrors[];
+    tasksWithErrors: TaskWithErrors[];
     etlStats: EtlTaskStats[];
     width: number;
     toggleDeleteAllErrorsModal: () => void;
@@ -229,7 +229,7 @@ function GroupByNoneTable({
 }
 
 interface GroupByNoneViewProps {
-    tasksWithErrors: EtlTaskWithErrors[];
+    tasksWithErrors: TaskWithErrors[];
     etlStats: EtlTaskStats[];
     filters: TasksFiltersState;
     onRefresh: () => void;
