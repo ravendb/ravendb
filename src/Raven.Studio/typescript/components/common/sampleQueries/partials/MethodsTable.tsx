@@ -24,14 +24,18 @@ export default function MethodsTable({ methodGroups, search, onSearchChange }: M
         .filter((group) => group.methods.length > 0);
 
     return (
-        <div className="methods-table vstack gap-3 px-3 py-1">
-            <StickyHeader className="panel-bg-1">
-                <Form.Control
-                    type="search"
-                    placeholder="Search by signature"
-                    value={search}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                />
+        <div className="methods-table vstack gap-3 px-3 py-2">
+            <StickyHeader className="panel-bg-1 px-3">
+                <div className="methods-search-wrapper position-relative">
+                    <Icon icon="search" margin="m-0" className="methods-search-icon position-absolute" />
+                    <Form.Control
+                        type="search"
+                        placeholder="Search by signature"
+                        className="rounded-1 methods-search-input"
+                        value={search}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                    />
+                </div>
             </StickyHeader>
             {filteredGroups.map((group) => (
                 <MethodGroupCard key={group.category} group={group} />

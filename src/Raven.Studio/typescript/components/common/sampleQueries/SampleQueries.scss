@@ -8,7 +8,20 @@
 
 .sample-queries-tabs {
     &.card {
-        border-radius: 0;
+        border-radius: sizes.$border-radius;
+        overflow: hidden;
+    }
+
+    .sample-queries-nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: sizes.$gutter-xxs;
+
+        &::before,
+        &::after {
+            display: none;
+        }
     }
 
     .nav-item {
@@ -16,6 +29,7 @@
             color: inherit;
             border-radius: sizes.$border-radius-sm;
             padding: sizes.$gutter-xxxs sizes.$gutter-xxs;
+            font-size: sizes.$font-size-xs;
 
             &.active {
                 background-color: colors.$panel-bg-3-var;
@@ -30,6 +44,20 @@
                 background-image: none !important;
             }
         }
+    }
+}
+
+.methods-search-wrapper {
+    .methods-search-icon {
+        top: 50%;
+        left: sizes.$gutter-xs;
+        transform: translateY(-50%);
+        pointer-events: none;
+        opacity: 0.5;
+    }
+
+    .methods-search-input {
+        padding-left: calc(#{sizes.$gutter-xs} * 2 + 1em);
     }
 }
 
@@ -101,39 +129,42 @@
     }
 }
 
-.patch-samples-action {
-    &.dropstart .dropdown-toggle::before {
-        display: none;
-    }
-}
+.patch-samples-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 102%;
+    z-index: 1050;
+    border-radius: sizes.$border-radius;
 
-.patch-samples-dropdown-menu {
-    // .bs3 .dropdown-menu sets min-width: 100% (specificity 0,2,0) — beat it with same level
-    .bs3 & {
-        min-width: 650px;
-    }
-
-    min-width: 650px;
-
-    // The Nav (tab pills) stays fixed at the top as the dropdown's navigation.
-    // Only the Tab.Content scrolls, so the "Search by signature" StickyHeader
-    // inside MethodsTable can pin to the top of its own scroll container.
-    //
-    // We cannot make the menu itself the scroll container: react-bootstrap's
-    // Popper manages the menu's inline styles, and the legacy BS3 rule
-    // `.bs3 .dropdown-menu { max-height: 45vh }` caps the menu height (the patch
-    // page is rendered inside a .bs3 ancestor). So the scroll lives on
-    // .tab-content, and its max-height tracks that 45vh cap minus the Nav height
-    // (~52px) so the menu itself never needs its own scrollbar.
-    .tab-content {
+.tab-content {
         background-color: transparent;
         max-height: calc(45vh - 60px);
         overflow-y: auto;
         padding: 0;
     }
 
-    .tab-pane.fade {
+    .tab-pane.fade,
+    .alert.fade {
         opacity: 1;
         transition: none;
+    }
+
+    // BS3 styles.css loads after bs5-styles.css, so BS3's block layout and hardcoded
+    // .alert-info colors override BS5. Re-apply them here since main.css loads last.
+    .alert {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: var(--bs-alert-bg);
+        border-color: var(--bs-alert-border-color);
+        color: var(--bs-alert-color);
+        padding: var(--bs-alert-padding-y) var(--bs-alert-padding-x);
+        border-radius: var(--bs-alert-border-radius, var(--bs-border-radius));
+
+        .w-100 {
+            font-size: 0.875rem;
+        }
     }
 }

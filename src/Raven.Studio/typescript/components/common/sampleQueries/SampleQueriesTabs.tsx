@@ -37,15 +37,15 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                 activeKey={activeTab}
                 onSelect={(tab) => handleTabSelect(tab as ActiveTab)}
             >
-                <Nav variant="pills" className="gap-1 panel-bg-2 p-2">
+                <Nav variant="pills" className="gap-1 panel-bg-2 sample-queries-nav">
                     <Nav.Item>
-                        <Nav.Link eventKey="scripts">
+                        <Nav.Link eventKey="scripts" className="no-decor">
                             <Icon icon="document" />
                             Sample scripts
                         </Nav.Link>
                     </Nav.Item>
                     <Nav.Item>
-                        <Nav.Link eventKey="methods">
+                        <Nav.Link eventKey="methods" className="no-decor">
                             <Icon icon="indent" />
                             Methods
                         </Nav.Link>
