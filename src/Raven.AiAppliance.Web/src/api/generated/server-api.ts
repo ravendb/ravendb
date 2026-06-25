@@ -4,6 +4,86 @@
 import type { ApiClient } from "@/api/http-client";
 
 export interface paths {
+    "/api/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/usage/by-app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.tokensByApp"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.dashboardApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboard/apps/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.dashboardApp"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/bootstrap/status": {
         parameters: {
             query?: never;
@@ -110,6 +190,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["apps.provisionAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/cdc/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["apps.cdcPerformance"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -280,6 +376,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.appUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.collections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.conversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/conversations/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.conversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/conversations/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.conversationStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/agents/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.agents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/channels/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stats.channels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/license": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.license"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/connect": {
         parameters: {
             query?: never;
@@ -396,12 +668,43 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ActivityEventDto: {
+            id: string;
+            appId: string;
+            type: string;
+            message: string;
+            /** Format: date-time */
+            timestamp: string;
+        };
+        AgentStatsResponse: {
+            /** Format: int32 */
+            configuredAgents: number;
+            last24h: components["schemas"]["ConversationWindow"];
+            last7d: components["schemas"]["ConversationWindow"];
+            last30d: components["schemas"]["ConversationWindow"];
+            agents: components["schemas"]["AgentUsageSummary"][];
+        };
         AgentSummaryResponse: {
             agentId: string;
             name: string;
             model: null | string;
             disabled: boolean;
             parameters: string[];
+            /** Format: int64 */
+            invocations: number;
+            /** Format: double */
+            successRate: number;
+            /** Format: date-time */
+            lastInvokedAt: null | string;
+        };
+        AgentUsageSummary: {
+            agentId: string;
+            /** Format: int64 */
+            conversations: number;
+            /** Format: int64 */
+            messages: number;
+            /** Format: int64 */
+            tokens: number;
         };
         AiAgentChatTrimmingConfiguration: {
             tokens?: components["schemas"]["AiAgentSummarizationByTokens"];
@@ -503,6 +806,44 @@ export interface components {
             errors?: null | string[];
             code?: null | string;
         };
+        ApplianceAppResponse: {
+            id: string;
+            name: string;
+            slug: string;
+            status: string;
+            source: components["schemas"]["AppSource"];
+            /** Format: int32 */
+            tablesCount: number;
+            /** Format: int64 */
+            documentsCount: number;
+            /** Format: int32 */
+            capabilitiesCount: number;
+            /** Format: int32 */
+            channelsCount: number;
+            /** Format: int32 */
+            adaptersCount: number;
+            /** Format: int32 */
+            agentsCount: number;
+            /** Format: int64 */
+            writesPerMonth: null | number;
+            channelsLabel: null | string;
+            statusSubtitle: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        AppOverviewResponse: {
+            slug: string;
+            /** Format: int64 */
+            documents: number;
+            /** Format: int32 */
+            configuredAgents: number;
+            /** Format: int32 */
+            channels: number;
+            /** Format: int32 */
+            activeChannels: number;
+        };
         AppResponse: {
             id: string;
             slug: string;
@@ -511,6 +852,31 @@ export interface components {
             cdcTaskName: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        AppSource: {
+            type: string;
+            connectionString: string;
+        };
+        AppTokens: {
+            slug: string;
+            /** Format: int64 */
+            tokens: number;
+        };
+        AppUsageMetrics: {
+            conversations: components["schemas"]["MetricCard"];
+            tokens: components["schemas"]["MetricCard"];
+            cost: components["schemas"]["MetricCard"];
+            cdcWrites: components["schemas"]["MetricCard"];
+        };
+        AppUsageResponse: {
+            granularity: components["schemas"]["UsageGranularity"];
+            metrics: components["schemas"]["AppUsageMetrics"];
+            tokensByCapability: components["schemas"]["SeriesData"];
+            tokensByModel: components["schemas"]["SeriesData"];
+            conversationsByChannel: components["schemas"]["SeriesData"];
+            cdcWrites: components["schemas"]["CdcWritePoint"][];
+            topTables: components["schemas"]["TopTable"][];
+            topCapabilities: components["schemas"]["TopCapability"][];
         };
         AuthStatusResponse: {
             authenticated: boolean;
@@ -534,6 +900,21 @@ export interface components {
             state: components["schemas"]["BootstrapPhase"];
             reason?: null | string;
         };
+        CdcBatchPoint: {
+            /** Format: date-time */
+            started: string;
+            /** Format: date-time */
+            completed: null | string;
+            /** Format: double */
+            durationInMs: number;
+            /** Format: int32 */
+            read: number;
+            /** Format: int32 */
+            processed: number;
+            /** Format: int32 */
+            errors: number;
+            stopReason: null | string;
+        };
         CdcColumnMapping: {
             column?: null | string;
             name?: null | string;
@@ -541,6 +922,21 @@ export interface components {
         };
         /** @enum {unknown} */
         CdcColumnType: "Default" | "Json" | "Attachment";
+        CdcPerformanceResponse: {
+            enabled: boolean;
+            status: string;
+            /** Format: date-time */
+            lastSyncAt: null | string;
+            /** Format: int32 */
+            lagSeconds: null | number;
+            /** Format: int64 */
+            recentReads: number;
+            /** Format: int64 */
+            recentWrites: number;
+            /** Format: int32 */
+            errorCount: number;
+            recentBatches: components["schemas"]["CdcBatchPoint"][];
+        };
         CdcSinkConfiguration: {
             /** Format: int64 */
             taskId?: number;
@@ -596,6 +992,17 @@ export interface components {
             embeddedTables?: null | components["schemas"]["CdcSinkEmbeddedTableConfig"][];
             linkedTables?: null | components["schemas"]["CdcSinkLinkedTableConfig"][];
         };
+        CdcWritePoint: {
+            t: string;
+            /** Format: int64 */
+            writes: number;
+        };
+        ChannelStatsResponse: {
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            active: number;
+        };
         ChannelSummaryResponse: {
             widgetId: string;
             type: components["schemas"]["ChannelType"];
@@ -622,6 +1029,66 @@ export interface components {
         ConnectResult: {
             success: boolean;
             errors: string[];
+        };
+        ConversationDto: {
+            id: string;
+            appId: string;
+            channelName: string;
+            agentName: string;
+            agentInitials: string;
+            agentColor: string;
+            params: components["schemas"]["ConversationParam"][];
+            lastExchange: components["schemas"]["ConversationTurn"][];
+            transcript: null | components["schemas"]["ConversationTurn"][];
+            state: string;
+            /** Format: date-time */
+            lastActivityAt: string;
+            /** Format: date-time */
+            startedAt: null | string;
+            maxDuration: null | string;
+        };
+        ConversationParam: {
+            key: string;
+            value: string;
+        };
+        ConversationStatsResponse: {
+            last24h: components["schemas"]["ConversationWindow"];
+            last7d: components["schemas"]["ConversationWindow"];
+            last30d: components["schemas"]["ConversationWindow"];
+        };
+        ConversationTurn: {
+            role: string;
+            text: string;
+            /** Format: date-time */
+            at: null | string;
+        };
+        ConversationWindow: {
+            /** Format: int64 */
+            conversations: number;
+            /** Format: int64 */
+            messages: number;
+            /** Format: int64 */
+            tokens: number;
+        };
+        DashboardResponse: {
+            /** Format: int32 */
+            apps: number;
+            last24h: components["schemas"]["ConversationWindow"];
+            last7d: components["schemas"]["ConversationWindow"];
+            last30d: components["schemas"]["ConversationWindow"];
+        };
+        DataCollectionDto: {
+            appId: string;
+            name: string;
+            /** Format: int64 */
+            documentsCount: number;
+            fields: unknown[];
+        };
+        DayWrites: {
+            label: string;
+            date: string;
+            /** Format: int64 */
+            writes: number;
         };
         DiscoverColumnResponse: {
             name: string;
@@ -703,6 +1170,39 @@ export interface components {
             embeddingsMaxConcurrentBatches?: null | number;
         };
         JsonElement: unknown;
+        LicensePlan: {
+            slug: string;
+            name: string;
+            tagline: string;
+            priceLabel: string;
+            priceSuffix: string;
+            featured: boolean;
+            features: string[];
+        };
+        LicenseResponse: {
+            state: string;
+            tier: string;
+            /** Format: int32 */
+            daysLeft: number;
+            /** Format: int32 */
+            daysElapsed: number;
+            /** Format: int32 */
+            trialLengthDays: number;
+            trialStartedLabel: string;
+            trialEndsLabel: string;
+            /** Format: int32 */
+            graceHoursLeft: null | number;
+            graceEndsLabel: null | string;
+            api: string;
+            apiHealthy: boolean;
+            connectivityOK: boolean;
+            tierHealthy: boolean;
+            lastRefreshedLabel: string;
+            plans: components["schemas"]["LicensePlan"][];
+            includes: string[];
+            stops: null | string[];
+            keeps: null | string[];
+        };
         LoginRequest: {
             apiKey: string;
         };
@@ -717,6 +1217,13 @@ export interface components {
             tables: components["schemas"]["CdcSinkTableConfig"][];
             postgres?: null | components["schemas"]["CdcSinkPostgresSettings"];
             skipInitialLoad?: null | boolean;
+        };
+        MetricCard: {
+            /** Format: double */
+            value: number;
+            /** Format: double */
+            delta: number;
+            sparkline: number[];
         };
         MintEmbedLinkRequest: {
             agentId: string;
@@ -742,6 +1249,18 @@ export interface components {
             apiKey?: null | string;
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
+        };
+        MonthlyWritesResponse: {
+            days: components["schemas"]["DayWrites"][];
+            /** Format: int64 */
+            monthlyQuota: number;
+            /** Format: int64 */
+            monthlyUsed: number;
+            monthLabel: string;
+            quotaResetsOn: string;
+            /** Format: int32 */
+            trialDaysLeft: number;
+            isCurrent: boolean;
         };
         OllamaSettings: {
             uri?: null | string;
@@ -800,6 +1319,15 @@ export interface components {
             id: string;
             slug: string;
         };
+        SeriesData: {
+            points: Record<string, never>[];
+            keys: components["schemas"]["SeriesKey"][];
+        };
+        SeriesKey: {
+            key: string;
+            label: string;
+            color: string;
+        };
         SetupTryParameter: {
             value: null | components["schemas"]["JsonElement"];
             sendToModel: boolean;
@@ -849,10 +1377,43 @@ export interface components {
             debugOutput?: string[];
             error?: null | string;
         };
+        TokensByAppResponse: {
+            apps: components["schemas"]["AppTokens"][];
+            /** Format: int32 */
+            refreshedMinutesAgo: number;
+        };
+        TopCapability: {
+            name: string;
+            /** Format: int64 */
+            invocations: number;
+            /** Format: int64 */
+            avgTokens: number;
+            /** Format: int64 */
+            totalTokens: number;
+            /** Format: double */
+            cost: number;
+        };
+        TopTable: {
+            name: string;
+            /** Format: int64 */
+            writes: number;
+            /** Format: int32 */
+            lagSeconds: number;
+            lastWriteAt: string;
+        };
         UpdateChannelRequest: {
             displayName: null | string;
             allowedOrigins: null | string[];
             enabled: null | boolean;
+        };
+        UsageGranularity: unknown;
+        UsagePoint: {
+            /** Format: date-time */
+            timestamp: string;
+            /** Format: int64 */
+            invocations: number;
+            /** Format: int64 */
+            tokens: number;
         };
         /** @enum {unknown} */
         VertexAIVersion: "V1" | "V1_Beta" | null;
@@ -873,6 +1434,117 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "stats.dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardResponse"];
+                };
+            };
+        };
+    };
+    "stats.usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsagePoint"][];
+                };
+            };
+        };
+    };
+    "stats.tokensByApp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokensByAppResponse"];
+                };
+            };
+        };
+    };
+    "stats.dashboardApps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplianceAppResponse"][];
+                };
+            };
+        };
+    };
+    "stats.dashboardApp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplianceAppResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "bootstrap.status": {
         parameters: {
             query?: never;
@@ -1046,6 +1718,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "apps.cdcPerformance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CdcPerformanceResponse"];
                 };
             };
             /** @description Not Found */
@@ -1613,6 +2316,343 @@ export interface operations {
             };
         };
     };
+    "stats.overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppOverviewResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.appUsage": {
+        parameters: {
+            query?: {
+                start?: string;
+                end?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppUsageResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataCollectionDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationDto"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityEventDto"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.conversationStats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationStatsResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentStatsResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "stats.channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelStatsResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "settings.license": {
+        parameters: {
+            query?: {
+                demoState?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseResponse"];
+                };
+            };
+        };
+    };
+    "settings.usage": {
+        parameters: {
+            query?: {
+                year?: number;
+                month?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthlyWritesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.connect": {
         parameters: {
             query?: never;
@@ -1862,7 +2902,10 @@ export interface operations {
     };
 }
 
+export type ActivityEventDto = components["schemas"]["ActivityEventDto"];
+export type AgentStatsResponse = components["schemas"]["AgentStatsResponse"];
 export type AgentSummaryResponse = components["schemas"]["AgentSummaryResponse"];
+export type AgentUsageSummary = components["schemas"]["AgentUsageSummary"];
 export type AiAgentChatTrimmingConfiguration = components["schemas"]["AiAgentChatTrimmingConfiguration"];
 export type AiAgentConfiguration = components["schemas"]["AiAgentConfiguration"];
 export type AiAgentHistoryConfiguration = components["schemas"]["AiAgentHistoryConfiguration"];
@@ -1882,13 +2925,21 @@ export type AiConnectionStringListResponse = components["schemas"]["AiConnection
 export type AiConnectorType = components["schemas"]["AiConnectorType"];
 export type AiModelType = components["schemas"]["AiModelType"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
+export type ApplianceAppResponse = components["schemas"]["ApplianceAppResponse"];
+export type AppOverviewResponse = components["schemas"]["AppOverviewResponse"];
 export type AppResponse = components["schemas"]["AppResponse"];
+export type AppSource = components["schemas"]["AppSource"];
+export type AppTokens = components["schemas"]["AppTokens"];
+export type AppUsageMetrics = components["schemas"]["AppUsageMetrics"];
+export type AppUsageResponse = components["schemas"]["AppUsageResponse"];
 export type AuthStatusResponse = components["schemas"]["AuthStatusResponse"];
 export type AzureOpenAiSettings = components["schemas"]["AzureOpenAiSettings"];
 export type BootstrapPhase = components["schemas"]["BootstrapPhase"];
 export type BootstrapStatusResponse = components["schemas"]["BootstrapStatusResponse"];
+export type CdcBatchPoint = components["schemas"]["CdcBatchPoint"];
 export type CdcColumnMapping = components["schemas"]["CdcColumnMapping"];
 export type CdcColumnType = components["schemas"]["CdcColumnType"];
+export type CdcPerformanceResponse = components["schemas"]["CdcPerformanceResponse"];
 export type CdcSinkConfiguration = components["schemas"]["CdcSinkConfiguration"];
 export type CdcSinkEmbeddedTableConfig = components["schemas"]["CdcSinkEmbeddedTableConfig"];
 export type CdcSinkLinkedTableConfig = components["schemas"]["CdcSinkLinkedTableConfig"];
@@ -1896,11 +2947,21 @@ export type CdcSinkOnDeleteConfig = components["schemas"]["CdcSinkOnDeleteConfig
 export type CdcSinkPostgresSettings = components["schemas"]["CdcSinkPostgresSettings"];
 export type CdcSinkRelationType = components["schemas"]["CdcSinkRelationType"];
 export type CdcSinkTableConfig = components["schemas"]["CdcSinkTableConfig"];
+export type CdcWritePoint = components["schemas"]["CdcWritePoint"];
+export type ChannelStatsResponse = components["schemas"]["ChannelStatsResponse"];
 export type ChannelSummaryResponse = components["schemas"]["ChannelSummaryResponse"];
 export type ChannelType = components["schemas"]["ChannelType"];
 export type ChatRequest = components["schemas"]["ChatRequest"];
 export type ConnectRequest = components["schemas"]["ConnectRequest"];
 export type ConnectResult = components["schemas"]["ConnectResult"];
+export type ConversationDto = components["schemas"]["ConversationDto"];
+export type ConversationParam = components["schemas"]["ConversationParam"];
+export type ConversationStatsResponse = components["schemas"]["ConversationStatsResponse"];
+export type ConversationTurn = components["schemas"]["ConversationTurn"];
+export type ConversationWindow = components["schemas"]["ConversationWindow"];
+export type DashboardResponse = components["schemas"]["DashboardResponse"];
+export type DataCollectionDto = components["schemas"]["DataCollectionDto"];
+export type DayWrites = components["schemas"]["DayWrites"];
 export type DiscoverColumnResponse = components["schemas"]["DiscoverColumnResponse"];
 export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignKeyResponse"];
 export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
@@ -1912,11 +2973,15 @@ export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
 export type JsonElement = components["schemas"]["JsonElement"];
+export type LicensePlan = components["schemas"]["LicensePlan"];
+export type LicenseResponse = components["schemas"]["LicenseResponse"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type MapRequest = components["schemas"]["MapRequest"];
+export type MetricCard = components["schemas"]["MetricCard"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
+export type MonthlyWritesResponse = components["schemas"]["MonthlyWritesResponse"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiReasoningEffort = components["schemas"]["OpenAiReasoningEffort"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
@@ -1926,6 +2991,8 @@ export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelReq
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
 export type ProvisionRequest = components["schemas"]["ProvisionRequest"];
 export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
+export type SeriesData = components["schemas"]["SeriesData"];
+export type SeriesKey = components["schemas"]["SeriesKey"];
 export type SetupTryParameter = components["schemas"]["SetupTryParameter"];
 export type SetupTryRequest = components["schemas"]["SetupTryRequest"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
@@ -1935,7 +3002,12 @@ export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];
 export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];
+export type TokensByAppResponse = components["schemas"]["TokensByAppResponse"];
+export type TopCapability = components["schemas"]["TopCapability"];
+export type TopTable = components["schemas"]["TopTable"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
+export type UsageGranularity = components["schemas"]["UsageGranularity"];
+export type UsagePoint = components["schemas"]["UsagePoint"];
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 
@@ -1950,6 +3022,7 @@ export const API_ENDPOINTS = {
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings`,
     },
     apps: {
+        cdcPerformance: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/performance`,
         detail: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
         list: "/apps",
         provisionAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/agent`,
@@ -1978,6 +3051,10 @@ export const API_ENDPOINTS = {
         mint: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
         revoke: (slug: string, token: string) => `/apps/${encodeURIComponent(slug)}/embed-links/${encodeURIComponent(token)}`,
     },
+    settings: {
+        license: "/settings/license",
+        usage: "/settings/usage",
+    },
     setup: {
         connect: "/setup/connect",
         discover: "/setup/discover",
@@ -1985,6 +3062,22 @@ export const API_ENDPOINTS = {
         provision: "/setup/provision",
         suggestCdc: "/setup/suggest/cdc",
         testMapping: "/setup/test-mapping",
+    },
+    stats: {
+        activity: (slug: string) => `/apps/${encodeURIComponent(slug)}/activity`,
+        agents: (slug: string) => `/apps/${encodeURIComponent(slug)}/agents/stats`,
+        appUsage: (slug: string) => `/apps/${encodeURIComponent(slug)}/usage`,
+        channels: (slug: string) => `/apps/${encodeURIComponent(slug)}/channels/stats`,
+        collections: (slug: string) => `/apps/${encodeURIComponent(slug)}/collections`,
+        conversation: (slug: string, conversationId: string) => `/apps/${encodeURIComponent(slug)}/conversations/${encodeURIComponent(conversationId)}`,
+        conversations: (slug: string) => `/apps/${encodeURIComponent(slug)}/conversations`,
+        conversationStats: (slug: string) => `/apps/${encodeURIComponent(slug)}/conversations/stats`,
+        dashboard: "/dashboard",
+        dashboardApp: (slug: string) => `/dashboard/apps/${encodeURIComponent(slug)}`,
+        dashboardApps: "/dashboard/apps",
+        overview: (slug: string) => `/apps/${encodeURIComponent(slug)}/overview`,
+        tokensByApp: "/usage/by-app",
+        usage: "/usage",
     },
 } as const;
 
@@ -2000,6 +3093,7 @@ export function createServerApi(client: ApiClient) {
             list: (slug: string) => client.get<AiConnectionStringListResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list(slug)),
         },
         apps: {
+            cdcPerformance: (slug: string) => client.get<CdcPerformanceResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcPerformance(slug)),
             detail: (slug: string) => client.get<AppResponse, ApiErrorResponse>(API_ENDPOINTS.apps.detail(slug)),
             list: () => client.get<AppResponse[]>(API_ENDPOINTS.apps.list),
             provisionAgent: (slug: string, request: AiAgentConfiguration) => client.post<ProvisionAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.provisionAgent(slug), request),
@@ -2028,6 +3122,10 @@ export function createServerApi(client: ApiClient) {
             mint: (slug: string, request: MintEmbedLinkRequest) => client.post<MintEmbedLinkResponse, ApiErrorResponse>(API_ENDPOINTS.embedLinks.mint(slug), request),
             revoke: (slug: string, token: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.embedLinks.revoke(slug, token)),
         },
+        settings: {
+            license: (searchParams?: { demoState?: string; }) => client.get<LicenseResponse>(API_ENDPOINTS.settings.license, { searchParams }),
+            usage: (searchParams?: { month?: string; year?: string; }) => client.get<MonthlyWritesResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
+        },
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
             discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
@@ -2035,6 +3133,22 @@ export function createServerApi(client: ApiClient) {
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
             suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
+        },
+        stats: {
+            activity: (slug: string) => client.get<ActivityEventDto[], ApiErrorResponse>(API_ENDPOINTS.stats.activity(slug)),
+            agents: (slug: string) => client.get<AgentStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.agents(slug)),
+            appUsage: (slug: string, searchParams?: { end?: string; start?: string; }) => client.get<AppUsageResponse, ApiErrorResponse>(API_ENDPOINTS.stats.appUsage(slug), { searchParams }),
+            channels: (slug: string) => client.get<ChannelStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.channels(slug)),
+            collections: (slug: string) => client.get<DataCollectionDto[], ApiErrorResponse>(API_ENDPOINTS.stats.collections(slug)),
+            conversation: (slug: string, conversationId: string) => client.get<ConversationDto, ApiErrorResponse>(API_ENDPOINTS.stats.conversation(slug, conversationId)),
+            conversations: (slug: string) => client.get<ConversationDto[], ApiErrorResponse>(API_ENDPOINTS.stats.conversations(slug)),
+            conversationStats: (slug: string) => client.get<ConversationStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.conversationStats(slug)),
+            dashboard: () => client.get<DashboardResponse>(API_ENDPOINTS.stats.dashboard),
+            dashboardApp: (slug: string) => client.get<ApplianceAppResponse, ApiErrorResponse>(API_ENDPOINTS.stats.dashboardApp(slug)),
+            dashboardApps: () => client.get<ApplianceAppResponse[]>(API_ENDPOINTS.stats.dashboardApps),
+            overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),
+            tokensByApp: () => client.get<TokensByAppResponse>(API_ENDPOINTS.stats.tokensByApp),
+            usage: () => client.get<UsagePoint[]>(API_ENDPOINTS.stats.usage),
         },
     };
 }
