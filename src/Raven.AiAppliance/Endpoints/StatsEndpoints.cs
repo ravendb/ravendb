@@ -36,21 +36,21 @@ public static class StatsEndpoints
         // Per-app token-usage breakdown (mock-api `getTokensByApp()`).
         app.MapGet("/api/usage/by-app", GetTokensByAppAsync)
             .WithTags("stats")
-            .WithName("stats.usage.byApp")
+            .WithName("stats.tokensByApp")
             .RequireAuthorization()
             .Produces<TokensByAppResponse>();
 
         // Enriched apps list for the Dashboard table (mock-api `listApps()`).
         app.MapGet("/api/dashboard/apps", GetDashboardAppsAsync)
             .WithTags("stats")
-            .WithName("stats.dashboard.apps")
+            .WithName("stats.dashboardApps")
             .RequireAuthorization()
             .Produces<ApplianceAppResponse[]>();
 
         // Single enriched app (mock-api `getApp(id)`).
         app.MapGet("/api/dashboard/apps/{slug}", GetDashboardAppAsync)
             .WithTags("stats")
-            .WithName("stats.dashboard.app")
+            .WithName("stats.dashboardApp")
             .RequireAuthorization()
             .Produces<ApplianceAppResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
@@ -78,12 +78,12 @@ public static class StatsEndpoints
         // The {*conversationId} catch-all carries the "chats/..." id (it contains a slash);
         // the literal "/conversations/stats" route still wins by routing precedence.
         group.MapGet("/conversations", GetConversationsListAsync)
-            .WithName("stats.conversations.list")
+            .WithName("stats.conversations")
             .Produces<ConversationDto[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapGet("/conversations/{*conversationId}", GetConversationByIdAsync)
-            .WithName("stats.conversations.get")
+            .WithName("stats.conversation")
             .Produces<ConversationDto>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
@@ -95,7 +95,7 @@ public static class StatsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapGet("/conversations/stats", GetConversationStatsAsync)
-            .WithName("stats.conversations")
+            .WithName("stats.conversationStats")
             .Produces<ConversationStatsResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
