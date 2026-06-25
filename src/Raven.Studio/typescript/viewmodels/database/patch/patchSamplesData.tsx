@@ -142,16 +142,17 @@ export const methodGroups: MethodGroup[] = [
                 description: (
                     <>
                         Returns the ID of a document object. Use <code>id(this)</code> for the document currently being
-                        patched. Use <code>id(documentVariable)</code> for another document object available in the
-                        script, such as a loaded related document.
+                        patched. Use <code>id(documentVariable)</code> for any document variable available in the
+                        script, such as a query alias or a loaded related document.
                     </>
                 ),
-                sampleScript: `// Copy the current order ID and the related company ID into fields.
+                sampleScript: `// Copy document IDs from the current document, query alias, and loaded related document.
 from Orders as o
 load o.Company as c
 update {
-    o.OrderId = id(this); // Current order ID
-    o.CompanyId = id(c);  // Loaded company ID
+    o.OrderId = id(this);       // Current document
+    o.OrderAliasId = id(o);     // Query alias
+    o.CompanyId = id(c);        // Loaded related document
 }`,
             },
             {
