@@ -9,6 +9,8 @@ import { createEmbedLinksQueries } from "@/api/queries/embed-links-queries";
 import { createBootstrapQueries } from "@/api/queries/bootstrap-queries";
 import { createSetupQueries } from "@/api/queries/setup-queries";
 import { createAiConnectionStringsQueries } from "@/api/queries/ai-connection-strings-queries";
+import { createStatsQueries } from "@/api/queries/stats-queries";
+import { createSettingsQueries } from "@/api/queries/settings-queries";
 
 export type ApiServices = Omit<ServerApi, "chat"> & {
     chat: ReturnType<typeof createChatService>;
@@ -23,6 +25,8 @@ export type ApiQueries = {
     embedLinks: ReturnType<typeof createEmbedLinksQueries>;
     setup: ReturnType<typeof createSetupQueries>;
     aiConnectionStrings: ReturnType<typeof createAiConnectionStringsQueries>;
+    stats: ReturnType<typeof createStatsQueries>;
+    settings: ReturnType<typeof createSettingsQueries>;
 };
 
 export type Api = {
@@ -51,6 +55,8 @@ export function createApi(options?: ApiClientOptions): Api {
             embedLinks: createEmbedLinksQueries(services.embedLinks),
             setup: createSetupQueries(services.setup),
             aiConnectionStrings: createAiConnectionStringsQueries(services.aiConnectionStrings),
+            stats: createStatsQueries(services.stats),
+            settings: createSettingsQueries(services.settings),
         },
     };
 }
