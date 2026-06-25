@@ -7,7 +7,6 @@ import { Icon } from "components/common/Icon";
 import { StickyHeader } from "components/common/StickyHeader";
 import copyToClipboard from "common/copyToClipboard";
 import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
-import RichAlert from "components/common/RichAlert";
 
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
@@ -16,7 +15,6 @@ interface MethodsTableProps {
 }
 
 export default function MethodsTable({ methodGroups, search, onSearchChange }: MethodsTableProps) {
-
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
@@ -53,19 +51,16 @@ function MethodGroupCard({ group }: MethodGroupCardProps) {
     return (
         <div>
             <h4 className="mb-2 mt-0">{group.category}</h4>
-            {group.category === "Document operations" && (
-                <RichAlert variant="info" icon="info" className="mb-2">
-                    To get a document ID from the current document use <code>id(this)</code>, or from a loaded document
-                    use <code>id(doc)</code>.
-                </RichAlert>
-            )}
             <Card className="border border-color-light rounded overflow-hidden mb-0">
                 <Row className="mx-0 panel-bg-2 fw-regular border-color-light">
-                    <Col xs={6} className="py-2 px-3">
-                        Methods signature
+                    <Col xs={5} className="py-2 px-3">
+                        Method signature
                     </Col>
-                    <Col xs={6} className="py-2 px-3 border-start border-color-light">
+                    <Col xs={5} className="py-2 px-3 border-start border-color-light">
                         Description
+                    </Col>
+                    <Col xs={2} className="py-2 px-3 border-start border-color-light">
+                        Return type
                     </Col>
                 </Row>
                 {group.methods.map((method) => (
@@ -87,7 +82,7 @@ function MethodRow({ method }: MethodRowProps) {
 
     return (
         <Row className="mx-0 border-top border-color-light method-row">
-            <Col xs={6} className="py-2 px-3 position-relative">
+            <Col xs={5} className="py-2 px-3 position-relative">
                 <code>{method.signature}</code>
                 <button
                     type="button"
@@ -98,8 +93,11 @@ function MethodRow({ method }: MethodRowProps) {
                     <Icon icon="copy-to-clipboard" margin="m-0" />
                 </button>
             </Col>
-            <Col xs={6} className="py-2 px-3 border-start border-color-light">
+            <Col xs={5} className="py-2 px-3 border-start border-color-light">
                 {method.description}
+            </Col>
+            <Col xs={2} className="py-2 px-3 border-start border-color-light">
+                <code>{method.returnType}</code>
             </Col>
         </Row>
     );
