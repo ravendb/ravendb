@@ -1478,6 +1478,7 @@ return docs[0];`,
     static taskErrors(): TaskErrors[] {
         return [
             {
+                Category: "Etl",
                 ProcessErrors: [],
                 EtlSubType: null,
                 ItemErrors: [
