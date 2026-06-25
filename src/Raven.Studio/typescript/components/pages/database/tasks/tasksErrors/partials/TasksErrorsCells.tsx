@@ -14,7 +14,6 @@ import moment from "moment";
 import genUtils from "common/generalUtils";
 import TaskErrorDetailsSheet from "./TaskErrorDetailsSheet";
 import {
-    AI_ONLY_TASK_TYPES,
     TaskErrorStep,
     EtlHealthStatus,
     FlatError,
@@ -24,6 +23,7 @@ import {
     getStepIcon,
     getTaskTypeDisplay,
     healthStatusToBadge,
+    taskHasTransformations,
 } from "../utils/tasksErrorsUtils";
 import colorsManager from "common/colorsManager";
 
@@ -137,18 +137,17 @@ export const HyperLinkDocumentCellValue = ({ getValue }: Pick<CellContext<FlatEr
 
 export const CellTaskWrapper = ({ row }: CellContext<FlatError, string>) => {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { etlName, transformationName, taskId, etlType } = row.original;
+    const { etlName, transformationName, taskId, etlType, category } = row.original;
 
     const taskLink =
         etlName && taskId != null && etlType != null ? getEtlEditLink(databaseName, taskId, etlType) : null;
 
-    const isAiTask = AI_ONLY_TASK_TYPES.includes(etlType);
-    const content = isAiTask ? (
-        <>{etlName}</>
-    ) : (
+    const content = taskHasTransformations(category) ? (
         <>
             {etlName}/{transformationName}
         </>
+    ) : (
+        <>{etlName}</>
     );
 
     return <div className="cell-value">{taskLink ? <a href={taskLink}>{content}</a> : content}</div>;
