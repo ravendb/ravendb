@@ -121,6 +121,34 @@ namespace SlowTests.Server.Documents.CdcSink
             return null;
         }
 
+        protected async Task<T> WaitForSinkDocumentAsync<T>(IDocumentStore store, string configName, string docId, int timeoutMs = 120_000)
+            where T : class
+        {
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var doc = await session.LoadAsync<T>(docId);
+                    if (doc != null)
+                        return doc;
+                }
+
+                await Task.Delay(250);
+            }
+
+            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == configName);
+            var diagnostics = process == null
+                ? "CDC Sink process not found (it may have been removed)."
+                : $"IsFaulted={process.IsFaulted}, FallbackTime={process.FallbackTime?.TotalSeconds:F0}s, " +
+                  $"LastCheckpoint={process.LastCheckpoint ?? "(none)"}, LastProcessException={process.LastProcessException?.ToString() ?? "(none)"}";
+
+            throw new Xunit.Sdk.XunitException(
+                $"CDC Sink '{configName}' did not deliver document '{docId}' within {timeoutMs}ms. {diagnostics}");
+        }
+
         protected async Task<bool> WaitForDocumentDeletionAsync(IDocumentStore store, string docId, int timeoutMs = 30_000)
         {
             var sw = Stopwatch.StartNew();
