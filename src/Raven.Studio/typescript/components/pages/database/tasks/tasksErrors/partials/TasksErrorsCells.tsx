@@ -205,7 +205,7 @@ export const CellAffectedDocumentsWrapper = ({ getValue }: CellContext<FlatError
     return <CellValue value={getValue()} />;
 };
 
-export const CellEtlTypeWrapper = ({ row }: CellContext<FlatError, StudioEtlType>) => {
+export const CellTaskTypeWrapper = ({ row }: CellContext<FlatError, StudioEtlType>) => {
     // CDC Sink rows have no StudioEtlType; getTaskTypeDisplay brands them by category and falls back
     // to a neutral icon/label for any other type-less row (instead of hitting the exhaustive switch).
     const { category, etlType } = row.original;

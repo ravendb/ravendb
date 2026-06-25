@@ -58,12 +58,12 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { AccessPopover } from "components/common/AccessPopover";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
-interface EtlTypeRichPanelItemProps {
+interface TaskTypeRichPanelItemProps {
     category?: TaskCategory;
     etlType?: StudioEtlType;
 }
 
-function EtlTypeRichPanelItem({ category, etlType }: EtlTypeRichPanelItemProps) {
+function TaskTypeRichPanelItem({ category, etlType }: TaskTypeRichPanelItemProps) {
     if (category !== "CdcSink" && !etlType) {
         return null;
     }
@@ -330,7 +330,7 @@ export function TaskPanel({ etlName, etlType, category, transformations, etlStat
                             <Icon icon={isDetailsVisible ? "fold" : "unfold"} margin="m-0" />
                         </Button>
                     </RichPanelDetailItem>
-                    <EtlTypeRichPanelItem category={category} etlType={etlType} />
+                    <TaskTypeRichPanelItem category={category} etlType={etlType} />
                     <RichPanelDetailItem contentClassName="d-flex gap-1 align-items-center">
                         <Icon icon="warning" color="danger" margin="m-0" />
                         <span>Errors</span> <b>{errorsCount}</b>

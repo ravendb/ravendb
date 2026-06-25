@@ -31,7 +31,7 @@ import {
     CellDateWithRelativeTimeWrapper,
     CellErrorStepWrapper,
     CellErrorTypeWrapper,
-    CellEtlTypeWrapper,
+    CellTaskTypeWrapper,
     CellNodeValueWrapper,
     CellShardValueWrapper,
     CellTaskHealthWrapper,
@@ -59,7 +59,7 @@ function useGroupByNoneTableColumns(availableWidth: number, hasProcessErrors: bo
             {
                 header: "Task type",
                 accessorKey: "etlType",
-                cell: CellEtlTypeWrapper,
+                cell: CellTaskTypeWrapper,
                 size: getSize(5),
                 enableSorting: false,
                 enableColumnFilter: false,
