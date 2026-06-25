@@ -348,8 +348,10 @@ export const AI_ONLY_TASK_TYPES: StudioEtlType[] = ["EmbeddingsGeneration", "Gen
 
 export type TaskCategory = "Etl" | "Ai" | "CdcSink";
 
-export function getTaskCategory(etlType: StudioEtlType | undefined): TaskCategory {
-    return etlType && AI_ONLY_TASK_TYPES.includes(etlType) ? "Ai" : "Etl";
+// ETL tasks report errors per transformation and are shown as "taskName/transformationName".
+// AI and CDC tasks have no transformation, so they're shown by task name only.
+export function taskHasTransformations(category: TaskCategory | undefined): boolean {
+    return category === "Etl";
 }
 
 function resolveEtlType(etlStats: EtlTaskStats[], etlName: string): StudioEtlType | undefined {

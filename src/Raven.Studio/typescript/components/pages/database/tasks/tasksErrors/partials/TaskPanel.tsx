@@ -36,10 +36,10 @@ import {
     flattenTransformationErrors,
     getEtlEditLink,
     getPopoverMessageForTaskHealth,
-    getTaskCategory,
     getTaskHealthStatus,
     getTaskTypeDisplay,
     healthStatusToBadge,
+    taskHasTransformations,
     SHOW_WIDTH_SIZE,
     TaskCategory,
 } from "../utils/tasksErrorsUtils";
@@ -222,6 +222,7 @@ interface NestedTaskPanelDetailsProps extends TransformationWithErrors {
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
+    category?: TaskCategory;
 }
 
 function NestedTaskPanelDetails({
@@ -234,9 +235,8 @@ function NestedTaskPanelDetails({
     const { value: isNestedDetailsVisible, toggle: toggleNestedDetailsVisible } = useBoolean(true);
 
     const totalErrors = processErrors.length + itemErrors.length;
-    const isAiTask = getTaskCategory(rest.etlType) === "Ai";
 
-    if (isAiTask) {
+    if (!taskHasTransformations(rest.category)) {
         return (
             <Card className="bg-black p-3">
                 <NestedTaskPanelDetailsTable
@@ -385,6 +385,7 @@ export function TaskPanel({ etlName, etlType, category, transformations, etlStat
                                         healthStatus={taskHealth}
                                         taskId={taskId}
                                         etlType={etlType}
+                                        category={category}
                                     />
                                 ))}
                             </div>
