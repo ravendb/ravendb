@@ -7,6 +7,7 @@ import { Icon } from "components/common/Icon";
 import { StickyHeader } from "components/common/StickyHeader";
 import copyToClipboard from "common/copyToClipboard";
 import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
+import RichAlert from "components/common/RichAlert";
 
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
@@ -51,9 +52,15 @@ interface MethodGroupCardProps {
 function MethodGroupCard({ group }: MethodGroupCardProps) {
     return (
         <div>
-            <h6 className="mb-2">{group.category}</h6>
+            <h4 className="mb-2 mt-0">{group.category}</h4>
+            {group.category === "Document operations" && (
+                <RichAlert variant="info" icon="info" className="mb-2">
+                    To get a document ID from the current document use <code>id(this)</code>, or from a loaded document
+                    use <code>id(doc)</code>.
+                </RichAlert>
+            )}
             <Card className="border border-color-light rounded overflow-hidden mb-0">
-                <Row className="mx-0 panel-bg-2 fw-semibold border-bottom border-color-light">
+                <Row className="mx-0 panel-bg-2 fw-regular border-color-light">
                     <Col xs={6} className="py-2 px-3">
                         Methods signature
                     </Col>
