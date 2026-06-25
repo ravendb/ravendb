@@ -42,6 +42,7 @@ type CdcSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskCdcSinkInfo> & {
 function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { appUrl } = useAppUrls();
 
     const lastBatchTime = formatDate(data.shared.lastBatchTime);
     const lastActivityTime = formatDate(data.shared.lastActivityTime);
