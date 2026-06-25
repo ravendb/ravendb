@@ -76,6 +76,30 @@ namespace SlowTests.Server.Documents.CdcSink
             throw new TimeoutException("CDC capture job did not process any changes within 30 seconds.");
         }
 
+        /// <summary>
+        /// Waits until SQL Server's CDC has recorded the row in its change table. An insert made
+        /// right after an ALTER TABLE takes longer than usual to show up there, so we wait for it
+        /// explicitly to keep the test from being flaky.
+        /// </summary>
+        private async Task WaitForCdcChangeCapture(string connectionString, string captureInstance, string keyColumn, int keyValue)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < 60_000)
+            {
+                await using var connection = new SqlConnection(connectionString);
+                await connection.OpenAsync();
+                await using var cmd = new SqlCommand(
+                    $"SELECT COUNT(*) FROM cdc.{captureInstance}_CT WHERE {keyColumn} = @key", connection);
+                cmd.Parameters.AddWithValue("@key", keyValue);
+                var result = await cmd.ExecuteScalarAsync();
+                if (result is int count && count > 0)
+                    return;
+                await Task.Delay(500);
+            }
+            throw new TimeoutException(
+                $"CDC capture job did not record {keyColumn}={keyValue} in 'cdc.{captureInstance}_CT' within 60 seconds.");
+        }
+
         private SqlConnectionString SetupSqlConnectionString(IDocumentStore store, string connectionString, string name = "mssql-resilience-test")
         {
             var sqlCs = new SqlConnectionString
@@ -148,6 +172,9 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Insert with the new column — CDC still captures old column set
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'After', 'new col')");
+
+            // Wait for CDC to capture the new row before checking the document.
+            await WaitForCdcChangeCapture(connectionString, "dbo_items", "id", 2);
 
             // Should still work fine — the capture instance has the old columns
             var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);
