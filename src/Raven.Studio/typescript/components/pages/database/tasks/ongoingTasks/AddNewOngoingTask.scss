@@ -88,6 +88,10 @@ $variants: (
     ),
 );
 
+.add-new-ongoing-task .radio-toggle .toggle-knob i {
+    align-items: center;
+}
+
 .add-new-ongoing-task {
     height: calc(100% - #{sizes.$gutter});
     margin: #{sizes.$gutter} #{sizes.$gutter} 0 #{sizes.$gutter};
@@ -121,8 +125,14 @@ $variants: (
     }
 }
 
-.add-new-ongoing-task-card .task-icon {
-    font-size: 1.25rem;
+.add-new-ongoing-task-card {
+    .task-icon {
+        font-size: 1.25rem;
+    }
+
+    .license-restricted-badge {
+        z-index: 4;
+    }
 }
 
 .ongoing-tasks-grid {
@@ -134,6 +144,18 @@ $variants: (
 
     @container (min-width: 720px) {
         grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    &--compact {
+        @container (min-width: 1100px) {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+}
+
+.add-new-ongoing-task-card.compact {
+    .card-body {
+        padding: sizes.$gutter-sm;
     }
 }
 
@@ -154,7 +176,10 @@ $variants: (
 }
 
 .add-new-ongoing-task-sidebar {
-    width: 224px;
+    width: 250px;
+    height: fit-content;
+    background: colors.$panel-bg-1;
+    border-radius: sizes.$border-radius;
 
     .form-control.filtering-input {
         min-width: 0;
@@ -214,6 +239,25 @@ button.add-new-ongoing-task-chip {
     &:disabled {
         opacity: 0.4;
         cursor: default;
+    }
+}
+
+a.add-new-ongoing-task-nav-item {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xxs;
+    width: 100%;
+    padding: sizes.$gutter-xxs sizes.$gutter-xs;
+    border-radius: sizes.$border-radius-sm;
+    text-align: left;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background: colors.$panel-bg-2-var;
+    }
+
+    .add-new-ongoing-task-nav-item__newtab {
+        font-size: sizes.$font-size-base;
     }
 }
 

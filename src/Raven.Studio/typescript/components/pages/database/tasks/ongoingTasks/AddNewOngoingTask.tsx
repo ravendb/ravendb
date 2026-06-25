@@ -15,6 +15,7 @@ import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/Lice
 import { useNewOngoingTasks } from "components/pages/database/tasks/shared/shared";
 import { EmptySet } from "components/common/EmptySet";
 import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
+import { RadioToggleWithIcon } from "components/common/toggles/RadioToggle";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -35,9 +36,10 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
     const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl();
     const showBackUrl = !queryParams?.noBack;
 
-    const [activeCategory, setActiveCategory] = useState<string>(
+    const [activeCategory, setActiveCategory] = useState<string | null>(
         allCategories.length > 0 ? allCategories[0].categoryName : null
     );
+    const [displayMode, setDisplayMode] = useState<"expanded" | "compact">("expanded");
 
     const contentRef = useRef<HTMLDivElement>(null);
     const isScrollingRef = useRef(false);
@@ -54,7 +56,9 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
 
     useEffect(() => {
         const container = contentRef.current;
-        if (!container || allCategories.length === 0) return;
+        if (!container || allCategories.length === 0) {
+            return;
+        }
 
         const handleScroll = () => {
             if (isScrollingRef.current) {
@@ -93,7 +97,7 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
 
     return (
         <div className="add-new-ongoing-task d-flex flex-column">
-            <div className="d-flex justify-content-between">
+            <div className="d-flex justify-content-between align-items-start">
                 {showBackUrl ? (
                     <AboutViewHeading
                         title="Add a database task"
@@ -105,17 +109,14 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
                 ) : (
                     <AboutViewHeading title="Add a database task" icon="tasks" iconAddon="plus" marginBottom={4} />
                 )}
-                <div className="d-flex align-items-start gap-3">
-                    <Button
-                        size="sm"
-                        target="_blank"
-                        href={serverWideTasksUrl}
-                        title="Go to the Server-Wide Tasks view"
-                        variant="link"
-                    >
-                        <Icon icon="server-wide-tasks" />
-                        Server-Wide Tasks
-                    </Button>
+                <div className="d-flex align-items-center gap-3">
+                    <RadioToggleWithIcon
+                        name="task-display-mode"
+                        leftItem={{ label: "", value: "expanded", iconName: "list" }}
+                        rightItem={{ label: "", value: "compact", iconName: "grid-3x2" }}
+                        selectedValue={displayMode}
+                        setSelectedValue={(val) => setDisplayMode(val)}
+                    />
                     <AddNewOngoingTaskAboutView />
                 </div>
             </div>
@@ -126,7 +127,7 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
                         <Form.Control
                             type="text"
                             accessKey="/"
-                            placeholder="e.g. Embeddings Generation"
+                            placeholder="e.g. External Replication"
                             title="Filter tasks"
                             className="filtering-input"
                             value={searchText}
@@ -164,13 +165,13 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
                 </div>
             </div>
             <div className="add-new-ongoing-task-layout d-flex gap-4 mt-2">
-                <div className="add-new-ongoing-task-sidebar flex-shrink-0">
+                <div className="add-new-ongoing-task-sidebar flex-shrink-0 p-3">
                     <div className="small-label ms-1 mb-1">Search by name</div>
-                    <div className="clearable-input mb-4">
+                    <div className="clearable-input mb-3">
                         <Form.Control
                             type="text"
                             accessKey="/"
-                            placeholder="e.g. Embeddings Generation"
+                            placeholder="e.g. External Replication"
                             title="Filter tasks"
                             className="filtering-input"
                             value={searchText}
@@ -184,29 +185,51 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
                             </div>
                         )}
                     </div>
-                    <div className="small-label ms-1 mb-1">Task Categories</div>
-                    <div className="d-flex flex-column">
-                        {allCategories.map((category) => {
-                            const isAvailable = filteredTasks.some((t) => t.categoryName === category.categoryName);
-                            return (
-                                <button
-                                    key={category.categoryName}
-                                    className={classNames("add-new-ongoing-task-nav-item", {
-                                        active: activeCategory === category.categoryName,
-                                        disabled: !isAvailable,
-                                    })}
-                                    onClick={() => scrollToCategory(category.categoryName)}
-                                    disabled={!isAvailable}
-                                >
-                                    <Icon icon={category.categoryIcon} margin="m-0" />
-                                    <span>{category.categoryName}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    {displayMode === "expanded" && (
+                        <>
+                            <div className="small-label ms-1 mb-1">Task Categories</div>
+                            <div className="d-flex flex-column">
+                                {allCategories.map((category) => {
+                                    const isAvailable = filteredTasks.some(
+                                        (t) => t.categoryName === category.categoryName
+                                    );
+                                    return (
+                                        <button
+                                            key={category.categoryName}
+                                            className={classNames("add-new-ongoing-task-nav-item", {
+                                                active: activeCategory === category.categoryName,
+                                                disabled: !isAvailable,
+                                            })}
+                                            onClick={() => scrollToCategory(category.categoryName)}
+                                            disabled={!isAvailable}
+                                        >
+                                            <Icon icon={category.categoryIcon} margin="m-0" />
+                                            <span>{category.categoryName}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+                    <hr className="my-3" />
+                    <div className="small ms-1 text-muted">Need a cluster-wide task? Check out:</div>
+                    <a
+                        href={serverWideTasksUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="add-new-ongoing-task-nav-item text-decoration-none"
+                    >
+                        <Icon icon="server-wide-tasks" margin="m-0" />
+                        <span>Server-Wide Tasks</span>
+                        <Icon icon="newtab" margin="ms-0 m-0" className="add-new-ongoing-task-nav-item__newtab" />
+                    </a>
                 </div>
                 <div ref={contentRef} className="add-new-ongoing-task-content pb-4">
-                    <OngoingTasksList filteredTasks={filteredTasks} getCategoryId={getCategoryId} />
+                    <OngoingTasksList
+                        filteredTasks={filteredTasks}
+                        getCategoryId={getCategoryId}
+                        displayMode={displayMode}
+                    />
                 </div>
             </div>
         </div>
@@ -223,12 +246,15 @@ interface TaskCategory {
 interface OngoingTasksListProps {
     filteredTasks: TaskCategory[];
     getCategoryId?: (categoryName: string) => string;
+    displayMode?: "expanded" | "compact";
 }
 
-export function OngoingTasksList({ filteredTasks, getCategoryId }: OngoingTasksListProps) {
+export function OngoingTasksList({ filteredTasks, getCategoryId, displayMode = "expanded" }: OngoingTasksListProps) {
     if (filteredTasks.length === 0) {
         return <EmptySet>No tasks match your filter criteria</EmptySet>;
     }
+
+    const isCompact = displayMode === "compact";
 
     return (
         <>
@@ -238,9 +264,14 @@ export function OngoingTasksList({ filteredTasks, getCategoryId }: OngoingTasksL
                         <Icon icon={category.categoryIcon} />
                         {category.categoryHeaderName ?? category.categoryName}
                     </HrHeader>
-                    <div className="d-grid gap-3 ongoing-tasks-grid">
+                    <div
+                        className={classNames(
+                            "d-grid ongoing-tasks-grid",
+                            isCompact ? "gap-2 ongoing-tasks-grid--compact" : "gap-3"
+                        )}
+                    >
                         {category.tasks.map((task) => (
-                            <TaskItem key={task.title} {...task} />
+                            <TaskItem key={task.title} {...task} displayMode={displayMode} />
                         ))}
                     </div>
                 </div>
@@ -264,6 +295,7 @@ export interface TaskItemProps {
     isShardingSupported?: boolean;
     accessRequired: databaseAccessLevel;
     customDisabledReason?: ReactNode;
+    displayMode?: "expanded" | "compact";
 }
 
 function TaskItem({
@@ -279,6 +311,7 @@ function TaskItem({
     isShardingSupported,
     accessRequired,
     customDisabledReason,
+    displayMode = "expanded",
 }: TaskItemProps) {
     const { reportEvent } = useEventsCollector();
     const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
@@ -286,6 +319,8 @@ function TaskItem({
 
     const isShardingNotSupported = !isShardingSupported && isSharded;
     const isDisabled = isShardingNotSupported || !canHandleOperation || !!customDisabledReason;
+
+    const isCompact = displayMode === "compact";
 
     return (
         <ConditionalPopover
@@ -296,7 +331,7 @@ function TaskItem({
                     message: getDatabaseAccessRequiredMessage(accessRequired),
                 },
                 {
-                    isActive: isShardingNotSupported,
+                    isActive: !!isShardingNotSupported,
                     message: "Sharding is not supported for this task",
                 },
                 {
@@ -313,19 +348,20 @@ function TaskItem({
                     `variant-${variant}`,
                     {
                         "item-disabled": !!isDisabled,
+                        compact: isCompact,
                     }
                 )}
             >
-                <Card.Body className="d-flex flex-column gap-1">
+                <Card.Body className={isCompact ? "d-flex align-items-center" : "d-flex flex-column gap-1"}>
                     <div className="d-flex align-items-center">
                         <Icon icon={iconName} className="task-icon" margin="me-2" />
                         <h4 className="mb-0">{title}</h4>
                         {counterBadge}
                     </div>
-                    <div className="small">{description}</div>
+                    {!isCompact && <div className="small">{description}</div>}
                 </Card.Body>
 
-                {showLicenseBadge && (
+                {showLicenseBadge && licenseBadge && (
                     <LicenseRestrictedBadge
                         className="position-absolute top-0 end-0 m-2"
                         licenseRequired={licenseBadge}
