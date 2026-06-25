@@ -2657,7 +2657,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("GoodOrders/2", goodData, goodRaw, goodProcessor),
             };
 
-            var statistics = new CdcSinkProcessStatistics("test", "test", database.NotificationCenter);
+            var statistics = new CdcSinkProcessStatistics("test");
 
             var command = new CdcSinkBatchCommand(database, ops, "test-maxsteps", "test-lsn",
                 tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,

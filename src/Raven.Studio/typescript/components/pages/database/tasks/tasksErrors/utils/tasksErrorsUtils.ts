@@ -47,7 +47,7 @@ export function getEtlEditLink(databaseName: string, taskId: number, etlType: St
     }
 }
 
-export type EtlErrorsWithLocation = EtlErrors & databaseLocationSpecifier;
+export type TaskErrorsWithLocation = EtlErrors & databaseLocationSpecifier;
 
 export interface EtlTransformationWithErrors {
     transformationName: string;
@@ -58,6 +58,7 @@ export interface EtlTransformationWithErrors {
 export interface EtlTaskWithErrors {
     etlName: string;
     etlType?: StudioEtlType;
+    category?: TaskCategory;
     transformations: EtlTransformationWithErrors[];
 }
 
@@ -67,6 +68,7 @@ export interface EtlError {
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
+    category?: TaskCategory;
 }
 
 export type FlatError = (
@@ -91,23 +93,24 @@ export function parseProcessName(processName: string): [etlName: string, transfo
     return [processName.slice(0, slashIndex), processName.slice(slashIndex + 1)];
 }
 
-export function getTasksWithErrors(processes: EtlErrorsWithLocation[], etlStats: EtlTaskStats[]): EtlTaskWithErrors[] {
+export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats: EtlTaskStats[]): EtlTaskWithErrors[] {
     if (!processes?.length) {
         return [];
     }
 
     return _.chain(processes)
-        .filter((p: EtlErrorsWithLocation) => _.size(p?.ProcessErrors) || _.size(p?.ItemErrors))
-        .groupBy((p: EtlErrorsWithLocation) => parseProcessName(p.TaskName)[0])
+        .filter((p: TaskErrorsWithLocation) => _.size(p?.ProcessErrors) || _.size(p?.ItemErrors))
+        .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName)[0])
         .map(
-            (group: EtlErrorsWithLocation[], etlName: string): EtlTaskWithErrors => ({
+            (group: TaskErrorsWithLocation[], etlName: string): EtlTaskWithErrors => ({
                 etlName,
                 etlType: resolveEtlType(etlStats, etlName),
+                category: _.first(group)?.Category,
                 transformations: _.chain(group)
-                    .groupBy((p: EtlErrorsWithLocation) => parseProcessName(p.TaskName)[1])
+                    .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName)[1])
                     .map(
                         (
-                            transformationGroup: EtlErrorsWithLocation[],
+                            transformationGroup: TaskErrorsWithLocation[],
                             transformationName: string
                         ): EtlTransformationWithErrors => ({
                             transformationName,
@@ -140,6 +143,7 @@ export function flattenAllTasksErrors(tasksWithErrors: EtlTaskWithErrors[], etlS
         const taskStats = etlStats.find((s) => s.TaskName === task.etlName);
         const taskId = taskStats?.TaskId;
         const etlType = task.etlType;
+        const category = task.category;
 
         return task.transformations.flatMap((transformation) => {
             const healthStatus =
@@ -156,6 +160,7 @@ export function flattenAllTasksErrors(tasksWithErrors: EtlTaskWithErrors[], etlS
                     healthStatus,
                     taskId,
                     etlType,
+                    category,
                 })),
                 ...transformation.processErrors.map((e) => ({
                     ...e,
@@ -165,6 +170,7 @@ export function flattenAllTasksErrors(tasksWithErrors: EtlTaskWithErrors[], etlS
                     healthStatus,
                     taskId,
                     etlType,
+                    category,
                 })),
             ];
         });
@@ -298,6 +304,20 @@ export function getEtlTypeLabel(etlType: StudioEtlType): string {
     }
 }
 
+export function getTaskTypeDisplay(
+    category: TaskCategory | undefined,
+    etlType: StudioEtlType | undefined
+): { icon: IconName; label: string } {
+    if (category === "CdcSink") {
+        return { icon: "sql-etl", label: "CDC Sink" };
+    }
+
+    return {
+        icon: etlType ? getEtlTypeIcon(etlType) : "help",
+        label: etlType ? getEtlTypeLabel(etlType) : "Other",
+    };
+}
+
 export function getPopoverMessageForErrorType(errorType: "Item" | "Process"): string {
     switch (errorType) {
         case "Item":
@@ -326,7 +346,7 @@ export const SHOW_WIDTH_SIZE = 70;
 
 export const AI_ONLY_TASK_TYPES: StudioEtlType[] = ["EmbeddingsGeneration", "GenAi"];
 
-export type TaskCategory = "Etl" | "Ai";
+export type TaskCategory = "Etl" | "Ai" | "CdcSink";
 
 export function getTaskCategory(etlType: StudioEtlType | undefined): TaskCategory {
     return etlType && AI_ONLY_TASK_TYPES.includes(etlType) ? "Ai" : "Etl";

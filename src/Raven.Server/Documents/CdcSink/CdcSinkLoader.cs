@@ -4,8 +4,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Logging;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -15,8 +16,6 @@ namespace Raven.Server.Documents.CdcSink;
 
 public class CdcSinkLoader : IDisposable
 {
-    private const string AlertTitle = "CDC Sink loader";
-
     private CdcSinkProcess[] _processes = [];
 
     private readonly HashSet<string> _uniqueConfigurationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -218,9 +217,13 @@ public class CdcSinkLoader : IDisposable
         if (Logger.IsInfoEnabled)
             Logger.Info(errorMessage);
 
-        var alert = AlertRaised.Create(_database.Name, AlertTitle, errorMessage, AlertReason.CdcSink_Error, NotificationSeverity.Error);
-
-        _database.NotificationCenter.Add(alert);
+        _database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+        {
+            CreatedAt = SystemTime.UtcNow,
+            TaskName = config.Name,
+            Step = TaskErrorStep.Configuration,
+            Error = errorMessage
+        });
     }
 
     private static string GetStopReason(
@@ -359,6 +362,21 @@ public class CdcSinkLoader : IDisposable
                             $"Failed to dispose CDC sink process {process.Name} on the database record change", e);
                 }
             });
+        }
+
+        // Drop dedicated error storage for sinks whose configuration was deleted from the record
+        // (not merely moved to another node).
+        if (toRemoveList.Count > 0)
+        {
+            var existingConfigNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var config in record.CdcSinks)
+                existingConfigNames.Add(config.Name);
+
+            foreach (var process in toRemoveList)
+            {
+                if (existingConfigNames.Contains(process.Configuration.Name) == false)
+                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
+            }
         }
 
         LoadProcesses(record, myCdcSinks, toRemoveList);

@@ -135,7 +135,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        using var _ = _statistics?.NewBatch();
+        _statistics?.NewBatch();
         int batchErrors = 0;
         // Per-execution success count. The TxMerger can re-run ExecuteCmd (via
         // RunEachOperationIndependently) when a merged batch fails, so the cumulative
@@ -1480,7 +1480,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 }
                 _sb.Append("]. Patch count: ").Append(patches.Count);
                 var enriched = new InvalidOperationException(_sb.ToString(), e);
-                _statistics?.RecordScriptExecutionError(enriched);
+                _statistics?.RecordScriptExecutionError(enriched, documentId);
                 throw enriched;
             }
 

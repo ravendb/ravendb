@@ -40,7 +40,7 @@ internal sealed class EtlHandlerProcessorForGetErrors : AbstractTaskErrorsHandle
         foreach (var (taskName, processErrors, itemErrors) in errorsByTask)
         {
             processesByName.TryGetValue(taskName, out var process);
-            response.Results.Add(BuildTaskErrors(taskName, process, processErrors, itemErrors));
+            response.Results.Add(BuildTaskErrors(taskName, process, processErrors, itemErrors, TaskCategory));
         }
 
         await WriteTaskErrorsResponseAsync(response, "etl/errors");

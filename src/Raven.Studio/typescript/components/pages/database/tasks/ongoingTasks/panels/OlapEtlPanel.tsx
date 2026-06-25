@@ -26,7 +26,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
 type OlapEtlPanelProps = EtlPanelBaseProps<OngoingTaskOlapEtlInfo>;
 
@@ -112,7 +112,7 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                     </div>
                 </RichPanelDetailItem>
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}

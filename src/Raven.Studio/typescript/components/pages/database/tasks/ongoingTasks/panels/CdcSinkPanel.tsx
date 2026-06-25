@@ -28,8 +28,16 @@ import moment from "moment";
 import genUtils from "common/generalUtils";
 import RichAlert from "components/common/RichAlert";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { TaskPanelErrors } from "components/pages/database/tasks/ongoingTasks/panels/EtlPanelComponents";
+import {
+    getTaskErrorCount,
+    getTaskErrorCountByLocation,
+} from "components/pages/database/tasks/ongoingTasks/panels/etlPanelUtils";
+import { TaskErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
-type CdcSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskCdcSinkInfo>;
+type CdcSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskCdcSinkInfo> & {
+    taskErrors?: TaskErrorsWithLocation[];
+};
 
 function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
@@ -42,6 +50,14 @@ function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
     const configuration = data.shared.configuration;
     const tables = configuration?.Tables ?? [];
     const enabledTables = tables.filter((x) => !x.Disabled).length;
+
+    const errorCount = getTaskErrorCount(props.taskErrors ?? [], data.shared.taskName);
+    const errorsByLocation = getTaskErrorCountByLocation(
+        props.taskErrors ?? [],
+        data.shared.taskName,
+        data.responsibleLocations
+    );
+    const goToTaskErrors = appUrl.forTasksErrors(databaseName, { taskName: data.shared.taskName });
 
     return (
         <>
@@ -74,6 +90,11 @@ function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
                     <RichPanelDetailItem label="Tables">
                         {enabledTables} / {tables.length} enabled
                     </RichPanelDetailItem>
+                    <TaskPanelErrors
+                        errorCount={errorCount}
+                        errorsByLocation={errorsByLocation}
+                        goToTaskErrors={goToTaskErrors}
+                    />
                 </div>
                 <div className="hstack">
                     <RichPanelDetailItem label="Last batch time">{lastBatchTime}</RichPanelDetailItem>

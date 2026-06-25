@@ -5,7 +5,8 @@ namespace Raven.Server.Documents.ETL;
 public enum TaskCategory
 {
     Etl,
-    Ai
+    Ai,
+    CdcSink
 }
 
 public static class TaskTypeExtensions
