@@ -20,11 +20,13 @@ internal abstract class AbstractTaskErrorsHandlerProcessorBase<TRequestHandler, 
         string taskName,
         EtlProcess process,
         IEnumerable<TaskProcessErrorTableValue> processErrors,
-        IEnumerable<TaskItemErrorTableValue> itemErrors)
+        IEnumerable<TaskItemErrorTableValue> itemErrors,
+        TaskCategory taskCategory)
     {
         return new TaskErrors
         {
             TaskName = taskName,
+            Category = taskCategory,
             EtlType = process?.EtlType,
             EtlSubType = process?.EtlSubType,
             ProcessErrors = processErrors.Select(x => x.ToTaskProcessError()).ToArray(),

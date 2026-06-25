@@ -35,13 +35,13 @@ import {
     FlatError,
     flattenTransformationErrors,
     getEtlEditLink,
-    getEtlTypeIcon,
-    getEtlTypeLabel,
     getPopoverMessageForTaskHealth,
     getTaskCategory,
     getTaskHealthStatus,
+    getTaskTypeDisplay,
     healthStatusToBadge,
     SHOW_WIDTH_SIZE,
+    TaskCategory,
 } from "../utils/tasksErrorsUtils";
 import {
     CellAffectedDocumentsWrapper,
@@ -59,12 +59,16 @@ import { AccessPopover } from "components/common/AccessPopover";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 interface EtlTypeRichPanelItemProps {
-    etlType: StudioEtlType;
+    category?: TaskCategory;
+    etlType?: StudioEtlType;
 }
 
-function EtlTypeRichPanelItem({ etlType }: EtlTypeRichPanelItemProps) {
-    const icon = getEtlTypeIcon(etlType);
-    const label = getEtlTypeLabel(etlType);
+function EtlTypeRichPanelItem({ category, etlType }: EtlTypeRichPanelItemProps) {
+    if (category !== "CdcSink" && !etlType) {
+        return null;
+    }
+
+    const { icon, label } = getTaskTypeDisplay(category, etlType);
 
     return (
         <RichPanelDetailItem>
@@ -278,7 +282,7 @@ interface TaskPanelProps extends EtlTaskWithErrors {
     onRefresh: () => void;
 }
 
-export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefresh }: TaskPanelProps) {
+export function TaskPanel({ etlName, etlType, category, transformations, etlStats, onRefresh }: TaskPanelProps) {
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const db = useAppSelector(databaseSelectors.activeDatabase);
@@ -326,7 +330,7 @@ export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefre
                             <Icon icon={isDetailsVisible ? "fold" : "unfold"} margin="m-0" />
                         </Button>
                     </RichPanelDetailItem>
-                    {etlType && <EtlTypeRichPanelItem etlType={etlType} />}
+                    <EtlTypeRichPanelItem category={category} etlType={etlType} />
                     <RichPanelDetailItem contentClassName="d-flex gap-1 align-items-center">
                         <Icon icon="warning" color="danger" margin="m-0" />
                         <span>Errors</span> <b>{errorsCount}</b>
@@ -393,6 +397,7 @@ export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefre
                     mode="task"
                     etlName={etlName}
                     etlType={etlType}
+                    category={category}
                     transformations={transformations}
                     errorsCount={errorsCount}
                     toggle={toggleDeleteModal}

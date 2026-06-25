@@ -80,7 +80,7 @@ import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.Replic
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import genUtils from "common/generalUtils";
-import { EtlErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
+import { TaskErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
 interface OngoingTasksPageProps {
     isAiOnly?: boolean;
@@ -286,7 +286,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
     ];
 
     const flatEtlStats: EtlTaskStats[] = etlStatsResult.flatMap((x) => x.data ?? []);
-    const flatEtlErrors: EtlErrorsWithLocation[] = etlErrorsResult.flatMap((x) =>
+    const flatEtlErrors: TaskErrorsWithLocation[] = etlErrorsResult.flatMap((x) =>
         (x.data ?? []).map((e) => ({
             ...e,
             nodeTag: x.location.nodeTag,
@@ -773,7 +773,12 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                             />
                                         ))}
                                         {cdcSinks.map((x) => (
-                                            <CdcSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                            <CdcSinkPanel
+                                                {...sharedPanelProps}
+                                                key={taskKey(x.shared)}
+                                                data={x}
+                                                taskErrors={flatEtlErrors}
+                                            />
                                         ))}
                                     </div>
                                 )}

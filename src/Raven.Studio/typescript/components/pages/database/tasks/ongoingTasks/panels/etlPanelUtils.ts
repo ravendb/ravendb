@@ -20,7 +20,7 @@ import {
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 import {
-    EtlErrorsWithLocation,
+    TaskErrorsWithLocation,
     getTaskHealthStatus,
     healthStatusToBadge,
 } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
@@ -59,7 +59,7 @@ export interface TaskErrorsByLocation extends databaseLocationSpecifier {
 }
 
 export function getTaskErrorCountByLocation(
-    etlErrors: EtlErrorsWithLocation[],
+    etlErrors: TaskErrorsWithLocation[],
     taskName: string,
     locations: databaseLocationSpecifier[]
 ): TaskErrorsByLocation[] {
@@ -129,7 +129,7 @@ export function computeEtlPanelProgress(
 export type EtlPanelBaseProps<T extends AnyEtlOngoingTaskInfo> = BaseOngoingTaskPanelProps<T> &
     ICanShowTransformationScriptPreview & {
         etlStats?: EtlTaskStats[];
-        etlErrors?: EtlErrorsWithLocation[];
+        etlErrors?: TaskErrorsWithLocation[];
     };
 
 export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBaseProps<T>, editUrl: string) {

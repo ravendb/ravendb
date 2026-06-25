@@ -35,7 +35,7 @@ internal sealed class TaskErrorsHandlerProcessorForGetAllErrors : AbstractTaskEr
             foreach (var (taskName, processErrors, itemErrors) in storage.ReadAllErrorsGroupedByTask(taskType))
             {
                 processesByName.TryGetValue(taskName, out var process);
-                response.Results.Add(BuildTaskErrors(taskName, process, processErrors, itemErrors));
+                response.Results.Add(BuildTaskErrors(taskName, process, processErrors, itemErrors, taskType));
             }
         }
 

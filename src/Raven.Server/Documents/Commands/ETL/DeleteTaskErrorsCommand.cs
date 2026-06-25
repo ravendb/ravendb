@@ -26,6 +26,7 @@ internal sealed class DeleteTaskErrorsCommand : RavenCommand
         {
             TaskCategory.Etl => "etl/errors",
             TaskCategory.Ai => "ai/errors",
+            TaskCategory.CdcSink => "cdc-sink/errors",
             _ => throw new ArgumentOutOfRangeException(nameof(_taskCategory), _taskCategory, "Unknown task type")
         };
 

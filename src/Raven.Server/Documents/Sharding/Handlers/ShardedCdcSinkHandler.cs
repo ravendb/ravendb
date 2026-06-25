@@ -41,4 +41,18 @@ public sealed class ShardedCdcSinkHandler : ShardedDatabaseRequestHandler
         using (var processor = new NotSupportedInShardingProcessor(this, NotSupportedMessage))
             await processor.ExecuteAsync();
     }
+
+    [RavenShardedAction("/databases/*/cdc-sink/errors", "GET")]
+    public async Task GetErrors()
+    {
+        using (var processor = new NotSupportedInShardingProcessor(this, NotSupportedMessage))
+            await processor.ExecuteAsync();
+    }
+
+    [RavenShardedAction("/databases/*/cdc-sink/errors", "DELETE")]
+    public async Task DeleteErrors()
+    {
+        using (var processor = new NotSupportedInShardingProcessor(this, NotSupportedMessage))
+            await processor.ExecuteAsync();
+    }
 }

@@ -19,11 +19,10 @@ import {
     EtlHealthStatus,
     FlatError,
     getEtlEditLink,
-    getEtlTypeIcon,
-    getEtlTypeLabel,
     getPopoverMessageForErrorType,
     getPopoverMessageForTaskHealth,
     getStepIcon,
+    getTaskTypeDisplay,
     healthStatusToBadge,
 } from "../utils/tasksErrorsUtils";
 import colorsManager from "common/colorsManager";
@@ -206,9 +205,11 @@ export const CellAffectedDocumentsWrapper = ({ getValue }: CellContext<FlatError
     return <CellValue value={getValue()} />;
 };
 
-export const CellEtlTypeWrapper = ({ getValue }: CellContext<FlatError, StudioEtlType>) => {
-    const icon = getEtlTypeIcon(getValue());
-    const label = getEtlTypeLabel(getValue());
+export const CellEtlTypeWrapper = ({ row }: CellContext<FlatError, StudioEtlType>) => {
+    // CDC Sink rows have no StudioEtlType; getTaskTypeDisplay brands them by category and falls back
+    // to a neutral icon/label for any other type-less row (instead of hitting the exhaustive switch).
+    const { category, etlType } = row.original;
+    const { icon, label } = getTaskTypeDisplay(category, etlType);
     return (
         <div className="cell-value value-string">
             <Icon icon={icon} />

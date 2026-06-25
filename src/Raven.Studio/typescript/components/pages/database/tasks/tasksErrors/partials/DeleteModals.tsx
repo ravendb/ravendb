@@ -14,12 +14,7 @@ import { useAsync, useAsyncCallback } from "react-async-hook";
 import studioSettings from "common/settings/studioSettings";
 import messagePublisher from "common/messagePublisher";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import {
-    EtlTaskWithErrors,
-    EtlTransformationWithErrors,
-    getTaskCategory,
-    TaskCategory,
-} from "../utils/tasksErrorsUtils";
+import { EtlTaskWithErrors, EtlTransformationWithErrors, TaskCategory } from "../utils/tasksErrorsUtils";
 import footer from "common/shell/footer";
 
 function useDeleteConfirmation(isRequireTypedConfirm: boolean) {
@@ -43,6 +38,7 @@ type DeleteErrorsModalProps =
           onRefresh: () => void;
           etlName: string;
           etlType?: StudioEtlType;
+          category?: TaskCategory;
           transformations: EtlTransformationWithErrors[];
           errorsCount: number;
       }
@@ -68,27 +64,29 @@ export function DeleteErrorsModal(props: DeleteErrorsModalProps) {
     const asyncDeleteErrors = useAsyncCallback(async () => {
         const requestsPerTask: { type: TaskCategory; processNames: string[] }[] = [];
 
-        const addTask = (etlName: string, etlType: StudioEtlType | undefined, transformationNames: string[]) => {
+        const addTask = (etlName: string, category: TaskCategory | undefined, transformationNames: string[]) => {
             if (transformationNames.length === 0) {
                 return;
             }
             requestsPerTask.push({
-                type: getTaskCategory(etlType),
-                processNames: transformationNames.map((name) => `${etlName}/${name}`),
+                type: category ?? "Etl",
+                // CDC Sink tasks have no transformation, so their stored task name is the bare config
+                // name - not the "task/transformation" form used by ETL/AI.
+                processNames: transformationNames.map((name) => (name ? `${etlName}/${name}` : etlName)),
             });
         };
 
         if (mode === "task") {
             addTask(
                 props.etlName,
-                props.etlType,
+                props.category,
                 props.transformations.map((t) => t.transformationName)
             );
         } else {
             for (const task of props.tasksWithErrors) {
                 addTask(
                     task.etlName,
-                    task.etlType,
+                    task.category,
                     task.transformations.map((t) => t.transformationName)
                 );
             }

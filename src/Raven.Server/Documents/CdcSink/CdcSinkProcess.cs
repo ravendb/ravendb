@@ -16,11 +16,10 @@ using Raven.Client.Util;
 using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Sparrow.Json;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -68,7 +67,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Database = database;
         Configuration = configuration;
         Name = Configuration.Name;
-        Statistics = new CdcSinkProcessStatistics(Tag, Name, Database.NotificationCenter);
+        Statistics = new CdcSinkProcessStatistics(Name);
         DocumentProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema) { Logger = Logger };
     }
 
@@ -246,13 +245,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 if (Logger.IsErrorEnabled)
                     Logger.Error($"[{Name}] CDC Sink process faulted; it will not retry until the configuration is corrected.", e);
 
-                Database.NotificationCenter.Add(AlertRaised.Create(
-                    Database.Name, Tag,
-                    $"[{Name}] CDC Sink process faulted (configuration error): {e.Message}",
-                    AlertReason.CdcSink_Error,
-                    NotificationSeverity.Error,
-                    key: $"{Tag}/{Name}",
-                    details: new ExceptionDetails(e)));
+                RecordProcessError(TaskErrorStep.Configuration, e.ToString());
 
                 Statistics.RecordConsumeError(e.ToString());
                 return;
@@ -273,21 +266,25 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                 if (Logger.IsErrorEnabled)
                     Logger.Error($"[{Name}] CDC Sink process failed.", e);
-                var alert = AlertRaised.Create(
-                    Database.Name, Tag,
-                    $"[{Name}] CDC Sink process failed: {e.Message}",
-                    AlertReason.CdcSink_Error,
-                    NotificationSeverity.Error,
-                    key: $"{Tag}/{Name}",
-                    details: new ExceptionDetails(e));
-
-                Database.NotificationCenter.Add(alert);
+                RecordProcessError(TaskErrorStep.Extraction, e.ToString());
 
                 // Read the error time BEFORE recording the new error.
                 EnterFallbackMode();
                 Statistics.RecordConsumeError(e.ToString());
             }
         }
+    }
+
+    protected void RecordProcessError(TaskErrorStep step, string error, long affectedDocumentsCount = 0)
+    {
+        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+        {
+            CreatedAt = SystemTime.UtcNow,
+            TaskName = Name,
+            Step = step,
+            Error = error,
+            AffectedDocumentsCount = affectedDocumentsCount
+        });
     }
 
     // A CdcSinkFaultedException anywhere in the exception chain marks a permanent configuration/schema error
@@ -463,6 +460,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
             var start = Stopwatch.GetTimestamp();
             await Database.TxMerger.Enqueue(command);
+
+            // Flush per-document item errors accumulated during the batch to dedicated storage.
+            // Done here on the process thread - never from inside the merged command - so
+            // the enqueue-sync TaskErrorsStorage API is safe to use.
+            if (Statistics.InMemoryItemErrorsCount > 0)
+                Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, Name, Statistics.ReadInMemoryItemErrors());
 
             LastBatchTime = Database.Time.GetUtcNow();
             if (checkpoint != null)

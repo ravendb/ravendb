@@ -12,7 +12,7 @@ using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Schema;
-using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Documents.ETL;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.NpgSQL;
 using Sparrow.Json;
@@ -314,15 +314,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         if (extra.Count > 0)
         {
-            var alert = AlertRaised.Create(
-                Database.Name, Tag,
+            RecordProcessError(TaskErrorStep.Configuration,
                 $"Publication '{_publicationName}' includes tables not configured in the CDC Sink task: {string.Join(", ", extra)}. " +
-                "Rows from these tables will be discarded. Consider narrowing the publication to only the configured tables.",
-                AlertReason.CdcSink_Error,
-                NotificationSeverity.Warning,
-                key: $"{Tag}/{Name}/publication-extra-tables");
-
-            Database.NotificationCenter.Add(alert);
+                "Rows from these tables will be discarded. Consider narrowing the publication to only the configured tables.");
         }
     }
 
@@ -606,9 +600,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         if (Logger.IsErrorEnabled)
             Logger.Error(msg);
 
-        Database.NotificationCenter.Add(AlertRaised.Create(
-            Database.Name, Tag, msg, AlertReason.CdcSink_Error,
-            NotificationSeverity.Warning, key: $"{Tag}/{Name}/stale-lsn"));
+        RecordProcessError(TaskErrorStep.Extraction, msg);
     }
 
     protected override async Task OnBatchFlushed(string checkpoint, int rows)

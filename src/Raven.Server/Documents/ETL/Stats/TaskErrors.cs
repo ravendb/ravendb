@@ -8,6 +8,8 @@ public sealed class TaskErrors : IDynamicJson
 {
     public string TaskName { get; set; }
 
+    public TaskCategory Category { get; set; }
+
     public EtlType? EtlType { get; set; }
 
     public string EtlSubType { get; set; }
@@ -21,6 +23,7 @@ public sealed class TaskErrors : IDynamicJson
         return new DynamicJsonValue
         {
             [nameof(TaskName)] = TaskName,
+            [nameof(Category)] = Category.ToString(),
             [nameof(EtlType)] = EtlType?.ToString(),
             [nameof(EtlSubType)] = EtlSubType,
             [nameof(ProcessErrors)] = new DynamicJsonArray(ProcessErrors.Select(x => x.ToJson())),
