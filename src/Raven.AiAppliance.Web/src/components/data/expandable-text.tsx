@@ -36,7 +36,7 @@ export function ExpandableText({ children, maxLines = 3, className }: Expandable
         : { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: maxLines, overflow: "hidden" };
 
     return (
-        <div className="flex flex-col items-start">
+        <div className="flex flex-col items-end">
             <div ref={contentRef} style={clampStyle} className={className}>
                 {children}
             </div>

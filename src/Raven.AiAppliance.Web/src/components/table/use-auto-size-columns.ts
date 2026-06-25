@@ -65,10 +65,11 @@ function computeColumnSizing<TData>(
     // Grow columns to fill any leftover space so the table always spans its container.
     const freeSpace = containerWidth - totalWidth;
     if (freeSpace > 0 && resizableIds.length > 0) {
-        const cappedId = resizableIds.find((id) => sizing[id] === CELL_MAX_WIDTH);
-        if (cappedId) {
-            // A capped column most likely holds the long content, so let it absorb the slack.
-            sizing[cappedId] += freeSpace;
+        const cappedIds = resizableIds.filter((id) => sizing[id] === CELL_MAX_WIDTH);
+        if (cappedIds.length > 0) {
+            cappedIds.forEach((id) => {
+                sizing[id] += Math.floor(freeSpace / cappedIds.length);
+            });
         } else {
             const share = Math.floor(freeSpace / resizableIds.length);
             for (const id of resizableIds) {
@@ -109,7 +110,7 @@ export function useAutoSizeColumns<TData>(
         });
 
         const observer = new ResizeObserver(resize);
-        observer.observe(container);
+        observer.observe(container, { box: "content-box" });
 
         return () => {
             cancelled = true;

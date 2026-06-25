@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
 import type { DiscoverResponse } from "@/api/generated/server-api";
 import { api } from "@/api/api";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
@@ -78,6 +79,8 @@ export function useImportConfig() {
             }
         },
         onSuccess: ({ config, formTables, discoverResult, schemas }) => {
+            toast.success("Configuration imported");
+
             const verifySchemaTables = config.tables.map((table) => ({
                 sourceTableSchema: table.sourceTableSchema ?? null,
                 sourceTableName: table.sourceTableName ?? "",
