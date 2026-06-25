@@ -3,8 +3,9 @@
 // to the RavenDB server. When a method contains two or more independent operations, they can
 // be registered as lazy and executed together in a single multi-get request, reducing latency.
 //
-// Fix: use session.Advanced.Lazily.Load<T>() and query.Lazily() to register lazily, then
-// access .Value or call session.Advanced.Eagerly.ExecuteAllPendingLazyOperations() to batch.
+// Fix: use session.Advanced.Lazily.Load<T>() and query.Lazily() to register lazily, then read
+// the values. Reading the first .Value (or awaiting it in async code) dispatches every pending
+// lazy operation in a single multi-get round-trip; no explicit call is required.
 // Code fix available: Alt+Enter / Ctrl+. on the squiggle applies the fix automatically.
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,12 +37,12 @@ public static class RVN012_SessionLazyBatching
 
     public static void GoodExample(IDocumentSession session, string userId, string orderId)
     {
-        // Correct: register both as lazy, then execute in a single multi-get
+        // Correct: register both as lazy, then read the values. The first .Value access dispatches
+        // both pending operations in a single multi-get round-trip.
         var lazyUser  = session.Advanced.Lazily.Load<RVN012_User>(userId);
         var lazyOrder = session.Advanced.Lazily.Load<RVN012_Order>(orderId);
-        session.Advanced.Eagerly.ExecuteAllPendingLazyOperations(); // one round-trip
 
-        RVN012_User  user  = lazyUser.Value;
+        RVN012_User  user  = lazyUser.Value; // one round-trip dispatches the whole batch
         RVN012_Order order = lazyOrder.Value;
     }
 }

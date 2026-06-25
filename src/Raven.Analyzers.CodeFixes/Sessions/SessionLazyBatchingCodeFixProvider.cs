@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -118,10 +117,6 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     return;
             }
 
-            // Determine if any call is async
-            bool isAsync = directBatchableCalls.Any(call =>
-                call.methodName.EndsWith("Async", StringComparison.Ordinal));
-
             // Register the code fix
             context.RegisterCodeFix(
                 CodeAction.Create(
@@ -131,7 +126,6 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                         block,
                         directBatchableCalls,
                         batchableIndices,
-                        isAsync,
                         ct),
                     equivalenceKey: DiagnosticIds.SessionLazyBatching),
                 context.Diagnostics);
@@ -142,7 +136,6 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             BlockSyntax block,
             List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> batchableCalls,
             List<int> batchableIndices,
-            bool isAsync,
             CancellationToken cancellationToken)
         {
             SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken);
@@ -195,7 +188,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 if (isLoad || methodName.Contains("Load", StringComparison.Ordinal))
                     newInitializer = BuildLazyLoadInitializer(stmt, sessionReceiver, methodName);
                 else
-                    newInitializer = BuildLazyQueryInitializer(stmt);
+                    newInitializer = BuildLazyQueryInitializer(stmt, methodName);
 
                 if (newInitializer == null)
                     return document; // bail rather than apply a partial fix
@@ -219,33 +212,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 replacements[batchableIndices[i]] = newStmt;
             }
 
-            // Build the execute statement with proper indentation
-            // session.Advanced.Eagerly.ExecuteAllPendingLazyOperations[Async]()
-            ExpressionSyntax executeExpr = SyntaxFactory.InvocationExpression(
-                SyntaxFactory.MemberAccessExpression(
-                    SyntaxKind.SimpleMemberAccessExpression,
-                    SyntaxFactory.MemberAccessExpression(
-                        SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            sessionReceiver,
-                            SyntaxFactory.IdentifierName("Advanced")),
-                        SyntaxFactory.IdentifierName("Eagerly")),
-                    SyntaxFactory.IdentifierName(
-                        isAsync ? "ExecuteAllPendingLazyOperationsAsync" : "ExecuteAllPendingLazyOperations")),
-                SyntaxFactory.ArgumentList());
-
-            StatementSyntax executeStmt = isAsync
-                ? SyntaxFactory.ExpressionStatement(
-                    SyntaxFactory.AwaitExpression(executeExpr))
-                : SyntaxFactory.ExpressionStatement(executeExpr);
-
-            // Use the indentation of the first batchable statement for the execute call,
-            // but strip any comments — those stay with the renamed lazy declaration.
-            executeStmt = executeStmt.WithLeadingTrivia(GetIndentationTrivia(renamings[0].originalTrivia));
-
-            // Build Value extraction statements; each extraction inherits the trivia of its source statement
-            List<StatementSyntax> extractionStatements = [executeStmt];
+            // Build Value extraction statements; each extraction inherits the trivia of its source
+            // statement. No explicit ExecuteAllPendingLazyOperations call is needed: realizing the
+            // first lazy value (sync .Value, or awaiting the .Value of an async lazy) dispatches the
+            // entire pending batch in one multi-get round-trip.
+            List<StatementSyntax> extractionStatements = [];
             foreach (var (lazyName, originalName, methodName, originalTrivia) in renamings)
             {
                 // Determine the materializer to call on .Value (Load has none; query methods keep theirs)
@@ -254,25 +225,33 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     : "";
 
                 // Build: var x = lazyX.Value [.Method()];
-                // For async loads, Lazily.LoadAsync returns Lazy<Task<T>> so we must await
-                // the .Value to materialize the document.
+                // Async operations (LoadAsync, ToListAsync, ...) register a Lazy<Task<T>>, so the
+                // .Value (a Task) must be awaited to materialize and to dispatch the batch async.
+                bool isAsync = methodName.EndsWith("Async", StringComparison.Ordinal);
+
                 ExpressionSyntax valueExpr = SyntaxFactory.MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
                     SyntaxFactory.IdentifierName(lazyName),
                     SyntaxFactory.IdentifierName("Value"));
 
-                bool isAsyncLoad = methodName == KnownTypes.LoadAsyncMethodName;
-                if (isAsyncLoad)
+                if (isAsync)
                 {
                     valueExpr = SyntaxFactory.AwaitExpression(valueExpr);
                 }
 
                 if (!string.IsNullOrEmpty(valueMethod))
                 {
+                    // For async queries the await must be parenthesized before the materializer:
+                    // (await lazyX.Value).ToList(). Without parens Roslyn renders
+                    // 'await lazyX.Value.ToList()', which reparses as 'await (lazyX.Value.ToList())'.
+                    ExpressionSyntax target = isAsync
+                        ? SyntaxFactory.ParenthesizedExpression(valueExpr)
+                        : valueExpr;
+
                     valueExpr = SyntaxFactory.InvocationExpression(
                         SyntaxFactory.MemberAccessExpression(
                             SyntaxKind.SimpleMemberAccessExpression,
-                            valueExpr,
+                            target,
                             SyntaxFactory.IdentifierName(valueMethod)),
                         SyntaxFactory.ArgumentList());
                 }
@@ -404,8 +383,14 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             return null;
         }
 
-        private static ExpressionSyntax? BuildLazyQueryInitializer(LocalDeclarationStatementSyntax stmt)
+        private static ExpressionSyntax? BuildLazyQueryInitializer(LocalDeclarationStatementSyntax stmt, string methodName)
         {
+            // An async materializer (ToListAsync/ToArrayAsync) must register via LazilyAsync so that
+            // awaiting the .Value dispatches the batch asynchronously; a sync one uses Lazily.
+            string lazyMethodName = methodName.EndsWith("Async", StringComparison.Ordinal)
+                ? "LazilyAsync"
+                : "Lazily";
+
             ExpressionSyntax? initValue = stmt.Declaration.Variables[0].Initializer?.Value;
 
             if (initValue is AwaitExpressionSyntax awaitExpr)
@@ -415,7 +400,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     return null;
 
                 return SyntaxFactory.InvocationExpression(
-                    origMem.WithName(SyntaxFactory.IdentifierName("Lazily")),
+                    origMem.WithName(SyntaxFactory.IdentifierName(lazyMethodName)),
                     SyntaxFactory.ArgumentList());
             }
 
@@ -423,7 +408,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 origInv2.Expression is MemberAccessExpressionSyntax origMem2)
             {
                 return SyntaxFactory.InvocationExpression(
-                    origMem2.WithName(SyntaxFactory.IdentifierName("Lazily")),
+                    origMem2.WithName(SyntaxFactory.IdentifierName(lazyMethodName)),
                     SyntaxFactory.ArgumentList());
             }
 
