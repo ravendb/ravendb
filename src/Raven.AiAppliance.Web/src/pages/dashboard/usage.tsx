@@ -1,13 +1,19 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { api } from "@/api/api";
 import type { DayWrites } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/shadcn/ui/chart";
 import { Progress } from "@/components/shadcn/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
+
+const writesChartConfig = {
+    writes: { label: "Writes", color: "var(--chart-1)" },
+} satisfies ChartConfig;
 
 const compactFormatter = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
@@ -141,36 +147,16 @@ export function DashboardUsage() {
 }
 
 function WritesChart({ days }: { days: DayWrites[] }) {
-    const maxWrites = Math.max(1, ...days.map((day) => day.writes));
-
     return (
-        <div className="flex h-56 flex-col">
-            <div className="relative flex flex-1 items-end gap-1 border-b">
-                <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
-                    {[0, 1, 2, 3].map((line) => (
-                        <div key={line} className="border-t border-border/50" />
-                    ))}
-                </div>
-                {days.map((day) => (
-                    <div
-                        key={day.date}
-                        className="relative flex-1 rounded-t-sm bg-primary/70 transition-colors hover:bg-primary"
-                        style={{ height: `${(day.writes / maxWrites) * 100}%` }}
-                        title={`${day.label}: ${day.writes.toLocaleString()} writes`}
-                    />
-                ))}
-            </div>
-            <div className="flex gap-1 pt-2">
-                {days.map((day) => {
-                    const dayOfMonth = Number(day.date.slice(8, 10));
-                    return (
-                        <div key={day.date} className="flex-1 text-center text-xs text-muted-foreground">
-                            {dayOfMonth % 3 === 1 ? day.label : ""}
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+        <ChartContainer config={writesChartConfig} className="aspect-auto h-56 w-full">
+            <BarChart accessibilityLayer data={days} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} interval={2} />
+                <YAxis hide domain={[0, "dataMax"]} />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                <Bar dataKey="writes" fill="var(--color-writes)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+        </ChartContainer>
     );
 }
 
@@ -181,8 +167,8 @@ function PerAppUsageTable({ apps }: { apps: { slug: string; tokens: number }[] }
         <Table>
             <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-xs font-medium text-muted-foreground">Name</TableHead>
-                    <TableHead className="text-xs font-medium text-muted-foreground">Usage</TableHead>
+                    <TableHead className="w-full pl-4 text-xs font-medium text-muted-foreground">Name</TableHead>
+                    <TableHead className="pr-4 text-right text-xs font-medium text-muted-foreground">Usage</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -195,14 +181,13 @@ function PerAppUsageTable({ apps }: { apps: { slug: string; tokens: number }[] }
                 ) : (
                     apps.map((app) => (
                         <TableRow key={app.slug}>
-                            <TableCell className="font-medium">{app.slug}</TableCell>
-                            <TableCell>
-                                <div className="flex items-center gap-4">
-                                    <Progress
-                                        className="h-1.5 max-w-64 flex-1"
-                                        value={(app.tokens / maxTokens) * 100}
-                                    />
-                                    <span className="w-20 text-right tabular-nums">{app.tokens.toLocaleString()}</span>
+                            <TableCell className="py-3 pl-4 font-medium">{app.slug}</TableCell>
+                            <TableCell className="py-3 pr-4">
+                                <div className="ml-auto flex w-64 max-w-full items-center gap-3">
+                                    <Progress className="h-1.5 flex-1" value={(app.tokens / maxTokens) * 100} />
+                                    <span className="w-16 text-right text-muted-foreground tabular-nums">
+                                        {app.tokens.toLocaleString()}
+                                    </span>
                                 </div>
                             </TableCell>
                         </TableRow>

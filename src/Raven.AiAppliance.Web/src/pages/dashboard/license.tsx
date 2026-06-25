@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, CircleCheck, RefreshCw } from "lucide-react";
 import { api } from "@/api/api";
@@ -8,43 +7,20 @@ import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Progress } from "@/components/shadcn/ui/progress";
-import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
 import { cn } from "@/lib/utils";
+import { ContactSheet } from "@/pages/dashboard/contact-sheet";
 
-type DemoState = "default" | "expiring" | "expired";
-
-const DEMO_STATES: { value: DemoState; label: string; dotClassName: string }[] = [
-    { value: "default", label: "Default", dotClassName: "bg-primary" },
-    { value: "expiring", label: "Expiring", dotClassName: "bg-amber-500" },
-    { value: "expired", label: "Expired", dotClassName: "bg-red-500" },
-];
+// Subtle brand wash used to make the trial card and the featured plan stand out.
+// Defined as a CSS class (see index.css) so it layers over the card's bg-color.
+const PREMIUM_CARD_GRADIENT = "card-premium-gradient";
 
 export function DashboardLicense() {
-    const [demoState, setDemoState] = useState<DemoState>("default");
-    const licenseQuery = useQuery(api.queries.settings.license(demoState === "default" ? undefined : demoState));
+    const licenseQuery = useQuery(api.queries.settings.license());
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight">License</h1>
-                <div className="flex items-center gap-1 rounded-lg border p-1">
-                    <span className="px-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                        Demo
-                    </span>
-                    <ToggleGroup
-                        type="single"
-                        size="sm"
-                        value={demoState}
-                        onValueChange={(value) => value && setDemoState(value as DemoState)}
-                    >
-                        {DEMO_STATES.map((state) => (
-                            <ToggleGroupItem key={state.value} value={state.value} className="gap-1.5">
-                                <span className={cn("size-1.5 rounded-full", state.dotClassName)} aria-hidden="true" />
-                                {state.label}
-                            </ToggleGroupItem>
-                        ))}
-                    </ToggleGroup>
-                </div>
             </div>
 
             <ApiState
@@ -76,7 +52,7 @@ function TrialCard({ license }: { license: LicenseResponse }) {
     const expireShortLabel = license.trialEndsLabel.split(",")[0];
 
     return (
-        <Card>
+        <Card className={PREMIUM_CARD_GRADIENT}>
             <CardHeader>
                 {isExpired ? (
                     <>
@@ -99,9 +75,13 @@ function TrialCard({ license }: { license: LicenseResponse }) {
                     </CardTitle>
                 )}
                 <CardAction>
-                    <Button variant="outline" size="sm">
-                        Contact us
-                    </Button>
+                    <ContactSheet
+                        trigger={
+                            <Button variant="outline" size="sm">
+                                Contact us
+                            </Button>
+                        }
+                    />
                 </CardAction>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -162,7 +142,7 @@ function PlansSection({ plans }: { plans: LicensePlan[] }) {
 
 function PlanCard({ plan }: { plan: LicensePlan }) {
     return (
-        <Card className={cn(plan.featured && "ring-2 ring-primary")}>
+        <Card className={cn(plan.featured && PREMIUM_CARD_GRADIENT)}>
             <CardHeader>
                 <CardTitle>{plan.name}</CardTitle>
                 <CardDescription>{plan.tagline}</CardDescription>

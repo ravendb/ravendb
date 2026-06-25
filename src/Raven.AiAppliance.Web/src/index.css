@@ -326,19 +326,37 @@
 }
 
 @layer components {
+    /* Subtle brand wash layered over a card's solid background (kept as a real CSS
+       class so tailwind-merge doesn't drop the card's bg-color utility). */
+    .card-premium-gradient {
+        background-image: linear-gradient(
+            to bottom right,
+            color-mix(in oklab, var(--brand-500) 15%, transparent),
+            color-mix(in oklab, var(--brand-500) 5%, transparent) 50%,
+            transparent
+        );
+    }
+
     .app-shell {
         --app-sidebar-width: 13.75rem;
         --app-sidebar-collapsed-width: 3.5rem;
 
         display: grid;
         grid-template-columns: var(--app-sidebar-collapsed-width) minmax(0, 1fr);
-        grid-template-rows: auto minmax(0, 1fr);
+        /* Optional banner row (collapses to 0 when absent), then header, then body. */
+        grid-template-rows: auto auto minmax(0, 1fr);
         height: 100svh;
         overflow: hidden;
         transition: grid-template-columns 200ms ease-out;
     }
 
+    .app-shell__banner {
+        grid-row: 1;
+        grid-column: 1 / -1;
+    }
+
     .app-shell__header {
+        grid-row: 2;
         grid-column: 1 / -1;
         display: flex;
         align-items: center;
@@ -347,12 +365,16 @@
     }
 
     .app-shell__sidebar {
+        grid-row: 3;
+        grid-column: 1;
         display: flex;
         flex-direction: column;
         min-height: 0;
     }
 
     .app-shell__main {
+        grid-row: 3;
+        grid-column: 2;
         display: grid;
         grid-template-rows: auto minmax(0, 1fr);
         min-width: 0;
