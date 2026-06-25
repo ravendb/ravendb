@@ -7,7 +7,7 @@ namespace Raven.AiAppliance.Contracts;
 /// <c>/api/apps</c> keeps its minimal shape). <c>writesPerMonth</c> is null (no write
 /// counter yet — gap #4); <c>status</c>/<c>statusSubtitle</c> are derived.
 /// </summary>
-public sealed record AppliancAppResponse(
+public sealed record ApplianceAppResponse(
     string Id,
     string Name,
     string Slug,

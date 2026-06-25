@@ -72,13 +72,14 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
     /// <summary>Writes a <c>Channel</c> doc into the per-app DB so the channels
     /// stats endpoint has something to count.</summary>
     protected static async Task SeedChannelAsync(
-        IDocumentStore store, string database, string channelId, bool enabled, string agentId = "demo")
+        IDocumentStore store, string database, string channelId, bool enabled,
+        string agentId = "demo", string? displayName = null)
     {
         using var session = store.OpenAsyncSession(database);
         await session.StoreAsync(new Channel
         {
             Type = ChannelType.IFrame,
-            DisplayName = channelId,
+            DisplayName = displayName ?? channelId,
             AgentId = agentId,
             Enabled = enabled,
             CreatedAt = DateTime.UtcNow,

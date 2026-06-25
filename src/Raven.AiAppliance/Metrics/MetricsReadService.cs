@@ -267,9 +267,11 @@ internal static class MetricsReadService
         if (nameByWidget.Count == 0)
             return new SeriesData([], []);
 
-        var keys = nameByWidget.Values.Distinct().OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToArray();
+        // Key by the stable WidgetId (dictionary keys are already distinct); the display
+        // name is only the label, so channels sharing a display name don't merge (review C2).
+        var keys = nameByWidget.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
         var seriesKeys = keys
-            .Select((k, idx) => new SeriesKey(k, k, SeriesPalette[idx % SeriesPalette.Length])).ToArray();
+            .Select((k, idx) => new SeriesKey(k, nameByWidget[k], SeriesPalette[idx % SeriesPalette.Length])).ToArray();
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
@@ -284,10 +286,10 @@ internal static class MetricsReadService
         foreach (var link in links)
         {
             if (link.CreatedAt < startUtc || link.CreatedAt > endUtc) continue;
-            if (link.WidgetId is null || nameByWidget.TryGetValue(link.WidgetId, out var channelName) == false) continue;
+            if (link.WidgetId is null || nameByWidget.ContainsKey(link.WidgetId) == false) continue;
             var i = BucketIndex(buckets, link.CreatedAt, granularity);
             if (i < 0) continue;
-            points[i][channelName] = (long)points[i][channelName] + 1L;
+            points[i][link.WidgetId] = (long)points[i][link.WidgetId] + 1L;
         }
         return new SeriesData(points, seriesKeys);
     }
@@ -351,7 +353,7 @@ internal static class MetricsReadService
     /// per-app counts (documents/agents/channels/tables), CDC <c>source.type</c>, and
     /// a derived <c>status</c>, via fan-out. <c>writesPerMonth</c> is null (no counter).
     /// </summary>
-    public static async Task<List<AppliancAppResponse>> GetDashboardAppsAsync(
+    public static async Task<List<ApplianceAppResponse>> GetDashboardAppsAsync(
         IDocumentStore store, ILogger? log, CancellationToken ct)
     {
         var apps = await LoadAllAppsAsync(store, ct);
@@ -359,14 +361,14 @@ internal static class MetricsReadService
     }
 
     /// <summary>Single enriched app (mock-api <c>getApp(id)</c>), or null if not found.</summary>
-    public static async Task<AppliancAppResponse?> GetDashboardAppAsync(
+    public static async Task<ApplianceAppResponse?> GetDashboardAppAsync(
         IDocumentStore store, string slug, CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         return app is null ? null : await EnrichAppAsync(store, app, ct);
     }
 
-    private static async Task<AppliancAppResponse> EnrichAppAsync(IDocumentStore store, App app, CancellationToken ct)
+    private static async Task<ApplianceAppResponse> EnrichAppAsync(IDocumentStore store, App app, CancellationToken ct)
     {
         var maintenance = store.Maintenance.ForDatabase(app.Database);
         var stats = await maintenance.SendAsync(new GetStatisticsOperation(), ct);
@@ -396,7 +398,7 @@ internal static class MetricsReadService
 
         var (status, subtitle) = DeriveAppStatus(agentsCount, channels.Count, enabledChannels, cdc?.Disabled ?? false);
 
-        return new AppliancAppResponse(
+        return new ApplianceAppResponse(
             Id: app.Slug,  // the prototype routes by app.id; slug is the routing key (id==slug)
             Name: app.AppName,
             Slug: app.Slug,

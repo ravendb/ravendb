@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Raven.AiAppliance.Channels;
@@ -95,7 +96,8 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         await SeedConversationAsync(store, perAppDb, "chats/b", agentId, now.AddDays(-2), tokens: 200_000);
 
         // An iframe channel + two embed links → conversationsByChannel (links ≈ conversations).
-        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true);
+        // Distinct display name so the series proves key (widgetId) vs label (displayName).
+        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true, displayName: "Support Widget");
         using (var session = store.OpenAsyncSession(perAppDb))
         {
             for (var i = 0; i < 2; i++)
@@ -131,10 +133,12 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         Assert.Equal(1, modelKeys.GetArrayLength());
         Assert.Equal("gpt-4o-mini", modelKeys[0].GetProperty("key").GetString());
 
-        // conversationsByChannel — the iframe channel, two links.
+        // conversationsByChannel — the iframe channel, two links. Series key is the stable
+        // widget id; label is the display name (C2 — must not key by display name).
         var channelData = json.GetProperty("conversationsByChannel");
         Assert.Equal(1, channelData.GetProperty("keys").GetArrayLength());
         Assert.Equal("wgt1", channelData.GetProperty("keys")[0].GetProperty("key").GetString());
+        Assert.Equal("Support Widget", channelData.GetProperty("keys")[0].GetProperty("label").GetString());
         long channelTotal = 0;
         foreach (var point in channelData.GetProperty("points").EnumerateArray())
             channelTotal += point.GetProperty("wgt1").GetInt64();
@@ -237,6 +241,24 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         Assert.Equal(1000, json.GetProperty("metrics").GetProperty("tokens").GetProperty("value").GetDouble());
         var points = json.GetProperty("tokensByCapability").GetProperty("points");
         Assert.Contains("T", points[0].GetProperty("t").GetString());  // hourly bucket label (yyyy-MM-ddTHH:00)
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task AppUsage_returns_400_when_start_is_not_before_end()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var now = DateTime.UtcNow;
+        var start = Uri.EscapeDataString(now.ToString("o"));            // later
+        var end = Uri.EscapeDataString(now.AddDays(-7).ToString("o"));  // earlier
+        var resp = await client.GetAsync($"/api/apps/my-app/usage?start={start}&end={end}");
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);  // C3: inverted range rejected
     }
 
     private sealed class Product
