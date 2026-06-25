@@ -1,5 +1,6 @@
 using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.AiHelper;
+using Raven.AiAppliance.Cdc;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
 using Raven.AiAppliance.Live;
@@ -38,6 +39,10 @@ public static class AppsEndpoints
             // WebSocket-only route (101 on success); OpenAPI can't describe the
             // upgrade + streamed frames, so keep it out of the spec like /embed/*.
             .ExcludeFromDescription();
+        group.MapGet("/{slug}/cdc/performance", CdcPerformanceAsync)
+            .WithName("apps.cdcPerformance")
+            .Produces<CdcPerformanceResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
             .Accepts<SetupTryRequest>("application/json")
@@ -274,6 +279,45 @@ public static class AppsEndpoints
 
         using var browser = await ctx.WebSockets.AcceptWebSocketAsync();
         await RavenLiveFeedProxy.RelayAsync(browser, store, app.Database, "cdc-sink/performance/live", ct);
+    }
+
+    /// <summary>
+    /// CDC sink performance snapshot for the app's CDC page. Reads RavenDB's rolling
+    /// per-batch perf stats via <see cref="GetCdcSinkPerformanceStatisticsOperation"/> and
+    /// shapes a recent-activity view (last-sync, recent reads/writes, lag, status). The
+    /// batch-derived fields stay empty until the server collects CDC stats (RavenDB-26780 /
+    /// ravendb#23046) and a batch has run; the live-updating counterpart is the
+    /// <c>/cdc/progress</c> WebSocket feed. Degrades to an empty snapshot (200) when CDC is
+    /// not configured or the feed is unavailable.
+    /// </summary>
+    private static async Task<IResult> CdcPerformanceAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
+        var cdc = record?.CdcSinks?.FirstOrDefault();
+
+        // Telemetry must never 500 the CDC page: if the perf feed is unavailable (feature off,
+        // older server, parse hiccup) degrade to an empty snapshot. Cancellation still propagates.
+        CdcSinkPerformanceRaw raw;
+        try
+        {
+            raw = await store.Maintenance.ForDatabase(app.Database)
+                .SendAsync(new GetCdcSinkPerformanceStatisticsOperation(), ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            raw = new CdcSinkPerformanceRaw();
+        }
+
+        var snapshot = CdcPerformanceShaper.Shape(
+            raw, configured: cdc is not null, disabled: cdc?.Disabled ?? false, DateTime.UtcNow);
+        return Results.Ok(snapshot);
     }
 
     /// <summary>
