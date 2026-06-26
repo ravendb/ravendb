@@ -1,25 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { api } from "@/api/api";
-import type { DayWrites } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { WritesBarChart } from "@/components/data/charts";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/shadcn/ui/chart";
 import { Progress } from "@/components/shadcn/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
-
-const writesChartConfig = {
-    writes: { label: "Writes", color: "var(--chart-1)" },
-} satisfies ChartConfig;
-
-const compactFormatter = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
-
-function formatCompact(value: number) {
-    return compactFormatter.format(value);
-}
+import { formatCompact } from "@/lib/format";
 
 function formatTimeAgo(timestamp: number) {
     const minutes = Math.round((Date.now() - timestamp) / 60_000);
@@ -38,6 +27,12 @@ export function DashboardUsage() {
 
     const usageQuery = useQuery(api.queries.settings.usage(year, month));
     const tokensByAppQuery = useQuery(api.queries.stats.tokensByApp());
+
+    // Anchor the "Refreshed …" label to when the server aggregated the data
+    // (refreshedMinutesAgo), not when the browser fetched it.
+    const refreshedAt = tokensByAppQuery.data
+        ? tokensByAppQuery.dataUpdatedAt - tokensByAppQuery.data.refreshedMinutesAgo * 60_000
+        : undefined;
 
     const isAtCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
     const monthLabel =
@@ -89,10 +84,14 @@ export function DashboardUsage() {
                             </div>
                             <Progress
                                 className="mt-2 ml-auto h-1.5 w-56"
-                                value={Math.min(
-                                    100,
-                                    (usageQuery.data.monthlyUsed / usageQuery.data.monthlyQuota) * 100,
-                                )}
+                                value={
+                                    usageQuery.data.monthlyQuota > 0
+                                        ? Math.min(
+                                              100,
+                                              (usageQuery.data.monthlyUsed / usageQuery.data.monthlyQuota) * 100,
+                                          )
+                                        : 0
+                                }
                             />
                         </CardAction>
                     )}
@@ -105,18 +104,17 @@ export function DashboardUsage() {
                         onRetry={() => usageQuery.refetch()}
                         loadingLabel="Loading chart…"
                     >
-                        {usageQuery.data && <WritesChart days={usageQuery.data.days} />}
+                        {usageQuery.data && <WritesBarChart data={usageQuery.data.days} xKey="label" />}
                     </ApiState>
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Writes usage per app</CardTitle>
+                    <CardTitle>Token usage per app</CardTitle>
                     <CardDescription>
                         Tracked for this period.
-                        {tokensByAppQuery.dataUpdatedAt > 0 &&
-                            ` Refreshed ${formatTimeAgo(tokensByAppQuery.dataUpdatedAt)}.`}
+                        {refreshedAt !== undefined && ` Refreshed ${formatTimeAgo(refreshedAt)}.`}
                     </CardDescription>
                     <CardAction>
                         <Button
@@ -146,20 +144,6 @@ export function DashboardUsage() {
     );
 }
 
-function WritesChart({ days }: { days: DayWrites[] }) {
-    return (
-        <ChartContainer config={writesChartConfig} className="aspect-auto h-56 w-full">
-            <BarChart accessibilityLayer data={days} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} interval={2} />
-                <YAxis hide domain={[0, "dataMax"]} />
-                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                <Bar dataKey="writes" fill="var(--color-writes)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-        </ChartContainer>
-    );
-}
-
 function PerAppUsageTable({ apps }: { apps: { slug: string; tokens: number }[] }) {
     const maxTokens = Math.max(1, ...apps.map((app) => app.tokens));
 
@@ -168,7 +152,7 @@ function PerAppUsageTable({ apps }: { apps: { slug: string; tokens: number }[] }
             <TableHeader>
                 <TableRow className="hover:bg-transparent">
                     <TableHead className="w-full pl-4 text-xs font-medium text-muted-foreground">Name</TableHead>
-                    <TableHead className="pr-4 text-right text-xs font-medium text-muted-foreground">Usage</TableHead>
+                    <TableHead className="pr-4 text-right text-xs font-medium text-muted-foreground">Tokens</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>

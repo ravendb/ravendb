@@ -51,7 +51,7 @@ export function AddAppWizard() {
     return (
         <FormProvider {...form}>
             <form
-                onSubmit={form.handleSubmit((values) => provisionMutation.mutate(values))}
+                onSubmit={form.handleSubmit(async (values) => await provisionMutation.mutateAsync(values))}
                 onKeyDown={preventEnterKeySubmission}
                 className="h-full"
             >

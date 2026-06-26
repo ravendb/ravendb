@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { CdcPerformanceResponse } from "@/api/generated/server-api";
@@ -27,14 +28,19 @@ export function CdcPerformanceSection({ slug }: { slug: string }) {
     );
 }
 
+// Maps the backend CDC status contract ("not-configured" | "disabled" | "idle" | "active"
+// | "error") to a badge — a healthy "active" sink reads as success, not a warning.
+const CDC_STATUS_BADGES: Record<string, { variant: ComponentProps<typeof Badge>["variant"]; label: string }> = {
+    active: { variant: "success", label: "Active" },
+    idle: { variant: "secondary", label: "Idle" },
+    disabled: { variant: "secondary", label: "Disabled" },
+    "not-configured": { variant: "outline", label: "Not configured" },
+    error: { variant: "destructive", label: "Error" },
+};
+
 function CdcStatusBadge({ performance }: { performance: CdcPerformanceResponse }) {
-    if (!performance.enabled) {
-        return <Badge variant="secondary">Disabled</Badge>;
-    }
-    if (performance.status.toLowerCase() === "running") {
-        return <Badge variant="success">Running</Badge>;
-    }
-    return <Badge variant="warning">{performance.status}</Badge>;
+    const badge = CDC_STATUS_BADGES[performance.status] ?? { variant: "warning" as const, label: performance.status };
+    return <Badge variant={badge.variant}>{badge.label}</Badge>;
 }
 
 function CdcPerformanceContent({ performance }: { performance: CdcPerformanceResponse }) {

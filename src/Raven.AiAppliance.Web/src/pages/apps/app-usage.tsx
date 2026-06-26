@@ -1,22 +1,15 @@
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { api } from "@/api/api";
-import type { AppUsageResponse } from "@/api/generated/server-api";
+import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { SeriesBarChart, WritesBarChart } from "@/components/data/charts";
 import { PagePanel } from "@/components/data/page-panel";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/shadcn/ui/chart";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
-import { formatCompact } from "@/lib/format";
+import { formatCompact, formatCurrency } from "@/lib/format";
 import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
-
-const currencyFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-
-function formatCurrency(value: number) {
-    return currencyFormatter.format(value);
-}
 
 export function AppUsage() {
     const { slug = "" } = useParams();
@@ -34,6 +27,15 @@ export function AppUsage() {
                 {appUsageQuery.data && (
                     <div className="space-y-8">
                         <UsageMetricCards usage={appUsageQuery.data} />
+                        <UsageSeriesSection
+                            title="Tokens by capability"
+                            series={appUsageQuery.data.tokensByCapability}
+                        />
+                        <UsageSeriesSection title="Tokens by model" series={appUsageQuery.data.tokensByModel} />
+                        <UsageSeriesSection
+                            title="Conversations by channel"
+                            series={appUsageQuery.data.conversationsByChannel}
+                        />
                         <CdcWritesSection points={appUsageQuery.data.cdcWrites} />
                         <TopTablesSection tables={appUsageQuery.data.topTables} />
                         <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
@@ -75,23 +77,25 @@ function UsageMetricCards({ usage }: { usage: AppUsageResponse }) {
     return <DashboardStatCards cards={cards} />;
 }
 
-const cdcChartConfig = {
-    writes: { label: "Writes", color: "var(--chart-1)" },
-} satisfies ChartConfig;
+function UsageSeriesSection({ title, series }: { title: string; series: SeriesData }) {
+    return (
+        <SectionCard title={title}>
+            <div className="rounded-lg border p-4">
+                {series.keys.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">No data for this period.</p>
+                ) : (
+                    <SeriesBarChart data={series} />
+                )}
+            </div>
+        </SectionCard>
+    );
+}
 
 function CdcWritesSection({ points }: { points: AppUsageResponse["cdcWrites"] }) {
     return (
         <SectionCard title="CDC writes">
             <div className="rounded-lg border p-4">
-                <ChartContainer config={cdcChartConfig} className="aspect-auto h-56 w-full">
-                    <BarChart accessibilityLayer data={points} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
-                        <CartesianGrid vertical={false} />
-                        <XAxis dataKey="t" tickLine={false} axisLine={false} tickMargin={8} interval={2} />
-                        <YAxis hide domain={[0, "dataMax"]} />
-                        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                        <Bar dataKey="writes" fill="var(--color-writes)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ChartContainer>
+                <WritesBarChart data={points} xKey="t" />
             </div>
         </SectionCard>
     );

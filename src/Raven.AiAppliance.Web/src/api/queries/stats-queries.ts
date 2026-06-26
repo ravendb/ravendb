@@ -35,10 +35,10 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "overview", slug],
                 queryFn: () => api.overview(slug),
             }),
-        appUsage: (slug: string) =>
+        appUsage: (slug: string, range?: { start?: string; end?: string }) =>
             queryOptions({
-                queryKey: [baseKey, "appUsage", slug],
-                queryFn: () => api.appUsage(slug),
+                queryKey: [baseKey, "appUsage", slug, range?.start ?? null, range?.end ?? null],
+                queryFn: () => api.appUsage(slug, range),
             }),
         collections: (slug: string) =>
             queryOptions({
