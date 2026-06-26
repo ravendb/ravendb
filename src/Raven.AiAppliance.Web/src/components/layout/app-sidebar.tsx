@@ -34,13 +34,14 @@ export function AppSidebar({ slug, hasActiveApp, isCollapsed, isToggleVisible, o
                         ))}
                     </SidebarGroup>
 
-                    {dashboardNavigationSections.map((section) => (
-                        <SidebarGroup key={section.label} label={section.label} isCollapsed={isCollapsed}>
-                            {section.items.map((item) => (
-                                <SidebarNavLink key={item.label} item={item} isCollapsed={isCollapsed} />
-                            ))}
-                        </SidebarGroup>
-                    ))}
+                    {!hasActiveApp &&
+                        dashboardNavigationSections.map((section) => (
+                            <SidebarGroup key={section.label} label={section.label} isCollapsed={isCollapsed}>
+                                {section.items.map((item) => (
+                                    <SidebarNavLink key={item.label} item={item} isCollapsed={isCollapsed} />
+                                ))}
+                            </SidebarGroup>
+                        ))}
 
                     {hasActiveApp &&
                         appNavigationSections.map((section) => (

@@ -1,10 +1,17 @@
 import { delay, http, HttpResponse } from "msw";
-import type { AppResponse, ProvisionAgentResponse, SuggestAgentResponse } from "@/api/generated/server-api";
+import type {
+    AppResponse,
+    CdcPerformanceResponse,
+    ProvisionAgentResponse,
+    SuggestAgentResponse,
+} from "@/api/generated/server-api";
 import type { AgentStreamEvent } from "@/api/custom-services/agent-stream";
 import { apiHttp } from "./api-http";
 
 export const appsMocks = {
     list: (apps: AppResponse[] = sampleApps) => apiHttp.get("/api/apps", ({ response }) => response(200).json(apps)),
+    cdcPerformance: (response: CdcPerformanceResponse = sampleCdcPerformance) =>
+        apiHttp.get("/api/apps/{slug}/cdc/performance", ({ response: res }) => res(200).json(response)),
     detail: (apps: AppResponse[] = sampleApps) =>
         apiHttp.get("/api/apps/{slug}", ({ params, response }) => {
             const app = apps.find((candidate) => candidate.slug === params.slug);
@@ -52,6 +59,30 @@ export const sampleApps: AppResponse[] = [
         createdAt: "2026-05-12T08:30:00Z",
     },
 ];
+
+export const sampleCdcPerformance: CdcPerformanceResponse = {
+    enabled: true,
+    status: "Running",
+    lastSyncAt: "2026-06-25T09:01:30Z",
+    lagSeconds: 2,
+    recentReads: 12840,
+    recentWrites: 12810,
+    errorCount: 0,
+    recentBatches: Array.from({ length: 6 }, (_, index) => {
+        const startedMs = Date.parse("2026-06-25T09:00:00Z") - index * 90_000;
+        const durationInMs = 900 + Math.round(Math.abs(Math.sin(index)) * 800);
+        const read = 480 + index * 7;
+        return {
+            started: new Date(startedMs).toISOString(),
+            completed: new Date(startedMs + durationInMs).toISOString(),
+            durationInMs,
+            read,
+            processed: read - (index === 2 ? 3 : 0),
+            errors: index === 2 ? 3 : 0,
+            stopReason: "BatchSizeReached",
+        };
+    }),
+};
 
 export const sampleAgentSuggestion: SuggestAgentResponse = {
     configurations: [

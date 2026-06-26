@@ -7,6 +7,8 @@ import { StatusIndicator } from "@/components/data/status-indicator";
 import { Button } from "@/components/shadcn/ui/button";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { appRoutes } from "@/lib/app-routes";
+import { formatCompact } from "@/lib/format";
+import { formatDateTime } from "@/lib/utils";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
 export function AgentsSection({ slug }: { slug: string }) {
@@ -23,7 +25,7 @@ export function AgentsSection({ slug }: { slug: string }) {
             >
                 {agentsQuery.data && (
                     <SectionTable
-                        headers={["Agent name", "Status", "Model"]}
+                        headers={["Agent name", "Status", "Model", "Runs", "Last run"]}
                         isEmpty={agentsQuery.data.length === 0}
                         emptyMessage="No agents yet."
                     >
@@ -38,6 +40,10 @@ export function AgentsSection({ slug }: { slug: string }) {
                                 </TableCell>
                                 <TableCell className="font-mono text-xs text-muted-foreground">
                                     {agent.model ?? "—"}
+                                </TableCell>
+                                <TableCell className="tabular-nums">{formatCompact(agent.invocations)}</TableCell>
+                                <TableCell className="whitespace-nowrap text-muted-foreground">
+                                    {agent.lastInvokedAt ? formatDateTime(agent.lastInvokedAt) : "—"}
                                 </TableCell>
                             </TableRow>
                         ))}
