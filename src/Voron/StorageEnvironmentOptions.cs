@@ -843,7 +843,9 @@ namespace Voron
 
             public override bool CanJournalsBeLinkedWith(StorageEnvironmentOptions other)
             {
-                return other is DirectoryStorageEnvironmentOptions && 
+                if (ForTestingPurposes?.SimulateCannotLinkJournals == true || other.ForTestingPurposes?.SimulateCannotLinkJournals == true)
+                    return false;
+                return other is DirectoryStorageEnvironmentOptions &&
                        CanJournalsBeLinkedWith(other.JournalPath, JournalPath);
             }
 
@@ -1154,7 +1156,9 @@ namespace Voron
 
             public override bool CanJournalsBeLinkedWith(StorageEnvironmentOptions other)
             {
-                return other is PureMemoryStorageEnvironmentOptions && 
+                if (ForTestingPurposes?.SimulateCannotLinkJournals == true || other.ForTestingPurposes?.SimulateCannotLinkJournals == true)
+                    return false;
+                return other is PureMemoryStorageEnvironmentOptions &&
                        CanJournalsBeLinkedWith(TempPath, other.TempPath);
             }
         }
@@ -1421,6 +1425,8 @@ namespace Voron
         internal sealed class TestingStuff
         {
             internal Action<long> BeforeLinkFiles;
+
+            internal bool SimulateCannotLinkJournals;
         }
     }
 }
