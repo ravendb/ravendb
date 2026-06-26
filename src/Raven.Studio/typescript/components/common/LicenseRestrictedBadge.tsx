@@ -24,9 +24,10 @@ export default function LicenseRestrictedBadge({ className, licenseRequired }: L
         <PopoverWithHoverWrapper
             message={popoverMessage}
             placement="top"
-            wrapperClassName={classNames("license-restricted-badge", className)}
+            wrapperClassName={classNames("license-restricted-badge ms-2", className)}
         >
             <Badge
+                data-testid="license-restricted-badge"
                 className={classNames("license-restricted-badge", getClassName(licenseRequired, isCloud))}
                 bg="secondary"
             >
