@@ -624,11 +624,19 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            if (indexOptions.CanJournalsBeLinkedWith(documentDatabase.DocumentsStorage.Environment.Options) == false)
+            var sharedJournals = documentDatabase.IndexStore.SharedJournals;
+            if (sharedJournals == null)
+            {
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Shared journals environment is not available for index '{name}'; running in unshared mode.");
+                return;
+            }
+
+            if (indexOptions.CanJournalsBeLinkedWith(sharedJournals.Env.Options) == false)
             {
                 if (logger.IsWarnEnabled)
                 {
-                    logger.Warn($"Unable to create hard links between '{documentDatabase.DocumentsStorage.Environment.Options.JournalPath}' and '{indexOptions.JournalPath}'. " +
+                    logger.Warn($"Unable to create hard links between '{sharedJournals.Env.Options.JournalPath}' and '{indexOptions.JournalPath}'. " +
                                 $"Shared journals mode is disabled for this index: {name}.");
                 }
                 return;
