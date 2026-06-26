@@ -229,9 +229,14 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var conversation = await MetricsReadService.GetConversationAsync(store, slug, app.Database, conversationId, DateTime.UtcNow, ct);
+        // The id carries a '/', e.g. "chats/recent". The browser client percent-encodes it to
+        // "chats%2Frecent" and Kestrel keeps %2F encoded in the path (unlike TestServer), so the
+        // catch-all hands us the still-encoded value — decode it back to the real document id.
+        var decodedId = Uri.UnescapeDataString(conversationId);
+
+        var conversation = await MetricsReadService.GetConversationAsync(store, slug, app.Database, decodedId, DateTime.UtcNow, ct);
         return conversation is null
-            ? Results.NotFound(new ApiErrorResponse($"no conversation '{conversationId}'"))
+            ? Results.NotFound(new ApiErrorResponse($"no conversation '{decodedId}'"))
             : Results.Ok(conversation);
     }
 

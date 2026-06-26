@@ -80,6 +80,27 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task GetConversation_resolves_a_percent_encoded_slash_in_the_id()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await SeedConversationAsync(store, perAppDb, "chats/recent", "order-support", DateTime.UtcNow.AddMinutes(-5),
+            turns: [("user", "hello"), ("assistant", "hi there")]);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // The browser client percent-encodes the document-id slash (chats/recent -> chats%2Frecent);
+        // the endpoint must still resolve it to the real conversation.
+        var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats%2Frecent");
+        var transcript = detail.GetProperty("transcript");
+        Assert.Equal(2, transcript.GetArrayLength());
+        Assert.Equal("hello", transcript[0].GetProperty("text").GetString());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task GetConversation_returns_404_for_non_conversation_or_unknown_id()
     {
         var store = GetDocumentStore();

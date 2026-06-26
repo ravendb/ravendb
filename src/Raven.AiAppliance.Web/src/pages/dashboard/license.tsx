@@ -48,7 +48,8 @@ export function DashboardLicense() {
 
 function TrialCard({ license }: { license: LicenseResponse }) {
     const isExpired = license.state === "expired";
-    const progress = Math.min(100, (license.daysElapsed / license.trialLengthDays) * 100);
+    const progress =
+        license.trialLengthDays > 0 ? Math.min(100, (license.daysElapsed / license.trialLengthDays) * 100) : 0;
     const expireShortLabel = license.trialEndsLabel.split(",")[0];
 
     return (

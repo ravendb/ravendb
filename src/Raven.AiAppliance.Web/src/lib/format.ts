@@ -7,3 +7,10 @@ const compactNumberFormatter = new Intl.NumberFormat("en-US", {
 export function formatCompact(value: number): string {
     return compactNumberFormatter.format(value);
 }
+
+const currencyFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+// Currency display, e.g. 128.4 -> "$128.40".
+export function formatCurrency(value: number): string {
+    return currencyFormatter.format(value);
+}

@@ -8,6 +8,8 @@ import type {
     ConversationStatsResponse,
     DataCollectionDto,
     DashboardResponse,
+    SeriesData,
+    SeriesKey,
     TokensByAppResponse,
     UsagePoint,
 } from "@/api/generated/server-api";
@@ -287,17 +289,50 @@ const sampleTranscript: ConversationDto["lastExchange"] = [
 const usageSparkline = (base: number) =>
     Array.from({ length: 14 }, (_, index) => Math.round(base * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))));
 
+// Builds a multi-series breakdown shaped like the backend's SeriesData — one
+// { t, <key>: number } row per bucket. The generated `points` type is Record<string, never>,
+// so assemble the rows loosely and cast to the contract shape.
+const buildSeries = (keys: SeriesKey[], bases: number[]): SeriesData => {
+    const seriesValues = bases.map((base) => usageSparkline(base));
+    const points = Array.from({ length: 14 }, (_, index) => {
+        const row: Record<string, number | string> = { t: `2026-06-${String(index + 12).padStart(2, "0")}` };
+        keys.forEach((key, seriesIndex) => {
+            row[key.key] = seriesValues[seriesIndex][index];
+        });
+        return row;
+    });
+    return { points: points as unknown as SeriesData["points"], keys };
+};
+
 export const sampleAppUsage: AppUsageResponse = {
     granularity: "Day",
     metrics: {
-        conversations: { value: 7400, delta: 0.125, sparkline: usageSparkline(520) },
-        tokens: { value: 6100000, delta: 0.15, sparkline: usageSparkline(430000) },
-        cost: { value: 128.4, delta: -0.03, sparkline: usageSparkline(9) },
-        cdcWrites: { value: 18400000, delta: 0.03, sparkline: usageSparkline(1300000) },
+        conversations: { value: 7400, delta: 12.5, sparkline: usageSparkline(520) },
+        tokens: { value: 6100000, delta: 15, sparkline: usageSparkline(430000) },
+        cost: { value: 128.4, delta: -3, sparkline: usageSparkline(9) },
+        cdcWrites: { value: 18400000, delta: 3, sparkline: usageSparkline(1300000) },
     },
-    tokensByCapability: { points: [], keys: [] },
-    tokensByModel: { points: [], keys: [] },
-    conversationsByChannel: { points: [], keys: [] },
+    tokensByCapability: buildSeries(
+        [
+            { key: "sales", label: "Sales assistant", color: "#3b82f6" },
+            { key: "faq", label: "FAQ bot", color: "#8b5cf6" },
+        ],
+        [280000, 150000],
+    ),
+    tokensByModel: buildSeries(
+        [
+            { key: "claude-opus-4-8", label: "claude-opus-4-8", color: "#10b981" },
+            { key: "gpt-4o", label: "gpt-4o", color: "#f59e0b" },
+        ],
+        [300000, 130000],
+    ),
+    conversationsByChannel: buildSeries(
+        [
+            { key: "web", label: "Web widget", color: "#22d3ee" },
+            { key: "telegram", label: "Telegram", color: "#a855f7" },
+        ],
+        [320, 200],
+    ),
     cdcWrites: Array.from({ length: 14 }, (_, index) => ({
         t: `2026-06-${String(index + 12).padStart(2, "0")}`,
         writes: Math.round(1300000 * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))),

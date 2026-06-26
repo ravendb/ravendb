@@ -15,13 +15,14 @@ export type DashboardStatCard = {
     series?: number[];
     // Preformatted value, used when formatCompact isn't enough (e.g. currency).
     valueLabel?: string;
-    // Period-over-period change as a fraction (0.125 -> +12.5%). Renders a trend badge.
+    // Period-over-period change as a percent (12.5 -> +12.5%). Renders a trend badge.
     delta?: number;
 };
 
 export function DashboardStatCards({ cards }: { cards: DashboardStatCard[] }) {
     return (
-        <div className="grid grid-flow-col gap-4">
+        // Two-up on small screens; a single equal-width row from lg up, for any card count.
+        <div className="grid grid-cols-2 gap-4 lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none">
             {cards.map((card) => (
                 <StatCard key={card.label} card={card} />
             ))}
@@ -60,7 +61,7 @@ function DeltaBadge({ delta }: { delta: number }) {
         <Badge variant={isUp ? "success" : "destructive"}>
             <Icon aria-hidden="true" />
             {isUp ? "+" : ""}
-            {(delta * 100).toFixed(1)}%
+            {delta.toFixed(1)}%
         </Badge>
     );
 }
