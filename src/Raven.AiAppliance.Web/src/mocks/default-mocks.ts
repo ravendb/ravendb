@@ -7,7 +7,9 @@ import { bootstrapMocks } from "./bootstrap-mocks";
 import { channelsMocks } from "./channels-mocks";
 import { chatMocks } from "./chat-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
+import { settingsMocks } from "./settings-mocks";
 import { setupMocks } from "./setup-mocks";
+import { statsMocks } from "./stats-mocks";
 
 // Happy-path defaults for every server endpoint, keyed by service. Storybook merges
 // parameters deeply, so a story can replace a single service and keep the rest, and
@@ -40,6 +42,8 @@ export const defaultApiMocks = {
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
     chat: [chatMocks.stream()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
+    settings: [settingsMocks.license(), settingsMocks.usage()],
+    stats: [statsMocks.dashboard(), statsMocks.dashboardApps(), statsMocks.usage(), statsMocks.tokensByApp()],
     setup: [
         setupMocks.connect(),
         setupMocks.discover(),

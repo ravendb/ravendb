@@ -1,194 +1,112 @@
-import { Link } from "react-router";
-import { Database, Plus } from "lucide-react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { parseISO, subDays } from "date-fns";
+import { Clock } from "lucide-react";
 import { api } from "@/api/api";
-import type { AgentSummaryResponse, AppResponse, ChannelSummaryResponse } from "@/api/generated/server-api";
+import type { LicenseResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { PagePanel } from "@/components/data/page-panel";
-import { RawDataPreview } from "@/components/data/raw-data-preview";
 import { Badge } from "@/components/shadcn/ui/badge";
-import { Button } from "@/components/shadcn/ui/button";
-import { Skeleton } from "@/components/shadcn/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
-import { appRoutes } from "@/lib/app-routes";
-import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
+import { DashboardAppsTable } from "@/pages/dashboard/dashboard-apps-table";
+import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
+
+type WindowKey = "last24h" | "last7d" | "last30d";
+
+const WINDOW_OPTIONS: { value: WindowKey; label: string; days: number }[] = [
+    { value: "last24h", label: "Last 24 hours", days: 1 },
+    { value: "last7d", label: "Last 7 days", days: 7 },
+    { value: "last30d", label: "Last month", days: 30 },
+];
 
 export function DashboardHome() {
-    const appsQuery = useQuery(api.queries.apps.list());
+    const [windowKey, setWindowKey] = useState<WindowKey>("last7d");
+
     const dashboardQuery = useQuery(api.queries.stats.dashboard());
-    const usageQuery = useQuery(api.queries.stats.usage());
-    const tokensByAppQuery = useQuery(api.queries.stats.tokensByApp());
-    const dashboardAppsQuery = useQuery(api.queries.stats.dashboardApps());
+    const monthlyWritesQuery = useQuery(api.queries.settings.usage());
+    const appsQuery = useQuery(api.queries.stats.dashboardApps());
+    const licenseQuery = useQuery(api.queries.settings.license());
+
+    const windowData = dashboardQuery.data?.[windowKey];
+    const monthlyWrites = monthlyWritesQuery.data;
+
+    const windowDays = WINDOW_OPTIONS.find((option) => option.value === windowKey)?.days ?? 0;
+    const now = new Date();
+    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const cutoff = subDays(todayUtc, windowDays - 1);
+    const writesDays = monthlyWrites?.days.filter((day) => {
+        const date = parseISO(`${day.date}T00:00:00Z`);
+        return date >= cutoff && date <= todayUtc;
+    });
+    const writesValue = writesDays?.reduce((sum, day) => sum + day.writes, 0);
+
+    const cards: DashboardStatCard[] = [
+        {
+            label: "Conversations",
+            value: windowData?.conversations,
+            isLoading: dashboardQuery.isPending,
+        },
+        {
+            label: "Messages",
+            value: windowData?.messages,
+            isLoading: dashboardQuery.isPending,
+        },
+        {
+            label: "Tokens",
+            value: windowData?.tokens,
+            isLoading: dashboardQuery.isPending,
+        },
+        {
+            label: "Writes",
+            value: writesValue,
+            isLoading: monthlyWritesQuery.isPending,
+            series: writesDays?.map((day) => day.writes),
+        },
+    ];
 
     return (
-        <PagePanel>
-            <div className="space-y-8">
-                <div className="space-y-6">
-                    <RawDataPreview title="stats.dashboard" query={dashboardQuery} />
-                    <RawDataPreview title="stats.usage" query={usageQuery} />
-                    <RawDataPreview title="stats.tokensByApp" query={tokensByAppQuery} />
-                    <RawDataPreview title="stats.dashboardApps" query={dashboardAppsQuery} />
+        <div className="space-y-6">
+            <header className="flex items-center justify-between gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight">My apps</h1>
+                <TrialPill license={licenseQuery.data} />
+            </header>
+
+            <div className="space-y-4">
+                <div className="flex justify-end">
+                    <Tabs value={windowKey} onValueChange={(value) => setWindowKey(value as WindowKey)}>
+                        <TabsList>
+                            {WINDOW_OPTIONS.map((option) => (
+                                <TabsTrigger key={option.value} value={option.value}>
+                                    {option.label}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </Tabs>
                 </div>
-                <ApiState
-                    isLoading={appsQuery.isPending}
-                    isError={appsQuery.isError}
-                    errorTitle="Could not load apps"
-                    onRetry={appsQuery.refetch}
-                    loadingLabel="Loading apps..."
-                >
-                    {appsQuery.data && appsQuery.data.length > 0 ? (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-sm font-semibold">Apps</h2>
-                                    <Badge variant="secondary" className="font-mono">
-                                        {appsQuery.data.length}
-                                    </Badge>
-                                </div>
-                                <Button asChild size="sm">
-                                    <Link to={appRoutes.addApp()}>
-                                        <Plus className="size-3.5" aria-hidden="true" />
-                                        Add app
-                                    </Link>
-                                </Button>
-                            </div>
-                            <div className="overflow-hidden rounded-lg border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="hover:bg-transparent">
-                                            <TableHead className="w-[30%] text-xs font-medium text-muted-foreground">
-                                                App
-                                            </TableHead>
-                                            <TableHead className="text-xs font-medium text-muted-foreground">
-                                                Agents
-                                            </TableHead>
-                                            <TableHead className="text-xs font-medium text-muted-foreground">
-                                                Channels
-                                            </TableHead>
-                                            <TableHead className="text-xs font-medium text-muted-foreground">
-                                                Created
-                                            </TableHead>
-                                            <TableHead className="w-[22%] text-xs font-medium text-muted-foreground">
-                                                Status
-                                            </TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {appsQuery.data.map((app) => (
-                                            <AppRow key={app.slug} app={app} />
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </div>
-                    ) : (
-                        <EmptyAppsState />
-                    )}
-                </ApiState>
+                <DashboardStatCards cards={cards} />
             </div>
-        </PagePanel>
-    );
-}
 
-function AppRow({ app }: { app: AppResponse }) {
-    const agentsQuery = useQuery(api.queries.agents.list(app.slug));
-    const channelsQuery = useQuery(api.queries.channels.list(app.slug));
-
-    return (
-        <TableRow className="group">
-            <TableCell className="py-3">
-                <Link to={appRoutes.app(app.slug)} className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium group-hover:underline">{app.name}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{app.database}</span>
-                </Link>
-            </TableCell>
-            <TableCell className="text-sm tabular-nums">
-                {agentsQuery.isPending ? (
-                    <Skeleton className="h-4 w-6" />
-                ) : agentsQuery.data && agentsQuery.data.length > 0 ? (
-                    agentsQuery.data.length
-                ) : (
-                    "—"
-                )}
-            </TableCell>
-            <TableCell className="text-sm">
-                {channelsQuery.isPending ? <Skeleton className="h-4 w-24" /> : formatChannels(channelsQuery.data)}
-            </TableCell>
-            <TableCell className="text-sm text-muted-foreground">{formatCreatedDate(app.createdAt)}</TableCell>
-            <TableCell className="py-3">
-                {agentsQuery.isPending || channelsQuery.isPending ? (
-                    <Skeleton className="h-4 w-20" />
-                ) : agentsQuery.data && channelsQuery.data ? (
-                    <AppStatusCell agents={agentsQuery.data} channels={channelsQuery.data} />
-                ) : (
-                    <StatusBlock
-                        dotClassName="bg-muted-foreground/50"
-                        label="Unknown"
-                        subtitle="Could not load status"
-                    />
-                )}
-            </TableCell>
-        </TableRow>
-    );
-}
-
-function formatChannels(channels: ChannelSummaryResponse[] | undefined) {
-    if (!channels || channels.length === 0) {
-        return "—";
-    }
-    const labels = new Set(channels.map((channel) => (channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "Other")));
-    return [...labels].join(", ");
-}
-
-function AppStatusCell({ agents, channels }: { agents: AgentSummaryResponse[]; channels: ChannelSummaryResponse[] }) {
-    if (agents.length === 0) {
-        return <StatusBlock dotClassName="bg-sky-500" label="Setup" subtitle="No AI capability yet" />;
-    }
-    if (agents.every((agent) => agent.disabled)) {
-        return <StatusBlock dotClassName="bg-muted-foreground/50" label="Disabled" subtitle="All agents disabled" />;
-    }
-    if (channels.length > 0 && channels.every((channel) => !channel.enabled)) {
-        return <StatusBlock dotClassName="bg-amber-500" label="Needs attention" subtitle="All channels disabled" />;
-    }
-    return <StatusBlock dotClassName="bg-emerald-500" label="Active" />;
-}
-
-function StatusBlock({ dotClassName, label, subtitle }: { dotClassName: string; label: string; subtitle?: string }) {
-    return (
-        <div className="flex items-start gap-2">
-            <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", dotClassName)} aria-hidden="true" />
-            <div className="flex flex-col">
-                <span className="text-sm font-medium">{label}</span>
-                {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
-            </div>
+            <ApiState
+                isLoading={appsQuery.isPending}
+                isError={appsQuery.isError}
+                errorTitle="Could not load apps"
+                onRetry={() => appsQuery.refetch()}
+                loadingLabel="Loading apps…"
+            >
+                {appsQuery.data && <DashboardAppsTable apps={appsQuery.data} />}
+            </ApiState>
         </div>
     );
 }
 
-function formatCreatedDate(value: string) {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
-}
+function TrialPill({ license }: { license: LicenseResponse | undefined }) {
+    if (!license || license.tier !== "Trial" || license.daysLeft <= 0) {
+        return null;
+    }
 
-function EmptyAppsState() {
     return (
-        <div className="flex min-h-full items-center justify-center">
-            <div className="flex max-w-xs flex-col items-center text-center">
-                <div className="flex size-9 items-center justify-center rounded-md bg-accent text-accent-foreground">
-                    <Database className="size-5" aria-hidden="true" />
-                </div>
-                <h2 className="mt-4 text-sm font-semibold">No apps added yet</h2>
-                <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                    Create an app from a source database and CDC mapping.
-                </p>
-                <Button asChild size="sm" className="mt-5">
-                    <Link to={appRoutes.addApp()}>
-                        <Plus className="size-3.5" aria-hidden="true" />
-                        Add app
-                    </Link>
-                </Button>
-            </div>
-        </div>
+        <Badge variant="warning" className="gap-1.5">
+            <Clock aria-hidden="true" />
+            {license.daysLeft} {license.daysLeft === 1 ? "day" : "days"} left in trial
+        </Badge>
     );
 }
