@@ -56,8 +56,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
-        // in case of error, we'll re-learn the schema (it may have changed).
+        // In case of error, re-learn the schema (it may have changed).
         _columnTypesCache.Clear();
+        DocumentProcessor.ResetSourceColumnNames();
         await EnsureCdcEnabled(ct);
         await HandleInitialLoad(ct);
         _initialLoadTcs.TrySetResult();
