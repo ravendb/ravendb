@@ -38,7 +38,7 @@ export const EmptyView: StoryObj = {
             dto.Results = [];
         });
 
-        return <OngoingTasksPage />;
+        return <OngoingTasksPage queryParams={{ allowEmpty: "1" }} />;
     },
 };
 

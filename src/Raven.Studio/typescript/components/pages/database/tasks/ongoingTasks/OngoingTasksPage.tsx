@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
+﻿import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import router from "plugins/router";
 import { useServices } from "hooks/useServices";
 import { OngoingTasksState, ongoingTasksReducer, ongoingTasksReducerInitializer } from "./partials/OngoingTasksReducer";
@@ -65,10 +65,15 @@ import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.Replic
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import { OngoingTasksHeader } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksHeader";
 import { InternalReplicationPanel } from "./panels/InternalReplicationPanel";
+import { LoadingView } from "components/common/LoadingView";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import recentError from "common/notifications/models/recentError";
 
-export function OngoingTasksPage() {
+interface OngoingTasksPageProps {
+    queryParams?: { allowEmpty?: string };
+}
+
+export function OngoingTasksPage({ queryParams }: OngoingTasksPageProps = {}) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
 
     const { tasksService } = useServices();
@@ -347,13 +352,31 @@ export function OngoingTasksPage() {
 
     const showInternalReplication = DatabaseUtils.hasInternalReplication(db);
 
+    const hasSeenTasksRef = useRef(false);
+    if (allTasksCount > 0 || showInternalReplication) {
+        hasSeenTasksRef.current = true;
+    }
+
     useEffect(() => {
-        if (isInitialLoadDone && allTasksCount === 0 && !showInternalReplication) {
+        if (!queryParams?.allowEmpty && isInitialLoadDone && allTasksCount === 0 && !showInternalReplication) {
             router.navigate(addNewOngoingTaskUrl + "&noBack=1");
         }
-    }, [isInitialLoadDone, allTasksCount, showInternalReplication]);
+        // Intentionally omitting allTasksCount and showInternalReplication — redirect only on initial load
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isInitialLoadDone]);
 
-    if (!isInitialLoadDone || (allTasksCount === 0 && !showInternalReplication)) {
+    const isRedirecting =
+        !queryParams?.allowEmpty &&
+        isInitialLoadDone &&
+        allTasksCount === 0 &&
+        !showInternalReplication &&
+        !hasSeenTasksRef.current;
+
+    if (!isInitialLoadDone) {
+        return <LoadingView />;
+    }
+
+    if (isRedirecting) {
         return null;
     }
 

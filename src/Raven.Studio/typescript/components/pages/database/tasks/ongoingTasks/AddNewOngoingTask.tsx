@@ -4,7 +4,7 @@ import { AboutViewHeading } from "components/common/AboutView";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import React, { ReactNode, useEffect, useRef, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
@@ -16,6 +16,7 @@ import { useNewOngoingTasks } from "components/pages/database/tasks/shared/share
 import { EmptySet } from "components/common/EmptySet";
 import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
 import { RadioToggleWithIcon } from "components/common/toggles/RadioToggle";
+import { useScrollSpy } from "components/pages/database/tasks/ongoingTasks/hooks/useScrollSpy";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -25,6 +26,8 @@ interface AddNewOngoingTaskProps {
     queryParams?: { noBack?: string };
 }
 
+type DisplayMode = "expanded" | "compact";
+
 const getCategoryId = (categoryName: string) =>
     `ongoing-task-category-${categoryName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
 
@@ -33,67 +36,11 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
     const { filteredTasks, allCategories, searchText, setSearchText } = useNewOngoingTasks();
 
     const serverWideTasksUrl = appUrl.forServerWideTasks();
-    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl();
+    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl() + "&allowEmpty=1";
     const showBackUrl = !queryParams?.noBack;
 
-    const [activeCategory, setActiveCategory] = useState<string | null>(
-        allCategories.length > 0 ? allCategories[0].categoryName : null
-    );
-    const [displayMode, setDisplayMode] = useState<"expanded" | "compact">("expanded");
-
-    const contentRef = useRef<HTMLDivElement>(null);
-    const isScrollingRef = useRef(false);
-    const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-    const scrollToCategory = (categoryName: string) => {
-        const el = document.getElementById(getCategoryId(categoryName));
-        if (el) {
-            isScrollingRef.current = true;
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        setActiveCategory(categoryName);
-    };
-
-    useEffect(() => {
-        const container = contentRef.current;
-        if (!container || allCategories.length === 0) {
-            return;
-        }
-
-        const handleScroll = () => {
-            if (isScrollingRef.current) {
-                // Debounce: clear the flag 150ms after the last scroll tick from the animation
-                clearTimeout(scrollTimerRef.current);
-                scrollTimerRef.current = setTimeout(() => {
-                    isScrollingRef.current = false;
-                }, 150);
-                return;
-            }
-
-            const maxScrollTop = container.scrollHeight - container.clientHeight;
-            const scrollProgress = maxScrollTop > 0 ? container.scrollTop / maxScrollTop : 0;
-            const triggerFraction = 0.15 + scrollProgress * 0.7;
-            const containerTop = container.getBoundingClientRect().top;
-            const triggerY = containerTop + container.clientHeight * triggerFraction;
-
-            let active = allCategories[0].categoryName;
-            for (const category of allCategories) {
-                const el = document.getElementById(getCategoryId(category.categoryName));
-                if (el && el.getBoundingClientRect().top <= triggerY) {
-                    active = category.categoryName;
-                }
-            }
-
-            setActiveCategory(active);
-        };
-
-        container.addEventListener("scroll", handleScroll, { passive: true });
-
-        return () => {
-            container.removeEventListener("scroll", handleScroll);
-            clearTimeout(scrollTimerRef.current);
-        };
-    }, [allCategories]);
+    const [displayMode, setDisplayMode] = useState<DisplayMode>("expanded");
+    const { contentRef, activeCategory, scrollToCategory } = useScrollSpy(allCategories);
 
     return (
         <div className="add-new-ongoing-task d-flex flex-column">
@@ -331,7 +278,7 @@ function TaskItem({
                     message: getDatabaseAccessRequiredMessage(accessRequired),
                 },
                 {
-                    isActive: !!isShardingNotSupported,
+                    isActive: isShardingNotSupported,
                     message: "Sharding is not supported for this task",
                 },
                 {
