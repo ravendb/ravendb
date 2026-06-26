@@ -84,6 +84,8 @@ const dashboardPages: AppRouteDefinition[] = [
             label: "My apps",
             icon: LayoutGrid,
         },
+        // DashboardHome renders its own header so the trial pill can sit beside the title.
+        isPageTitleHidden: true,
         element: <DashboardHome />,
     },
     {
