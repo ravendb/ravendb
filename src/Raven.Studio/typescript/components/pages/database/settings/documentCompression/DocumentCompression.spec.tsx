@@ -6,7 +6,6 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 const { DefaultDocumentCompression } = composeStories(stories);
 
-
 describe("DocumentCompression", () => {
     async function waitForLoad(screen: RtlScreen) {
         await screen.findByText(DatabasesStubs.documentsCompressionConfiguration().Collections[0]);
