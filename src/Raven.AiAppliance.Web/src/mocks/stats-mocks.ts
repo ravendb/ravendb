@@ -1,5 +1,12 @@
 import type {
+    ActivityEventDto,
+    AgentStatsResponse,
     ApplianceAppResponse,
+    AppUsageResponse,
+    ChannelStatsResponse,
+    ConversationDto,
+    ConversationStatsResponse,
+    DataCollectionDto,
     DashboardResponse,
     TokensByAppResponse,
     UsagePoint,
@@ -11,10 +18,34 @@ export const statsMocks = {
         apiHttp.get("/api/dashboard", ({ response: res }) => res(200).json(response)),
     dashboardApps: (apps: ApplianceAppResponse[] = sampleDashboardApps) =>
         apiHttp.get("/api/dashboard/apps", ({ response }) => response(200).json(apps)),
+    dashboardApp: (app: ApplianceAppResponse = sampleDashboardApps[0]) =>
+        apiHttp.get("/api/dashboard/apps/{slug}", ({ response }) => response(200).json(app)),
     usage: (points: UsagePoint[] = sampleUsage) =>
         apiHttp.get("/api/usage", ({ response }) => response(200).json(points)),
     tokensByApp: (response: TokensByAppResponse = sampleTokensByApp) =>
         apiHttp.get("/api/usage/by-app", ({ response: res }) => res(200).json(response)),
+    conversationStats: (response: ConversationStatsResponse = sampleConversationStats) =>
+        apiHttp.get("/api/apps/{slug}/conversations/stats", ({ response: res }) => res(200).json(response)),
+    activity: (events: ActivityEventDto[] = sampleActivity) =>
+        apiHttp.get("/api/apps/{slug}/activity", ({ response }) => response(200).json(events)),
+    agents: (response: AgentStatsResponse = sampleAgentStats) =>
+        apiHttp.get("/api/apps/{slug}/agents/stats", ({ response: res }) => res(200).json(response)),
+    channels: (response: ChannelStatsResponse = sampleChannelStats) =>
+        apiHttp.get("/api/apps/{slug}/channels/stats", ({ response: res }) => res(200).json(response)),
+    collections: (collections: DataCollectionDto[] = sampleCollections) =>
+        apiHttp.get("/api/apps/{slug}/collections", ({ response }) => response(200).json(collections)),
+    conversations: (conversations: ConversationDto[] = sampleConversations) =>
+        apiHttp.get("/api/apps/{slug}/conversations", ({ response }) => response(200).json(conversations)),
+    conversation: (conversations: ConversationDto[] = sampleConversations) =>
+        apiHttp.get("/api/apps/{slug}/conversations/{conversationId}", ({ params, response }) => {
+            const found = conversations.find((candidate) => candidate.id === params.conversationId);
+            if (!found) {
+                return response(404).json({ error: `Unknown conversation: ${params.conversationId}` });
+            }
+            return response(200).json({ ...found, transcript: sampleTranscript });
+        }),
+    appUsage: (response: AppUsageResponse = sampleAppUsage) =>
+        apiHttp.get("/api/apps/{slug}/usage", ({ response: res }) => res(200).json(response)),
 };
 
 export const sampleDashboard: DashboardResponse = {
@@ -117,4 +148,169 @@ export const sampleTokensByApp: TokensByAppResponse = {
         { slug: "acme-internal", tokens: 900000 },
     ],
     refreshedMinutesAgo: 2,
+};
+
+export const sampleConversationStats: ConversationStatsResponse = {
+    last24h: { conversations: 1100, messages: 3200, tokens: 890000 },
+    last7d: { conversations: 7400, messages: 21800, tokens: 6100000 },
+    last30d: { conversations: 28900, messages: 86400, tokens: 24300000 },
+};
+
+export const sampleActivity: ActivityEventDto[] = [
+    {
+        id: "act-1",
+        appId: "acme-shop",
+        type: "conversation",
+        message: "Sales assistant resolved a conversation in #sales",
+        timestamp: "2026-06-25T09:02:00Z",
+    },
+    {
+        id: "act-2",
+        appId: "acme-shop",
+        type: "cdc",
+        message: "CDC batch processed 1,240 documents",
+        timestamp: "2026-06-25T08:41:00Z",
+    },
+    {
+        id: "act-3",
+        appId: "acme-shop",
+        type: "channel",
+        message: "Web widget “Website widget” connected",
+        timestamp: "2026-06-24T17:15:00Z",
+    },
+    {
+        id: "act-4",
+        appId: "acme-shop",
+        type: "agent",
+        message: "FAQ bot was disabled",
+        timestamp: "2026-06-24T11:30:00Z",
+    },
+];
+
+// Agent ids mirror agents-mocks so the per-agent usage table can resolve names.
+export const sampleAgentStats: AgentStatsResponse = {
+    configuredAgents: 2,
+    last24h: { conversations: 320, messages: 980, tokens: 210000 },
+    last7d: { conversations: 2100, messages: 6400, tokens: 1500000 },
+    last30d: { conversations: 8800, messages: 26100, tokens: 6300000 },
+    agents: [
+        { agentId: "agents/sales", conversations: 1800, messages: 5200, tokens: 1200000 },
+        { agentId: "agents/faq", conversations: 300, messages: 1200, tokens: 300000 },
+    ],
+};
+
+export const sampleChannelStats: ChannelStatsResponse = {
+    total: 2,
+    active: 1,
+};
+
+export const sampleCollections: DataCollectionDto[] = [
+    { appId: "demo", name: "Products", documentsCount: 482000, fields: ["Name", "Price", "Sku", "Description"] },
+    { appId: "demo", name: "Orders", documentsCount: 91000, fields: ["Total", "Status", "CustomerId"] },
+    { appId: "demo", name: "Customers", documentsCount: 23000, fields: ["Email", "Name"] },
+];
+
+export const sampleConversations: ConversationDto[] = [
+    {
+        id: "chats/1001",
+        appId: "demo",
+        channelName: "Website widget",
+        agentName: "Sales assistant",
+        agentInitials: "SA",
+        agentColor: "#6366f1",
+        params: [{ key: "customerId", value: "cust-42" }],
+        lastExchange: [
+            { role: "user", text: "Do you have the wireless mouse in stock?", at: "2026-06-25T09:00:00Z" },
+            { role: "assistant", text: "Yes, the Wireless Mouse is in stock for $24.99.", at: "2026-06-25T09:00:04Z" },
+        ],
+        transcript: null,
+        state: "Completed",
+        lastActivityAt: "2026-06-25T09:00:04Z",
+        startedAt: "2026-06-25T08:59:30Z",
+        maxDuration: null,
+    },
+    {
+        id: "chats/1002",
+        appId: "demo",
+        channelName: "Telegram bot",
+        agentName: "FAQ bot",
+        agentInitials: "FB",
+        agentColor: "#0ea5e9",
+        params: [],
+        lastExchange: [
+            { role: "user", text: "What are your opening hours?", at: "2026-06-24T16:20:00Z" },
+            { role: "assistant", text: "We're online 24/7 for chat support.", at: "2026-06-24T16:20:03Z" },
+        ],
+        transcript: null,
+        state: "Active",
+        lastActivityAt: "2026-06-24T16:20:03Z",
+        startedAt: "2026-06-24T16:19:40Z",
+        maxDuration: null,
+    },
+    {
+        id: "chats/1003",
+        appId: "demo",
+        channelName: "Website widget",
+        agentName: "Sales assistant",
+        agentInitials: "SA",
+        agentColor: "#6366f1",
+        params: [{ key: "customerId", value: "cust-7" }],
+        lastExchange: [
+            { role: "user", text: "Where is my order #4821?", at: "2026-06-24T10:05:00Z" },
+            {
+                role: "assistant",
+                text: "Order #4821 shipped yesterday and arrives Friday.",
+                at: "2026-06-24T10:05:06Z",
+            },
+        ],
+        transcript: null,
+        state: "Completed",
+        lastActivityAt: "2026-06-24T10:05:06Z",
+        startedAt: "2026-06-24T10:04:20Z",
+        maxDuration: null,
+    },
+];
+
+// Returned by the conversation-detail mock so the transcript sheet has a full thread.
+const sampleTranscript: ConversationDto["lastExchange"] = [
+    { role: "user", text: "Hi, do you have the wireless mouse in stock?", at: "2026-06-25T08:59:30Z" },
+    { role: "assistant", text: "Let me check that for you.", at: "2026-06-25T08:59:34Z" },
+    {
+        role: "assistant",
+        text: "Yes, the Wireless Mouse is in stock for $24.99. Want me to add it to your cart?",
+        at: "2026-06-25T09:00:01Z",
+    },
+    { role: "user", text: "Yes please.", at: "2026-06-25T09:00:03Z" },
+    { role: "assistant", text: "Done — it's in your cart. Anything else?", at: "2026-06-25T09:00:04Z" },
+];
+
+const usageSparkline = (base: number) =>
+    Array.from({ length: 14 }, (_, index) => Math.round(base * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))));
+
+export const sampleAppUsage: AppUsageResponse = {
+    granularity: "Day",
+    metrics: {
+        conversations: { value: 7400, delta: 0.125, sparkline: usageSparkline(520) },
+        tokens: { value: 6100000, delta: 0.15, sparkline: usageSparkline(430000) },
+        cost: { value: 128.4, delta: -0.03, sparkline: usageSparkline(9) },
+        cdcWrites: { value: 18400000, delta: 0.03, sparkline: usageSparkline(1300000) },
+    },
+    tokensByCapability: { points: [], keys: [] },
+    tokensByModel: { points: [], keys: [] },
+    conversationsByChannel: { points: [], keys: [] },
+    cdcWrites: Array.from({ length: 14 }, (_, index) => ({
+        t: `2026-06-${String(index + 12).padStart(2, "0")}`,
+        writes: Math.round(1300000 * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))),
+    })),
+    topTables: [
+        { name: "Products", writes: 9200000, lagSeconds: 2, lastWriteAt: "2026-06-25T09:00:00Z" },
+        { name: "Orders", writes: 5100000, lagSeconds: 4, lastWriteAt: "2026-06-25T08:58:00Z" },
+        { name: "Customers", writes: 2300000, lagSeconds: 1, lastWriteAt: "2026-06-25T08:55:00Z" },
+        { name: "Inventory", writes: 1800000, lagSeconds: 9, lastWriteAt: "2026-06-25T08:40:00Z" },
+    ],
+    topCapabilities: [
+        { name: "Sales assistant", invocations: 8100, avgTokens: 540, totalTokens: 4374000, cost: 92.1 },
+        { name: "FAQ bot", invocations: 2400, avgTokens: 320, totalTokens: 768000, cost: 18.6 },
+        { name: "Order tracker", invocations: 1200, avgTokens: 410, totalTokens: 492000, cost: 17.7 },
+    ],
 };

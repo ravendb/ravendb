@@ -1,5 +1,7 @@
 import { useId } from "react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, YAxis } from "recharts";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Card, CardContent } from "@/components/shadcn/ui/card";
 import { ChartContainer, type ChartConfig } from "@/components/shadcn/ui/chart";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
@@ -11,11 +13,15 @@ export type DashboardStatCard = {
     isLoading: boolean;
     caption?: string;
     series?: number[];
+    // Preformatted value, used when formatCompact isn't enough (e.g. currency).
+    valueLabel?: string;
+    // Period-over-period change as a fraction (0.125 -> +12.5%). Renders a trend badge.
+    delta?: number;
 };
 
 export function DashboardStatCards({ cards }: { cards: DashboardStatCard[] }) {
     return (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-flow-col gap-4">
             {cards.map((card) => (
                 <StatCard key={card.label} card={card} />
             ))}
@@ -25,22 +31,37 @@ export function DashboardStatCards({ cards }: { cards: DashboardStatCard[] }) {
 
 function StatCard({ card }: { card: DashboardStatCard }) {
     const hasSparkline = card.series !== undefined && card.series.length > 1;
+    const valueLabel = card.valueLabel ?? (card.value === undefined ? "—" : formatCompact(card.value));
 
     return (
         <Card className="gap-3 pb-0">
             <CardContent className="space-y-1">
-                <div className="text-sm text-muted-foreground">{card.label}</div>
+                <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">{card.label}</span>
+                    {card.delta !== undefined && !card.isLoading && <DeltaBadge delta={card.delta} />}
+                </div>
                 {card.isLoading ? (
                     <Skeleton className="h-9 w-20" />
                 ) : (
-                    <div className="text-3xl font-semibold tracking-tight tabular-nums">
-                        {card.value === undefined ? "—" : formatCompact(card.value)}
-                    </div>
+                    <div className="text-3xl font-semibold tracking-tight tabular-nums">{valueLabel}</div>
                 )}
                 {card.caption && <div className="text-xs text-muted-foreground">{card.caption}</div>}
             </CardContent>
             {hasSparkline ? <Sparkline series={card.series!} /> : <div className="h-14" aria-hidden="true" />}
         </Card>
+    );
+}
+
+function DeltaBadge({ delta }: { delta: number }) {
+    const isUp = delta >= 0;
+    const Icon = isUp ? TrendingUp : TrendingDown;
+
+    return (
+        <Badge variant={isUp ? "success" : "destructive"}>
+            <Icon aria-hidden="true" />
+            {isUp ? "+" : ""}
+            {(delta * 100).toFixed(1)}%
+        </Badge>
     );
 }
 
