@@ -305,6 +305,16 @@ public class CdcSinkDocumentProcessor
             processor.ClearPool();
     }
 
+    /// <summary>
+    /// Drops every table's learned column set so the next read re-learns it. Called on retry so a
+    /// schema change seen mid-initial-load doesn't keep re-failing on stale column metadata.
+    /// </summary>
+    public void ResetSourceColumnNames()
+    {
+        foreach (var (_, processor) in _tableIndex)
+            processor.ResetSourceColumnNames();
+    }
+
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
     {
         if (_tableIndex.TryGetValue((row.TableSchema ?? "", row.TableName), out var processor) == false)

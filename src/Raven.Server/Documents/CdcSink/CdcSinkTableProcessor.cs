@@ -170,6 +170,15 @@ public class CdcSinkTableProcessor
         _valuesPool.Clear();
     }
 
+    /// <summary>
+    /// Drops the learned column set so the next read re-learns it. Used on retry to recover from a
+    /// schema change seen mid-initial-load, which would otherwise keep failing the reader's count check.
+    /// </summary>
+    public void ResetSourceColumnNames()
+    {
+        SourceColumnNames = null;
+    }
+
     public void SetSourceColumnNames(string[] names)
     {
         if (SourceColumnNames?.Length != names.Length)

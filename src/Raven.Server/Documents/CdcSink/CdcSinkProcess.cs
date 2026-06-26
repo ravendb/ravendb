@@ -908,6 +908,10 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected async Task HandleInitialLoad(CancellationToken ct)
     {
+        // A retry may be recovering from a schema change seen mid-load; drop cached column metadata
+        // so this attempt re-learns the current column set instead of re-failing on the stale one.
+        DocumentProcessor.ResetSourceColumnNames();
+
         CdcSinkTaskState state;
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
