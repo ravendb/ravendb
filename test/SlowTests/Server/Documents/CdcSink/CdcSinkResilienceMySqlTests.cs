@@ -135,6 +135,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
+            await WaitForCdcInitialLoadAsync(store, "test-schema-drop-col");
+
             var doc = await WaitForDocumentAsync<dynamic>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
