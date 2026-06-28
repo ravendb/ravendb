@@ -38,7 +38,7 @@ internal sealed class ConversationMetricsIndex : AbstractIndexCreationTask
                 @"from c in docs.@conversations
                   select new {
                       Agent = c.Agent,
-                      Bucket = new DateTime(c.CreatedAt.Year, c.CreatedAt.Month, c.CreatedAt.Day, c.CreatedAt.Hour, 0, 0),
+                      Bucket = new DateTime(c.CreatedAt.Year, c.CreatedAt.Month, c.CreatedAt.Day, c.CreatedAt.Hour, 0, 0, DateTimeKind.Utc),
                       Conversations = 1,
                       Messages = c.Messages.Count(m => m.role == ""user""),
                       Tokens = c.TotalUsage.TotalTokens
