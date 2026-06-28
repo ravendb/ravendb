@@ -33,16 +33,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         internal bool MatchesHubToSinkTask(PullReplicationAsSink destination)
         {
-            if (destination == null ||
-                IncomingPullReplicationParams.Mode != PullReplicationMode.HubToSink ||
+            if (IncomingPullReplicationParams.Mode != PullReplicationMode.HubToSink ||
                 destination.Mode != PullReplicationMode.HubToSink)
                 return false;
 
-            if (IncomingPullReplicationParams.TaskId != 0 && destination.TaskId != 0)
-                return IncomingPullReplicationParams.TaskId == destination.TaskId;
-
-            return string.Equals(IncomingPullReplicationParams.Name, destination.HubName, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(IncomingPullReplicationParams.SourceDatabaseName, destination.Database, StringComparison.OrdinalIgnoreCase);
+            return IncomingPullReplicationParams.TaskId == destination.TaskId;
         }
 
         protected override DynamicJsonValue GetHeartbeatStatusMessage(DocumentsOperationContext documentsContext, long lastDocumentEtag, string handledMessageType)

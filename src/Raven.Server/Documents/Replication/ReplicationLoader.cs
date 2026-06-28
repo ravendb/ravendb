@@ -919,8 +919,6 @@ namespace Raven.Server.Documents.Replication
                         _logger.Warn($"Failed to reset outgoing pull replication to {repl.DestinationFormatted} after pull replication composite change-vector support changed.", e);
                 }
             }
-
-            ForceTryReconnectAll();
         }
 
         private static bool SupportsPullReplicationCompositeChangeVectors(DatabaseRecord record)
