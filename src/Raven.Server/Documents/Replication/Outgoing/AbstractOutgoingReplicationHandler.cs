@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public void Start()
         {
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(Replication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunReplicationWithErrorHandling(Replication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
                     _databaseName, Destination.FromString(), pullReplicationAsHub: false));
         }
 
@@ -691,7 +691,17 @@ namespace Raven.Server.Documents.Replication.Outgoing
             throw new OperationCanceledException("The connection has been closed by the Dispose method");
         }
 
-        protected virtual void HandleReplicationErrors(Action replicationAction)
+        protected void RunReplicationWithErrorHandling(Action replicationAction)
+        {
+            OnReplicationRunStarted();
+            HandleReplicationErrors(replicationAction);
+        }
+
+        protected virtual void OnReplicationRunStarted()
+        {
+        }
+
+        private void HandleReplicationErrors(Action replicationAction)
         {
             try
             {
@@ -902,6 +912,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
 
             _connectionDisposed.Dispose();
+        }
+
+        internal void ReportFailure(Exception exception)
+        {
+            HandleReplicationErrors(() => throw exception);
         }
 
         private void DisposeTcpClient()
