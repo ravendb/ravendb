@@ -670,6 +670,11 @@ namespace Raven.Server.Documents.Replication.Incoming
             _incomingWork = null;
         }
 
+        internal void ReportFailure(Exception exception)
+        {
+            InvokeOnFailed(exception);
+        }
+
         protected virtual void DisposeInternal()
         {
             var releaser = _copiedBuffer.ReleaseBuffer;
