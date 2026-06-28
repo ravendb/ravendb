@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public void StartPullReplicationAsHub()
         {
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunReplicationWithErrorHandling(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
                     _database.Name, Destination.FromString(), pullReplicationAsHub: true));
         }
 
