@@ -938,10 +938,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var veryLongEscapedCharsAndNonAsciiString = string.Join(",", Enumerable.Repeat("\"מגניב\"", 200).ToArray());
 
                     var longEscapedWithControlCharsString = string.Join(",", Enumerable.Repeat("Cool\u0001\t\n", 100).ToArray());
-                    var expectedLongEscapedWithControlCharsString = string.Join(",", Enumerable.Repeat("Cool\\u0001\t\n", 100).ToArray());
 
                     var veryLongEscapedWithControlCharsString = string.Join(",", Enumerable.Repeat("Cool\u0001\t\n", 300).ToArray());
-                    var expectedVeryLongEscapedWithControlCharsString = string.Join(",", Enumerable.Repeat("Cool\\u0001\t\n", 300).ToArray());
 
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
 
@@ -1047,8 +1045,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     Assert.Equal(longEscapedCharsAndNonAsciiString, reader["StringEscapedCharsAndNonAscii"].ToString());
                     Assert.Equal(veryLongEscapedCharsString, reader["StringVeryLongEscapedChars"].ToString());
                     Assert.Equal(veryLongEscapedCharsAndNonAsciiString, reader["StringVeryEscapedCharsAndNonAscii"].ToString());
-                    Assert.Equal(expectedLongEscapedWithControlCharsString, reader["StringLongEscapedWithControlChars"].ToString());
-                    Assert.Equal(expectedVeryLongEscapedWithControlCharsString, reader["StringVeryLongEscapedWithControlChars"].ToString());
+                    Assert.Equal(longEscapedWithControlCharsString, reader["StringLongEscapedWithControlChars"].ToString());
+                    Assert.Equal(veryLongEscapedWithControlCharsString, reader["StringVeryLongEscapedWithControlChars"].ToString());
                     Assert.Equal(lsvString, reader["LSVString"].ToString());
                     Assert.Equal(1000, int.Parse((reader["Embedded"] as BlittableJsonReaderObject)["Value"].ToString(), CultureInfo.InvariantCulture));
                 }
