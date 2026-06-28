@@ -71,10 +71,4 @@ public sealed class AiConfiguration : ConfigurationCategory
     [DefaultValue(false)]
     [ConfigurationEntry("Ai.Assistant.DisableDataSubmission", ConfigurationEntryScope.ServerWideOnly)]
     public bool DisableDataSubmission { get; set; }
-
-    [Description("Overrides the upstream URL that the Quill AI proxy (/quill/ai/assist) forwards to. " +
-                 "When empty, requests go to api.ravendb.net via the shared API client. Primarily for testing and staging.")]
-    [DefaultValue(null)]
-    [ConfigurationEntry("Ai.Quill.AssistApiUrl", ConfigurationEntryScope.ServerWideOnly)]
-    public string QuillAssistApiUrl { get; set; }
 }

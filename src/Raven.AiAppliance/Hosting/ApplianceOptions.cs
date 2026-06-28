@@ -81,7 +81,7 @@ public sealed class ApplianceOptions
 
     /// <summary>
     /// AI-Helper endpoint override. Bound from <c>RAVEN_AI_API_URL</c>. Left unset in production:
-    /// the AI Helper proxies through the bundled RavenDB (<c>/quill/ai/assist</c>), so the base
+    /// the AI Helper proxies through the bundled RavenDB (<c>/assistant/assist</c>), so the base
     /// address is derived from the store's own node URL. Tests set this to an in-process mock that
     /// stands in for that proxy hop. <see cref="UrlAttribute"/> + the options pipeline's
     /// <c>ValidateOnStart</c> reject a malformed value. A null (unset) value passes validation and

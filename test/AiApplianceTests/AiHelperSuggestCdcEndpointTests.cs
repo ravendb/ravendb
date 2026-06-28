@@ -41,7 +41,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         Assert.Equal("Customer", (string?)table["linkedTables"]![0]!["propertyName"]);
 
         // OperationType still rides on the request (the proxy reads the exact enum name to route).
-        // License + CertificateThumbprint are now injected by the bundled RavenDB /quill/ai/assist
+        // License + CertificateThumbprint are now injected by the bundled RavenDB /assistant/assist
         // proxy, so the appliance must NOT attach them itself.
         var sent = JsonNode.Parse(mockAi.LastCdcRequestBody!)!;
         Assert.Equal("CdcConfigSetup", (string?)sent["OperationType"]);
