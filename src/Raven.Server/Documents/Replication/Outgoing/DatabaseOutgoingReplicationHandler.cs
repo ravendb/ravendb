@@ -161,9 +161,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        protected override void OnReplicationRunStarted()
+        protected override void RunReplicationWithErrorHandling(Action replicationAction)
         {
             _parent.ForTestingPurposes?.OnOutgoingReplicationStart?.Invoke(this);
+            base.RunReplicationWithErrorHandling(replicationAction);
         }
 
         public long NextReplicateTicks;

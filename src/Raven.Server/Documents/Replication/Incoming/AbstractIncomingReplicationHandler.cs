@@ -62,6 +62,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected readonly AsyncManualResetEvent _replicationFromAnotherSource;
         protected RavenLogger Logger;
         private DeescalatingWarnToDebugLogger _endOfStreamExceptionLogger;
+        private Exception _reportedFailure;
 
         public long LastDocumentEtag => _lastDocumentEtag;
 
@@ -257,25 +258,29 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             catch (Exception e)
             {
+                var reportedFailure = Interlocked.Exchange(ref _reportedFailure, null);
+
                 // if we are disposing, do not notify about failure (not relevant)
-                if (_cts.IsCancellationRequested == false)
+                if (_cts.IsCancellationRequested == false || reportedFailure != null)
                 {
+                    var failure = reportedFailure ?? e;
+
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", e);
+                        Logger.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", failure);
 
                     var stats = _lastStats = new IncomingReplicationStatsAggregator(GetNextReplicationStatsId(), _lastStats);
                     try
                     {
                         AddReplicationPerformance(stats);
                         using (var scope = stats.CreateScope())
-                            scope.AddError(e);
+                            scope.AddError(failure);
                     }
                     finally
                     {
                         stats.Complete();
                     }
                     
-                    InvokeOnFailed(e);
+                    InvokeOnFailed(failure);
                 }
             }
         }
@@ -672,7 +677,13 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         internal void ReportFailure(Exception exception)
         {
-            InvokeOnFailed(exception);
+            if (exception == null)
+                throw new ArgumentNullException(nameof(exception));
+
+            if (Interlocked.CompareExchange(ref _reportedFailure, exception, null) != null)
+                return;
+
+            _cts.SafeCancel(Logger, $"Failed to cancel {nameof(CancellationTokenSource)} while reporting failure for {GetType().Name} ({FromToString})");
         }
 
         protected virtual void DisposeInternal()
