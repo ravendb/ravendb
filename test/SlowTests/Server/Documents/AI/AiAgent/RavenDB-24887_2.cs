@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -813,50 +816,72 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenDB_24887_Base(outp
         };
         userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
+        var sb = new StringBuilder();
+        try
+        {
+            var chat = store.AI.Conversation(userAgent1Id, "chats/",
+                new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
+            chat.Handle<ChangeUserNameSampleRequest, ActionToolResult>("user-info-agent-2a/ChangeUserName", async (r) =>
+            {
+                var res = (await ChangeUserNameAsync(store, r)) as ActionToolResult;
+                sb.AppendLine($"*Tool-ChangeUserName : Req={r?.ToString()} Res={res?.ToString()}*");
+                return res;
+            });
+            chat.Handle<RateToolSampleRequest, ActionToolResult>("user-info-agent-2a/RateMovie", async (r) =>
+            {
+                var res = await RateMovieAsync(store, "Users/1", r) as ActionToolResult;
+                sb.AppendLine($"*Tool-RateMovie : Req={r?.ToString()} Res={res?.ToString()}*");
+                return res;
+            });
+            chat.Handle<AddMovieToWatchedListSampleRequest, ActionToolResult>("user-info-agent-2b/AddToMovieWatchedList", async (r) =>
+            {
+                var res = await AddMovieAsync(store, "Users/1", r) as ActionToolResult;
+                sb.AppendLine($"*Tool-AddMovieToWatchedList : Req={r?.ToString()} Res={res?.ToString()}*");
+                return res;
+            });
 
-        var chat = store.AI.Conversation(userAgent1Id, "chats/",
-            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
-        chat.Handle<ChangeUserNameSampleRequest, ActionToolResult>("user-info-agent-2a/ChangeUserName", async (r) =>
-        {
-            var res = (await ChangeUserNameAsync(store, r)) as ActionToolResult;
-            // Console.WriteLine(res.Answer);
-            return res;
-        });
-        chat.Handle<RateToolSampleRequest, ActionToolResult>("user-info-agent-2a/RateMovie", async (r) =>
-        {
-            var res = await RateMovieAsync(store, "Users/1", r) as ActionToolResult;
-            // Console.WriteLine(res.Answer);
-            return res;
-        });
-        chat.Handle<AddMovieToWatchedListSampleRequest, ActionToolResult>("user-info-agent-2b/AddToMovieWatchedList", async (r) =>
-        {
-            var res = await AddMovieAsync(store, "Users/1", r) as ActionToolResult;
-            return res;
-        });
+            chat.SetUserPrompt("Please rate the movie \"Toy Story\" as 5, add the movie Nixon and Sudden Death to my watched list, change my name from 'Shahar Hikri' to 'Aviv Rachmani', and also please add Sudden Death to my watched list");
+            var r = await chat.RunAsync<MoviesSampleObject>();
+            Assert.Equal(AiConversationResult.Done, r.Status);
 
-        chat.SetUserPrompt("Please rate the movie \"Toy Story\" as 5, add the movie Nixon and Sudden Death to my watched list, change my name from 'Shahar Hikri' to 'Aviv Rachmani', and also please add Sudden Death to my watched list");
-        var r = await chat.RunAsync<MoviesSampleObject>();
-        Assert.Equal(AiConversationResult.Done, r.Status);
+            using (var session = store.OpenAsyncSession())
+            {
+                var u = await session.LoadAsync<User>("Users/1");
 
-        using (var session = store.OpenAsyncSession())
-        {
-            var u = await session.LoadAsync<User>("Users/1");
-            Assert.Equal("Aviv Rachmani", u.Name);
-            Assert.Equal(5, u.WatchedMovies.Count);
+                sb.AppendLine(u.ToString());
+                var newRatings = (await session.Query<Rating>().ToListAsync())
+                    .Where(x => Rates.Any(y => y.Id == x.Id) == false);
+                sb.AppendLine(string.Join(",", newRatings));
+
+                Assert.Equal("Aviv Rachmani", u.Name);
+                Assert.Equal(5, u.WatchedMovies.Count);
+            }
+
+            Assert.Equal(Rates.Count + 1, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
+
+            chat.SetUserPrompt("Please rate the movie \"Toy Story\" as 4, add the movie Casino and Sudden Death to my watched list, change my name from 'Aviv Rachmani' to 'Omer Adam'");
+            r = await chat.RunAsync<MoviesSampleObject>();
+            Assert.Equal(AiConversationResult.Done, r.Status);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var u = await session.LoadAsync<User>("Users/1");
+
+                sb.AppendLine(u.ToString());
+                var newRatings = (await session.Query<Rating>().ToListAsync())
+                    .Where(x => Rates.Any(y => y.Id == x.Id) == false);
+                sb.AppendLine(string.Join(",", newRatings));
+
+                Assert.Equal("Omer Adam", u.Name);
+                Assert.Equal(6, u.WatchedMovies.Count);
+            }
+
+            Assert.Equal(Rates.Count + 2, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
         }
-        Assert.Equal(Rates.Count + 1, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
-
-        chat.SetUserPrompt("Please rate the movie \"Toy Story\" as 4, add the movie Casino and Sudden Death to my watched list, change my name from 'Aviv Rachmani' to 'Omer Adam'");
-        r = await chat.RunAsync<MoviesSampleObject>();
-        Assert.Equal(AiConversationResult.Done, r.Status);
-
-        using (var session = store.OpenAsyncSession())
+        catch (Exception e)
         {
-            var u = await session.LoadAsync<User>("Users/1");
-            Assert.Equal("Omer Adam", u.Name);
-            Assert.Equal(6, u.WatchedMovies.Count);
+            throw new AggregateException(sb.ToString(), e);
         }
-        Assert.Equal(Rates.Count + 2, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
