@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Net.Http.Json;
 using Raven.AiAppliance.Metrics;
-using Raven.Client.Documents;
 using Tests.Infrastructure;
 using Xunit;
 

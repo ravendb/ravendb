@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Metrics;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Tests.Infrastructure;
 using Xunit;
