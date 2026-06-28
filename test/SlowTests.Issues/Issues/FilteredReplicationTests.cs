@@ -18,6 +18,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
@@ -28,6 +29,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -845,6 +847,212 @@ namespace SlowTests.Issues
             await sinkStore1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
 
             EnsureReplicating(sinkStore1, hubStore);
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task HubToSinkShouldUseUpdatedSinkPathFilter()
+        {
+            const int timeout = 30_000;
+            const int filteredTimeout = 3_000;
+
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            const string hubName = "filtered-hub-to-sink";
+            var connectionStringName = hubStore.Database + "ConStr";
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = hubName,
+                Mode = PullReplicationMode.HubToSink,
+                WithFiltering = true
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(hubName, new ReplicationHubAccess
+            {
+                Name = "Sink",
+                AllowedHubToSinkPaths = new[] { "*" },
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+            }));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database,
+                Name = connectionStringName,
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            var sinkTask = new PullReplicationAsSink
+            {
+                ConnectionStringName = connectionStringName,
+                Mode = PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubName = hubName,
+                AllowedHubToSinkPaths = new[] { "items/blue/*" }
+            };
+
+            var sinkTaskResult = await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
+
+            await StoreOnHub("items/blue/before-update");
+            await StoreOnHub("items/red/before-update");
+
+            Assert.True(WaitForDocument(sinkStore, "items/blue/before-update", timeout), sinkStore.Identifier);
+            Assert.False(WaitForDocument(sinkStore, "items/red/before-update", filteredTimeout), sinkStore.Identifier);
+
+            sinkTask.TaskId = sinkTaskResult.TaskId;
+            sinkTask.AllowedHubToSinkPaths = new[] { "items/red/*" };
+
+            var updateResult = await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                await sinkStore.GetRequestExecutor().ExecuteAsync(new WaitForRaftIndexCommand(updateResult.RaftCommandIndex), context);
+            }
+
+            await StoreOnHubUntilReplicated("items/red/after-update");
+
+            await StoreOnHub("items/blue/after-update");
+            Assert.False(WaitForDocument(sinkStore, "items/blue/after-update", filteredTimeout), sinkStore.Identifier);
+
+            async Task StoreOnHubUntilReplicated(string idPrefix)
+            {
+                for (var i = 0; i < 10; i++)
+                {
+                    var id = $"{idPrefix}-{i}";
+                    await StoreOnHub(id);
+
+                    if (WaitForDocument(sinkStore, id, filteredTimeout))
+                        return;
+                }
+
+                Assert.Fail($"Expected a document under '{idPrefix}' to replicate after updating the HubToSink path filter.");
+            }
+
+            async Task StoreOnHub(string id)
+            {
+                using var session = hubStore.OpenAsyncSession();
+                await session.StoreAsync(new User { Name = id }, id);
+                await session.SaveChangesAsync();
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task SinkToHubShouldUseUpdatedSinkPathFilter()
+        {
+            const int timeout = 30_000;
+            const int filteredTimeout = 3_000;
+
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+#pragma warning disable SYSLIB0057
+            var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            const string hubName = "filtered-sink-to-hub";
+            var connectionStringName = hubStore.Database + "ConStr";
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = hubName,
+                Mode = PullReplicationMode.SinkToHub,
+                WithFiltering = true
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(hubName, new ReplicationHubAccess
+            {
+                Name = "Sink",
+                AllowedSinkToHubPaths = new[] { "*" },
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+            }));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database,
+                Name = connectionStringName,
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            var sinkTask = new PullReplicationAsSink
+            {
+                ConnectionStringName = connectionStringName,
+                Mode = PullReplicationMode.SinkToHub,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubName = hubName,
+                AllowedSinkToHubPaths = new[] { "items/blue/*" }
+            };
+
+            var sinkTaskResult = await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
+
+            await StoreOnSink("items/blue/before-update");
+            await StoreOnSink("items/red/before-update");
+
+            Assert.True(WaitForDocument(hubStore, "items/blue/before-update", timeout), hubStore.Identifier);
+            Assert.False(WaitForDocument(hubStore, "items/red/before-update", filteredTimeout), hubStore.Identifier);
+
+            sinkTask.TaskId = sinkTaskResult.TaskId;
+            sinkTask.AllowedSinkToHubPaths = new[] { "items/red/*" };
+
+            var updateResult = await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                await sinkStore.GetRequestExecutor().ExecuteAsync(new WaitForRaftIndexCommand(updateResult.RaftCommandIndex), context);
+            }
+
+            await StoreOnSinkUntilReplicated("items/red/after-update");
+
+            await StoreOnSink("items/blue/after-update");
+            Assert.False(WaitForDocument(hubStore, "items/blue/after-update", filteredTimeout), hubStore.Identifier);
+
+            async Task StoreOnSinkUntilReplicated(string idPrefix)
+            {
+                for (var i = 0; i < 10; i++)
+                {
+                    var id = $"{idPrefix}-{i}";
+                    await StoreOnSink(id);
+
+                    if (WaitForDocument(hubStore, id, filteredTimeout))
+                        return;
+                }
+
+                Assert.Fail($"Expected a document under '{idPrefix}' to replicate after updating the SinkToHub path filter.");
+            }
+
+            async Task StoreOnSink(string id)
+            {
+                using var session = sinkStore.OpenAsyncSession();
+                await session.StoreAsync(new User { Name = id }, id);
+                await session.SaveChangesAsync();
+            }
         }
 
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
