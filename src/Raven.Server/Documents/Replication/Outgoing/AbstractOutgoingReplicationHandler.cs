@@ -83,7 +83,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public string LastSentChangeVector;
         public string LastAcceptedChangeVector { get; set; }
         public long LastHeartbeatTicks;
-        public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
 
         public int MissingAttachmentsRetries;
@@ -878,7 +877,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             _cts.SafeCancel(Logger, $"Failed to cancel {nameof(CancellationTokenSource)} while disposing of {GetType().Name} ({FromToString})");
 
-            _tcpConnectionOptions.Dispose();
+            _tcpConnectionOptions?.Dispose();
             DisposeTcpClient();
 
             _connectionDisposed.Set();

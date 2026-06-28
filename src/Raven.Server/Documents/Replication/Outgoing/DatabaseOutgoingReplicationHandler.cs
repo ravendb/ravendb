@@ -47,21 +47,31 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public event Action<DatabaseOutgoingReplicationHandler> DocumentsSend;
 
         protected DatabaseOutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
-        : base(connectionInfo, parent._server, database.Name, database.NotificationCenter, node, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
+            : this(parent, database, node, connectionInfo, CreateTcpConnectionOptions(database))
+        {
+        }
+
+        protected DatabaseOutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo, TcpConnectionOptions tcpConnectionOptions)
+            : base(connectionInfo, parent._server, database.Name, database.NotificationCenter, node, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
         {
             _parent = parent;
             _database = database;
             _waitForChanges = new AsyncManualResetEvent(database.DatabaseShutdown);
             _replicationMinimalHeartbeatInMs = (int)database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-            _tcpConnectionOptions = new TcpConnectionOptions
-            {
-                DocumentDatabase = database,
-                Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
-            };
+            _tcpConnectionOptions = tcpConnectionOptions;
 
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
             _database.Changes.OnTimeSeriesChange += OnTimeSeriesChange;
+        }
+
+        private static TcpConnectionOptions CreateTcpConnectionOptions(DocumentDatabase database)
+        {
+            return new TcpConnectionOptions
+            {
+                DocumentDatabase = database,
+                Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
+            };
         }
 
         public override int GetHashCode()
