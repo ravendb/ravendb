@@ -906,7 +906,7 @@ namespace Raven.Server.Documents.Replication
                             .OfType<PullReplicationAsSink>()
                             .FirstOrDefault(x => x.Disabled == false &&
                                                  x.Mode == PullReplicationMode.HubToSink &&
-                                                 IsSameHubToSinkPullReplicationTask(pullAsSink, x));
+                                                 pullAsSink.MatchesHubToSinkTask(x));
                         if (destination != null)
                         {
                             incomingPullReplicationAsSinkToReconnect ??= new List<PullReplicationAsSink>();
@@ -1235,25 +1235,10 @@ namespace Raven.Server.Documents.Replication
             if (incoming is IncomingPullReplicationHandlerAsSink pullAsSink &&
                 connectionToRemove is PullReplicationAsSink pullReplicationAsSink)
             {
-                return IsSameHubToSinkPullReplicationTask(pullAsSink, pullReplicationAsSink);
+                return pullAsSink.MatchesHubToSinkTask(pullReplicationAsSink);
             }
 
             return connectionToRemove.Url == incoming.ConnectionInfo.SourceUrl;
-        }
-
-        private static bool IsSameHubToSinkPullReplicationTask(IncomingPullReplicationHandlerAsSink incoming, PullReplicationAsSink destination)
-        {
-            var incomingParams = incoming.IncomingPullReplicationParams;
-            if (destination == null ||
-                incomingParams.Mode != PullReplicationMode.HubToSink ||
-                destination.Mode != PullReplicationMode.HubToSink)
-                return false;
-
-            if (incomingParams.TaskId != 0 && destination.TaskId != 0)
-                return incomingParams.TaskId == destination.TaskId;
-
-            return string.Equals(incomingParams.Name, destination.HubName, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(incomingParams.SourceDatabaseName, destination.Database, StringComparison.OrdinalIgnoreCase);
         }
 
         private void DisposeConnections(List<IDisposable> instancesToDispose)
