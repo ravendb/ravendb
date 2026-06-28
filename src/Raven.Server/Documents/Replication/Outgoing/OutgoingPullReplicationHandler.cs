@@ -92,7 +92,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             SupportedFeatures = supportedVersions;
             _stream = tcpConnectionOptions.Stream;
-            _tcpConnectionOptions = tcpConnectionOptions;
 
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
         }

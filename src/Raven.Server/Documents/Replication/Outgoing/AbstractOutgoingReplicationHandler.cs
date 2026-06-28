@@ -72,6 +72,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected OutgoingReplicationStatsAggregator _lastStats;
         protected RavenLogger Logger;
         private DeescalatingWarnToDebugLogger _endOfStreamExceptionLogger;
+        private Exception _reportedFailure;
 
         public ServerStore Server => _server;
         public long LastSentDocumentEtag => _lastSentDocumentEtag;
@@ -691,14 +692,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
             throw new OperationCanceledException("The connection has been closed by the Dispose method");
         }
 
-        protected void RunReplicationWithErrorHandling(Action replicationAction)
+        protected virtual void RunReplicationWithErrorHandling(Action replicationAction)
         {
-            OnReplicationRunStarted();
             HandleReplicationErrors(replicationAction);
-        }
-
-        protected virtual void OnReplicationRunStarted()
-        {
         }
 
         private void HandleReplicationErrors(Action replicationAction)
@@ -759,6 +755,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             void HandleOperationCancelException(OperationCanceledException e)
             {
+                var reportedFailure = Interlocked.Exchange(ref _reportedFailure, null);
+                if (reportedFailure != null)
+                {
+                    OnFailed(reportedFailure);
+                    return;
+                }
+
                 if (Logger.IsDebugEnabled)
                     Logger.Debug($"Operation canceled on replication thread ({FromToString}). " +
                                 $"This is not necessarily due to an issue. Stopped the thread.");
@@ -887,7 +890,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             _cts.SafeCancel(Logger, $"Failed to cancel {nameof(CancellationTokenSource)} while disposing of {GetType().Name} ({FromToString})");
 
-            _tcpConnectionOptions?.Dispose();
+            _tcpConnectionOptions.Dispose();
             DisposeTcpClient();
 
             _connectionDisposed.Set();
@@ -916,7 +919,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         internal void ReportFailure(Exception exception)
         {
-            HandleReplicationErrors(() => throw exception);
+            if (exception == null)
+                throw new ArgumentNullException(nameof(exception));
+
+            if (Interlocked.CompareExchange(ref _reportedFailure, exception, null) != null)
+                return;
+
+            _cts.SafeCancel(Logger, $"Failed to cancel {nameof(CancellationTokenSource)} while reporting failure for {GetType().Name} ({FromToString})");
         }
 
         private void DisposeTcpClient()
