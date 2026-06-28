@@ -105,7 +105,7 @@ builder.Services.AddHttpClient();
 // AI Helper client. In demo mode, the same local setup-package zip that makes the bootstrap
 // endpoint bypass the real license API (see BootstrapEndpoints) also leaves the internal AI
 // service unreachable, so serve canned Northwind sample data via MockAiHelperClient. Production
-// (no zip) proxies the call through the bundled RavenDB (/quill/ai/assist), which injects the
+// (no zip) proxies the call through the bundled RavenDB (/assistant/assist), which injects the
 // license + cert from its own ServerStore and forwards to api.ravendb.net.
 builder.Services.AddSingleton<IApplianceLicenseProvider, SetupPackageLicenseProvider>();
 
@@ -123,7 +123,7 @@ else
 {
     builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
         {
-            // The AI-Helper call is proxied through the bundled RavenDB (/quill/ai/assist), which injects
+            // The AI-Helper call is proxied through the bundled RavenDB (/assistant/assist), which injects
             // the license + cert and forwards to api.ravendb.net — the appliance never reaches it directly.
             // Default to the store's own node URL (single source of truth for the bundled server); tests
             // override AiApiUrl to point at an in-process mock.

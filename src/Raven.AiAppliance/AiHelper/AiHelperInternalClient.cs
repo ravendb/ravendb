@@ -9,7 +9,7 @@ namespace Raven.AiAppliance.AiHelper;
 
 /// <summary>
 /// Typed client for the AI-Helper endpoints, proxied through the bundled RavenDB server's
-/// <c>/quill/ai/assist</c> handler. That handler injects the license + client-cert thumbprint from
+/// <c>/assistant/assist</c> handler. That handler injects the license + client-cert thumbprint from
 /// its own ServerStore and forwards to api.ravendb.net, so the appliance never reaches the external
 /// API directly. Maps transport outcomes (401/429/non-2xx) to <see cref="AiHelperStatus"/>.
 /// Request/response payloads are serialized through <c>store.Conventions.Serialization</c>, keeping
@@ -22,8 +22,8 @@ public sealed class AiHelperInternalClient(
     IDocumentStore store) : IAiHelperClient
 {
     // Proxy entrypoint on the bundled RavenDB server; the operation is selected by
-    // OperationType on each request DTO (CdcConfigSetup / AgentConfigSetup).
-    private const string AssistPath = "/quill/ai/assist";
+    // OperationType on each request DTO (CdcConfigSetup / CdcBasedAgentConfigSetup).
+    private const string AssistPath = "/assistant/assist";
 
     public async Task<SuggestCdcInternalResult> SuggestCdcAsync(
         object? schema, object? samples, string prompt, CancellationToken ct)
@@ -135,7 +135,7 @@ public sealed class AiHelperInternalClient(
     private sealed class SuggestCdcApiRequest
     {
         // OperationType routes the consolidated assist endpoint (sent as the exact enum name).
-        // License + CertificateThumbprint are injected by the RavenDB /quill/ai/assist proxy.
+        // License + CertificateThumbprint are injected by the RavenDB /assistant/assist proxy.
         public string OperationType { get; set; } = "CdcConfigSetup";
         public object? Schema { get; set; }
         public object? Samples { get; set; }
@@ -145,8 +145,8 @@ public sealed class AiHelperInternalClient(
     private sealed class SuggestAiAgentApiRequest
     {
         // OperationType routes the consolidated assist endpoint (sent as the exact enum name).
-        // License + CertificateThumbprint are injected by the RavenDB /quill/ai/assist proxy.
-        public string OperationType { get; set; } = "AgentConfigSetup";
+        // License + CertificateThumbprint are injected by the RavenDB /assistant/assist proxy.
+        public string OperationType { get; set; } = "CdcBasedAgentConfigSetup";
         public CdcSinkConfiguration CdcConfig { get; set; } = null!;
         public object? CollectionsSample { get; set; }
         public string Mode { get; set; } = null!;

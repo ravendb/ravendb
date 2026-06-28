@@ -39,11 +39,11 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
         Assert.Equal(2, node["configurations"]!.AsArray().Count);
 
         var sent = JsonNode.Parse(mockAi.LastAgentRequestBody!)!;
-        Assert.Equal("AgentConfigSetup", (string?)sent["OperationType"]);
+        Assert.Equal("CdcBasedAgentConfigSetup", (string?)sent["OperationType"]);
         Assert.Equal("from-data", (string?)sent["Mode"]);
         Assert.NotNull(sent["CdcConfig"]);
 
-        // License + CertificateThumbprint are injected by the bundled RavenDB /quill/ai/assist
+        // License + CertificateThumbprint are injected by the bundled RavenDB /assistant/assist
         // proxy now, so the appliance must NOT attach them itself.
         Assert.Null(sent["License"]);
         Assert.Null(sent["CertificateThumbprint"]);
