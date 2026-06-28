@@ -606,12 +606,6 @@ namespace Raven.Server.Documents.Replication
 
             if (_outgoingFailureInfo.TryRemove(destination, out ConnectionShutdownInfo info))
                 _reconnectQueue.TryRemove(info);
-
-            foreach (var reconnect in _reconnectQueue.ToList())
-            {
-                if (destination.IsEqualTo(reconnect.Node))
-                    _reconnectQueue.TryRemove(reconnect);
-            }
         }
 
         private void RemoveOutgoingHandler(DatabaseOutgoingReplicationHandler instance)
@@ -620,8 +614,8 @@ namespace Raven.Server.Documents.Replication
             instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
             instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
 
-            if (_outgoing.TryRemove(instance))
-                OutgoingReplicationRemoved?.Invoke(instance);
+            _outgoing.TryRemove(instance);
+            OutgoingReplicationRemoved?.Invoke(instance);
         }
 
         private void OnAttachmentStreamsReceived(IncomingReplicationHandler source, int attachmentsStreamCount)
@@ -890,32 +884,18 @@ namespace Raven.Server.Documents.Replication
 
             _pullReplicationCompositeChangeVectorsSupported = supportsPullReplicationCompositeChangeVectors;
 
-            List<PullReplicationAsSink> incomingPullReplicationAsSinkToReconnect = null;
-            foreach (var (key, repl) in _incoming)
+            var resetException = new OperationCanceledException("Pull replication composite change-vector support changed.");
+            foreach (var (_, repl) in _incoming)
             {
-                if (repl is IncomingPullReplicationHandler == false)
+                if (repl is not IncomingPullReplicationHandler incomingPullReplicationHandler)
                     continue;
 
                 try
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Resetting {repl.ConnectionInfo} because pull replication composite change-vector support changed. Will be reconnected.");
-                    if (repl is IncomingPullReplicationHandlerAsSink pullAsSink)
-                    {
-                        var destination = _externalDestinations
-                            .OfType<PullReplicationAsSink>()
-                            .FirstOrDefault(x => x.Disabled == false &&
-                                                 x.Mode == PullReplicationMode.HubToSink &&
-                                                 pullAsSink.MatchesHubToSinkTask(x));
-                        if (destination != null)
-                        {
-                            incomingPullReplicationAsSinkToReconnect ??= new List<PullReplicationAsSink>();
-                            incomingPullReplicationAsSinkToReconnect.Add(destination);
-                        }
-                    }
 
-                    repl.Dispose();
-                    _incoming.TryRemove(key, out _);
+                    incomingPullReplicationHandler.ReportFailure(resetException);
                 }
                 catch (Exception e)
                 {
@@ -924,25 +904,14 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (incomingPullReplicationAsSinkToReconnect != null && Database.DisableOngoingTasks == false)
-                Task.Run(() => StartOutgoingConnections(incomingPullReplicationAsSinkToReconnect));
-
-            var shouldTryReconnect = false;
             foreach (var repl in _outgoing)
             {
-                if (repl is OutgoingPullReplicationHandler == false)
+                if (repl is not OutgoingPullReplicationHandler outgoingPullReplicationHandler)
                     continue;
 
                 try
                 {
-                    if (repl is OutgoingPullReplicationHandlerAsHub == false)
-                    {
-                        QueueOutgoingForImmediateReconnect(repl);
-                        shouldTryReconnect = true;
-                    }
-
-                    repl.Dispose();
-                    _outgoing.TryRemove(repl);
+                    outgoingPullReplicationHandler.ReportFailure(resetException);
                 }
                 catch (Exception e)
                 {
@@ -951,8 +920,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (shouldTryReconnect)
-                ForceTryReconnectAll();
+            ForceTryReconnectAll();
         }
 
         private static bool SupportsPullReplicationCompositeChangeVectors(DatabaseRecord record)
