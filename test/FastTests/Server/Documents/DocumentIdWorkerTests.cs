@@ -179,7 +179,7 @@ namespace FastTests.Server.Documents
         {
             var idWithNonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1) + id;
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(AllowControlCharactersInIdentifier());
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new TestObj(), id);
