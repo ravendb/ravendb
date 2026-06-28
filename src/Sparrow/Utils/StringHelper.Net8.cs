@@ -48,10 +48,8 @@ public static partial class StringUtils
             if (idx == -1)
                 break;
             byte value = remaining[idx];
-            if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
-                count++;
-            else
-                controlCount++;
+            count += EscapePositionsCountTable[value];
+            controlCount += EscapePositionsControlTable[value];
             remaining = remaining[(idx + 1)..];
         }
         escapedCount = controlCount;
@@ -69,10 +67,8 @@ public static partial class StringUtils
             if (idx == -1)
                 break;
             var value = str[idx];
-            if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
-                count++;
-            else
-                controlCount++;
+            count += EscapePositionsCountTable[value];
+            controlCount += EscapePositionsControlTable[value];
             str = str[(idx + 1)..];
         }
         return (count + 1) * EscapePositionItemSize + controlCount * ControlCharacterItemSize;

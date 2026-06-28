@@ -8,6 +8,42 @@ public static unsafe partial class StringUtils
 {
     private const int EscapePositionItemSize = 5;
 
+    internal static ReadOnlySpan<int> EscapePositionsCountTable =>
+    [
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+
+    internal static ReadOnlySpan<int> EscapePositionsControlTable =>
+    [
+        1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+
+    internal static ReadOnlySpan<int> EscapePositionsCountWithControlTable =>
+    [
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ];
+
 #if !NET8_0_OR_GREATER
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void FindEscapedPositionsInternal(FastList<int> buffer, byte* str, int len)
@@ -21,7 +57,7 @@ public static unsafe partial class StringUtils
 #endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsControlCharacter(char c) => c < 8 || c > 13 && c < 32 || c == 11;
+    public static bool IsControlCharacter(char c) => c < EscapePositionsControlTable.Length && EscapePositionsControlTable[c] != 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void FindEscapedPositions(FastList<int> buffer, byte* str, int len, int previousComputedMaxSize)
@@ -57,8 +93,6 @@ public static unsafe partial class StringUtils
         return (count + 1) * EscapePositionItemSize;
     }
 
-    // RavenDB-25738 (v8.0): byte-span overload for WriteValueFromHeap; delegates to the byte* version
-    // (SIMD on net8+, linear on netstandard) — no separate SIMD method needed.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int FindMaxEscapePositionSize(ReadOnlySpan<byte> str)
     {
@@ -90,13 +124,9 @@ public static unsafe partial class StringUtils
         for (int i = 0; i < size; i++)
         {
             byte value = str[i];
-
-            // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
-            // 34 => '"'  => 0010 0010
-            // 92 => '\\' => 0101 1100
-
-            if (value < 32 || value == 92 || value == 34)
-                count++;
+            if (value >= EscapePositionsCountWithControlTable.Length)
+                continue;
+            count += EscapePositionsCountWithControlTable[value];
         }
 
         return count;
@@ -106,13 +136,12 @@ public static unsafe partial class StringUtils
     private static int CountEscapeCharsLinearSearch(ReadOnlySpan<char> str)
     {
         var count = 0;
-        for (var i = 0; i < str.Length; i++)
+        foreach (var value in str)
         {
-            var value = str[i];
-            // 34 => '"'  => 0010 0010
-            // 92 => '\\' => 0101 1100
-            if (value < 32 || value == 92 || value == 34)
-                count++;
+            if (value >= EscapePositionsCountWithControlTable.Length)
+                continue;
+
+            count += EscapePositionsCountWithControlTable[value];
         }
         return count;
     }
