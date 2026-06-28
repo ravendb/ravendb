@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Extensions;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -29,6 +30,20 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
         protected override bool PreventIncomingSinkDeletions => false;
+
+        internal bool MatchesHubToSinkTask(PullReplicationAsSink destination)
+        {
+            if (destination == null ||
+                IncomingPullReplicationParams.Mode != PullReplicationMode.HubToSink ||
+                destination.Mode != PullReplicationMode.HubToSink)
+                return false;
+
+            if (IncomingPullReplicationParams.TaskId != 0 && destination.TaskId != 0)
+                return IncomingPullReplicationParams.TaskId == destination.TaskId;
+
+            return string.Equals(IncomingPullReplicationParams.Name, destination.HubName, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(IncomingPullReplicationParams.SourceDatabaseName, destination.Database, StringComparison.OrdinalIgnoreCase);
+        }
 
         protected override DynamicJsonValue GetHeartbeatStatusMessage(DocumentsOperationContext documentsContext, long lastDocumentEtag, string handledMessageType)
         {
