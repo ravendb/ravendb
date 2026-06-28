@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination = new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
         private bool _pullReplicationCompositeChangeVectorsSupported;
 
-        public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
+        public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Destination);
         public IEnumerable<DatabaseOutgoingReplicationHandler> OutgoingHandlers => _outgoing;
         public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo => _outgoingFailureInfo;
@@ -400,9 +400,9 @@ namespace Raven.Server.Documents.Replication
         {
             UpdateLastEtag(replicationHandler);
 
-            var shutdownInfo = _outgoingFailureInfo.GetOrAdd(replicationHandler.Node, new ConnectionShutdownInfo
+            var shutdownInfo = _outgoingFailureInfo.GetOrAdd(replicationHandler.Destination, new ConnectionShutdownInfo
             {
-                Node = replicationHandler.Node,
+                Node = replicationHandler.Destination,
                 MaxConnectionTimeout = Database.Configuration.Replication.RetryMaxTimeout.AsTimeSpan.TotalMilliseconds
             });
             shutdownInfo.Reset();
@@ -509,7 +509,7 @@ namespace Raven.Server.Documents.Replication
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToPullReplicationAsHub(initialRequest, taskId);
 
-            var outgoingReplication = new OutgoingPullReplicationHandlerAsHub(this, Database, externalReplication, initialRequest.Info)
+            var outgoingReplication = new OutgoingPullReplicationHandlerAsHub(this, Database, externalReplication, initialRequest.Info, tcpConnectionOptions, supportedVersions)
             {
                 OutgoingPullReplicationParams = new PullReplicationParams
                 {
@@ -544,8 +544,7 @@ namespace Raven.Server.Documents.Replication
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
 
-            // tcp ownership - the tcp is passed as a scope of the replication so that it can be properly disposed.
-            outgoingReplication.StartPullReplicationAsHub(tcpConnectionOptions, tcpConnectionOptions.Stream, supportedVersions);
+            outgoingReplication.StartPullReplicationAsHub();
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
@@ -1234,7 +1233,7 @@ namespace Raven.Server.Documents.Replication
         private static bool ShouldDropIncomingConnection(ReplicationNode connectionToRemove, IAbstractIncomingReplicationHandler incoming)
         {
             if (incoming is IncomingPullReplicationHandlerAsSink pullAsSink &&
-                connectionToRemove is PullReplicationAsSink { Mode: PullReplicationMode.HubToSink } pullReplicationAsSink)
+                connectionToRemove is PullReplicationAsSink pullReplicationAsSink)
             {
                 return IsSameHubToSinkPullReplicationTask(pullAsSink, pullReplicationAsSink);
             }
@@ -1245,7 +1244,9 @@ namespace Raven.Server.Documents.Replication
         private static bool IsSameHubToSinkPullReplicationTask(IncomingPullReplicationHandlerAsSink incoming, PullReplicationAsSink destination)
         {
             var incomingParams = incoming.IncomingPullReplicationParams;
-            if (incomingParams.Mode != PullReplicationMode.HubToSink)
+            if (destination == null ||
+                incomingParams.Mode != PullReplicationMode.HubToSink ||
+                destination.Mode != PullReplicationMode.HubToSink)
                 return false;
 
             if (incomingParams.TaskId != 0 && destination.TaskId != 0)
@@ -1873,7 +1874,7 @@ namespace Raven.Server.Documents.Replication
                 if (instance is OutgoingPullReplicationHandler)
                     _externalDestinations.Remove(instance.Destination as ExternalReplication);
 
-                if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo) == false)
+                if (_outgoingFailureInfo.TryGetValue(instance.Destination, out ConnectionShutdownInfo failureInfo) == false)
                     return;
 
                 UpdateLastEtag(instance);
@@ -1883,7 +1884,7 @@ namespace Raven.Server.Documents.Replication
                 failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
 
                 if (_logger.IsDebugEnabled)
-                    _logger.Debug($"Document replication connection ({instance.Node}) failed {failureInfo.RetriesCount} times, the connection will be retried on {failureInfo.RetryOn}.", e);
+                    _logger.Debug($"Document replication connection ({instance.Destination}) failed {failureInfo.RetriesCount} times, the connection will be retried on {failureInfo.RetryOn}.", e);
 
                 _reconnectQueue.Add(failureInfo);
             }
@@ -1892,7 +1893,7 @@ namespace Raven.Server.Documents.Replication
         private void UpdateLastEtag(DatabaseOutgoingReplicationHandler instance)
         {
             var etagPerDestination = _lastSendEtagPerDestination.GetOrAdd(
-                instance.Node,
+                instance.Destination,
                 _ => new LastEtagPerDestination());
 
             if (etagPerDestination.LastEtag == instance._lastSentDocumentEtag)
@@ -1913,7 +1914,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ResetReplicationFailuresInfo(DatabaseOutgoingReplicationHandler instance)
         {
-            if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo))
+            if (_outgoingFailureInfo.TryGetValue(instance.Destination, out ConnectionShutdownInfo failureInfo))
                 failureInfo.Reset();
         }
 

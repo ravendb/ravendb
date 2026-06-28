@@ -3911,7 +3911,7 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
     private async Task<(string DatabaseId, long LastEtag)> GetDatabaseIdAndLastEtagAsync(IDocumentStore store)
     {
-        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        var database = await GetDocumentDatabaseInstanceFor(store);
         return GetDatabaseIdAndLastEtag(database);
     }
 
