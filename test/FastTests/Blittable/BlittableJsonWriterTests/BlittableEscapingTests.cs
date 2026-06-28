@@ -59,7 +59,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var reader = builder.CreateReader();
 
                     Assert.Equal(1, reader.Count);
-                    Assert.Equal(@"\u0001", reader["Single"].ToString());
+                    Assert.Equal("\u0001", reader["Single"].ToString());
                 }
             }
         }
@@ -113,7 +113,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var reader = builder.CreateReader();
 
                     Assert.Equal(1, reader.Count);
-                    Assert.Equal(@"Cool\u0001", reader["Single"].ToString());
+                    Assert.Equal("Cool\u0001", reader["Single"].ToString());
                 }
             }
         }
@@ -167,7 +167,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var reader = builder.CreateReader();
 
                     Assert.Equal(1, reader.Count);
-                    Assert.Equal(@"Cool\u0001Cool", reader["Single"].ToString());
+                    Assert.Equal("Cool\u0001Cool", reader["Single"].ToString());
                 }
             }
         }
@@ -194,7 +194,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var reader = builder.CreateReader();
 
                     Assert.Equal(1, reader.Count);
-                    Assert.Equal(@"\u0002Cool", reader["Single"].ToString());
+                    Assert.Equal("\u0002Cool", reader["Single"].ToString());
                 }
             }
         }
@@ -221,7 +221,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var reader = builder.CreateReader();
 
                     Assert.Equal(1, reader.Count);
-                    Assert.Equal("\\u0002Cool\\u0002Cool\t\\u0002", reader["Single"].ToString());
+                    Assert.Equal("\u0002Cool\u0002Cool\t\u0002", reader["Single"].ToString());
                 }
             }
         }
