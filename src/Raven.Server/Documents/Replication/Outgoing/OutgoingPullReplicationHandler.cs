@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -46,6 +45,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
         }
 
+        protected OutgoingPullReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo, TcpConnectionOptions tcpConnectionOptions) :
+            base(parent, database, node, connectionInfo, tcpConnectionOptions)
+        {
+        }
+
         public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger)
         {
             return new FilteredReplicationDocumentSender(stream, this, logger, PathsToSend, _destinationAcceptablePaths);
@@ -82,25 +86,19 @@ namespace Raven.Server.Documents.Replication.Outgoing
         // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
 
-        /// <summary>
-        /// The replication scope that should be disposed when the replication is done.
-        /// </summary>
-        private IDisposable _replicationScope;
-
-        public OutgoingPullReplicationHandlerAsHub(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsHub node, TcpConnectionInfo connectionInfo) : 
-            base(parent, database, node, connectionInfo)
-        {
-        }
-
-        public void StartPullReplicationAsHub(IDisposable replicationScope, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
+        public OutgoingPullReplicationHandlerAsHub(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsHub node, TcpConnectionInfo connectionInfo, TcpConnectionOptions tcpConnectionOptions,
+            TcpConnectionHeaderMessage.SupportedFeatures supportedVersions) :
+            base(parent, database, node, connectionInfo, tcpConnectionOptions)
         {
             SupportedFeatures = supportedVersions;
-            _stream = stream;
-            _replicationScope = replicationScope;
-            if (replicationScope is TcpConnectionOptions tcpConnectionOptions)
-                _tcpConnectionOptions = tcpConnectionOptions;
+            _stream = tcpConnectionOptions.Stream;
+            _tcpConnectionOptions = tcpConnectionOptions;
 
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
+        }
+
+        public void StartPullReplicationAsHub()
+        {
             _longRunningSendingWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
                     _database.Name, Destination.FromString(), pullReplicationAsHub: true));
@@ -114,7 +112,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Start pull replication as hub {FromToString}");
 
-            using (_replicationScope)
+            using (_tcpConnectionOptions)
             using (_stream)
             using (_interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_parent.ContextPool, _stream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
