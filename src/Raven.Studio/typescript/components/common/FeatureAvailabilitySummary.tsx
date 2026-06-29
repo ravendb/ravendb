@@ -284,6 +284,7 @@ export default function FeatureAvailabilitySummaryWrapper({
     isOpenedByDefault = !isUnlimited,
 }: FeatureAvailabilitySummaryProps & { isUnlimited: boolean; isOpenedByDefault?: boolean }) {
     const { value: isOpen, toggle: toggleIsOpen } = useBoolean(isOpenedByDefault);
+    const isQuill = useAppSelector(licenseSelectors.licenseType) === "Quill";
 
     return (
         <>
@@ -304,7 +305,11 @@ export default function FeatureAvailabilitySummaryWrapper({
                             <div className="hstack flex-wrap gap-1">
                                 <h4 className="m-0">Licensing</h4>
                             </div>
-                            <small className="description">See which plans offer this and more exciting features</small>
+                            <small className="description">
+                                {isQuill
+                                    ? "See what features are included in this license"
+                                    : "See which plans offer this and more exciting features"}
+                            </small>
                         </div>
                     </button>
                 </h2>
