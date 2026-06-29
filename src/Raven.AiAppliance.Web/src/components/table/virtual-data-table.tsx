@@ -83,7 +83,9 @@ export function VirtualDataTable<TData>({
     return (
         // min-w-0 lets the table shrink inside flex/grid parents instead of forcing them to overflow.
         <div className={cn("relative min-w-0", className)}>
-            <div ref={tableContainerRef} className="overflow-auto rounded-lg border" style={{ height: heightInPx }}>
+            {/* heightInPx is a cap, not a fixed height: the body is sized to rowHeightInPx * row count,
+                so the container shrinks to fit a short list and only scrolls once it would exceed heightInPx. */}
+            <div ref={tableContainerRef} className="overflow-auto rounded-lg border" style={{ maxHeight: heightInPx }}>
                 <table className="grid min-w-full caption-bottom text-sm" style={{ width: table.getTotalSize() }}>
                     <VirtualTableHeader table={table} />
                     <TableBody
