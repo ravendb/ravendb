@@ -49,7 +49,7 @@ export function SeriesBarChart({ data }: { data: SeriesData }) {
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
                 {data.keys.map((series) => (
-                    <Bar key={series.key} dataKey={series.key} stackId="series" fill={`var(--color-${series.key})`} />
+                    <Bar key={series.key} dataKey={series.key} stackId="series" fill={series.color} />
                 ))}
             </BarChart>
         </ChartContainer>

@@ -62,7 +62,7 @@ export const sampleApps: AppResponse[] = [
 
 export const sampleCdcPerformance: CdcPerformanceResponse = {
     enabled: true,
-    status: "Running",
+    status: "active",
     lastSyncAt: "2026-06-25T09:01:30Z",
     lagSeconds: 2,
     recentReads: 12840,
