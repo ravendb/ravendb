@@ -222,6 +222,7 @@ function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): Fea
             community: { value: false },
             professional: { value: true },
             enterprise: { value: true },
+            quill: { value: true },
         },
         {
             featureName: "Max revisions",
@@ -229,6 +230,7 @@ function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): Fea
             community: { value: 2 },
             professional: { value: Infinity },
             enterprise: { value: Infinity },
+            quill: { value: Infinity },
         },
         {
             featureName: "Max revision days",
@@ -236,6 +238,7 @@ function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): Fea
             community: { value: isCloud ? 38 : 45 },
             professional: { value: Infinity },
             enterprise: { value: Infinity },
+            quill: { value: Infinity },
         },
     ];
 
@@ -258,6 +261,7 @@ const availabilityDataSimple: FeatureAvailabilityData[] = [
     {
         community: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
         professional: { value: true },
     },
 ];

@@ -146,5 +146,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         professional: { value: false },
         enterprise: { value: true },
         enterpriseAi: { value: true },
+        quill: { value: true },
     },
 ];

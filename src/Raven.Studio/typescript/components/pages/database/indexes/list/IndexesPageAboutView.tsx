@@ -96,23 +96,27 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Static indexes limit per cluster",
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Auto indexes limit per database",
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Static indexes limit per database",
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
 ];

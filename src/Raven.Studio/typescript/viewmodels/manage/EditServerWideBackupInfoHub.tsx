@@ -87,12 +87,14 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         featureIcon: "server-wide-backup",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
+        enterprise: { value: true },
+        quill: { value: true },
     },{
         featureName: "Snapshot Backups",
         featureIcon: "snapshot-backup",
         community: { value: false },
         professional: { value: false },
-        enterprise: { value: true }
+        enterprise: { value: true },
+        quill: { value: true },
     }
 ];

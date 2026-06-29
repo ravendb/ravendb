@@ -85,6 +85,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: true },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Power BI",
@@ -92,5 +93,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
     },
 ];
