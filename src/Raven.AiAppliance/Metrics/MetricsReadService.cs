@@ -233,6 +233,21 @@ internal static class MetricsReadService
             TopCapabilities: topCapabilities);
     }
 
+    // Reserved time-axis key in each series point ({ "t": label, <seriesKey>: number }).
+    // A series key colliding with it can't be represented twice in one dict, so such keys
+    // are dropped from the series (see the BuildTokenSeries / BuildConversationsByChannel filters).
+    private const string TimeAxisKey = "t";
+
+    // Builds a zero-filled bucket point. Series zeros first, then the time label last so it
+    // can't be clobbered; callers must have already filtered TimeAxisKey out of seriesKeys.
+    private static Dictionary<string, object> NewBucketPoint(IReadOnlyList<string> seriesKeys, string label)
+    {
+        var point = new Dictionary<string, object>(seriesKeys.Count + 1);
+        foreach (var k in seriesKeys) point[k] = 0L;
+        point[TimeAxisKey] = label;
+        return point;
+    }
+
     /// <summary>Builds a multi-series token chart from the hour-bucket rows: one
     /// series per distinct <paramref name="keyOf"/>(agent), per-bucket token sums.
     /// Used for both tokensByCapability (key = agent) and tokensByModel (key = the
@@ -245,21 +260,19 @@ internal static class MetricsReadService
         // label is the human-facing name. Default the label to the key (review M2).
         var label = labelOf ?? (k => k);
         var keys = rows.Select(r => keyOf(r.Agent ?? "")).Distinct()
+            .Where(k => k != TimeAxisKey)   // a key colliding with the reserved time axis can't be represented — drop it
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
         var seriesKeys = keys.Select(k => new SeriesKey(k, label(k))).ToArray();
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
-        {
-            var point = new Dictionary<string, object> { ["t"] = BucketLabel(buckets[b], granularity) };
-            foreach (var k in keys) point[k] = 0L;
-            points[b] = point;
-        }
+            points[b] = NewBucketPoint(keys, BucketLabel(buckets[b], granularity));
         foreach (var row in rows)
         {
             var i = BucketIndex(buckets, row.Bucket, granularity);
             if (i < 0) continue;
             var key = keyOf(row.Agent ?? "");
+            if (key == TimeAxisKey) continue;   // dropped from keys above
             points[i][key] = (long)points[i][key] + row.Tokens;
         }
         return new SeriesData(points, seriesKeys);
@@ -284,22 +297,21 @@ internal static class MetricsReadService
 
         // Key by the stable WidgetId (dictionary keys are already distinct); the display
         // name is only the label, so channels sharing a display name don't merge (review C2).
-        var keys = nameByWidget.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
+        var keys = nameByWidget.Keys
+            .Where(k => k != TimeAxisKey)   // a WidgetId colliding with the reserved time axis can't be represented — drop it
+            .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
         var seriesKeys = keys.Select(k => new SeriesKey(k, nameByWidget[k])).ToArray();
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
-        {
-            var point = new Dictionary<string, object> { ["t"] = BucketLabel(buckets[b], granularity) };
-            foreach (var k in keys) point[k] = 0L;
-            points[b] = point;
-        }
+            points[b] = NewBucketPoint(keys, BucketLabel(buckets[b], granularity));
 
         var links = await LoadAllByPrefixAsync<EmbedLink>(session, EmbedLink.IdPrefix, EmbedLinkPageSize, ct);
         foreach (var link in links)
         {
             if (link.CreatedAt < startUtc || link.CreatedAt > endUtc) continue;
             if (link.WidgetId is null || nameByWidget.ContainsKey(link.WidgetId) == false) continue;
+            if (link.WidgetId == TimeAxisKey) continue;   // dropped from keys above
             var i = BucketIndex(buckets, link.CreatedAt, granularity);
             if (i < 0) continue;
             points[i][link.WidgetId] = (long)points[i][link.WidgetId] + 1L;
@@ -426,6 +438,7 @@ internal static class MetricsReadService
             ChannelsLabel: channelsLabel,
             StatusSubtitle: subtitle,
             CreatedAt: Utc(app.CreatedAt),
+            // App carries no update timestamp yet, so updatedAt mirrors createdAt (review B4).
             UpdatedAt: Utc(app.CreatedAt));
     }
 
@@ -559,8 +572,8 @@ internal static class MetricsReadService
                 .GroupBy(r => r.Agent ?? "")
                 .ToDictionary(
                     g => g.Key,
-                    // The index Bucket is built with DateTimeKind.Unspecified; mark it UTC
-                    // so it serializes with the Z designator (review I1).
+                    // The index Bucket is DateTimeKind.Utc, but a round-trip through the index
+                    // may not preserve Kind, so normalize to UTC to keep the Z designator (review I1).
                     g => new AgentActivity(
                         g.Sum(r => r.Conversations), g.Sum(r => r.Messages), g.Sum(r => r.Tokens),
                         Utc(g.Max(r => r.Bucket))),

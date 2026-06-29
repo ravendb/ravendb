@@ -262,6 +262,39 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_tolerates_conversation_doc_missing_usage_and_messages()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
+
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(store, perAppDb, "chats/a", "support", now.AddHours(-1), messages: 2, tokens: 100);
+        // A @conversations doc with neither TotalUsage nor Messages — the index reads those via
+        // dynamic member access (DynamicNullObject, not NRE), so it must contribute 0, not error.
+        await PutConversationDocAsync(store, perAppDb, "chats/min",
+            new { Agent = "support", CreatedAt = now.AddHours(-1), LastMessageAt = now.AddHours(-1) });
+        await Indexes.WaitForIndexingAsync(store, perAppDb);   // throws if the index errored on the partial doc
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var points = await client.GetFromJsonAsync<JsonElement>("/api/usage");
+        long conv = 0, msg = 0, tok = 0;
+        foreach (var p in points.EnumerateArray())
+        {
+            conv += p.GetProperty("conversations").GetInt64();
+            msg += p.GetProperty("messages").GetInt64();
+            tok += p.GetProperty("tokens").GetInt64();
+        }
+        Assert.Equal(2, conv);    // both docs count as conversations
+        Assert.Equal(2, msg);     // only the well-formed doc's user messages
+        Assert.Equal(100, tok);   // only the well-formed doc's tokens
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Usage_rejects_invalid_time()
     {
         var store = GetDocumentStore();

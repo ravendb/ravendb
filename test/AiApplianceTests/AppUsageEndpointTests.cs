@@ -260,6 +260,46 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);  // C3: inverted range rejected
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task AppUsage_conversationsByChannel_survives_a_widget_keyed_like_the_time_axis()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        var now = DateTime.UtcNow;
+        // A channel whose WidgetId collides with the reserved "t" time-axis key, plus a normal one.
+        await SeedChannelAsync(store, perAppDb, channelId: "t", enabled: true);
+        await SeedChannelAsync(store, perAppDb, channelId: "alpha", enabled: true);
+        using (var session = store.OpenAsyncSession(perAppDb))
+        {
+            await session.StoreAsync(new EmbedLink { WidgetId = "t", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/x", CreatedAt = now.AddDays(-1) }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
+            await session.StoreAsync(new EmbedLink { WidgetId = "alpha", AgentId = "demo", ExpiresAt = now.AddHours(1), MaxInvocations = 5, ConversationId = "chats/y", CreatedAt = now.AddDays(-1) }, $"{EmbedLink.IdPrefix}{Guid.NewGuid():N}");
+            await session.SaveChangesAsync();
+        }
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var start = Uri.EscapeDataString(now.AddDays(-7).ToString("o"));
+        var end = Uri.EscapeDataString(now.ToString("o"));
+        var resp = await client.GetAsync($"/api/apps/my-app/usage?start={start}&end={end}");
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());  // no 500 from the "t" collision
+
+        var byChannel = (await resp.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("conversationsByChannel");
+
+        // The colliding WidgetId "t" is dropped from the series; the normal one remains.
+        var keys = byChannel.GetProperty("keys").EnumerateArray()
+            .Select(k => k.GetProperty("key").GetString()).ToArray();
+        Assert.Contains("alpha", keys);
+        Assert.DoesNotContain("t", keys);
+
+        // The time axis stays a string label on every bucket — never clobbered to a number.
+        foreach (var p in byChannel.GetProperty("points").EnumerateArray())
+            Assert.Equal(JsonValueKind.String, p.GetProperty("t").ValueKind);
+    }
+
     private sealed class Product
     {
         public string Name { get; set; } = "";
