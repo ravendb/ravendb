@@ -387,5 +387,160 @@ class Order { public string Id { get; set; } }
             // The simplified fix relies on .Value to dispatch the batch — no explicit Execute call.
             Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
         }
+
+        [Fact]
+        public async Task DependentLoad_Within_Batch_Offers_No_Fix()
+        {
+            // The middle Load depends on the first Load's result (user.ManagerId). Batching would
+            // rewrite all three and materialize 'user' only after the batch, so 'user.ManagerId'
+            // would reference 'user' before it is declared (CS0841). The fix must bail.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId)
+    {
+        var user = session.Load<User>(userId);
+        var manager = session.Load<User>(user.ManagerId);
+        var other = session.Load<User>(userId);
+    }
+}
+
+class User { public string Id { get; set; } public string ManagerId { get; set; } }
+";
+
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
+        }
+
+        [Fact]
+        public async Task DependentQuery_On_Prior_Load_Offers_No_Fix()
+        {
+            // The query depends on the prior Load's result (user.Id). Batching would materialize
+            // 'user' only after the batch, so the query's lazy initializer would reference 'user'
+            // before it is declared. The fix must bail rather than emit uncompilable code.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId)
+    {
+        var user = session.Load<User>(userId);
+        var orders = session.Query<Order>().Where(o => o.OwnerId == user.Id).ToList();
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } public string OwnerId { get; set; } }
+";
+
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
+        }
+
+        [Fact]
+        public async Task NameCollision_With_Method_Parameter_Generates_SuffixedName()
+        {
+            // 'lazyUser' is a method parameter (not a local), so it is not a descendant of the body
+            // block. The generated name must still avoid it (it would otherwise be CS0136), which
+            // requires consulting the semantic model for in-scope symbols.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId, User lazyUser)
+    {
+        var user = session.Load<User>(userId);
+        var order = session.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            // 'lazyUser' is taken by the parameter → must use 'lazyUser2'.
+            Assert.Contains("lazyUser2", fixed_code);
+            Assert.DoesNotContain("var lazyUser =", fixed_code);
+            Assert.Contains("var user = lazyUser2.Value;", fixed_code);
+        }
+
+        [Fact]
+        public async Task TypeArgument_Sharing_BatchedVariable_Name_Still_Offers_Fix()
+        {
+            // The second Load's type argument 'User' is an identifier that matches the local named
+            // 'User', but it is a TYPE, not the batched local — there is no real dependency. The
+            // dependency check must compare symbols (not names) so it does not falsely bail here.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string id1, string id2)
+    {
+        var User = session.Load<User>(id1);
+        var other = session.Load<User>(id2);
+    }
+}
+
+class User { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("var lazyUser = session.Advanced.Lazily.Load<User>(id1);", fixed_code);
+            Assert.Contains("var lazyOther = session.Advanced.Lazily.Load<User>(id2);", fixed_code);
+            Assert.Contains("var User = lazyUser.Value;", fixed_code);
+        }
+
+        [Fact]
+        public async Task NameCollision_With_Catch_Variable_Generates_SuffixedName()
+        {
+            // 'lazyUser' is a catch-clause variable in a nested scope; LookupSymbols at the block
+            // start cannot see it, so the syntactic walk must reserve it. Otherwise the generated
+            // 'lazyUser' local collides with the catch variable (CS0136).
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId)
+    {
+        var user = session.Load<User>(userId);
+        var order = session.Load<Order>(orderId);
+        try { } catch (Exception lazyUser) { Console.WriteLine(lazyUser); }
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("lazyUser2", fixed_code);
+            Assert.DoesNotContain("var lazyUser =", fixed_code);
+            Assert.Contains("var user = lazyUser2.Value;", fixed_code);
+        }
+
+        [Fact]
+        public async Task AsyncQuery_With_CancellationToken_Argument_Offers_No_Fix()
+        {
+            // The lazy rewrite cannot carry the ToListAsync(token) argument without silently dropping
+            // the CancellationToken, so both the analyzer and the code fix exclude an arg-bearing
+            // materializer. With only the Load left, there are fewer than two batchable operations,
+            // so the analyzer reports nothing and no fix is offered (the harness throws).
+            const string source = CommonUsings + @"
+class Test
+{
+    async Task Run(IAsyncDocumentSession session, string managerId, System.Threading.CancellationToken token)
+    {
+        var employees = await session.Query<Employee>().Where(e => e.Active).ToListAsync(token);
+        var manager = await session.LoadAsync<User>(managerId);
+    }
+}
+
+class Employee { public string Id { get; set; } public bool Active { get; set; } }
+class User { public string Id { get; set; } }
+";
+
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
+        }
     }
 }

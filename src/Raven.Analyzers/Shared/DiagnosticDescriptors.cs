@@ -212,7 +212,7 @@ namespace Raven.Analyzers.Shared
         public static readonly DiagnosticDescriptor SessionLazyBatching = Create(
             id: DiagnosticIds.SessionLazyBatching,
             title: "Batch independent session operations using the lazy API",
-            messageFormat: "'{0}' is an eager session operation. This method contains multiple independent session operations; use session.Advanced.Lazily or query.Lazily() to batch them into a single server round-trip.",
+            messageFormat: "'{0}' is an eager session operation. This method contains multiple independent session operations; batching them with the lazy API executes them in a single server round-trip.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
             description: "Each eager Load or materializing Query (ToList, First, etc.) sends a separate HTTP request to the RavenDB server. When a method contains two or more independent operations, they can be registered as lazy and executed together in a single multi-get request, reducing latency. Use session.Advanced.Lazily.Load<T>() and query.Lazily() to register operations lazily, then access .Value or call session.Advanced.Eagerly.ExecuteAllPendingLazyOperations() to trigger the batch.",

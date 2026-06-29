@@ -146,5 +146,24 @@ namespace Raven.Analyzers
         // ── Session lazy batching ──────────────────────────────────────────────────
         public const string LoadMethodName = "Load";
         public const string LoadAsyncMethodName = "LoadAsync";
+
+        /// <summary>
+        /// Materializing query methods that execute a session query eagerly and could instead be
+        /// registered with the lazy API and batched into a single round-trip. Declared once and
+        /// shared by both passes of <c>SessionLazyBatchingAnalyzer</c> so the dependency-tracking
+        /// pass and the detection pass can never disagree about which calls are materializers.
+        /// </summary>
+        public static readonly HashSet<string> SessionMaterializingMethods = new(System.StringComparer.Ordinal)
+        {
+            "ToList",    "ToListAsync",
+            "ToArray",   "ToArrayAsync",
+            "First",     "FirstAsync",
+            "FirstOrDefault",  "FirstOrDefaultAsync",
+            "Single",    "SingleAsync",
+            "SingleOrDefault", "SingleOrDefaultAsync",
+            "Any",       "AnyAsync",
+            "Count",     "CountAsync",
+            "LongCount", "LongCountAsync",
+        };
     }
 }
