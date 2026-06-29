@@ -6,7 +6,7 @@ export function getLicenseType(licenseInfo: SetupWizardFormData["licenseKeyStep"
     const licenseTiers: Record<Raven.Server.Commercial.LicenseType, number> = {
         None: 0,
         Invalid: 0,
-        Reserved: 0,
+        Quill: 0,
         Community: 1,
         Essential: 1,
         Professional: 3,
