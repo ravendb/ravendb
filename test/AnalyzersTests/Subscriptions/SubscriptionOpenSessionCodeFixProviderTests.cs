@@ -140,6 +140,118 @@ class Document { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task OpenSessionWithDatabaseName_FixBails()
+        {
+            // store.OpenSession(database) is flagged by RVN011, but SubscriptionBatch exposes only
+            // OpenSession() / OpenSession(SessionOptions) — there is no OpenSession(string) overload.
+            // Rewriting to batch.OpenSession(""MyDatabase"") would not compile, so the fix must bail
+            // while the diagnostic still stands (the misuse must be restructured by hand).
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var session = store.OpenSession(""MyDatabase"");
+            var doc = session.Load<Document>(""id"");
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            // The diagnostic fired (the harness got past the "no diagnostic" guard); the fix declined.
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
+
+        [Fact]
+        public async Task OpenAsyncSessionWithDatabaseName_FixBails()
+        {
+            // Same as the sync case for the async overload: store.OpenAsyncSession(string database)
+            // has no batch counterpart, so the fix bails while the diagnostic stands.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var session = store.OpenAsyncSession(""MyDatabase"");
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
+
+        [Fact]
+        public async Task OpenSessionWithNamedSessionOptionsArgument_FixBails()
+        {
+            // store.OpenSession(sessionOptions: opts) compiles against IDocumentStore (its parameter is
+            // named 'sessionOptions'), but SubscriptionBatch.OpenSession's parameter is named 'options'.
+            // Swapping only the receiver would yield batch.OpenSession(sessionOptions: opts) — CS1739.
+            // The fix must bail on a named argument while the diagnostic still stands.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var session = store.OpenSession(sessionOptions: new SessionOptions { NoCaching = true });
+            var doc = session.Load<Document>(""id"");
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
+
+        [Fact]
+        public async Task OpenSessionWithPositionalSessionOptions_Transforms_To_Batch()
+        {
+            // A positional SessionOptions argument is batch-compatible (SubscriptionBatch.OpenSession
+            // accepts SessionOptions), so the fix still applies — guards against the named-argument
+            // rejection being too broad.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var session = store.OpenSession(new SessionOptions { NoCaching = true });
+            var doc = session.Load<Document>(""id"");
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source);
+
+            Assert.Contains("var session = batch.OpenSession(new SessionOptions", fixed_code);
+        }
+
+        [Fact]
         public async Task OpenSession_InDeferredAction_FixBails()
         {
             // Diagnostic fires (store.OpenSession() is inside the Run lambda) but the fix refuses to

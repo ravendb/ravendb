@@ -523,7 +523,9 @@ public void Subscribe(SubscriptionWorker<Order> worker)
 
 ## RVN012: Batch independent session operations using the lazy API
 
-**Triggered by:** a method that contains two or more independent materializing session operations — `session.Load<T>(id)` or `session.Query<T>()...ToList()` / `.First()` / etc. — each of which causes a separate HTTP round-trip to the RavenDB server.
+**Triggered by:** a method that contains two or more independent materializing session operations — a single-argument `session.Load<T>(id)` or a `session.Query<T>()...ToList()` / `.ToArray()` (and their async forms) — each of which causes a separate HTTP round-trip to the RavenDB server.
+
+Only `ToList`/`ToArray` query materializers are flagged: they are the ones with a direct `query.Lazily()` / `LazilyAsync()` equivalent that the code fix can produce. Scalar/element materializers such as `.First()`, `.Single()`, `.Any()`, and `.Count()` have no lazy batching API and are not flagged. The include-builder `Load<T>(id, includes)` overload is likewise excluded — it has no lazy counterpart.
 
 RavenDB's lazy API queues operations and sends them as a single multi-get HTTP request. Use `session.Advanced.Lazily.Load<T>(id)` and `query.Lazily()` to register operations lazily, then read the values. Reading the first `.Value` (or awaiting it in async code) dispatches every pending lazy operation in one round-trip — no explicit call is needed. You can still force the batch without reading a value via `session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()` (or `...ExecuteAllPendingLazyOperationsAsync()`), but that is optional.
 

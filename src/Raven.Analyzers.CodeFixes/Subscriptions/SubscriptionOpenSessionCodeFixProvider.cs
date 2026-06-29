@@ -57,6 +57,14 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
             if (batchParamName == null)
                 return;
 
+            // SubscriptionBatch only exposes OpenSession() / OpenSession(SessionOptions) (and the async
+            // pair). The fix preserves the original argument list verbatim while swapping the receiver,
+            // so it can only be offered for those shapes. The store's OpenSession(string database)
+            // overload has no batch counterpart; rewriting it to batch.OpenSession("db") would not
+            // compile, so bail. The RVN011 diagnostic still stands — the call must be restructured by hand.
+            if (!IsBatchCompatibleArgumentList(openSessionInvocation, model))
+                return;
+
             context.RegisterCodeFix(
                 CodeAction.Create(
                     title: $"Use {batchParamName}.{memberName.Identifier.Text}",
@@ -64,6 +72,32 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                         context.Document, memberAccess, batchParamName, ct),
                     equivalenceKey: nameof(SubscriptionOpenSessionCodeFixProvider)),
                 diagnostic);
+        }
+
+        // True when the OpenSession/OpenAsyncSession argument list is one SubscriptionBatch accepts:
+        // empty, or a single SessionOptions argument. Anything else — most importantly the store-only
+        // OpenSession(string database) overload — has no batch equivalent, so the verbatim-argument
+        // rewrite must not be offered. A single argument whose type cannot be resolved is treated as
+        // incompatible: better to withhold the fix than emit code that may not compile.
+        private static bool IsBatchCompatibleArgumentList(InvocationExpressionSyntax invocation, SemanticModel model)
+        {
+            SeparatedSyntaxList<ArgumentSyntax> arguments = invocation.ArgumentList.Arguments;
+            if (arguments.Count == 0)
+                return true;
+            if (arguments.Count != 1)
+                return false;
+
+            ArgumentSyntax argument = arguments[0];
+
+            // A named argument cannot be carried over by swapping only the receiver: the store's
+            // SessionOptions parameter is named 'sessionOptions', but SubscriptionBatch's is named
+            // 'options', so batch.OpenSession(sessionOptions: ...) would not compile (CS1739). The
+            // verbatim-argument rewrite is only safe for a positional argument.
+            if (argument.NameColon != null)
+                return false;
+
+            ITypeSymbol? argType = model.GetTypeInfo(argument.Expression).Type;
+            return argType?.Name == KnownTypes.SessionOptionsTypeName;
         }
 
         private static string? FindRunLambdaBatchParameterName(SyntaxNode node, SemanticModel model)

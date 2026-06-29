@@ -521,6 +521,31 @@ class Order { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task IncludeStyleLoads_Offer_No_Fix()
+        {
+            // Regression: the include-builder Load overload (Load<T>(id, Action<IIncludeBuilder<T>>))
+            // has no lazy counterpart. Previously the analyzer flagged it and the fix produced
+            // session.Advanced.Lazily.Load<T>(id, i => i.IncludeDocuments(...)) — which does not
+            // compile (Lazily.Load takes an Action<T> onEval, not an include builder). The analyzer no
+            // longer flags it, so the fix never engages and the harness throws (no diagnostic).
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string managerId)
+    {
+        var user = session.Load<User>(userId, i => i.IncludeDocuments(x => x.ManagerId));
+        var manager = session.Load<User>(managerId, i => i.IncludeDocuments(x => x.ManagerId));
+    }
+}
+
+class User { public string Id { get; set; } public string ManagerId { get; set; } }
+";
+
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
+        }
+
+        [Fact]
         public async Task AsyncQuery_With_CancellationToken_Argument_Offers_No_Fix()
         {
             // The lazy rewrite cannot carry the ToListAsync(token) argument without silently dropping

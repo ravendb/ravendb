@@ -130,6 +130,12 @@ namespace Raven.Analyzers
         public const string ProjectionMethodName = "Projection";
         public const string ProjectionBehaviorTypeName = "ProjectionBehavior";
 
+        // The document identifier property (RavenDB's default id convention). In a Select projection
+        // the LINQ provider rewrites a reference to it (x.Id) to the document-id field id(), which is
+        // always retrievable under any ProjectionBehavior. (ProjectInto fetches member names verbatim
+        // and does NOT get this rewrite, so its Id is not special-cased.) Used by RVN008.
+        public const string IdPropertyName = "Id";
+
         // Enum value names (string form; compared with member identifier text)
         public const string ProjectionBehaviorDefault = "Default";
         public const string ProjectionBehaviorFromIndex = "FromIndex";
@@ -146,15 +152,25 @@ namespace Raven.Analyzers
         public const string SubscriptionWorkerTypeName = "SubscriptionWorker";
         public const string AbstractSubscriptionWorkerTypeName = "AbstractSubscriptionWorker";
 
+        // The only argument type SubscriptionBatch.OpenSession / OpenAsyncSession accept besides
+        // the parameterless form. The RVN011 code fix swaps the receiver but keeps the argument
+        // list verbatim, so it may only offer the rewrite for an empty arg list or a single
+        // SessionOptions argument — the store's OpenSession(string database) overload has no
+        // batch equivalent and would not compile.
+        public const string SessionOptionsTypeName = "SessionOptions";
+
         // ── Session lazy batching ──────────────────────────────────────────────────
         public const string LoadMethodName = "Load";
         public const string LoadAsyncMethodName = "LoadAsync";
 
         /// <summary>
-        /// Materializing query methods that execute a session query eagerly and could instead be
-        /// registered with the lazy API and batched into a single round-trip. Declared once and
-        /// shared by both passes of <c>SessionLazyBatchingAnalyzer</c> so the dependency-tracking
-        /// pass and the detection pass can never disagree about which calls are materializers.
+        /// Every query method that executes a session query eagerly (materializes a result). This is
+        /// the broad set used only by <c>SessionLazyBatchingAnalyzer</c>'s dependency-tracking pass to
+        /// decide whether a local was produced by a materialized server call — a later operation that
+        /// reads such a local genuinely depends on it and must not be batched. It deliberately includes
+        /// scalar/element materializers (<c>First</c>, <c>Single</c>, <c>Count</c>, …) that the lazy
+        /// rewrite cannot express; those are filtered out of the batchable set by
+        /// <see cref="LazyBatchableQueryMaterializers"/>.
         /// </summary>
         public static readonly HashSet<string> SessionMaterializingMethods = new(System.StringComparer.Ordinal)
         {
@@ -167,6 +183,20 @@ namespace Raven.Analyzers
             "Any",       "AnyAsync",
             "Count",     "CountAsync",
             "LongCount", "LongCountAsync",
+        };
+
+        /// <summary>
+        /// The materializers RVN012 may actually offer to batch: only <c>ToList</c>/<c>ToArray</c>
+        /// (and their async forms) have a direct <c>IRavenQueryable.Lazily()</c> / <c>LazilyAsync()</c>
+        /// equivalent that the code fix can rewrite to. Scalar/element materializers such as
+        /// <c>First</c>, <c>Single</c>, <c>Any</c>, and <c>Count</c> would need dedicated lazy APIs and
+        /// are excluded. This is the single source of truth shared by the analyzer's detection pass and
+        /// the code fix's collector so the diagnostic is only raised where a working fix exists.
+        /// </summary>
+        public static readonly HashSet<string> LazyBatchableQueryMaterializers = new(System.StringComparer.Ordinal)
+        {
+            "ToList",  "ToListAsync",
+            "ToArray", "ToArrayAsync",
         };
     }
 }
