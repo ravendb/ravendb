@@ -13,14 +13,23 @@ export function formatDateTime(value: string) {
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-const RELATIVE_TIME_DIVISIONS: { amount: number; unit: Intl.RelativeTimeFormatUnit }[] = [
-    { amount: 60, unit: "second" },
-    { amount: 60, unit: "minute" },
-    { amount: 24, unit: "hour" },
-    { amount: 7, unit: "day" },
-    { amount: 4.34524, unit: "week" },
-    { amount: 12, unit: "month" },
-    { amount: Number.POSITIVE_INFINITY, unit: "year" },
+const SECOND_MS = 1000;
+const MINUTE_MS = 60 * SECOND_MS;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+const WEEK_MS = 7 * DAY_MS;
+const MONTH_MS = 30 * DAY_MS;
+const YEAR_MS = 365 * DAY_MS;
+
+// Largest unit first: a duration is shown in the biggest unit it fills at least once.
+const RELATIVE_TIME_UNITS: { unit: Intl.RelativeTimeFormatUnit; ms: number }[] = [
+    { unit: "year", ms: YEAR_MS },
+    { unit: "month", ms: MONTH_MS },
+    { unit: "week", ms: WEEK_MS },
+    { unit: "day", ms: DAY_MS },
+    { unit: "hour", ms: HOUR_MS },
+    { unit: "minute", ms: MINUTE_MS },
+    { unit: "second", ms: SECOND_MS },
 ];
 
 const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "narrow" });
@@ -33,14 +42,13 @@ export function formatRelativeTime(value: string) {
         return value;
     }
 
-    let duration = (date.getTime() - Date.now()) / 1000;
-    for (const division of RELATIVE_TIME_DIVISIONS) {
-        if (Math.abs(duration) < division.amount) {
-            return relativeTimeFormatter.format(Math.round(duration), division.unit);
+    const elapsedMs = date.getTime() - Date.now();
+    for (const { unit, ms } of RELATIVE_TIME_UNITS) {
+        if (Math.abs(elapsedMs) >= ms) {
+            return relativeTimeFormatter.format(Math.round(elapsedMs / ms), unit);
         }
-        duration /= division.amount;
     }
-    return value;
+    return relativeTimeFormatter.format(0, "second"); // "now" for sub-second differences
 }
 
 export async function copyToClipboard(value: string) {
