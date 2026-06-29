@@ -6,8 +6,8 @@ namespace FastTests.Server.Integrations.PostgreSQL
 {
     public sealed class PgSqlParserNativeTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        [RavenFact(RavenTestCategory.PostgreSql)]
-        public void NativeParser_Loads_OnThisPlatform()
+        [RavenMultiplatformFact(RavenTestCategory.PostgreSql, RavenArchitecture.AllX64)]
+        public void NativeParser_Loads_OnSupportedArchitecture()
         {
             Assert.True(PgSqlParserNative.IsAvailable, "Native libpg_query parser failed to load on this platform.");
         }
