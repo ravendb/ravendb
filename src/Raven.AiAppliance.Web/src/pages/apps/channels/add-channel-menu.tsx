@@ -50,7 +50,15 @@ const CHANNEL_OPTIONS: ChannelOption[] = [
     },
 ];
 
-export function AddChannelMenu({ slug, agent }: { slug: string; agent?: FixedAgent }) {
+export function AddChannelMenu({
+    slug,
+    agent,
+    label = "Add channel",
+}: {
+    slug: string;
+    agent?: FixedAgent;
+    label?: string;
+}) {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     return (
@@ -59,7 +67,7 @@ export function AddChannelMenu({ slug, agent }: { slug: string; agent?: FixedAge
                 <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="outline">
                         <Plus className="size-3.5" aria-hidden="true" />
-                        Add channel
+                        {label}
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-72">

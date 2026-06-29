@@ -28,7 +28,7 @@ export const Empty: Story = {
     },
 };
 
-// Open "Generate embed link" on the Website widget row and submit to see the
+// Open "Generate embed link" on the Website widget card and submit to see the
 // server's inline error surfaced (e.g. a required parameter left blank server-side).
 export const LinkMintError: Story = {
     parameters: {
