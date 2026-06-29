@@ -574,6 +574,35 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
+        [Fact]
+        public async Task Chained_Select_Second_Projection_No_False_Positive()
+        {
+            // The second Select operates on the anonymous shape produced by the first Select, not on
+            // the source document / index. 'Renamed' exists only on that intermediate type, so it
+            // must NOT be flagged against Order / OrderIndex.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Select(x => new { Renamed = x.Name })
+            .Select(y => new { y.Renamed });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
         // ── Bail conditions ────────────────────────────────────────────────────
 
         [Fact]

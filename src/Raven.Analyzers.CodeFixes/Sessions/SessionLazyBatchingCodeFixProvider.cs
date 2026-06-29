@@ -117,12 +117,20 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     return;
             }
 
+            // Bail if any batched statement depends on another batched statement's variable. Each
+            // batchable statement is rewritten to a lazy local whose real value is only materialized
+            // AFTER the batch, so a cross-reference (e.g. var b = session.Load<Order>(a.Id) where a is
+            // also batched) would move a use ahead of its declaration and produce uncompilable code.
+            if (HasInterStatementDependency(semanticModel, directBatchableCalls))
+                return;
+
             // Register the code fix
             context.RegisterCodeFix(
                 CodeAction.Create(
                     "Batch with lazy API (reduces server round-trips)",
                     ct => ApplyLazyBatchFixAsync(
                         context.Document,
+                        semanticModel,
                         block,
                         directBatchableCalls,
                         batchableIndices,
@@ -133,6 +141,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
         private static async Task<Document> ApplyLazyBatchFixAsync(
             Document document,
+            SemanticModel semanticModel,
             BlockSyntax block,
             List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> batchableCalls,
             List<int> batchableIndices,
@@ -166,7 +175,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 return document;
 
             // Collect identifiers already in scope so generated lazy names don't collide.
-            HashSet<string> reservedNames = CollectReservedNames(block);
+            HashSet<string> reservedNames = CollectReservedNames(semanticModel, block);
 
             // Build a map of statement index to new statement
             Dictionary<int, LocalDeclarationStatementSyntax> replacements = [];
@@ -440,10 +449,66 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             }
         }
 
-        private static HashSet<string> CollectReservedNames(BlockSyntax block)
+        // True when any batched statement's initializer references a local declared by another
+        // batched statement. Those locals are materialized only after the batch, so reordering them
+        // ahead of their use would not compile (CS0841) — bail instead of emitting broken code.
+        // Symbols are compared (not identifier text) so an unrelated lambda parameter or generic
+        // type argument that merely shares a batched variable's name does not trigger a false bail.
+        private static bool HasInterStatementDependency(
+            SemanticModel semanticModel,
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> calls)
+        {
+            var batchedLocals = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+            foreach (var (statement, _, _, _, _) in calls)
+            {
+                foreach (VariableDeclaratorSyntax v in statement.Declaration.Variables)
+                {
+                    ISymbol? declared = semanticModel.GetDeclaredSymbol(v);
+                    if (declared != null)
+                        batchedLocals.Add(declared);
+                }
+            }
+
+            foreach (var (statement, _, _, _, _) in calls)
+            {
+                if (statement.Declaration.Variables.Count != 1)
+                    continue;
+
+                ExpressionSyntax? initializer = statement.Declaration.Variables[0].Initializer?.Value;
+                if (initializer == null)
+                    continue;
+
+                foreach (SyntaxNode node in initializer.DescendantNodesAndSelf())
+                {
+                    if (node is IdentifierNameSyntax id)
+                    {
+                        ISymbol? symbol = semanticModel.GetSymbolInfo(id).Symbol;
+                        if (symbol != null && batchedLocals.Contains(symbol))
+                            return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Collects identifiers that a generated lazy local must not collide with. Walks the entire
+        // enclosing method/lambda body so locals declared in any sibling or enclosing scope are
+        // covered (a collision there is CS0128/CS0136), and adds fields, parameters, usings, and
+        // any other symbol in scope at the batch location via the semantic model — these are not
+        // descendants of the body block.
+        private static HashSet<string> CollectReservedNames(SemanticModel semanticModel, BlockSyntax block)
         {
             var names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (SyntaxNode node in block.DescendantNodes())
+
+            BlockSyntax outermost = block;
+            foreach (SyntaxNode ancestor in block.Ancestors())
+            {
+                if (ancestor is BlockSyntax ancestorBlock)
+                    outermost = ancestorBlock;
+            }
+
+            foreach (SyntaxNode node in outermost.DescendantNodes())
             {
                 switch (node)
                 {
@@ -459,8 +524,36 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     case SingleVariableDesignationSyntax svd:
                         names.Add(svd.Identifier.ValueText);
                         break;
+                    case LocalFunctionStatementSyntax lf:
+                        names.Add(lf.Identifier.ValueText);
+                        break;
+                    // Catch variables and LINQ query range variables live in nested scopes that
+                    // LookupSymbols(block.SpanStart) cannot see, yet a body-level local sharing
+                    // their name is a CS0136 collision. Reserve them from the syntactic walk.
+                    case CatchDeclarationSyntax cd when cd.Identifier.ValueText.Length > 0:
+                        names.Add(cd.Identifier.ValueText);
+                        break;
+                    case FromClauseSyntax fc:
+                        names.Add(fc.Identifier.ValueText);
+                        break;
+                    case LetClauseSyntax lc:
+                        names.Add(lc.Identifier.ValueText);
+                        break;
+                    case JoinClauseSyntax jc:
+                        names.Add(jc.Identifier.ValueText);
+                        break;
+                    case JoinIntoClauseSyntax jic:
+                        names.Add(jic.Identifier.ValueText);
+                        break;
+                    case QueryContinuationSyntax qc:
+                        names.Add(qc.Identifier.ValueText);
+                        break;
                 }
             }
+
+            foreach (ISymbol symbol in semanticModel.LookupSymbols(block.SpanStart))
+                names.Add(symbol.Name);
+
             return names;
         }
 
@@ -520,8 +613,14 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
                 ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
 
-                // Check for query materializations on IRavenQueryable only
-                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
+                // Check for query materializations on IRavenQueryable only.
+                // The lazy rewrite replaces the materializer (ToList/ToListAsync/...) with a
+                // bare Lazily()/LazilyAsync() and cannot carry the materializer's arguments
+                // (e.g. a CancellationToken passed to ToListAsync). Skip any materializer that
+                // has arguments rather than silently dropping them.
+                if (QueryMaterializingMethods.Contains(methodName)
+                    && invocation.ArgumentList.Arguments.Count == 0
+                    && SyntaxHelpers.IsRavenQueryable(receiverType))
                 {
                     ISymbol? sessionSymbol = ResolveSessionSymbolFromQueryChain(memberAccess.Expression);
                     BatchableCalls.Add((statement, methodName, memberAccess.Expression, false, sessionSymbol));
