@@ -878,6 +878,109 @@ namespace SlowTests.Server.Replication
         }
 
         [RavenFact(RavenTestCategory.Replication)]
+        public async Task DisabledHubToSinkPullReplicationShouldNotKeepReplicatingAfterStaleHandoff()
+        {
+            DoNotReuseServer();
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            const int timeout = 20_000;
+
+            using (var sinkServer = GetNewServer())
+            using (var hubServer = GetNewServer())
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                var firstHandoffReached = new AsyncManualResetEvent();
+                var allowFirstHandoffToContinue = new AsyncManualResetEvent();
+                var handoffAttempt = 0;
+
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().BeforePullReplicationAsSinkHandoff = () =>
+                {
+                    if (Interlocked.Increment(ref handoffAttempt) != 1)
+                        return;
+
+                    firstHandoffReached.Set();
+                    if (allowFirstHandoffToContinue.WaitAsync(TimeSpan.FromMilliseconds(timeout)).GetAwaiter().GetResult() == false)
+                        throw new TimeoutException("Timed out while waiting to continue the first HubToSink handoff.");
+                };
+
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                }));
+
+                var pullReplication = new PullReplicationAsSink(hub.Database, $"ConnectionString-{hub.Database}", definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                var sinkTask = await AddWatcherToReplicationTopology(sink, pullReplication, hub.Urls);
+
+                Assert.True(await firstHandoffReached.WaitAsync(TimeSpan.FromMilliseconds(timeout)), "Expected the first HubToSink handoff to reach the test barrier.");
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+                await AssertPullReplicationAsSinkTaskDisabled(sink, sinkTask.TaskId);
+                Assert.True(WaitForValue(() => HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId) == false, true, timeout),
+                    "Disabling the HubToSink task should remove the first outgoing connector.");
+                Assert.False(HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId),
+                    "Disabling the HubToSink task before handoff completes should not leave a tracked incoming handler.");
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: false));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "before-stale-handoff" }, "users/before-stale-handoff");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/before-stale-handoff", u => u.Name == "before-stale-handoff", timeout), sink.Identifier);
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected the re-enabled HubToSink task to complete a replacement handoff.");
+                Assert.False(HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId),
+                    "After the replacement handoff, the sink should track HubToSink as incoming only.");
+
+                var staleIncomingAdded = new AsyncManualResetEvent();
+                sinkDatabase.ReplicationLoader.IncomingReplicationAdded += handler =>
+                {
+                    if (handler is IncomingPullReplicationHandlerAsSink pullAsSink &&
+                        pullAsSink.IncomingPullReplicationParams.TaskId == sinkTask.TaskId &&
+                        pullAsSink.IncomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
+                    {
+                        staleIncomingAdded.Set();
+                    }
+                };
+
+                allowFirstHandoffToContinue.Set();
+
+                await staleIncomingAdded.WaitAsync(TimeSpan.FromSeconds(3));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "after-stale-handoff" }, "users/after-stale-handoff");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/after-stale-handoff", u => u.Name == "after-stale-handoff", timeout), sink.Identifier);
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+                await AssertPullReplicationAsSinkTaskDisabled(sink, sinkTask.TaskId);
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId) == false, true, timeout),
+                    "Disabling the HubToSink task should remove the tracked incoming handler.");
+                Assert.False(HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId),
+                    "The disabled HubToSink task should not have an outgoing connector.");
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "after-disable" }, "users/after-disable");
+                    session.SaveChanges();
+                }
+
+                Assert.False(WaitForDocument<User>(sink, "users/after-disable", u => u.Name == "after-disable", 5_000),
+                    "The disabled HubToSink task must not keep replicating through an untracked stale incoming handler.");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task DisablePullReplicationOnHub()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -2055,6 +2158,11 @@ namespace SlowTests.Server.Replication
                             destinationTaskId == taskId);
         }
 
+        private static bool HasOutgoingHubToSinkPullConnection(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return CountOutgoingHubToSinkPullHandlers(database, taskId) > 0;
+        }
+
         private static OutgoingPullReplicationHandlerAsSink GetOutgoingSinkToHubPullHandler(Raven.Server.Documents.DocumentDatabase database, long taskId)
         {
             return database.ReplicationLoader.OutgoingHandlers
@@ -2071,6 +2179,12 @@ namespace SlowTests.Server.Replication
         private static PullReplicationAsSink GetQueuedHubToSinkDestination(Raven.Server.Documents.DocumentDatabase database, long taskId)
         {
             return database.ReplicationLoader.ReconnectQueue.OfType<PullReplicationAsSink>().FirstOrDefault(x => x.TaskId == taskId && x.Mode == PullReplicationMode.HubToSink);
+        }
+
+        private static async Task AssertPullReplicationAsSinkTaskDisabled(IDocumentStore store, long taskId)
+        {
+            var taskInfo = (OngoingTaskPullReplicationAsSink)await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.PullReplicationAsSink));
+            Assert.Equal(OngoingTaskState.Disabled, taskInfo.TaskState);
         }
 
         private class AsyncGate
