@@ -608,11 +608,9 @@ namespace Raven.Analyzers.CodeFixes.Sessions
         {
             // Only ToList/ToArray have direct Lazily() equivalents via IRavenQueryable.Lazily().
             // Count/First/Single/Any etc. would need dedicated CountLazily() APIs and are excluded.
-            private static readonly HashSet<string> QueryMaterializingMethods = new(StringComparer.Ordinal)
-            {
-                "ToList",  "ToListAsync",
-                "ToArray", "ToArrayAsync",
-            };
+            // Shared with the analyzer's detection pass via KnownTypes so the diagnostic and the fix
+            // agree exactly on which materializers are batchable.
+            private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.LazyBatchableQueryMaterializers;
 
             private readonly SemanticModel _model;
             public readonly List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> BatchableCalls;
@@ -667,8 +665,13 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     return;
                 }
 
-                // Check for session loads
+                // Check for session loads. Only the single-argument Load(id) form is batchable: it maps
+                // to Lazily.Load<T>(id). The two-argument include overload Load<T>(id,
+                // Action<IIncludeBuilder<T>>) has no lazy equivalent — copying its include lambda onto
+                // Lazily.Load (which only takes an Action<T> onEval) would not compile — so it is
+                // excluded here in lockstep with the analyzer.
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
+                    invocation.ArgumentList.Arguments.Count == 1 &&
                     SyntaxHelpers.IsSessionType(receiverType))
                 {
                     ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
