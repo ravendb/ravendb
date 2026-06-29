@@ -46,7 +46,9 @@ namespace Raven.Analyzers.Queries
             if (!SyntaxHelpers.IsRavenQueryable(receiverType))
                 return;
 
-            // RVN002 — filtering/ordering after projection
+            // RVN002 — filtering/ordering after projection. The chain walk follows the receiver
+            // through a local variable so a projection stored in a prior statement
+            // (var p = session.Query<T>().ProjectInto<V>(); p.Where(...)) is still detected.
             if (IsPostProjectionForbiddenMethod(methodName))
             {
                 if (FindProjectionInChain(receiver, context.SemanticModel))
@@ -63,7 +65,7 @@ namespace Raven.Analyzers.Queries
             // RVN003 — double ProjectInto
             if (methodName == KnownTypes.ProjectIntoMethodName)
             {
-                foreach (var prior in SyntaxHelpers.EnumerateInvocationChain(receiver))
+                foreach (var prior in SyntaxHelpers.EnumerateInvocationChain(receiver, context.SemanticModel))
                 {
                     if (SyntaxHelpers.GetMethodName(prior) == KnownTypes.ProjectIntoMethodName)
                     {
@@ -84,7 +86,7 @@ namespace Raven.Analyzers.Queries
         /// </summary>
         private static bool FindProjectionInChain(ExpressionSyntax expression, SemanticModel model)
         {
-            foreach (InvocationExpressionSyntax invocation in SyntaxHelpers.EnumerateInvocationChain(expression))
+            foreach (InvocationExpressionSyntax invocation in SyntaxHelpers.EnumerateInvocationChain(expression, model))
             {
                 string? name = SyntaxHelpers.GetMethodName(invocation);
                 if (name != KnownTypes.ProjectIntoMethodName && name != KnownTypes.SelectMethodName)

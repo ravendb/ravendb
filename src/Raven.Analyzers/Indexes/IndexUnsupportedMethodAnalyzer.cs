@@ -56,7 +56,8 @@ namespace Raven.Analyzers.Indexes
         {
             foreach (SyntaxNode node in body.DescendantNodesAndSelf())
             {
-                SyntaxNode? lambdaBody = TryGetMapReduceLambdaBody(node, context.SemanticModel);
+                // Map, Reduce, and AddMap lambdas are all compiled server-side, so include Reduce.
+                SyntaxNode? lambdaBody = SyntaxHelpers.TryGetIndexMapLambdaBody(node, context.SemanticModel, includeReduce: true);
                 if (lambdaBody == null)
                     continue;
 
@@ -71,7 +72,7 @@ namespace Raven.Analyzers.Indexes
                     if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method))
                         continue;
 
-                    Location location = GetInvocationNameLocation(invocation);
+                    Location location = SyntaxHelpers.GetInvocationNameLocation(invocation);
                     context.ReportDiagnostic(Diagnostic.Create(
                         DiagnosticDescriptors.IndexUnsupportedMethodCall,
                         location,
@@ -79,54 +80,6 @@ namespace Raven.Analyzers.Indexes
                         expressionKind));
                 }
             }
-        }
-
-        /// <summary>
-        /// If <paramref name="node"/> is a Map/Reduce assignment or an AddMap/AddMapForAll invocation
-        /// on the index base, returns the lambda's expression body. Otherwise returns null.
-        /// </summary>
-        private static SyntaxNode? TryGetMapReduceLambdaBody(SyntaxNode node, SemanticModel model)
-        {
-            // Map = lambda  /  Reduce = lambda  /  this.Map = lambda  /  base.Reduce = lambda  etc.
-            if (node is AssignmentExpressionSyntax assignment)
-            {
-                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
-                if (nameNode == null)
-                    return null;
-
-                string name = nameNode.Identifier.Text;
-                if (name != KnownTypes.MapFieldName && name != KnownTypes.ReduceFieldName)
-                    return null;
-
-                ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;
-                if (sym is not (IFieldSymbol or IPropertySymbol))
-                    return null;
-
-                if (!SyntaxHelpers.IsDefinedOnIndexBase(sym.ContainingType))
-                    return null;
-
-                return SyntaxHelpers.TryGetLambdaBody(assignment.Right);
-            }
-
-            // AddMap<T>(...) or AddMapForAll<T>(...)
-            if (node is InvocationExpressionSyntax invocation)
-            {
-                string? methodName = SyntaxHelpers.GetMethodName(invocation);
-                if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)
-                    return null;
-
-                ISymbol? sym = model.GetSymbolInfo(invocation).Symbol;
-                if (sym is not IMethodSymbol method || !SyntaxHelpers.IsMultiMapBase(method.ContainingType))
-                    return null;
-
-                SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
-                if (args.Count == 0)
-                    return null;
-
-                return SyntaxHelpers.TryGetLambdaBody(args[args.Count - 1].Expression);
-            }
-
-            return null;
         }
 
         private static string GetExpressionKind(SyntaxNode node)
@@ -142,15 +95,6 @@ namespace Raven.Analyzers.Indexes
             }
 
             return "Map";
-        }
-
-        private static Location GetInvocationNameLocation(InvocationExpressionSyntax invocation)
-        {
-            if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
-                return memberAccess.Name.GetLocation();
-            if (invocation.Expression is IdentifierNameSyntax identifier)
-                return identifier.GetLocation();
-            return invocation.GetLocation();
         }
     }
 }

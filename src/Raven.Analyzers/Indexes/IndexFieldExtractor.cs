@@ -57,7 +57,7 @@ namespace Raven.Analyzers.Indexes
                         continue;
 
                     // Bail if the constructor uses dynamic field creation
-                    if (ContainsDynamicFieldCalls(ctorBody))
+                    if (SyntaxHelpers.ContainsDynamicFieldCalls(ctorBody))
                         return IndexFieldSet.Bail;
 
                     IndexFieldInspection result = ExtractFromCtorBody(ctorBody, model, allFields);
@@ -69,25 +69,6 @@ namespace Raven.Analyzers.Indexes
             return new IndexFieldSet(IndexFieldInspection.Ok, allFields.ToImmutableHashSet());
         }
 
-
-        private static bool ContainsDynamicFieldCalls(SyntaxNode body)
-        {
-            foreach (InvocationExpressionSyntax inv in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
-            {
-                string? name = SyntaxHelpers.GetMethodName(inv);
-                // Also handle plain identifier calls like CreateField(...) without this. prefix
-                if (name == null && inv.Expression is IdentifierNameSyntax id)
-                    name = id.Identifier.Text;
-
-                if (name == KnownTypes.CreateFieldMethodName
-                    || name == KnownTypes.CreateSpatialFieldMethodName
-                    || name == KnownTypes.AsJsonMethodName)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
 
         private static IndexFieldInspection ExtractFromCtorBody(
             SyntaxNode body,

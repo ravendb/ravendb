@@ -38,7 +38,7 @@ The `RavenDB.Analyzers` NuGet package ships two DLLs under `analyzers/dotnet/cs/
 
 The split follows the [RS1038](https://github.com/dotnet/roslyn-analyzers/issues/7438) rule: analyzer assemblies must only depend on compiler-provided references. `Microsoft.CodeAnalysis.CSharp.Workspaces` is not a compiler-provided reference — it is only available inside an IDE host — so code-fix providers must live in a separate assembly. IDEs load both DLLs from the analyzer folder automatically; `dotnet build` loads only the analyzer DLL, which keeps command-line builds free of the Workspaces dependency and the RS1038 warning.
 
-`KnownTypes` and `SyntaxHelpers` in `Raven.Analyzers` are `internal` but made available to `Raven.Analyzers.CodeFixes` via `[assembly: InternalsVisibleTo("Raven.Analyzers.CodeFixes")]` in `Properties/AssemblyInfo.cs`.
+The shared helpers the code-fix providers reuse from `Raven.Analyzers` — `KnownTypes`, `DiagnosticIds`, and the public members of `SyntaxHelpers` — are declared `public` so they are visible across the assembly boundary. There is no `InternalsVisibleTo` bridge: `Raven.Analyzers.CodeFixes` references `Raven.Analyzers` as an ordinary project reference and calls those public APIs directly. (Helpers used only within `Raven.Analyzers` stay `internal`.)
 
 ## Sandbox and benchmarking
 
@@ -591,7 +591,7 @@ async Task GetDataAsync(IAsyncDocumentSession session, string userId, string ord
 
 ---
 
-## RVN013: Add Take() to bound the query result set
+## RVN013: Query result is not bounded by Take()
 
 **Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, or `ToArrayAsync()` on an `IRavenQueryable<T>` chain that does not have a `.Take(n)` call anywhere in the chain.
 

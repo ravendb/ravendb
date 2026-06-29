@@ -124,6 +124,32 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (HasInterStatementDependency(semanticModel, directBatchableCalls))
                 return;
 
+            // Bail on a mixed sync/async batch. The extraction reads a sync .Value for a sync
+            // operation and awaits the .Value for an async one; reading a sync .Value first forces
+            // the WHOLE pending batch — including any async-registered op — to dispatch through the
+            // blocking path, turning an awaited call into sync-over-async (a deadlock risk). Only
+            // rewrite when every batched operation shares the same modality.
+            bool anyAsync = false, anySync = false;
+            foreach (var (_, methodName, _, _, _) in directBatchableCalls)
+            {
+                if (methodName.EndsWith("Async", StringComparison.Ordinal))
+                    anyAsync = true;
+                else
+                    anySync = true;
+            }
+            if (anyAsync && anySync)
+                return;
+
+            // Bail if any batched declaration has a missing/empty variable name (incomplete code while
+            // typing). The rewrite derives the lazy name from the original identifier's first char, so
+            // an empty identifier would otherwise crash the fix.
+            foreach (var (statement, _, _, _, _) in directBatchableCalls)
+            {
+                if (statement.Declaration.Variables.Count != 1
+                    || statement.Declaration.Variables[0].Identifier.ValueText.Length == 0)
+                    return;
+            }
+
             // Register the code fix
             context.RegisterCodeFix(
                 CodeAction.Create(
@@ -179,7 +205,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
             // Build a map of statement index to new statement
             Dictionary<int, LocalDeclarationStatementSyntax> replacements = [];
-            List<(string lazyName, string originalName, string methodName, SyntaxTriviaList originalTrivia)> renamings = [];
+            List<(string lazyName, string originalName, string methodName, TypeSyntax originalType, SyntaxTriviaList originalTrivia)> renamings = [];
 
             // Transform each batchable statement
             for (int i = 0; i < batchableCalls.Count; i++)
@@ -217,7 +243,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                         .WithType(varType)
                         .WithVariables(SyntaxFactory.SingletonSeparatedList(newDeclarator)));
 
-                renamings.Add((lazyName, originalName, methodName, stmt.GetLeadingTrivia()));
+                renamings.Add((lazyName, originalName, methodName, stmt.Declaration.Type.WithoutTrivia(), stmt.GetLeadingTrivia()));
                 replacements[batchableIndices[i]] = newStmt;
             }
 
@@ -226,7 +252,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             // first lazy value (sync .Value, or awaiting the .Value of an async lazy) dispatches the
             // entire pending batch in one multi-get round-trip.
             List<StatementSyntax> extractionStatements = [];
-            foreach (var (lazyName, originalName, methodName, originalTrivia) in renamings)
+            foreach (var (lazyName, originalName, methodName, originalType, originalTrivia) in renamings)
             {
                 // Determine the materializer to call on .Value (Load has none; query methods keep theirs)
                 string valueMethod = methodName.StartsWith("ToList", StringComparison.Ordinal) ? "ToList"
@@ -269,9 +295,14 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     SyntaxFactory.Identifier(originalName))
                     .WithInitializer(SyntaxFactory.EqualsValueClause(valueExpr));
 
+                // Restore the original declared type on the extraction. The extraction re-applies the
+                // same materializer the user wrote (Load → .Value, ToList → .Value.ToList(), ToArray →
+                // .Value.ToArray()), so it reproduces the exact original result type. Reusing the
+                // declared type preserves an explicit widening declaration (e.g. IEnumerable<T> users =
+                // ….ToList()); forcing 'var' there would infer List<T> and break a later reassignment.
                 LocalDeclarationStatementSyntax extractStmt = SyntaxFactory.LocalDeclarationStatement(
                     SyntaxFactory.VariableDeclaration(
-                        SyntaxFactory.IdentifierName("var"),
+                        originalType,
                         SyntaxFactory.SingletonSeparatedList(extractVarDecl)));
 
                 // Strip comments; they stay with the renamed lazy declaration, not the extraction.
@@ -559,6 +590,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
         private static string GenerateLazyName(string originalName, HashSet<string> reservedNames)
         {
+            // Defensive: an empty identifier (incomplete code) is already filtered in
+            // RegisterCodeFixesAsync, but guard here too so indexing originalName[0] can never throw.
+            if (string.IsNullOrEmpty(originalName))
+                originalName = "value";
+
             string baseName = "lazy" + char.ToUpperInvariant(originalName[0]) + originalName.Substring(1);
             string candidate = baseName;
             int suffix = 2;
@@ -620,21 +656,32 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 // has arguments rather than silently dropping them.
                 if (QueryMaterializingMethods.Contains(methodName)
                     && invocation.ArgumentList.Arguments.Count == 0
-                    && SyntaxHelpers.IsRavenQueryable(receiverType))
+                    && SyntaxHelpers.IsRavenQueryable(receiverType)
+                    && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol))
                 {
+                    // Only the genuine framework materializer (Enumerable.ToList, Raven async query
+                    // extensions) can be rewritten to Lazily()/LazilyAsync(); a same-named user-defined
+                    // extension would be silently replaced with different semantics, so it is excluded.
                     ISymbol? sessionSymbol = ResolveSessionSymbolFromQueryChain(memberAccess.Expression);
-                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, false, sessionSymbol));
+                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, false, AsStableSessionSymbol(sessionSymbol)));
                     return;
                 }
 
                 // Check for session loads
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
-                    IsSessionType(receiverType))
+                    SyntaxHelpers.IsSessionType(receiverType))
                 {
                     ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
-                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, true, sessionSymbol));
+                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, true, AsStableSessionSymbol(sessionSymbol)));
                 }
             }
+
+            // Two calls can be merged onto one lazy receiver only when they provably share the same
+            // session instance. A local, parameter, or field reference does; a property getter or a
+            // method call (e.g. GetSession()) may return a fresh session per call, so those receivers
+            // are reported as null and excluded from the same-session grouping — the fix then bails.
+            private static ISymbol? AsStableSessionSymbol(ISymbol? symbol) =>
+                symbol is ILocalSymbol or IParameterSymbol or IFieldSymbol ? symbol : null;
 
             private ISymbol? ResolveSessionSymbolFromQueryChain(ExpressionSyntax queryChain)
             {
@@ -653,23 +700,6 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                             return _model.GetSymbolInfo(current).Symbol;
                     }
                 }
-            }
-
-            private static bool IsSessionType(ITypeSymbol? type)
-            {
-                if (type == null)
-                    return false;
-
-                if (type.Name == KnownTypes.IDocumentSessionName || type.Name == KnownTypes.IAsyncDocumentSessionName)
-                    return true;
-
-                foreach (INamedTypeSymbol iface in type.AllInterfaces)
-                {
-                    if (iface.Name == KnownTypes.IDocumentSessionName || iface.Name == KnownTypes.IAsyncDocumentSessionName)
-                        return true;
-                }
-
-                return false;
             }
 
             public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) { }

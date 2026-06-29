@@ -14,28 +14,43 @@ namespace Raven.Analyzers.Shared
         public static ImmutableHashSet<string> GetPublicMembers(INamedTypeSymbol type)
         {
             var names = new HashSet<string>(System.StringComparer.Ordinal);
-            INamedTypeSymbol? current = type;
 
-            while (current != null && current.SpecialType != SpecialType.System_Object)
+            // Walk the base-type chain (classes). Interfaces have no base type, so their inherited
+            // members live on the interfaces they extend, handled separately below.
+            for (INamedTypeSymbol? current = type;
+                 current != null && current.SpecialType != SpecialType.System_Object;
+                 current = current.BaseType)
             {
-                foreach (ISymbol member in current.GetMembers())
-                {
-                    if (member.IsStatic)
-                        continue;
+                AddPublicInstanceMembers(current, names);
+            }
 
-                    if (member.DeclaredAccessibility != Accessibility.Public)
-                        continue;
-
-                    if (member is IPropertySymbol prop && !prop.IsIndexer)
-                        names.Add(prop.Name);
-                    else if (member is IFieldSymbol)
-                        names.Add(member.Name);
-                }
-
-                current = current.BaseType;
+            // For an interface projection type (e.g. ProjectInto<IMyDto>()), include members inherited
+            // from base interfaces — they are retrievable just like the interface's own members but do
+            // not appear on a (non-existent) base type.
+            if (type.TypeKind == TypeKind.Interface)
+            {
+                foreach (INamedTypeSymbol baseInterface in type.AllInterfaces)
+                    AddPublicInstanceMembers(baseInterface, names);
             }
 
             return names.ToImmutableHashSet();
+        }
+
+        private static void AddPublicInstanceMembers(INamedTypeSymbol type, HashSet<string> names)
+        {
+            foreach (ISymbol member in type.GetMembers())
+            {
+                if (member.IsStatic)
+                    continue;
+
+                if (member.DeclaredAccessibility != Accessibility.Public)
+                    continue;
+
+                if (member is IPropertySymbol prop && !prop.IsIndexer)
+                    names.Add(prop.Name);
+                else if (member is IFieldSymbol)
+                    names.Add(member.Name);
+            }
         }
     }
 }
