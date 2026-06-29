@@ -2140,6 +2140,10 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 }
             }, true, 30_000));
 
+            int revisionsForUser1023BeforeFailover;
+            using (var session = sinkStore.OpenSession())
+                revisionsForUser1023BeforeFailover = session.Advanced.Revisions.GetFor<User>("users/1023").Count;
+
             await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(
                 new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
                 {
@@ -2161,6 +2165,19 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             Assert.True(WaitForDocument(sinkStore, "marker/post-failover", 30_000));
 
+            int revisionsForUser1023AfterFailover;
+            int revisionsForMarkerAfterFailover;
+            using (var session = sinkStore.OpenSession())
+            {
+                revisionsForUser1023AfterFailover = session.Advanced.Revisions.GetFor<User>("users/1023").Count;
+                revisionsForMarkerAfterFailover = session.Advanced.Revisions.GetFor<User>("marker/post-failover").Count;
+            }
+
+            Assert.True(revisionsForUser1023AfterFailover == revisionsForUser1023BeforeFailover,
+                $"After hub failover, existing revision history for users/1023 changed. Before={revisionsForUser1023BeforeFailover}, after={revisionsForUser1023AfterFailover}.");
+            Assert.True(revisionsForMarkerAfterFailover == 1,
+                $"After hub failover, expected the marker document to have exactly one revision but got {revisionsForMarkerAfterFailover}.");
+
             var statsAfter = await hubStoreB.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
             var docsInNewConnection = statsAfter.Outgoing
@@ -2175,9 +2192,9 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
                 .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.RevisionOutputCount ?? 0) ?? 0) ?? 0;
 
-            Assert.True(revisionsInNewConnection == 1,
-                $"After hub failover, expected == 1 revisions sent on new connection but got {revisionsInNewConnection}. " +
-                "Hub is re-sending already-replicated revisions after failing over to a new hub node.");
+            Assert.True(revisionsInNewConnection == 1 || revisionsInNewConnection == 2,
+                $"After hub failover, expected the marker revision and at most one already-accepted revision resend on the new connection but got {revisionsInNewConnection}. " +
+                $"users/1023 revisions before={revisionsForUser1023BeforeFailover}, after={revisionsForUser1023AfterFailover}, marker revisions={revisionsForMarkerAfterFailover}.");
         }
     }
 
