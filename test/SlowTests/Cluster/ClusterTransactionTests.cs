@@ -1039,8 +1039,7 @@ namespace SlowTests.Cluster
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 // bring our SUT node down, but we still have a cluster and can execute cluster transaction.
-                var server = Servers[1];
-                var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+                var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
 
                 const string id = "foo/bar/2";
                 using (var session = leaderStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
@@ -1073,6 +1072,23 @@ namespace SlowTests.Cluster
                     session.Advanced.WaitForIndexesAfterSaveChanges();
                     await session.SaveChangesAsync();
                 }
+
+                long committedRaftIndex = 0;
+                foreach (var server in Servers)
+                {
+                    if (server == Servers[0] || server == Servers[1])
+                        continue;
+
+                    if (server.ServerStore.Disposed || server.ServerStore.Engine.CurrentState == RachisState.Passive)
+                        continue;
+
+                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        committedRaftIndex = Math.Max(committedRaftIndex, server.ServerStore.Engine.GetLastCommitIndex(ctx));
+                    }
+                }
+                await Servers[0].ServerStore.Cluster.WaitForIndexNotification(committedRaftIndex, TimeSpan.FromSeconds(15));
 
                 // bring more nodes down, so only one node is left
                 var task2 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[2]);
