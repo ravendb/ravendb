@@ -570,7 +570,14 @@ namespace Raven.Server.Documents.Replication
                 var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
                 newIncoming.Failed += RetryPullReplication;
 
-                CompletePullReplicationAsSinkHandoff(source, destination, newIncoming);
+                ForTestingPurposes?.BeforePullReplicationAsSinkHandoff?.Invoke();
+
+                if (CompletePullReplicationAsSinkHandoff(source, destination, newIncoming) == false)
+                {
+                    newIncoming.Failed -= RetryPullReplication;
+                    newIncoming.Dispose();
+                    return;
+                }
 
                 PoolOfThreads.PooledThread.ResetCurrentThreadName();
                 Thread.CurrentThread.Name = ThreadNames.GetNameToUse(ThreadNames.ForPullReplicationAsSink($"Pull Replication as Sink from {destination.Database} at {destination.Url}", destination.Database, destination.Url));
@@ -597,26 +604,37 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void CompletePullReplicationAsSinkHandoff(DatabaseOutgoingReplicationHandler source, ReplicationNode destination, IncomingReplicationHandler newIncoming)
+        private bool CompletePullReplicationAsSinkHandoff(DatabaseOutgoingReplicationHandler source, ReplicationNode destination, IncomingReplicationHandler newIncoming)
         {
-            _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
-            IncomingReplicationAdded?.Invoke(newIncoming);
-
             // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
-            RemoveOutgoingHandler(source);
+            if (RemoveOutgoingHandler(source) == false)
+                return false;
+
+            var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
+                (_, val) => val.IsDisposed ? newIncoming : val);
+
+            if (current != newIncoming)
+                return false;
+
+            IncomingReplicationAdded?.Invoke(newIncoming);
 
             if (_outgoingFailureInfo.TryRemove(destination, out ConnectionShutdownInfo info))
                 _reconnectQueue.TryRemove(info);
+
+            return true;
         }
 
-        private void RemoveOutgoingHandler(DatabaseOutgoingReplicationHandler instance)
+        private bool RemoveOutgoingHandler(DatabaseOutgoingReplicationHandler instance)
         {
             instance.Failed -= OnOutgoingSendingFailed;
             instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
             instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
 
-            _outgoing.TryRemove(instance);
+            if (_outgoing.TryRemove(instance) == false)
+                return false;
+
             OutgoingReplicationRemoved?.Invoke(instance);
+            return true;
         }
 
         private void OnAttachmentStreamsReceived(IncomingReplicationHandler source, int attachmentsStreamCount)

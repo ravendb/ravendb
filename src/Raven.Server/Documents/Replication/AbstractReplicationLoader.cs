@@ -82,6 +82,7 @@ namespace Raven.Server.Documents.Replication
             public Action<DatabaseOutgoingReplicationHandler> OnOutgoingReplicationStart;
             public Action<Exception> OnIncomingReplicationHandlerFailure;
             public Action OnIncomingReplicationHandlerStart;
+            public Action BeforePullReplicationAsSinkHandoff;
             public Action BeforeDisposingIncomingReplicationHandlers;
             public Func<Stream, Stream> WrapIncomingReplicationStream;
             public Func<ExternalReplicationBase, bool?> ShouldOwnExternalReplicationTask;
