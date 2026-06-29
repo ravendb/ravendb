@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Config;
@@ -75,6 +76,15 @@ namespace Raven.Server.Integrations.PostgreSQL
                                          "this is an experimental feature and the current server configuration does not allow to use experimental features. " +
                                          $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
                     }
+                }
+
+                if (activate && PgSqlParserNative.IsAvailable == false)
+                {
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"PostgreSQL integration is enabled but the native SQL parser (libpg_query) could not be loaded " +
+                                     $"on this platform ({RuntimeInformation.RuntimeIdentifier}). The integration will not be started. " +
+                                     "The pgsqlparser package does not bundle a native libpg_query binary for this architecture.");
+                    activate = false;
                 }
 
                 if (activate)
