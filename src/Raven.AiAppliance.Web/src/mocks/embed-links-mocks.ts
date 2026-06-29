@@ -13,14 +13,20 @@ export const embedLinksMocks = {
     revoke: () => apiHttp.delete("/api/apps/{slug}/embed-links/{token}", ({ response }) => response(204).empty()),
 };
 
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+const fromNow = (offsetMs: number) => new Date(Date.now() + offsetMs).toISOString();
+
+// Dates are relative to "now" so the channel detail always shows the full spread of
+// statuses: a healthy link, one expiring soon / nearing its limit, and an expired one.
 export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
     {
         token: "3f2a9c1b4d5e6f708192a3b4c5d6e7f8",
         widgetId: SAMPLE_WEB_WIDGET_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/1" },
-        createdAt: "2026-06-14T09:00:00Z",
-        expiresAt: "2026-06-20T09:00:00Z",
+        createdAt: fromNow(-3 * DAY_MS),
+        expiresAt: fromNow(6 * DAY_MS),
         maxInvocations: 100,
         invocationCount: 12,
     },
@@ -29,10 +35,20 @@ export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
         widgetId: SAMPLE_WEB_WIDGET_ID,
         agentId: "agents/sales",
         parameters: { customerId: "users/42" },
-        createdAt: "2026-06-15T11:30:00Z",
-        expiresAt: "2026-06-16T11:30:00Z",
+        createdAt: fromNow(-2 * DAY_MS),
+        expiresAt: fromNow(8 * HOUR_MS),
         maxInvocations: 50,
-        invocationCount: 3,
+        invocationCount: 44,
+    },
+    {
+        token: "1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",
+        widgetId: SAMPLE_WEB_WIDGET_ID,
+        agentId: "agents/sales",
+        parameters: { customerId: "users/108" },
+        createdAt: fromNow(-10 * DAY_MS),
+        expiresAt: fromNow(-2 * DAY_MS),
+        maxInvocations: 200,
+        invocationCount: 200,
     },
 ];
 
