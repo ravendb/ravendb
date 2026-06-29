@@ -36,6 +36,9 @@ internal sealed class GetCdcSinkPerformanceStatisticsOperation : IMaintenanceOpe
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            // The CDC sink's rolling perf window lives on whichever node runs the sink; this hits
+            // the request-executor-selected node, so on a multi-node cluster the snapshot can be
+            // empty/partial. Fine for the single-node appliance and mirrors Studio (review B5).
             url = $"{node.Url}/databases/{node.Database}/cdc-sink/performance";
             return new HttpRequestMessage { Method = HttpMethod.Get };
         }

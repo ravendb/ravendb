@@ -139,13 +139,18 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
         await PutConversationAsync(store, database, id, conversation);
     }
 
-    // PUTs the conversation as a raw document. We serialize with Newtonsoft + TypeNameHandling.None
-    // (the default RavenDB conventions emit $type/$values for object-typed members like the
-    // array-of-parts / {reply} content, which the server's GetConversationMessages reader can't
-    // parse). The real AI runtime stores clean JSON; this matches it.
-    private static async Task PutConversationAsync(IDocumentStore store, string database, string id, SeedConversation conversation)
+    private static Task PutConversationAsync(IDocumentStore store, string database, string id, SeedConversation conversation)
+        => PutConversationDocAsync(store, database, id, conversation);
+
+    /// <summary>PUTs an arbitrary object as a raw <c>@conversations</c> doc. Serialized with
+    /// Newtonsoft + <c>TypeNameHandling.None</c> (the default RavenDB conventions emit
+    /// <c>$type</c>/<c>$values</c> for object-typed members like the array-of-parts / <c>{reply}</c>
+    /// content, which the server's GetConversationMessages reader can't parse). The real AI runtime
+    /// stores clean JSON; this matches it. Pass a partial object to exercise the index's
+    /// missing-member tolerance.</summary>
+    protected static async Task PutConversationDocAsync(IDocumentStore store, string database, string id, object body)
     {
-        var json = JsonConvert.SerializeObject(conversation, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None });
+        var json = JsonConvert.SerializeObject(body, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None });
         using var commands = store.Commands(database);
         var document = commands.ParseJson(json);
         await commands.PutAsync(id, changeVector: null, document,
