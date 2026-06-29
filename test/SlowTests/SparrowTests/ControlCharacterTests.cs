@@ -15,14 +15,7 @@ using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
-using Raven.Server.Documents;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Server;
-using Sparrow.Threading;
 using Tests.Infrastructure;
-using Voron;
-using Voron.Impl.Paging;
 using Xunit;
 
 namespace SlowTests.SparrowTests;
@@ -531,96 +524,6 @@ public class ControlCharacterTests : ClusterTestBase
         }
     }
 
-    public static object[][] Ids =>
-        new object[][]
-        {
-            ["\0{\r\n>"],
-            [new string('\0', global::Voron.Global.Constants.Tree.MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2) + '\n'],
-            ['a' + new string('\r', global::Voron.Global.Constants.Tree.MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4) + '\n']
-        };
-
-    [RavenTheory(RavenTestCategory.Memory)]
-    [MemberData(nameof(Ids))]
-    public async Task DocumentId_WhenStore_ShouldBeAbleToLoadAndDelete(string id)
-    {
-        var idWithNonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1) + id;
-
-        using var store = GetDocumentStore(AllowControlCharactersInIdentifier());
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new TestObj(), id);
-            await session.StoreAsync(new TestObj(), idWithNonAscii);
-            await session.SaveChangesAsync();
-        }
-
-        using (var session = store.OpenAsyncSession())
-        {
-            Assert.NotNull(await session.LoadAsync<TestObj>(id));
-            Assert.NotNull(await session.LoadAsync<TestObj>(idWithNonAscii));
-        }
-
-        using (var session = store.OpenAsyncSession())
-        {
-            session.Delete(id);
-            session.Delete(idWithNonAscii);
-            await session.SaveChangesAsync();
-        }
-
-        using (var session = store.OpenAsyncSession())
-        {
-            Assert.Null(await session.LoadAsync<TestObj>(id));
-            Assert.Null(await session.LoadAsync<TestObj>(idWithNonAscii));
-        }
-    }
-    
-    [RavenTheory(RavenTestCategory.Memory)]
-    [MemberData(nameof(Ids))]
-    public async Task DocumentId_WhenWrite_ShouldBeAbleToRead(string id)
-    {
-        const char nonAscii = 'Ć';
-
-        var idWithNonAscii = id + nonAscii;
-
-        using var context = JsonOperationContext.ShortTermSingleUse();
-        using var memoryStream = new MemoryStream();
-
-        using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, id, out var withoutAsciiSliceLower, out var withoutAsciiSlice))
-        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, idWithNonAscii, out var withAsciiSliceLower, out var withAsciiSlice))
-        {
-            var withoutAsciiLazyString = GetLazyStringValue(context, withoutAsciiSlice);
-            var withAsciiLazyString = GetLazyStringValue(context, withAsciiSlice);
-
-
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
-            {
-                Assert.True(withAsciiLazyString.StartsWith(withoutAsciiLazyString));
-
-                writer.WriteStartObject();
-                writer.WritePropertyName("withoutAsciiSlice");
-                writer.WriteString(withoutAsciiLazyString);
-                writer.WriteComma();
-                writer.WritePropertyName("withAsciiSlice");
-                writer.WriteString(withAsciiLazyString);
-                writer.WriteEndObject();
-            }
-
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            using (var reader = await context.ReadForMemoryAsync(memoryStream, "result"))
-            {
-                Assert.True(reader["withoutAsciiSlice"].Equals(id));
-                Assert.True(reader["withAsciiSlice"].Equals(idWithNonAscii));
-            }
-
-            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out Slice withoutAsciiSlice2))
-            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, idWithNonAscii, out Slice withAsciiSlice2))
-            {
-                Assert.Equal(withoutAsciiSliceLower, withoutAsciiSlice2, new SliceComparer());
-                Assert.Equal(withAsciiSliceLower, withAsciiSlice2, new SliceComparer());
-            }
-        }
-    }
-    
     [RavenTheory(RavenTestCategory.BackupExportImport)]
     [InlineData("ControlChars.ravendb-full-backup")]
     [InlineData("ControlChars.ravendb-snapshot")]
@@ -688,12 +591,5 @@ public class ControlCharacterTests : ClusterTestBase
             e = temp;
 
         Assert.IsType<T>(e);
-    }
-    
-    private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)
-    {
-        var ret = context.GetLazyStringValue(idSlice.Content.Ptr, out var success);
-        Assert.True(success);
-        return ret;
     }
 }

@@ -1330,7 +1330,7 @@ namespace FastTests
 
                 // Get all public const string fields from SupportedFeatures class dynamically
                 record.SupportedFeatures = typeof(Constants.DatabaseRecord.SupportedFeatures)
-                    .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                    .GetFields(BindingFlags.Public | BindingFlags.Static)
                     .Where(f => f.IsLiteral && f.FieldType == typeof(string))
                     .Select(f => (string)f.GetValue(null))
                     .Where(x => x != Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier)
