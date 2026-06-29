@@ -1,0 +1,73 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronsUpDown } from "lucide-react";
+import { api } from "@/api/api";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/shadcn/ui/dropdown-menu";
+import { Spinner } from "@/components/shadcn/ui/spinner";
+import { appRoutes } from "@/lib/app-routes";
+
+type AppBreadcrumbSwitcherProps = {
+    slug: string;
+    appName: string;
+};
+
+export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const navigate = useNavigate();
+    // The list is only needed once the menu opens; fetch lazily like the command palette.
+    const appsQuery = useQuery({ ...api.queries.apps.list(), enabled: isOpen });
+    const apps = appsQuery.data ?? [];
+
+    const switchToApp = (nextSlug: string) => {
+        if (nextSlug !== slug) {
+            navigate(appRoutes.app(nextSlug));
+        }
+    };
+
+    return (
+        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+            <DropdownMenuTrigger
+                aria-label="Switch application"
+                className="flex min-w-0 items-center gap-1 rounded-md text-sm font-semibold text-sidebar-foreground transition-colors outline-none hover:text-sidebar-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                <span className="truncate">{appName}</span>
+                <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-foreground/50" aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuLabel>Switch application</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {apps.length > 0 ? (
+                    <DropdownMenuRadioGroup value={slug}>
+                        {apps.map((app) => (
+                            <DropdownMenuRadioItem
+                                key={app.slug}
+                                value={app.slug}
+                                onSelect={() => switchToApp(app.slug)}
+                            >
+                                <span className="truncate">{app.name}</span>
+                            </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
+                ) : appsQuery.isLoading ? (
+                    <div className="flex items-center gap-2 px-1.5 py-2 text-sm text-muted-foreground">
+                        <Spinner />
+                        Loading applications…
+                    </div>
+                ) : (
+                    <p className="px-1.5 py-2 text-sm text-muted-foreground">
+                        {appsQuery.isError ? "Couldn't load applications." : "No applications yet."}
+                    </p>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}

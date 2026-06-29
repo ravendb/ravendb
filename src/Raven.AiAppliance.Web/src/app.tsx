@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { isAppRouteHandle } from "@/routes";
 import { api } from "@/api/api";
+import { AppBreadcrumbSwitcher } from "@/components/layout/app-breadcrumb-switcher";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { TrialBanner } from "@/components/layout/trial-banner";
@@ -81,12 +82,13 @@ function App() {
                     {breadcrumbLabel && (
                         <>
                             <span className="text-sidebar-foreground/40">/</span>
-                            <Link
-                                to={hasActiveApp && slug ? appRoutes.app(slug) : "."}
-                                className="truncate text-sm font-semibold text-sidebar-foreground"
-                            >
-                                {breadcrumbLabel}
-                            </Link>
+                            {hasActiveApp && slug ? (
+                                <AppBreadcrumbSwitcher slug={slug} appName={breadcrumbLabel} />
+                            ) : (
+                                <Link to="." className="truncate text-sm font-semibold text-sidebar-foreground">
+                                    {breadcrumbLabel}
+                                </Link>
+                            )}
                         </>
                     )}
                 </div>
