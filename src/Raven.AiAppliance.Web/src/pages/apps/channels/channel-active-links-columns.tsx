@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Copy, Eye, Trash2 } from "lucide-react";
 import type { EmbedLinkSummaryResponse } from "@/api/generated/server-api";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { Parameters } from "@/components/data/parameters";
 import { Button } from "@/components/shadcn/ui/button";
 import { copyToClipboard, formatDateTime } from "@/lib/utils";
 import { buildEmbedUrl } from "@/pages/apps/channels/embed-link-utils";
@@ -24,7 +24,11 @@ export function createActiveLinkColumns(slug: string): ColumnDef<EmbedLinkSummar
         {
             id: "parameters",
             header: "Parameters",
-            cell: ({ row }) => <LinkParameters parameters={row.original.parameters} />,
+            cell: ({ row }) => (
+                <Parameters
+                    params={Object.entries(row.original.parameters).map(([name, value]) => ({ name, value }))}
+                />
+            ),
         },
         {
             accessorKey: "createdAt",
@@ -91,22 +95,5 @@ function LinkActions({ slug, link }: { slug: string; link: EmbedLinkSummaryRespo
                 }
             />
         </div>
-    );
-}
-
-function LinkParameters({ parameters }: { parameters: Record<string, string> }) {
-    const entries = Object.entries(parameters);
-    if (entries.length === 0) {
-        return <span className="text-muted-foreground">—</span>;
-    }
-
-    return (
-        <span className="flex gap-1.5">
-            {entries.map(([name, value]) => (
-                <Badge key={name} variant="secondary" className="font-mono font-normal">
-                    {name}: {value}
-                </Badge>
-            ))}
-        </span>
     );
 }
