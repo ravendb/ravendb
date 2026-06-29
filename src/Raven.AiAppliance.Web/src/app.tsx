@@ -144,7 +144,7 @@ function App() {
                 {!isPageTitleHidden && (
                     <h1 className="text-2xl font-semibold tracking-tight">{activeRoute?.title ?? "My apps"}</h1>
                 )}
-                <div className="min-h-0 overflow-auto">
+                <div className={cn("min-h-0 overflow-auto", !isBareLayout && "-mx-2 px-2")}>
                     <Outlet />
                 </div>
             </main>
