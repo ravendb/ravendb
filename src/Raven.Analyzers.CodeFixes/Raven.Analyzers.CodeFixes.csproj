@@ -3,6 +3,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Raven.Analyzers.CodeFixes</AssemblyName>
     <IsRoslynComponent>true</IsRoslynComponent>
+    <!-- Activate RS1038 (and the rest of the extended analyzer ruleset) here too, so that if a
+         DiagnosticAnalyzer is ever added to this project the compiler-only-reference rule is
+         enforced rather than silently dormant — matching the sibling Raven.Analyzers project. -->
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
     <LangVersion>preview</LangVersion>

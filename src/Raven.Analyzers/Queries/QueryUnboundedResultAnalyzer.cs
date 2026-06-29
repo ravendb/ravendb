@@ -43,8 +43,10 @@ namespace Raven.Analyzers.Queries
                 return;
 
             // Walk the receiver chain. A .Take(...) call anywhere before the materializing
-            // call means the query is bounded — do not flag.
-            foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(memberAccess.Expression))
+            // call means the query is bounded — do not flag. The chain walk follows the receiver
+            // through a local variable so a query bounded in a prior statement
+            // (var q = session.Query<T>().Take(10); q.ToList();) is recognised as bounded.
+            foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(memberAccess.Expression, context.SemanticModel))
             {
                 if (SyntaxHelpers.GetMethodName(chainCall) == KnownTypes.TakeMethodName)
                     return;

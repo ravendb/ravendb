@@ -134,17 +134,20 @@ namespace Raven.Analyzers.Sessions
                 // stays in lockstep with the code fix, which cannot batch it without dropping the argument.
                 if (QueryMaterializingMethods.Contains(methodName)
                     && invocation.ArgumentList.Arguments.Count == 0
-                    && SyntaxHelpers.IsRavenQueryable(receiverType))
+                    && SyntaxHelpers.IsRavenQueryable(receiverType)
+                    && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol))
                 {
+                    // The matched name is the genuine framework materializer (Enumerable.ToList,
+                    // Raven's async query extensions), not a same-named user-defined extension.
                     ISymbol? sessionSymbol = ResolveSessionSymbolFromQueryChain(memberAccess.Expression);
-                    BatchableCalls.Add((invocation, methodName, sessionSymbol));
+                    BatchableCalls.Add((invocation, methodName, AsStableInstanceSymbol(sessionSymbol)));
                     base.VisitInvocationExpression(invocation);
                     return;
                 }
 
                 // Check for session loads
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
-                    IsSessionType(receiverType))
+                    SyntaxHelpers.IsSessionType(receiverType))
                 {
                     if (invocation.ArgumentList.Arguments.Count > 0)
                     {
@@ -152,7 +155,7 @@ namespace Raven.Analyzers.Sessions
                         if (IsIndependentArg(firstArg))
                         {
                             ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
-                            BatchableCalls.Add((invocation, methodName, sessionSymbol));
+                            BatchableCalls.Add((invocation, methodName, AsStableInstanceSymbol(sessionSymbol)));
                         }
                     }
                     base.VisitInvocationExpression(invocation);
@@ -185,22 +188,14 @@ namespace Raven.Analyzers.Sessions
                 }
             }
 
-            private static bool IsSessionType(ITypeSymbol? type)
-            {
-                if (type == null)
-                    return false;
-
-                if (type.Name == KnownTypes.IDocumentSessionName || type.Name == KnownTypes.IAsyncDocumentSessionName)
-                    return true;
-
-                foreach (INamedTypeSymbol iface in type.AllInterfaces)
-                {
-                    if (iface.Name == KnownTypes.IDocumentSessionName || iface.Name == KnownTypes.IAsyncDocumentSessionName)
-                        return true;
-                }
-
-                return false;
-            }
+            // Only a local, parameter, or field denotes a stable session instance that two calls
+            // can be proven to share. A property getter or method call (e.g. GetSession() or a
+            // Session property) may return a fresh session each invocation, so such receivers must
+            // not be grouped as "the same session" — doing so would let the code fix merge calls
+            // onto one receiver and silently change semantics. Returning null excludes them from
+            // grouping (they are filtered out before the 2+ check).
+            private static ISymbol? AsStableInstanceSymbol(ISymbol? symbol) =>
+                symbol is ILocalSymbol or IParameterSymbol or IFieldSymbol ? symbol : null;
 
             private bool IsIndependentArg(ArgumentSyntax arg)
             {
@@ -319,7 +314,7 @@ namespace Raven.Analyzers.Sessions
 
                             // Check if initializer is a session load
                             if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
-                                IsSessionType(receiverType))
+                                SyntaxHelpers.IsSessionType(receiverType))
                             {
                                 _materializationDerivedSet.Add(symbol);
                                 continue;
@@ -349,23 +344,6 @@ namespace Raven.Analyzers.Sessions
             public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
             {
                 // Skip local functions
-            }
-
-            private static bool IsSessionType(ITypeSymbol? type)
-            {
-                if (type == null)
-                    return false;
-
-                if (type.Name == KnownTypes.IDocumentSessionName || type.Name == KnownTypes.IAsyncDocumentSessionName)
-                    return true;
-
-                foreach (INamedTypeSymbol iface in type.AllInterfaces)
-                {
-                    if (iface.Name == KnownTypes.IDocumentSessionName || iface.Name == KnownTypes.IAsyncDocumentSessionName)
-                        return true;
-                }
-
-                return false;
             }
         }
 

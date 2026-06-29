@@ -121,6 +121,9 @@ namespace Raven.Analyzers
         public const string StoreMethodName = "Store";
         public const string StoresPropertyName = "Stores";
         public const string StoresStringsPropertyName = "StoresStrings";
+        public const string FieldStorageTypeName = "FieldStorage";
+        public const string FieldStorageYes = "Yes";
+        public const string FieldStorageNo = "No";
 
         // Projection behavior
         public const string CustomizeMethodName = "Customize";

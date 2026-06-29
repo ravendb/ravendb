@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Analyzers.Shared;
 
 namespace Raven.Analyzers.CodeFixes.Subscriptions
 {
@@ -32,7 +33,11 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                 .Document.GetSyntaxRootAsync(context.CancellationToken)
                 .ConfigureAwait(false);
 
-            if (root == null)
+            SemanticModel? model = await context
+                .Document.GetSemanticModelAsync(context.CancellationToken)
+                .ConfigureAwait(false);
+
+            if (root == null || model == null)
                 return;
 
             Diagnostic diagnostic = context.Diagnostics.First();
@@ -48,7 +53,7 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
             if (memberAccess.Parent is not InvocationExpressionSyntax openSessionInvocation)
                 return;
 
-            string? batchParamName = FindRunLambdaBatchParameterName(openSessionInvocation);
+            string? batchParamName = FindRunLambdaBatchParameterName(openSessionInvocation, model);
             if (batchParamName == null)
                 return;
 
@@ -61,7 +66,7 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                 diagnostic);
         }
 
-        private static string? FindRunLambdaBatchParameterName(SyntaxNode node)
+        private static string? FindRunLambdaBatchParameterName(SyntaxNode node, SemanticModel model)
         {
             SyntaxNode? current = node.Parent;
 
@@ -86,12 +91,14 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                 if (current is SimpleLambdaExpressionSyntax or
                                ParenthesizedLambdaExpressionSyntax)
                 {
-                    if (IsRunLambda(current))
+                    if (IsRunLambda(current, model))
                         return ExtractFirstParameterName(current);
 
-                    // The OpenSession call is inside a nested (non-Run) lambda.
-                    // Rewriting it to batch.OpenSession() could be incorrect if the lambda
-                    // outlives the subscription batch, so bail rather than produce a wrong fix.
+                    // The OpenSession call is inside a nested lambda that is NOT a subscription
+                    // worker's Run lambda (e.g. an unrelated method also named Run, or any other
+                    // lambda). Rewriting its receiver to batch.OpenSession() would bind to the wrong
+                    // parameter (producing uncompilable code) or move work into a scope that may
+                    // outlive the batch, so bail rather than produce a wrong fix.
                     return null;
                 }
 
@@ -107,7 +114,11 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
             return null;
         }
 
-        private static bool IsRunLambda(SyntaxNode lambdaNode)
+        // Mirrors the analyzer's IsArgumentToRunOnSubscriptionWorker: the lambda must be an argument
+        // to a method named Run whose receiver is a SubscriptionWorker. The receiver-type check (via
+        // the semantic model) is what keeps the fix from misfiring on an unrelated method named Run —
+        // without it the fix could rewrite store.OpenSession() to a foreign lambda parameter.
+        private static bool IsRunLambda(SyntaxNode lambdaNode, SemanticModel model)
         {
             if (lambdaNode.Parent is not ArgumentSyntax)
                 return false;
@@ -119,7 +130,11 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
             if (runInvocation.Expression is not MemberAccessExpressionSyntax ma)
                 return false;
 
-            return ma.Name.Identifier.Text == KnownTypes.RunMethodName;
+            if (ma.Name.Identifier.Text != KnownTypes.RunMethodName)
+                return false;
+
+            ITypeSymbol? receiverType = model.GetTypeInfo(ma.Expression).Type;
+            return SyntaxHelpers.IsSubscriptionWorkerType(receiverType);
         }
 
         private static string? ExtractFirstParameterName(SyntaxNode lambdaNode)

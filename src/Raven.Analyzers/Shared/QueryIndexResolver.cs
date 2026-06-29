@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Raven.Analyzers.Shared
 {
@@ -12,6 +14,53 @@ namespace Raven.Analyzers.Shared
     /// </summary>
     internal static class QueryIndexResolver
     {
+        /// <summary>
+        /// Builds the index-name → index-class registry both query analyzers query when a string
+        /// <c>indexName</c> is used. Registered once per compilation. The value is <c>null</c> when
+        /// the name is <em>ambiguous</em> — two or more distinct index classes resolve to the same
+        /// name (e.g. same short name in different namespaces). An ambiguous name cannot be resolved
+        /// to a single field set, so it must not be validated (doing so would false-positive against
+        /// the wrong index). A single registry build keeps the two analyzers in lockstep.
+        /// </summary>
+        internal static ConcurrentDictionary<string, INamedTypeSymbol?> CreateIndexNameRegistry(
+            CompilationStartAnalysisContext startCtx)
+        {
+            var registry = new ConcurrentDictionary<string, INamedTypeSymbol?>(StringComparer.Ordinal);
+
+            startCtx.RegisterSymbolAction(symCtx =>
+            {
+                var type = (INamedTypeSymbol)symCtx.Symbol;
+                if (!SyntaxHelpers.IsIndexCreationTask(type))
+                    return;
+
+                string? key = ComputeIndexKey(type);
+                if (key == null)
+                    return;
+
+                // First registration wins the slot; a second, distinct type collapses it to null
+                // (ambiguous) and it stays null thereafter.
+                registry.AddOrUpdate(
+                    key,
+                    type,
+                    (_, existing) => SymbolEqualityComparer.Default.Equals(existing, type) ? existing : null);
+            }, SymbolKind.NamedType);
+
+            return registry;
+        }
+
+        /// <summary>
+        /// Computes the index name an index class registers under: the overridden <c>IndexName</c>
+        /// literal when present, otherwise the conventional name (type name with <c>_</c> → <c>/</c>).
+        /// Returns null when the class overrides IndexName with a value that cannot be read statically,
+        /// so it is left unregistered rather than registered under the wrong key.
+        /// </summary>
+        private static string? ComputeIndexKey(INamedTypeSymbol type)
+        {
+            if (TryGetOverriddenIndexNameLiteral(type, out string? overridden))
+                return overridden;
+
+            return type.Name.Replace("_", "/");
+        }
         /// <summary>
         /// Returns true when the invocation is session.Query&lt;…&gt;() on IDocumentSession or IAsyncDocumentSession.
         /// </summary>
@@ -51,7 +100,7 @@ namespace Raven.Analyzers.Shared
         internal static INamedTypeSymbol? ResolveIndexClass(
             InvocationExpressionSyntax invocation,
             SemanticModel model,
-            ConcurrentDictionary<string, INamedTypeSymbol> indexByName)
+            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName)
         {
             ISymbol? symbol = model.GetSymbolInfo(invocation).Symbol;
             if (symbol is not IMethodSymbol method)

@@ -56,7 +56,7 @@ namespace Raven.Analyzers.Queries
                     if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method))
                         continue;
 
-                    Location location = GetInvocationNameLocation(nested);
+                    Location location = SyntaxHelpers.GetInvocationNameLocation(nested);
                     context.ReportDiagnostic(Diagnostic.Create(
                         DiagnosticDescriptors.QueryUnsupportedMethodCall,
                         location,
@@ -72,15 +72,6 @@ namespace Raven.Analyzers.Queries
             if (expr is ParenthesizedLambdaExpressionSyntax paren)
                 return paren.Body;
             return null;
-        }
-
-        private static Location GetInvocationNameLocation(InvocationExpressionSyntax invocation)
-        {
-            if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
-                return memberAccess.Name.GetLocation();
-            if (invocation.Expression is IdentifierNameSyntax identifier)
-                return identifier.GetLocation();
-            return invocation.GetLocation();
         }
     }
 }
