@@ -97,6 +97,9 @@
     <None Include="..\..\libs\libzstd\libzstd.arm.64.so" Link="libzstd.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\libs\libpgquery\libpg_query.linux.arm64.so" Link="libpg_query.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm32)' == 'true'">
     <None Include="..\..\libs\librvnpal\librvnpal.arm.32.so" Link="librvnpal.arm.32.so">
