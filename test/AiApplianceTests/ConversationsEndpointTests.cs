@@ -49,7 +49,8 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        // List — newest first, last-exchange preview, derived state/initials.
+        // List — newest first, metadata only (no transcript/last-exchange; that's detail-only),
+        // derived state/initials, channel attribution.
         var list = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations");
         Assert.Equal(2, list.GetArrayLength());
 
@@ -59,8 +60,8 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         Assert.Equal("order-support", first.GetProperty("agentName").GetString());
         Assert.Equal("OS", first.GetProperty("agentInitials").GetString());
         Assert.Equal("active", first.GetProperty("state").GetString());          // 10 min ago
-        Assert.Equal(2, first.GetProperty("lastExchange").GetArrayLength());
-        Assert.Equal("agent", first.GetProperty("lastExchange")[0].GetProperty("role").GetString()); // newest first
+        Assert.Empty(first.GetProperty("lastExchange").EnumerateArray());        // list carries no preview
+        Assert.Equal(JsonValueKind.Null, first.GetProperty("transcript").ValueKind);
         Assert.Equal("wgt1", first.GetProperty("channelName").GetString());      // attributed via EmbedLink
 
         Assert.Equal("closed", list[1].GetProperty("state").GetString());        // 3 days ago
@@ -120,6 +121,28 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         // An unknown chats/ id also 404s.
         var unknown = await client.GetAsync("/api/apps/my-app/conversations/chats/does-not-exist");
         Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Conversations_list_loads_all_pages()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        // One past a single 1024-doc LoadStartingWith page — the list must page to return them all.
+        const int count = 1025;
+        var now = DateTime.UtcNow;
+        await using (var bulk = store.BulkInsert(perAppDb))
+            for (var i = 0; i < count; i++)
+                await bulk.StoreAsync(new { Agent = "demo", CreatedAt = now, LastMessageAt = now }, $"chats/{i:D5}");
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations");
+        Assert.Equal(count, list.GetArrayLength());
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]

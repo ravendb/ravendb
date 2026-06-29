@@ -10,11 +10,12 @@ namespace AiApplianceTests;
 
 /// <summary>
 /// Coverage for the global <c>GET /api/usage</c> endpoint — the backend behind the
-/// prototype's <c>api.getUsage()</c>. Contract (mock-api.ts): <c>UsagePoint[]</c> of
-/// <c>{ timestamp, invocations, tokens }</c>, one contiguous point per hour over the
-/// last 24h, summed across every app DB. <c>invocations</c> = agent turns (messages)
-/// in the hour; <c>tokens</c> = summed token usage. Aggregated from the per-app
-/// <see cref="ConversationMetricsIndex"/>; no live LLM.
+/// prototype's <c>api.getUsage()</c>. Contract: <c>UsagePoint[]</c> of
+/// <c>{ timestamp, conversations, messages, tokens }</c>, one contiguous point per
+/// bucket over the window (<c>time</c> = <c>Last24h</c> hourly / <c>Last7d</c> /
+/// <c>Last30d</c> daily), summed across every app DB (or scoped via <c>app</c>).
+/// <c>messages</c> = user turns in the bucket; <c>tokens</c> = summed token usage.
+/// Aggregated from the per-app <see cref="ConversationMetricsIndex"/>; no live LLM.
 /// </summary>
 public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
 {
@@ -49,7 +50,7 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         foreach (var p in points.EnumerateArray())
         {
             Assert.True(p.TryGetProperty("timestamp", out _), "point is missing 'timestamp'");
-            totalInvocations += p.GetProperty("invocations").GetInt64();
+            totalInvocations += p.GetProperty("messages").GetInt64();
             totalTokens += p.GetProperty("tokens").GetInt64();
         }
 
@@ -87,7 +88,7 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         long totalInvocations = 0, totalTokens = 0;
         foreach (var p in points.EnumerateArray())
         {
-            totalInvocations += p.GetProperty("invocations").GetInt64();
+            totalInvocations += p.GetProperty("messages").GetInt64();
             totalTokens += p.GetProperty("tokens").GetInt64();
         }
 
@@ -115,7 +116,7 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         var points = await client.GetFromJsonAsync<JsonElement>("/api/usage");
         long invocations = 0;
         foreach (var p in points.EnumerateArray())
-            invocations += p.GetProperty("invocations").GetInt64();
+            invocations += p.GetProperty("messages").GetInt64();
         Assert.Equal(1, invocations);  // only the user message counts (not system/assistant/tool)
     }
 
@@ -136,7 +137,7 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         var points = await resp.Content.ReadFromJsonAsync<JsonElement>();
         long invocations = 0;
         foreach (var p in points.EnumerateArray())
-            invocations += p.GetProperty("invocations").GetInt64();
+            invocations += p.GetProperty("messages").GetInt64();
         Assert.Equal(0, invocations);
     }
 
@@ -177,7 +178,7 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         long invocations = 0, tokens = 0;
         foreach (var p in points.EnumerateArray())
         {
-            invocations += p.GetProperty("invocations").GetInt64();
+            invocations += p.GetProperty("messages").GetInt64();
             tokens += p.GetProperty("tokens").GetInt64();
         }
         Assert.Equal(3, invocations);
@@ -186,5 +187,88 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         // The global dashboard fan-out is resilient too.
         var dashResp = await client.GetAsync("/api/dashboard");
         Assert.Equal(HttpStatusCode.OK, dashResp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_window_controls_granularity_and_point_count()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
+
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(store, perAppDb, "chats/a", "support", now.AddDays(-2), messages: 2, tokens: 100);
+        await Indexes.WaitForIndexingAsync(store, perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // Last24h → 24 hourly, Last7d → 7 daily, Last30d → 30 daily (contiguous, zero-filled).
+        Assert.Equal(24, (await client.GetFromJsonAsync<JsonElement>("/api/usage?time=Last24h")).GetArrayLength());
+        Assert.Equal(7, (await client.GetFromJsonAsync<JsonElement>("/api/usage?time=Last7d")).GetArrayLength());
+        var d30 = await client.GetFromJsonAsync<JsonElement>("/api/usage?time=Last30d");
+        Assert.Equal(30, d30.GetArrayLength());
+
+        // The 2-days-ago conversation lands in the 30d window with all three metrics.
+        long conv = 0, msg = 0, tok = 0;
+        foreach (var p in d30.EnumerateArray())
+        {
+            conv += p.GetProperty("conversations").GetInt64();
+            msg += p.GetProperty("messages").GetInt64();
+            tok += p.GetProperty("tokens").GetInt64();
+        }
+        Assert.Equal(1, conv);
+        Assert.Equal(2, msg);
+        Assert.Equal(100, tok);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_app_param_scopes_to_a_single_app()
+    {
+        var store = GetDocumentStore();
+        var (db1, c1) = await CreatePerAppDatabaseAsync(store);
+        using var _1 = c1;
+        var (db2, c2) = await CreatePerAppDatabaseAsync(store);
+        using var _2 = c2;
+        await SeedAppAsync(store, slug: "app-one", database: db1);
+        await SeedAppAsync(store, slug: "app-two", database: db2);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: db1);
+        await new ConversationMetricsIndex().ExecuteAsync(store, database: db2);
+
+        var now = DateTime.UtcNow;
+        await SeedConversationAsync(store, db1, "chats/a", "x", now.AddHours(-1), messages: 2, tokens: 50);
+        await SeedConversationAsync(store, db2, "chats/b", "y", now.AddHours(-1), messages: 4, tokens: 70);
+        await Indexes.WaitForIndexingAsync(store, db1);
+        await Indexes.WaitForIndexingAsync(store, db2);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        static long Sum(JsonElement points, string field)
+        {
+            long s = 0;
+            foreach (var p in points.EnumerateArray()) s += p.GetProperty(field).GetInt64();
+            return s;
+        }
+
+        var appOne = await client.GetFromJsonAsync<JsonElement>("/api/usage?time=Last24h&app=app-one");
+        Assert.Equal(2, Sum(appOne, "messages"));   // only app-one's data
+        Assert.Equal(50, Sum(appOne, "tokens"));
+
+        var all = await client.GetFromJsonAsync<JsonElement>("/api/usage?time=Last24h");
+        Assert.Equal(6, Sum(all, "messages"));       // both apps summed
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Usage_rejects_invalid_time()
+    {
+        var store = GetDocumentStore();
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.GetAsync("/api/usage?time=5d");
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 }

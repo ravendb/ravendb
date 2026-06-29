@@ -35,7 +35,7 @@ public sealed record MetricCard(double Value, double Delta, double[] Sparkline);
 /// <c>{ t, &lt;key&gt;: number, ... }</c>; <c>Keys</c> names/labels/colors each series.</summary>
 public sealed record SeriesData(Dictionary<string, object>[] Points, SeriesKey[] Keys);
 
-public sealed record SeriesKey(string Key, string Label, string Color);
+public sealed record SeriesKey(string Key, string Label);
 
 public sealed record CdcWritePoint(string T, long Writes);
 

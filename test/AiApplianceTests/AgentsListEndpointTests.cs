@@ -38,7 +38,8 @@ public class AgentsListEndpointTests(ITestOutputHelper output) : ApplianceMetric
         var list = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/agents");
         var agent = list.EnumerateArray().Single(a => a.GetProperty("agentId").GetString() == agentId);
 
-        Assert.Equal(2, agent.GetProperty("invocations").GetInt64());          // two conversations
+        Assert.Equal(2, agent.GetProperty("conversations").GetInt64());        // two conversations
+        Assert.Equal(2, agent.GetProperty("messages").GetInt64());             // one user message each
         Assert.Equal("gpt-4o-mini", agent.GetProperty("model").GetString());   // from the connection string
         Assert.Equal(JsonValueKind.String, agent.GetProperty("lastInvokedAt").ValueKind); // present
         Assert.EndsWith("Z\"", agent.GetProperty("lastInvokedAt").GetRawText()); // I1: UTC, ISO-8601 with Z

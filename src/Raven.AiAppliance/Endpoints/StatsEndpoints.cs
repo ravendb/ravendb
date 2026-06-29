@@ -26,7 +26,9 @@ public static class StatsEndpoints
             .RequireAuthorization()
             .Produces<DashboardResponse>();
 
-        // Global hourly usage series (mock-api `getUsage()`) — last 24h, all apps.
+        // Usage series (conversations / messages / tokens) over a window — global or per-app.
+        // `GET /api/usage?time={Last24h|Last7d|Last30d}&app={slug}` (app omitted → summed across
+        // all apps). `time` binds the UsageWindow enum directly — an unknown value 400s in binding.
         app.MapGet("/api/usage", GetUsageAsync)
             .WithTags("stats")
             .WithName("stats.usage")
@@ -99,11 +101,6 @@ public static class StatsEndpoints
             .Produces<ConversationStatsResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        group.MapGet("/agents/stats", GetAgentStatsAsync)
-            .WithName("stats.agents")
-            .Produces<AgentStatsResponse>()
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
-
         group.MapGet("/channels/stats", GetChannelStatsAsync)
             .WithName("stats.channels")
             .Produces<ChannelStatsResponse>()
@@ -123,10 +120,12 @@ public static class StatsEndpoints
     private static async Task<IResult> GetUsageAsync(
         IDocumentStore store,
         ILoggerFactory loggerFactory,
-        CancellationToken ct)
+        CancellationToken ct,
+        UsageWindow time = UsageWindow.Last24h,
+        string? app = null)
     {
         var usage = await MetricsReadService.GetUsageAsync(
-            store, DateTime.UtcNow, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
+            store, time, app, DateTime.UtcNow, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(usage);
     }
 
@@ -276,19 +275,6 @@ public static class StatsEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         var stats = await MetricsReadService.GetConversationStatsAsync(store, app.Database, DateTime.UtcNow, ct);
-        return Results.Ok(stats);
-    }
-
-    private static async Task<IResult> GetAgentStatsAsync(
-        string slug,
-        IDocumentStore store,
-        CancellationToken ct)
-    {
-        var app = await AppLookup.LoadAppAsync(store, slug, ct);
-        if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
-
-        var stats = await MetricsReadService.GetAgentStatsAsync(store, app.Database, DateTime.UtcNow, ct);
         return Results.Ok(stats);
     }
 

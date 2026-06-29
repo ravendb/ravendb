@@ -1,9 +1,9 @@
 namespace Raven.AiAppliance.Contracts;
 
 /// <summary>
-/// One hourly point of the global usage series — the prototype's
-/// <c>UsagePoint</c> (mock-api.ts). <paramref name="Invocations"/> = agent turns
-/// (messages) in the hour starting at <paramref name="Timestamp"/> (UTC);
-/// <paramref name="Tokens"/> = summed token usage in that hour.
+/// One point of a usage series (<c>GET /api/usage?time=…&amp;app=…</c>) — the bucket
+/// starting at <paramref name="Timestamp"/> (UTC). <paramref name="Conversations"/> =
+/// conversations started, <paramref name="Messages"/> = user messages (agent turns),
+/// <paramref name="Tokens"/> = summed token usage, all within the bucket.
 /// </summary>
-public sealed record UsagePoint(DateTime Timestamp, long Invocations, long Tokens);
+public sealed record UsagePoint(DateTime Timestamp, long Conversations, long Messages, long Tokens);

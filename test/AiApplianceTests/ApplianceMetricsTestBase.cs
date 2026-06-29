@@ -1,5 +1,6 @@
 using AiApplianceTests.E2E.Fixtures;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Wizard;
 using Raven.Client;
@@ -94,7 +95,6 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
         IDocumentStore store, string database, string id, string agent, DateTime createdAt,
         int messages = 1, long tokens = 0, (string Role, string Text)[]? turns = null)
     {
-        using var session = store.OpenAsyncSession(database);
         var conversation = new SeedConversation
         {
             Agent = agent,
@@ -110,9 +110,7 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
             for (var i = 0; i < messages; i++)
                 conversation.Messages.Add(new SeedMessage { date = createdAt, role = "user" });
 
-        await session.StoreAsync(conversation, id);
-        session.Advanced.GetMetadataFor(conversation)[Constants.Documents.Metadata.Collection] = "@conversations";
-        await session.SaveChangesAsync();
+        await PutConversationAsync(store, database, id, conversation);
     }
 
     /// <summary>Seeds a <c>@conversations</c> doc shaped like the real AI-runtime output:
@@ -122,7 +120,6 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
     protected static async Task SeedRealisticConversationAsync(
         IDocumentStore store, string database, string id, string agent, DateTime createdAt, long tokens = 0)
     {
-        using var session = store.OpenAsyncSession(database);
         var conversation = new SeedConversation
         {
             Agent = agent,
@@ -132,19 +129,41 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
             Messages =
             [
                 new SeedMessage { date = createdAt, role = "system", content = "You are a helpful assistant." },
-                new SeedMessage { date = createdAt, role = "user", content = "hello" },
-                new SeedMessage { date = createdAt, role = "assistant", content = new object[] { new { type = "text", text = "hi there" } } },
-                new SeedMessage { date = createdAt, role = "tool", content = "{\"result\":42}" },
+                new SeedMessage { date = createdAt, role = "user", content = new List<object> { new Dictionary<string, object> { ["type"] = "text", ["text"] = "hello" } } },
+                new SeedMessage { date = createdAt, role = "assistant", content = new Dictionary<string, object> { ["reply"] = "hi there" } },
+                // tool-call step: assistant message with tool_calls but no content — must be dropped.
+                new SeedMessage { date = createdAt.AddSeconds(1), role = "assistant", content = null },
+                new SeedMessage { date = createdAt.AddSeconds(2), role = "tool", content = "{\"result\":42}" },
             ],
         };
-        await session.StoreAsync(conversation, id);
-        session.Advanced.GetMetadataFor(conversation)[Constants.Documents.Metadata.Collection] = "@conversations";
-        await session.SaveChangesAsync();
+        await PutConversationAsync(store, database, id, conversation);
     }
 
+    // PUTs the conversation as a raw document. We serialize with Newtonsoft + TypeNameHandling.None
+    // (the default RavenDB conventions emit $type/$values for object-typed members like the
+    // array-of-parts / {reply} content, which the server's GetConversationMessages reader can't
+    // parse). The real AI runtime stores clean JSON; this matches it.
+    private static async Task PutConversationAsync(IDocumentStore store, string database, string id, SeedConversation conversation)
+    {
+        var json = JsonConvert.SerializeObject(conversation, new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None });
+        using var commands = store.Commands(database);
+        var document = commands.ParseJson(json);
+        await commands.PutAsync(id, changeVector: null, document,
+            new Dictionary<string, object> { [Constants.Documents.Metadata.Collection] = "@conversations" });
+    }
+
+    // Mirrors the real @conversations doc shape so the server's GetConversationMessages
+    // operation (ConversationDocument.ToDocument) can read it: Parameters / LinkedConversations
+    // / OpenActionCalls / Expires are all required (the metrics index tolerates their absence,
+    // the operation does not). Property casing must match (PascalCase top-level, lowercase
+    // role/content/date per message).
     private sealed class SeedConversation
     {
         public string Agent { get; set; } = "";
+        public Dictionary<string, object> Parameters { get; set; } = new();
+        public List<string> LinkedConversations { get; set; } = [];
+        public Dictionary<string, object> OpenActionCalls { get; set; } = new();
+        public TimeSpan? Expires { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime LastMessageAt { get; set; }
         public List<SeedMessage> Messages { get; set; } = [];
