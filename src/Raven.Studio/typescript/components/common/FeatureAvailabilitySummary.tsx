@@ -36,7 +36,7 @@ export interface FeatureAvailabilityData {
     professional: FeatureAvailabilityValueData;
     enterprise: FeatureAvailabilityValueData;
     enterpriseAi?: FeatureAvailabilityValueData; // if not set, use enterprise value
-    quill?: FeatureAvailabilityValueData;
+    quill: FeatureAvailabilityValueData;
 }
 
 interface FeatureAvailabilitySummaryProps {
@@ -319,6 +319,7 @@ function FeatureAvailabilitySummaryModal({
     toggleIsOpen,
 }: FeatureAvailabilitySummaryProps & { toggleIsOpen: () => void }) {
     const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isQuill = licenseType === "Quill";
 
     return (
         <Modal size="lg" show onHide={toggleIsOpen} contentClassName="modal-border bulge-primary">
@@ -326,7 +327,7 @@ function FeatureAvailabilitySummaryModal({
                 <div>
                     <h3>
                         <Icon icon="license" color="primary" />
-                        License comparison
+                        {isQuill ? "License features" : "License comparison"}
                     </h3>
                     {licenseType !== "Developer" && licenseType !== "Quill" && (
                         <>
@@ -357,6 +358,11 @@ function FeatureAvailabilitySummaryModal({
 function UpgradeLinkButton() {
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
     const cloudPricingLink = "https://cloud.ravendb.net/pricing";
+    const isQuill = useAppSelector(licenseSelectors.licenseType) === "Quill";
+
+    if (isQuill) {
+        return null;
+    }
 
     if (isCloud) {
         return (

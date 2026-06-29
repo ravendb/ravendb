@@ -101,17 +101,20 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: 1 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Limit per cluster",
         community: { value: 5 },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Server-wide custom sorters",
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
 ];

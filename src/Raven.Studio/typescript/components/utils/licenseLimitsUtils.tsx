@@ -72,6 +72,7 @@ export function useProfessionalOrAboveLicenseAvailability(isFeatureInLicense: bo
             community: { value: false },
             professional: { value: true },
             enterprise: { value: true },
+            quill: { value: true },
         },
     ];
 
@@ -84,6 +85,7 @@ export function useEnterpriseLicenseAvailability(isFeatureInLicense: boolean): F
             community: { value: false },
             professional: { value: false },
             enterprise: { value: true },
+            quill: { value: true },
         },
     ];
 
