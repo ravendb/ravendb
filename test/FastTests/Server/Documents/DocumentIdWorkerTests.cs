@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -9,15 +10,12 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
-using Voron.Impl.Paging;
 using Xunit;
 
 namespace FastTests.Server.Documents
 {
     public class DocumentIdWorkerTests : RavenTestBase
     {
-        private const int MaxKeySize = 2025;
-
         public DocumentIdWorkerTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -121,8 +119,8 @@ namespace FastTests.Server.Documents
             new object[][]
             {
                 ["\0{\r\n>"],
-                [new string('\0', MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2) + '\n'],
-                ['a' + new string('\r', MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4) + '\n']
+                [new string('\0', Math.Min(Constants.Tree.MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1), DocumentIdWorker.MaxIdSize - 2) - 1) + '\n'],
+                ['a' + new string('\r', Math.Min(Constants.Tree.MaxKeySize / (JsonParserState.EscapePositionItemSize + 1), DocumentIdWorker.MaxIdSize - 2) - 2) + '\n']
             };
 
         [RavenTheory(RavenTestCategory.Memory)]
