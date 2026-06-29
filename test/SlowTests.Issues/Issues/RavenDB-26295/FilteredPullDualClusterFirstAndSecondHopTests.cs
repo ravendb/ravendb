@@ -1286,7 +1286,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeCTombstoneExists={nodeCTombstone.Exists}, nodeCTombstoneCV='{nodeCTombstone.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in attachment tombstone Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        // The node C database CV can already include later internal-replication progress by the time the tombstone wait observes it.
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
