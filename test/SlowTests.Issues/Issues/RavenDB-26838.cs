@@ -1,9 +1,17 @@
 using System;
+using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.Documents;
+using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -123,6 +131,95 @@ public class RavenDB_26838 : RavenTestBase
                 Assert.Equal("orders/2", task.ItemErrors[0].DocumentId);
                 Assert.Equal(TaskErrorStep.Load, task.ItemErrors[0].Step);
             }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public async Task FailedBatch_StillPersistsBufferedItemErrors()
+    {
+        const string taskName = "CdcSink-failing";
+
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = taskName,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                            new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
+                        },
+                        PrimaryKeyColumns = new List<string> { "order_id" },
+                        Patch = "throw new Error('intentional failure');"
+                    }
+                }
+            };
+
+            using var process = new TestCdcSinkProcess(config, database);
+            var docProcessor = process.TestDocumentProcessor;
+            docProcessor.SetSourceColumnNames("public", "orders", new[] { "order_id", "customer_name" });
+            var tableProcessor = docProcessor.GetProcessor("public", "orders");
+
+            var ops = new List<CdcSinkDocumentOp>();
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                for (int i = 1; i <= 100; i++)
+                {
+                    var data = new object[] { i, "name" + i };
+                    ops.Add(docProcessor.ProcessRow(tableProcessor, CdcSinkOperation.Upsert, data, context));
+                }
+
+                await Assert.ThrowsAnyAsync<Exception>(() => process.SubmitBatchForTest(ops));
+            }
+
+            var itemErrors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Sink, taskName);
+            Assert.NotEmpty(itemErrors);
+            Assert.All(itemErrors, e => Assert.Equal((long)TaskErrorStep.Load, e.Step));
+        }
+    }
+
+    private sealed class TestCdcSinkProcess : CdcSinkProcess
+    {
+        public TestCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
+            : base(configuration, database, defaultSchema: "public")
+        {
+        }
+
+        public CdcSinkDocumentProcessor TestDocumentProcessor => DocumentProcessor;
+
+        public Task<(string Checkpoint, int Rows)> SubmitBatchForTest(List<CdcSinkDocumentOp> ops) => SubmitBatch(ops);
+
+        public override bool IsHealthy(out string issue)
+        {
+            issue = null;
+            return true;
+        }
+
+        protected override Task RunInternalAsync(CancellationToken ct) => throw new NotSupportedException();
+
+        protected override IAsyncEnumerable<CdcEvent> GetCdcEvents(CancellationToken ct) => throw new NotSupportedException();
+
+        protected override string GetDefaultSchema() => "public";
+
+        protected override Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct) => throw new NotSupportedException();
+
+        protected override Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct) => throw new NotSupportedException();
+
+        protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo) => throw new NotSupportedException();
+
+        protected override DbCommandBuilder CommandBuilder => null;
+
+        public override void Dispose()
+        {
         }
     }
 }
