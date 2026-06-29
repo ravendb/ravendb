@@ -13,7 +13,7 @@ internal sealed class CdcSinkHandlerProcessorForDeleteErrors : AbstractTaskError
     {
     }
 
-    protected override TaskCategory TaskCategory => TaskCategory.CdcSink;
+    protected override TaskCategory TaskCategory => TaskCategory.Sink;
 
     protected override bool SupportsCurrentNode => true;
 

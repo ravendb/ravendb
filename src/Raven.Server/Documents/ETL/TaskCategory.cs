@@ -6,7 +6,7 @@ public enum TaskCategory
 {
     Etl,
     Ai,
-    CdcSink
+    Sink
 }
 
 public static class TaskTypeExtensions

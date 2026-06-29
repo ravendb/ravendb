@@ -29,7 +29,7 @@ internal sealed class GetTaskErrorsCommand : RavenCommand<TaskErrors[]>
         {
             TaskCategory.Etl => "etl/errors",
             TaskCategory.Ai => "ai/errors",
-            TaskCategory.CdcSink => "cdc-sink/errors",
+            TaskCategory.Sink => "cdc-sink/errors",
             _ => throw new ArgumentOutOfRangeException(nameof(_taskCategory), _taskCategory, null)
         };
 

@@ -26,7 +26,7 @@ public class RavenDB_26838 : RavenTestBase
             var database = GetDatabase(store.Database).GetAwaiter().GetResult();
             var now = DateTime.UtcNow;
 
-            database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+            database.TaskErrorsStorage.StoreProcessError(TaskCategory.Sink, new TaskProcessError
             {
                 CreatedAt = now,
                 TaskName = taskName,
@@ -35,7 +35,7 @@ public class RavenDB_26838 : RavenTestBase
                 Error = "configuration error"
             });
 
-            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, taskName,
+            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.Sink, taskName,
             [
                 new TaskItemError
                 {
@@ -47,8 +47,8 @@ public class RavenDB_26838 : RavenTestBase
                 }
             ]);
 
-            var processErrors = database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.CdcSink, taskName);
-            var itemErrors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName);
+            var processErrors = database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.Sink, taskName);
+            var itemErrors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Sink, taskName);
 
             Assert.Single(processErrors);
             Assert.Equal(taskName, processErrors[0].TaskName);
@@ -65,13 +65,13 @@ public class RavenDB_26838 : RavenTestBase
             Assert.Empty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl, taskName));
 
             // The grouped read used by the errors endpoints surfaces the CDC task.
-            var grouped = database.TaskErrorsStorage.ReadAllErrorsGroupedByTask(TaskCategory.CdcSink);
+            var grouped = database.TaskErrorsStorage.ReadAllErrorsGroupedByTask(TaskCategory.Sink);
             Assert.Contains(grouped, x => x.TaskName == taskName && x.ProcessErrors.Count == 1 && x.ItemErrors.Count == 1);
 
-            database.TaskErrorsStorage.DeleteErrorsOfTask(taskName, TaskCategory.CdcSink);
+            database.TaskErrorsStorage.DeleteErrorsOfTask(taskName, TaskCategory.Sink);
 
-            Assert.Empty(database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.CdcSink, taskName));
-            Assert.Empty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName));
+            Assert.Empty(database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.Sink, taskName));
+            Assert.Empty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Sink, taskName));
         }
     }
 
@@ -85,7 +85,7 @@ public class RavenDB_26838 : RavenTestBase
             var database = GetDatabase(store.Database).GetAwaiter().GetResult();
             var now = DateTime.UtcNow;
 
-            database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+            database.TaskErrorsStorage.StoreProcessError(TaskCategory.Sink, new TaskProcessError
             {
                 CreatedAt = now,
                 TaskName = taskName,
@@ -94,7 +94,7 @@ public class RavenDB_26838 : RavenTestBase
                 Error = "consume error"
             });
 
-            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, taskName,
+            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.Sink, taskName,
             [
                 new TaskItemError
                 {
@@ -109,13 +109,13 @@ public class RavenDB_26838 : RavenTestBase
             var requestExecutor = store.GetRequestExecutor();
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new GetTaskErrorsCommand(names: null, TaskCategory.CdcSink, database.ServerStore.NodeTag);
+                var command = new GetTaskErrorsCommand(names: null, TaskCategory.Sink, database.ServerStore.NodeTag);
                 requestExecutor.Execute(command, context);
 
                 var task = command.Result.Single(x => x.TaskName == taskName);
 
                 // CDC sinks are not ETL processes, so the shared DTO carries no EtlType, only the category.
-                Assert.Equal(TaskCategory.CdcSink, task.Category);
+                Assert.Equal(TaskCategory.Sink, task.Category);
                 Assert.Null(task.EtlType);
                 Assert.Single(task.ProcessErrors);
                 Assert.Equal(TaskErrorStep.Extraction, task.ProcessErrors[0].Step);

@@ -308,7 +308,7 @@ export function getTaskTypeDisplay(
     category: TaskCategory | undefined,
     etlType: StudioEtlType | undefined
 ): { icon: IconName; label: string } {
-    if (category === "CdcSink") {
+    if (category === "Sink") {
         return { icon: "sql-etl", label: "CDC Sink" };
     }
 
@@ -346,7 +346,7 @@ export const SHOW_WIDTH_SIZE = 70;
 
 export const AI_ONLY_TASK_TYPES: StudioEtlType[] = ["EmbeddingsGeneration", "GenAi"];
 
-export type TaskCategory = "Etl" | "Ai" | "CdcSink";
+export type TaskCategory = "Etl" | "Ai" | "Sink";
 
 // ETL tasks report errors per transformation and are shown as "taskName/transformationName".
 // AI and CDC tasks have no transformation, so they're shown by task name only.
