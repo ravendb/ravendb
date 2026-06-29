@@ -32,7 +32,7 @@ const RELATIVE_TIME_UNITS: { unit: Intl.RelativeTimeFormatUnit; ms: number }[] =
     { unit: "second", ms: SECOND_MS },
 ];
 
-const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "narrow" });
+const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "narrow" });
 
 // Renders an ISO timestamp as a short relative label (e.g. "19m ago", "1h ago"); falls back to the
 // raw value if it isn't a parseable date.

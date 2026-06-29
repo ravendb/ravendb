@@ -1,11 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 
+import type { ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Copy, Eye, Trash2 } from "lucide-react";
+import { CircleAlert, Copy, Eye, Trash2, TriangleAlert } from "lucide-react";
 import type { EmbedLinkSummaryResponse } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { copyToClipboard, formatDateTime } from "@/lib/utils";
+import { type EmbedLinkStatusTone, getExpiryStatus, getUsageStatus } from "@/pages/apps/channels/embed-link-status";
 import { buildEmbedUrl } from "@/pages/apps/channels/embed-link-utils";
 import { PreviewEmbedLinkDialog } from "@/pages/apps/channels/preview-embed-link-dialog";
 import { RevokeEmbedLinkDialog } from "@/pages/apps/channels/revoke-embed-link-dialog";
@@ -38,16 +41,26 @@ export function createActiveLinkColumns(slug: string): ColumnDef<EmbedLinkSummar
         {
             accessorKey: "expiresAt",
             header: "Expires",
-            cell: ({ row }) => <span className="text-muted-foreground">{formatDateTime(row.original.expiresAt)}</span>,
+            cell: ({ row }) => {
+                const status = getExpiryStatus(row.original.expiresAt);
+                return (
+                    <StatusValue tone={status.tone} title={status.title}>
+                        {status.label}
+                    </StatusValue>
+                );
+            },
         },
         {
             id: "usage",
             header: "Usage",
-            cell: ({ row }) => (
-                <span className="text-muted-foreground tabular-nums">
-                    {row.original.invocationCount.toLocaleString()} / {row.original.maxInvocations.toLocaleString()}
-                </span>
-            ),
+            cell: ({ row }) => {
+                const status = getUsageStatus(row.original.invocationCount, row.original.maxInvocations);
+                return (
+                    <StatusValue tone={status.tone} title={status.title}>
+                        {status.label}
+                    </StatusValue>
+                );
+            },
         },
         {
             id: "actions",
@@ -57,6 +70,26 @@ export function createActiveLinkColumns(slug: string): ColumnDef<EmbedLinkSummar
             cell: ({ row }) => <LinkActions slug={slug} link={row.original} />,
         },
     ];
+}
+
+// Renders an expiry/usage value, escalating to a colored badge with an icon once the
+// link needs attention so problem rows stand out at a glance.
+function StatusValue({ tone, title, children }: { tone: EmbedLinkStatusTone; title: string; children: ReactNode }) {
+    if (tone === "normal") {
+        return (
+            <span className="text-muted-foreground tabular-nums" title={title}>
+                {children}
+            </span>
+        );
+    }
+
+    const Icon = tone === "critical" ? CircleAlert : TriangleAlert;
+    return (
+        <Badge variant={tone === "critical" ? "destructive" : "warning"} className="tabular-nums" title={title}>
+            <Icon aria-hidden="true" />
+            {children}
+        </Badge>
+    );
 }
 
 function LinkActions({ slug, link }: { slug: string; link: EmbedLinkSummaryResponse }) {
