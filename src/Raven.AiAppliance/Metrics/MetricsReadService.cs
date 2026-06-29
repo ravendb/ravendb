@@ -37,9 +37,10 @@ internal static class MetricsReadService
 
     // Conversation docs (@conversations collection) are id-prefixed "chats/".
     private const string ConversationIdPrefix = "chats/";
+    private const int ConversationPageSize = 1024;
 
-    // The global usage series is a contiguous hourly sparkline over the last day.
-    private const int UsageWindowHours = 24;
+    // Embed links (iframe channel attribution) are id-prefixed; read by prefix.
+    private const int EmbedLinkPageSize = 1024;
 
     // Per-app fan-out (dashboard/usage) runs bounded-parallel and isolates failures.
     private const int MaxFanoutConcurrency = 8;
@@ -53,46 +54,62 @@ internal static class MetricsReadService
     // Cap on the "top tables" (collections) list returned for the App Usage page.
     private const int TopTablesLimit = 10;
 
-    // Stable-ish palette so each capability series gets a colour without config.
-    private static readonly string[] SeriesPalette =
-        ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#22d3ee", "#a855f7", "#84cc16"];
-
     /// <summary>
-    /// Global usage series behind the prototype's <c>getUsage()</c>: one
-    /// <see cref="UsagePoint"/> per hour over the last 24h (contiguous, zero-filled),
-    /// summed across every app DB. <c>invocations</c> = agent turns (messages),
-    /// <c>tokens</c> = token usage, both per hour.
+    /// Usage series behind <c>GET /api/usage?time=&amp;app=</c>: one <see cref="UsagePoint"/>
+    /// per bucket over the window (24h → 24 hourly, 7d → 7 daily, 30d → 30 daily),
+    /// contiguous + zero-filled, carrying conversations / messages / tokens. With
+    /// <paramref name="appSlug"/> it scopes to that app; otherwise it sums across all apps.
     /// </summary>
     public static async Task<List<UsagePoint>> GetUsageAsync(
-        IDocumentStore store, DateTime nowUtc, ILogger? log, CancellationToken ct)
+        IDocumentStore store, UsageWindow window, string? appSlug, DateTime nowUtc, ILogger? log, CancellationToken ct)
     {
-        var nowHour = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, 0, 0, DateTimeKind.Utc);
-        var since = nowHour.AddHours(-(UsageWindowHours - 1));
+        var (granularity, start, end) = WindowRange(window, nowUtc);
+        var buckets = BuildBuckets(start, end, granularity);
+        var conversations = new long[buckets.Count];
+        var messages = new long[buckets.Count];
+        var tokens = new long[buckets.Count];
 
-        var invocations = new long[UsageWindowHours];
-        var tokens = new long[UsageWindowHours];
-
-        var apps = await LoadAllAppsAsync(store, ct);
+        var apps = await AppsToQueryAsync(store, appSlug, ct);
         var perApp = await ForEachAppAsync(apps, log, async app =>
         {
             using var session = store.OpenAsyncSession(app.Database);
-            return await QueryMetricRowsAsync(session, since, ct);
+            return await QueryMetricRowsAsync(session, start, ct);
         }, ct);
 
         foreach (var rows in perApp)
             foreach (var row in rows)
             {
-                var bucket = (int)Math.Round((row.Bucket - since).TotalHours);
-                if (bucket < 0 || bucket >= UsageWindowHours)
-                    continue;
-                invocations[bucket] += row.Messages;
-                tokens[bucket] += row.Tokens;
+                var i = BucketIndex(buckets, row.Bucket, granularity);
+                if (i < 0) continue;
+                conversations[i] += row.Conversations;
+                messages[i] += row.Messages;
+                tokens[i] += row.Tokens;
             }
 
-        var points = new List<UsagePoint>(UsageWindowHours);
-        for (var i = 0; i < UsageWindowHours; i++)
-            points.Add(new UsagePoint(since.AddHours(i), invocations[i], tokens[i]));
+        var points = new List<UsagePoint>(buckets.Count);
+        for (var i = 0; i < buckets.Count; i++)
+            points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i]));
         return points;
+    }
+
+    private static (UsageGranularity Granularity, DateTime Start, DateTime End) WindowRange(UsageWindow window, DateTime nowUtc)
+    {
+        var hour = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, 0, 0, DateTimeKind.Utc);
+        var day = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        return window switch
+        {
+            UsageWindow.Last7d => (UsageGranularity.Day, day.AddDays(-6), day),
+            UsageWindow.Last30d => (UsageGranularity.Day, day.AddDays(-29), day),
+            _ => (UsageGranularity.Hour, hour.AddHours(-23), hour),
+        };
+    }
+
+    private static async Task<List<App>> AppsToQueryAsync(IDocumentStore store, string? appSlug, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(appSlug))
+            return await LoadAllAppsAsync(store, ct);
+        var app = await AppLookup.LoadAppAsync(store, appSlug, ct);
+        return app is null ? [] : [app];
     }
 
     /// <summary>
@@ -229,8 +246,7 @@ internal static class MetricsReadService
         var label = labelOf ?? (k => k);
         var keys = rows.Select(r => keyOf(r.Agent ?? "")).Distinct()
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
-        var seriesKeys = keys
-            .Select((k, idx) => new SeriesKey(k, label(k), SeriesPalette[idx % SeriesPalette.Length])).ToArray();
+        var seriesKeys = keys.Select(k => new SeriesKey(k, label(k))).ToArray();
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
@@ -257,8 +273,7 @@ internal static class MetricsReadService
         IAsyncDocumentSession session, List<DateTime> buckets, DateTime startUtc, DateTime endUtc,
         UsageGranularity granularity, CancellationToken ct)
     {
-        var channels = await session.Advanced.LoadStartingWithAsync<Channel>(
-            Channel.IdPrefix, pageSize: 1024, token: ct);
+        var channels = await LoadAllByPrefixAsync<Channel>(session, Channel.IdPrefix, ChannelPageSize, ct);
         var nameByWidget = channels
             .Where(c => c.Id is not null)
             .ToDictionary(c => c.Id![Channel.IdPrefix.Length..],
@@ -270,8 +285,7 @@ internal static class MetricsReadService
         // Key by the stable WidgetId (dictionary keys are already distinct); the display
         // name is only the label, so channels sharing a display name don't merge (review C2).
         var keys = nameByWidget.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
-        var seriesKeys = keys
-            .Select((k, idx) => new SeriesKey(k, nameByWidget[k], SeriesPalette[idx % SeriesPalette.Length])).ToArray();
+        var seriesKeys = keys.Select(k => new SeriesKey(k, nameByWidget[k])).ToArray();
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
@@ -281,8 +295,7 @@ internal static class MetricsReadService
             points[b] = point;
         }
 
-        var links = await session.Advanced.LoadStartingWithAsync<EmbedLink>(
-            EmbedLink.IdPrefix, pageSize: 1024, token: ct);
+        var links = await LoadAllByPrefixAsync<EmbedLink>(session, EmbedLink.IdPrefix, EmbedLinkPageSize, ct);
         foreach (var link in links)
         {
             if (link.CreatedAt < startUtc || link.CreatedAt > endUtc) continue;
@@ -377,8 +390,7 @@ internal static class MetricsReadService
 
         List<Channel> channels;
         using (var session = store.OpenAsyncSession(app.Database))
-            channels = (await session.Advanced.LoadStartingWithAsync<Channel>(
-                Channel.IdPrefix, pageSize: 1024, token: ct)).ToList();
+            channels = await LoadAllByPrefixAsync<Channel>(session, Channel.IdPrefix, ChannelPageSize, ct);
         var enabledChannels = channels.Count(c => c.Enabled);
         var channelsLabel = channels.Count == 0
             ? null
@@ -515,30 +527,6 @@ internal static class MetricsReadService
         return new ConversationStatsResponse(last24h, last7d, last30d);
     }
 
-    public static async Task<AgentStatsResponse> GetAgentStatsAsync(
-        IDocumentStore store, string database, DateTime nowUtc, CancellationToken ct)
-    {
-        var agents = await store.Maintenance.ForDatabase(database).SendAsync(new GetAiAgentsOperation(), ct);
-        var configuredAgents = agents.AiAgents?.Count ?? 0;
-
-        using var session = store.OpenAsyncSession(database);
-        var rows = await QueryMetricRowsAsync(session, nowUtc.AddDays(-30), ct);
-
-        var (last24h, last7d, last30d) = FoldWindows(rows, nowUtc);
-
-        var perAgent = rows
-            .GroupBy(row => row.Agent ?? "")
-            .Select(group => new AgentUsageSummary(
-                group.Key,
-                group.Sum(row => row.Conversations),
-                group.Sum(row => row.Messages),
-                group.Sum(row => row.Tokens)))
-            .OrderBy(agent => agent.AgentId, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        return new AgentStatsResponse(configuredAgents, last24h, last7d, last30d, perAgent);
-    }
-
     /// <summary>
     /// Mirrored collections behind <c>listCollections(appId)</c>: each business
     /// collection with its current document count. System (<c>@</c>-prefixed)
@@ -557,10 +545,10 @@ internal static class MetricsReadService
             .ToList();
     }
 
-    /// <summary>Per-agent activity from the conversation index: invocations
-    /// (conversation count) and last-invoked (latest hour bucket). Returns empty
-    /// when the index isn't deployed yet, so callers degrade to zeroes.</summary>
-    public static async Task<Dictionary<string, (long Invocations, DateTime? LastInvokedAt)>> GetAgentActivityAsync(
+    /// <summary>Per-agent rollup from the conversation index: conversations, user
+    /// messages, tokens, and last-invoked (latest hour bucket). Returns empty when the
+    /// index isn't deployed yet, so callers degrade to zeroes.</summary>
+    public static async Task<Dictionary<string, AgentActivity>> GetAgentActivityAsync(
         IDocumentStore store, string database, CancellationToken ct)
     {
         try
@@ -573,49 +561,77 @@ internal static class MetricsReadService
                     g => g.Key,
                     // The index Bucket is built with DateTimeKind.Unspecified; mark it UTC
                     // so it serializes with the Z designator (review I1).
-                    g => (g.Sum(r => r.Conversations), (DateTime?)Utc(g.Max(r => r.Bucket))),
+                    g => new AgentActivity(
+                        g.Sum(r => r.Conversations), g.Sum(r => r.Messages), g.Sum(r => r.Tokens),
+                        Utc(g.Max(r => r.Bucket))),
                     StringComparer.OrdinalIgnoreCase);
         }
         catch (IndexDoesNotExistException)
         {
-            return new Dictionary<string, (long, DateTime?)>(StringComparer.OrdinalIgnoreCase);
+            return new Dictionary<string, AgentActivity>(StringComparer.OrdinalIgnoreCase);
         }
     }
 
-    /// <summary>Conversations for the Conversations list — shaped from
-    /// <c>@conversations</c> docs (id-prefixed <c>chats/</c>), newest activity first,
-    /// last-exchange preview only (no full transcript).</summary>
+    /// <summary>Conversations for the Conversations list — metadata only (agent,
+    /// channel, state, timestamps, params), newest activity first. The transcript /
+    /// last-exchange preview is fetched on detail; the list page doesn't render it,
+    /// and reading messages per row would be an N+1 against the AI messages endpoint.</summary>
     public static async Task<List<ConversationDto>> GetConversationsAsync(
         IDocumentStore store, string slug, string database, DateTime nowUtc, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);
         var channelByConversation = await BuildConversationChannelMapAsync(session, ct);
-        // NOTE (review SF5): single 1024-doc page ordered by id (not LastMessageAt) — for
-        // apps with >1024 conversations this truncates and may miss the newest. Index-backed
-        // pagination is a deferred follow-up.
-        var docs = await session.Advanced.LoadStartingWithAsync<ConversationDoc>(
-            ConversationIdPrefix, pageSize: 1024, token: ct);
+        // Loads every conversation doc (paged) and sorts by last activity in memory — no
+        // truncation. Index-backed *server-side* pagination is a deferred perf follow-up
+        // for very large apps (review SF5).
+        var docs = await LoadAllByPrefixAsync<ConversationDoc>(session, ConversationIdPrefix, ConversationPageSize, ct);
         return docs
-            .Select(d => ShapeConversation(d, slug, nowUtc, includeTranscript: false, channelByConversation))
+            .Select(d => ShapeListItem(d, slug, nowUtc, channelByConversation))
             .OrderByDescending(c => c.LastActivityAt)
             .ToList();
     }
 
-    /// <summary>One conversation with its full chronological transcript, or null.</summary>
+    /// <summary>One conversation with its full chronological transcript, or null. The AI
+    /// runtime owns the on-disk message format, so we read it through its own
+    /// <c>GetConversationMessages</c> operation (joins multi-part text, and at
+    /// <see cref="AiConversationDetailLevel.Simple"/> returns only user + assistant-with-content)
+    /// instead of re-parsing the raw doc.</summary>
     public static async Task<ConversationDto?> GetConversationAsync(
         IDocumentStore store, string slug, string database, string conversationId, DateTime nowUtc, CancellationToken ct)
     {
         // Only conversation docs are addressable here; reject other ids (e.g. the
-        // catch-all capturing "channels/x") so we don't shape a non-conversation
+        // catch-all capturing "channels/x") so we don't read a non-conversation
         // doc and return nonsense instead of 404 (review M5).
         if (conversationId.StartsWith(ConversationIdPrefix, StringComparison.Ordinal) == false)
             return null;
 
+        var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(conversationId, ct);
+        if (result is null)
+            return null;  // 404 — no such conversation
+
+        // Messages arrive oldest-first; DetailLevel.Simple already excludes system/tool and
+        // assistant-without-content, so we only drop attachment-only/blank turns, normalize the
+        // role, and extract the reply text — no re-ordering.
+        var transcript = result.Messages
+            .Where(m => string.IsNullOrWhiteSpace(m.Content) == false)
+            .Select(m => new ConversationTurn(RoleLabel(m.Role), ReplyText(m.Content), Utc(m.Timestamp)))
+            .ToArray();
+
         using var session = store.OpenAsyncSession(database);
-        var doc = await session.LoadAsync<ConversationDoc>(conversationId, ct);
-        if (doc is null) return null;
-        var channelByConversation = await BuildConversationChannelMapAsync(session, ct);
-        return ShapeConversation(doc, slug, nowUtc, includeTranscript: true, channelByConversation);
+        var channelName = (await BuildConversationChannelMapAsync(session, ct))
+            .GetValueOrDefault(conversationId, "");
+
+        var agentName = result.Agent ?? "";
+        var prms = (result.Parameters ?? new Dictionary<string, object>())
+            .Select(kv => new ConversationParam(kv.Key, kv.Value?.ToString() ?? ""))
+            .ToArray();
+        var lastExchange = transcript.TakeLast(2).Reverse().ToArray();  // newest first, at most 2
+        var startedAt = result.Messages.Count > 0 ? Utc(result.Messages[0].Timestamp) : Utc(result.LastMessageAt);
+
+        return new ConversationDto(
+            conversationId, slug, channelName, agentName, AgentInitials(agentName),
+            prms, lastExchange, transcript, State(nowUtc - result.LastMessageAt),
+            Utc(result.LastMessageAt), startedAt, MaxDuration: null);
     }
 
     /// <summary>conversationId → channel display-name, for iframe conversations only,
@@ -625,8 +641,7 @@ internal static class MetricsReadService
     private static async Task<Dictionary<string, string>> BuildConversationChannelMapAsync(
         IAsyncDocumentSession session, CancellationToken ct)
     {
-        var channels = await session.Advanced.LoadStartingWithAsync<Channel>(
-            Channel.IdPrefix, pageSize: 1024, token: ct);
+        var channels = await LoadAllByPrefixAsync<Channel>(session, Channel.IdPrefix, ChannelPageSize, ct);
         var nameByWidget = channels
             .Where(c => c.Id is not null)
             .ToDictionary(c => c.Id![Channel.IdPrefix.Length..],
@@ -637,8 +652,7 @@ internal static class MetricsReadService
         if (nameByWidget.Count == 0)
             return map;
 
-        var links = await session.Advanced.LoadStartingWithAsync<EmbedLink>(
-            EmbedLink.IdPrefix, pageSize: 1024, token: ct);
+        var links = await LoadAllByPrefixAsync<EmbedLink>(session, EmbedLink.IdPrefix, EmbedLinkPageSize, ct);
         foreach (var link in links)
             if (link.ConversationId is { } cid && link.WidgetId is { } wid
                 && nameByWidget.TryGetValue(wid, out var name))
@@ -646,63 +660,69 @@ internal static class MetricsReadService
         return map;
     }
 
-    private static ConversationDto ShapeConversation(
-        ConversationDoc doc, string slug, DateTime nowUtc, bool includeTranscript, Dictionary<string, string> channelByConversation)
+    private static ConversationDto ShapeListItem(
+        ConversationDoc doc, string slug, DateTime nowUtc, Dictionary<string, string> channelByConversation)
     {
         var agentName = doc.Agent ?? "";
         var channelName = doc.Id is { } id && channelByConversation.TryGetValue(id, out var cn) ? cn : "";
-        // Only user/assistant turns are end-user-facing; drop the system prompt and
-        // tool/internal scaffolding, and normalize the assistant role to "agent".
-        var chrono = (doc.Messages ?? [])
-            .Where(m => m.role is "user" or "assistant")
-            .Select(m => new ConversationTurn(m.role == "assistant" ? "agent" : "user", TextOf(m.content), Utc(m.date)))
-            .OrderBy(t => t.At ?? doc.CreatedAt)
-            .ToArray();
-        var lastExchange = chrono.TakeLast(2).Reverse().ToArray();  // newest first, at most 2
         var prms = (doc.Parameters ?? new Dictionary<string, object>())
             .Select(kv => new ConversationParam(kv.Key, kv.Value?.ToString() ?? ""))
             .ToArray();
 
-        var age = nowUtc - doc.LastMessageAt;
-        var state = age < TimeSpan.FromHours(1) ? "active" : age < TimeSpan.FromHours(24) ? "idle" : "closed";
-
+        // List rows are metadata only — Transcript/LastExchange are detail-only.
         return new ConversationDto(
-            doc.Id ?? "", slug, channelName, agentName,
-            AgentInitials(agentName), AgentColor(agentName),
-            prms, lastExchange, includeTranscript ? chrono : null,
-            state, Utc(doc.LastMessageAt), Utc(doc.CreatedAt), MaxDuration: null);
+            doc.Id ?? "", slug, channelName, agentName, AgentInitials(agentName),
+            prms, LastExchange: [], Transcript: null,
+            State(nowUtc - doc.LastMessageAt), Utc(doc.LastMessageAt), Utc(doc.CreatedAt), MaxDuration: null);
     }
 
-    // Message content is a string, an array-of-parts ([{type:"text",text}]), or an
-    // object. RavenDB deserializes a JSON array/object into CLR object[] /
-    // dictionaries, so handle those directly; a JSON round-trip is the fallback.
-    private static string TextOf(object? content)
+    private static string State(TimeSpan age) =>
+        age < TimeSpan.FromHours(1) ? "active" : age < TimeSpan.FromHours(24) ? "idle" : "closed";
+
+    // The UI labels the assistant "agent"; these are the FE wire-contract values, not the enum
+    // names (nameof would yield "Assistant"/"User" and break the contract + the FE).
+    private static string RoleLabel(AiMessageRole role) => role == AiMessageRole.Assistant ? "agent" : "user";
+
+    // AiConversationMessage.Content is already a string: plain text for user / plain-assistant
+    // turns, or the JSON of a structured reply ({"reply":…}) for schema-output agents. For the
+    // latter, surface the reply text; plain prose and scalars pass through unchanged.
+    private static string ReplyText(string content)
     {
-        switch (content)
-        {
-            case null: return "";
-            case string s: return s;
-            case IEnumerable<object> parts: return string.Concat(parts.Select(TextOf));
-            case IDictionary<string, object> dict:
-                return dict.TryGetValue("text", out var t) ? t?.ToString() ?? "" : "";
-        }
         try
         {
-            using var json = JsonDocument.Parse(JsonSerializer.Serialize(content));
-            return ExtractText(json.RootElement);
+            using var json = JsonDocument.Parse(content);
+            if (json.RootElement.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+            {
+                var text = ExtractText(json.RootElement);
+                return string.IsNullOrEmpty(text) ? content : text;
+            }
         }
-        catch (JsonException) { return content.ToString() ?? ""; }
+        catch (JsonException) { /* not JSON — plain text */ }
+        return content;
     }
 
     private static string ExtractText(JsonElement el) => el.ValueKind switch
     {
         JsonValueKind.String => el.GetString() ?? "",
         JsonValueKind.Array => string.Concat(el.EnumerateArray().Select(ExtractText)),
-        JsonValueKind.Object => el.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String
-            ? t.GetString() ?? ""
-            : "",
+        JsonValueKind.Object => ObjectText(el),
         _ => "",
     };
+
+    // A content object is either an array-of-parts element ({type,text}) or the agent's
+    // structured reply ({reply:…} or a custom single-field reply). Prefer "text", then
+    // "reply", then the first non-empty string property so any reply shape surfaces.
+    private static string ObjectText(JsonElement o)
+    {
+        if (o.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
+            return t.GetString() ?? "";
+        if (o.TryGetProperty("reply", out var r) && r.ValueKind == JsonValueKind.String)
+            return r.GetString() ?? "";
+        foreach (var p in o.EnumerateObject())
+            if (p.Value.ValueKind == JsonValueKind.String && p.Value.GetString() is { Length: > 0 } s)
+                return s;
+        return "";
+    }
 
     private static string AgentInitials(string name)
     {
@@ -712,46 +732,43 @@ internal static class MetricsReadService
         return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
     }
 
-    private static string AgentColor(string name)
-    {
-        var hash = 0;
-        foreach (var c in name) hash = unchecked(hash * 31 + c);
-        return SeriesPalette[Math.Abs(hash % SeriesPalette.Length)];
-    }
-
+    // List-row projection of an @conversations doc — metadata only (no Messages; the
+    // transcript is read on detail via the AI GetConversationMessages operation).
     private sealed class ConversationDoc
     {
         public string? Id { get; set; }
         public string? Agent { get; set; }
         public Dictionary<string, object>? Parameters { get; set; }
-        public List<ConversationMessageDoc>? Messages { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime LastMessageAt { get; set; }
-    }
-
-    private sealed class ConversationMessageDoc
-    {
-        public string? role { get; set; }
-        public object? content { get; set; }
-        public DateTime date { get; set; }
     }
 
     /// <summary>Loads every registered app from the config DB by id prefix, paging
     /// so installations with more than one page are fully returned.</summary>
     private static async Task<List<App>> LoadAllAppsAsync(IDocumentStore store, CancellationToken ct)
     {
-        var apps = new List<App>();
         using var configSession = store.OpenAsyncSession();
+        return await LoadAllByPrefixAsync<App>(configSession, AppIdPrefix, AppPageSize, ct);
+    }
+
+    /// <summary>Loads every document whose id starts with <paramref name="prefix"/>, paging
+    /// until a partial page so result sets larger than one page are fully returned. A single
+    /// <c>LoadStartingWithAsync</c> call silently truncates at <paramref name="pageSize"/> —
+    /// every prefix-load in this service goes through here so that never happens.</summary>
+    private static async Task<List<T>> LoadAllByPrefixAsync<T>(
+        IAsyncDocumentSession session, string prefix, int pageSize, CancellationToken ct) where T : class
+    {
+        var all = new List<T>();
         var offset = 0;
         while (true)
         {
-            var page = (await configSession.Advanced.LoadStartingWithAsync<App>(
-                AppIdPrefix, start: offset, pageSize: AppPageSize, token: ct)).ToList();
-            apps.AddRange(page);
-            if (page.Count < AppPageSize) break;
-            offset += AppPageSize;
+            var page = (await session.Advanced.LoadStartingWithAsync<T>(
+                prefix, start: offset, pageSize: pageSize, token: ct)).ToList();
+            all.AddRange(page);
+            if (page.Count < pageSize) break;
+            offset += pageSize;
         }
-        return apps;
+        return all;
     }
 
     // Normalize an outbound timestamp to UTC so System.Text.Json emits the Z designator
@@ -895,3 +912,9 @@ internal static class MetricsReadService
         public readonly ConversationWindow ToWindow() => new(_conversations, _messages, _tokens);
     }
 }
+
+/// <summary>The usage-series time window — maps to bucket granularity + count.</summary>
+public enum UsageWindow { Last24h, Last7d, Last30d }
+
+/// <summary>Per-agent rollup from the conversation index for the merged Agents table.</summary>
+internal sealed record AgentActivity(long Conversations, long Messages, long Tokens, DateTime? LastInvokedAt);

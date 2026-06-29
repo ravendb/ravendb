@@ -2,9 +2,9 @@ namespace Raven.AiAppliance.Contracts;
 
 /// <summary>
 /// App Overview snapshot: index-free health/usage counts read straight from
-/// database statistics and the per-app collections. Conversation/agent activity
-/// over time lives on the dedicated <c>conversations/stats</c> and
-/// <c>agents/stats</c> endpoints.
+/// database statistics and the per-app collections. Conversation activity over
+/// time lives on the dedicated <c>conversations/stats</c> endpoint; per-agent
+/// usage is folded into the enriched <c>agents</c> list.
 /// </summary>
 /// <param name="Slug">The app slug.</param>
 /// <param name="Documents">Total documents in the app database (data-volume indicator).</param>

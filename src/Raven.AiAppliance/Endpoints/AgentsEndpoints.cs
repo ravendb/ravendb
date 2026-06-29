@@ -48,15 +48,13 @@ public static class AgentsEndpoints
         var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
             .ToDictionary(pair => pair.Key, pair => AiConnectionStringModel.Resolve(pair.Value), StringComparer.OrdinalIgnoreCase);
 
-        // Usage (invocations + last-invoked) from the conversation index.
+        // Per-agent usage (conversations / messages / tokens + last-invoked) from the index.
         var activity = await MetricsReadService.GetAgentActivityAsync(store, app.Database, ct);
 
         var items = (agents.AiAgents ?? [])
             .Select(agent =>
             {
-                var (invocations, lastInvokedAt) = activity.TryGetValue(agent.Identifier, out var act)
-                    ? act
-                    : (0L, (DateTime?)null);
+                var act = activity.GetValueOrDefault(agent.Identifier);
                 return new AgentSummaryResponse(
                     agent.Identifier,
                     string.IsNullOrWhiteSpace(agent.Name) ? agent.Identifier : agent.Name,
@@ -68,9 +66,10 @@ public static class AgentsEndpoints
                         .Select(parameter => parameter.Name)
                         .Where(parameterName => string.IsNullOrWhiteSpace(parameterName) == false)
                         .ToArray(),
-                    invocations,
-                    SuccessRate: 0,
-                    lastInvokedAt);
+                    act?.LastInvokedAt,
+                    act?.Conversations ?? 0,
+                    act?.Messages ?? 0,
+                    act?.Tokens ?? 0);
             })
             .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
