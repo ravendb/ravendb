@@ -461,12 +461,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             var start = Stopwatch.GetTimestamp();
             await Database.TxMerger.Enqueue(command);
 
-            // Flush per-document item errors accumulated during the batch to dedicated storage.
-            // Done here on the process thread - never from inside the merged command - so
-            // the enqueue-sync TaskErrorsStorage API is safe to use.
-            if (Statistics.InMemoryItemErrorsCount > 0)
-                Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.Sink, Name, Statistics.ReadInMemoryItemErrors());
-
             LastBatchTime = Database.Time.GetUtcNow();
             if (checkpoint != null)
                 LastCheckpoint = checkpoint;
@@ -476,6 +470,24 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
         finally
         {
+            // Flush per-document item errors accumulated during the batch to dedicated storage.
+            // Done here on the process thread - never from inside the merged command - so the
+            // enqueue-sync TaskErrorsStorage API is safe to use. Flushing in finally ensures the
+            // errors are persisted even when the batch threw (e.g. the error-ratio threshold was
+            // exceeded) - those are exactly the errors the user needs to see, and the next
+            // NewBatch() would otherwise clear them. The flush is guarded so a failure here never
+            // masks the original batch exception.
+            try
+            {
+                if (Statistics.InMemoryItemErrorsCount > 0)
+                    Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.Sink, Name, Statistics.ReadInMemoryItemErrors());
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"[{Name}] Failed to store CDC Sink item errors to dedicated storage.", e);
+            }
+
             stats.Dispose();
             statsAggregator.Complete();
         }
