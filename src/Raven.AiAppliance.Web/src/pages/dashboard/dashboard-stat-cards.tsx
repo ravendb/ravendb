@@ -31,11 +31,10 @@ export function DashboardStatCards({ cards }: { cards: DashboardStatCard[] }) {
 }
 
 function StatCard({ card }: { card: DashboardStatCard }) {
-    const hasSparkline = card.series !== undefined && card.series.length > 1;
     const valueLabel = card.valueLabel ?? (card.value === undefined ? "—" : formatCompact(card.value));
 
     return (
-        <Card className="gap-3 pb-0">
+        <Card className="gap-3">
             <CardContent className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
                     <span className="text-sm text-muted-foreground">{card.label}</span>
@@ -48,7 +47,7 @@ function StatCard({ card }: { card: DashboardStatCard }) {
                 )}
                 {card.caption && <div className="text-xs text-muted-foreground">{card.caption}</div>}
             </CardContent>
-            {hasSparkline ? <Sparkline series={card.series!} /> : <div className="h-14" aria-hidden="true" />}
+            {card.series && card.series.length > 1 && <Sparkline series={card.series} />}
         </Card>
     );
 }

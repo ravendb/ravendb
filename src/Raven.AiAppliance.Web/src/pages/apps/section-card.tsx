@@ -1,11 +1,24 @@
 import type { ReactNode } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 
-export function SectionCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+export function SectionCard({
+    title,
+    description,
+    action,
+    children,
+}: {
+    title: string;
+    description?: ReactNode;
+    action?: ReactNode;
+    children: ReactNode;
+}) {
     return (
         <section className="min-w-0">
             <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold">{title}</h2>
+                <div className="space-y-0.5">
+                    <h2 className="text-sm font-semibold">{title}</h2>
+                    {description && <p className="text-xs text-muted-foreground">{description}</p>}
+                </div>
                 {action}
             </div>
             {children}
