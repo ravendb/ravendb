@@ -346,6 +346,30 @@ class User { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task QueryMaterializer_With_Argument_Not_Counted_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    async Task Run(IAsyncDocumentSession session, string managerId, System.Threading.CancellationToken token)
+    {
+        var employees = await session.Query<Employee>().Where(e => e.Active).ToListAsync(token);
+        var manager = await session.LoadAsync<User>(managerId);
+    }
+}
+
+class Employee { public string Id { get; set; } public bool Active { get; set; } }
+class User { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            // ToListAsync(token) carries an argument the lazy rewrite cannot preserve, so it is not
+            // counted as batchable (lockstep with the code fix). Only the Load remains → no diagnostic.
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
         public async Task LoadsOnDifferentSessions_No_Diagnostic()
         {
             const string source = CommonUsings + @"

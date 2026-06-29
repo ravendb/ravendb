@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -79,18 +78,8 @@ namespace Raven.Analyzers.Sessions
 
         private sealed class MaterializingCallCollector : CSharpSyntaxWalker
         {
-            private static readonly HashSet<string> QueryMaterializingMethods = new(StringComparer.Ordinal)
-            {
-                "ToList",    "ToListAsync",
-                "ToArray",   "ToArrayAsync",
-                "First",     "FirstAsync",
-                "FirstOrDefault",  "FirstOrDefaultAsync",
-                "Single",    "SingleAsync",
-                "SingleOrDefault", "SingleOrDefaultAsync",
-                "Any",       "AnyAsync",
-                "Count",     "CountAsync",
-                "LongCount", "LongCountAsync",
-            };
+            // Shared with Pass1 via KnownTypes so the two passes stay in lockstep.
+            private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.SessionMaterializingMethods;
 
             private readonly SemanticModel _model;
             private readonly HashSet<ISymbol> _materializationDerivedSet;
@@ -140,8 +129,12 @@ namespace Raven.Analyzers.Sessions
 
                 ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
 
-                // Check for query materializations on IRavenQueryable only (avoids false positives on EF etc.)
-                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
+                // Check for query materializations on IRavenQueryable only (avoids false positives on EF etc.).
+                // A materializer carrying arguments (e.g. ToListAsync(token)) is excluded so the analyzer
+                // stays in lockstep with the code fix, which cannot batch it without dropping the argument.
+                if (QueryMaterializingMethods.Contains(methodName)
+                    && invocation.ArgumentList.Arguments.Count == 0
+                    && SyntaxHelpers.IsRavenQueryable(receiverType))
                 {
                     ISymbol? sessionSymbol = ResolveSessionSymbolFromQueryChain(memberAccess.Expression);
                     BatchableCalls.Add((invocation, methodName, sessionSymbol));
@@ -288,18 +281,8 @@ namespace Raven.Analyzers.Sessions
 
         private sealed class Pass1CollectMaterializationDerivedLocals : CSharpSyntaxWalker
         {
-            private static readonly HashSet<string> QueryMaterializingMethods = new(StringComparer.Ordinal)
-            {
-                "ToList",    "ToListAsync",
-                "ToArray",   "ToArrayAsync",
-                "First",     "FirstAsync",
-                "FirstOrDefault",  "FirstOrDefaultAsync",
-                "Single",    "SingleAsync",
-                "SingleOrDefault", "SingleOrDefaultAsync",
-                "Any",       "AnyAsync",
-                "Count",     "CountAsync",
-                "LongCount", "LongCountAsync",
-            };
+            // Shared with the detection pass via KnownTypes so the two passes stay in lockstep.
+            private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.SessionMaterializingMethods;
 
             private readonly SemanticModel _model;
             private readonly HashSet<ISymbol> _materializationDerivedSet;

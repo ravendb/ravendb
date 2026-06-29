@@ -102,6 +102,13 @@ namespace Raven.Analyzers.Queries
 
                 string methodName = memberAccess.Name.Identifier.Text;
 
+                // Stop at a projection boundary: operators after Select/ProjectInto bind to the
+                // projected shape, not the index, so their fields must not be checked against the
+                // index field set (the operator-after-projection case is RVN002's concern).
+                // Without this, a post-projection Where/OrderBy would produce a false RVN007.
+                if (methodName == KnownTypes.SelectMethodName || methodName == KnownTypes.ProjectIntoMethodName)
+                    break;
+
                 if (IsFilterOrOrderMethod(methodName))
                 {
                     SeparatedSyntaxList<ArgumentSyntax> args = outerInvocation.ArgumentList.Arguments;
@@ -147,6 +154,18 @@ namespace Raven.Analyzers.Queries
                 if (memberAccess.Expression is not IdentifierNameSyntax id)
                     continue;
                 if (id.Identifier.ValueText != paramName)
+                    continue;
+
+                // Skip an intermediate object hop in a nested path (o.Address.City): o.Address is the
+                // receiver of a further property access (o.Address.City), so its name ("Address") is
+                // the object, not a queried field — checking it would be a false positive. But do NOT
+                // skip a single-hop field that is the receiver of a method call (o.Tags.Contains(...))
+                // or element access (o.Items[0]): there the field itself (Tags/Items) is the one being
+                // queried and must still be checked. The distinction: an intermediate hop's enclosing
+                // member access is a property reference, not an invocation target.
+                if (memberAccess.Parent is MemberAccessExpressionSyntax parentAccess &&
+                    parentAccess.Expression == memberAccess &&
+                    parentAccess.Parent is not InvocationExpressionSyntax)
                     continue;
 
                 string fieldName = memberAccess.Name.Identifier.Text;

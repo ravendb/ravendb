@@ -97,6 +97,13 @@ namespace Raven.Analyzers.Queries
             if (!SyntaxHelpers.IsRavenQueryable(receiverType))
                 return;
 
+            // Bail if another projection sits between this projection and the Query call: this
+            // projection then operates on the intermediate projected shape, not the source document
+            // / index, so checking its fields against TSource or the index stored set would produce
+            // false positives. (e.g. Query<S,I>().Select(x => new {x.A}).Select(y => new {y.B}))
+            if (HasInterveningProjection(memberAccess.Expression))
+                return;
+
             // Walk inward through the chain to find the originating session.Query<>() call
             InvocationExpressionSyntax? queryCall = FindQueryCall(memberAccess.Expression);
             if (queryCall == null)
@@ -164,6 +171,24 @@ namespace Raven.Analyzers.Queries
                     return inv;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Returns true when a Select/ProjectInto projection appears in <paramref name="receiver"/>'s
+        /// chain before the originating Query call — meaning the analyzed projection's input shape is
+        /// an intermediate projected type rather than the source document.
+        /// </summary>
+        private static bool HasInterveningProjection(ExpressionSyntax receiver)
+        {
+            foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(receiver))
+            {
+                string? name = SyntaxHelpers.GetMethodName(inv);
+                if (name == KnownTypes.QueryMethodName)
+                    return false;
+                if (name == KnownTypes.SelectMethodName || name == KnownTypes.ProjectIntoMethodName)
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>

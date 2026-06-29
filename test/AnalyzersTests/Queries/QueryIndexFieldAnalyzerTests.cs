@@ -267,9 +267,11 @@ class Test
         }
 
         [Fact]
-        public async Task Nested_Member_Access_Checks_First_Hop_Only()
+        public async Task Nested_Member_Access_Is_Not_Flagged()
         {
-            // x.Address.City → checks "Address" (first hop); if Address is indexed, no diagnostic
+            // A nested path (x.Address.City) maps to an index field name ambiguously, so it is
+            // conservatively not analyzed: the intermediate segment x.Address is an object, not a
+            // queried field, and flagging it ("Address") would be a false positive.
             const string source = CommonUsings + @"
 class Address { public string City { get; set; } }
 class Order { public Address Address { get; set; } }
@@ -293,6 +295,129 @@ class Test
                 await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
 
             Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Nested_Member_Access_To_Mapped_Leaf_No_False_Positive()
+        {
+            // The index maps the leaf (City = o.Shipping.City), so the field is "City". A query on
+            // the nested path x.Shipping.City must NOT be flagged for the intermediate "Shipping".
+            const string source = CommonUsings + @"
+class Shipping { public string City { get; set; } }
+class Order { public Shipping Shipping { get; set; } }
+
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { City = o.Shipping.City };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>().Where(x => x.Shipping.City == ""NYC"");
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Filter_After_Projection_Is_Not_Flagged()
+        {
+            // A Where after a Select binds to the projected shape, not the index, so its fields must
+            // not be checked against the index field set (that is RVN002's concern). Price is absent
+            // from the index Map but valid on the projected type — no RVN007 false positive.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Select(o => new { o.Name, o.Price })
+            .Where(x => x.Price > 5);
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Filter_Before_Projection_Is_Still_Flagged()
+        {
+            // The projection boundary must only suppress operators that come AFTER it: a Where on a
+            // non-indexed field placed before the Select is still a real RVN007.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Where(x => x.Price > 5)
+            .Select(o => new { o.Name });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task Collection_Field_Method_Call_Is_Still_Flagged()
+        {
+            // x.Tags.Contains(...) queries the collection field 'Tags' directly — Tags is a single-hop
+            // field (not an intermediate object hop), so a non-indexed Tags must still be flagged. The
+            // nested-path skip must not swallow a field that is the receiver of a method call.
+            const string source = CommonUsings + @"
+class Order { public string Name { get; set; } public System.Collections.Generic.List<string> Tags { get; set; } }
+
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>().Where(x => x.Tags.Contains(""foo""));
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
+            Assert.Contains("Tags", d.GetMessage());
         }
 
         [Fact]
