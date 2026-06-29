@@ -247,19 +247,19 @@ internal class AiConversation : IAiConversationOperations
 
     public AiAnswer<TAnswer> Run<TAnswer>() => AsyncHelpers.RunSync(() => RunAsync<TAnswer>());
 
-    public AiAnswer<TAnswer> RunWithOutputOptions<TAnswer>(AiOutputOptions outputOptions) => AsyncHelpers.RunSync(() => RunWithOutputOptionsAsync<TAnswer>(outputOptions));
+    public AiAnswer<TAnswer> RunWithSchema<TAnswer>(AiOutputOptions outputOptions) => AsyncHelpers.RunSync(() => RunWithSchemaAsync<TAnswer>(outputOptions));
 
-    public Task<AiAnswer<TAnswer>> RunWithSampleObjectAsync<TAnswer>(TAnswer sampleObject, CancellationToken token = default)
+    public Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(TAnswer sampleObject, CancellationToken token = default)
     {
-        return RunWithOutputOptionsAsync<TAnswer>(new AiOutputOptions { SampleObject = sampleObject }, token);
+        return RunWithSchemaAsync<TAnswer>(new AiOutputOptions { SampleObject = sampleObject }, token);
     }
 
     public Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(string schema, CancellationToken token = default)
     {
-        return RunWithOutputOptionsAsync<TAnswer>(new AiOutputOptions { OutputSchema = schema }, token);
+        return RunWithSchemaAsync<TAnswer>(new AiOutputOptions { OutputSchema = schema }, token);
     }
 
-    public AiAnswer<TAnswer> RunWithSampleObject<TAnswer>(TAnswer sampleObject) => AsyncHelpers.RunSync(() => RunWithSampleObjectAsync<TAnswer>(sampleObject));
+    public AiAnswer<TAnswer> RunWithSchema<TAnswer>(TAnswer sampleObject) => AsyncHelpers.RunSync(() => RunWithSchemaAsync<TAnswer>(sampleObject));
 
     public AiAnswer<TAnswer> RunWithSchema<TAnswer>(string schema) => AsyncHelpers.RunSync(() => RunWithSchemaAsync<TAnswer>(schema));
 
@@ -271,7 +271,7 @@ internal class AiConversation : IAiConversationOperations
     public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         if (typeof(TAnswer) == typeof(string))
-            return await StreamWithOutputOptionsAsync<TAnswer>(streamPropertyPath, streamedChunksCallback, new AiOutputOptions { NoSchema = true }, token).ConfigureAwait(false);
+            return await StreamWithSchemaAsync<TAnswer>(streamPropertyPath, streamedChunksCallback, new AiOutputOptions { NoSchema = true }, token).ConfigureAwait(false);
 
         while (true)
         {
@@ -281,22 +281,22 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    public Task<AiAnswer<TAnswer>> StreamWithSampleObjectAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default)
+    public Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default)
     {
-        return StreamWithOutputOptionsAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, new AiOutputOptions { SampleObject = sampleObject }, token);
+        return StreamWithSchemaAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, new AiOutputOptions { SampleObject = sampleObject }, token);
     }
 
-    public Task<AiAnswer<TAnswer>> StreamWithSampleObjectAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default)
+    public Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default)
     {
-        return StreamWithOutputOptionsAsync<TAnswer>(streamPropertyPath, streamedChunksCallback, new AiOutputOptions { SampleObject = sampleObject }, token);
+        return StreamWithSchemaAsync<TAnswer>(streamPropertyPath, streamedChunksCallback, new AiOutputOptions { SampleObject = sampleObject }, token);
     }
 
-    public Task<AiAnswer<TAnswer>> StreamWithOutputOptionsAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
+    public Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
     {
-        return StreamWithOutputOptionsAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, outputOptions, token);
+        return StreamWithSchemaAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, outputOptions, token);
     }
 
-    public async Task<AiAnswer<TAnswer>> StreamWithOutputOptionsAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
+    public async Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default)
     {
         ValidateOutputOptions<TAnswer>(outputOptions);
 
@@ -310,7 +310,7 @@ internal class AiConversation : IAiConversationOperations
 
     public Task<AiAnswer<string>> StreamAsync(Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
-        return StreamWithOutputOptionsAsync<string>(string.Empty, streamedChunksCallback, new AiOutputOptions { NoSchema = true }, token);
+        return StreamWithSchemaAsync<string>(string.Empty, streamedChunksCallback, new AiOutputOptions { NoSchema = true }, token);
     }
 
     public AiAnswer<TAnswer> Stream<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback)
@@ -319,18 +319,18 @@ internal class AiConversation : IAiConversationOperations
     public AiAnswer<TAnswer> Stream<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback)
         => AsyncHelpers.RunSync(() => StreamAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }));
 
-    public AiAnswer<TAnswer> StreamWithOutputOptions<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions)
-        => AsyncHelpers.RunSync(() => StreamWithOutputOptionsAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }, outputOptions));
+    public AiAnswer<TAnswer> StreamWithSchema<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions)
+        => AsyncHelpers.RunSync(() => StreamWithSchemaAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }, outputOptions));
 
-    public AiAnswer<TAnswer> StreamWithOutputOptions<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions)
-        => AsyncHelpers.RunSync(() => StreamWithOutputOptionsAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }, outputOptions));
+    public AiAnswer<TAnswer> StreamWithSchema<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions)
+        => AsyncHelpers.RunSync(() => StreamWithSchemaAsync<TAnswer>(streamPropertyPath, chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }, outputOptions));
 
     public AiAnswer<string> Stream(Action<string> streamedChunksCallback)
         => AsyncHelpers.RunSync(() => StreamAsync(chunk => { streamedChunksCallback(chunk); return Task.CompletedTask; }));
 
     public Task<AiAnswer<string>> RunAsync(CancellationToken token = default)
     {
-        return RunWithOutputOptionsAsync<string>(new AiOutputOptions { NoSchema = true }, token);
+        return RunWithSchemaAsync<string>(new AiOutputOptions { NoSchema = true }, token);
     }
 
     public AiAnswer<string> Run()
@@ -343,7 +343,7 @@ internal class AiConversation : IAiConversationOperations
         _dispatchedToolIds.Clear();
 
         if (typeof(TAnswer) == typeof(string))
-            return await RunWithOutputOptionsAsync<TAnswer>(new AiOutputOptions { NoSchema = true }, token).ConfigureAwait(false);
+            return await RunWithSchemaAsync<TAnswer>(new AiOutputOptions { NoSchema = true }, token).ConfigureAwait(false);
 
         while (true)
         {
@@ -353,7 +353,7 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    public async Task<AiAnswer<TAnswer>> RunWithOutputOptionsAsync<TAnswer>(AiOutputOptions outputOptions, CancellationToken token = default)
+    public async Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(AiOutputOptions outputOptions, CancellationToken token = default)
     {
         _dispatchedToolIds.Clear();
 
