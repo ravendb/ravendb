@@ -33,34 +33,13 @@ namespace Raven.Analyzers.Queries
 
             context.RegisterCompilationStartAction(startCtx =>
             {
-                var indexByName = new ConcurrentDictionary<string, INamedTypeSymbol>(
-                    System.StringComparer.Ordinal);
+                ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
+                    QueryIndexResolver.CreateIndexNameRegistry(startCtx);
                 var storedFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet>(
                     SymbolEqualityComparer.Default);
                 var mapFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
                     SymbolEqualityComparer.Default);
                 var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
-
-                startCtx.RegisterSymbolAction(symCtx =>
-                {
-                    var type = (INamedTypeSymbol)symCtx.Symbol;
-                    if (!SyntaxHelpers.IsIndexCreationTask(type))
-                        return;
-
-                    string indexKey;
-                    if (QueryIndexResolver.TryGetOverriddenIndexNameLiteral(type, out string? overriddenLiteral))
-                    {
-                        if (overriddenLiteral == null)
-                            return;
-                        indexKey = overriddenLiteral;
-                    }
-                    else
-                    {
-                        indexKey = type.Name.Replace("_", "/");
-                    }
-
-                    indexByName.TryAdd(indexKey, type);
-                }, SymbolKind.NamedType);
 
                 startCtx.RegisterSyntaxNodeAction(ctx =>
                 {
@@ -82,7 +61,7 @@ namespace Raven.Analyzers.Queries
         private static void AnalyzeInvocation(
             SemanticModel model,
             InvocationExpressionSyntax invocation,
-            ConcurrentDictionary<string, INamedTypeSymbol> indexByName,
+            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
             ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
             ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache,
             Action<Diagnostic> reportDiagnostic)
@@ -101,11 +80,11 @@ namespace Raven.Analyzers.Queries
             // projection then operates on the intermediate projected shape, not the source document
             // / index, so checking its fields against TSource or the index stored set would produce
             // false positives. (e.g. Query<S,I>().Select(x => new {x.A}).Select(y => new {y.B}))
-            if (HasInterveningProjection(memberAccess.Expression))
+            if (HasInterveningProjection(memberAccess.Expression, model))
                 return;
 
             // Walk inward through the chain to find the originating session.Query<>() call
-            InvocationExpressionSyntax? queryCall = FindQueryCall(memberAccess.Expression);
+            InvocationExpressionSyntax? queryCall = FindQueryCall(memberAccess.Expression, model);
             if (queryCall == null)
                 return;
 
@@ -144,7 +123,7 @@ namespace Raven.Analyzers.Queries
             ImmutableHashSet<string> sourceMembers = SourceMemberExtractor.GetPublicMembers(sourceType);
 
             // Resolve the effective ProjectionBehavior from Customize(x => x.Projection(...)) in the chain
-            string behavior = ResolveProjectionBehavior(memberAccess.Expression);
+            string behavior = ResolveProjectionBehavior(memberAccess.Expression, model);
             if (behavior == "bail")
                 return;
 
@@ -162,9 +141,9 @@ namespace Raven.Analyzers.Queries
         /// <summary>
         /// Walks inward through the invocation chain to find a session.Query call.
         /// </summary>
-        private static InvocationExpressionSyntax? FindQueryCall(ExpressionSyntax expression)
+        private static InvocationExpressionSyntax? FindQueryCall(ExpressionSyntax expression, SemanticModel model)
         {
-            foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(expression))
+            foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(expression, model))
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
                 if (name == KnownTypes.QueryMethodName)
@@ -178,9 +157,9 @@ namespace Raven.Analyzers.Queries
         /// chain before the originating Query call — meaning the analyzed projection's input shape is
         /// an intermediate projected type rather than the source document.
         /// </summary>
-        private static bool HasInterveningProjection(ExpressionSyntax receiver)
+        private static bool HasInterveningProjection(ExpressionSyntax receiver, SemanticModel model)
         {
-            foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(receiver))
+            foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(receiver, model))
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
                 if (name == KnownTypes.QueryMethodName)
@@ -195,11 +174,11 @@ namespace Raven.Analyzers.Queries
         /// Walks the invocation chain looking for .Customize(x => x.Projection(ProjectionBehavior.X)).
         /// Returns the enum value name (e.g. "FromIndex"), "Default" when absent, or "bail" on ambiguity.
         /// </summary>
-        private static string ResolveProjectionBehavior(ExpressionSyntax chainExpression)
+        private static string ResolveProjectionBehavior(ExpressionSyntax chainExpression, SemanticModel model)
         {
             string result = KnownTypes.ProjectionBehaviorDefault;
 
-            foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(chainExpression))
+            foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(chainExpression, model))
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
                 if (name != KnownTypes.CustomizeMethodName)
@@ -210,7 +189,7 @@ namespace Raven.Analyzers.Queries
                     continue;
 
                 // Expect: x => x.Projection(ProjectionBehavior.X)
-                ExpressionSyntax? lambdaBody = GetLambdaBodyExpression(args[0].Expression);
+                ExpressionSyntax? lambdaBody = SyntaxHelpers.TryGetLambdaBody(args[0].Expression);
                 if (lambdaBody is not InvocationExpressionSyntax projCall)
                     continue;
 
@@ -302,11 +281,11 @@ namespace Raven.Analyzers.Queries
                 return;
 
             // Only handle lambda expressions
-            ExpressionSyntax? lambdaBody = GetLambdaBodyExpression(args[0].Expression);
+            ExpressionSyntax? lambdaBody = SyntaxHelpers.TryGetLambdaBody(args[0].Expression);
             if (lambdaBody == null)
                 return;
 
-            string? paramName = GetLambdaParameterName(args[0].Expression);
+            string? paramName = SyntaxHelpers.GetLambdaParameterName(args[0].Expression);
             if (paramName == null)
                 return;
 
@@ -410,21 +389,5 @@ namespace Raven.Analyzers.Queries
             }
         }
 
-        private static string? GetLambdaParameterName(ExpressionSyntax expr) =>
-            expr switch
-            {
-                SimpleLambdaExpressionSyntax simple => simple.Parameter.Identifier.ValueText,
-                ParenthesizedLambdaExpressionSyntax paren when paren.ParameterList.Parameters.Count == 1
-                    => paren.ParameterList.Parameters[0].Identifier.ValueText,
-                _ => null
-            };
-
-        private static ExpressionSyntax? GetLambdaBodyExpression(ExpressionSyntax expr) =>
-            expr switch
-            {
-                SimpleLambdaExpressionSyntax simple when simple.Body is ExpressionSyntax e => e,
-                ParenthesizedLambdaExpressionSyntax paren when paren.Body is ExpressionSyntax e => e,
-                _ => null
-            };
     }
 }

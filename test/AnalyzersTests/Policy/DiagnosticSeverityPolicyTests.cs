@@ -61,7 +61,18 @@ namespace AnalyzersTests.Policy
             {
                 Assert.True(tracked.TryGetValue(policy.Id, out DiagnosticSeverity severity),
                     $"{policy.Id} is not listed in any AnalyzerReleases file.");
-                Assert.Equal(policy.EffectiveSeverity, severity);
+
+                // The release-tracking files record each rule's severity AS SHIPPED in its introducing
+                // release — which, under the graduated-severity policy, is always Info. That value is
+                // stable across product versions. Comparing against it (rather than the current
+                // EffectiveSeverity) deliberately decouples this check from the build version: a routine
+                // version bump auto-promotes EffectiveSeverity to the destination severity, and the live
+                // severity is already validated by Effective_Severity_Follows_The_Version_Policy. Tying
+                // the .md files to the effective severity would otherwise break the build on every
+                // promotion boundary until the files were hand-edited.
+                DiagnosticSeverity shippedSeverity =
+                    SeverityPolicy.Resolve(policy.IntroducedAt, policy.IntroducedAt, policy.DestinationSeverity);
+                Assert.Equal(shippedSeverity, severity);
             }
 
             string[] strayTracked = tracked.Keys.Where(id => !byId.ContainsKey(id)).ToArray();

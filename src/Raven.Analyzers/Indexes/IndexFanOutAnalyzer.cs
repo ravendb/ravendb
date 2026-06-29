@@ -57,7 +57,9 @@ namespace Raven.Analyzers.Indexes
         {
             foreach (SyntaxNode node in body.DescendantNodesAndSelf())
             {
-                SyntaxNode? lambdaBody = TryGetMapLambdaBody(node, context.SemanticModel);
+                // Reduce is intentionally excluded (includeReduce: false): a Reduce lambda runs over
+                // already-mapped entries and never produces additional outputs per source document.
+                SyntaxNode? lambdaBody = SyntaxHelpers.TryGetIndexMapLambdaBody(node, context.SemanticModel, includeReduce: false);
                 if (lambdaBody == null)
                     continue;
 
@@ -81,65 +83,28 @@ namespace Raven.Analyzers.Indexes
                     DiagnosticDescriptors.IndexFanOut, loc, KnownTypes.SelectManyMethodName));
             }
 
-            // Detect nested from clauses in query-expression form
+            // Detect nested from clauses in query-expression form. Walk continuations too, so a
+            // fan-out introduced after a 'group … into g' continuation
+            // (from d in docs group d by d.X into g from item in g.Items select …) is not missed.
             if (lambdaBody is QueryExpressionSyntax query)
             {
-                foreach (QueryClauseSyntax clause in query.Body.Clauses)
+                for (QueryBodySyntax? body = query.Body; body != null; body = body.Continuation?.Body)
                 {
-                    if (clause is not FromClauseSyntax fromClause)
-                        continue;
+                    foreach (QueryClauseSyntax clause in body.Clauses)
+                    {
+                        if (clause is not FromClauseSyntax fromClause)
+                            continue;
 
-                    // Use a stable token ("nested from") rather than the collection expression so the
-                    // message reads consistently with the method-chain case ("fans out via 'SelectMany'").
-                    context.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.IndexFanOut,
-                        fromClause.FromKeyword.GetLocation(),
-                        "nested from"));
+                        // Use a stable token ("nested from") rather than the collection expression so the
+                        // message reads consistently with the method-chain case ("fans out via 'SelectMany'").
+                        context.ReportDiagnostic(Diagnostic.Create(
+                            DiagnosticDescriptors.IndexFanOut,
+                            fromClause.FromKeyword.GetLocation(),
+                            "nested from"));
+                    }
                 }
             }
         }
 
-        // Returns the lambda body for Map = ... / AddMap<T>(...) / AddMapForAll<T>(...).
-        // Reduce is intentionally excluded: a Reduce lambda runs over already-mapped entries
-        // and never produces additional outputs per source document, so it cannot fan out.
-        private static SyntaxNode? TryGetMapLambdaBody(SyntaxNode node, SemanticModel model)
-        {
-            // Map = lambda  /  this.Map = lambda  /  base.Map = lambda
-            if (node is AssignmentExpressionSyntax assignment)
-            {
-                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
-                if (nameNode == null || nameNode.Identifier.Text != KnownTypes.MapFieldName)
-                    return null;
-
-                ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;
-                if (sym is not (IFieldSymbol or IPropertySymbol))
-                    return null;
-
-                if (!SyntaxHelpers.IsDefinedOnIndexBase(sym.ContainingType))
-                    return null;
-
-                return SyntaxHelpers.TryGetLambdaBody(assignment.Right);
-            }
-
-            // AddMap<T>(...) or AddMapForAll<T>(...)
-            if (node is InvocationExpressionSyntax invocation)
-            {
-                string? methodName = SyntaxHelpers.GetMethodName(invocation);
-                if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)
-                    return null;
-
-                ISymbol? sym = model.GetSymbolInfo(invocation).Symbol;
-                if (sym is not IMethodSymbol method || !SyntaxHelpers.IsMultiMapBase(method.ContainingType))
-                    return null;
-
-                SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
-                if (args.Count == 0)
-                    return null;
-
-                return SyntaxHelpers.TryGetLambdaBody(args[args.Count - 1].Expression);
-            }
-
-            return null;
-        }
     }
 }

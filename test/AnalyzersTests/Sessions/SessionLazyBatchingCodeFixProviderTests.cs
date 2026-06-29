@@ -47,10 +47,12 @@ class Order { public string Id { get; set; } }
         }
 
         [Fact]
-        public async Task ExplicitlyTypedLoads_Transform_To_Var_Lazy()
+        public async Task ExplicitlyTypedLoads_Keep_Lazy_As_Var_But_Restore_Declared_Type_On_Extraction()
         {
-            // The rewritten lazy local holds a Lazy<T>, so the original explicit type ('User')
-            // must be replaced with 'var' or the generated code would not compile.
+            // The rewritten lazy local holds a Lazy<T>, so the original explicit type ('User') must
+            // be replaced with 'var' on the lazy declaration. The .Value extraction, however, restores
+            // the original declared type: .Value is exactly the loaded type, so 'User user = ...' both
+            // compiles and round-trips the user's explicit typing.
             const string source = CommonUsings + @"
 class Test
 {
@@ -72,9 +74,9 @@ class Order { public string Id { get; set; } }
             Assert.Contains("var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);", fixed_code);
             Assert.DoesNotContain("User lazyUser", fixed_code);
             Assert.DoesNotContain("Order lazyOrder", fixed_code);
-            // Value extractions restore the original variable names via var.
-            Assert.Contains("var user = lazyUser.Value;", fixed_code);
-            Assert.Contains("var order = lazyOrder.Value;", fixed_code);
+            // Value extractions restore the original explicit declared type.
+            Assert.Contains("User user = lazyUser.Value;", fixed_code);
+            Assert.Contains("Order order = lazyOrder.Value;", fixed_code);
         }
 
         [Fact]

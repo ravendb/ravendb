@@ -65,30 +65,12 @@ namespace Raven.Analyzers.Indexes
             return new IndexStoredFieldSet(StoredFieldsStatus.Ok, allFields.ToImmutableHashSet());
         }
 
-        private static bool ContainsDynamicFieldCalls(SyntaxNode body)
-        {
-            foreach (InvocationExpressionSyntax inv in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
-            {
-                string? name = SyntaxHelpers.GetMethodName(inv);
-                if (name == null && inv.Expression is IdentifierNameSyntax id)
-                    name = id.Identifier.Text;
-
-                if (name == KnownTypes.CreateFieldMethodName
-                    || name == KnownTypes.CreateSpatialFieldMethodName
-                    || name == KnownTypes.AsJsonMethodName)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         private static StoredFieldsStatus ExtractFromCtorBody(
             SyntaxNode body,
             SemanticModel model,
             HashSet<string> fields)
         {
-            if (ContainsDynamicFieldCalls(body))
+            if (SyntaxHelpers.ContainsDynamicFieldCalls(body))
                 return StoredFieldsStatus.BailCannotAnalyze;
 
             foreach (SyntaxNode node in body.DescendantNodesAndSelf())
@@ -107,9 +89,9 @@ namespace Raven.Analyzers.Indexes
                         // stores nothing. Only the explicit Yes form means "all stored"; for No keep
                         // scanning individual Store(...) calls, and bail if the argument can't be read.
                         SeparatedSyntaxList<ArgumentSyntax> storeAllArgs = invocation.ArgumentList.Arguments;
-                        if (storeAllArgs.Count == 1 && IsFieldStorageYes(storeAllArgs[0].Expression))
+                        if (storeAllArgs.Count == 1 && IsFieldStorageYes(storeAllArgs[0].Expression, model))
                             return StoredFieldsStatus.AllStored;
-                        if (storeAllArgs.Count == 1 && IsFieldStorageNo(storeAllArgs[0].Expression))
+                        if (storeAllArgs.Count == 1 && IsFieldStorageNo(storeAllArgs[0].Expression, model))
                             continue;
                         return StoredFieldsStatus.BailCannotAnalyze;
                     }
@@ -120,7 +102,7 @@ namespace Raven.Analyzers.Indexes
                         if (args.Count < 2)
                             continue;
 
-                        if (!IsFieldStorageYes(args[1].Expression))
+                        if (!IsFieldStorageYes(args[1].Expression, model))
                             continue;
 
                         string? fieldName = ExtractFieldNameFromArg(args[0].Expression);
@@ -146,7 +128,7 @@ namespace Raven.Analyzers.Indexes
                     if (indexerArgs.Count == 0)
                         return StoredFieldsStatus.BailCannotAnalyze;
 
-                    if (!IsFieldStorageYes(assignment.Right))
+                    if (!IsFieldStorageYes(assignment.Right, model))
                         continue;
 
                     string? fieldName = ExtractFieldNameFromArg(indexerArgs[0].Expression);
@@ -160,18 +142,23 @@ namespace Raven.Analyzers.Indexes
             return StoredFieldsStatus.Ok;
         }
 
-        private static bool IsFieldStorageYes(ExpressionSyntax expr)
-        {
-            // FieldStorage.Yes — a member access where the member name is "Yes"
-            return expr is MemberAccessExpressionSyntax ma
-                && ma.Name.Identifier.ValueText == "Yes";
-        }
+        private static bool IsFieldStorageYes(ExpressionSyntax expr, SemanticModel model) =>
+            IsFieldStorageMember(expr, KnownTypes.FieldStorageYes, model);
 
-        private static bool IsFieldStorageNo(ExpressionSyntax expr)
+        private static bool IsFieldStorageNo(ExpressionSyntax expr, SemanticModel model) =>
+            IsFieldStorageMember(expr, KnownTypes.FieldStorageNo, model);
+
+        // FieldStorage.Yes / FieldStorage.No — a member access whose member name matches AND whose
+        // expression type is the FieldStorage enum. The type check is what keeps an unrelated enum
+        // member that merely happens to be named "Yes"/"No" (e.g. MyFlags.Yes) from being mistaken
+        // for a storage directive and corrupting the stored-field set.
+        private static bool IsFieldStorageMember(ExpressionSyntax expr, string memberName, SemanticModel model)
         {
-            // FieldStorage.No — a member access where the member name is "No"
-            return expr is MemberAccessExpressionSyntax ma
-                && ma.Name.Identifier.ValueText == "No";
+            if (expr is not MemberAccessExpressionSyntax ma || ma.Name.Identifier.ValueText != memberName)
+                return false;
+
+            ITypeSymbol? type = model.GetTypeInfo(ma).Type;
+            return type?.Name == KnownTypes.FieldStorageTypeName;
         }
 
         /// <summary>

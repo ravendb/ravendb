@@ -50,7 +50,7 @@ namespace Raven.Analyzers.Subscriptions
             ITypeSymbol? receiverType = context.SemanticModel
                 .GetTypeInfo(memberAccess.Expression).Type;
 
-            if (!IsDocumentStore(receiverType))
+            if (!SyntaxHelpers.IsDocumentStore(receiverType))
                 return;
 
             if (!IsInsideRunLambda(invocation, context.SemanticModel))
@@ -60,23 +60,6 @@ namespace Raven.Analyzers.Subscriptions
                 DiagnosticDescriptors.SubscriptionStoreOpenSession,
                 memberAccess.Name.GetLocation(),
                 methodName));
-        }
-
-        private static bool IsDocumentStore(ITypeSymbol? type)
-        {
-            if (type == null)
-                return false;
-
-            if (type.Name == KnownTypes.IDocumentStoreName)
-                return true;
-
-            foreach (INamedTypeSymbol iface in type.AllInterfaces)
-            {
-                if (iface.Name == KnownTypes.IDocumentStoreName)
-                    return true;
-            }
-
-            return false;
         }
 
         private static bool IsInsideRunLambda(SyntaxNode node, SemanticModel model)
@@ -134,23 +117,7 @@ namespace Raven.Analyzers.Subscriptions
                 return false;
 
             ITypeSymbol? workerType = model.GetTypeInfo(runMemberAccess.Expression).Type;
-            return IsSubscriptionWorkerType(workerType);
-        }
-
-        private static bool IsSubscriptionWorkerType(ITypeSymbol? type)
-        {
-            ITypeSymbol? current = type;
-            while (current != null)
-            {
-                string name = current.Name;
-                if (name == KnownTypes.SubscriptionWorkerTypeName ||
-                    name == KnownTypes.AbstractSubscriptionWorkerTypeName)
-                    return true;
-
-                current = current.BaseType;
-            }
-
-            return false;
+            return SyntaxHelpers.IsSubscriptionWorkerType(workerType);
         }
     }
 }

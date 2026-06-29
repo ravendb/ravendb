@@ -29,32 +29,11 @@ namespace Raven.Analyzers.Queries
 
             context.RegisterCompilationStartAction(startCtx =>
             {
-                var indexByName = new ConcurrentDictionary<string, INamedTypeSymbol>(
-                    System.StringComparer.Ordinal);
+                ConcurrentDictionary<string, INamedTypeSymbol?> indexByName =
+                    QueryIndexResolver.CreateIndexNameRegistry(startCtx);
                 var fieldSetCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
                     SymbolEqualityComparer.Default);
                 var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
-
-                startCtx.RegisterSymbolAction(symCtx =>
-                {
-                    var type = (INamedTypeSymbol)symCtx.Symbol;
-                    if (!SyntaxHelpers.IsIndexCreationTask(type))
-                        return;
-
-                    string indexKey;
-                    if (QueryIndexResolver.TryGetOverriddenIndexNameLiteral(type, out string? overriddenLiteral))
-                    {
-                        if (overriddenLiteral == null)
-                            return;
-                        indexKey = overriddenLiteral;
-                    }
-                    else
-                    {
-                        indexKey = type.Name.Replace("_", "/");
-                    }
-
-                    indexByName.TryAdd(indexKey, type);
-                }, SymbolKind.NamedType);
 
                 startCtx.RegisterSyntaxNodeAction(ctx =>
                 {
@@ -75,7 +54,7 @@ namespace Raven.Analyzers.Queries
         private static void AnalyzeInvocation(
             SemanticModel model,
             InvocationExpressionSyntax queryInvocation,
-            ConcurrentDictionary<string, INamedTypeSymbol> indexByName,
+            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
             ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> fieldSetCache,
             Action<Diagnostic> reportDiagnostic)
         {
@@ -135,11 +114,11 @@ namespace Raven.Analyzers.Queries
             string indexClassName,
             Action<Diagnostic> reportDiagnostic)
         {
-            string? paramName = GetLambdaParameterName(lambdaExpr);
+            string? paramName = SyntaxHelpers.GetLambdaParameterName(lambdaExpr);
             if (paramName == null)
                 return;
 
-            ExpressionSyntax? body = GetLambdaBodyExpression(lambdaExpr);
+            ExpressionSyntax? body = SyntaxHelpers.TryGetLambdaBody(lambdaExpr);
             if (body == null)
                 return;
 
@@ -181,21 +160,5 @@ namespace Raven.Analyzers.Queries
             }
         }
 
-        private static string? GetLambdaParameterName(ExpressionSyntax expr) =>
-            expr switch
-            {
-                SimpleLambdaExpressionSyntax simple => simple.Parameter.Identifier.ValueText,
-                ParenthesizedLambdaExpressionSyntax paren when paren.ParameterList.Parameters.Count == 1
-                    => paren.ParameterList.Parameters[0].Identifier.ValueText,
-                _ => null
-            };
-
-        private static ExpressionSyntax? GetLambdaBodyExpression(ExpressionSyntax expr) =>
-            expr switch
-            {
-                SimpleLambdaExpressionSyntax { Body: ExpressionSyntax e } => e,
-                ParenthesizedLambdaExpressionSyntax { Body: ExpressionSyntax e } => e,
-                _ => null
-            };
     }
 }

@@ -52,48 +52,53 @@ namespace Raven.Analyzers.Indexes
             bool isMultiMap = SyntaxHelpers.IsMultiMapIndexCreationTask(classSymbol);
 
             if (isMultiMap)
-                CheckMultiMapAddMapCalls(context, classDecl);
+                CheckMultiMapAddMapCalls(context, classDecl, classSymbol);
             else
-                CheckRegularIndexMapAssignment(context, classDecl);
+                CheckRegularIndexMapAssignment(context, classDecl, classSymbol);
         }
 
         private static void CheckRegularIndexMapAssignment(
             SyntaxNodeAnalysisContext context,
-            ClassDeclarationSyntax classDecl)
+            ClassDeclarationSyntax classDecl,
+            INamedTypeSymbol classSymbol)
         {
-            // RVN004 — No constructor assigns Map
-            bool mapAssignedInCtor = classDecl.Members
-                .OfType<ConstructorDeclarationSyntax>()
-                .Any(ctor => ctor.GetBodyNode() is SyntaxNode body && ContainsMapAssignment(body, context.SemanticModel));
+            // RVN004 — no constructor in this class OR any user-defined base class assigns Map.
+            // A base index class that defines a shared Map (the common abstract-base pattern) must
+            // count, so the search walks the inheritance chain rather than only this declaration.
+            if (IndexInheritanceInspector.FindMapAssignmentInChain(classSymbol, context.Compilation) != IndexChainSearch.NotFound)
+                return;
 
-            if (!mapAssignedInCtor)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.IndexMissingMapAssignment,
-                    classDecl.Identifier.GetLocation(),
-                    classDecl.Identifier.Text));
-            }
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.IndexMissingMapAssignment,
+                classDecl.Identifier.GetLocation(),
+                classDecl.Identifier.Text));
         }
 
         private static void CheckMultiMapAddMapCalls(
             SyntaxNodeAnalysisContext context,
-            ClassDeclarationSyntax classDecl)
+            ClassDeclarationSyntax classDecl,
+            INamedTypeSymbol classSymbol)
         {
-            int totalAddMapCount = classDecl.Members
-                .OfType<ConstructorDeclarationSyntax>()
-                .Sum(ctor => ctor.GetBodyNode() is SyntaxNode body ? CountAddMapInvocations(body, context.SemanticModel) : 0);
+            (int totalAddMapCount, bool anyInLoop, bool unknown) =
+                IndexInheritanceInspector.CountAddMapInChain(classSymbol, context.Compilation);
+
+            // A base class is metadata-only; its AddMap calls are invisible, so don't report.
+            if (unknown)
+                return;
 
             if (totalAddMapCount == 0)
             {
-                // RVN005 — no AddMap in any constructor
+                // RVN005 — no AddMap in any constructor (this class or a user-defined base)
                 context.ReportDiagnostic(Diagnostic.Create(
                     DiagnosticDescriptors.MultiMapIndexMissingAddMap,
                     classDecl.Identifier.GetLocation(),
                     classDecl.Identifier.Text));
             }
-            else if (totalAddMapCount == 1)
+            else if (totalAddMapCount == 1 && anyInLoop == false)
             {
-                // RVN006 — exactly one AddMap; a regular index would suffice
+                // RVN006 — exactly one AddMap call site; a regular index would suffice. Suppressed
+                // when that call sits in a loop, where it registers a map per iteration at runtime
+                // and the multi-map base is genuinely required.
                 context.ReportDiagnostic(Diagnostic.Create(
                     DiagnosticDescriptors.MultiMapIndexSingleAddMap,
                     classDecl.Identifier.GetLocation(),
@@ -133,47 +138,5 @@ namespace Raven.Analyzers.Indexes
             }
         }
 
-        private static bool ContainsMapAssignment(SyntaxNode node, SemanticModel model)
-        {
-            foreach (AssignmentExpressionSyntax assignment in
-                node.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
-            {
-                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
-                if (nameNode == null || nameNode.Identifier.Text != KnownTypes.MapFieldName)
-                    continue;
-
-                ISymbol? symbol = model.GetSymbolInfo(nameNode).Symbol;
-                if (symbol is (IFieldSymbol or IPropertySymbol)
-                    && SyntaxHelpers.IsDefinedOnIndexBase(symbol.ContainingType))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static int CountAddMapInvocations(SyntaxNode node, SemanticModel model)
-        {
-            int count = 0;
-
-            foreach (InvocationExpressionSyntax invocation in
-                node.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
-            {
-                string? methodName = SyntaxHelpers.GetMethodName(invocation);
-                if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)
-                    continue;
-
-                // Confirm the method resolves to the AddMap defined on a multi-map index base class
-                ISymbol? symbol = model.GetSymbolInfo(invocation).Symbol;
-                if (symbol is IMethodSymbol method
-                    && SyntaxHelpers.IsMultiMapBase(method.ContainingType))
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
     }
 }
