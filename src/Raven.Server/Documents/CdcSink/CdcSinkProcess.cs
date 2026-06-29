@@ -277,7 +277,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected void RecordProcessError(TaskErrorStep step, string error, long affectedDocumentsCount = 0)
     {
-        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.Sink, new TaskProcessError
         {
             CreatedAt = SystemTime.UtcNow,
             TaskName = Name,
@@ -465,7 +465,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             // Done here on the process thread - never from inside the merged command - so
             // the enqueue-sync TaskErrorsStorage API is safe to use.
             if (Statistics.InMemoryItemErrorsCount > 0)
-                Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, Name, Statistics.ReadInMemoryItemErrors());
+                Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.Sink, Name, Statistics.ReadInMemoryItemErrors());
 
             LastBatchTime = Database.Time.GetUtcNow();
             if (checkpoint != null)

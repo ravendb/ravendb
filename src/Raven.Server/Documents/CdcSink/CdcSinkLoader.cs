@@ -217,7 +217,7 @@ public class CdcSinkLoader : IDisposable
         if (Logger.IsInfoEnabled)
             Logger.Info(errorMessage);
 
-        _database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+        _database.TaskErrorsStorage.StoreProcessError(TaskCategory.Sink, new TaskProcessError
         {
             CreatedAt = SystemTime.UtcNow,
             TaskName = config.Name,
@@ -375,7 +375,7 @@ public class CdcSinkLoader : IDisposable
             foreach (var process in toRemoveList)
             {
                 if (existingConfigNames.Contains(process.Configuration.Name) == false)
-                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
+                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.Sink);
             }
         }
 
