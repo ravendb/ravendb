@@ -355,6 +355,14 @@ namespace Raven.Analyzers.Queries
 
             string fieldName = memberAccess.Name.Identifier.Text;
 
+            // In a Select projection the LINQ provider rewrites the identity property (the default
+            // convention is the member named "Id") to the document-id field id(), which is always
+            // retrievable regardless of ProjectionBehavior — including FromIndex / FromIndexOrThrow.
+            // (ProjectInto is different: it fetches the member name verbatim, so its Id is NOT
+            // rewritten and is handled by the normal stored/source check above.) Never flag Id here.
+            if (fieldName == KnownTypes.IdPropertyName)
+                return;
+
             // Under Default behavior the field is on source doc by C# compile check → only warn for FromIndex*
             if (!IsFieldRetrievable(fieldName, storedFields, sourceMembers, behavior))
             {

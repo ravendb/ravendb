@@ -346,6 +346,55 @@ class User { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task IncludeStyleLoads_Not_Batchable_No_Diagnostic()
+        {
+            // Load<T>(id, includes) has no lazy equivalent — Lazily.Load only accepts (id) or
+            // (id, Action<T> onEval), never an Action<IIncludeBuilder<T>>. Flagging it would let the
+            // code fix copy the include lambda onto Lazily.Load and emit uncompilable code, so the
+            // analyzer counts only the single-argument Load(id) form as batchable.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string managerId)
+    {
+        var user = session.Load<User>(userId, i => i.IncludeDocuments(x => x.ManagerId));
+        var manager = session.Load<User>(managerId, i => i.IncludeDocuments(x => x.ManagerId));
+    }
+}
+
+class User { public string Id { get; set; } public string ManagerId { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task ScalarMaterializers_Not_Batchable_No_Diagnostic()
+        {
+            // First/Any/Single/Count have no IRavenQueryable.Lazily() equivalent the code fix can
+            // produce, so the detection pass excludes them (in lockstep with the fix). Two such calls
+            // are therefore not reported, even though both materialize a server round-trip.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var first = session.Query<User>().First();
+        var any = session.Query<User>().Any();
+    }
+}
+
+class User { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
         public async Task QueryMaterializer_With_Argument_Not_Counted_No_Diagnostic()
         {
             const string source = CommonUsings + @"

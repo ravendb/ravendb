@@ -315,6 +315,138 @@ class Test
             Assert.Contains("FromIndexOrThrow", d.GetMessage());
         }
 
+        [Fact]
+        public async Task Select_FromIndexOrThrow_Id_Always_Retrievable_No_Diagnostic()
+        {
+            // In a Select projection the LINQ provider rewrites the identity property (x.Id) to the
+            // document-id field id(), which is always retrievable even under FromIndexOrThrow where the
+            // document fallback is disabled and Id is not a stored index field. So Id must not be flagged.
+            const string source = CommonUsings + @"
+class Doc { public string Id { get; set; } public string Name { get; set; } }
+class DocIndex : AbstractIndexCreationTask<Doc>
+{
+    public DocIndex()
+    {
+        Map = docs => from d in docs select new { d.Name };
+        Store(x => x.Name, FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Doc, DocIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+            .Select(x => new { x.Id });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Select_FromIndexOrThrow_Id_Retrievable_But_Other_Field_Still_Flagged()
+        {
+            // Id is rewritten to id() and is retrievable, but a genuinely unstored field projected next
+            // to it must still be reported — the Select Id special-case must not suppress real diagnostics.
+            const string source = CommonUsings + @"
+class Doc { public string Id { get; set; } public string Name { get; set; } public string Ghost { get; set; } }
+class DocIndex : AbstractIndexCreationTask<Doc>
+{
+    public DocIndex()
+    {
+        Map = docs => from d in docs select new { d.Name };
+        Store(x => x.Name, FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Doc, DocIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+            .Select(x => new { x.Id, x.Ghost });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            // Only Ghost is flagged; Id is excluded (rewritten to id()).
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("Ghost", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task Select_NamedDto_FromIndexOrThrow_Id_Retrievable_No_Diagnostic()
+        {
+            // The named-object Select initializer (new Dto { Key = x.Id }) routes its RHS through the
+            // same CheckSelectInitializerRhs Id skip as the anonymous form: x.Id is rewritten to id()
+            // and is always retrievable, so it must not be flagged.
+            const string source = CommonUsings + @"
+class Doc { public string Id { get; set; } public string Name { get; set; } }
+class Dto { public string Key { get; set; } }
+class DocIndex : AbstractIndexCreationTask<Doc>
+{
+    public DocIndex()
+    {
+        Map = docs => from d in docs select new { d.Name };
+        Store(x => x.Name, FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Doc, DocIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+            .Select(x => new Dto { Key = x.Id });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task ProjectInto_FromIndexOrThrow_Unstored_Id_Reports_Diagnostic()
+        {
+            // Unlike Select, ProjectInto fetches member names verbatim (it emits `select Id`, not
+            // `select id()`). Under FromIndexOrThrow, an Id that the index does not store is not
+            // retrievable and the query throws at runtime, so RVN008 correctly fires — Id is NOT
+            // special-cased in the ProjectInto path.
+            const string source = CommonUsings + @"
+class Doc { public string Id { get; set; } public string Name { get; set; } }
+class Dto { public string Id { get; set; } }
+class DocIndex : AbstractIndexCreationTask<Doc>
+{
+    public DocIndex()
+    {
+        Map = docs => from d in docs select new { d.Name };
+        Store(x => x.Name, FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Doc, DocIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+            .ProjectInto<Dto>();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("Id", d.GetMessage());
+            Assert.Contains("FromIndexOrThrow", d.GetMessage());
+        }
+
         // ── Stored-field extraction: expression-bodied ctor & this/base receiver ──
 
         [Fact]

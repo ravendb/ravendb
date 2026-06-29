@@ -78,8 +78,11 @@ namespace Raven.Analyzers.Sessions
 
         private sealed class MaterializingCallCollector : CSharpSyntaxWalker
         {
-            // Shared with Pass1 via KnownTypes so the two passes stay in lockstep.
-            private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.SessionMaterializingMethods;
+            // Detection uses the NARROW set: only materializers the code fix can actually rewrite to a
+            // lazy registration. Scalar/element materializers (First/Single/Count/…) are intentionally
+            // excluded so RVN012 is never raised where no working fix exists. Pass1 uses the broad
+            // SessionMaterializingMethods set for dependency tracking; the two are deliberately different.
+            private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.LazyBatchableQueryMaterializers;
 
             private readonly SemanticModel _model;
             private readonly HashSet<ISymbol> _materializationDerivedSet;
@@ -145,11 +148,16 @@ namespace Raven.Analyzers.Sessions
                     return;
                 }
 
-                // Check for session loads
+                // Check for session loads. Only a single-argument Load(id) is batchable: the lazy
+                // API exposes Lazily.Load<T>(id) for exactly that shape. The two-argument overload
+                // Load<T>(id, Action<IIncludeBuilder<T>>) (includes) has no lazy counterpart — the code
+                // fix would copy the include lambda verbatim onto Lazily.Load, which only accepts an
+                // Action<T> onEval, producing uncompilable code. Async LoadAsync(id, CancellationToken)
+                // is likewise excluded. So require exactly one argument and verify it is independent.
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
                     SyntaxHelpers.IsSessionType(receiverType))
                 {
-                    if (invocation.ArgumentList.Arguments.Count > 0)
+                    if (invocation.ArgumentList.Arguments.Count == 1)
                     {
                         ArgumentSyntax firstArg = invocation.ArgumentList.Arguments[0];
                         if (IsIndependentArg(firstArg))
@@ -276,7 +284,9 @@ namespace Raven.Analyzers.Sessions
 
         private sealed class Pass1CollectMaterializationDerivedLocals : CSharpSyntaxWalker
         {
-            // Shared with the detection pass via KnownTypes so the two passes stay in lockstep.
+            // Dependency tracking uses the BROAD set: any materializer (including First/Single/Count/…)
+            // produces a local that downstream operations may depend on, so all of them must be tracked
+            // even though the detection pass only flags the lazy-batchable subset.
             private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.SessionMaterializingMethods;
 
             private readonly SemanticModel _model;
