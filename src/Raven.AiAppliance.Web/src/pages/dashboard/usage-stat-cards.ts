@@ -9,6 +9,7 @@ export function buildUsageStatCards(points: UsagePoint[] | undefined, isPending:
         value: points?.reduce((sum, point) => sum + select(point), 0),
         isLoading: isPending,
         series: points?.map(select),
+        seriesDates: points?.map((point) => point.timestamp),
     });
 
     return [
