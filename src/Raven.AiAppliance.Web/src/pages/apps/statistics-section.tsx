@@ -1,40 +1,17 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import { USAGE_WINDOW_BY_KEY } from "@/components/data/usage-window";
 import { WindowTabs, type WindowKey } from "@/components/data/window-tabs";
-import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
+import { DashboardStatCards } from "@/pages/dashboard/dashboard-stat-cards";
+import { buildUsageStatCards } from "@/pages/dashboard/usage-stat-cards";
 import { SectionCard } from "@/pages/apps/section-card";
 
 export function StatisticsSection({ slug }: { slug: string }) {
     const [windowKey, setWindowKey] = useState<WindowKey>("last7d");
-    const conversationStatsQuery = useQuery(api.queries.stats.conversationStats(slug));
-    const dashboardAppQuery = useQuery(api.queries.stats.dashboardApp(slug));
+    const usageQuery = useQuery(api.queries.stats.usage(USAGE_WINDOW_BY_KEY[windowKey], slug));
 
-    const windowData = conversationStatsQuery.data?.[windowKey];
-
-    const cards: DashboardStatCard[] = [
-        {
-            label: "Conversations",
-            value: windowData?.conversations,
-            isLoading: conversationStatsQuery.isPending,
-        },
-        {
-            label: "Messages",
-            value: windowData?.messages,
-            isLoading: conversationStatsQuery.isPending,
-        },
-        {
-            label: "Tokens",
-            value: windowData?.tokens,
-            isLoading: conversationStatsQuery.isPending,
-        },
-        {
-            label: "Writes",
-            value: dashboardAppQuery.data?.writesPerMonth ?? undefined,
-            isLoading: dashboardAppQuery.isPending,
-            caption: "This month",
-        },
-    ];
+    const cards = buildUsageStatCards(usageQuery.data, usageQuery.isPending);
 
     return (
         <SectionCard title="Statistics" action={<WindowTabs value={windowKey} onChange={setWindowKey} />}>

@@ -68,6 +68,7 @@ export const sampleUsage: UsagePoint[] = Array.from({ length: 24 }, (_, hour) =>
         conversations: Math.round(base * 0.4),
         messages: Math.round(base),
         tokens: Math.round(base * 280),
+        writes: Math.round(base * 45),
     };
 });
 

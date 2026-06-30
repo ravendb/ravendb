@@ -259,6 +259,12 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
 
         var all = await client.GetFromJsonAsync<JsonElement>("/api/usage?time=Last24h");
         Assert.Equal(6, Sum(all, "messages"));       // both apps summed
+
+        var appTwo = await client.GetFromJsonAsync<JsonElement>("/api/usage?time=Last24h&app=app-two");
+        // Writes are a deterministic per-app mock (RavenDB-26780): the global series must
+        // equal the sum of the per-app series, and be populated (> 0).
+        Assert.Equal(Sum(appOne, "writes") + Sum(appTwo, "writes"), Sum(all, "writes"));
+        Assert.True(Sum(all, "writes") > 0);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
