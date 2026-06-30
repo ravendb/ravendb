@@ -26,9 +26,9 @@ public class CdcSinkProcessStatistics
 
     private readonly CdcSinkConfiguration _configuration;
 
-    // Latched on a permanent fault so HealthStatus stays Failed even if a later batch completes; cleared
+    // Set on a permanent fault so HealthStatus stays Failed even if a later batch completes; cleared
     // only by recreating the process (and thus these statistics).
-    private bool _healthFailedLatched;
+    private bool _setHealthStatusToFailedOnFault;
 
     // Per-batch error/success tally feeding the EWMA error ratio on batch completion (see OnBatchCompletion).
     private long _batchErrors;
@@ -160,7 +160,7 @@ public class CdcSinkProcessStatistics
         {
             AverageErrorsRatio.UpdateOnBatchCompletion(_batchErrors, _batchErrors + _batchSuccesses);
 
-            if (_healthFailedLatched)
+            if (_setHealthStatusToFailedOnFault)
             {
                 HealthStatus = EtlProcessHealthStatus.Failed;
             }
@@ -189,7 +189,7 @@ public class CdcSinkProcessStatistics
     {
         lock (_lock)
         {
-            _healthFailedLatched = true;
+            _setHealthStatusToFailedOnFault = true;
             HealthStatus = EtlProcessHealthStatus.Failed;
         }
     }
