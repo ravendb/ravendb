@@ -1243,17 +1243,71 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 var response = (BlittableJsonReaderObject)results[i];
                 if (response.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
                     throw new InvalidOperationException("Missing status code");
-                if (response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult) is false)
+
+                response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult);
+                if (statusCode == 200 && requestResult == null)
                     throw new InvalidOperationException("Missing Result from query request output");
 
+                var index = i;
                 yield return (() =>
                 {
                     if (statusCode != 200)
-                        throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
+                    {
+                        if (requestResult != null)
+                            throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
+
+                        // A failed sub-request can come back with a null body (for example, a query against a
+                        // non-existing index returns 404 with no result). There's no server-side ExceptionSchema
+                        // to deserialize in that case, so build a fitting one ourselves - otherwise we'd throw
+                        // while trying to deserialize a null result instead of surfacing the real failure.
+                        var (requestUrl, requestContent) = TryGetRequestUrlAndContent(reqs, index);
+                        var msg = $"The request to '{requestUrl}' failed with status code {statusCode} and returned an empty response body. Request: {requestContent}";
+
+                        var schema = new ExceptionDispatcher.ExceptionSchema
+                        {
+                            Url = requestUrl,
+                            Type = typeof(RavenException).FullName,
+                            Message = msg,
+                            Error = msg
+                        };
+                        throw ExceptionDispatcher.Get(schema, (HttpStatusCode)statusCode);
+                    }
                     return requestResult;
                 }, i);
             }
         }
+    }
+
+    private static (string Url, string Content) TryGetRequestUrlAndContent(DynamicJsonArray reqs, int index)
+    {
+        if (reqs == null || index < 0 || index >= reqs.Items.Count)
+            return (null, null);
+
+        if (reqs.Items[index] is not DynamicJsonValue request)
+            return (null, null);
+
+        string url = null;
+        string content = null;
+
+        foreach (var (name, value) in request.Properties)
+        {
+            if (name == nameof(GetRequest.Url))
+            {
+                url = value as string;
+            }
+            else if (name == nameof(GetRequest.Content) && value is DynamicJsonValue contentObject)
+            {
+                foreach (var (contentName, contentValue) in contentObject.Properties)
+                {
+                    content ??= string.Empty;
+                    if (content.Length > 0)
+                        content += ", ";
+                    content += $"{contentName}: {contentValue}";
+                }
+            }
+        }
+
+        return (url, content);
     }
 
     public async Task<AiInternalConversationResult> HandleRequestAsync(
