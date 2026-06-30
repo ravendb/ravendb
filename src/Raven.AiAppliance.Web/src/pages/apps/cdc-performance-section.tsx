@@ -59,8 +59,8 @@ function CdcPerformanceContent({ performance }: { performance: CdcPerformanceRes
                 isEmpty={performance.recentBatches.length === 0}
                 emptyMessage="No recent batches."
             >
-                {performance.recentBatches.map((batch) => (
-                    <TableRow key={batch.started}>
+                {performance.recentBatches.map((batch, index) => (
+                    <TableRow key={`${batch.started}-${index}`}>
                         <TableCell className="whitespace-nowrap text-muted-foreground">
                             {formatDateTime(batch.started)}
                         </TableCell>

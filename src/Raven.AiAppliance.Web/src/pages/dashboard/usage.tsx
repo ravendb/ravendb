@@ -9,17 +9,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Progress } from "@/components/shadcn/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
-
-function formatTimeAgo(timestamp: number) {
-    const minutes = Math.round((Date.now() - timestamp) / 60_000);
-    if (minutes < 1) {
-        return "just now";
-    }
-    if (minutes < 60) {
-        return `${minutes} min ago`;
-    }
-    return `${Math.round(minutes / 60)} h ago`;
-}
+import { formatRelativeTime } from "@/lib/utils";
 
 export function DashboardUsage() {
     const now = new Date();
@@ -114,7 +104,7 @@ export function DashboardUsage() {
                     <CardTitle>Token usage per app</CardTitle>
                     <CardDescription>
                         Tracked for this period.
-                        {refreshedAt !== undefined && ` Refreshed ${formatTimeAgo(refreshedAt)}.`}
+                        {refreshedAt !== undefined && ` Refreshed ${formatRelativeTime(refreshedAt)}.`}
                     </CardDescription>
                     <CardAction>
                         <Button

@@ -32,14 +32,16 @@ const RELATIVE_TIME_UNITS: { unit: Intl.RelativeTimeFormatUnit; ms: number }[] =
     { unit: "second", ms: SECOND_MS },
 ];
 
-const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "narrow" });
+// "always" (not "auto") so a value just past the day boundary reads "in 1 day" rather than
+// "tomorrow" — the vaguer word can clash with a caller's own warning threshold (see getExpiryStatus).
+const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", { numeric: "always", style: "narrow" });
 
-// Renders an ISO timestamp as a short relative label (e.g. "19m ago", "1h ago"); falls back to the
-// raw value if it isn't a parseable date.
-export function formatRelativeTime(value: string) {
+// Renders an ISO timestamp or epoch milliseconds as a short relative label (e.g. "19m ago",
+// "1h ago"); falls back to the raw value if it isn't a parseable date.
+export function formatRelativeTime(value: string | number) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-        return value;
+        return String(value);
     }
 
     const elapsedMs = date.getTime() - Date.now();
@@ -48,7 +50,7 @@ export function formatRelativeTime(value: string) {
             return relativeTimeFormatter.format(Math.round(elapsedMs / ms), unit);
         }
     }
-    return relativeTimeFormatter.format(0, "second"); // "now" for sub-second differences
+    return "now"; // sub-second differences
 }
 
 export async function copyToClipboard(value: string) {

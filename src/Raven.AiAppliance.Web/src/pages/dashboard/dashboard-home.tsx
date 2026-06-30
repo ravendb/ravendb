@@ -45,13 +45,12 @@ export function DashboardHome() {
 
     const isWritesLoading =
         currentMonthWritesQuery.isPending || (needsPreviousMonth && previousMonthWritesQuery.isPending);
-    const writesDays = [
-        ...(previousMonthWritesQuery.data?.days ?? []),
-        ...(currentMonthWritesQuery.data?.days ?? []),
-    ].filter((day) => {
-        const date = parseISO(`${day.date}T00:00:00Z`);
-        return date >= cutoff && date <= todayUtc;
-    });
+    const writesDays = [...(previousMonthWritesQuery.data?.days ?? []), ...(currentMonthWritesQuery.data?.days ?? [])]
+        .filter((day) => {
+            const date = parseISO(`${day.date}T00:00:00Z`);
+            return date >= cutoff && date <= todayUtc;
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
     const writesValue = isWritesLoading ? undefined : writesDays.reduce((sum, day) => sum + day.writes, 0);
 
     const cards: DashboardStatCard[] = [
