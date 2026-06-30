@@ -62,7 +62,7 @@ namespace Raven.Server.Web.System
             var skipCollections = GetBoolValueQueryString("skipCollectionsMetrics", false) ?? false;
             var skipEtls = GetBoolValueQueryString("skipEtlsMetrics", false) ?? false;
             var skipAiTasks = GetBoolValueQueryString("skipAiTasksMetrics", false) ?? false;
-            var skipSinks = GetBoolValueQueryString("skipSinksMetrics", false) ?? false;
+            var skipCdcSinks = GetBoolValueQueryString("skipCdcSinksMetrics", false) ?? false;
             var includeGc = GetBoolValueQueryString("includeGcMetrics", false) ?? false;
 
             var provider = new MetricsProvider(Server);
@@ -101,9 +101,9 @@ namespace Raven.Server.Web.System
                 await WriteAiTaskMetricsAsync(provider, databases, responseStream);
             }
 
-            if (skipSinks == false)
+            if (skipCdcSinks == false)
             {
-                await WriteSinkMetricsAsync(provider, databases, responseStream);
+                await WriteCdcSinkMetricsAsync(provider, databases, responseStream);
             }
         }
 
@@ -232,12 +232,12 @@ namespace Raven.Server.Web.System
                     WriteCounterWithHelp(writer, "Number of impaired AI tasks", "server_ai_tasks_impaired_count", serverMetrics.AiTasks.ImpairedTasksCount);
                     WriteCounterWithHelp(writer, "Number of failed AI tasks", "server_ai_tasks_failed_count", serverMetrics.AiTasks.FailedTasksCount);
 
-                    // CDC Sinks
-                    WriteCounterWithHelp(writer, "Number of CDC Sinks", "server_sinks_count", serverMetrics.Sinks.Count);
-                    WriteCounterWithHelp(writer, "Number of CDC Sink errors", "server_sinks_errors_count", serverMetrics.Sinks.ErrorsCount);
-                    WriteCounterWithHelp(writer, "Number of healthy CDC Sinks", "server_sinks_healthy_count", serverMetrics.Sinks.HealthySinksCount);
-                    WriteCounterWithHelp(writer, "Number of impaired CDC Sinks", "server_sinks_impaired_count", serverMetrics.Sinks.ImpairedSinksCount);
-                    WriteCounterWithHelp(writer, "Number of failed CDC Sinks", "server_sinks_failed_count", serverMetrics.Sinks.FailedSinksCount);
+                    // CDC CdcSinks
+                    WriteCounterWithHelp(writer, "Number of CDC CdcSinks", "server_cdc_sinks_count", serverMetrics.CdcSinks.Count);
+                    WriteCounterWithHelp(writer, "Number of CDC Sink errors", "server_cdc_sinks_errors_count", serverMetrics.CdcSinks.ErrorsCount);
+                    WriteCounterWithHelp(writer, "Number of healthy CDC CdcSinks", "server_cdc_sinks_healthy_count", serverMetrics.CdcSinks.HealthyCdcSinksCount);
+                    WriteCounterWithHelp(writer, "Number of impaired CDC CdcSinks", "server_cdc_sinks_impaired_count", serverMetrics.CdcSinks.ImpairedCdcSinksCount);
+                    WriteCounterWithHelp(writer, "Number of failed CDC CdcSinks", "server_cdc_sinks_failed_count", serverMetrics.CdcSinks.FailedCdcSinksCount);
                 }
 
                 ms.Position = 0;
@@ -374,11 +374,11 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Number of impaired AI tasks", "database_ai_tasks_impaired_count", metrics, x => x.AiTasks.ImpairedTasksCount, cachedTags);
                     WriteGauges(writer, "Number of failed AI tasks", "database_ai_tasks_failed_count", metrics, x => x.AiTasks.FailedTasksCount, cachedTags);
 
-                    WriteGauges(writer, "Number of CDC Sinks", "database_sinks_count", metrics, x => x.Sinks.Count, cachedTags);
-                    WriteGauges(writer, "Number of CDC Sink errors", "database_sinks_errors_count", metrics, x => x.Sinks.ErrorsCount, cachedTags);
-                    WriteGauges(writer, "Number of healthy CDC Sinks", "database_sinks_healthy_count", metrics, x => x.Sinks.HealthySinksCount, cachedTags);
-                    WriteGauges(writer, "Number of impaired CDC Sinks", "database_sinks_impaired_count", metrics, x => x.Sinks.ImpairedSinksCount, cachedTags);
-                    WriteGauges(writer, "Number of failed CDC Sinks", "database_sinks_failed_count", metrics, x => x.Sinks.FailedSinksCount, cachedTags);
+                    WriteGauges(writer, "Number of CDC CdcSinks", "database_cdc_sinks_count", metrics, x => x.CdcSinks.Count, cachedTags);
+                    WriteGauges(writer, "Number of CDC Sink errors", "database_cdc_sinks_errors_count", metrics, x => x.CdcSinks.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "Number of healthy CDC CdcSinks", "database_cdc_sinks_healthy_count", metrics, x => x.CdcSinks.HealthyCdcSinksCount, cachedTags);
+                    WriteGauges(writer, "Number of impaired CDC CdcSinks", "database_cdc_sinks_impaired_count", metrics, x => x.CdcSinks.ImpairedCdcSinksCount, cachedTags);
+                    WriteGauges(writer, "Number of failed CDC CdcSinks", "database_cdc_sinks_failed_count", metrics, x => x.CdcSinks.FailedCdcSinksCount, cachedTags);
                 }
 
                 ms.Position = 0;
@@ -497,21 +497,21 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task WriteSinkMetricsAsync(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
+        private async Task WriteCdcSinkMetricsAsync(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
         {
-            var metrics = new List<SinkMetrics>();
+            var metrics = new List<CdcSinkMetrics>();
             var cachedTags = new List<string>();
 
             foreach (var database in databases)
             {
                 foreach (var sink in database.CdcSinkLoader.Processes)
                 {
-                    var sinkMetrics = provider.CollectSinkMetrics(sink, database.TaskErrorsStorage);
-                    metrics.Add(sinkMetrics);
+                    var cdcSinkMetrics = provider.CollectCdcSinkMetrics(sink, database.TaskErrorsStorage);
+                    metrics.Add(cdcSinkMetrics);
                     cachedTags.Add(SerializeTags(new Dictionary<string, string>
                     {
                         { "database_name", database.Name },
-                        { "sink_name", sink.Name }
+                        { "cdc_sink_name", sink.Name }
                     }));
                 }
             }
@@ -520,9 +520,9 @@ namespace Raven.Server.Web.System
             {
                 await using (var writer = PrometheusWriter(ms))
                 {
-                    WriteGauges(writer, "Number of CDC Sink errors", "sink_errors_count", metrics, x => x.ErrorsCount, cachedTags);
-                    WriteGauges(writer, "CDC Sink health status, " + EnumHelp.EtlHealthStatus, "sink_health_status", metrics, x => (int)x.HealthStatus, cachedTags);
-                    WriteGauges(writer, "Time elapsed since Last successful batch (in seconds)", "sink_last_successful_batch_time_in_seconds", metrics, x => x.LastSuccessfulBatchTimeInSec, cachedTags);
+                    WriteGauges(writer, "Number of CDC Sink errors", "cdc_sink_errors_count", metrics, x => x.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "CDC Sink health status, " + EnumHelp.EtlHealthStatus, "cdc_sink_health_status", metrics, x => (int)x.HealthStatus, cachedTags);
+                    WriteGauges(writer, "Time elapsed since Last successful batch (in seconds)", "cdc_sink_last_successful_batch_time_in_seconds", metrics, x => x.LastSuccessfulBatchTimeInSec, cachedTags);
                 }
 
                 ms.Position = 0;

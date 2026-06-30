@@ -5,14 +5,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Utils.Monitoring;
 
-public sealed class SinkMetrics
+public sealed class CdcSinkMetrics
 {
     public string ProcessName { get; set; }
     public long ErrorsCount { get; set; }
     public EtlProcessHealthStatus HealthStatus { get; set; }
     public double? LastSuccessfulBatchTimeInSec { get; set; }
 
-    public SinkMetrics()
+    public CdcSinkMetrics()
     {
         // deserialization
     }
@@ -29,11 +29,11 @@ public sealed class SinkMetrics
     }
 }
 
-public sealed class SinksMetrics
+public sealed class CdcSinksMetrics
 {
     public string PublicServerUrl { get; set; }
     public string NodeTag { get; set; }
-    public List<PerDatabaseSinkMetrics> Results { get; set; } = new List<PerDatabaseSinkMetrics>();
+    public List<PerDatabaseCdcSinkMetrics> Results { get; set; } = new List<PerDatabaseCdcSinkMetrics>();
 
     public DynamicJsonValue ToJson()
     {
@@ -46,17 +46,17 @@ public sealed class SinksMetrics
     }
 }
 
-public sealed class PerDatabaseSinkMetrics
+public sealed class PerDatabaseCdcSinkMetrics
 {
     public string DatabaseName { get; set; }
-    public List<SinkMetrics> Sinks { get; set; } = new List<SinkMetrics>();
+    public List<CdcSinkMetrics> CdcSinks { get; set; } = new List<CdcSinkMetrics>();
 
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(DatabaseName)] = DatabaseName,
-            [nameof(Sinks)] = Sinks.Select(x => x.ToJson()).ToList()
+            [nameof(CdcSinks)] = CdcSinks.Select(x => x.ToJson()).ToList()
         };
     }
 }
