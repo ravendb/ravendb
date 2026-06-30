@@ -183,7 +183,7 @@ public class RavenDB_26838 : RavenTestBase
 
             var itemErrors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Sink, taskName);
             Assert.NotEmpty(itemErrors);
-            Assert.All(itemErrors, e => Assert.Equal((long)TaskErrorStep.Load, e.Step));
+            Assert.All(itemErrors, e => Assert.Equal((long)TaskErrorStep.Transformation, e.Step));
         }
     }
 
