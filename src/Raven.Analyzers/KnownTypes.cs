@@ -102,6 +102,13 @@ namespace Raven.Analyzers
         public const string SearchMethodName = "Search";
         public const string TakeMethodName = "Take";
 
+        // RavenDB client types live under this namespace. Short-name matches for the session /
+        // store / queryable interfaces are gated on it (see SyntaxHelpers.IsTypeOrImplements) so the
+        // analyzers stay decoupled from Raven.Client versioning — no full assembly-qualified name —
+        // while not colliding with unrelated user types that happen to share a name such as
+        // IDocumentSession or IRavenQueryable.
+        public const string RavenClientNamespace = "Raven.Client";
+
         // Session type names (matched by short name)
         public const string IDocumentSessionName = "IDocumentSession";
         public const string IAsyncDocumentSessionName = "IAsyncDocumentSession";

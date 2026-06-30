@@ -83,6 +83,42 @@ namespace Raven.Analyzers.Shared
         }
 
         /// <summary>
+        /// Walks a fluent chain such as <c>session.Query&lt;T&gt;().Where(...).OrderBy(...)</c> down through
+        /// invocation receivers and parentheses to the root expression (typically the session/store
+        /// reference). Shared by the lazy-batching analyzer (to resolve the receiver's symbol) and its
+        /// code fix (to extract the receiver node), so the two cannot disagree on what the chain root is.
+        /// </summary>
+        public static ExpressionSyntax WalkInvocationChainToRoot(ExpressionSyntax expression)
+        {
+            ExpressionSyntax current = expression;
+            while (true)
+            {
+                switch (current)
+                {
+                    case InvocationExpressionSyntax inv when inv.Expression is MemberAccessExpressionSyntax ma:
+                        current = ma.Expression;
+                        continue;
+                    case ParenthesizedExpressionSyntax paren:
+                        current = paren.Expression;
+                        continue;
+                    default:
+                        return current;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns <paramref name="symbol"/> when it denotes a stable instance — a local, parameter, or
+        /// field — that two calls can be proven to share, otherwise null. A property getter or method
+        /// call (e.g. <c>GetSession()</c> or a <c>Session</c> property) may return a fresh instance per
+        /// invocation, so such receivers must not be grouped as "the same session". Shared by the
+        /// lazy-batching analyzer (grouping) and its code fix (same-session bail) so the predicate that
+        /// keeps them in lockstep lives in exactly one place.
+        /// </summary>
+        public static ISymbol? AsStableSessionInstance(ISymbol? symbol) =>
+            symbol is ILocalSymbol or IParameterSymbol or IFieldSymbol ? symbol : null;
+
+        /// <summary>
         /// Returns the simple method name from an invocation, handling both
         /// plain member access and generic method calls.
         /// </summary>
@@ -114,25 +150,42 @@ namespace Raven.Analyzers.Shared
 
         /// <summary>
         /// Returns true when <paramref name="type"/> is named <paramref name="name"/> or implements
-        /// an interface of that name. Matched by simple name only — avoids FQN coupling with
-        /// Raven.Client versioning (a deliberate design choice so the analyzers stay in sync with
-        /// client refactoring; see readme.md).
+        /// an interface of that name, AND that matching type/interface is declared in the
+        /// <c>Raven.Client</c> namespace. Matching by simple name (not full assembly-qualified name)
+        /// keeps the analyzers decoupled from Raven.Client versioning, while the namespace gate stops
+        /// an unrelated user type that happens to be named <c>IDocumentSession</c>,
+        /// <c>IRavenQueryable</c>, etc. from being treated as the RavenDB type.
         /// </summary>
         internal static bool IsTypeOrImplements(ITypeSymbol? type, string name)
         {
             if (type == null)
                 return false;
 
-            if (type.Name == name)
+            if (type.Name == name && IsInRavenClientNamespace(type))
                 return true;
 
             foreach (INamedTypeSymbol iface in type.AllInterfaces)
             {
-                if (iface.Name == name)
+                if (iface.Name == name && IsInRavenClientNamespace(iface))
                     return true;
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// True when <paramref name="symbol"/> is declared in the <c>Raven.Client</c> namespace or a
+        /// nested namespace under it (e.g. <c>Raven.Client.Documents.Session</c>).
+        /// </summary>
+        private static bool IsInRavenClientNamespace(ISymbol symbol)
+        {
+            INamespaceSymbol? ns = symbol.ContainingNamespace;
+            if (ns == null || ns.IsGlobalNamespace)
+                return false;
+
+            string full = ns.ToDisplayString();
+            return full == KnownTypes.RavenClientNamespace
+                   || full.StartsWith(KnownTypes.RavenClientNamespace + ".", StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -263,35 +316,57 @@ namespace Raven.Analyzers.Shared
             };
 
         /// <summary>
-        /// If <paramref name="node"/> is an index <c>Map</c> (or, when <paramref name="includeReduce"/>
-        /// is set, <c>Reduce</c>) assignment on the index base, or an <c>AddMap</c>/<c>AddMapForAll</c>
-        /// invocation on a multi-map base, returns the lambda's body; otherwise null. Shared by the
-        /// fan-out (Map/AddMap only) and unsupported-method (Map+Reduce/AddMap) index analyzers so the
-        /// recognition of what counts as a map/reduce lambda cannot drift between them.
+        /// Classifies <paramref name="node"/> with respect to index map/reduce definitions:
+        /// it is not a map node, it is a map node whose lambda body cannot be extracted
+        /// (block body, or an <c>AddMap</c> with no arguments), or its expression body was extracted.
         /// </summary>
-        internal static SyntaxNode? TryGetIndexMapLambdaBody(SyntaxNode node, SemanticModel model, bool includeReduce)
+        internal enum IndexMapNodeKind
         {
+            /// <summary>Not a <c>Map</c>/<c>Reduce</c> assignment or <c>AddMap</c>/<c>AddMapForAll</c> on the right base.</summary>
+            NotAMapNode,
+            /// <summary>A map definition node, but its lambda body cannot be extracted (block body, or no arguments).</summary>
+            Unanalyzable,
+            /// <summary>A map definition node whose expression lambda body was extracted.</summary>
+            LambdaBody,
+        }
+
+        /// <summary>
+        /// Core matcher for index map/reduce definition sites. Returns whether <paramref name="node"/>
+        /// is an index <c>Map</c> (or, when <paramref name="includeReduce"/> is set, <c>Reduce</c>)
+        /// assignment on the index base, or an <c>AddMap</c>/<c>AddMapForAll</c> invocation on a
+        /// multi-map base, and — for the <see cref="IndexMapNodeKind.LambdaBody"/> case — outputs the
+        /// lambda's expression body. The three-state result lets a caller that must distinguish
+        /// "not a map" from "a map we cannot read" (the field extractor, which bails on the latter)
+        /// share this recognition with callers that only need the body or null (the fan-out and
+        /// unsupported-method analyzers, via <see cref="TryGetIndexMapLambdaBody"/>), so the notion of
+        /// what counts as a map/reduce lambda cannot drift between them.
+        /// </summary>
+        internal static IndexMapNodeKind ClassifyIndexMapNode(SyntaxNode node, SemanticModel model, bool includeReduce, out ExpressionSyntax? lambdaBody)
+        {
+            lambdaBody = null;
+
             // Map = lambda  /  this.Map = lambda  /  base.Reduce = lambda  etc.
             if (node is AssignmentExpressionSyntax assignment)
             {
                 SimpleNameSyntax? nameNode = TryGetSimpleMemberName(assignment.Left);
                 if (nameNode == null)
-                    return null;
+                    return IndexMapNodeKind.NotAMapNode;
 
                 string name = nameNode.Identifier.Text;
                 bool matches = name == KnownTypes.MapFieldName
                                || (includeReduce && name == KnownTypes.ReduceFieldName);
                 if (!matches)
-                    return null;
+                    return IndexMapNodeKind.NotAMapNode;
 
                 ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;
                 if (sym is not (IFieldSymbol or IPropertySymbol))
-                    return null;
+                    return IndexMapNodeKind.NotAMapNode;
 
                 if (!IsDefinedOnIndexBase(sym.ContainingType))
-                    return null;
+                    return IndexMapNodeKind.NotAMapNode;
 
-                return TryGetLambdaBody(assignment.Right);
+                lambdaBody = TryGetLambdaBody(assignment.Right);
+                return lambdaBody != null ? IndexMapNodeKind.LambdaBody : IndexMapNodeKind.Unanalyzable;
             }
 
             // AddMap<T>(...) or AddMapForAll<T>(...)
@@ -299,21 +374,34 @@ namespace Raven.Analyzers.Shared
             {
                 string? methodName = GetMethodName(invocation);
                 if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)
-                    return null;
+                    return IndexMapNodeKind.NotAMapNode;
 
                 ISymbol? sym = model.GetSymbolInfo(invocation).Symbol;
                 if (sym is not IMethodSymbol method || !IsMultiMapBase(method.ContainingType))
-                    return null;
+                    return IndexMapNodeKind.NotAMapNode;
 
                 SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
                 if (args.Count == 0)
-                    return null;
+                    return IndexMapNodeKind.Unanalyzable;
 
-                return TryGetLambdaBody(args[args.Count - 1].Expression);
+                lambdaBody = TryGetLambdaBody(args[args.Count - 1].Expression);
+                return lambdaBody != null ? IndexMapNodeKind.LambdaBody : IndexMapNodeKind.Unanalyzable;
             }
 
-            return null;
+            return IndexMapNodeKind.NotAMapNode;
         }
+
+        /// <summary>
+        /// Convenience over <see cref="ClassifyIndexMapNode"/> for callers that only need the lambda
+        /// body or null: returns the extracted expression body when <paramref name="node"/> is a
+        /// map/reduce definition with an expression lambda, and null both when it is not a map node and
+        /// when it is a map node whose body cannot be read. Used by the fan-out and unsupported-method
+        /// index analyzers.
+        /// </summary>
+        internal static SyntaxNode? TryGetIndexMapLambdaBody(SyntaxNode node, SemanticModel model, bool includeReduce) =>
+            ClassifyIndexMapNode(node, model, includeReduce, out ExpressionSyntax? body) == IndexMapNodeKind.LambdaBody
+                ? body
+                : null;
 
         /// <summary>
         /// Returns the effective body of a method-like member as a single <see cref="SyntaxNode"/>:

@@ -487,5 +487,32 @@ class User { public string Id { get; set; } }
             Assert.Equal(2, diagnostics.Length);
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
         }
+
+        [Fact]
+        public async Task TwoLoads_OnSameNamedNonRavenSession_No_Diagnostic()
+        {
+            // A user type named IDocumentSession that is NOT in the Raven.Client namespace must not be
+            // treated as a RavenDB session, so its repeated Load calls are not flagged for batching.
+            const string source = @"
+namespace MyApp
+{
+    public interface IDocumentSession { T Load<T>(string id); }
+    public class User { public string Id { get; set; } }
+
+    public class Test
+    {
+        public void Run(IDocumentSession session, string a, string b)
+        {
+            var x = session.Load<User>(a);
+            var y = session.Load<User>(b);
+        }
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }
