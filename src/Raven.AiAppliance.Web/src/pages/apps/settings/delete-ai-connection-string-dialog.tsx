@@ -45,9 +45,13 @@ export function DeleteAiConnectionStringDialog({ slug, name, trigger }: DeleteAi
     const deleteMutation = useMutation({
         mutationFn: () => api.services.aiConnectionStrings.delete(slug, name),
         onSuccess: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: api.queries.aiConnectionStrings.list(slug).queryKey,
-            });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list(slug).queryKey }),
+                // Drop the deleted string's cached detail so a stale edit sheet can't resurrect it.
+                queryClient.invalidateQueries({
+                    queryKey: api.queries.aiConnectionStrings.detail(slug, name).queryKey,
+                }),
+            ]);
             toast.success(`Connection string “${name}” deleted`);
             setIsOpen(false);
         },

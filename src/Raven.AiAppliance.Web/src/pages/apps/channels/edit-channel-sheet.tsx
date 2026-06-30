@@ -23,6 +23,7 @@ import { FormInput } from "@/components/form/form-input";
 import { FormStringList } from "@/components/form/form-string-list";
 import { FormSwitch } from "@/components/form/form-switch";
 import { withNestedSubmit } from "@/lib/form-utils";
+import { invalidateChannelQueries } from "@/lib/query-invalidation";
 
 type EditChannelSheetProps = {
     slug: string;
@@ -91,7 +92,7 @@ function EditChannelForm({
                 enabled: values.enabled,
             }),
         onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: api.queries.channels.list(slug).queryKey });
+            await invalidateChannelQueries(queryClient, slug);
             toast.success("Channel updated");
             onSaved();
         },

@@ -7,6 +7,7 @@ import type { AiAgentConfiguration } from "@/api/generated/server-api";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { buildAgentConfigurationPayload } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
+import { invalidateAgentQueries } from "@/lib/query-invalidation";
 
 // Runs on "Save agent" from the review step: provisions the agent, then lets the wizard
 // advance to the optional channels step. The new agent id is stored so that step can attach
@@ -46,7 +47,7 @@ export function useProvisionAgentStep() {
         // Record the irreversible write before non-critical cache work. If invalidation ever
         // fails, the wizard must still know not to provision the same agent again.
         setCreatedAgent({ agentId, name });
-        void queryClient.invalidateQueries({ queryKey: api.queries.agents.list(slug).queryKey });
+        void invalidateAgentQueries(queryClient, slug);
         toast.success(`Agent "${name}" created`);
     };
 }
