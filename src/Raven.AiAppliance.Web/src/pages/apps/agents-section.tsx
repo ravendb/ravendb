@@ -25,7 +25,7 @@ export function AgentsSection({ slug }: { slug: string }) {
             >
                 {agentsQuery.data && (
                     <SectionTable
-                        headers={["Agent name", "Status", "Model", "Runs", "Last run"]}
+                        headers={["Agent name", "Status", "Model", "Last run", "Conversations", "Messages", "Tokens"]}
                         isEmpty={agentsQuery.data.length === 0}
                         emptyMessage="No agents yet."
                     >
@@ -41,10 +41,12 @@ export function AgentsSection({ slug }: { slug: string }) {
                                 <TableCell className="font-mono text-xs text-muted-foreground">
                                     {agent.model ?? "—"}
                                 </TableCell>
-                                <TableCell className="tabular-nums">{formatCompact(agent.invocations)}</TableCell>
                                 <TableCell className="whitespace-nowrap text-muted-foreground">
                                     {agent.lastInvokedAt ? formatDateTime(agent.lastInvokedAt) : "—"}
                                 </TableCell>
+                                <TableCell className="tabular-nums">{formatCompact(agent.conversations)}</TableCell>
+                                <TableCell className="tabular-nums">{formatCompact(agent.messages)}</TableCell>
+                                <TableCell className="tabular-nums">{formatCompact(agent.tokens)}</TableCell>
                             </TableRow>
                         ))}
                     </SectionTable>

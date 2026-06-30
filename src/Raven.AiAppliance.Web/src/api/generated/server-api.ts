@@ -488,22 +488,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/agents/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["stats.agents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/apps/{slug}/channels/stats": {
         parameters: {
             query?: never;
@@ -676,29 +660,14 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
-        AgentStatsResponse: {
-            /** Format: int32 */
-            configuredAgents: number;
-            last24h: components["schemas"]["ConversationWindow"];
-            last7d: components["schemas"]["ConversationWindow"];
-            last30d: components["schemas"]["ConversationWindow"];
-            agents: components["schemas"]["AgentUsageSummary"][];
-        };
         AgentSummaryResponse: {
             agentId: string;
             name: string;
             model: null | string;
             disabled: boolean;
             parameters: string[];
-            /** Format: int64 */
-            invocations: number;
-            /** Format: double */
-            successRate: number;
             /** Format: date-time */
             lastInvokedAt: null | string;
-        };
-        AgentUsageSummary: {
-            agentId: string;
             /** Format: int64 */
             conversations: number;
             /** Format: int64 */
@@ -1036,7 +1005,6 @@ export interface components {
             channelName: string;
             agentName: string;
             agentInitials: string;
-            agentColor: string;
             params: components["schemas"]["ConversationParam"][];
             lastExchange: components["schemas"]["ConversationTurn"][];
             transcript: null | components["schemas"]["ConversationTurn"][];
@@ -1326,7 +1294,6 @@ export interface components {
         SeriesKey: {
             key: string;
             label: string;
-            color: string;
         };
         SetupTryParameter: {
             value: null | components["schemas"]["JsonElement"];
@@ -1411,10 +1378,14 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
             /** Format: int64 */
-            invocations: number;
+            conversations: number;
+            /** Format: int64 */
+            messages: number;
             /** Format: int64 */
             tokens: number;
         };
+        /** @enum {unknown} */
+        UsageWindow: "Last24h" | "Last7d" | "Last30d";
         /** @enum {unknown} */
         VertexAIVersion: "V1" | "V1_Beta" | null;
         VertexSettings: {
@@ -1456,7 +1427,10 @@ export interface operations {
     };
     "stats.usage": {
         parameters: {
-            query?: never;
+            query?: {
+                time?: components["schemas"]["UsageWindow"];
+                app?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2537,37 +2511,6 @@ export interface operations {
             };
         };
     };
-    "stats.agents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentStatsResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
     "stats.channels": {
         parameters: {
             query?: never;
@@ -2903,9 +2846,7 @@ export interface operations {
 }
 
 export type ActivityEventDto = components["schemas"]["ActivityEventDto"];
-export type AgentStatsResponse = components["schemas"]["AgentStatsResponse"];
 export type AgentSummaryResponse = components["schemas"]["AgentSummaryResponse"];
-export type AgentUsageSummary = components["schemas"]["AgentUsageSummary"];
 export type AiAgentChatTrimmingConfiguration = components["schemas"]["AiAgentChatTrimmingConfiguration"];
 export type AiAgentConfiguration = components["schemas"]["AiAgentConfiguration"];
 export type AiAgentHistoryConfiguration = components["schemas"]["AiAgentHistoryConfiguration"];
@@ -3008,6 +2949,7 @@ export type TopTable = components["schemas"]["TopTable"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
 export type UsageGranularity = components["schemas"]["UsageGranularity"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
+export type UsageWindow = components["schemas"]["UsageWindow"];
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 
@@ -3065,7 +3007,6 @@ export const API_ENDPOINTS = {
     },
     stats: {
         activity: (slug: string) => `/apps/${encodeURIComponent(slug)}/activity`,
-        agents: (slug: string) => `/apps/${encodeURIComponent(slug)}/agents/stats`,
         appUsage: (slug: string) => `/apps/${encodeURIComponent(slug)}/usage`,
         channels: (slug: string) => `/apps/${encodeURIComponent(slug)}/channels/stats`,
         collections: (slug: string) => `/apps/${encodeURIComponent(slug)}/collections`,
@@ -3136,7 +3077,6 @@ export function createServerApi(client: ApiClient) {
         },
         stats: {
             activity: (slug: string) => client.get<ActivityEventDto[], ApiErrorResponse>(API_ENDPOINTS.stats.activity(slug)),
-            agents: (slug: string) => client.get<AgentStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.agents(slug)),
             appUsage: (slug: string, searchParams?: { end?: string; start?: string; }) => client.get<AppUsageResponse, ApiErrorResponse>(API_ENDPOINTS.stats.appUsage(slug), { searchParams }),
             channels: (slug: string) => client.get<ChannelStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.channels(slug)),
             collections: (slug: string) => client.get<DataCollectionDto[], ApiErrorResponse>(API_ENDPOINTS.stats.collections(slug)),
@@ -3148,7 +3088,7 @@ export function createServerApi(client: ApiClient) {
             dashboardApps: () => client.get<ApplianceAppResponse[]>(API_ENDPOINTS.stats.dashboardApps),
             overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),
             tokensByApp: () => client.get<TokensByAppResponse>(API_ENDPOINTS.stats.tokensByApp),
-            usage: () => client.get<UsagePoint[]>(API_ENDPOINTS.stats.usage),
+            usage: (searchParams?: { app?: string; time?: UsageWindow; }) => client.get<UsagePoint[]>(API_ENDPOINTS.stats.usage, { searchParams }),
         },
     };
 }

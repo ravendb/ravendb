@@ -2,10 +2,11 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { MessageSquareText } from "lucide-react";
-import type { ConversationDto, ConversationTurn } from "@/api/generated/server-api";
+import type { ConversationDto } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
 import { Button } from "@/components/shadcn/ui/button";
-import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { agentAvatarColor } from "@/lib/palette";
 import { ConversationStateDot } from "@/pages/apps/conversations/conversation-state";
 import { ConversationTranscriptSheet } from "@/pages/apps/conversations/conversation-transcript-sheet";
 
@@ -30,12 +31,6 @@ export function createConversationColumns(slug: string): ColumnDef<ConversationD
             cell: ({ row }) => (
                 <Parameters params={row.original.params.map((param) => ({ name: param.key, value: param.value }))} />
             ),
-        },
-        {
-            id: "lastExchange",
-            header: "Last exchange",
-            size: 360,
-            cell: ({ row }) => <LastExchangeCell turns={row.original.lastExchange} />,
         },
         {
             accessorKey: "lastActivityAt",
@@ -82,39 +77,12 @@ function AgentCell({ conversation }: { conversation: ConversationDto }) {
         <span className="flex items-center gap-2 font-medium">
             <span
                 className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                style={{ backgroundColor: conversation.agentColor }}
+                style={{ backgroundColor: agentAvatarColor(conversation.agentName) }}
                 aria-hidden="true"
             >
                 {conversation.agentInitials}
             </span>
             <span className="truncate">{conversation.agentName}</span>
-        </span>
-    );
-}
-
-function LastExchangeCell({ turns }: { turns: ConversationTurn[] }) {
-    const lastTurns = turns.slice(-2);
-
-    if (lastTurns.length === 0) {
-        return <span className="text-muted-foreground italic">Awaiting first reply…</span>;
-    }
-
-    return (
-        // `whitespace-normal` resets the nowrap the virtual table applies to every cell so the two
-        // turns can stack; each line is clamped on its own.
-        <span className="flex w-full min-w-0 flex-col justify-center gap-1 py-1 leading-snug whitespace-normal">
-            {lastTurns.map((turn, index) => (
-                <span key={index} className="flex min-w-0 items-center gap-2">
-                    <span
-                        className={cn(
-                            "h-3 w-0.5 shrink-0 rounded-full",
-                            turn.role === "user" ? "bg-amber-500" : "bg-border",
-                        )}
-                        aria-hidden="true"
-                    />
-                    <span className="line-clamp-1 text-xs text-muted-foreground">{turn.text}</span>
-                </span>
-            ))}
         </span>
     );
 }
