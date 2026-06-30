@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Util;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Utils.Metrics;
 
@@ -23,8 +24,7 @@ public class CdcSinkProcessStatistics
     // thread once the batch completes (see CdcSinkProcess.SubmitBatch), mirroring EtlProcessStatistics.
     private readonly List<TaskItemError> _itemErrors = new();
 
-    private readonly float _healthFailedThreshold;
-    private readonly float _healthImpairedThreshold;
+    private readonly CdcSinkConfiguration _configuration;
 
     // Latched on a permanent fault so HealthStatus stays Failed even if a later batch completes; cleared
     // only by recreating the process (and thus these statistics). Mirrors ETL's script-parse-error latch.
@@ -43,11 +43,10 @@ public class CdcSinkProcessStatistics
     /// </summary>
     public EtlProcessHealthStatus HealthStatus { get; private set; } = EtlProcessHealthStatus.Healthy;
 
-    public CdcSinkProcessStatistics(string processName, float healthFailedThreshold, float healthImpairedThreshold)
+    public CdcSinkProcessStatistics(string processName, CdcSinkConfiguration configuration)
     {
         _processName = processName;
-        _healthFailedThreshold = healthFailedThreshold;
-        _healthImpairedThreshold = healthImpairedThreshold;
+        _configuration = configuration;
     }
 
     public int ConsumeSuccesses { get; private set; }
@@ -170,8 +169,8 @@ public class CdcSinkProcessStatistics
                 var errorsRatio = AverageErrorsRatio.GetRate();
                 HealthStatus = errorsRatio switch
                 {
-                    _ when errorsRatio > _healthFailedThreshold => EtlProcessHealthStatus.Failed,
-                    _ when errorsRatio > _healthImpairedThreshold => EtlProcessHealthStatus.Impaired,
+                    _ when errorsRatio > _configuration.ProcessHealthStatusFailedThreshold => EtlProcessHealthStatus.Failed,
+                    _ when errorsRatio > _configuration.ProcessHealthStatusImpairedThreshold => EtlProcessHealthStatus.Impaired,
                     _ => EtlProcessHealthStatus.Healthy
                 };
             }
