@@ -30,6 +30,7 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace InterversionTests
 {
