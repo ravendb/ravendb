@@ -529,7 +529,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.Advanced.UseOptimisticConcurrency = true;
+                    session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
 
                     var user = await session.LoadAsync<UserWithTags>("users/1");
 
@@ -573,7 +573,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.Advanced.UseOptimisticConcurrency = true;
+                    session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
 
                     var user = await session.LoadAsync<UserWithTags>("users/1");
 
