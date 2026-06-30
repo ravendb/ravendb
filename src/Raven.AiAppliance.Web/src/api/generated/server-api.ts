@@ -1383,6 +1383,8 @@ export interface components {
             messages: number;
             /** Format: int64 */
             tokens: number;
+            /** Format: int64 */
+            writes: number;
         };
         /** @enum {unknown} */
         UsageWindow: "Last24h" | "Last7d" | "Last30d";

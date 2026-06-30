@@ -68,6 +68,7 @@ internal static class MetricsReadService
         var conversations = new long[buckets.Count];
         var messages = new long[buckets.Count];
         var tokens = new long[buckets.Count];
+        var writes = new long[buckets.Count];
 
         var apps = await AppsToQueryAsync(store, appSlug, ct);
         var perApp = await ForEachAppAsync(apps, log, async app =>
@@ -86,9 +87,17 @@ internal static class MetricsReadService
                 tokens[i] += row.Tokens;
             }
 
+        // Writes have no real per-DB counter yet (RavenDB-26780): fill the series with a
+        // deterministic per-app mock so the dashboards render plausible writes. Each app
+        // contributes independently, so a global series equals the sum of its apps. Swap
+        // this loop for the real counter when it lands.
+        foreach (var app in apps)
+            for (var i = 0; i < buckets.Count; i++)
+                writes[i] += MockWritesForBucket(app, buckets[i], granularity);
+
         var points = new List<UsagePoint>(buckets.Count);
         for (var i = 0; i < buckets.Count; i++)
-            points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i]));
+            points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i], writes[i]));
         return points;
     }
 
@@ -110,6 +119,30 @@ internal static class MetricsReadService
             return await LoadAllAppsAsync(store, ct);
         var app = await AppLookup.LoadAppAsync(store, appSlug, ct);
         return app is null ? [] : [app];
+    }
+
+    /// <summary>
+    /// Deterministic stand-in for a per-app, per-bucket write count until a real per-DB
+    /// write counter lands (RavenDB-26780). Pure in (app, bucket, granularity) so a global
+    /// series equals the sum of its apps and values stay stable across requests — hence
+    /// FNV-1a over the database name, not the per-process-randomized string hash.
+    /// </summary>
+    private static long MockWritesForBucket(App app, DateTime bucket, UsageGranularity granularity)
+    {
+        var perHour = 400 + StableHash(app.Database) % 800;            // ~[400, 1200) writes/hour, stable per app
+        var phase = granularity == UsageGranularity.Hour ? bucket.Hour : bucket.Day;
+        var wave = 0.55 + 0.45 * Math.Sin(phase / 24.0 * 2 * Math.PI); // shape so the sparkline isn't flat
+        var hoursInBucket = granularity == UsageGranularity.Hour ? 1 : 24;
+        return (long)Math.Round(perHour * hoursInBucket * wave);
+    }
+
+    private static uint StableHash(string value)
+    {
+        // FNV-1a — deterministic across processes (string.GetHashCode is randomized).
+        var hash = 2166136261u;
+        foreach (var c in value)
+            hash = (hash ^ c) * 16777619u;
+        return hash;
     }
 
     /// <summary>

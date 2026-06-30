@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { ServerApi } from "@/api/generated/server-api";
+import type { ServerApi, UsageWindow } from "@/api/generated/server-api";
 
 const baseKey = "stats";
 
@@ -20,10 +20,10 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "dashboardApp", slug],
                 queryFn: () => api.dashboardApp(slug),
             }),
-        usage: () =>
+        usage: (time: UsageWindow, app?: string) =>
             queryOptions({
-                queryKey: [baseKey, "usage"],
-                queryFn: () => api.usage(),
+                queryKey: [baseKey, "usage", time, app ?? null],
+                queryFn: () => api.usage({ time, app }),
             }),
         tokensByApp: () =>
             queryOptions({
