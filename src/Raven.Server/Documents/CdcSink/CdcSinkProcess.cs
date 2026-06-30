@@ -67,9 +67,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Database = database;
         Configuration = configuration;
         Name = Configuration.Name;
-        Statistics = new CdcSinkProcessStatistics(Name,
-            database.Configuration.CdcSink.ProcessHealthStatusFailedThreshold,
-            database.Configuration.CdcSink.ProcessHealthStatusImpairedThreshold);
+        Statistics = new CdcSinkProcessStatistics(Name, database.Configuration.CdcSink);
         DocumentProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema) { Logger = Logger };
     }
 

@@ -2657,7 +2657,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("GoodOrders/2", goodData, goodRaw, goodProcessor),
             };
 
-            var statistics = new CdcSinkProcessStatistics("test", healthFailedThreshold: 0.9f, healthImpairedThreshold: 0.1f);
+            var statistics = new CdcSinkProcessStatistics("test", new Raven.Server.Config.Categories.CdcSinkConfiguration());
 
             var command = new CdcSinkBatchCommand(database, ops, "test-maxsteps", "test-lsn",
                 tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
