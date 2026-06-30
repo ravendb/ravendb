@@ -77,49 +77,22 @@ namespace Raven.Analyzers.Indexes
         {
             foreach (SyntaxNode node in body.DescendantNodesAndSelf())
             {
-                ExpressionSyntax? lambdaBody = null;
+                // Reuse the shared map/reduce recognition (Map assignment on the index base, or
+                // AddMap/AddMapForAll on a multi-map base) so what counts as a map lambda stays in sync
+                // with the fan-out and unsupported-method analyzers. The three-state result preserves
+                // the distinction this extractor needs: a node that is not a map is skipped, but a map
+                // whose body cannot be read (block body, or AddMap with no arguments) forces a bail so
+                // we never validate queries against an incomplete field set.
+                SyntaxHelpers.IndexMapNodeKind kind =
+                    SyntaxHelpers.ClassifyIndexMapNode(node, model, includeReduce: false, out ExpressionSyntax? lambdaBody);
 
-                // Map = lambda  /  this.Map = lambda  /  base.Map = lambda
-                if (node is AssignmentExpressionSyntax assignment)
-                {
-                    SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
-                    if (nameNode != null && nameNode.Identifier.Text == KnownTypes.MapFieldName)
-                    {
-                        ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;
-                        if (sym is (IFieldSymbol or IPropertySymbol)
-                            && SyntaxHelpers.IsDefinedOnIndexBase(sym.ContainingType))
-                        {
-                            lambdaBody = ExtractLambdaBody(assignment.Right);
-                            if (lambdaBody == null)
-                                return IndexFieldInspection.BailCannotAnalyze;
-                        }
-                    }
-                }
-
-                // AddMap<T>(..., lambda) or AddMapForAll<T>(..., lambda)
-                if (node is InvocationExpressionSyntax invocation)
-                {
-                    string? methodName = SyntaxHelpers.GetMethodName(invocation);
-                    if (methodName == KnownTypes.AddMapMethodName || methodName == KnownTypes.AddMapForAllMethodName)
-                    {
-                        ISymbol? sym = model.GetSymbolInfo(invocation).Symbol;
-                        if (sym is IMethodSymbol method && SyntaxHelpers.IsMultiMapBase(method.ContainingType))
-                        {
-                            SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
-                            if (args.Count == 0)
-                                return IndexFieldInspection.BailCannotAnalyze;
-
-                            lambdaBody = ExtractLambdaBody(args[args.Count - 1].Expression);
-                            if (lambdaBody == null)
-                                return IndexFieldInspection.BailCannotAnalyze;
-                        }
-                    }
-                }
-
-                if (lambdaBody == null)
+                if (kind == SyntaxHelpers.IndexMapNodeKind.NotAMapNode)
                     continue;
 
-                ExpressionSyntax? projection = ExtractProjectionExpression(lambdaBody);
+                if (kind == SyntaxHelpers.IndexMapNodeKind.Unanalyzable)
+                    return IndexFieldInspection.BailCannotAnalyze;
+
+                ExpressionSyntax? projection = ExtractProjectionExpression(lambdaBody!);
                 if (projection == null)
                     return IndexFieldInspection.BailCannotAnalyze;
 
