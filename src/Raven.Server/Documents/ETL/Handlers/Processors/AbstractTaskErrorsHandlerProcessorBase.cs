@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers.Processors;
 using Sparrow.Json;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 

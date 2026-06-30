@@ -11,6 +11,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 

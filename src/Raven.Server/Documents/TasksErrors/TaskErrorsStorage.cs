@@ -12,7 +12,7 @@ using Voron;
 using Voron.Data.Tables;
 using Transaction = Voron.Impl.Transaction;
 
-namespace Raven.Server.Documents.ETL;
+namespace Raven.Server.Documents.TasksErrors;
 
 public unsafe class TaskErrorsStorage
 {

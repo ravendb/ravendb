@@ -22,6 +22,7 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Server.Documents.AI.GenAi;
 

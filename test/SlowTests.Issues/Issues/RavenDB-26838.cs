@@ -15,6 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Issues;
 

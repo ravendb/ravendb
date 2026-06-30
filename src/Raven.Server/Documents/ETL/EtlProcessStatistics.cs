@@ -7,6 +7,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json.Parsing;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL
 {

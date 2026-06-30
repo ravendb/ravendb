@@ -55,6 +55,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL
 {

@@ -36,6 +36,7 @@ using Sparrow.Server.Json.Sync;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 #pragma warning disable SKEXP0001
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.GenAi;
 
