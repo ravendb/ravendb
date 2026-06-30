@@ -14,6 +14,6 @@ public sealed class DatabaseHealthyCdcSinks : DatabaseScalarObjectBase<Integer32
 
     protected override Integer32 GetData(DocumentDatabase database)
     {
-        return new Integer32(database.CdcSinkLoader.Processes.Count(x => x.HealthStatus == EtlProcessHealthStatus.Healthy));
+        return new Integer32(database.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy));
     }
 }

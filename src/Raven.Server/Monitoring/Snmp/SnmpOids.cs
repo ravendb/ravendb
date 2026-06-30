@@ -455,6 +455,30 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("AI tasks processing in the last minute")]
             public const string NumberOfActiveAiTasks = "1.21.6";
 
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Number of CDC Sink errors")]
+            public const string CdcSinkErrors = "1.22.1";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} CDC Sink tasks count")]
+            public const string NumberOfHealthyCdcSinks = "1.22.2";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} CDC Sink tasks count")]
+            public const string NumberOfImpairedCdcSinks = "1.22.3";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Failed)} CDC Sink tasks count")]
+            public const string NumberOfFailedCdcSinks = "1.22.4";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Total number of CDC Sink tasks")]
+            public const string TotalNumberOfCdcSinks = "1.22.5";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("CDC Sink tasks processing in the last minute")]
+            public const string NumberOfActiveCdcSinks = "1.22.6";
+
             public static Dictionary<string, string> CreateMapping()
             {
                 var dictionary = new Dictionary<string, string>();
@@ -852,6 +876,26 @@ namespace Raven.Server.Monitoring.Snmp
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Documents processed per second by all AI tasks in the database (one minute rate)")]
             public const string AiTaskDocumentsProcessedPerSec = "5.2.{0}.8.6";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} CDC Sink tasks count")]
+            public const string NumberOfHealthyCdcSinks = "5.2.{0}.9.1";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} CDC Sink tasks count")]
+            public const string NumberOfImpairedCdcSinks = "5.2.{0}.9.2";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Failed)} CDC Sink tasks count")]
+            public const string NumberOfFailedCdcSinks = "5.2.{0}.9.3";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Total number of CDC Sink tasks")]
+            public const string TotalNumberOfCdcSinks = "5.2.{0}.9.4";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("CDC Sink tasks processing in the last minute")]
+            public const string NumberOfActiveCdcSinks = "5.2.{0}.9.5";
 
             public sealed class Indexes
             {

@@ -536,6 +536,13 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerTotalNumberOfAiTasks(server.ServerStore));
             store.Add(new ServerActiveAiTasks(server.ServerStore));
 
+            store.Add(new ServerCdcSinkErrors(server.ServerStore));
+            store.Add(new ServerHealthyCdcSinks(server.ServerStore));
+            store.Add(new ServerImpairedCdcSinks(server.ServerStore));
+            store.Add(new ServerFailedCdcSinks(server.ServerStore));
+            store.Add(new ServerTotalNumberOfCdcSinks(server.ServerStore));
+            store.Add(new ServerActiveCdcSinks(server.ServerStore));
+
             return store;
 
             void AddGc(GCKind gcKind)
