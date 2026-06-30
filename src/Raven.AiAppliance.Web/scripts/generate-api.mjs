@@ -30,7 +30,14 @@ try {
     normalizeOpenApiNumericTypes(spec);
     writeFileSync(tempSpecPath, JSON.stringify(spec));
 
-    run(process.execPath, [openApiTypescriptCliPath, tempSpecPath, "-o", tempTypesPath], webDirectory);
+    // `--empty-objects-unknown` maps bare `{ type: object }` schemas (C# `object` / Dictionary<string,
+    // object> values, e.g. SeriesData.points) to `Record<string, unknown>` instead of
+    // `Record<string, never>`, which otherwise blocks all property access on those values.
+    run(
+        process.execPath,
+        [openApiTypescriptCliPath, tempSpecPath, "-o", tempTypesPath, "--empty-objects-unknown"],
+        webDirectory,
+    );
 
     const operations = collectOperations(spec.paths ?? {});
     const generatedTypes = stripOpenApiTypesBanner(readFileSync(tempTypesPath, "utf8").trim());

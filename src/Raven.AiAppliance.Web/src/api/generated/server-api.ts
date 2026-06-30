@@ -736,7 +736,7 @@ export interface components {
             allowModelQueries?: null | boolean;
             addToInitialContext?: null | boolean;
         };
-        AiAgentToolSubAgent: Record<string, never>;
+        AiAgentToolSubAgent: Record<string, unknown>;
         AiConnectionString: {
             identifier?: null | string;
             openAiSettings?: components["schemas"]["OpenAiSettings"];
@@ -1288,7 +1288,7 @@ export interface components {
             slug: string;
         };
         SeriesData: {
-            points: Record<string, never>[];
+            points: Record<string, unknown>[];
             keys: components["schemas"]["SeriesKey"][];
         };
         SeriesKey: {
