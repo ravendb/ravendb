@@ -185,11 +185,20 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            if (ShouldUseJsonPatch(path.Body.Type, value) && HasExistingJavaScriptPatch(id) == false
-                                                          && TryBuildJsonPointer(path.Body, out var jsonPointer))
+            if (ShouldUseJsonPatch(value) && HasExistingJavaScriptPatch(id) == false
+                                          && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 var jpd = new JsonPatchDocument();
-                jpd.Replace(jsonPointer, ConvertValueForJsonPatch(value));
+                var convertedValue = ConvertValueForJsonPatch(value);
+
+                // Match the old JavaScript "this.x = value" semantics: assigning to a named
+                // member creates it when absent (JsonPatch "add" creates-or-replaces an object
+                // member), while assigning to an existing positional element overwrites it in
+                // place (JsonPatch "replace"; "add" would insert before the index instead).
+                if (IsNamedMemberAccess(path.Body))
+                    jpd.Add(jsonPointer, convertedValue);
+                else
+                    jpd.Replace(jsonPointer, convertedValue);
 
                 if (TryMergeJsonPatches(id, jpd) == false)
                     Defer(new JsonPatchCommandData(id, jpd));
@@ -276,7 +285,7 @@ namespace Raven.Client.Documents.Session
                     {
                         case nameof(JavaScriptDictionary<TKey, TValue>.Add):
                         {
-                            if (ShouldUseJsonPatch(typeof(TValue), value))
+                            if (ShouldUseJsonPatch(value))
                             {
                                 var escapedKey = EscapeJsonPointerSegment(keyString);
                                 var jpd = new JsonPatchDocument();
@@ -543,7 +552,7 @@ namespace Raven.Client.Documents.Session
             return true;
         }
 
-        private static bool ShouldUseJsonPatch(Type propertyType, object value)
+        private static bool ShouldUseJsonPatch(object value)
         {
             if (value == null)
                 return true;
@@ -559,6 +568,17 @@ namespace Raven.Client.Documents.Session
                 return false;
 
             return true;
+        }
+
+        private static bool IsNamedMemberAccess(Expression body)
+        {
+            while (body is UnaryExpression unary)
+                body = unary.Operand;
+
+            // A named member (x => x.Foo or x => x.Foo.Bar) maps to a JSON object member,
+            // which "add" creates-or-replaces. Array/list indexing (x => x.Items[0]) and
+            // dictionary indexers are handled by "replace" so existing elements are not shifted.
+            return body is MemberExpression;
         }
 
         private bool TryMergeJsonPatches(string id, JsonPatchDocument patch)
@@ -612,7 +632,7 @@ namespace Raven.Client.Documents.Session
                     case nameof(JavaScriptArray<U>.Add):
                         foreach (var val in values)
                         {
-                            if (ShouldUseJsonPatch(typeof(U), val) == false)
+                            if (ShouldUseJsonPatch(val) == false)
                                 return false;
 
                             jpd.Add($"{jsonPointer}/-", ConvertValueForJsonPatch(val));

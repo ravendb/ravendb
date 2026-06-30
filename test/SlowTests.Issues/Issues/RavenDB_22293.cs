@@ -1,9 +1,13 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Orders;
+using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -630,6 +634,150 @@ namespace SlowTests.Issues
                     Assert.Equal(15, user.Age);
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void Patch_AbsentProperty_CreatesPropertyViaJsonPatch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // Store a document that does NOT contain the 'Age' property at all
+                // (simulating schema evolution / a document written under an older shape,
+                // or a store configured to omit nulls). A JsonPatch "replace" would throw
+                // server-side; the old JavaScript "this.Age = value" silently created it.
+                using (var commands = store.Commands())
+                {
+                    commands.Put("users/1", null, new { Name = "Test" },
+                        new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "UserWithTags" } });
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, int>("users/1", u => u.Age, 30);
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges(); // must not throw even though 'Age' is absent on the stored document
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal("Test", user.Name);
+                    Assert.Equal(30, user.Age);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void Patch_ArrayElementByIndex_ReplacesInPlace()
+        {
+            // Guards the JsonPatch op selection: assigning to an existing positional element
+            // must overwrite it ("replace"), not insert before it ("add").
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Test", Tags = new List<string> { "a", "b", "c" } }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags[1], "B");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal(3, user.Tags.Count); // replaced in place, not inserted
+                    Assert.Equal("a", user.Tags[0]);
+                    Assert.Equal("B", user.Tags[1]);
+                    Assert.Equal("c", user.Tags[2]);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void Patch_Value_UsesStoreSerializationConventions()
+        {
+            // A value routed through JsonPatch must be serialized with the store's configured
+            // conventions (custom converter -> "30C"), not DocumentConventions.Default
+            // (which would emit an object like {"Celsius":30}).
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer => serializer.Converters.Add(new TemperatureConverter())
+                    };
+                }
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new WeatherDoc { Temp = new Temperature { Celsius = 20 } }, "weather/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<WeatherDoc, Temperature>("weather/1", x => x.Temp, new Temperature { Celsius = 30 });
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("weather/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges();
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var doc = commands.Get("weather/1").BlittableJson;
+                    Assert.True(doc.TryGet(nameof(WeatherDoc.Temp), out string temp),
+                        "Temp should be serialized as a string via the store's custom converter");
+                    Assert.Equal("30C", temp);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<WeatherDoc>("weather/1");
+                    Assert.Equal(30, doc.Temp.Celsius);
+                }
+            }
+        }
+
+        private struct Temperature
+        {
+            public int Celsius { get; set; }
+        }
+
+        private class TemperatureConverter : JsonConverter
+        {
+            public override bool CanConvert(Type objectType) => objectType == typeof(Temperature);
+
+            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            {
+                writer.WriteValue($"{((Temperature)value).Celsius}C");
+            }
+
+            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                var s = (string)reader.Value;
+                return new Temperature { Celsius = int.Parse(s.Substring(0, s.Length - 1)) };
+            }
+        }
+
+        private class WeatherDoc
+        {
+            public string Id { get; set; }
+            public Temperature Temp { get; set; }
         }
     }
 }
