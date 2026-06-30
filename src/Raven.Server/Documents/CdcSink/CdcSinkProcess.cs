@@ -250,7 +250,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                 RecordProcessError(TaskErrorStep.Configuration, e.ToString());
 
-                Statistics.RecordConsumeError(e.ToString());
+                Statistics.RecordConsumeError();
                 return;
             }
             catch (OperationCanceledException)
@@ -273,7 +273,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                 // Read the error time BEFORE recording the new error.
                 EnterFallbackMode();
-                Statistics.RecordConsumeError(e.ToString());
+                Statistics.RecordConsumeError();
             }
         }
     }
