@@ -66,5 +66,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("License.ThrowOnInvalidOrMissingLicense", ConfigurationEntryScope.ServerWideOnly)]
         public bool ThrowOnInvalidOrMissingLicense { get; set; }
+
+        [Description("EXPERT ONLY. The interval at which the cluster leader reports write-usage metering to api.ravendb.net")]
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("License.WriteUsageReportingIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting WriteUsageReportingInterval { get; set; }
     }
 }

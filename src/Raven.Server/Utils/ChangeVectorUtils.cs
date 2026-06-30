@@ -228,6 +228,38 @@ namespace Raven.Server.Utils
         [ThreadStatic] private static List<ChangeVectorEntry> _mergeVectorBuffer;
 
 
+        /// <summary>
+        /// Removes the special, non-node change-vector entries (RAFT for cluster transactions, MOVE for resharding,
+        /// and defensively TRXN/SINK) from a change-vector string. These tags are not real node tags and must not be
+        /// counted as write-usage nodes.
+        /// </summary>
+        public static string StripSpecialTags(string changeVector)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return changeVector;
+
+            var entries = changeVector.ToChangeVectorList();
+            if (entries == null)
+                return changeVector;
+
+            var stripped = new List<ChangeVectorEntry>(entries.Count);
+            foreach (var entry in entries)
+            {
+                if (entry.NodeTag == ChangeVectorParser.RaftInt ||
+                    entry.NodeTag == ChangeVectorParser.MoveInt ||
+                    entry.NodeTag == ChangeVectorParser.TrxnInt ||
+                    entry.NodeTag == ChangeVectorParser.SinkInt)
+                    continue;
+
+                stripped.Add(entry);
+            }
+
+            if (stripped.Count == entries.Count)
+                return changeVector;
+
+            return stripped.SerializeVector();
+        }
+
         public static string MergeVectors(string vectorAstring, string vectorBstring)
         {
             if (string.IsNullOrEmpty(vectorAstring))
