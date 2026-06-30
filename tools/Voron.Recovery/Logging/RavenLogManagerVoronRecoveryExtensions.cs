@@ -6,7 +6,6 @@ using NLog.Config;
 using NLog.Targets.Wrappers;
 using NLog.Targets;
 using Raven.Server.Config.Settings;
-using Raven.Server.Logging;
 using Sparrow.Server.Logging;
 using LogLevel = Sparrow.Logging.LogLevel;
 
@@ -50,7 +49,7 @@ internal static class RavenLogManagerVoronRecoveryExtensions
 
         config.AddRule(defaultRule);
 
-        LogManager.Setup(x => x.RegisterRavenLayoutRenderers().LoadConfiguration(config));
+        LogManager.Setup(x => x.LoadConfiguration(config));
         LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
     }
 }

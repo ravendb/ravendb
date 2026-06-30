@@ -385,7 +385,7 @@ internal static class RavenLogManagerServerExtensions
         config.AddRule(DefaultAuditRule);
         config.AddRule(DefaultRule);
 
-        LogManager.Setup(x => x.RegisterRavenLayoutRenderers().LoadConfiguration(config));
+        LogManager.Setup(x => x.LoadConfiguration(config));
         LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
         if (Logger.IsInfoEnabled)
@@ -421,7 +421,7 @@ internal static class RavenLogManagerServerExtensions
 #if !RVN
             AsyncHelpers.RunSync(() => InstallAdditionalTargetsAsync(configuration));
 #endif
-            LogManager.Setup(x => x.RegisterRavenLayoutRenderers().LoadConfigurationFromFile(configuration.Logs.ConfigPath.FullPath, optional: false));
+            LogManager.Setup(x => x.LoadConfigurationFromFile(configuration.Logs.ConfigPath.FullPath, optional: false));
             var c = LogManager.Configuration;
 #if !RVN
             c.AddRule(AdminLogsRule);
@@ -444,7 +444,7 @@ internal static class RavenLogManagerServerExtensions
 
             RavenLogManager.SetAudit(DefaultAuditRule.Targets.Count > 0 && DefaultAuditRule.Targets.Any(t => t.GetType() != typeof(NullTarget)));
 
-            LogManager.Setup(x => x.RegisterRavenLayoutRenderers().LoadConfiguration(c));
+            LogManager.Setup(x => x.LoadConfiguration(c));
             LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
             if (Logger.IsInfoEnabled)
@@ -538,7 +538,7 @@ internal static class RavenLogManagerServerExtensions
 
         RavenLogManager.SetAudit(true);
 
-        LogManager.Setup(x => x.RegisterRavenLayoutRenderers().LoadConfiguration(config));
+        LogManager.Setup(x => x.LoadConfiguration(config));
         LogManager.ReconfigExistingLoggers(purgeObsoleteLoggers: true);
 
         if (RavenLogManager.Instance.IsAuditEnabled)
