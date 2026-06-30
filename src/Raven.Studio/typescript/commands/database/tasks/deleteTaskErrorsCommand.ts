@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-type TaskCategory = "Etl" | "Ai" | "Sink";
+type TaskCategory = "Etl" | "Ai" | "CdcSink";
 
 interface deleteTaskErrorsDto {
     type: TaskCategory;

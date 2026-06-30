@@ -280,7 +280,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected void RecordProcessError(TaskErrorStep step, string error, long affectedDocumentsCount = 0)
     {
-        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.Sink, new TaskProcessError
+        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
         {
             CreatedAt = SystemTime.UtcNow,
             TaskName = Name,
@@ -483,7 +483,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             try
             {
                 if (Statistics.InMemoryItemErrorsCount > 0)
-                    Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.Sink, Name, Statistics.ReadInMemoryItemErrors());
+                    Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, Name, Statistics.ReadInMemoryItemErrors());
             }
             catch (Exception e)
             {

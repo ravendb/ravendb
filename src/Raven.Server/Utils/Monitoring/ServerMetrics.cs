@@ -25,7 +25,7 @@ namespace Raven.Server.Utils.Monitoring
         public AllDatabasesMetrics Databases { get; set; }
         public ServerEtlMetrics Etls { get; set; }
         public ServerAiTasksMetrics AiTasks { get; set; }
-        public ServerSinksMetrics Sinks { get; set; }
+        public ServerCdcSinksMetrics CdcSinks { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -48,7 +48,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(Databases)] = Databases.ToJson(),
                 [nameof(Etls)] = Etls.ToJson(),
                 [nameof(AiTasks)] = AiTasks.ToJson(),
-                [nameof(Sinks)] = Sinks.ToJson()
+                [nameof(CdcSinks)] = CdcSinks.ToJson()
             };
         }
     }
@@ -326,13 +326,13 @@ namespace Raven.Server.Utils.Monitoring
         }
     }
 
-    public sealed class ServerSinksMetrics
+    public sealed class ServerCdcSinksMetrics
     {
         public int Count { get; set; }
         public long ErrorsCount { get; set; }
-        public int HealthySinksCount { get; set; }
-        public int ImpairedSinksCount { get; set; }
-        public int FailedSinksCount { get; set; }
+        public int HealthyCdcSinksCount { get; set; }
+        public int ImpairedCdcSinksCount { get; set; }
+        public int FailedCdcSinksCount { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -340,9 +340,9 @@ namespace Raven.Server.Utils.Monitoring
             {
                 [nameof(Count)] = Count,
                 [nameof(ErrorsCount)] = ErrorsCount,
-                [nameof(HealthySinksCount)] = HealthySinksCount,
-                [nameof(ImpairedSinksCount)] = ImpairedSinksCount,
-                [nameof(FailedSinksCount)] = FailedSinksCount
+                [nameof(HealthyCdcSinksCount)] = HealthyCdcSinksCount,
+                [nameof(ImpairedCdcSinksCount)] = ImpairedCdcSinksCount,
+                [nameof(FailedCdcSinksCount)] = FailedCdcSinksCount
             };
         }
     }

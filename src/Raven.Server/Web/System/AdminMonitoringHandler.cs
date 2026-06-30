@@ -233,14 +233,14 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/monitoring/v1/sinks", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/monitoring/v1/cdc-sinks", "GET", AuthorizationStatus.Operator)]
         public async Task MonitoringSinks()
         {
             ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 
             var databases = GetDatabases();
 
-            var result = new SinksMetrics();
+            var result = new CdcSinksMetrics();
 
             result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
             result.NodeTag = ServerStore.NodeTag;
@@ -249,15 +249,15 @@ namespace Raven.Server.Web.System
 
             foreach (var documentDatabase in databases)
             {
-                var perDatabaseMetrics = new PerDatabaseSinkMetrics { DatabaseName = documentDatabase.Name };
+                var perDatabaseMetrics = new PerDatabaseCdcSinkMetrics { DatabaseName = documentDatabase.Name };
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     foreach (var sink in documentDatabase.CdcSinkLoader.Processes)
                     {
-                        var sinkMetrics = provider.CollectSinkMetrics(sink, documentDatabase.TaskErrorsStorage);
-                        perDatabaseMetrics.Sinks.Add(sinkMetrics);
+                        var cdcSinkMetrics = provider.CollectCdcSinkMetrics(sink, documentDatabase.TaskErrorsStorage);
+                        perDatabaseMetrics.CdcSinks.Add(cdcSinkMetrics);
                     }
                 }
 

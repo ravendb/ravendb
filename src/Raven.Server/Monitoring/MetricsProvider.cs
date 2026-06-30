@@ -61,7 +61,7 @@ public sealed class MetricsProvider
         result.Databases = GetAllDatabasesMetrics();
         result.Etls = GetServerEtlMetrics();
         result.AiTasks = GetServerAiTasksMetrics();
-        result.Sinks = GetServerSinksMetrics();
+        result.CdcSinks = GetServerCdcSinksMetrics();
 
         return result;
     }
@@ -369,30 +369,30 @@ public sealed class MetricsProvider
         return result;
     }
 
-    private ServerSinksMetrics GetServerSinksMetrics()
+    private ServerCdcSinksMetrics GetServerCdcSinksMetrics()
     {
-        var result = new ServerSinksMetrics();
+        var result = new ServerCdcSinksMetrics();
 
-        var sinksCount = 0;
+        var cdcSinksCount = 0;
         var errorsCount = 0L;
-        var healthySinksCount = 0;
-        var impairedSinksCount = 0;
-        var failedSinksCount = 0;
+        var healthyCdcSinksCount = 0;
+        var impairedCdcSinksCount = 0;
+        var failedCdcSinksCount = 0;
 
         foreach (var dbResult in _serverStore.DatabasesLandlord.GetLoadedDatabases())
         {
-            sinksCount += dbResult.CdcSinkLoader.Processes.Length;
-            errorsCount += dbResult.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Sink);
-            healthySinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
-            impairedSinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
-            failedSinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+            cdcSinksCount += dbResult.CdcSinkLoader.Processes.Length;
+            errorsCount += dbResult.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.CdcSink);
+            healthyCdcSinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+            impairedCdcSinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+            failedCdcSinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
         }
 
-        result.Count = sinksCount;
+        result.Count = cdcSinksCount;
         result.ErrorsCount = errorsCount;
-        result.HealthySinksCount = healthySinksCount;
-        result.ImpairedSinksCount = impairedSinksCount;
-        result.FailedSinksCount = failedSinksCount;
+        result.HealthyCdcSinksCount = healthyCdcSinksCount;
+        result.ImpairedCdcSinksCount = impairedCdcSinksCount;
+        result.FailedCdcSinksCount = failedCdcSinksCount;
 
         return result;
     }
@@ -432,7 +432,7 @@ public sealed class MetricsProvider
         result.Statistics = GetDatabaseStatistics(database);
         result.Etls = GetDatabaseEtlsMetrics(database);
         result.AiTasks = GetDatabaseAiTasksMetrics(database);
-        result.Sinks = GetDatabaseSinksMetrics(database);
+        result.CdcSinks = GetDatabaseCdcSinksMetrics(database);
 
         return result;
     }
@@ -587,18 +587,18 @@ public sealed class MetricsProvider
         return result;
     }
 
-    private DatabaseSinksMetrics GetDatabaseSinksMetrics(DocumentDatabase database)
+    private DatabaseCdcSinksMetrics GetDatabaseCdcSinksMetrics(DocumentDatabase database)
     {
-        var result = new DatabaseSinksMetrics();
+        var result = new DatabaseCdcSinksMetrics();
 
         var sinks = database.CdcSinkLoader.Processes;
 
         result.Count = sinks.Length;
-        result.ErrorsCount = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Sink);
+        result.ErrorsCount = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.CdcSink);
 
-        result.HealthySinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
-        result.ImpairedSinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
-        result.FailedSinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+        result.HealthyCdcSinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+        result.ImpairedCdcSinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+        result.FailedCdcSinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
 
         return result;
     }
@@ -685,13 +685,13 @@ public sealed class MetricsProvider
         return result;
     }
 
-    public SinkMetrics CollectSinkMetrics(CdcSinkProcess sink, TaskErrorsStorage errorsStorage)
+    public CdcSinkMetrics CollectCdcSinkMetrics(CdcSinkProcess sink, TaskErrorsStorage errorsStorage)
     {
-        var result = new SinkMetrics();
+        var result = new CdcSinkMetrics();
 
         result.ProcessName = sink.Name;
         result.HealthStatus = sink.Statistics.HealthStatus;
-        result.ErrorsCount = errorsStorage.ReadErrorsCountOfTask(TaskCategory.Sink, sink.Name);
+        result.ErrorsCount = errorsStorage.ReadErrorsCountOfTask(TaskCategory.CdcSink, sink.Name);
 
         result.LastSuccessfulBatchTimeInSec = sink.LastBatchTime.HasValue
             ? (SystemTime.UtcNow - sink.LastBatchTime.Value).TotalSeconds

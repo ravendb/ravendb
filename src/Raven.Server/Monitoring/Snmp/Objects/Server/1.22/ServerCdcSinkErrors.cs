@@ -19,7 +19,7 @@ public sealed class ServerCdcSinkErrors : ScalarObjectBase<Integer32>
         var result = 0;
 
         foreach (var database in _store.DatabasesLandlord.GetLoadedDatabases())
-            result += (int)database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Sink);
+            result += (int)database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.CdcSink);
 
         return new Integer32(result);
     }
