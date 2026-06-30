@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { endOfDay, startOfDay, startOfToday, subDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { SeriesBarChart, WritesBarChart } from "@/components/data/charts";
+import { DateRangePicker } from "@/components/data/date-range-picker";
 import { PagePanel } from "@/components/data/page-panel";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact, formatCurrency } from "@/lib/format";
@@ -11,12 +15,30 @@ import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
+const getDefaultRange = (): DateRange => {
+    const today = startOfToday();
+    return { from: subDays(today, 6), to: today };
+};
+
+// The endpoint binds start/end as DateTime, so send the full inclusive span of the picked days.
+function toApiRange(range: DateRange | undefined) {
+    if (!range?.from) {
+        return undefined;
+    }
+    const to = range.to ?? range.from;
+    return { start: startOfDay(range.from).toISOString(), end: endOfDay(to).toISOString() };
+}
+
 export function AppUsage() {
     const { slug = "" } = useParams();
-    const appUsageQuery = useQuery(api.queries.stats.appUsage(slug));
+    const [range, setRange] = useState<DateRange | undefined>(getDefaultRange);
+    const appUsageQuery = useQuery(api.queries.stats.appUsage(slug, toApiRange(range)));
 
     return (
         <PagePanel>
+            <div className="mb-6 flex items-center justify-end">
+                <DateRangePicker value={range} onChange={setRange} />
+            </div>
             <ApiState
                 isLoading={appUsageQuery.isPending}
                 isError={appUsageQuery.isError}
