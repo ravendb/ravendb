@@ -1725,8 +1725,6 @@ public class RavenDB_21192 : RavenTestBase
         {
             const string cdcSinkName = "CdcSink1";
 
-            // A disabled sink keeps a config in the database record (so it gets an SNMP per-task mapping)
-            // without a live source connection that would fault and generate its own non-deterministic errors.
             var connectionString = new SqlConnectionString
             {
                 Name = "cdc-cs",
@@ -1756,7 +1754,6 @@ public class RavenDB_21192 : RavenTestBase
             var database = GetDatabase(store.Database).GetAwaiter().GetResult();
             var now = DateTime.UtcNow;
 
-            // 2 process errors + 3 item errors => 5 errors total for the task.
             for (int i = 0; i < 2; i++)
             {
                 database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
@@ -1780,9 +1777,6 @@ public class RavenDB_21192 : RavenTestBase
             var ip = new Uri(Server.WebUrl).Host;
             var endpoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
-            // SNMP attach + the per-task mapping (Raft command) happen asynchronously after the record change.
-            // Poll until the OIDs are listed, extracting them as strings (the blittable result is tied to the
-            // per-iteration command context and must not be held past it).
             string serverErrorsOid = null, dbErrorsOid = null;
             string taskErrorsOid = null, taskHealthOid = null, taskResponsibleNodeOid = null, taskLastBatchOid = null;
 
@@ -1831,10 +1825,8 @@ public class RavenDB_21192 : RavenTestBase
             Assert.Equal(expectedErrors, ((Integer32)SnmpGet(dbErrorsOid)).ToInt32());
             Assert.Equal(expectedErrors, ((Integer32)SnmpGet(taskErrorsOid)).ToInt32());
 
-            // The sink hasn't run a batch, so its health is the default "Healthy".
             Assert.Equal(nameof(EtlProcessHealthStatus.Healthy), SnmpGet(taskHealthOid).ToString());
 
-            // Single node => this node is responsible for the task.
             Assert.Equal(Server.ServerStore.NodeTag, SnmpGet(taskResponsibleNodeOid).ToString());
 
             Assert.Equal(SnmpType.TimeTicks, SnmpGet(taskLastBatchOid).TypeCode);
