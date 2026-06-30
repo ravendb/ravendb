@@ -1481,8 +1481,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     _sb.Append(patches[i].TableName);
                 }
                 _sb.Append("]. Patch count: ").Append(patches.Count);
-                // Recorded once by the per-document handler in ExecuteCmd (as a Transformation error),
-                // not here, so a failed patch isn't double-counted as both transformation and load.
                 throw new CdcSinkScriptExecutionException(_sb.ToString(), e);
             }
 
