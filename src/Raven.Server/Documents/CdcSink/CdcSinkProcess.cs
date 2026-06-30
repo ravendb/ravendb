@@ -489,13 +489,16 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     Logger.Warn($"[{Name}] Failed to store CDC Sink item errors to dedicated storage.", e);
             }
 
+            // Recompute health from the per-batch error/success tally (EWMA), mirroring ETL. In finally
+            // so a failed batch (e.g. the error-ratio threshold tripped) still feeds the EWMA and degrades
+            // health, rather than only successful batches moving it.
+            Statistics.OnBatchCompletion();
+
             stats.Dispose();
             statsAggregator.Complete();
         }
 
-        // Recompute health from the per-batch error/success tally (EWMA), mirroring ETL.
-        Statistics.OnBatchCompletion();
-
+        // Only a successfully persisted batch raises the completion event (mirrors ETL's loader callback).
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
         return (checkpoint, ops.Count);
     }
