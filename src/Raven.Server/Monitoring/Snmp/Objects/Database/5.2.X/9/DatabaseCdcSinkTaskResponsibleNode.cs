@@ -1,5 +1,4 @@
 using Lextm.SharpSnmpLib;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 
