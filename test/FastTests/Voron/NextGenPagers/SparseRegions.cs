@@ -5,6 +5,7 @@ using Sparrow.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
+using Voron.Impl.Journal;
 using Xunit;
 
 namespace FastTests.Voron.NextGenPagers;
@@ -15,6 +16,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
     public unsafe void CanReleaseDiskSpaceBackToTheOperatingSystem()
     {
         Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
         var pages = new List<long>();
         using (var wtx = Env.WriteTransaction())
         {
@@ -76,6 +78,12 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         Env.FlushLogToDataFile();
         Assert.Equal(128 * 1024 * 1024, Env.CurrentStateRecord.DataPagerState.TotalAllocatedSize);
 
+        // RavenDB-26910: hole-punching is deferred to the post-sync phase, so force a sync to actually reclaim the space
+        using (var syncOperation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+        {
+            Assert.True(syncOperation.SyncDataFile());
+        }
+
         (long allocatedSize, long physicalSize) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
 
         // On Linux, we have to deal with hole punching being done on 4KB boundaries, but the file system is 
@@ -94,6 +102,69 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             // MacOS is doing weird stuff here, because it is eagerly marking the file as sparse
             // so we'll just verify that we were able to save _some_ space.
             Assert.True((beforePhysicalSize - physicalSize) > 20*1024*1024);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public unsafe void DeferredPunch_DoesNotZeroPageReusedInLaterFlushBatch()
+    {
+        // RavenDB-26910: the hole-punch is deferred to the post-sync phase and re-validated against the live free-space tree.
+        // A page freed in one flush batch can be reused + written by a later batch before the deferred punch runs; the re-validation
+        // must exclude it so it is never zeroed. If the filter is removed (punching the stale pending regions directly), this fails.
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
+
+        const int allocationSize = 600;
+        const int overflowSize = allocationSize * Constants.Storage.PageSize - PageHeader.SizeOf;
+
+        long pageNum;
+        using (var tx = Env.WriteTransaction())
+        {
+            var p = tx.LowLevelTransaction.AllocatePage(allocationSize);
+            p.Flags |= PageFlags.Overflow;
+            p.OverflowSize = overflowSize;
+            pageNum = p.PageNumber;
+            p.AsSpan(PageHeader.SizeOf, overflowSize).Fill(1);
+            tx.Commit();
+        }
+
+        Env.FlushLogToDataFile();
+        using (var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            Assert.True(sync.SyncDataFile());
+
+        // batch N: free the pages (records a sparse-region candidate), flush without syncing -> the punch is deferred, not yet done
+        using (var tx = Env.WriteTransaction())
+        {
+            for (int i = 0; i < allocationSize; i++)
+                tx.LowLevelTransaction.FreePage(pageNum + i);
+            tx.Commit();
+        }
+        Env.FlushLogToDataFile();
+
+        // batch N+1: reuse the same pages and write new content, flush -> the deferred punch from batch N has still not run
+        using (var tx = Env.WriteTransaction())
+        {
+            var p = tx.LowLevelTransaction.AllocatePage(allocationSize);
+            Assert.Equal(pageNum, p.PageNumber);
+            p.Flags |= PageFlags.Overflow;
+            p.OverflowSize = overflowSize;
+            p.AsSpan(PageHeader.SizeOf, overflowSize).Fill(2);
+            tx.Commit();
+        }
+        Env.FlushLogToDataFile();
+
+        // now sync: batch N's deferred punch runs over a clean section, re-validated against the live free-space tree. The pages were
+        // reused by batch N+1, so they must be excluded from the punch and keep their content.
+        using (var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            Assert.True(sync.SyncDataFile());
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var p = tx.LowLevelTransaction.GetPage(pageNum);
+            Assert.Equal(overflowSize, p.OverflowSize);
+            Assert.False(p.AsSpan(PageHeader.SizeOf, overflowSize).ContainsAnyExcept((byte)2),
+                "Reused page was zeroed by the deferred sparse-region punch");
         }
     }
 
@@ -168,6 +239,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
     public unsafe void StorageReport_ShouldReflectPhysicalDiskSpaceAfterHolePunching()
     {
         Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
         var pages = new List<long>();
         using (var wtx = Env.WriteTransaction())
         {
@@ -199,6 +271,12 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         }
 
         Env.FlushLogToDataFile();
+
+        // RavenDB-26910: hole-punching is deferred to the post-sync phase, so force a sync to actually reclaim the space
+        using (var syncOperation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+        {
+            Assert.True(syncOperation.SyncDataFile());
+        }
 
         using var rtx = Env.ReadTransaction();
         var report = Env.GenerateReport(rtx);

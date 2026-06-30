@@ -9,6 +9,7 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
+using Voron.Impl.Journal;
 using Voron.Util.Settings;
 using Xunit;
 
@@ -81,6 +82,12 @@ public class RavenDB_26344 : StorageTest
 
         Env.FlushLogToDataFile();
 
+        // RavenDB-26910: hole-punching is deferred to the post-sync phase, so force a sync to actually reclaim the space
+        using (var syncOperation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+        {
+            Assert.True(syncOperation.SyncDataFile());
+        }
+
         (long allocatedAfter, long physicalAfter) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
         Assert.Equal(allocatedBefore, allocatedAfter);
 
@@ -132,6 +139,12 @@ public class RavenDB_26344 : StorageTest
         }
 
         Env.FlushLogToDataFile();
+
+        // RavenDB-26910: hole-punching is deferred to the post-sync phase, so force a sync so the source file is actually sparse before backup
+        using (var syncOperation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+        {
+            Assert.True(syncOperation.SyncDataFile());
+        }
 
         // 3. Get the original file sizes for reference
         (long originalAllocated, long originalPhysical) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
