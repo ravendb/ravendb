@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@base-ui/react':
         specifier: ^1.5.0
-        version: 1.5.0(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        version: 1.5.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@fontsource-variable/geist':
         specifier: ^5.2.9
         version: 5.2.9
@@ -62,6 +62,9 @@ importers:
       react-ace:
         specifier: ^14.0.1
         version: 14.0.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react-day-picker:
+        specifier: ^10.0.1
+        version: 10.0.1(@types/react@19.2.14)(react@19.2.6)
       react-dom:
         specifier: ^19.2.6
         version: 19.2.6(react@19.2.6)
@@ -339,6 +342,9 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@date-fns/tz@1.5.0':
+    resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
 
   '@dotenvx/dotenvx@1.66.0':
     resolution: {integrity: sha512-qlQFhHUjhRDybrinqLAD0MClVZDOrsq80O8eD5iSjz3Qa/4f3Jg7SQrOaSobrRyP1QaWIYLGtGpj2c7H0D8NUw==}
@@ -3661,6 +3667,16 @@ packages:
       react: ^0.13.0 || ^0.14.0 || ^15.0.1 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^0.13.0 || ^0.14.0 || ^15.0.1 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  react-day-picker@10.0.1:
+    resolution: {integrity: sha512-eNh6BlwcYInWaJtRv18mXQ06Ys/H6rdTZAnTaSdOYJuTpwP1JMCHNd1FDRadA+gbeinq+psdULN5Xnowy9mV8w==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/react': '>=16.8.0'
+      react: '>=16.8.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
   react-docgen-typescript@2.4.0:
     resolution: {integrity: sha512-ZtAp5XTO5HRzQctjPU0ybY0RRCQO19X/8fxn3w7y2VVTUbGHDKULPTL4ky3vB05euSgG5NpALhEhDPvQ56wvXg==}
     peerDependencies:
@@ -4498,7 +4514,7 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@base-ui/react@1.5.0(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@base-ui/react@1.5.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@base-ui/utils': 0.2.9(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -4508,6 +4524,7 @@ snapshots:
       react-dom: 19.2.6(react@19.2.6)
       use-sync-external-store: 1.6.0(react@19.2.6)
     optionalDependencies:
+      '@date-fns/tz': 1.5.0
       '@types/react': 19.2.14
       date-fns: 4.4.0
 
@@ -4521,6 +4538,8 @@ snapshots:
       use-sync-external-store: 1.6.0(react@19.2.6)
     optionalDependencies:
       '@types/react': 19.2.14
+
+  '@date-fns/tz@1.5.0': {}
 
   '@dotenvx/dotenvx@1.66.0':
     dependencies:
@@ -7642,6 +7661,14 @@ snapshots:
       prop-types: 15.8.1
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
+
+  react-day-picker@10.0.1(@types/react@19.2.14)(react@19.2.6):
+    dependencies:
+      '@date-fns/tz': 1.5.0
+      date-fns: 4.4.0
+      react: 19.2.6
+    optionalDependencies:
+      '@types/react': 19.2.14
 
   react-docgen-typescript@2.4.0(typescript@6.0.3):
     dependencies:
