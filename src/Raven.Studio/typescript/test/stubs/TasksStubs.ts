@@ -1462,6 +1462,29 @@ namespace Orders
     static taskErrors(): TaskErrors[] {
         return [
             {
+                TaskName: "CdcSinkTask",
+                Category: "CdcSink",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "CdcSinkTask",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Configuration",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 0,
+                    },
+                ],
+                ItemErrors: [
+                    {
+                        TaskName: "CdcSinkTask",
+                        DocumentId: "orders/1-A",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Load",
+                        Error: "dummy error",
+                    },
+                ],
+            },
+            {
                 TaskName: "AzureETL/T1",
                 Category: "Etl",
                 EtlType: "Queue",
