@@ -183,7 +183,7 @@ public class CdcSinkProcessStatistics
     /// <summary>
     /// Forces <see cref="HealthStatus"/> to <see cref="EtlProcessHealthStatus.Failed"/> when the process
     /// hits a permanent configuration/schema fault and stops retrying - no further batch completes to move
-    /// the EWMA, so the health would otherwise stay stale. Mirrors ETL's script-parse-error health override.
+    /// the EWMA, so the health would otherwise stay stale.
     /// </summary>
     public void SetHealthStatusToFailed()
     {
