@@ -67,23 +67,13 @@ public class CdcSinkProcessStatistics
         }
     }
 
-    public void RecordConsumeError(string error, int count = 1)
+    public void RecordConsumeError(int count = 1)
     {
         lock (_lock)
         {
             WasLatestConsumeSuccessful = false;
-
             ConsumeErrors += count;
-
             LastConsumeErrorTime = SystemTime.UtcNow;
-
-            if (ConsumeErrors <= ConsumeSuccesses)
-                return;
-
-            var message = $"Consume error ratio is too high (errors: {ConsumeErrors}, successes: {ConsumeSuccesses}). " +
-                          "Could not tolerate consume error ratio and stopped current CDC Sink batch.";
-
-            throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {error}");
         }
     }
 
