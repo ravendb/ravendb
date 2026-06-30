@@ -27,7 +27,7 @@ public class CdcSinkProcessStatistics
     private readonly CdcSinkConfiguration _configuration;
 
     // Latched on a permanent fault so HealthStatus stays Failed even if a later batch completes; cleared
-    // only by recreating the process (and thus these statistics). Mirrors ETL's script-parse-error latch.
+    // only by recreating the process (and thus these statistics).
     private bool _healthFailedLatched;
 
     // Per-batch error/success tally feeding the EWMA error ratio on batch completion (see OnBatchCompletion).
