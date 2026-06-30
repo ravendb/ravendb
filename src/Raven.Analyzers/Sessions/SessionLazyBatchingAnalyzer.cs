@@ -142,8 +142,8 @@ namespace Raven.Analyzers.Sessions
                 {
                     // The matched name is the genuine framework materializer (Enumerable.ToList,
                     // Raven's async query extensions), not a same-named user-defined extension.
-                    ISymbol? sessionSymbol = ResolveSessionSymbolFromQueryChain(memberAccess.Expression);
-                    BatchableCalls.Add((invocation, methodName, AsStableInstanceSymbol(sessionSymbol)));
+                    ISymbol? sessionSymbol = _model.GetSymbolInfo(SyntaxHelpers.WalkInvocationChainToRoot(memberAccess.Expression)).Symbol;
+                    BatchableCalls.Add((invocation, methodName, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
                     base.VisitInvocationExpression(invocation);
                     return;
                 }
@@ -163,7 +163,7 @@ namespace Raven.Analyzers.Sessions
                         if (IsIndependentArg(firstArg))
                         {
                             ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
-                            BatchableCalls.Add((invocation, methodName, AsStableInstanceSymbol(sessionSymbol)));
+                            BatchableCalls.Add((invocation, methodName, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
                         }
                     }
                     base.VisitInvocationExpression(invocation);
@@ -172,38 +172,6 @@ namespace Raven.Analyzers.Sessions
 
                 base.VisitInvocationExpression(invocation);
             }
-
-            // For a query chain like `session.Query<T>().Where(x).OrderBy(y)`, walk back
-            // through invocations and member accesses to find the session expression at
-            // the root. Returns null when the root is not a resolvable symbol (e.g. a
-            // method call result whose instance identity we can't track).
-            private ISymbol? ResolveSessionSymbolFromQueryChain(ExpressionSyntax queryChain)
-            {
-                ExpressionSyntax current = queryChain;
-                while (true)
-                {
-                    switch (current)
-                    {
-                        case InvocationExpressionSyntax inv when inv.Expression is MemberAccessExpressionSyntax ma:
-                            current = ma.Expression;
-                            continue;
-                        case ParenthesizedExpressionSyntax paren:
-                            current = paren.Expression;
-                            continue;
-                        default:
-                            return _model.GetSymbolInfo(current).Symbol;
-                    }
-                }
-            }
-
-            // Only a local, parameter, or field denotes a stable session instance that two calls
-            // can be proven to share. A property getter or method call (e.g. GetSession() or a
-            // Session property) may return a fresh session each invocation, so such receivers must
-            // not be grouped as "the same session" — doing so would let the code fix merge calls
-            // onto one receiver and silently change semantics. Returning null excludes them from
-            // grouping (they are filtered out before the 2+ check).
-            private static ISymbol? AsStableInstanceSymbol(ISymbol? symbol) =>
-                symbol is ILocalSymbol or IParameterSymbol or IFieldSymbol ? symbol : null;
 
             private bool IsIndependentArg(ArgumentSyntax arg)
             {

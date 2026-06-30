@@ -320,5 +320,220 @@ class Place { public string Location { get; set; } }
 
             Assert.Empty(diagnostics);
         }
+
+        // ── Query-expression (from/where/select) form ─────────────────────────────
+
+        [Fact]
+        public async Task UserMethod_In_QueryExpression_Where_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyFilters { public static bool IsActive(string status) => status == ""Active""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                where MyFilters.IsActive(o.Status)
+                select o;
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("IsActive", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_QueryExpression_Select_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Mapper { public static string Map(Order o) => o.Name; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                select Mapper.Map(o);
+    }
+}
+
+class Order { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("Map", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_QueryExpression_OrderBy_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyScorer { public static int Score(Order o) => o.Amount; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                orderby MyScorer.Score(o)
+                select o;
+    }
+}
+
+class Order { public int Amount { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("Score", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task BclMethod_In_QueryExpression_Where_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                where o.Name.ToUpper() == ""ACTIVE""
+                select o;
+    }
+}
+
+class Order { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserMethod_In_NonRaven_QueryExpression_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using System.Collections.Generic;
+
+class MyFilters { public static bool IsActive(string s) => s == ""Active""; }
+
+class Test
+{
+    void Run()
+    {
+        var orders = new List<Order>();
+        var q = from o in orders
+                where MyFilters.IsActive(o.Status)
+                select o;
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserMethod_In_EmbeddedRavenChain_Inside_QueryExpression_Reports_Once()
+        {
+            // A method-chain Raven query embedded in a 'select' clause is reported by the method-chain
+            // path; the query-expression path must not report it a second time at the same location.
+            const string source = CommonUsings + @"
+class H { public static bool M(Item i) => i.On; }
+class Item { public bool On { get; set; } }
+class Order { }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                select session.Query<Item>().Where(i => H.M(i)).ToList();
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("M", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_NonRavenLambda_Inside_QueryExpression_Where_Reports_Once()
+        {
+            // A lambda passed to a non-Raven method (Enumerable.Any) inside a clause is NOT owned by the
+            // method-chain path, so the query-expression path must still report the user method in it.
+            const string source = CommonUsings + @"
+using System.Collections.Generic;
+class H { public static bool M(string s) => s.Length > 0; }
+class Order { public List<string> Tags { get; set; } }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                where o.Tags.Any(t => H.M(t))
+                select o;
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("M", d.GetMessage());
+        }
+
+        // ── Type matching is gated on the Raven.Client namespace ───────────────────
+
+        [Fact]
+        public async Task UserMethod_On_SameNamedNonRavenQueryable_No_Diagnostic()
+        {
+            // A user type named IRavenQueryable that is NOT in the Raven.Client namespace must not be
+            // treated as the RavenDB queryable, so its Where lambda is never analyzed.
+            const string source = @"
+using System;
+
+namespace MyApp
+{
+    public interface IRavenQueryable<T> { IRavenQueryable<T> Where(Func<T, bool> predicate); }
+    public static class Q { public static IRavenQueryable<T> Query<T>() => null!; }
+    public static class MyFilters { public static bool IsActive(string s) => s == ""Active""; }
+    public class Order { public string Status { get; set; } }
+
+    public class Test
+    {
+        public void Run()
+        {
+            var q = Q.Query<Order>().Where(o => MyFilters.IsActive(o.Status));
+        }
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }

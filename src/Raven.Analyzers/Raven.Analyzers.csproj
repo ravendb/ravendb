@@ -42,9 +42,18 @@
   <Target Name="GenerateRavenProductVersion" BeforeTargets="CoreCompile">
     <PropertyGroup>
       <_RavenCommonAssemblyInfo>$(MSBuildProjectDirectory)\..\CommonAssemblyInfo.cs</_RavenCommonAssemblyInfo>
-      <RavenProductVersion>$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('$(_RavenCommonAssemblyInfo)')), '(?s).*AssemblyVersion\("([^"]*)"\).*', '$1'))</RavenProductVersion>
+      <!--
+        Extract via Match, not Replace: Regex.Replace returns the WHOLE input unchanged when the
+        pattern does not match, which would bake the entire file (embedded quotes and newlines) into
+        the generated const and fail to compile. Match captures only the version; if the
+        AssemblyVersion line is ever renamed or removed the captured group is empty and the Error
+        below fails the build with a clear message instead of emitting broken source.
+      -->
+      <RavenProductVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(_RavenCommonAssemblyInfo)')), 'AssemblyVersion\("([^"]*)"\)').Groups.get_Item(1).Value)</RavenProductVersion>
       <_RavenProductVersionFile>$(IntermediateOutputPath)RavenProductVersion.g.cs</_RavenProductVersionFile>
     </PropertyGroup>
+    <Error Condition="'$(RavenProductVersion)' == ''"
+           Text="GenerateRavenProductVersion: could not read AssemblyVersion from $(_RavenCommonAssemblyInfo). SeverityPolicy.ProductVersion depends on it." />
     <WriteLinesToFile
         File="$(_RavenProductVersionFile)"
         Lines="namespace Raven.Analyzers.Shared { public static partial class SeverityPolicy { internal const string ProductVersion = &quot;$(RavenProductVersion)&quot;%3B } }"
