@@ -62,7 +62,7 @@ namespace SlowTests.Client.Counters
 
             cOut.ReplicateOnce(DocId); // C now evaluates its merged counter-group row under the armed cv -> gated
 
-            cOut.Mend();
+            await cOut.MendAsync();
             foreach (var (from, to) in links)
                 EnsureReplicating(from, to);
 
@@ -128,7 +128,7 @@ namespace SlowTests.Client.Counters
 
             cOut.ReplicateOnce(DocId);
 
-            cOut.Mend();
+            await cOut.MendAsync();
             foreach (var (from, to) in links)
                 EnsureReplicating(from, to);
 
