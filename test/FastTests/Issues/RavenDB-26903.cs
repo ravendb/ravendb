@@ -9,7 +9,7 @@ using Amazon.S3.Model;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
+using ITestOutputHelper = Xunit.ITestOutputHelper;
 
 namespace FastTests.Issues
 {
