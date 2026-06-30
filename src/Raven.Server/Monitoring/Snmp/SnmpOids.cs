@@ -1150,6 +1150,68 @@ namespace Raven.Server.Monitoring.Snmp
                 }
             }
 
+            public sealed class CdcSinks
+            {
+                private CdcSinks()
+                {
+                }
+
+                [Description("Number of CDC Sink task errors")]
+                public const string CdcSinkErrorsOfTask = "5.2.{0}.10.{{0}}.1";
+
+                [Description("Health status of particular CDC Sink task")]
+                public const string HealthStatus = "5.2.{0}.10.{{0}}.2";
+
+                [Description("Last successful batch time")]
+                public const string LastSuccessfulBatchTime = "5.2.{0}.10.{{0}}.3";
+
+                [Description("Responsible node tag of particular CDC Sink task")]
+                public const string TaskResponsibleNode = "5.2.{0}.10.{{0}}.4";
+
+                public static Dictionary<string, string> CreateMapping(long ignoreIndex)
+                {
+                    var dictionary = new Dictionary<string, string>();
+                    foreach (var field in typeof(CdcSinks).GetFields())
+                    {
+                        var fieldValue = GetFieldValue(field);
+                        var databaseOid = string.Format(fieldValue.Oid, ignoreIndex);
+                        var cdcSinkOid = string.Format(databaseOid, ignoreIndex);
+                        dictionary.Add(Root + cdcSinkOid, fieldValue.Description);
+                    }
+
+                    return dictionary;
+                }
+
+                public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, RawDatabaseRecord record, long databaseIndex)
+                {
+                    var mapping = SnmpDatabase.GetCdcSinksMapping(context, serverStore, record.DatabaseName);
+
+                    var djv = new DynamicJsonValue();
+                    if (mapping.Count == 0)
+                        return djv;
+
+                    foreach (var cdcSink in record.CdcSinks)
+                    {
+                        var name = cdcSink.Name;
+                        if (mapping.TryGetValue(name, out var index) == false)
+                            continue;
+
+                        var array = new DynamicJsonArray();
+                        foreach (var field in typeof(CdcSinks).GetFields())
+                        {
+                            var fieldValue = GetFieldValue(field);
+                            var databaseOid = string.Format(fieldValue.Oid, databaseIndex);
+                            var indexOid = string.Format(databaseOid, index);
+                            array.Add(CreateJsonItem(Root + indexOid, fieldValue.Description));
+                        }
+
+                        djv[name] = array;
+                    }
+
+                    return djv;
+                }
+            }
+
             public sealed class General
             {
                 private General()
@@ -1394,6 +1456,7 @@ namespace Raven.Server.Monitoring.Snmp
                     .Concat(Indexes.CreateMapping(0))
                     .Concat(Etls.CreateMapping(0))
                     .Concat(AiTasks.CreateMapping(0))
+                    .Concat(CdcSinks.CreateMapping(0))
                     .ToDictionary();
                 
                 foreach (var field in typeof(Databases).GetFields())
@@ -1435,7 +1498,8 @@ namespace Raven.Server.Monitoring.Snmp
                             [$"@{nameof(General)}"] = array,
                             [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value),
                             [nameof(Etls)] = Etls.ToJson(serverStore, context, record, kvp.Value),
-                            [nameof(AiTasks)] = AiTasks.ToJson(serverStore, context, record, kvp.Value)
+                            [nameof(AiTasks)] = AiTasks.ToJson(serverStore, context, record, kvp.Value),
+                            [nameof(CdcSinks)] = CdcSinks.ToJson(serverStore, context, record, kvp.Value)
                         };
                     }
                 }

@@ -22,6 +22,7 @@ namespace Raven.Server.Monitoring.Snmp
         private readonly Dictionary<string, int> _loadedIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int> _loadedEtls = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int> _loadedAiTasks = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _loadedCdcSinks = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         private readonly DatabasesLandlord _databaseLandlord;
 
@@ -152,6 +153,7 @@ namespace Raven.Server.Monitoring.Snmp
                     await AddIndexesFromDatabaseAsync(database);
                     await AddEtlsFromDatabaseAsync(database);
                     await AddAiTasksFromDatabaseAsync(database);
+                    await AddCdcSinksFromDatabaseAsync(database);
 
                     _attached = true;
                 }
@@ -225,6 +227,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                     await AddEtlsFromDatabaseAsync(database);
                     await AddAiTasksFromDatabaseAsync(database);
+                    await AddCdcSinksFromDatabaseAsync(database);
                 }
                 finally
                 {
@@ -344,6 +347,43 @@ namespace Raven.Server.Monitoring.Snmp
             }
         }
 
+        private async Task AddCdcSinksFromDatabaseAsync(DocumentDatabase database)
+        {
+            var cdcSinkNames = database.CdcSinkLoader.GetCdcSinkProcessNamesFromRecord().ToList();
+
+            if (cdcSinkNames.Count == 0)
+                return;
+
+            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                context.OpenReadTransaction();
+
+                var mapping = GetCdcSinksMapping(context, database.ServerStore, database.Name);
+
+                var missingCdcSinks = new List<string>();
+                foreach (var cdcSinkName in cdcSinkNames)
+                {
+                    if (mapping.ContainsKey(cdcSinkName) == false)
+                        missingCdcSinks.Add(cdcSinkName);
+                }
+
+                if (missingCdcSinks.Count > 0)
+                {
+                    context.CloseTransaction();
+
+                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseCdcSinksMappingCommand(database.Name, missingCdcSinks, RaftIdGenerator.NewId()));
+                    await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+
+                    context.OpenReadTransaction();
+
+                    mapping = GetCdcSinksMapping(context, database.ServerStore, database.Name);
+                }
+
+                foreach (var cdcSinkName in cdcSinkNames)
+                    LoadCdcSink(cdcSinkName, (int)mapping[cdcSinkName]);
+            }
+        }
+
         private void LoadIndex(string indexName, int index)
         {
             if (_loadedIndexes.ContainsKey(indexName))
@@ -396,6 +436,19 @@ namespace Raven.Server.Monitoring.Snmp
             _loadedAiTasks[processName] = index;
         }
 
+        private void LoadCdcSink(string processName, int index)
+        {
+            if (_loadedCdcSinks.ContainsKey(processName))
+                return;
+
+            _objectStore.Add(new DatabaseCdcSinkErrorsOfTask(_databaseName, processName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseCdcSinkHealthStatus(_databaseName, processName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseCdcSinkLastSuccessfulBatchTime(_databaseName, processName, _databaseLandlord, _databaseIndex, index));
+            _objectStore.Add(new DatabaseCdcSinkTaskResponsibleNode(_databaseName, processName, _databaseLandlord, _databaseIndex, index));
+
+            _loadedCdcSinks[processName] = index;
+        }
+
         internal static Dictionary<string, long> GetIndexMapping(TransactionOperationContext context, ServerStore serverStore, string databaseName)
         {
             return GetMapping(context, serverStore, UpdateSnmpDatabaseIndexesMappingCommand.GetStorageKey(databaseName));
@@ -409,6 +462,11 @@ namespace Raven.Server.Monitoring.Snmp
         internal static Dictionary<string, long> GetAiTasksMapping(TransactionOperationContext context, ServerStore serverStore, string databaseName)
         {
             return GetMapping(context, serverStore, UpdateSnmpDatabaseAiTasksMappingCommand.GetStorageKey(databaseName));
+        }
+
+        internal static Dictionary<string, long> GetCdcSinksMapping(TransactionOperationContext context, ServerStore serverStore, string databaseName)
+        {
+            return GetMapping(context, serverStore, UpdateSnmpDatabaseCdcSinksMappingCommand.GetStorageKey(databaseName));
         }
 
         private static Dictionary<string, long> GetMapping(TransactionOperationContext context, ServerStore serverStore, string storageKey)
