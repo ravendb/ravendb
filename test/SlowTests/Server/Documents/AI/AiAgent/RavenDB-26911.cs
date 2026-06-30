@@ -25,14 +25,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             using (var session = store.OpenAsyncSession())
             {
-                foreach (var m in Movies)
-                    await session.StoreAsync(m);
-
                 foreach (var u in Users)
                     await session.StoreAsync(u);
-
-                foreach (var r in Rates)
-                    await session.StoreAsync(r);
 
                 await session.SaveChangesAsync();
             }
@@ -72,10 +66,158 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 r => ChangeUserNameAsync(store, r));
 
             chat.SetUserPrompt("What is my name?");
-            var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<MoviesSampleObject>(CancellationToken.None));
-            var msg =
-                "The request to '/databases/WrongIndexInQuery_1/queries' failed with status code 404 and returned an empty response body. Request: Query: from index 'NonExistentIndex' where id() = $userId select Name, QueryParameters: {\"userId\":\"Users/1\"}";
-            Assert.Contains(msg, e.Message);
+            var e = await Assert.ThrowsAsync<QueryToolFailedException>(() => chat.RunAsync<MoviesSampleObject>(CancellationToken.None));
+            Assert.Contains("failed with status code 404", e.Message);
+            Assert.Contains("NonExistentIndex", e.Message);
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task WrongIndexInSubAgentQuery(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                foreach (var u in Users)
+                    await session.StoreAsync(u);
+
+                await session.SaveChangesAsync();
+            }
+
+            // The sub-agent runs a query against an index that does not exist.
+            var userAgent = new AiAgentConfiguration("user-info-agent-1",
+                config.ConnectionStringName,
+                "Your role responsibility is to provide the user's name when requested.")
+            {
+                Queries = new List<AiAgentToolQuery>()
+                {
+                    new AiAgentToolQuery
+                    {
+                        Name = "GetUserName",
+                        Description = "Get the user name",
+                        // wrong index: 'NonExistentIndex' does not exist in the database
+                        Query = "from index 'NonExistentIndex' " +
+                                "where id() = $userId " +
+                                "select Name",
+                        ParametersSampleObject = "{}"
+                    },
+                }
+            };
+            userAgent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+            var userAgentId = (await store.AI.CreateAgentAsync(userAgent, MoviesSampleObject.Instance)).Identifier;
+
+            // The root agent delegates the name lookup to the sub-agent above.
+            var rootAgent = new AiAgentConfiguration("root-agent-1",
+                config.ConnectionStringName,
+                "You are a User Profile Agent. When asked about the user's name, delegate to the sub-agent.")
+            {
+                SubAgents =
+                [
+                    new AiAgentToolSubAgent
+                    {
+                        Identifier = userAgentId,
+                        Description = "Get the user name."
+                    }
+                ]
+            };
+            rootAgent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+            var rootAgentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(rootAgent, MoviesSampleObject.Instance)).Identifier;
+
+            var chat = store.AI.Conversation(rootAgentId, "chats/1",
+                new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
+
+            chat.SetUserPrompt("What is my name?");
+
+            // The sub-agent's query failure must propagate all the way to the user
+            // (instead of being swallowed into a tool message for the model).
+            var e = await Assert.ThrowsAsync<QueryToolFailedException>(() => chat.RunAsync<MoviesSampleObject>(CancellationToken.None));
+            Assert.Contains("failed with status code 404", e.Message);
+            Assert.Contains("NonExistentIndex", e.Message);
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task WrongIndexInSubAgentQuery_ThreeLayers(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                foreach (var u in Users)
+                    await session.StoreAsync(u);
+
+                await session.SaveChangesAsync();
+            }
+
+            // Layer 3 (deepest): the only agent that actually runs a query, against an index that does not exist.
+            var lastSubAgent = new AiAgentConfiguration("last-sub-agent",
+                config.ConnectionStringName,
+                "Your role responsibility is to provide the user's name when requested.")
+            {
+                Queries = new List<AiAgentToolQuery>()
+                {
+                    new AiAgentToolQuery
+                    {
+                        Name = "GetUserName",
+                        Description = "Get the user name",
+                        // wrong index: 'NonExistentIndex' does not exist in the database
+                        Query = "from index 'NonExistentIndex' " +
+                                "where id() = $userId " +
+                                "select Name",
+                        ParametersSampleObject = "{}"
+                    },
+                }
+            };
+            lastSubAgent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+            var lastSubAgentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(lastSubAgent, MoviesSampleObject.Instance)).Identifier;
+
+            // Layer 2 (middle): delegates the name lookup to the deepest agent.
+            var middleSubAgent = new AiAgentConfiguration("middle-sub-agent",
+                config.ConnectionStringName,
+                "Your role responsibility is to provide the user's name when requested. Delegate to the sub-agent.")
+            {
+                SubAgents =
+                [
+                    new AiAgentToolSubAgent
+                    {
+                        Identifier = lastSubAgentId,
+                        Description = "Get the user name."
+                    }
+                ]
+            };
+            middleSubAgent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+            var middleSubAgentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(middleSubAgent, MoviesSampleObject.Instance)).Identifier;
+
+            // Layer 1 (root): delegates the name lookup to the middle agent.
+            var rootAgent = new AiAgentConfiguration("sub-agent-root",
+                config.ConnectionStringName,
+                "You are a User Profile Agent. When asked about the user's name, delegate to the sub-agent.")
+            {
+                SubAgents =
+                [
+                    new AiAgentToolSubAgent
+                    {
+                        Identifier = middleSubAgentId,
+                        Description = "Get the user name."
+                    }
+                ]
+            };
+            rootAgent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+            var rootAgentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(rootAgent, MoviesSampleObject.Instance)).Identifier;
+
+            var chat = store.AI.Conversation(rootAgentId, "chats/1",
+                new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
+
+            chat.SetUserPrompt("What is my name?");
+
+            // The query failure happens in the deepest sub-agent and must propagate up
+            // through every layer all the way to the user - exactly like WrongIndexInSubAgentQuery.
+            var e = await Assert.ThrowsAsync<QueryToolFailedException>(() => chat.RunAsync<MoviesSampleObject>(CancellationToken.None));
+            Assert.Contains("failed with status code 404", e.Message);
+            Assert.Contains("NonExistentIndex", e.Message);
         }
     }
 }
