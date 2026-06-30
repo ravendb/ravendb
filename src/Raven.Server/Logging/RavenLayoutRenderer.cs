@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text;
 using NLog;
 using NLog.Config;
@@ -28,8 +27,4 @@ internal sealed class RvnLayoutRenderer : LayoutRenderer
         "NodeTag" => NodeTag ?? RachisConsensus.InitialTag,
         _ => null
     };
-
-    [ModuleInitializer]
-    internal static void Register() =>
-        LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<RvnLayoutRenderer>("rvn"));
 }
