@@ -67,7 +67,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Database = database;
         Configuration = configuration;
         Name = Configuration.Name;
-        Statistics = new CdcSinkProcessStatistics(Name);
+        Statistics = new CdcSinkProcessStatistics(Name,
+            database.Configuration.CdcSink.ProcessHealthStatusFailedThreshold,
+            database.Configuration.CdcSink.ProcessHealthStatusImpairedThreshold);
         DocumentProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema) { Logger = Logger };
     }
 
@@ -235,6 +237,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 // of falling back and hammering the source forever. Correcting the configuration recreates the
                 // process (CdcSinkLoader.HandleDatabaseRecordChange) for a fresh, un-faulted start.
                 IsFaulted = true;
+                Statistics.SetHealthStatusToFailed();
                 LastProcessException = e;
 
                 // Unlike the transient path below, a faulted process will not retry - so initial-load waiters
@@ -491,6 +494,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             stats.Dispose();
             statsAggregator.Complete();
         }
+
+        // Recompute health from the per-batch error/success tally (EWMA), mirroring ETL.
+        Statistics.OnBatchCompletion();
 
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
         return (checkpoint, ops.Count);

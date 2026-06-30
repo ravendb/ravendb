@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -23,9 +24,27 @@ public class CdcSinkProcessStatistics
     // thread once the batch completes (see CdcSinkProcess.SubmitBatch), mirroring EtlProcessStatistics.
     private readonly List<TaskItemError> _itemErrors = new();
 
-    public CdcSinkProcessStatistics(string processName)
+    private readonly float _healthFailedThreshold;
+    private readonly float _healthImpairedThreshold;
+
+    // Per-batch error/success tally feeding the EWMA error ratio on batch completion (see OnBatchCompletion).
+    private long _batchErrors;
+    private long _batchSuccesses;
+
+    /// <summary>EWMA of the per-batch error ratio, mirroring EtlProcessStatistics.AverageErrorsRatio.</summary>
+    public TimeAgnosticEwma AverageErrorsRatio { get; } = new();
+
+    /// <summary>
+    /// Health derived from <see cref="AverageErrorsRatio"/> vs the configured thresholds, recomputed each
+    /// batch (see <see cref="OnBatchCompletion"/>). Read lock-free by monitoring; a slightly stale value is fine.
+    /// </summary>
+    public EtlProcessHealthStatus HealthStatus { get; private set; } = EtlProcessHealthStatus.Healthy;
+
+    public CdcSinkProcessStatistics(string processName, float healthFailedThreshold, float healthImpairedThreshold)
     {
         _processName = processName;
+        _healthFailedThreshold = healthFailedThreshold;
+        _healthImpairedThreshold = healthImpairedThreshold;
     }
 
     public int ConsumeSuccesses { get; private set; }
@@ -44,6 +63,7 @@ public class CdcSinkProcessStatistics
         {
             WasLatestConsumeSuccessful = true;
             ConsumeSuccesses += items;
+            _batchSuccesses += items;
         }
     }
 
@@ -108,6 +128,7 @@ public class CdcSinkProcessStatistics
             WasLatestConsumeSuccessful = false;
 
             ConsumeErrors++;
+            _batchErrors++;
 
             _itemErrors.Add(new TaskItemError
             {
@@ -157,8 +178,48 @@ public class CdcSinkProcessStatistics
         lock (_lock)
         {
             // Start each batch (and each TxMerger re-run of a batch) with an empty buffer so a
-            // re-executed command stores only the errors from its final attempt.
+            // re-executed command stores only the errors from its final attempt. The per-batch
+            // error/success tally is reset for the same reason — only the final attempt feeds the EWMA.
             _itemErrors.Clear();
+            _batchErrors = 0;
+            _batchSuccesses = 0;
+        }
+    }
+
+    /// <summary>
+    /// Feeds the per-batch error/success tally into <see cref="AverageErrorsRatio"/> and recomputes
+    /// <see cref="HealthStatus"/> from the EWMA error ratio vs the configured thresholds, mirroring
+    /// EtlProcessStatistics.OnBatchCompletion. Called on the process thread after a batch is written.
+    /// </summary>
+    public void OnBatchCompletion()
+    {
+        lock (_lock)
+        {
+            AverageErrorsRatio.UpdateOnBatchCompletion(_batchErrors, _batchErrors + _batchSuccesses);
+
+            var errorsRatio = AverageErrorsRatio.GetRate();
+            HealthStatus = errorsRatio switch
+            {
+                _ when errorsRatio > _healthFailedThreshold => EtlProcessHealthStatus.Failed,
+                _ when errorsRatio > _healthImpairedThreshold => EtlProcessHealthStatus.Impaired,
+                _ => EtlProcessHealthStatus.Healthy
+            };
+
+            _batchErrors = 0;
+            _batchSuccesses = 0;
+        }
+    }
+
+    /// <summary>
+    /// Forces <see cref="HealthStatus"/> to <see cref="EtlProcessHealthStatus.Failed"/> when the process
+    /// hits a permanent configuration/schema fault and stops retrying — no further batch completes to move
+    /// the EWMA, so the health would otherwise stay stale. Mirrors ETL's script-parse-error health override.
+    /// </summary>
+    public void SetHealthStatusToFailed()
+    {
+        lock (_lock)
+        {
+            HealthStatus = EtlProcessHealthStatus.Failed;
         }
     }
 }

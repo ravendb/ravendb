@@ -1,12 +1,23 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL;
 
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.CdcSink)]
     public class CdcSinkConfiguration : ConfigurationCategory
     {
+        [Description($"Weighted EWMA ratio threshold of errored items to successfully processed items above which the CDC Sink process health status will be set to '{nameof(EtlProcessHealthStatus.Failed)}'")]
+        [DefaultValue(0.9f)]
+        [ConfigurationEntry("CdcSink.ProcessHealthStatusFailedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public float ProcessHealthStatusFailedThreshold { get; protected set; }
+
+        [Description($"Weighted EWMA ratio threshold of errored items to successfully processed items above which the CDC Sink process health status will be set to '{nameof(EtlProcessHealthStatus.Impaired)}'")]
+        [DefaultValue(0.1f)]
+        [ConfigurationEntry("CdcSink.ProcessHealthStatusImpairedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public float ProcessHealthStatusImpairedThreshold { get; protected set; }
+
         [Description("Target number of change rows processed in a single batch before writing to the database. A batch may exceed this size when a source database transaction contains more rows, since transactions are never split across batches.")]
         [DefaultValue(1024)]
         [ConfigurationEntry("CdcSink.MaxBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
