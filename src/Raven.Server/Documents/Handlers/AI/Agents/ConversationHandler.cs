@@ -1170,6 +1170,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                             // Missing parameter detected in sub-agent execution
                             throw;
                         }
+                        catch (QueryToolFailedException)
+                        {
+                            // A query tool failed inside the sub-agent (e.g. a non-existing index) - surface it to the user
+                            throw;
+                        }
                         catch (Exception e)
                         {
                             result.Messages.Add(context.ReadObject(
@@ -1184,7 +1189,18 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                         }
                         break;
                     case AiAgentToolQuery:
-                        var requestResult = getRequestResult.Invoke();
+                    {
+                        BlittableJsonReaderObject requestResult;
+                        try
+                        {
+                            requestResult = getRequestResult.Invoke();
+                        }
+                        catch (Exception e)
+                        {
+                            // Wrap query failures (e.g. a non-existing index) so they propagate to the user instead of being swallowed into a tool message.
+                            throw new QueryToolFailedException($"Query tool '{currentCall.Name}' failed to execute. (Query - Id: {currentCall.Id})", e);
+                        }
+
                         if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
                             throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
@@ -1196,6 +1212,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                                 [ChatCompletionClient.Constants.ResponseFields.Content] = GetToolResultContent(queryResult)
                             }, "tool-call/response"));
                         break;
+                    }
                     default:
                         throw new InvalidOperationException(
                             $"Type mismatch for tool '{currentCall.Name}' in sub-conversation '{conversationId}'. " +
@@ -1256,12 +1273,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                         if (requestResult != null)
                             throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
 
-                        // A failed sub-request can come back with a null body (for example, a query against a
-                        // non-existing index returns 404 with no result). There's no server-side ExceptionSchema
-                        // to deserialize in that case, so build a fitting one ourselves - otherwise we'd throw
-                        // while trying to deserialize a null result instead of surfacing the real failure.
-                        var (requestUrl, requestContent) = TryGetRequestUrlAndContent(reqs, index);
-                        var msg = $"The request to '{requestUrl}' failed with status code {statusCode} and returned an empty response body. Request: {requestContent}";
+                        // Failed sub-request with no body (e.g. query against a non-existing index -> 404).
+                        // Synthesize a schema to surface the real failure instead of dereferencing a null result.
+                        var (requestUrl, request) = TryGetRequestAndUrl(context, reqs, index);
+                        var msg = $"The request to '{requestUrl}' failed with status code {statusCode} and returned an empty response body. Request: {request}";
 
                         var schema = new ExceptionDispatcher.ExceptionSchema
                         {
@@ -1278,36 +1293,14 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private static (string Url, string Content) TryGetRequestUrlAndContent(DynamicJsonArray reqs, int index)
+    private static (string Url, string Request) TryGetRequestAndUrl(JsonOperationContext context, DynamicJsonArray reqs, int index)
     {
-        if (reqs == null || index < 0 || index >= reqs.Items.Count)
+        if (reqs == null || index < 0 || index >= reqs.Items.Count || reqs.Items[index] is not DynamicJsonValue request)
             return (null, null);
 
-        if (reqs.Items[index] is not DynamicJsonValue request)
-            return (null, null);
-
-        string url = null;
-        string content = null;
-
-        foreach (var (name, value) in request.Properties)
-        {
-            if (name == nameof(GetRequest.Url))
-            {
-                url = value as string;
-            }
-            else if (name == nameof(GetRequest.Content) && value is DynamicJsonValue contentObject)
-            {
-                foreach (var (contentName, contentValue) in contentObject.Properties)
-                {
-                    content ??= string.Empty;
-                    if (content.Length > 0)
-                        content += ", ";
-                    content += $"{contentName}: {contentValue}";
-                }
-            }
-        }
-
-        return (url, content);
+        var reqBjro = context.ReadObject(request, "ai-agent/failed-request");
+        reqBjro.TryGet(nameof(GetRequest.Url), out string url);
+        return (url, reqBjro.ToString());
     }
 
     public async Task<AiInternalConversationResult> HandleRequestAsync(
