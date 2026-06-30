@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -138,22 +140,57 @@ public class ControlCharacterTests  : MixedClusterTestBase
                 Assert.Equal(1, counter.Value);
             }
 
-            var indexResult = await session.Query<CounterIndex.Result, CounterIndex>().Select(x => new
+            try
             {
-                x.Name,
-            }).SingleAsync();
-            //Should be `counterName` but we decided to not deal with that and reject control characters in new databases 
-            Assert.True(indexResult.Name == counterName || indexResult.Name == escapedCounterName);
+                var indexResult = (await session.Query<CounterIndex.Result, CounterIndex>().Select(x => new
+                {
+                    x.Name,
+                }).SingleAsync());
+                //Should be `counterName` but we decided to not deal with that and reject control characters in new databases
+                Assert.True(indexResult.Name == counterName || indexResult.Name == escapedCounterName);
+            }
+            catch (IndexDoesNotExistException)
+            {
+                // RavenDB-26891 DEBUG: capture which node failed, and retry the actual query for up to a minute to see whether the index comes back.
+                var names = await stores[i].Maintenance.SendAsync(new GetIndexNamesOperation(0, int.MaxValue));
+                var indexesVisibleAtFailure = names.Contains(counterIndex.IndexName);
+
+                var sw = Stopwatch.StartNew();
+                var recovered = false;
+                Exception lastError = null;
+                while (sw.Elapsed < TimeSpan.FromMinutes(1))
+                {
+                    try
+                    {
+                        using var retrySession = stores[i].OpenAsyncSession();
+                        await retrySession.Query<CounterIndex.Result, CounterIndex>().Select(x => new { x.Name }).SingleAsync();
+                        recovered = true;
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        lastError = e;
+                    }
+
+                    await Task.Delay(500);
+                }
+
+                throw new InvalidOperationException(
+                    $"[RavenDB-26891] CounterIndex query threw IndexDoesNotExist on node i={i} url={stores[i].Urls[0]}. " +
+                    $"GetIndexNames-saw-it-at-failure={indexesVisibleAtFailure}; query-recovered={recovered} after {sw.ElapsedMilliseconds}ms; " +
+                    $"lastError={lastError?.GetType().Name}: {lastError?.Message}");
+            }
             
+
             var resetIndexCommand = new ResetIndexOperation.ResetIndexCommand(counterIndex.IndexName, IndexResetMode.InPlace);
             await stores[i].Commands().ExecuteAsync(resetIndexCommand);
             await Indexes.WaitForIndexingAsync(stores[i]);
-            indexResult = await session.Query<CounterIndex.Result, CounterIndex>().Select(x => new
+            var indexResultAfterReset = await session.Query<CounterIndex.Result, CounterIndex>().Select(x => new
             {
                 x.Name,
             }).SingleAsync();
-            //Should be `counterName` but we decided to not deal with that and reject control characters in new databases 
-            Assert.True(indexResult.Name == counterName || indexResult.Name == escapedCounterName); 
+            //Should be `counterName` but we decided to not deal with that and reject control characters in new databases
+            Assert.True(indexResultAfterReset.Name == counterName || indexResultAfterReset.Name == escapedCounterName);
             
             
             var timeSeries = await session.TimeSeriesFor(testObj, timeSeriesName).GetAsync();
