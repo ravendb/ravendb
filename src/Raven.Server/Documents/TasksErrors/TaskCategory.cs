@@ -1,6 +1,6 @@
 using Raven.Client.Documents.Operations.ETL;
 
-namespace Raven.Server.Documents.ETL;
+namespace Raven.Server.Documents.TasksErrors;
 
 public enum TaskCategory
 {

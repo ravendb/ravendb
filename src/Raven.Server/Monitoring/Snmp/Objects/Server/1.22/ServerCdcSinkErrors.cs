@@ -1,6 +1,7 @@
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents.ETL;
 using Raven.Server.ServerWide;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server;
 

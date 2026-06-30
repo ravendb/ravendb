@@ -5,6 +5,7 @@ using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Utils.Metrics;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 

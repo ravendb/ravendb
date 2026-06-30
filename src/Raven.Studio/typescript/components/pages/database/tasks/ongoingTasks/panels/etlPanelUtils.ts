@@ -18,7 +18,7 @@ import {
     useTasksOperations,
 } from "../../shared/shared";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import {
     TaskErrorsWithLocation,
     getTaskHealthStatus,

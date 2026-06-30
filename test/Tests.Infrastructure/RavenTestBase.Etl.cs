@@ -43,6 +43,8 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
+using Raven.Server.Documents.TasksErrors;
+
 namespace FastTests
 {
     public abstract partial class RavenTestBase

@@ -2,7 +2,7 @@ using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.ETL.Stats;
+namespace Raven.Server.Documents.TasksErrors;
 
 public sealed class TaskErrors : IDynamicJson
 {

@@ -23,6 +23,7 @@ using Sparrow.Server.Utils;
 using Voron;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Monitoring;
 

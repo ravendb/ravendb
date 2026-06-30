@@ -4,10 +4,10 @@ import appUrl from "common/appUrl";
 import assertUnreachable from "components/utils/assertUnreachable";
 import TaskUtils from "components/utils/TaskUtils";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import { ThemeColor } from "components/models/common";
 
-export type TaskErrorStep = Raven.Server.Documents.ETL.TaskErrorStep;
+export type TaskErrorStep = Raven.Server.Documents.TasksErrors.TaskErrorStep;
 export type EtlHealthStatus = Raven.Server.Documents.ETL.EtlProcessHealthStatus;
 
 export type GroupByType = "task" | "none";

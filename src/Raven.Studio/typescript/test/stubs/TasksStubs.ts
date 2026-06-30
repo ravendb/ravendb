@@ -26,7 +26,7 @@ import OngoingTaskSnowflakeEtl = Raven.Client.Documents.Operations.OngoingTasks.
 import EmbeddingsGeneration = Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration;
 import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import TaskErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
