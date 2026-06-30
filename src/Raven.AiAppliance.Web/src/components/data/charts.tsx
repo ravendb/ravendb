@@ -8,6 +8,7 @@ import {
     ChartTooltipContent,
     type ChartConfig,
 } from "@/components/shadcn/ui/chart";
+import { seriesColor } from "@/lib/palette";
 
 const writesChartConfig = {
     writes: { label: "Writes", color: "var(--chart-1)" },
@@ -31,12 +32,13 @@ export function WritesBarChart({ data, xKey }: { data: Array<Record<string, unkn
 
 // Multi-series stacked bar chart for the App Usage breakdowns (tokens by capability /
 // model, conversations by channel). Each point is shaped { t, <key>: number, ... } and
-// `keys` names, labels and colors each series — the chart joins on key and renders label.
+// `keys` names and labels each series — the chart joins on key, colors by position from
+// the local palette, and renders the label.
 export function SeriesBarChart({ data }: { data: SeriesData }) {
     const config: ChartConfig = Object.fromEntries(
-        data.keys.map((series): [string, { label: string; color: string }] => [
+        data.keys.map((series, index): [string, { label: string; color: string }] => [
             series.key,
-            { label: series.label, color: series.color },
+            { label: series.label, color: seriesColor(index) },
         ]),
     );
 
@@ -48,8 +50,8 @@ export function SeriesBarChart({ data }: { data: SeriesData }) {
                 <YAxis hide domain={[0, "dataMax"]} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <ChartLegend content={<ChartLegendContent />} />
-                {data.keys.map((series) => (
-                    <Bar key={series.key} dataKey={series.key} stackId="series" fill={series.color} />
+                {data.keys.map((series, index) => (
+                    <Bar key={series.key} dataKey={series.key} stackId="series" fill={seriesColor(index)} />
                 ))}
             </BarChart>
         </ChartContainer>

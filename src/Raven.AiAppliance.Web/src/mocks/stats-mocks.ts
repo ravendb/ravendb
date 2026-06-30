@@ -1,6 +1,5 @@
 import type {
     ActivityEventDto,
-    AgentStatsResponse,
     ApplianceAppResponse,
     AppUsageResponse,
     ChannelStatsResponse,
@@ -30,21 +29,24 @@ export const statsMocks = {
         apiHttp.get("/api/apps/{slug}/conversations/stats", ({ response: res }) => res(200).json(response)),
     activity: (events: ActivityEventDto[] = sampleActivity) =>
         apiHttp.get("/api/apps/{slug}/activity", ({ response }) => response(200).json(events)),
-    agents: (response: AgentStatsResponse = sampleAgentStats) =>
-        apiHttp.get("/api/apps/{slug}/agents/stats", ({ response: res }) => res(200).json(response)),
     channels: (response: ChannelStatsResponse = sampleChannelStats) =>
         apiHttp.get("/api/apps/{slug}/channels/stats", ({ response: res }) => res(200).json(response)),
     collections: (collections: DataCollectionDto[] = sampleCollections) =>
         apiHttp.get("/api/apps/{slug}/collections", ({ response }) => response(200).json(collections)),
     conversations: (conversations: ConversationDto[] = sampleConversations) =>
-        apiHttp.get("/api/apps/{slug}/conversations", ({ response }) => response(200).json(conversations)),
+        apiHttp.get("/api/apps/{slug}/conversations", ({ response }) =>
+            response(200).json(
+                conversations.map((conversation) => ({ ...conversation, lastExchange: [], transcript: null })),
+            ),
+        ),
     conversation: (conversations: ConversationDto[] = sampleConversations) =>
         apiHttp.get("/api/apps/{slug}/conversations/{conversationId}", ({ params, response }) => {
             const found = conversations.find((candidate) => candidate.id === params.conversationId);
             if (!found) {
                 return response(404).json({ error: `Unknown conversation: ${params.conversationId}` });
             }
-            return response(200).json({ ...found, transcript: sampleTranscript });
+            const transcript = found.lastExchange.length > 0 ? found.lastExchange : sampleTranscript;
+            return response(200).json({ ...found, transcript });
         }),
     appUsage: (response: AppUsageResponse = sampleAppUsage) =>
         apiHttp.get("/api/apps/{slug}/usage", ({ response: res }) => res(200).json(response)),
@@ -57,13 +59,14 @@ export const sampleDashboard: DashboardResponse = {
     last30d: { conversations: 28900, messages: 86400, tokens: 24300000 },
 };
 
-// 24 hourly points with a gentle wave so the agent-runs/tokens sparklines have shape.
+// 24 hourly points (the Last24h window) with a gentle wave so the series have shape.
 export const sampleUsage: UsagePoint[] = Array.from({ length: 24 }, (_, hour) => {
     const wave = Math.sin((hour / 23) * Math.PI * 1.5);
     const base = 120 + wave * 70;
     return {
         timestamp: `2026-06-25T${String(hour).padStart(2, "0")}:00:00Z`,
-        invocations: Math.round(base),
+        conversations: Math.round(base * 0.4),
+        messages: Math.round(base),
         tokens: Math.round(base * 280),
     };
 });
@@ -189,18 +192,6 @@ export const sampleActivity: ActivityEventDto[] = [
     },
 ];
 
-// Agent ids mirror agents-mocks so the per-agent usage table can resolve names.
-export const sampleAgentStats: AgentStatsResponse = {
-    configuredAgents: 2,
-    last24h: { conversations: 320, messages: 980, tokens: 210000 },
-    last7d: { conversations: 2100, messages: 6400, tokens: 1500000 },
-    last30d: { conversations: 8800, messages: 26100, tokens: 6300000 },
-    agents: [
-        { agentId: "agents/sales", conversations: 1800, messages: 5200, tokens: 1200000 },
-        { agentId: "agents/faq", conversations: 300, messages: 1200, tokens: 300000 },
-    ],
-};
-
 export const sampleChannelStats: ChannelStatsResponse = {
     total: 2,
     active: 1,
@@ -223,7 +214,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "Email support",
         agentName: "Support",
         agentInitials: "S",
-        agentColor: "#6366f1",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "email" },
@@ -249,7 +239,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "@DataQueryBot",
         agentName: "Orders",
         agentInitials: "O",
-        agentColor: "#0ea5e9",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "data" },
@@ -275,7 +264,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "Telegram bot",
         agentName: "Support",
         agentInitials: "S",
-        agentColor: "#6366f1",
         params: [
             { key: "locale", value: "de" },
             { key: "tier", value: "gold" },
@@ -300,7 +288,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "@BillingAssistant",
         agentName: "Returns",
         agentInitials: "R",
-        agentColor: "#a855f7",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "invoice" },
@@ -326,7 +313,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "Web widget",
         agentName: "Support",
         agentInitials: "S",
-        agentColor: "#6366f1",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "widget" },
@@ -352,7 +338,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "Email support",
         agentName: "Support",
         agentInitials: "S",
-        agentColor: "#6366f1",
         params: [
             { key: "locale", value: "fr" },
             { key: "surface", value: "email" },
@@ -378,7 +363,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "Web widget",
         agentName: "Support",
         agentInitials: "S",
-        agentColor: "#6366f1",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "widget" },
@@ -404,7 +388,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "@DataQueryBot",
         agentName: "Orders",
         agentInitials: "O",
-        agentColor: "#0ea5e9",
         params: [
             { key: "locale", value: "de" },
             { key: "surface", value: "data" },
@@ -434,7 +417,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "@AcmeVIPBot",
         agentName: "Returns",
         agentInitials: "R",
-        agentColor: "#a855f7",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "orders" },
@@ -453,7 +435,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "Telegram bot",
         agentName: "Billing",
         agentInitials: "B",
-        agentColor: "#14b8a6",
         params: [
             { key: "locale", value: "en" },
             { key: "customerId", value: "cust_3301" },
@@ -478,7 +459,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "Web widget",
         agentName: "Sales",
         agentInitials: "SA",
-        agentColor: "#f97316",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "widget" },
@@ -504,7 +484,6 @@ export const sampleConversations: ConversationDto[] = [
         channelName: "@BillingAssistant",
         agentName: "Billing",
         agentInitials: "B",
-        agentColor: "#14b8a6",
         params: [
             { key: "locale", value: "en" },
             { key: "surface", value: "invoice" },
@@ -567,22 +546,22 @@ export const sampleAppUsage: AppUsageResponse = {
     },
     tokensByCapability: buildSeries(
         [
-            { key: "sales", label: "Sales assistant", color: "#3b82f6" },
-            { key: "faq", label: "FAQ bot", color: "#8b5cf6" },
+            { key: "sales", label: "Sales assistant" },
+            { key: "faq", label: "FAQ bot" },
         ],
         [280000, 150000],
     ),
     tokensByModel: buildSeries(
         [
-            { key: "claude-opus-4-8", label: "claude-opus-4-8", color: "#10b981" },
-            { key: "gpt-4o", label: "gpt-4o", color: "#f59e0b" },
+            { key: "claude-opus-4-8", label: "claude-opus-4-8" },
+            { key: "gpt-4o", label: "gpt-4o" },
         ],
         [300000, 130000],
     ),
     conversationsByChannel: buildSeries(
         [
-            { key: "web", label: "Web widget", color: "#22d3ee" },
-            { key: "telegram", label: "Telegram", color: "#a855f7" },
+            { key: "web", label: "Web widget" },
+            { key: "telegram", label: "Telegram" },
         ],
         [320, 200],
     ),

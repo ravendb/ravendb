@@ -65,11 +65,6 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "conversationStats", slug],
                 queryFn: () => api.conversationStats(slug),
             }),
-        agents: (slug: string) =>
-            queryOptions({
-                queryKey: [baseKey, "agents", slug],
-                queryFn: () => api.agents(slug),
-            }),
         channels: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "channels", slug],
