@@ -2279,6 +2279,8 @@ namespace Raven.Server.Documents
 
             internal AsyncManualResetEvent DelayQueryByPatch;
 
+            internal AsyncManualResetEvent DelayDeleteBucket;
+
             internal bool EnableWritesToTheWrongShard = false;
             
             internal TimeSpan? EtlFallbackTime;

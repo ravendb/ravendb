@@ -1686,6 +1686,98 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "deleted time series range after local delete replicated from node A", nodeCDbCvAfterLocalChange, nodeCDeletedRangeAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
     }
 
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates | RavenTestCategory.TimeSeries)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Hub])]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ClusterSide.Sink])]
+    public async Task TimeSeriesDeletedRange_WithSeparateLocalSegmentShouldNotRestoreDelayedInternalSegmentAfterLocalDeletedRangeExtension(Options options, ClusterSide filteredPassReceiveSide)
+    {
+        const string itemName = "time-series-deleted-range-delayed-internal-segment";
+        const string timeSeriesName = "HeartRate";
+        var delayedSegmentReplicationMarker = "delayed-time-series-segment-after-delete-range-" + itemName;
+        var firstTimestamp = new DateTime(2024, 01, 01, 00, 00, 00, DateTimeKind.Utc);
+        var deleteFrom = firstTimestamp;
+        var deleteTo = firstTimestamp.AddMinutes(1);
+        var delayedSegmentTimestamp = deleteTo.AddSeconds(30);
+        var localDeleteTo = deleteTo.AddMinutes(1);
+        var separateLocalSegmentTimestamp = firstTimestamp.AddDays(26);
+
+        await using var lab = await CreateDualClusterLabAsync(options, filteredPassReceiveSide, itemName);
+        await lab.StoreFilteredRoundTripTicketAsync(LabNode.B);
+        await lab.AppendFilteredRoundTripTimeSeriesAsync(LabNode.B, timeSeriesName, firstTimestamp, 72);
+        await lab.WaitForFilteredRoundTripDocumentNameAsync(LabNode.A);
+        await lab.WaitForFilteredRoundTripTimeSeriesSegmentAsync(LabNode.A, timeSeriesName, expectedValueCount: 1);
+
+        var bToALegacyBlocker = await lab.BlockInternalReplicationAsync(from: LabNode.B, to: LabNode.A);
+        var bToCLegacyBlocker = await lab.BlockInternalReplicationAsync(from: LabNode.B, to: LabNode.C);
+        await lab.StoreAllowedTicketThenFilteredOutUserAsync(LabNode.B);
+        await bToALegacyBlocker.WaitForBlockedAsync();
+        await bToCLegacyBlocker.WaitForBlockedAsync();
+
+        await lab.PassThroughFilteredReplicationAsync();
+
+        var bToABeforeScanGate = lab.BlockInternalReplicationBeforeScan(from: LabNode.B, to: LabNode.A);
+        var bToCBeforeScanGate = lab.BlockInternalReplicationBeforeScan(from: LabNode.B, to: LabNode.C);
+        await bToALegacyBlocker.DisposeAsync();
+        await bToCLegacyBlocker.DisposeAsync();
+        await bToABeforeScanGate.WaitForBlockedAsync();
+        await bToCBeforeScanGate.WaitForBlockedAsync();
+
+        await lab.AppendFilteredRoundTripTimeSeriesAsync(LabNode.B, timeSeriesName, delayedSegmentTimestamp, 73);
+        await lab.DeleteFilteredRoundTripTimeSeriesRangeAsync(LabNode.B, timeSeriesName, deleteFrom, deleteTo);
+        await lab.StoreFilteredRoundTripTicketWithNameAsync(LabNode.B, itemName + "-source-parent-after-delete");
+        await lab.StoreFilteredOutInternalReplicationMarkerAsync(LabNode.B, delayedSegmentReplicationMarker);
+
+        await lab.WaitForFilteredRoundTripTimeSeriesDeletedRangeAsync(LabNode.A, timeSeriesName, deleteFrom, deleteTo);
+        var aToBLocalDeleteBlocker = await lab.BlockInternalReplicationAsync(from: LabNode.A, to: LabNode.B);
+        await lab.DeleteFilteredRoundTripTimeSeriesRangeAsync(LabNode.A, timeSeriesName, deleteFrom, localDeleteTo);
+        await lab.WaitForFilteredRoundTripTimeSeriesDeletedRangeAsync(LabNode.A, timeSeriesName, deleteFrom, localDeleteTo);
+
+        // Covers the path where the time series still has another live segment, so stale delayed segments must still be checked against deleted ranges.
+        await lab.AppendFilteredRoundTripTimeSeriesAsync(LabNode.A, timeSeriesName, separateLocalSegmentTimestamp, 74);
+        await lab.WaitForFilteredRoundTripTimeSeriesSegmentAsync(LabNode.A, timeSeriesName, expectedValueCount: 1);
+
+        await aToBLocalDeleteBlocker.WaitForBlockedAsync();
+
+        const int expectedVisibleValueCount = 1;
+        var nodeBDelayedSegment = lab.GetFilteredRoundTripTimeSeriesSegment(LabNode.B, timeSeriesName);
+        var nodeADeletedRangeAfterLocalChange = lab.GetFilteredRoundTripTimeSeriesDeletedRange(LabNode.A, timeSeriesName);
+        var nodeASegmentBeforeDelayedInternalReplication = lab.GetFilteredRoundTripTimeSeriesSegment(LabNode.A, timeSeriesName);
+        var nodeADelayedTimestampCountBeforeRelease = lab.GetFilteredRoundTripTimeSeriesValueCount(LabNode.A, timeSeriesName, delayedSegmentTimestamp, delayedSegmentTimestamp);
+
+        Assert.True(
+            nodeBDelayedSegment.Exists && nodeBDelayedSegment.ValueCount == 1,
+            $"Expected delayed source time series segment '{timeSeriesName}' to exist on {NodeTag(filteredPassReceiveSide, LabNode.B)} before releasing internal replication. " +
+            $"nodeBDelayedSegmentExists={nodeBDelayedSegment.Exists}, nodeBDelayedSegmentValueCount={nodeBDelayedSegment.ValueCount}, nodeBDelayedSegmentCV='{nodeBDelayedSegment.ChangeVector ?? "<null>"}'.");
+        Assert.True(
+            nodeASegmentBeforeDelayedInternalReplication.ValueCount == expectedVisibleValueCount && nodeADelayedTimestampCountBeforeRelease == 0,
+            $"Expected {NodeTag(filteredPassReceiveSide, LabNode.A)} not to have the delayed source time series value before releasing internal replication from {NodeTag(filteredPassReceiveSide, LabNode.B)}. " +
+            $"expectedVisibleValueCount={expectedVisibleValueCount}, " +
+            $"nodeASegmentBeforeDelayedInternalReplicationExists={nodeASegmentBeforeDelayedInternalReplication.Exists}, " +
+            $"nodeASegmentBeforeDelayedInternalReplicationValueCount={nodeASegmentBeforeDelayedInternalReplication.ValueCount}, " +
+            $"nodeADelayedTimestampCountBeforeRelease={nodeADelayedTimestampCountBeforeRelease}, " +
+            $"nodeASegmentBeforeDelayedInternalReplicationCV='{nodeASegmentBeforeDelayedInternalReplication.ChangeVector ?? "<null>"}'.");
+
+        bToABeforeScanGate.Release();
+        await lab.WaitForFilteredOutInternalReplicationMarkerAsync(LabNode.A, delayedSegmentReplicationMarker);
+
+        var nodeASegmentAfterDelayedInternalReplication = lab.GetFilteredRoundTripTimeSeriesSegment(LabNode.A, timeSeriesName);
+        var nodeADelayedTimestampCountAfterRelease = lab.GetFilteredRoundTripTimeSeriesValueCount(LabNode.A, timeSeriesName, delayedSegmentTimestamp, delayedSegmentTimestamp);
+
+        Assert.True(
+            nodeASegmentAfterDelayedInternalReplication.ValueCount == expectedVisibleValueCount && nodeADelayedTimestampCountAfterRelease == 0,
+            $"Expected delayed time series segment '{timeSeriesName}' on '{lab.FilteredRoundTripTicketId}' not to be restored on {NodeTag(filteredPassReceiveSide, LabNode.A)} after real internal replication from {NodeTag(filteredPassReceiveSide, LabNode.B)}. " +
+            $"The delayed timestamp is covered by {NodeTag(filteredPassReceiveSide, LabNode.A)}'s local deleted range extension, so the delayed source segment must remain invisible even after replication catches up. " +
+            $"delayedSegmentTimestamp='{delayedSegmentTimestamp:O}', localDeleteTo='{localDeleteTo:O}', separateLocalSegmentTimestamp='{separateLocalSegmentTimestamp:O}', " +
+            $"delayedSourceSegmentCV='{nodeBDelayedSegment.ChangeVector ?? "<null>"}', " +
+            $"deletedRangeAfterLocalChangeCV='{nodeADeletedRangeAfterLocalChange.ChangeVector ?? "<null>"}', " +
+            $"expectedVisibleValueCount={expectedVisibleValueCount}, nodeADelayedTimestampCountAfterRelease={nodeADelayedTimestampCountAfterRelease}, " +
+            $"nodeASegmentAfterDelayedInternalReplicationExists={nodeASegmentAfterDelayedInternalReplication.Exists}, " +
+            $"nodeASegmentAfterDelayedInternalReplicationValueCount={nodeASegmentAfterDelayedInternalReplication.ValueCount}, " +
+            $"nodeASegmentAfterDelayedInternalReplicationCV='{nodeASegmentAfterDelayedInternalReplication.ChangeVector ?? "<null>"}'.");
+
+        await aToBLocalDeleteBlocker.DisposeAsync();
+    }
+
     private static void AssertNoConflictsAfterLocalChange(
         ClusterSide filteredPassReceiveSide,
         string itemDescription,
