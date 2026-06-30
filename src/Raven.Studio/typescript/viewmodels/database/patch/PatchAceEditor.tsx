@@ -55,7 +55,6 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
         (script: string) => {
             query(script);
             setValue(script);
-            setShowSamples(false);
         },
         [query]
     );
@@ -90,7 +89,12 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
             />
             {showSamples && (
                 <div className="patch-samples-panel bs5">
-                    <SampleQueriesTabs scripts={scripts} methodGroups={methodGroups} onSelect={handleLoadScript} />
+                    <SampleQueriesTabs
+                        scripts={scripts}
+                        methodGroups={methodGroups}
+                        onSelect={handleLoadScript}
+                        onClose={() => setShowSamples(false)}
+                    />
                 </div>
             )}
             {!value && (

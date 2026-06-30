@@ -2,6 +2,8 @@ import React, { useRef, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Nav from "react-bootstrap/Nav";
 import Card from "react-bootstrap/Card";
+import Button from "react-bootstrap/Button";
+import { motion } from "motion/react";
 import { Icon } from "components/common/Icon";
 import SampleScriptsList from "./partials/SampleScriptsList";
 import MethodsTable from "./partials/MethodsTable";
@@ -14,9 +16,10 @@ export interface SampleQueriesTabsProps {
     scripts: SampleScript[];
     methodGroups: MethodGroup[];
     onSelect: (script: string) => void;
+    onClose?: () => void;
 }
 
-export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: SampleQueriesTabsProps) {
+export default function SampleQueriesTabs({ scripts, methodGroups, onSelect, onClose }: SampleQueriesTabsProps) {
     const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
     const [methodSearch, setMethodSearch] = useState("");
     const tabContentRef = useRef<HTMLDivElement>(null);
@@ -50,6 +53,24 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                             Methods
                         </Nav.Link>
                     </Nav.Item>
+                    {onClose && (
+                        <Button
+                            variant="link"
+                            size="sm"
+                            className="ms-auto p-1 text-reset sample-queries-close"
+                            title="Close"
+                            onClick={onClose}
+                        >
+                            <motion.span
+                                className="d-inline-flex"
+                                initial={{ opacity: 0.6 }}
+                                whileHover={{ opacity: 1 }}
+                                whileTap={{ scale: 0.85 }}
+                            >
+                                <Icon icon="cancel" margin="m-0" />
+                            </motion.span>
+                        </Button>
+                    )}
                 </Nav>
                 <Tab.Content ref={tabContentRef}>
                     <Tab.Pane eventKey="scripts">
