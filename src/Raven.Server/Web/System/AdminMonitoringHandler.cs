@@ -234,7 +234,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/monitoring/v1/cdc-sinks", "GET", AuthorizationStatus.Operator)]
-        public async Task MonitoringSinks()
+        public async Task MonitoringCdcSinks()
         {
             ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
 

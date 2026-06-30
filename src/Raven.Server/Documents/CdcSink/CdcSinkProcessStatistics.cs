@@ -12,11 +12,11 @@ public class CdcSinkProcessStatistics
 {
     private readonly string _processName;
 
-    // Mutated from both the process thread (RecordConsumeError) and the TxMerger thread
-    // (ConsumeSuccess / RecordItemError / NewBatch / OnBatchCompletion). All mutations take this lock
-    // so the per-batch error/success tally and its threshold check stay atomic and the in-memory error
-    // buffer isn't corrupted by concurrent Add/Clear. Cross-thread reads of the int/bool counters for
-    // monitoring are intentionally lock-free (atomic reads; a slightly stale value is acceptable there).
+    // Mutated from both the process thread (RecordConsumeError / OnBatchCompletion / SetHealthStatusToFailed)
+    // and the TxMerger thread (ConsumeSuccess / RecordItemError / NewBatch). All mutations take this lock so
+    // the per-batch error/success tally and its threshold check stay atomic and the in-memory error buffer
+    // isn't corrupted by concurrent Add/Clear. Cross-thread reads of the int/bool counters for monitoring
+    // are intentionally lock-free (atomic reads; a slightly stale value is acceptable there).
     private readonly object _lock = new();
 
     // Per-batch item errors (per-document apply failures + JS-script failures). Buffered here while
@@ -51,7 +51,7 @@ public class CdcSinkProcessStatistics
 
     public int ConsumeSuccesses { get; private set; }
 
-    public int ConsumeErrors { get; set; }
+    public int ConsumeErrors { get; private set; }
 
     public DateTime? LastConsumeErrorTime { get; private set; }
 
