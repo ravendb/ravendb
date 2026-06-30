@@ -56,7 +56,12 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect }: S
                         <SampleScriptsList scripts={scripts} onSelect={onSelect} />
                     </Tab.Pane>
                     <Tab.Pane eventKey="methods">
-                        <MethodsTable methodGroups={methodGroups} search={methodSearch} onSearchChange={setMethodSearch} />
+                        <MethodsTable
+                            methodGroups={methodGroups}
+                            search={methodSearch}
+                            onSearchChange={setMethodSearch}
+                            onSelect={onSelect}
+                        />
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>

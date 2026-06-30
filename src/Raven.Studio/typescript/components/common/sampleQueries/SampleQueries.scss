@@ -74,14 +74,24 @@
     }
 
     .method-row {
-        .copy-btn {
-            opacity: 0;
-            transition: opacity 0.15s ease;
+        &--expandable {
+            cursor: pointer;
+
+            &:hover {
+                background-color: colors.$panel-bg-2-var;
+            }
         }
 
-        &:hover .copy-btn {
-            opacity: 1;
+        &__chevron {
+            display: inline-block;
+            margin-right: sizes.$gutter-xxs;
+            line-height: 1;
+            vertical-align: middle;
         }
+    }
+
+    .method-example {
+        background-color: colors.$panel-bg-1-var;
     }
 }
 
@@ -137,7 +147,7 @@
     z-index: 1050;
     border-radius: sizes.$border-radius;
 
-.tab-content {
+    .tab-content {
         background-color: transparent;
         max-height: calc(45vh - 60px);
         overflow-y: auto;
