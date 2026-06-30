@@ -10,6 +10,7 @@ import { appRoutes } from "@/lib/app-routes";
 import { api } from "@/api/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
+import { invalidateAppQueries } from "@/lib/query-invalidation";
 import { toast } from "sonner";
 
 export function AddAppWizard() {
@@ -38,7 +39,7 @@ export function AddAppWizard() {
             });
         },
         onSuccess: async (result) => {
-            await queryClient.invalidateQueries({ queryKey: api.queries.apps.list().queryKey });
+            await invalidateAppQueries(queryClient);
             toast.success(`App ${result.slug} created`);
             navigate(appRoutes.addCapability(result.slug, "agent"));
         },

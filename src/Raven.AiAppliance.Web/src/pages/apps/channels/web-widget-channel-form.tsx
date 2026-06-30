@@ -13,6 +13,7 @@ import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormStringList } from "@/components/form/form-string-list";
 import { withNestedSubmit } from "@/lib/form-utils";
+import { invalidateChannelQueries } from "@/lib/query-invalidation";
 
 const webWidgetChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
@@ -60,7 +61,7 @@ export function WebWidgetChannelForm({
                 allowedOrigins: values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean),
             }),
         onSuccess: async (result) => {
-            await queryClient.invalidateQueries({ queryKey: api.queries.channels.list(slug).queryKey });
+            await invalidateChannelQueries(queryClient, slug);
             if (result.existing) {
                 toast.info("This agent already has a web widget. Showing the existing channel.");
             } else {

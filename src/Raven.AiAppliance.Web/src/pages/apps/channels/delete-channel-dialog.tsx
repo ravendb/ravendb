@@ -6,6 +6,7 @@ import type { ChannelSummaryResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { invalidateChannelQueries } from "@/lib/query-invalidation";
 import {
     Dialog,
     DialogClose,
@@ -30,7 +31,11 @@ export function DeleteChannelDialog({ slug, channel, trigger }: DeleteChannelDia
     const deleteMutation = useMutation({
         mutationFn: () => api.services.channels.delete(slug, channel.widgetId),
         onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: api.queries.channels.list(slug).queryKey });
+            await Promise.all([
+                invalidateChannelQueries(queryClient, slug),
+                // Deleting a channel orphans its embed links, so drop them from the active-links view.
+                queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey }),
+            ]);
             toast.success(`Channel “${channel.displayName}” deleted`);
             setIsOpen(false);
         },

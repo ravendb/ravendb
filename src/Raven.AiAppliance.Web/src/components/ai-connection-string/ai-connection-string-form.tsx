@@ -90,9 +90,13 @@ export function AiConnectionStringForm({
             return result.name;
         },
         onSuccess: async (name) => {
-            await queryClient.invalidateQueries({
-                queryKey: api.queries.aiConnectionStrings.list(slug).queryKey,
-            });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list(slug).queryKey }),
+                // Refresh the cached detail so reopening the edit sheet shows the saved values.
+                queryClient.invalidateQueries({
+                    queryKey: api.queries.aiConnectionStrings.detail(slug, name).queryKey,
+                }),
+            ]);
             await onSaved(name);
         },
     });
