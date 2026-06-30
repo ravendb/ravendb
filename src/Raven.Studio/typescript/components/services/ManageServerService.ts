@@ -30,8 +30,24 @@ import forceRenewServerCertificateCommand = require("commands/auth/forceRenewSer
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
 import updateCertificateCommand = require("commands/auth/updateCertificateCommand");
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
+import registerSsoServerCertCommand = require("commands/auth/registerSsoServerCertCommand");
+import fetchSsoServerCertCommand = require("commands/auth/fetchSsoServerCertCommand");
+import registerSsoUserEntryCommand = require("commands/auth/registerSsoUserEntryCommand");
 import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
+import uploadDebugPackageForAnalysisCommand = require("commands/maintenance/uploadDebugPackageForAnalysisCommand");
+import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeDebugPackageAnalysisCommand");
+import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
+import getDebugPackageDatabaseIndexStatsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexStatsCommand");
+import getDebugPackageDatabaseStatsCommand = require("commands/maintenance/getDebugPackageDatabaseStatsCommand");
+import getDebugPackageDatabaseSettingsCommand = require("commands/maintenance/getDebugPackageDatabaseSettingsCommand");
+import getDebugPackageDatabaseIndexDefinitionsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexDefinitionsCommand");
+import getDebugPackageClusterLogCommand = require("commands/maintenance/getDebugPackageClusterLogCommand");
+import getDebugPackageClusterObserverDecisionsCommand = require("commands/maintenance/getDebugPackageClusterObserverDecisionsCommand");
+import getDebugPackageDatabaseOngoingTasksCommand = require("commands/maintenance/getDebugPackageDatabaseOngoingTasksCommand");
+import getDebugPackageDatabaseIndexErrorsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexErrorsCommand");
+import getDebugPackageNetworkInfoCommand = require("commands/maintenance/getDebugPackageNetworkInfoCommand");
+import getDebugPackageThreadsInfoCommand = require("commands/maintenance/getDebugPackageThreadsInfoCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -163,11 +179,87 @@ export default class ManageServerService {
         return new updateCertificateCommand(...args).execute();
     }
 
+    async registerSsoServerCert(...args: ConstructorParameters<typeof registerSsoServerCertCommand>) {
+        return new registerSsoServerCertCommand(...args).execute();
+    }
+
+    async fetchSsoServerCert(...args: ConstructorParameters<typeof fetchSsoServerCertCommand>) {
+        return new fetchSsoServerCertCommand(...args).execute();
+    }
+
+    async registerSsoUserEntry(...args: ConstructorParameters<typeof registerSsoUserEntryCommand>) {
+        return new registerSsoUserEntryCommand(...args).execute();
+    }
+
     async replaceClusterCertificate(...args: ConstructorParameters<typeof replaceClusterCertificateCommand>) {
         return new replaceClusterCertificateCommand(...args).execute();
     }
 
     async getClusterDomains() {
         return new getClusterDomainsCommand().execute();
+    }
+
+    async uploadDebugPackageForAnalysis(...args: ConstructorParameters<typeof uploadDebugPackageForAnalysisCommand>) {
+        return new uploadDebugPackageForAnalysisCommand(...args).execute();
+    }
+
+    async removeDebugPackageAnalysis(...args: ConstructorParameters<typeof removeDebugPackageAnalysisCommand>) {
+        return new removeDebugPackageAnalysisCommand(...args).execute();
+    }
+
+    async getDebugPackageAnalysisSummary(...args: ConstructorParameters<typeof getDebugPackageAnalysisSummaryCommand>) {
+        return new getDebugPackageAnalysisSummaryCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseIndexStats(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexStatsCommand>
+    ) {
+        return new getDebugPackageDatabaseIndexStatsCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseStats(...args: ConstructorParameters<typeof getDebugPackageDatabaseStatsCommand>) {
+        return new getDebugPackageDatabaseStatsCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseSettings(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseSettingsCommand>
+    ) {
+        return new getDebugPackageDatabaseSettingsCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseIndexDefinitions(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexDefinitionsCommand>
+    ) {
+        return new getDebugPackageDatabaseIndexDefinitionsCommand(...args).execute();
+    }
+
+    async getDebugPackageClusterLog(...args: ConstructorParameters<typeof getDebugPackageClusterLogCommand>) {
+        return new getDebugPackageClusterLogCommand(...args).execute();
+    }
+
+    async getDebugPackageClusterObserverDecisions(
+        ...args: ConstructorParameters<typeof getDebugPackageClusterObserverDecisionsCommand>
+    ) {
+        return new getDebugPackageClusterObserverDecisionsCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseOngoingTasks(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseOngoingTasksCommand>
+    ) {
+        return new getDebugPackageDatabaseOngoingTasksCommand(...args).execute();
+    }
+
+    async getDebugPackageDatabaseIndexErrors(
+        ...args: ConstructorParameters<typeof getDebugPackageDatabaseIndexErrorsCommand>
+    ) {
+        return new getDebugPackageDatabaseIndexErrorsCommand(...args).execute();
+    }
+
+    async getDebugPackageNetworkInfo(...args: ConstructorParameters<typeof getDebugPackageNetworkInfoCommand>) {
+        return new getDebugPackageNetworkInfoCommand(...args).execute();
+    }
+
+    async getDebugPackageThreadsInfo(...args: ConstructorParameters<typeof getDebugPackageThreadsInfoCommand>) {
+        return new getDebugPackageThreadsInfoCommand(...args).execute();
     }
 }

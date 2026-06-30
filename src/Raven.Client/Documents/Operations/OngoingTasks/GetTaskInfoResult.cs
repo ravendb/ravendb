@@ -38,6 +38,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         PullReplicationAsHub,
         PullReplicationAsSink,
         QueueSink,
+        CdcSink,
         EmbeddingsGeneration,
         GenAi
     }
@@ -567,11 +568,11 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
 
         public QueueSinkConfiguration Configuration { get; set; }
-        
+
         public QueueBrokerType BrokerType { get; set; }
-        
+
         public string ConnectionStringName { get; set; }
-        
+
         public string Url { get; set; }
 
         public override DynamicJsonValue ToJson()
@@ -582,6 +583,74 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(Url)] = Url;
             json[nameof(Configuration)] = Configuration?.ToJson();
+
+            return json;
+        }
+    }
+
+    public class OngoingTaskCdcSink : OngoingTask
+    {
+        public OngoingTaskCdcSink()
+        {
+            TaskType = OngoingTaskType.CdcSink;
+        }
+
+        public CdcSink.CdcSinkConfiguration Configuration { get; set; }
+
+        public string ConnectionStringName { get; set; }
+
+        public string FactoryName { get; set; }
+
+        /// <summary>
+        /// UTC time of the last successfully completed batch. Null if no batch has completed yet.
+        /// </summary>
+        public DateTime? LastBatchTime { get; set; }
+
+        /// <summary>
+        /// The last successfully persisted checkpoint (LSN/GTID).
+        /// </summary>
+        public string LastCheckpoint { get; set; }
+
+        /// <summary>
+        /// Seconds since the last successful batch. Null if no batch has completed yet.
+        /// Provides a simple lag indicator for the dashboard.
+        /// </summary>
+        public double? SecondsSinceLastBatch { get; set; }
+
+        /// <summary>
+        /// UTC time of the last activity from the source — poll iteration (SQL Server),
+        /// replication message (PostgreSQL), or binlog event (MySQL).
+        /// Null before the first activity. When this is recent but LastBatchTime is old,
+        /// it means the source connection is alive but there are no changes. When both
+        /// are stale, the connection may be dead.
+        /// </summary>
+        public DateTime? LastActivityTime { get; set; }
+
+        /// <summary>
+        /// Seconds since the last source activity. When this exceeds the expected
+        /// heartbeat/poll interval significantly, the connection may be dead.
+        /// </summary>
+        public double? SecondsSinceLastActivity { get; set; }
+
+        /// <summary>
+        /// Null when healthy. Contains a diagnostic message when the process
+        /// detects a problem (fallback mode, stale connection, etc.).
+        /// </summary>
+        public string HealthIssue { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(FactoryName)] = FactoryName;
+            json[nameof(Configuration)] = Configuration?.ToJson();
+            json[nameof(LastBatchTime)] = LastBatchTime;
+            json[nameof(LastCheckpoint)] = LastCheckpoint;
+            json[nameof(SecondsSinceLastBatch)] = SecondsSinceLastBatch;
+            json[nameof(LastActivityTime)] = LastActivityTime;
+            json[nameof(SecondsSinceLastActivity)] = SecondsSinceLastActivity;
+            json[nameof(HealthIssue)] = HealthIssue;
 
             return json;
         }

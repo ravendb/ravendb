@@ -18,6 +18,7 @@ import OngoingTaskOlapEtl = Raven.Client.Documents.Operations.OngoingTasks.Ongoi
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import OngoingTaskCdcSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink;
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
@@ -50,6 +51,7 @@ export class TasksStubs {
                 TasksStubs.getKafkaSink(),
                 TasksStubs.getRabbitSink(),
                 TasksStubs.getAzureServiceBusSink(),
+                TasksStubs.getCdcSink(),
                 TasksStubs.getReplicationSink(),
                 TasksStubs.getReplicationHub(),
                 TasksStubs.getExternalReplicationListItem(),
@@ -615,6 +617,196 @@ export class TasksStubs {
             Url: "mynamespace.servicebus.windows.net",
             PinToMentorNode: false,
             Configuration: null,
+        };
+    }
+
+    static getCdcSink(): OngoingTaskCdcSink {
+        return {
+            TaskName: "CdcSinkTask",
+            TaskId: 583,
+            TaskType: "CdcSink",
+            TaskConnectionStatus: "Active",
+            TaskState: "Enabled",
+            Error: null,
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            MentorNode: null,
+            PinToMentorNode: false,
+            ConnectionStringName: "sql-name",
+            FactoryName: "System.Data.SqlClient",
+            HealthIssue: null,
+            LastCheckpoint: null,
+            Configuration: {
+                TaskId: 583,
+                Name: "CdcSinkTask",
+                Disabled: false,
+                ConnectionStringName: "sql-name",
+                MentorNode: null,
+                PinToMentorNode: false,
+                Postgres: null,
+                SkipInitialLoad: false,
+                Tables: [
+                    {
+                        SourceTableName: "orders",
+                        SourceTableSchema: "dbo",
+                        CollectionName: "Orders",
+                        Disabled: false,
+                        PrimaryKeyColumns: ["Id"],
+                        Columns: [
+                            {
+                                Column: "Id",
+                                Name: "Id",
+                                Type: "Default",
+                            },
+                            {
+                                Column: "Company",
+                                Name: "Company",
+                                Type: "Default",
+                            },
+                        ],
+                        EmbeddedTables: [
+                            {
+                                SourceTableName: "order_lines",
+                                SourceTableSchema: "dbo",
+                                PropertyName: "Lines",
+                                Type: "Array",
+                                PrimaryKeyColumns: ["Id"],
+                                JoinColumns: ["OrderId"],
+                                CaseSensitiveKeys: false,
+                                Columns: [
+                                    {
+                                        Column: "Product",
+                                        Name: "Product",
+                                        Type: "Default",
+                                    },
+                                ],
+                                EmbeddedTables: [],
+                                LinkedTables: [],
+                                OnDelete: {
+                                    IgnoreDeletes: false,
+                                    Patch: null,
+                                },
+                                Patch: null,
+                            },
+                        ],
+                        LinkedTables: [
+                            {
+                                SourceTableName: "companies",
+                                SourceTableSchema: "dbo",
+                                PropertyName: "Company",
+                                LinkedCollectionName: "Companies",
+                                JoinColumns: ["CompanyId"],
+                            },
+                        ],
+                        OnDelete: {
+                            IgnoreDeletes: false,
+                            Patch: null,
+                        },
+                        Patch: null,
+                    },
+                ],
+            },
+        };
+    }
+
+    static testCdcSink(): Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult {
+        return {
+            Errors: [],
+            Warnings: [],
+            Results: [
+                {
+                    DebugOutput: [],
+                    Document: JSON.stringify({
+                        Id: "orders/1",
+                        Company: "companies/1",
+                        Lines: [
+                            {
+                                Product: "products/1",
+                            },
+                        ],
+                    }),
+                    DocumentId: "Orders/1",
+                    Error: null,
+                    IgnoreDeletes: false,
+                    SourceRow: JSON.stringify({
+                        Id: "1",
+                        CompanyId: "companies/1",
+                    }),
+                    WouldDelete: false,
+                },
+            ],
+        };
+    }
+
+    static cdcSinkTaskSchema(): Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema {
+        return {
+            CatalogName: "Northwind",
+            Errors: [],
+            HasPermissionToSetup: true,
+            Success: true,
+            Warnings: [],
+            Tables: [
+                {
+                    SourceTableSchema: "dbo",
+                    SourceTableName: "orders",
+                    IsCdcEnabled: true,
+                    UnsupportedReason: null,
+                    Warnings: [],
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: true,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                        {
+                            Name: "CompanyId",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: false,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                    ],
+                    ForeignKeys: [
+                        {
+                            Columns: ["CompanyId"],
+                            ReferencedSchema: "dbo",
+                            ReferencedTable: "companies",
+                            ReferencedColumns: ["Id"],
+                        },
+                    ],
+                },
+                {
+                    SourceTableSchema: "dbo",
+                    SourceTableName: "companies",
+                    IsCdcEnabled: true,
+                    UnsupportedReason: null,
+                    Warnings: [],
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: true,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                        {
+                            Name: "Name",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: false,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                    ],
+                    ForeignKeys: [],
+                },
+            ],
         };
     }
 

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -917,6 +918,8 @@ namespace Raven.Server.Documents.TimeSeries
             private ChangeVector _currentChangeVector;
             public ChangeVector ChangeVector => _currentChangeVector;
 
+            public bool ResolvedSegment;
+
             private AllocatedMemoryData _clonedReadonlySegment;
 
             private TimeSeriesSegmentHolder(
@@ -1133,7 +1136,10 @@ namespace Raven.Server.Documents.TimeSeries
                     return;
 
                 _currentEtag = _tss._documentsStorage.GenerateNextEtag();
-                _currentChangeVector = ChangeVector.Merge(ReadOnlyChangeVector, ChangeVectorFromReplication, _context);
+                var mergedChangeVector = ChangeVector.Merge(ReadOnlyChangeVector, ChangeVectorFromReplication, _context);
+                _currentChangeVector = ResolvedSegment
+                    ? ChangeVector.MergeWithNewDatabaseChangeVector(_context, mergedChangeVector, _currentEtag)
+                    : mergedChangeVector;
 
                 if (segment.RecomputeRequired)
                     segment = segment.Recompute(_context.Allocator);
@@ -1241,6 +1247,7 @@ namespace Raven.Server.Documents.TimeSeries
                 ulong status)
             {
                 AppendExistingSegment(splitSegment);
+                ResolvedSegment = false;
 
                 splitSegment.Initialize(currentValues.Length);
 
@@ -1348,6 +1355,13 @@ namespace Raven.Server.Documents.TimeSeries
                 holder.Status = TimeSeriesValuesSegment.Live;
                 return holder;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateTag(LazyStringValue tag)
+        {
+            if(_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                DocumentIdWorker.CheckAndThrowContainsControlCharacters(tag, "Time-series tag");
         }
 
         private Dictionary<string, string[]> _incrementalPrefixByDbId;
@@ -1739,6 +1753,7 @@ namespace Raven.Server.Documents.TimeSeries
                 while (appendEnumerator.MoveNext())
                 {
                     var retry = true;
+                    
                     while (retry)
                     {
                         retry = false;
@@ -1750,7 +1765,10 @@ namespace Raven.Server.Documents.TimeSeries
                             // not from replication
                             AssertNoNanValue(current);
                         }
-
+                    
+                        if (options.VerifyName)
+                            ValidateTag(current!.Tag);
+                        
                         using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection).WithBaseline(current.Timestamp))
                         {
                             var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, options);
@@ -1763,7 +1781,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                             if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current))
                             {
-                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
+                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, options, out var newValueFetched))
                                     break;
 
                                 if (newValueFetched)
@@ -1807,14 +1825,20 @@ namespace Raven.Server.Documents.TimeSeries
             return context.LastDatabaseChangeVector;
         }
 
-        private static void VerifyLegalName(string name)
+        private void VerifyLegalName(string name)
         {
+            var checkControlChars = _documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier;
+            
             for (int i = 0; i < name.Length; i++)
             {
-                if (name[i] == TimeSeriesConfiguration.TimeSeriesRollupSeparator)
+                var c = name[i];
+                if (c == TimeSeriesConfiguration.TimeSeriesRollupSeparator)
                     throw new InvalidOperationException($"Illegal time series name : '{name}'. " +
                                                         $"Time series names cannot contain '{TimeSeriesConfiguration.TimeSeriesRollupSeparator}' character, " +
                                                         "since this character is reserved for time series rollups.");
+                
+                if (checkControlChars && StringUtils.IsControlCharacter(c))
+                    DocumentIdWorker.ThrowIdentifierWithControlCharacters(name, "TimeSeries name");
             }
         }
 
@@ -1854,6 +1878,7 @@ namespace Raven.Server.Documents.TimeSeries
             TimeSeriesSegmentHolder segmentHolder,
             IEnumerator<SingleResult> appendEnumerator,
             SingleResult current,
+            AppendOptions options,
             out bool newValueFetched)
         {
             var segment = segmentHolder.ReadOnlySegment;
@@ -1893,6 +1918,9 @@ namespace Raven.Server.Documents.TimeSeries
                         }
 
                         current = appendEnumerator.Current;
+                        if (options.VerifyName)
+                            ValidateTag(current!.Tag);
+                        
                         if (current!.Timestamp < nextSegmentBaseline)
                         {
                             if (EnsureNumberOfValues(newSegment.NumberOfValues, ref current))
@@ -1966,6 +1994,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
 
                     bool segmentChanged = false;
+                    timeSeriesSegment.ResolvedSegment = false;
 
                     using (var enumerator = readOnlySegment.GetEnumerator(context.Allocator))
                     {
@@ -1991,6 +2020,9 @@ namespace Raven.Server.Documents.TimeSeries
                                     if (compare.HasFlag(CompareResult.Merge) == false &&
                                         currentTime == current?.Timestamp)
                                     {
+                                        if (compare.HasFlag(CompareResult.Equal) == false)
+                                            timeSeriesSegment.ResolvedSegment = true;
+
                                         reader.MoveNext();
                                         current = reader.Current;
                                     }
@@ -2139,20 +2171,35 @@ namespace Raven.Server.Documents.TimeSeries
             if (isIncrement && EnsureNumberOfValues(localValues.Length, ref remote) == false)
                 return CompareResult.Remote;
 
-            if (localValues.Length != remote.Values.Length)
+            var localCount = TrimmedLength(localValues);
+            var remoteCount = TrimmedLength(remote.Values.Span);
+
+            if (localCount != remoteCount)
             {
                 // larger number of values wins
-                if (localValues.Length > remote.Values.Length)
+                if (localCount > remoteCount)
                     return CompareResult.Local;
 
                 return CompareResult.Remote;
             }
 
             var compare = localValues.SequenceCompareTo(remote.Values.Span);
-            if (compare >= 0)
+            if (compare > 0)
                 return CompareResult.Local;
 
+            if (compare == 0)
+                return CompareResult.Equal;
+
             return CompareResult.Remote;
+        }
+
+        private static int TrimmedLength(Span<double> values)
+        {
+            var length = values.Length;
+            while (length > 0 && double.IsNaN(values[length - 1]))
+                length--;
+
+            return length;
         }
 
         private static CompareResult SelectSmallerValue(Span<double> localValues, SingleResult remote)
@@ -2170,8 +2217,11 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             var compare = localValues.SequenceCompareTo(remote.Values.Span);
-            if (compare <= 0)
+            if (compare < 0)
                 return CompareResult.Local;
+
+            if (compare == 0)
+                return CompareResult.Equal;
 
             return CompareResult.Remote;
         }
@@ -2746,7 +2796,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (Utf8Formatter.TryFormat(baseline.Ticks, bufferSpan.Slice(offset), out var bytesWritten, FormatD18) == false || bytesWritten != FormatD18.Precision)
                         throw new InvalidOperationException($"Could not write '{baseline.Ticks}' ticks. Bytes written {bytesWritten}, but expected {FormatD18.Precision}.");
 
-                    return context.GetLazyString(mem.Address, size);
+                    return context.GetLazyStringForBackwardCompatibility(mem.Address, size);
                 }
                 finally
                 {
@@ -2770,7 +2820,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var offset = documentId.Size;
                 bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
                 name.AsSpan().CopyTo(bufferSpan.Slice(offset));
-                return context.GetLazyString(mem.Address, size);
+                return context.GetLazyStringForBackwardCompatibility(mem.Address, size);
             }
             finally
             {

@@ -25,8 +25,6 @@ export function EditServerWideExternalReplicationInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <div>
                     Defining a <strong>Server-Wide External-Replication task</strong> will create an ongoing

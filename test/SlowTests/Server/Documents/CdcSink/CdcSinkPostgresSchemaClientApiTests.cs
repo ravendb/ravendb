@@ -1,0 +1,196 @@
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Server.SqlMigration;
+using Tests.Infrastructure;
+using Xunit;
+
+namespace SlowTests.Server.Documents.CdcSink
+{
+    /// <summary>
+    /// Exercises <see cref="GetCdcSinkSchemaOperation"/> end-to-end: client builds the
+    /// request, hits POST /admin/cdc-sink/schema, deserializes the response into the
+    /// typed <see cref="CdcSinkSourceSchema"/> graph. Complements the direct
+    /// <c>CdcSinkSchemaDiscovery.For(...).DiscoverAsync(...)</c> tests in
+    /// <see cref="CdcSinkPostgresSchemaDiscoveryTests"/>.
+    /// </summary>
+    public class CdcSinkPostgresSchemaClientApiTests : CdcSinkIntegrationTestBase
+    {
+        public CdcSinkPostgresSchemaClientApiTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
+        private void ExecuteNpgSql(string connectionString, string sql)
+        {
+            ExecuteSqlQuery(MigrationProvider.NpgSQL, connectionString, sql);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_HappyPath_RoundTripsTypedDtos()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE customers (
+                    id           SERIAL PRIMARY KEY,
+                    name         VARCHAR(200) NOT NULL,
+                    metadata     JSONB,
+                    photo        BYTEA
+                );
+
+                CREATE TABLE orders (
+                    order_id     SERIAL PRIMARY KEY,
+                    customer_id  INTEGER NOT NULL REFERENCES customers(id),
+                    total        NUMERIC(12,2) NOT NULL
+                );
+            ");
+
+            using var store = GetDocumentStore();
+
+            var connection = new SqlConnectionString
+            {
+                FactoryName = "Npgsql",
+                ConnectionString = connectionString,
+            };
+
+            var schema = await store.Maintenance.SendAsync(new GetCdcSinkSchemaOperation(connection));
+
+            Assert.NotNull(schema);
+            Assert.NotNull(schema.CatalogName);
+            Assert.Equal(2, schema.Tables.Count);
+
+            var customers = schema.Tables.Single(t => t.SourceTableName == "customers");
+            Assert.Equal("public", customers.SourceTableSchema);
+            Assert.True(customers.IsCdcEnabled);
+            Assert.Equal(new[] { "id" }, customers.PrimaryKeyColumns);
+
+            var metadata = customers.Columns.Single(c => c.Name == "metadata");
+            Assert.Equal("jsonb", metadata.NativeType);
+            Assert.Equal(CdcColumnType.Json, metadata.SuggestedType);
+
+            var photo = customers.Columns.Single(c => c.Name == "photo");
+            Assert.Equal("bytea", photo.NativeType);
+            Assert.Equal(CdcColumnType.Attachment, photo.SuggestedType);
+
+            var orders = schema.Tables.Single(t => t.SourceTableName == "orders");
+            var fk = Assert.Single(orders.ForeignKeys);
+            Assert.Equal(new[] { "customer_id" }, fk.Columns);
+            Assert.Equal("customers", fk.ReferencedTable);
+            Assert.Equal(new[] { "id" }, fk.ReferencedColumns);
+
+            // Verification is now folded into the same response. The integration container runs with
+            // wal_level=logical and a replication-capable superuser, so the source verifies cleanly.
+            Assert.NotNull(schema.Errors);
+            Assert.NotNull(schema.Warnings);
+            Assert.Empty(schema.Errors);
+            Assert.True(schema.Success);
+            Assert.True(schema.HasPermissionToSetup);
+
+            // Both tables have a primary key with the default REPLICA IDENTITY, so no per-table
+            // delete-capture warnings are expected.
+            Assert.Empty(customers.Warnings);
+            Assert.Empty(orders.Warnings);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_SurfacesPerTableReplicaIdentityWarning()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            // with_pk: normal table, default REPLICA IDENTITY carries the PK on DELETE -> no warning.
+            // no_pk: no primary key + default REPLICA IDENTITY -> DELETE carries nothing -> warning.
+            // pk_nothing: has a PK but REPLICA IDENTITY NOTHING -> DELETE carries nothing -> warning.
+            //   This case warns ONLY if relreplident 'n' is parsed correctly; a PK table misread as
+            //   'd' (DEFAULT) would not warn, so it guards the relreplident scalar parsing.
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE with_pk (id SERIAL PRIMARY KEY, name VARCHAR(100));
+                CREATE TABLE no_pk (id INT, name VARCHAR(100));
+                CREATE TABLE pk_nothing (id SERIAL PRIMARY KEY, name VARCHAR(100));
+                ALTER TABLE pk_nothing REPLICA IDENTITY NOTHING;
+            ");
+
+            using var store = GetDocumentStore();
+
+            var connection = new SqlConnectionString
+            {
+                FactoryName = "Npgsql",
+                ConnectionString = connectionString,
+            };
+
+            var schema = await store.Maintenance.SendAsync(new GetCdcSinkSchemaOperation(connection));
+
+            var withPk = schema.Tables.Single(t => t.SourceTableName == "with_pk");
+            Assert.Empty(withPk.Warnings);
+
+            var noPk = schema.Tables.Single(t => t.SourceTableName == "no_pk");
+            var warning = Assert.Single(noPk.Warnings);
+            Assert.Contains("REPLICA IDENTITY", warning);
+
+            var pkNothing = schema.Tables.Single(t => t.SourceTableName == "pk_nothing");
+            var nothingWarning = Assert.Single(pkNothing.Warnings);
+            Assert.Contains("NOTHING", nothingWarning);
+
+            // A per-table data-quality warning does not block setup.
+            Assert.True(schema.Success);
+            Assert.Empty(schema.Errors);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_RespectsSchemasFilter()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE SCHEMA shop;
+                CREATE TABLE shop.items (id SERIAL PRIMARY KEY, name VARCHAR(100));
+                CREATE TABLE public.unrelated (id SERIAL PRIMARY KEY, junk VARCHAR(100));
+            ");
+
+            using var store = GetDocumentStore();
+
+            var connection = new SqlConnectionString
+            {
+                FactoryName = "Npgsql",
+                ConnectionString = connectionString,
+            };
+
+            var shopOnly = await store.Maintenance.SendAsync(new GetCdcSinkSchemaOperation(connection, new[] { "shop" }));
+            Assert.Single(shopOnly.Tables);
+            Assert.Equal("items", shopOnly.Tables[0].SourceTableName);
+
+            var publicOnly = await store.Maintenance.SendAsync(new GetCdcSinkSchemaOperation(connection));
+            Assert.Single(publicOnly.Tables);
+            Assert.Equal("unrelated", publicOnly.Tables[0].SourceTableName);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_ConnectionFailure_ReturnsErrorsInsteadOf500()
+        {
+            using var store = GetDocumentStore();
+
+            // Point at a host that won't resolve. The driver will throw inside DiscoverAsync;
+            // the handler must catch it and return a structured response with Errors populated.
+            var connection = new SqlConnectionString
+            {
+                FactoryName = "Npgsql",
+                ConnectionString = "Host=cdc-test-no-such-host.invalid;Database=postgres;User Id=postgres;Password=x;Timeout=2;Command Timeout=2",
+            };
+
+            var result = await store.Maintenance.SendAsync(new GetCdcSinkSchemaOperation(connection));
+
+            Assert.NotNull(result);
+            Assert.Empty(result.Tables);
+            var error = Assert.Single(result.Errors);
+            // Structured response (not HTTP 500) with the driver detail included — the admin
+            // needs the error chain to diagnose the source-side problem. Exact wording varies
+            // by platform, so assert only that the formatter surfaced something non-empty after
+            // the prefix.
+            Assert.Contains("Schema discovery against the source database failed", error);
+            var detail = error.Substring(error.IndexOf("source database failed:") + "source database failed:".Length).Trim();
+            Assert.True(detail.Length > 0, $"Expected driver detail after the prefix, got '{error}'");
+            Output.WriteLine($"Driver error surfaced to caller: {error}");
+        }
+    }
+}

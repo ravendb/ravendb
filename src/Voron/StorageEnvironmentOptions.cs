@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -937,7 +937,11 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                         return new Posix32BitsMemoryMapPager(this, path);
-                    return new RvnMemoryMapPager(this, path);
+
+                    var posixJournalPager = new RvnMemoryMapPager(this, path);
+                    if (UseSequentialReadAheadHintForJournalRecovery)
+                        posixJournalPager.TrySetSequentialScanHint();
+                    return posixJournalPager;
                 }
 
                 if (RunningOn32Bits)
@@ -1288,6 +1292,7 @@ namespace Voron
 
         public int MaxNumberOfRecyclableJournals { get; set; } = 32;
         public bool DiscardVirtualMemory { get; set; } = true;
+        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 
         private readonly RavenLogger _log;
 

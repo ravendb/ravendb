@@ -32,7 +32,7 @@ interface AboutViewHeadingWithIcon {
 }
 
 interface AboutViewHeadingWithBackUrl {
-    icon?: never;
+    icon?: IconName;
     backUrl: string;
 }
 
@@ -45,9 +45,12 @@ const AboutViewHeading = (props: AboutViewHeadingProps) => {
     return (
         <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`, className)}>
             {backUrl ? (
-                <a href={backUrl} className="link-muted no-decor hover-filter me-1">
-                    <Icon icon="arrow-thin-left" margin="m-0" />
-                </a>
+                <>
+                    <a href={backUrl} className="link-muted no-decor hover-filter me-1">
+                        <Icon icon="arrow-thin-left" margin="m-0" />
+                    </a>
+                    {icon && <Icon icon={icon} addon={iconAddon} />}
+                </>
             ) : (
                 icon && <Icon icon={icon} addon={iconAddon} />
             )}
@@ -107,8 +110,8 @@ const AboutViewFloating = (props: AboutViewProps) => {
 interface AccordionItemWrapperProps {
     icon: IconName;
     color: ThemeColor;
-    heading: string;
-    description: string;
+    heading?: string;
+    description?: string;
     children: ReactNode;
     pill?: boolean;
     pillText?: string;
@@ -118,7 +121,17 @@ interface AccordionItemWrapperProps {
 }
 
 const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
-    const { icon, color, heading, description, children, pill, pillText, pillIcon, className } = props;
+    const {
+        icon,
+        color,
+        heading = "About this view",
+        description = "Learn more about this view",
+        children,
+        pill,
+        pillText,
+        pillIcon,
+        className,
+    } = props;
     const targetId = props.targetId ?? uniqueId();
     return (
         <Accordion.Item

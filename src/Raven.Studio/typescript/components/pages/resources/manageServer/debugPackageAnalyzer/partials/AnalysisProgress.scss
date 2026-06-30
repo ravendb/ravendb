@@ -1,0 +1,62 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.analysis-progress {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: sizes.$gutter-xs;
+    text-align: center;
+    padding: sizes.$gutter-sm;
+    border: 2px dashed colors.$border-color-light-var;
+    border-radius: sizes.$border-radius-md;
+    background-color: colors.$input-bg-var;
+    color: colors.$text-muted-var;
+
+    .analysis-progress-text {
+        display: flex;
+        flex-direction: column;
+        gap: sizes.$gutter-xxxs;
+    }
+
+    .analysis-progress-title {
+        font-size: 1.1rem;
+        color: colors.$text-emphasis-var;
+    }
+
+    .analysis-progress-bar {
+        position: relative;
+        width: min(420px, 80%);
+        height: sizes.$gutter-xxs;
+        border-radius: 100px;
+        background-color: colors.$border-color-light-var;
+        overflow: hidden;
+    }
+
+    .analysis-progress-bar-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 40%;
+        border-radius: inherit;
+        background-color: colors.$primary-var;
+        animation: analysis-progress-indeterminate 1.2s ease-in-out infinite;
+    }
+}
+
+@keyframes analysis-progress-indeterminate {
+    0% {
+        left: -40%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .analysis-progress-bar-fill {
+        animation-duration: 2.4s;
+    }
+}

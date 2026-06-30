@@ -52,7 +52,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }, changeVector: null);
 
                 var ex = await Assert.ThrowsAnyAsync<Exception>(
-                    () => handler.HandleRequest(context, CancellationToken.None));
+                    () => handler.HandleRequestAsync(context, CancellationToken.None));
 
                 var full = ex.ToString();
 

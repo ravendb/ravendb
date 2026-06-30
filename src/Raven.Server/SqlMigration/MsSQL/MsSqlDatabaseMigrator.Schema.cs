@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Data.Common;
 using Raven.Server.SqlMigration.Schema;
 
@@ -6,23 +6,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 {
     internal partial class MsSqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectColumns = "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE" +
-                                            " FROM INFORMATION_SCHEMA.COLUMNS C JOIN INFORMATION_SCHEMA.TABLES T " +
-                                            " ON C.TABLE_CATALOG = T.TABLE_CATALOG AND C.TABLE_SCHEMA = T.TABLE_SCHEMA AND C.TABLE_NAME = T.TABLE_NAME " +
-                                            " WHERE T.TABLE_TYPE <> 'VIEW' ";
-
-        public const string SelectPrimaryKeys = "SELECT TC.TABLE_SCHEMA, TC.TABLE_NAME, COLUMN_NAME " +
-                                                "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC " +
-                                                "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU " +
-                                                "ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' AND TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME" +
-                                                " ORDER BY ORDINAL_POSITION";
-
-        public const string SelectReferentialConstraints = "SELECT CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
-                                                           "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS";
-
-        public const string SelectKeyColumnUsage = "SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
-                                                                      " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
-                                                                      "ORDER BY ORDINAL_POSITION";
+        private static readonly MsSqlSchemaQueries SchemaQueries = new MsSqlSchemaQueries();
 
         public override DatabaseSchema FindSchema()
         {
@@ -45,12 +29,14 @@ namespace Raven.Server.SqlMigration.MsSQL
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectColumns;
+                cmd.CommandText = SchemaQueries.SelectColumnsQuery;
+                SchemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        var schemaAndTableName = GetTableNameFromReader(reader);
+                        var schemaAndTableName = SqlSchemaQueries.GetTableNameFromReader(reader);
 
                         var tableSchema = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
 
@@ -75,18 +61,19 @@ namespace Raven.Server.SqlMigration.MsSQL
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectPrimaryKeys;
+                cmd.CommandText = SchemaQueries.SelectPrimaryKeysQuery;
+                SchemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        var schemaAndTableName = GetTableNameFromReader(reader);
+                        var schemaAndTableName = SqlSchemaQueries.GetTableNameFromReader(reader);
                         var table = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
                         table?.PrimaryKeyColumns.Add(reader["COLUMN_NAME"].ToString());
                     }
                 }
             }
-            
         }
 
         private void FindForeignKeys(DbConnection connection, DatabaseSchema dbSchema)
@@ -95,7 +82,9 @@ namespace Raven.Server.SqlMigration.MsSQL
 
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectReferentialConstraints;
+                cmd.CommandText = SchemaQueries.SelectReferentialConstraintsQuery;
+                SchemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
@@ -104,7 +93,7 @@ namespace Raven.Server.SqlMigration.MsSQL
             }
 
             var keyColumnUsageCache = GetKeyColumnUsageCache(connection);
-            
+
             foreach (var kvp in referentialConstraints)
             {
                 var fkCacheValue = keyColumnUsageCache[kvp.Key];
@@ -119,39 +108,36 @@ namespace Raven.Server.SqlMigration.MsSQL
                 }
             }
         }
-        
+
         private Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)> GetKeyColumnUsageCache(DbConnection connection)
         {
             var cache = new Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)>();
-            
+
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectKeyColumnUsage;
+                cmd.CommandText = SchemaQueries.SelectKeyColumnUsageQuery;
+                SchemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
                         var cacheKey = reader["CONSTRAINT_NAME"].ToString();
-                        (string schema, string tableName) = GetTableNameFromReader(reader);
+                        (string schema, string tableName) = SqlSchemaQueries.GetTableNameFromReader(reader);
                         var columnName = reader["COLUMN_NAME"].ToString();
-                        
+
                         if (cache.TryGetValue(cacheKey, out var cacheValue) == false)
                         {
                             cacheValue = (schema, tableName, new List<string>());
                             cache[cacheKey] = cacheValue;
                         }
-                        
+
                         cacheValue.ColumnNames.Add(columnName);
                     }
                 }
             }
-            
-            return cache;
-        }
 
-        private static (string Schema, string TableName) GetTableNameFromReader(DbDataReader reader)
-        {
-            return (reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
+            return cache;
         }
     }
 }

@@ -912,7 +912,8 @@ namespace Raven.Server.Commercial
                 Thumbprint = clientCert.Thumbprint,
                 PublicKeyPinningHash = PublicKeyPinningHashHelpers.GetPublicKeyPinningHash(clientCert),
                 NotAfter = clientCert.NotAfter,
-                NotBefore = clientCert.NotBefore
+                NotBefore = clientCert.NotBefore,
+                Usage = CertificateUsage.Client
             };
 
             try
@@ -1302,7 +1303,8 @@ namespace Raven.Server.Commercial
                 Thumbprint = selfSignedCertificate.Thumbprint,
                 PublicKeyPinningHash = PublicKeyPinningHashHelpers.GetPublicKeyPinningHash(selfSignedCertificate),
                 NotAfter = selfSignedCertificate.NotAfter,
-                NotBefore = selfSignedCertificate.NotBefore
+                NotBefore = selfSignedCertificate.NotBefore,
+                Usage = CertificateUsage.Client
             };
 
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));

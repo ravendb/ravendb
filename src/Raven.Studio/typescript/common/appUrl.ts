@@ -61,6 +61,7 @@ class appUrl {
         editKafkaSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditKafkaSink(appUrl.currentDatabase(), taskId)),
         editRabbitMqSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase(), taskId)),
         editAzureServiceBusSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditAzureServiceBusSink(appUrl.currentDatabase(), taskId)),
+        editCdcSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditCdcSink(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         addNewOngoingTask: (isAiOnly: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly)),
@@ -91,6 +92,7 @@ class appUrl {
         editKafkaSinkTaskUrl: ko.pureComputed(() => appUrl.forEditKafkaSink(appUrl.currentDatabase())),
         editRabbitMqSinkTaskUrl: ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase())),
         editAzureServiceBusSinkTaskUrl: ko.pureComputed(() => appUrl.forEditAzureServiceBusSink(appUrl.currentDatabase())),
+        editCdcSinkTaskUrl: ko.pureComputed(() => appUrl.forEditCdcSink(appUrl.currentDatabase())),
         csvImportUrl: ko.pureComputed(() => appUrl.forCsvImport(appUrl.currentDatabase())),
         status: ko.pureComputed(() => appUrl.forStatus(appUrl.currentDatabase())),
 
@@ -194,10 +196,14 @@ class appUrl {
         return "#admin/settings/trafficWatch" + filter;
     }
 
-    static forDebugInfo(): string {
-        return "#admin/settings/debugInfo";
+    static forDebugPackage(): string {
+        return "#admin/settings/debugPackage";
     }
-    
+
+    static forDebugPackageAnalyzer(): string {
+        return "#admin/settings/debugPackageAnalyzer";
+    }
+
     static forSystemStorageReport(): string {
         return "#admin/settings/storageReport"
     }
@@ -211,8 +217,12 @@ class appUrl {
         return "#admin/settings/runningQueries?" + databasePart;
     }
     
-    static forCaptureStackTraces(): string {
-        return "#admin/settings/captureStackTraces";
+    static forCaptureStackTraces(packageId?: string, nodeTag?: string): string {
+        const base = "#admin/settings/captureStackTraces";
+        if (packageId && nodeTag) {
+            return base + "?packageId=" + encodeURIComponent(packageId) + "&nodeTag=" + encodeURIComponent(nodeTag);
+        }
+        return base;
     }
 
     static forAdminJsConsole(): string {
@@ -255,6 +265,12 @@ class appUrl {
 
     static forServerWideCustomSorters(): string {
         return "#admin/settings/serverWideCustomSorters";
+    }
+
+    static forServerWideConnectionStrings(type?: connectionStringsTypes.StudioConnectionType, name?: string): string {
+        const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
+        const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
+        return "#admin/settings/serverWideConnectionStrings?" + typeUrlPart + nameUrlPart;
     }
 
     static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string, shardToCompact?: number): string {
@@ -351,8 +367,13 @@ class appUrl {
         return "#databases/status/ioStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexPerformance(db: database | string, indexName?: string): string {
-        return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
+    static forIndexPerformance(db: database | string, indexName?: string, packageId?: string, nodeTag?: string): string {
+        let url = `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
+        // the package's indexing performance is captured per node, so opening it requires both ids (same as forCaptureStackTraces)
+        if (packageId && nodeTag) {
+            url += "&packageId=" + encodeURIComponent(packageId) + "&nodeTag=" + encodeURIComponent(nodeTag);
+        }
+        return url;
     }
     
     static forIndexCleanup(db: database | string): string {
@@ -759,6 +780,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editAzureServiceBusSinkTask?" + databasePart + taskPart;
+    }
+
+    static forEditCdcSink(db: database | string, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editCdcSinkTask?" + databasePart + taskPart;
     }
 
     static forEditEmbeddingsGeneration(db: database | string, taskId?: number): string {

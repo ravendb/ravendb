@@ -3,6 +3,7 @@ import shardedDatabase from "models/resources/shardedDatabase";
 import document from "models/database/documents/document";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
+import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
@@ -443,6 +444,7 @@ export class DatabasesStubs {
         return {
             RavenConnectionStrings: {
                 "raven-name (used by task)": {
+                    UsedBy: [],
                     Type: "Raven",
                     Name: "raven-name (used by task)",
                     Database: "some-db",
@@ -451,6 +453,7 @@ export class DatabasesStubs {
             },
             SqlConnectionStrings: {
                 "sql-name": {
+                    UsedBy: [],
                     Type: "Sql",
                     Name: "sql-name",
                     ConnectionString: "some-connection-string",
@@ -459,6 +462,7 @@ export class DatabasesStubs {
             },
             SnowflakeConnectionStrings: {
                 "snowflake-name": {
+                    UsedBy: [],
                     Type: "Snowflake",
                     Name: "snowflake-name",
                     ConnectionString: "some-snowflake-connection-string",
@@ -466,6 +470,7 @@ export class DatabasesStubs {
             },
             OlapConnectionStrings: {
                 "olap-name": {
+                    UsedBy: [],
                     Type: "Olap",
                     Name: "olap-name",
                     LocalSettings: {
@@ -482,6 +487,7 @@ export class DatabasesStubs {
             },
             ElasticSearchConnectionStrings: {
                 "elasticsearch-name": {
+                    UsedBy: [],
                     Type: "ElasticSearch",
                     Name: "elasticsearch-name",
                     Nodes: ["http://test"],
@@ -495,6 +501,7 @@ export class DatabasesStubs {
             },
             QueueConnectionStrings: {
                 "kafka-name": {
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "kafka-name",
                     BrokerType: "Kafka",
@@ -509,6 +516,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "rabbitmq-name": {
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "rabbitmq-name",
                     BrokerType: "RabbitMq",
@@ -521,6 +529,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-queue-storage-name": {
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "azure-queue-storage-name",
                     BrokerType: "AzureQueueStorage",
@@ -535,6 +544,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-sqs-name": {
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "azure-sqs-name",
                     BrokerType: "AmazonSqs",
@@ -552,6 +562,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-service-bus-name": {
+                    UsedBy: [],
                     Type: "Queue",
                     Name: "azure-service-bus-name",
                     BrokerType: "AzureServiceBus",
@@ -570,6 +581,7 @@ export class DatabasesStubs {
             AiConnectionStrings: {
                 "ai-name": {
                     Type: "Ai",
+                    UsedBy: [],
                     Name: "ai-name",
                     Identifier: "some-identifier",
                     ModelType: "TextEmbeddings",
@@ -589,6 +601,7 @@ export class DatabasesStubs {
                 },
                 "ai-name-gen-ai": {
                     Type: "Ai",
+                    UsedBy: [],
                     Name: "ai-name-gen-ai",
                     Identifier: "some-identifier",
                     ModelType: "Chat",
@@ -608,6 +621,166 @@ export class DatabasesStubs {
                 },
             },
         };
+    }
+
+    static serverWideConnectionStrings(): ServerWideConnectionStringDto[] {
+        return [
+            {
+                Type: "Raven",
+                UsedBy: [],
+                Name: "sw-raven-name",
+                Database: "some-db",
+                TopologyDiscoveryUrls: ["http://test"],
+                ExcludedDatabases: ["excluded-db"],
+            },
+            {
+                Type: "Sql",
+                UsedBy: [],
+                Name: "sw-sql-name",
+                ConnectionString: "some-connection-string",
+                FactoryName: "System.Data.SqlClient",
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Olap",
+                UsedBy: [],
+                Name: "sw-olap-name",
+                LocalSettings: {
+                    Disabled: false,
+                    GetBackupConfigurationScript: null,
+                    FolderPath: "/bin",
+                },
+                S3Settings: null,
+                AzureSettings: null,
+                GlacierSettings: null,
+                GoogleCloudSettings: null,
+                FtpSettings: null,
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "ElasticSearch",
+                UsedBy: [],
+                Name: "sw-elasticsearch-name",
+                Nodes: ["http://test"],
+                EnableCompatibilityMode: false,
+                Authentication: {
+                    Basic: null,
+                    ApiKey: null,
+                    Certificate: null,
+                },
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Queue",
+                UsedBy: [],
+                Name: "sw-kafka-name",
+                BrokerType: "Kafka",
+                KafkaConnectionSettings: {
+                    BootstrapServers: "test:0",
+                    UseRavenCertificate: false,
+                    ConnectionOptions: {},
+                },
+                RabbitMqConnectionSettings: null,
+                AzureQueueStorageConnectionSettings: null,
+                AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: null,
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Queue",
+                UsedBy: [],
+                Name: "sw-rabbitmq-name",
+                BrokerType: "RabbitMq",
+                KafkaConnectionSettings: null,
+                RabbitMqConnectionSettings: {
+                    ConnectionString: "some-connection-string",
+                },
+                AzureQueueStorageConnectionSettings: null,
+                AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: null,
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Snowflake",
+                UsedBy: [],
+                Name: "sw-snowflake-name",
+                ConnectionString: "some-snowflake-connection-string",
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Queue",
+                UsedBy: [],
+                Name: "sw-azure-queue-storage-name",
+                BrokerType: "AzureQueueStorage",
+                KafkaConnectionSettings: null,
+                RabbitMqConnectionSettings: null,
+                AzureQueueStorageConnectionSettings: {
+                    ConnectionString: "some-connection-string",
+                    EntraId: null,
+                    Passwordless: null,
+                },
+                AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: null,
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Queue",
+                UsedBy: [],
+                Name: "sw-amazon-sqs-name",
+                BrokerType: "AmazonSqs",
+                KafkaConnectionSettings: null,
+                RabbitMqConnectionSettings: null,
+                AzureQueueStorageConnectionSettings: null,
+                AmazonSqsConnectionSettings: {
+                    Basic: {
+                        AccessKey: "AKIA123",
+                        SecretKey: "this is secret",
+                        RegionName: "us-west-2",
+                    },
+                    Passwordless: false,
+                },
+                AzureServiceBusConnectionSettings: null,
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Queue",
+                UsedBy: [],
+                Name: "azure-service-bus-name",
+                BrokerType: "AzureServiceBus",
+                KafkaConnectionSettings: null,
+                RabbitMqConnectionSettings: null,
+                AzureQueueStorageConnectionSettings: null,
+                AmazonSqsConnectionSettings: null,
+                AzureServiceBusConnectionSettings: {
+                    ConnectionString:
+                        "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub",
+                    EntraId: null,
+                    Passwordless: null,
+                },
+                ExcludedDatabases: [],
+            },
+            {
+                Type: "Ai",
+                UsedBy: [],
+                Name: "sw-ai-name",
+                Identifier: "some-identifier",
+                ModelType: "TextEmbeddings",
+                GoogleSettings: {
+                    ApiKey: "some-api-key",
+                    Endpoint: "https://generativelanguage.googleapis.com",
+                    Model: "some-model",
+                    AiVersion: "V1",
+                },
+                AzureOpenAiSettings: null,
+                HuggingFaceSettings: null,
+                OllamaSettings: null,
+                EmbeddedSettings: null,
+                OpenAiSettings: null,
+                MistralAiSettings: null,
+                VertexSettings: null,
+                ExcludedDatabases: [],
+            },
+        ];
     }
 
     static nodeConnectionTestErrorResult(): Raven.Server.Web.System.NodeConnectionTestResult {
@@ -639,7 +812,7 @@ export class DatabasesStubs {
                     Script: `
 var maxRecord = 0;
 for (var i = 0; i < docs.length; i++) {
-    maxRecord = Math.max(docs[i].MaxRecord, maxRecord);
+    maxRecord = Math.max(docs[i].MaxRecord, maxRecord);   
 }
 docs[0].MaxRecord = maxRecord;
 
@@ -650,7 +823,7 @@ return docs[0];`,
                     Script: `
 var maxPrice = 0;
 for (var i = 0; i < docs.length; i++) {
-    maxPrice = Math.max(docs[i].PricePerUnit, maxPrice);
+    maxPrice = Math.max(docs[i].PricePerUnit, maxPrice);   
 }
 docs[0].PricePerUnit = maxPrice;
 

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
@@ -138,6 +139,15 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
     }
 
+    private IEnumerable<OngoingTaskCdcSink> GetCdcSinkTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    {
+        if (databaseRecord.CdcSinks == null || databaseRecord.CdcSinks.Count == 0)
+            yield break;
+
+        foreach (var cdcSink in databaseRecord.CdcSinks)
+            yield return CreateCdcSinkTaskInfo(clusterTopology, databaseRecord, cdcSink);
+    }
+
     private IEnumerable<EmbeddingsGeneration> GetEmbeddingsGenerationTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
     {
         if (databaseRecord.EmbeddingsGenerations == null || databaseRecord.EmbeddingsGenerations.Count == 0)
@@ -192,6 +202,9 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return task;
         
         foreach (var task in GetQueueSinkTasks(clusterTopology, databaseRecord))
+            yield return task;
+
+        foreach (var task in GetCdcSinkTasks(clusterTopology, databaseRecord))
             yield return task;
 
         foreach (var task in GetEmbeddingsGenerationTasks(clusterTopology, databaseRecord))
@@ -321,6 +334,16 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                     return null;
 
                 return CreateQueueSinkTaskInfo(clusterTopology, databaseRecord, queueSink);
+            case OngoingTaskType.CdcSink:
+
+                var cdcSink = taskName != null
+                    ? databaseRecord.CdcSinks?.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    : databaseRecord.CdcSinks?.Find(x => x.TaskId == taskId);
+
+                if (cdcSink == null)
+                    return null;
+
+                return CreateCdcSinkTaskInfo(clusterTopology, databaseRecord, cdcSink);
             case OngoingTaskType.EmbeddingsGeneration:
 
                 var embeddingsGeneration = taskName != null
@@ -350,6 +373,10 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         where T : ConnectionString;
     
     protected abstract OngoingTaskConnectionStatus GetQueueSinkTaskConnectionStatus(DatabaseRecord record, QueueSinkConfiguration config, out string tag, out string error);
+
+    protected abstract OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config,
+        out string tag, out string error, out DateTime? lastBatchTime, out string lastCheckpoint,
+        out DateTime? lastActivityTime, out string healthIssue);
 
     protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
         T replication, Dictionary<string, RavenConnectionString> connectionStrings, out ExternalReplicationState replicationState, 
@@ -661,6 +688,37 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             Configuration = queueSink,
             ConnectionStringName = queueSink.ConnectionStringName,
             Url = connection?.GetUrl()
+        };
+    }
+
+    private OngoingTaskCdcSink CreateCdcSinkTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, CdcSinkConfiguration cdcSink)
+    {
+        databaseRecord.SqlConnectionStrings.TryGetValue(cdcSink.ConnectionStringName, out var connection);
+
+        var connectionStatus = GetCdcSinkTaskConnectionStatus(databaseRecord, cdcSink, out var tag, out var error,
+            out var lastBatchTime, out var lastCheckpoint, out var lastActivityTime, out var healthIssue);
+        var taskState = OngoingTasksHandler.GetCdcSinkTaskState(cdcSink);
+        var now = DateTime.UtcNow;
+
+        return new OngoingTaskCdcSink
+        {
+            TaskId = cdcSink.TaskId,
+            TaskName = cdcSink.Name,
+            TaskConnectionStatus = connectionStatus,
+            TaskState = taskState,
+            MentorNode = cdcSink.MentorNode,
+            PinToMentorNode = cdcSink.PinToMentorNode,
+            ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
+            Error = error,
+            Configuration = cdcSink,
+            ConnectionStringName = cdcSink.ConnectionStringName,
+            FactoryName = connection?.FactoryName,
+            LastBatchTime = lastBatchTime,
+            LastCheckpoint = lastCheckpoint,
+            SecondsSinceLastBatch = lastBatchTime.HasValue ? (now - lastBatchTime.Value).TotalSeconds : null,
+            LastActivityTime = lastActivityTime,
+            SecondsSinceLastActivity = lastActivityTime.HasValue ? (now - lastActivityTime.Value).TotalSeconds : null,
+            HealthIssue = healthIssue,
         };
     }
 

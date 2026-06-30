@@ -13,6 +13,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -168,6 +169,15 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
+            // filter server-wide connection strings
+            FilterOutServerWideConnectionStrings(databaseRecord.RavenConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.SqlConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.OlapConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.ElasticSearchConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.QueueConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.SnowflakeConnectionStrings);
+            FilterOutServerWideConnectionStrings(databaseRecord.AiConnectionStrings);
+
             return Task.FromResult(databaseRecord);
         }
 
@@ -199,6 +209,16 @@ namespace Raven.Server.Smuggler.Documents
                     Document = enumerator.Current
                 };
             }
+        }
+
+        private static void FilterOutServerWideConnectionStrings<T>(Dictionary<string, T> connectionStrings)
+        {
+            var keysToRemove = connectionStrings.Keys
+                .Where(k => k.StartsWith(ServerWideConnectionString.NamePrefix, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (var key in keysToRemove)
+                connectionStrings.Remove(key);
         }
 
         protected virtual DatabaseRecord ReadDatabaseRecord()

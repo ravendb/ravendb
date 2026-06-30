@@ -33,7 +33,7 @@ type RabbitMqEtlPanelProps = EtlPanelBaseProps<OngoingTaskRabbitMqEtlInfo>;
 export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editRabbitMqEtl(data.shared.taskId)();
 
     const {
@@ -50,11 +50,6 @@ export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransfor
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        databaseName,
-        "RabbitMQ",
-        data.shared.connectionStringName
-    );
 
     return (
         <RichPanel>
@@ -101,7 +96,8 @@ export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransfor
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="RabbitMQ"
+                    databaseName={databaseName}
                 />
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
                 <EtlPanelErrors

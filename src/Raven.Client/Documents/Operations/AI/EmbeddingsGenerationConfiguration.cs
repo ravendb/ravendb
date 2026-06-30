@@ -78,6 +78,9 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
     /// </summary>
     [JsonDeserializationIgnore]
     [JsonIgnore]
+#if NETCOREAPP3_1_OR_GREATER
+    [System.Text.Json.Serialization.JsonIgnore]
+#endif
     [Obsolete($"{nameof(EmbeddingsGenerationConfiguration)} doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
     public override List<Transformation> Transforms

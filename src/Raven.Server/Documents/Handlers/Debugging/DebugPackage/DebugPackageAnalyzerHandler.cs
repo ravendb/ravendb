@@ -93,4 +93,15 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
 
         return true;
     }
+
+    private async Task WriteEntryOrNotFoundAsync(DebugPackageEntries.Entry entry)
+    {
+        if (entry == null)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            return;
+        }
+
+        await entry.WriteContentToAsync(ResponseBodyStream());
+    }
 }

@@ -1058,6 +1058,7 @@ namespace Raven.Client.Http
                     }
 
                     OnSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
+                    command.CancellationToken = token;
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
                 }
                 finally

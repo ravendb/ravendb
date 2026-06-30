@@ -8,13 +8,7 @@ export default function DatabaseRecordAboutView() {
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <ul>
                     <li>
                         The Database Record stores all settings and configurations for the database and is consistently

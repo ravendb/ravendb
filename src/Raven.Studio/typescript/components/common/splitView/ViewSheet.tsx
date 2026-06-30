@@ -98,7 +98,7 @@ export interface OpenSheetOptions {
 
 export function useViewSheet() {
     const dispatch = useAppDispatch();
-    const { setSheetComponent } = useSplitViewContext();
+    const { setSheetComponent, sheetComponent } = useSplitViewContext();
     const viewWidthInPx = useAppSelector(splitViewSelectors.viewWidthInPx);
 
     const getWidthInPx = useCallback(
@@ -122,6 +122,7 @@ export function useViewSheet() {
     return {
         open,
         close: () => setSheetComponent(null),
+        isOpen: !!sheetComponent,
     };
 }
 

@@ -30,7 +30,7 @@ describe("Certificates", () => {
         const { screen } = await rtlRender_WithWaitForLoad(<CertificatesStory isSecureServer={true} />);
 
         expect(screen.queryByRole("heading", { name: selectors.authIsDisabledHeader })).not.toBeInTheDocument();
-        expect(screen.getByRole("button", { name: /Manage certificates/ })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Manage user access/ })).toBeInTheDocument();
     });
 
     describe("well known certs", () => {

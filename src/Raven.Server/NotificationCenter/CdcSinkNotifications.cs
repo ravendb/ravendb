@@ -1,0 +1,97 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using Raven.Client.Documents.Conventions;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Json;
+
+namespace Raven.Server.NotificationCenter
+{
+    public class CdcSinkNotifications
+    {
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
+
+        public CdcSinkNotifications(AbstractDatabaseNotificationCenter notificationCenter)
+        {
+            _notificationCenter = notificationCenter;
+        }
+
+        public AlertRaised AddScriptErrors(string processTag, string processName, Queue<CdcSinkErrorInfo> errors, string preMessage = null)
+        {
+            var alert = GetOrCreateAlert<CdcSinkErrorsDetails>(processTag,
+                processName,
+                AlertReason.CdcSink_ScriptError,
+                $"{preMessage}CDC Sink script execution failed (last {CdcSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
+                out var details);
+
+            return AddErrorAlert(errors, details, alert);
+        }
+
+        public AlertRaised AddConsumeErrors(string processTag, string processName, Queue<CdcSinkErrorInfo> errors, string preMessage = null)
+        {
+            var alert = GetOrCreateAlert<CdcSinkErrorsDetails>(processTag,
+                processName,
+                AlertReason.CdcSink_ConsumeError,
+                $"{preMessage}Failed to consume CDC changes from the source database (last {CdcSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
+                out var details);
+
+            return AddErrorAlert(errors, details, alert);
+        }
+
+        private AlertRaised AddErrorAlert(Queue<CdcSinkErrorInfo> errors, CdcSinkErrorsDetails details, AlertRaised alert)
+        {
+            details.Update(errors);
+
+            _notificationCenter.Add(alert);
+
+            return alert;
+        }
+
+        private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertReason alertReason, string message, out T details) where T : INotificationDetails, new()
+        {
+            Debug.Assert(alertReason == AlertReason.CdcSink_ConsumeError || alertReason == AlertReason.CdcSink_ScriptError);
+
+            var key = $"{processTag}/{processName}";
+
+            var id = AlertRaised.GetKey(alertReason, key);
+
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
+            {
+                details = GetDetails<T>(ntv);
+
+                return AlertRaised.Create(
+                    _notificationCenter.Database,
+                    $"{processTag}: '{processName}'",
+                    message,
+                    alertReason,
+                    NotificationSeverity.Warning,
+                    key: key,
+                    details: details);
+            }
+        }
+
+        public T GetAlert<T>(string processTag, string processName, AlertReason alertReason) where T : INotificationDetails, new()
+        {
+            Debug.Assert(
+                alertReason is AlertReason.CdcSink_ConsumeError or AlertReason.CdcSink_ScriptError or AlertReason.CdcSink_Error,
+                $"Got type: {alertReason}");
+
+            var key = $"{processTag}/{processName}";
+
+            var id = AlertRaised.GetKey(alertReason, key);
+
+            using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
+            {
+                return GetDetails<T>(ntv);
+            }
+        }
+
+        private T GetDetails<T>(NotificationTableValue ntv) where T : INotificationDetails, new()
+        {
+            if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
+                return new T();
+
+            return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<T>(detailsJson);
+        }
+    }
+}

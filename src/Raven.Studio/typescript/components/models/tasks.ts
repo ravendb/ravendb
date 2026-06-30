@@ -144,6 +144,19 @@ export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
     url: string;
 }
 
+export interface OngoingTaskCdcSinkSharedInfo extends OngoingTaskSharedInfo {
+    connectionStringName: string;
+    factoryName: string;
+    configuration: Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration;
+    lastBatchTime?: string;
+    lastCheckpoint: string;
+    secondsSinceLastBatch?: number;
+    lastActivityTime?: string;
+    secondsSinceLastActivity?: number;
+    healthIssue: string;
+    error: string;
+}
+
 export interface OngoingTaskEmbeddingsGenerationSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
     identifier: string;
@@ -240,6 +253,8 @@ export type OngoingTaskKafkaSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 export type OngoingTaskRabbitMqSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type OngoingTaskAzureServiceBusSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
+
+export type OngoingTaskCdcSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo
@@ -353,6 +368,11 @@ export type OngoingTaskRabbitMqSinkInfo = OngoingTaskInfo<
 export type OngoingTaskAzureServiceBusSinkInfo = OngoingTaskInfo<
     OngoingTaskAzureServiceBusSinkSharedInfo,
     OngoingTaskNodeInfo<OngoingTaskAzureServiceBusSinkNodeInfoDetails>
+>;
+
+export type OngoingTaskCdcSinkInfo = OngoingTaskInfo<
+    OngoingTaskCdcSinkSharedInfo,
+    OngoingTaskNodeInfo<OngoingTaskCdcSinkNodeInfoDetails>
 >;
 
 export type OngoingTaskSubscriptionInfo = OngoingTaskInfo<

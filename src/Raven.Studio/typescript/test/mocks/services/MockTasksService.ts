@@ -10,6 +10,7 @@ import { SharedStubs } from "test/stubs/SharedStubs";
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import { mockJQueryError } from "test/mocks/utils";
+import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
@@ -66,6 +67,10 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getSubscriptionTaskInfo, dto, TasksStubs.getSubscription());
     }
 
+    withGetCdcSinkTaskInfo(dto?: MockedValue<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskInfo, dto, TasksStubs.getCdcSink());
+    }
+
     withGetSubscriptionConnectionDetails(
         dto?: MockedValue<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails>
     ) {
@@ -88,6 +93,12 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getConnectionStrings, dto, DatabasesStubs.connectionStrings());
     }
 
+    withServerWideConnectionStrings(dto?: MockedValue<{ Results: ServerWideConnectionStringDto[] }>) {
+        return this.mockResolvedValue(this.mocks.getServerWideConnectionStrings, dto, {
+            Results: DatabasesStubs.serverWideConnectionStrings(),
+        });
+    }
+
     withTestClusterNodeConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testClusterNodeConnection,
@@ -102,6 +113,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             dto,
             SharedStubs.nodeConnectionTestSuccessResult()
         );
+    }
+
+    withTestCdcSink(dto?: Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult) {
+        return this.mockResolvedValue(this.mocks.testCdcSink, dto, TasksStubs.testCdcSink());
+    }
+
+    withGetCdcSinkTaskSchema(dto?: MockedValue<Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskSchema, dto, TasksStubs.cdcSinkTaskSchema());
     }
 
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {

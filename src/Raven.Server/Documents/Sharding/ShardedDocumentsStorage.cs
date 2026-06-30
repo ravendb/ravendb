@@ -520,7 +520,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             }
         }
 
-        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out var lowerId, out _))
+        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, documentId, out var lowerId, out _))
         {
             var attachments = AttachmentsStorage.GetAttachmentDetailsForDocument(context, lowerId);
             foreach (var attachment in attachments)

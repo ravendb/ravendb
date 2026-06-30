@@ -288,13 +288,7 @@ export function BackupsPage() {
                         </Button>
                         <FlexGrow />
                         <AboutViewFloating>
-                            <AccordionItemWrapper
-                                targetId="1"
-                                icon="about"
-                                color="info"
-                                heading="About this view"
-                                description="Get additional info on this feature"
-                            >
+                            <AccordionItemWrapper targetId="1" icon="about" color="info">
                                 <p>
                                     <strong>Backups</strong> save your data at a specific point in time and allow you to
                                     restore your database to that point.

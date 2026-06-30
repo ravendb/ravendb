@@ -208,6 +208,14 @@ public static class ThreadNames
         };
     }
 
+    public static ThreadInfo ForCdcSinkProcess(string threadName, string tag, string name)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.CdcSinkProcess(tag, name)
+        };
+    }
+
     public static ThreadInfo ForClusterTransactions(string threadName, string databaseName)
     {
         return new ThreadInfo(threadName)
@@ -269,6 +277,23 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"QuSnk {_tag} {_name}";
+            }
+        }
+
+        public class CdcSinkProcess : IThreadDetails
+        {
+            private readonly string _tag;
+            private readonly string _name;
+
+            public CdcSinkProcess(string tag, string name)
+            {
+                _tag = tag;
+                _name = name;
+            }
+
+            public string GetShortName()
+            {
+                return $"CdcSnk {_tag} {_name}";
             }
         }
 

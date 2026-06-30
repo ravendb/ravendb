@@ -55,7 +55,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             // lower document id, record separator, lower counter name, record separator, 16 bytes dbid
             CounterKey = 0,
 
-            Name = 1, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
+            Name = 1, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKeyForBackwardCompatibility
             Etag = 2,
             Value = 3,
             ChangeVector = 4,
@@ -345,7 +345,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             using (docId)
             using (counterName)
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice lowerId, out _))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, docId, out Slice lowerId, out _))
             {
                 string collection = null;
 

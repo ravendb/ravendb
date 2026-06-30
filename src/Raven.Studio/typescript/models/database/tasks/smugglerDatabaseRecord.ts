@@ -46,6 +46,7 @@ class smugglerDatabaseRecord {
     includeGenAi = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeAiAgents = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeRemoteAttachments = ko.observable<boolean>(this.isAdminAccessOrAbove());
+    includeCdcSinks = ko.observable<boolean>(this.isAdminAccessOrAbove());
 
     hasIncludes: KnockoutComputed<boolean>;
 
@@ -104,6 +105,12 @@ class smugglerDatabaseRecord {
         popoverUtils.longWithHover($(".js-warning-ai-connection-strings"),
             {
                 content: `AI Connection strings were not selected.`,
+                placement: 'right'
+            });
+        
+        popoverUtils.longWithHover($(".js-warning-cdc-sink"),
+            {
+                content: `SQL Connection strings were not selected.`,
                 placement: 'right'
             });
     }
@@ -213,6 +220,9 @@ class smugglerDatabaseRecord {
         }
         if (this.includeRemoteAttachments()) {
             result.push("RemoteAttachments")
+        }
+        if (this.includeCdcSinks()) {
+            result.push("CdcSinks")
         }
 
         return result;

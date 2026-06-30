@@ -22,6 +22,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly string _agentId;
     private readonly AiConversationCreationOptions _options;
     private readonly bool? _debug;
+    private bool _cancelPendingActionTools;
 
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
@@ -57,6 +58,13 @@ internal class AiConversation : IAiConversationOperations
         : this(aiOperations, agentId, conversationId, options, changeVector)
     {
         _debug = debug;
+    }
+
+    internal AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, bool? debug, bool cancelPendingActionTools)
+        : this(aiOperations, agentId, conversationId, options, changeVector)
+    {
+        _debug = debug;
+        _cancelPendingActionTools = cancelPendingActionTools;
     }
 
     public void AddAttachment(string name, Stream stream, string contentType)
@@ -306,13 +314,14 @@ internal class AiConversation : IAiConversationOperations
                 Status = AiConversationResult.Done
             };
         }
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, _debug);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, _debug, _cancelPendingActionTools);
 
         try
         {
             var r = await _aiOperations._executor.SendAsync(op, token).ConfigureAwait(false);
             _changeVector = r.ChangeVector;
             _conversationId = r.ConversationId;
+            _cancelPendingActionTools = false;
             _actionRequests = r.ActionRequests ?? [];
 
             return new AiAnswer<TAnswer>

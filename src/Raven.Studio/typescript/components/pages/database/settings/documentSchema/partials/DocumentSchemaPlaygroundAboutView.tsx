@@ -22,12 +22,7 @@ export default function DocumentSchemaPlaygroundAboutView() {
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper icon="about" color="info">
                 <div>
                     <ul>
                         <li>

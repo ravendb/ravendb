@@ -45,13 +45,7 @@ export default function IndexesPageAboutView({ isUnlimited }: IndexesPageAboutVi
 
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <p>
                     Manage all indexes in the database from this view.
                     <br />

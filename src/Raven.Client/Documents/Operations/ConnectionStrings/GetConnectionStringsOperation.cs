@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return result;
 
             void AddConnections<T>(Dictionary<string, T> connectionStrings, string propertyName)
-                where T : IDynamicJson
+                where T : ConnectionString
             {
                 if (connectionStrings == null)
                 {
@@ -120,10 +120,10 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 }
 
                 var jsonConnections = new DynamicJsonValue();
-                
+
                 foreach (var kvp in connectionStrings)
-                    jsonConnections[kvp.Key] = kvp.Value.ToJson();
-                
+                    jsonConnections[kvp.Key] = kvp.Value.ToStudioJson();
+
                 result[propertyName] = jsonConnections;
             }
         }

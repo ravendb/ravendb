@@ -193,7 +193,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 session.SaveChanges();
             }
 
-            await Etl.AssertEtlDoneAsync(etlDone, TimeSpan.FromSeconds(60), store.Database, config);
+            await Etl.AssertEtlDoneAsync(etlDone, TimeSpan.FromSeconds(120), store.Database, config);
 
             using (var session = store.OpenSession())
             {

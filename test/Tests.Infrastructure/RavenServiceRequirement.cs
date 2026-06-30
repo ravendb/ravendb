@@ -74,4 +74,18 @@ public enum RavenServiceRequirement
     /// </summary>
     AzureServiceBus = 1 << 11,
 
+    /// <summary>
+    /// Test requires SQL Server with CDC support (Enterprise, Developer, or Standard edition - not Express).
+    /// </summary>
+    MsSqlCdc = 1 << 12,
+
+    /// <summary>
+    /// Test requires PostgreSQL configured for logical replication (wal_level = logical) - the CDC source prerequisite.
+    /// </summary>
+    NpgSqlCdc = 1 << 13,
+
+    /// <summary>
+    /// Test requires MySQL/MariaDB with the binary log enabled in ROW format - the CDC source prerequisite.
+    /// </summary>
+    MySqlCdc = 1 << 14
 }

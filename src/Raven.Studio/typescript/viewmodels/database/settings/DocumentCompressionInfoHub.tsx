@@ -19,8 +19,6 @@ export function DocumentCompressionInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     Reduce the database storage space by enabling document compression from this view.
