@@ -12,6 +12,7 @@ using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -1702,6 +1703,141 @@ public class RavenDB_21192 : RavenTestBase
 
                Assert.Equal(SnmpType.Gauge32, result.Single().Data.TypeCode);
             }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Sinks)]
+    public async Task CanGetCdcSinkErrorsSnmpMetrics_V2C()
+    {
+        var port = ReservePort().Port;
+        var communityString = "public-test";
+        var customSettings = new Dictionary<string, string>
+        {
+            [RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Enabled)] = "true",
+            [RavenConfiguration.GetKey(x => x.Monitoring.Snmp.SupportedVersions)] = "V2C",
+            [RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Port)] = port.ToString(),
+            [RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Community)] = communityString
+        };
+
+        UseNewLocalServer(customSettings);
+
+        using (var store = GetDocumentStore(new Options { CreateDatabase = true }))
+        {
+            const string cdcSinkName = "CdcSink1";
+
+            // A disabled sink keeps a config in the database record (so it gets an SNMP per-task mapping)
+            // without a live source connection that would fault and generate its own non-deterministic errors.
+            var connectionString = new SqlConnectionString
+            {
+                Name = "cdc-cs",
+                FactoryName = "Microsoft.Data.SqlClient",
+                ConnectionString = "Server=localhost;Database=TestDb;User Id=sa;Password=pass;"
+            };
+            store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(connectionString));
+
+            store.Maintenance.Send(new AddCdcSinkOperation(new CdcSinkConfiguration
+            {
+                Name = cdcSinkName,
+                ConnectionStringName = connectionString.Name,
+                Disabled = true,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        Columns = new List<CdcColumnMapping> { new CdcColumnMapping { Column = "order_id", Name = "OrderId" } },
+                        PrimaryKeyColumns = new List<string> { "order_id" }
+                    }
+                }
+            }));
+
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+            var now = DateTime.UtcNow;
+
+            // 2 process errors + 3 item errors => 5 errors total for the task.
+            for (int i = 0; i < 2; i++)
+            {
+                database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+                {
+                    CreatedAt = now,
+                    TaskName = cdcSinkName,
+                    Step = TaskErrorStep.Extraction,
+                    Error = "process error"
+                });
+            }
+
+            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, cdcSinkName,
+            [
+                new TaskItemError { DocumentId = "orders/1", TaskName = cdcSinkName, CreatedAt = now, Step = TaskErrorStep.Load, Error = "e1" },
+                new TaskItemError { DocumentId = "orders/2", TaskName = cdcSinkName, CreatedAt = now, Step = TaskErrorStep.Load, Error = "e2" },
+                new TaskItemError { DocumentId = "orders/3", TaskName = cdcSinkName, CreatedAt = now, Step = TaskErrorStep.Transformation, Error = "e3" }
+            ]);
+
+            const int expectedErrors = 5;
+
+            var ip = new Uri(Server.WebUrl).Host;
+            var endpoint = new IPEndPoint(IPAddress.Parse(ip), port);
+
+            // SNMP attach + the per-task mapping (Raft command) happen asynchronously after the record change.
+            // Poll until the OIDs are listed, extracting them as strings (the blittable result is tied to the
+            // per-iteration command context and must not be held past it).
+            string serverErrorsOid = null, dbErrorsOid = null;
+            string taskErrorsOid = null, taskHealthOid = null, taskResponsibleNodeOid = null, taskLastBatchOid = null;
+
+            Assert.True(WaitForValue(() =>
+            {
+                using (var commands = store.Commands())
+                {
+                    var cmd = new GetSnmpOidsCommand();
+                    commands.Execute(cmd);
+
+                    if (cmd.Result is not BlittableJsonReaderObject res)
+                        return false;
+
+                    if (res.TryGet("Server", out BlittableJsonReaderArray serverEntries) == false ||
+                        res.TryGet("Databases", out BlittableJsonReaderObject databases) == false ||
+                        databases.TryGet(store.Database, out BlittableJsonReaderObject databaseOids) == false ||
+                        databaseOids.TryGet("@General", out BlittableJsonReaderArray generalEntries) == false ||
+                        databaseOids.TryGet("CdcSinks", out BlittableJsonReaderObject cdcSinks) == false ||
+                        cdcSinks.TryGet(cdcSinkName, out BlittableJsonReaderArray cdcSinkEntries) == false ||
+                        cdcSinkEntries == null)
+                        return false;
+
+                    string Find(BlittableJsonReaderArray entries, string description) =>
+                        JsonConvert.DeserializeObject<List<SnmpEntry>>(entries.ToString()).SingleOrDefault(x => x.Description == description)?.OID;
+
+                    serverErrorsOid = Find(serverEntries, "Number of CDC Sink errors");
+                    dbErrorsOid = Find(generalEntries, "Number of CDC Sink errors");
+                    taskErrorsOid = Find(cdcSinkEntries, "Number of CDC Sink task errors");
+                    taskHealthOid = Find(cdcSinkEntries, "Health status of particular CDC Sink task");
+                    taskResponsibleNodeOid = Find(cdcSinkEntries, "Responsible node tag of particular CDC Sink task");
+                    taskLastBatchOid = Find(cdcSinkEntries, "Last successful batch time");
+
+                    return serverErrorsOid != null && dbErrorsOid != null && taskErrorsOid != null &&
+                           taskHealthOid != null && taskResponsibleNodeOid != null && taskLastBatchOid != null;
+                }
+            }, true, timeout: 20000, interval: 500));
+
+            ISnmpData SnmpGet(string oid)
+            {
+                var result = Messenger.Get(VersionCode.V2, endpoint, new OctetString(communityString),
+                    [new Variable(new ObjectIdentifier(oid))], 10000);
+                return result.Single().Data;
+            }
+
+            Assert.Equal(expectedErrors, ((Integer32)SnmpGet(serverErrorsOid)).ToInt32());
+            Assert.Equal(expectedErrors, ((Integer32)SnmpGet(dbErrorsOid)).ToInt32());
+            Assert.Equal(expectedErrors, ((Integer32)SnmpGet(taskErrorsOid)).ToInt32());
+
+            // The sink hasn't run a batch, so its health is the default "Healthy".
+            Assert.Equal(nameof(EtlProcessHealthStatus.Healthy), SnmpGet(taskHealthOid).ToString());
+
+            // Single node => this node is responsible for the task.
+            Assert.Equal(Server.ServerStore.NodeTag, SnmpGet(taskResponsibleNodeOid).ToString());
+
+            Assert.Equal(SnmpType.TimeTicks, SnmpGet(taskLastBatchOid).TypeCode);
         }
     }
 

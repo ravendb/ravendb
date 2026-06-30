@@ -525,6 +525,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                     case nameof(UpdateSnmpDatabaseEtlsMappingCommand):
                     case nameof(UpdateSnmpDatabaseAiTasksMappingCommand):
+                    case nameof(UpdateSnmpDatabaseCdcSinksMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
                     case nameof(UpdateQueueSinkProcessStateCommand):
                     case nameof(RemoveQueueSinkProcessStateCommand):

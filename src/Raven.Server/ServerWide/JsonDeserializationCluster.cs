@@ -343,6 +343,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseEtlsMappingCommand>(),
             [nameof(UpdateSnmpDatabaseAiTasksMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseAiTasksMappingCommand>(),
             [nameof(ModifyDatabaseSupportedFeaturesCommand)] = GenerateJsonDeserializationRoutine<ModifyDatabaseSupportedFeaturesCommand>(),
+            [nameof(UpdateSnmpDatabaseCdcSinksMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseCdcSinksMappingCommand>(),
         };
     }
 }
