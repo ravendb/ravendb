@@ -1,0 +1,170 @@
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using Raven.Server.Logging;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
+using Sparrow.Server.Utils;
+
+namespace Raven.Server.Commercial.WriteUsageMetering
+{
+    internal sealed class WriteUsageReporter : IDisposable
+    {
+        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<WriteUsageReporter>();
+
+        private readonly ServerStore _serverStore;
+        private readonly ClusterObserver _observer;
+        private readonly long _term;
+        private readonly TimeSpan _interval;
+        private readonly CancellationTokenSource _cts;
+        private readonly PoolOfThreads.LongRunningWork _work;
+
+        // Write-usage is only reported under a Quill license. Toggled by the LicenseChanged event so we
+        // start/stop sending as the license is activated, changed, or removed.
+        private volatile bool _enabled;
+
+        public WriteUsageReporter(ServerStore serverStore, ClusterObserver observer, long term, TimeSpan interval, CancellationToken token)
+        {
+            _serverStore = serverStore;
+            _observer = observer;
+            _term = term;
+            _interval = interval;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+
+            UpdateEnabled();
+            _serverStore.LicenseManager.LicenseChanged += OnLicenseChanged;
+
+            _work = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+            {
+                try
+                {
+                    Run(_cts.Token);
+                }
+                catch
+                {
+                    // nothing we can do here
+                }
+            }, null, ThreadNames.ForWriteUsageReporter($"Write-usage reporter for term {_term}", _term));
+        }
+
+        private void Run(CancellationToken token)
+        {
+            while (_term == _serverStore.Engine.CurrentTerm && token.IsCancellationRequested == false)
+            {
+                // Wait first: gives the observer time to produce at least one snapshot, and spaces out reports.
+                if (token.WaitHandle.WaitOne(_interval))
+                    return; // signaled => cancellation / disposal
+
+                ReportOnce(token);
+            }
+        }
+
+        private void OnLicenseChanged()
+        {
+            UpdateEnabled();
+        }
+
+        private void UpdateEnabled()
+        {
+            var enabled = _serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Quill;
+
+            if (enabled == _enabled)
+                return;
+
+            _enabled = enabled;
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info(enabled
+                    ? "Quill license detected; starting write-usage reporting to api.ravendb.net."
+                    : "License is no longer Quill; stopping write-usage reporting to api.ravendb.net.");
+        }
+
+        private void ReportOnce(CancellationToken token)
+        {
+            try
+            {
+                if (_enabled == false && _serverStore.ForTestingPurposes is not { ForceWriteUsageReportingEnabled: true })
+                    return; // only report under a Quill license
+
+                var snapshot = _observer.LatestWriteUsageSnapshot;
+                if (snapshot == null)
+                    return; // no maintenance tick has run yet; try again next interval
+
+                var license = _serverStore.LoadLicense();
+                if (license == null)
+                    return; // no license to authenticate with; nothing to report
+
+                // Zero-etag entries are legitimate (e.g. brand-new databases) and are reported as-is.
+                var report = new WriteUsageReport(license.ToJson(), DateTime.UtcNow, snapshot.Databases);
+                var body = report.ToJson();
+
+                _serverStore.ForTestingPurposes?.OnWriteUsageReportReady?.Invoke(body);
+                if (_serverStore.ForTestingPurposes is { SkipWriteUsageActualSend: true })
+                    return;
+
+                string json;
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                using (var blittable = context.ReadObject(body, "write-usage-report"))
+                {
+                    json = blittable.ToString();
+                }
+
+                using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
+                {
+                    var response = ApiHttpClient
+                        .PostAsync(WriteUsageMeteringConstants.WriteUsageEndpointPath, content, token: token)
+                        .GetAwaiter().GetResult();
+
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Reported write-usage for {report.Databases.Count} database(s) to api.ravendb.net, response: {(int)response.StatusCode} {response.StatusCode}.");
+                }
+            }
+            catch (Exception e)
+            {
+                // A slow / failed / unreachable api.ravendb.net must never crash the sender or the observer.
+                // log , retry on the next interval.
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to report write-usage to api.ravendb.net. Will retry on the next interval.", e);
+            }
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                _serverStore.LicenseManager.LicenseChanged -= OnLicenseChanged;
+            }
+            catch
+            {
+                // nothing actionable
+            }
+
+            try
+            {
+                _cts.Cancel();
+            }
+            catch
+            {
+                // nothing actionable
+            }
+
+            try
+            {
+                _work?.Join((int)TimeSpan.FromSeconds(30).TotalMilliseconds);
+            }
+            catch
+            {
+                // best effort; nothing actionable on shutdown
+            }
+            finally
+            {
+                _cts.Dispose();
+            }
+        }
+    }
+}

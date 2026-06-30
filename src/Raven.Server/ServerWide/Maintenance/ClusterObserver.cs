@@ -13,6 +13,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
+using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter;
@@ -94,6 +95,11 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
         public bool Suspended = false; // don't really care about concurrency here
+
+        // Leader's latest write-usage snapshot, swapped atomically for the sender thread to read.
+        private volatile WriteUsageSnapshot _latestWriteUsageSnapshot;
+        public WriteUsageSnapshot LatestWriteUsageSnapshot => _latestWriteUsageSnapshot;
+
         internal long _iteration;
         private readonly long _term;
         private long _lastIndexCleanupTimeInTicks;
@@ -170,6 +176,8 @@ namespace Raven.Server.ServerWide.Maintenance
             List<DestinationMigrationConfirmCommand> confirmCommands = null;
             List<string> databases;
 
+            var writeUsageSnapshot = new List<WriteUsageDatabaseSnapshot>();
+
             using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -237,6 +245,25 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             var state = new DatabaseObservationState(topology.Name, rawRecord, topology.Topology, clusterTopology, newStats, prevStats, etag, _iteration);
 
+                            // Collect the current write-usage values for this topology (database or shard):
+                            // one entry per topology, carrying the MEMBER change vectors merged into a single
+                            // cluster-wide change vector.
+                            var memberChangeVectors = new List<string>();
+                            foreach (var member in state.DatabaseTopology.Members)
+                            {
+                                var memberReport = state.GetCurrentDatabaseReport(member);
+                                if (memberReport == null)
+                                    continue;
+
+                                // The DatabaseChangeVector may contain special, non-node entries such as RAFT (cluster
+                                // transactions) and MOVE (resharding). These are not real node tags and must not be counted
+                                // as write-usage nodes, so strip them before merging into the snapshot's change vector.
+                                memberChangeVectors.Add(ChangeVectorUtils.StripSpecialTags(memberReport.DatabaseChangeVector));
+                            }
+
+                            var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
+                            writeUsageSnapshot.Add(new WriteUsageDatabaseSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
+
                             try
                             {
                                 mergedState.AddState(state);
@@ -303,6 +330,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
             }
+
+            _latestWriteUsageSnapshot = new WriteUsageSnapshot(writeUsageSnapshot);
 
             if (cleanupIndexes)
             {
