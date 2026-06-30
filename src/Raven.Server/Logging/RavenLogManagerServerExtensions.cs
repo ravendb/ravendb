@@ -102,14 +102,6 @@ internal static class RavenLogManagerServerExtensions
 
     public static RavenLogger CreateNullLogger(this RavenLogManager logManager) => new(LogManager.CreateNullLogger());
 
-    public static ISetupBuilder RegisterRavenLayoutRenderers(this ISetupBuilder setupBuilder)
-    {
-#if !RVN
-        setupBuilder.SetupExtensions(ext => ext.RegisterLayoutRenderer<RvnLayoutRenderer>("rvn"));
-#endif
-        return setupBuilder;
-    }
-
     public static RavenLogger GetLoggerForCluster<T>(this RavenLogManager logManager, LoggingComponent component = null) => GetLoggerForCluster(logManager, typeof(T), component);
 
     public static RavenLogger GetLoggerForCluster(this RavenLogManager logManager, Type type, LoggingComponent component = null)
