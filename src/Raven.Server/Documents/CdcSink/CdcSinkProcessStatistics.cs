@@ -142,7 +142,7 @@ public class CdcSinkProcessStatistics
         {
             // Start each batch (and each TxMerger re-run of a batch) with an empty buffer so a
             // re-executed command stores only the errors from its final attempt. The per-batch
-            // error/success tally is reset for the same reason — only the final attempt feeds the EWMA.
+            // error/success tally is reset for the same reason - only the final attempt feeds the EWMA.
             _itemErrors.Clear();
             _batchErrors = 0;
             _batchSuccesses = 0;
@@ -182,7 +182,7 @@ public class CdcSinkProcessStatistics
 
     /// <summary>
     /// Forces <see cref="HealthStatus"/> to <see cref="EtlProcessHealthStatus.Failed"/> when the process
-    /// hits a permanent configuration/schema fault and stops retrying — no further batch completes to move
+    /// hits a permanent configuration/schema fault and stops retrying - no further batch completes to move
     /// the EWMA, so the health would otherwise stay stale. Mirrors ETL's script-parse-error health override.
     /// </summary>
     public void SetHealthStatusToFailed()
