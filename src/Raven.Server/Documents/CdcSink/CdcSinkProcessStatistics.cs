@@ -26,6 +26,10 @@ public class CdcSinkProcessStatistics
     private readonly float _healthFailedThreshold;
     private readonly float _healthImpairedThreshold;
 
+    // Latched on a permanent fault so HealthStatus stays Failed even if a later batch completes; cleared
+    // only by recreating the process (and thus these statistics). Mirrors ETL's script-parse-error latch.
+    private bool _healthFailedLatched;
+
     // Per-batch error/success tally feeding the EWMA error ratio on batch completion (see OnBatchCompletion).
     private long _batchErrors;
     private long _batchSuccesses;
@@ -157,13 +161,20 @@ public class CdcSinkProcessStatistics
         {
             AverageErrorsRatio.UpdateOnBatchCompletion(_batchErrors, _batchErrors + _batchSuccesses);
 
-            var errorsRatio = AverageErrorsRatio.GetRate();
-            HealthStatus = errorsRatio switch
+            if (_healthFailedLatched)
             {
-                _ when errorsRatio > _healthFailedThreshold => EtlProcessHealthStatus.Failed,
-                _ when errorsRatio > _healthImpairedThreshold => EtlProcessHealthStatus.Impaired,
-                _ => EtlProcessHealthStatus.Healthy
-            };
+                HealthStatus = EtlProcessHealthStatus.Failed;
+            }
+            else
+            {
+                var errorsRatio = AverageErrorsRatio.GetRate();
+                HealthStatus = errorsRatio switch
+                {
+                    _ when errorsRatio > _healthFailedThreshold => EtlProcessHealthStatus.Failed,
+                    _ when errorsRatio > _healthImpairedThreshold => EtlProcessHealthStatus.Impaired,
+                    _ => EtlProcessHealthStatus.Healthy
+                };
+            }
 
             _batchErrors = 0;
             _batchSuccesses = 0;
@@ -179,6 +190,7 @@ public class CdcSinkProcessStatistics
     {
         lock (_lock)
         {
+            _healthFailedLatched = true;
             HealthStatus = EtlProcessHealthStatus.Failed;
         }
     }
