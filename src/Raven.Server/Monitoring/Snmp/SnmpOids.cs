@@ -721,6 +721,10 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of AI task errors")]
             public const string AiTaskErrors = "5.2.{0}.1.18";
 
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Number of CDC Sink errors")]
+            public const string CdcSinkErrors = "5.2.{0}.1.19";
+
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Documents storage allocated size in MB")]
             public const string DocumentsStorageAllocatedSize = "5.2.{0}.2.1";
