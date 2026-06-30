@@ -30,6 +30,7 @@ using Sparrow.Threading;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.FreeSpace;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
@@ -707,6 +708,8 @@ namespace Voron.Impl.Journal
             }
 
             private LastFlushState _lastFlushed = LastFlushState.Empty;
+            // touched only under _flushingLock
+            private readonly List<(long Start, long Count)> _pendingSparseRegions = new();
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
@@ -835,14 +838,6 @@ namespace Voron.Impl.Journal
                             return; // nothing to do
                     }
 
-                    if(_applyLogsToDataFileStateFromPreviousFailedAttempt.SparseRegions is {Count: > 0} sparseRegionsToFlush)
-                    {
-                        // This needs to happen _before_ we actually write to the disk
-                        // because we _first_ zero a range and then we may write data to that range (filling some of it up).
-                        // That is fine, and means that we don't need to track re-uses. 
-                        MarkSparseRegionsInDataFile(sparseRegionsToFlush);
-                    }
-
                     _forTestingPurposes?.OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile?.Invoke();
 
 
@@ -892,7 +887,10 @@ namespace Voron.Impl.Journal
                         _failedToUpdateJournalState = true;
                         throw;
                     }
-                    
+
+                    if (currentState.SparseRegions is { Count: > 0 } regionsToPunchAfterSync)
+                        _pendingSparseRegions.AddRange(regionsToPunchAfterSync);
+
                     _waj._env.SuggestSyncDataFile();
                 }
                 finally
@@ -1262,6 +1260,9 @@ namespace Voron.Impl.Journal
                     if (parent._waj._env.Disposed)
                         return false;
 
+                    // runs here because the file is now synced (clean) and we hold _flushingLock - the deferred punch's two preconditions (RavenDB-26910)
+                    parent.ApplyPendingSparseRegions();
+
                     Interlocked.Add(ref parent._totalWrittenButUnsyncedBytes, -_currentTotalWrittenBytes);
 
                     var ignoreLastSyncJournalMissing = false;
@@ -1512,6 +1513,49 @@ namespace Voron.Impl.Journal
                 Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
 
                 return dataPagerState;
+            }
+
+            // Caller must hold _flushingLock and have synced first - punching a clean section is much cheaper on Windows (RavenDB-26910).
+            // Space reclamation only (cf. DisableSparseRegions), so failures are swallowed and never fail the sync.
+            private void ApplyPendingSparseRegions()
+            {
+                if (_pendingSparseRegions.Count == 0)
+                    return;
+
+                try
+                {
+                    // re-validate against the live free-space tree: a page reused (allocated) since it was freed is no longer free here, so it's excluded and never zeroed
+                    var sections = new HashSet<long>();
+                    foreach (var (start, count) in _pendingSparseRegions)
+                    {
+                        for (var section = start / FreeSpaceHandling.NumberOfPagesInSection;
+                             section <= (start + count - 1) / FreeSpaceHandling.NumberOfPagesInSection;
+                             section++)
+                            sections.Add(section);
+                    }
+
+                    using (var readTx = _waj._env.ReadTransaction())
+                    {
+                        var stillFree = _waj._env.FreeSpaceHandling.GetSparseRegions(readTx.LowLevelTransaction, sections);
+                        if (stillFree.Count > 0)
+                        {
+                            MarkSparseRegionsInDataFile(stillFree);
+
+                            // punch shrinks the physical (on-disk) size, not the allocated/logical size; refresh the cached value reports read
+                            var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
+                            dataPagerState.TotalPhysicalSpace = _waj._env.DataPager.GetFileSize(dataPagerState).PhysicalSize;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (_waj._logger.IsWarnEnabled)
+                        _waj._logger.Warn("Failed to punch deferred sparse regions after sync; disk space reclamation skipped for this cycle.", e);
+                }
+                finally
+                {
+                    _pendingSparseRegions.Clear();
+                }
             }
 
             private void MarkSparseRegionsInDataFile(List<(long Start, long Count)> sparseRegions)
