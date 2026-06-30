@@ -20,7 +20,7 @@ public sealed class ServerHealthyCdcSinks : ScalarObjectBase<Integer32>
         var result = 0;
 
         foreach (var database in _store.DatabasesLandlord.GetLoadedDatabases())
-            result += database.CdcSinkLoader.Processes.Count(x => x.HealthStatus == EtlProcessHealthStatus.Healthy);
+            result += database.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
 
         return new Integer32(result);
     }

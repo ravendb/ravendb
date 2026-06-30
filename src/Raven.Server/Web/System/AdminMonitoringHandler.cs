@@ -232,5 +232,43 @@ namespace Raven.Server.Web.System
                 context.Write(writer, result.ToJson());
             }
         }
+
+        [RavenAction("/admin/monitoring/v1/sinks", "GET", AuthorizationStatus.Operator)]
+        public async Task MonitoringSinks()
+        {
+            ServerStore.LicenseManager.AssertCanUseMonitoringEndpoints();
+
+            var databases = GetDatabases();
+
+            var result = new SinksMetrics();
+
+            result.PublicServerUrl = Server.Configuration.Core.PublicServerUrl?.UriValue;
+            result.NodeTag = ServerStore.NodeTag;
+
+            var provider = new MetricsProvider(Server);
+
+            foreach (var documentDatabase in databases)
+            {
+                var perDatabaseMetrics = new PerDatabaseSinkMetrics { DatabaseName = documentDatabase.Name };
+
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var sink in documentDatabase.CdcSinkLoader.Processes)
+                    {
+                        var sinkMetrics = provider.CollectSinkMetrics(sink, documentDatabase.TaskErrorsStorage);
+                        perDatabaseMetrics.Sinks.Add(sinkMetrics);
+                    }
+                }
+
+                result.Results.Add(perDatabaseMetrics);
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, result.ToJson());
+            }
+        }
     }
 }

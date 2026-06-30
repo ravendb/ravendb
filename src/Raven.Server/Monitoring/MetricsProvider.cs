@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents;
+using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
@@ -60,6 +61,7 @@ public sealed class MetricsProvider
         result.Databases = GetAllDatabasesMetrics();
         result.Etls = GetServerEtlMetrics();
         result.AiTasks = GetServerAiTasksMetrics();
+        result.Sinks = GetServerSinksMetrics();
 
         return result;
     }
@@ -367,6 +369,34 @@ public sealed class MetricsProvider
         return result;
     }
 
+    private ServerSinksMetrics GetServerSinksMetrics()
+    {
+        var result = new ServerSinksMetrics();
+
+        var sinksCount = 0;
+        var errorsCount = 0L;
+        var healthySinksCount = 0;
+        var impairedSinksCount = 0;
+        var failedSinksCount = 0;
+
+        foreach (var dbResult in _serverStore.DatabasesLandlord.GetLoadedDatabases())
+        {
+            sinksCount += dbResult.CdcSinkLoader.Processes.Length;
+            errorsCount += dbResult.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Sink);
+            healthySinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+            impairedSinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+            failedSinksCount += dbResult.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+        }
+
+        result.Count = sinksCount;
+        result.ErrorsCount = errorsCount;
+        result.HealthySinksCount = healthySinksCount;
+        result.ImpairedSinksCount = impairedSinksCount;
+        result.FailedSinksCount = failedSinksCount;
+
+        return result;
+    }
+
     private AllDatabasesMetrics GetAllDatabasesMetrics()
     {
         var result = new AllDatabasesMetrics();
@@ -402,6 +432,7 @@ public sealed class MetricsProvider
         result.Statistics = GetDatabaseStatistics(database);
         result.Etls = GetDatabaseEtlsMetrics(database);
         result.AiTasks = GetDatabaseAiTasksMetrics(database);
+        result.Sinks = GetDatabaseSinksMetrics(database);
 
         return result;
     }
@@ -555,7 +586,23 @@ public sealed class MetricsProvider
 
         return result;
     }
-    
+
+    private DatabaseSinksMetrics GetDatabaseSinksMetrics(DocumentDatabase database)
+    {
+        var result = new DatabaseSinksMetrics();
+
+        var sinks = database.CdcSinkLoader.Processes;
+
+        result.Count = sinks.Length;
+        result.ErrorsCount = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Sink);
+
+        result.HealthySinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+        result.ImpairedSinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+        result.FailedSinksCount = sinks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+
+        return result;
+    }
+
     private DatabaseStatistics GetDatabaseStatistics(DocumentDatabase database)
     {
         var result = new DatabaseStatistics();
@@ -633,6 +680,21 @@ public sealed class MetricsProvider
 
         result.LastSuccessfulBatchTimeInSec = aiTask.Statistics.LastSuccessfulBatchTime.HasValue
             ? (SystemTime.UtcNow - aiTask.Statistics.LastSuccessfulBatchTime.Value).TotalSeconds
+            : null;
+
+        return result;
+    }
+
+    public SinkMetrics CollectSinkMetrics(CdcSinkProcess sink, TaskErrorsStorage errorsStorage)
+    {
+        var result = new SinkMetrics();
+
+        result.ProcessName = sink.Name;
+        result.HealthStatus = sink.Statistics.HealthStatus;
+        result.ErrorsCount = errorsStorage.ReadErrorsCountOfTask(TaskCategory.Sink, sink.Name);
+
+        result.LastSuccessfulBatchTimeInSec = sink.LastBatchTime.HasValue
+            ? (SystemTime.UtcNow - sink.LastBatchTime.Value).TotalSeconds
             : null;
 
         return result;

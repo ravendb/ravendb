@@ -120,6 +120,12 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseActiveAiTasks(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseAiTaskTotalDocumentsProcessedPerSec(_databaseName, _databaseLandlord, _databaseIndex));
 
+            _objectStore.Add(new DatabaseHealthyCdcSinks(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseImpairedCdcSinks(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseFailedCdcSinks(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseTotalNumberOfCdcSinks(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseActiveCdcSinks(_databaseName, _databaseLandlord, _databaseIndex));
+
             //AddIndexesFromMappingDocument();
         }
 
