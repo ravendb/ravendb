@@ -78,11 +78,9 @@ public class CdcSinkProcessStatistics
     }
 
     /// <summary>
-    /// Records a single document's processing failure (transformation/script or load), buffering it for
-    /// flush to TaskErrorsStorage and feeding the per-batch error tally that drives the health EWMA.
-    /// When this batch's error ratio gets too high it throws to fail the batch and prevent checkpoint/LSN
-    /// advancement past the failed rows. The ratio is per-batch (not lifetime) so a long-healthy process's
-    /// history can't mask a poisoned batch, nor can old errors trip an otherwise-healthy one.
+    /// Records a single document's processing failure (buffered for TaskErrorsStorage, fed into the
+    /// per-batch error tally), throwing when this batch's error ratio gets too high to stop the batch and
+    /// prevent LSN advancement past the failed rows.
     /// </summary>
     public void RecordItemError(TaskErrorStep step, string error, string documentId)
     {
