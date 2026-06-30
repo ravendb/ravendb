@@ -1492,6 +1492,29 @@ return docs[0];`,
                 ],
                 TaskName: "ETL1/Transformation1",
             },
+            {
+                Category: "CdcSink",
+                EtlSubType: null,
+                TaskName: "CdcSink1",
+                ProcessErrors: [
+                    {
+                        TaskName: "CdcSink1",
+                        CreatedAt: "2026-03-09T09:52:12.6923003",
+                        Step: "Configuration",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 0,
+                    },
+                ],
+                ItemErrors: [
+                    {
+                        TaskName: "CdcSink1",
+                        CreatedAt: "2026-03-09T09:52:12.6923003",
+                        Step: "Load",
+                        Error: "dummy error",
+                        DocumentId: "orders/1-A",
+                    },
+                ],
+            },
         ];
     }
 
