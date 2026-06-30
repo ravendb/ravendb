@@ -12,11 +12,10 @@ public class CdcSinkProcessStatistics
     private readonly string _processName;
 
     // Mutated from both the process thread (RecordConsumeError) and the TxMerger thread
-    // (ConsumeSuccess / RecordPartialConsumeError / RecordScriptExecutionError / NewBatch). All
-    // mutations take this lock so the counters' compound threshold checks stay atomic and the
-    // in-memory error buffer isn't corrupted by concurrent Add/Clear. Cross-thread reads of the
-    // int/bool counters for monitoring are intentionally lock-free (atomic reads; a slightly stale
-    // value is acceptable there).
+    // (ConsumeSuccess / RecordItemError / NewBatch / OnBatchCompletion). All mutations take this lock
+    // so the per-batch error/success tally and its threshold check stay atomic and the in-memory error
+    // buffer isn't corrupted by concurrent Add/Clear. Cross-thread reads of the int/bool counters for
+    // monitoring are intentionally lock-free (atomic reads; a slightly stale value is acceptable there).
     private readonly object _lock = new();
 
     // Per-batch item errors (per-document apply failures + JS-script failures). Buffered here while
@@ -55,8 +54,6 @@ public class CdcSinkProcessStatistics
 
     public bool WasLatestConsumeSuccessful { get; set; }
 
-    private int ScriptExecutionErrors { get; set; }
-
     public void ConsumeSuccess(int items)
     {
         lock (_lock)
@@ -77,41 +74,14 @@ public class CdcSinkProcessStatistics
         }
     }
 
-    public void RecordScriptExecutionError(Exception e, string documentId)
-    {
-        lock (_lock)
-        {
-            ScriptExecutionErrors++;
-
-            _itemErrors.Add(new TaskItemError
-            {
-                CreatedAt = SystemTime.UtcNow,
-                TaskName = _processName,
-                DocumentId = documentId,
-                Step = TaskErrorStep.Transformation,
-                Error = e.ToString()
-            });
-
-            if (ScriptExecutionErrors < 100)
-                return;
-
-            if (ScriptExecutionErrors <= ConsumeSuccesses)
-                return;
-
-            var message = $"Script execution error ratio is too high (errors: {ScriptExecutionErrors}, successes: {ConsumeSuccesses}). " +
-                          "Could not tolerate script execution error ratio and stopped current batch.";
-
-            throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {e}");
-        }
-    }
-
     /// <summary>
-    /// Records a partial consume error for a single document group that failed processing.
-    /// Uses the same threshold logic as ETL's RecordPartialLoadError:
-    /// tolerate errors while under 100 cumulative errors OR while errors &lt;= successes.
-    /// When both thresholds are exceeded, throws to prevent LSN advancement.
+    /// Records a single document's processing failure (transformation/script or load), buffering it for
+    /// flush to TaskErrorsStorage and feeding the per-batch error tally that drives the health EWMA.
+    /// When this batch's error ratio gets too high it throws to fail the batch and prevent checkpoint/LSN
+    /// advancement past the failed rows. The ratio is per-batch (not lifetime) so a long-healthy process's
+    /// history can't mask a poisoned batch, nor can old errors trip an otherwise-healthy one.
     /// </summary>
-    public void RecordPartialConsumeError(string error, string documentId)
+    public void RecordItemError(TaskErrorStep step, string error, string documentId)
     {
         lock (_lock)
         {
@@ -125,22 +95,22 @@ public class CdcSinkProcessStatistics
                 CreatedAt = SystemTime.UtcNow,
                 TaskName = _processName,
                 DocumentId = documentId,
-                Step = TaskErrorStep.Load,
+                Step = step,
                 Error = error
             });
 
             LastConsumeErrorTime = SystemTime.UtcNow;
 
-            if (ConsumeErrors < 100)
+            if (_batchErrors < 100)
                 return;
 
-            if (ConsumeErrors <= ConsumeSuccesses)
+            if (_batchErrors <= _batchSuccesses)
                 return;
 
-            var message = $"Consume error ratio is too high (errors: {ConsumeErrors}, successes: {ConsumeSuccesses}). " +
-                          "Could not tolerate consume error ratio and stopped current CDC Sink batch.";
+            var message = $"Error ratio is too high (batch errors: {_batchErrors}, batch successes: {_batchSuccesses}). " +
+                          "Could not tolerate the error ratio and stopped the current CDC Sink batch.";
 
-            throw new InvalidOperationException($"{message}. Current stats: {this}. Document: '{documentId}'. Error: {error}");
+            throw new InvalidOperationException($"{message}. Document: '{documentId}'. Error: {error}");
         }
     }
 

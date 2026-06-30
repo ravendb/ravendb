@@ -11,6 +11,7 @@ using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Stats;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
@@ -165,10 +166,11 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     _statsScope?.RecordScriptProcessingError();
 
-                    // RecordPartialConsumeError tracks cumulative error/success counts and throws
-                    // InvalidOperationException when the error ratio is too high (>=100 errors AND
-                    // errors > successes), preventing LSN advancement for a poisoned stream.
-                    _statistics?.RecordPartialConsumeError(e.ToString(), documentId);
+                    // A patch/script failure is a transformation error; everything else is a load error.
+                    // RecordItemError buffers it once and throws when this batch's error ratio is too high,
+                    // preventing LSN advancement for a poisoned batch.
+                    var step = e is CdcSinkScriptExecutionException ? TaskErrorStep.Transformation : TaskErrorStep.Load;
+                    _statistics?.RecordItemError(step, e.ToString(), documentId);
                 }
             }
 
@@ -176,7 +178,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             {
                 // Advance LSN only when THIS execution made progress: either the entire batch
                 // succeeded, or some items were processed successfully and the error ratio is
-                // still tolerable (if it weren't, RecordPartialConsumeError would have thrown above).
+                // still tolerable (if it weren't, RecordItemError would have thrown above).
                 UpdateState(context);
             }
 
@@ -1479,9 +1481,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     _sb.Append(patches[i].TableName);
                 }
                 _sb.Append("]. Patch count: ").Append(patches.Count);
-                var enriched = new InvalidOperationException(_sb.ToString(), e);
-                _statistics?.RecordScriptExecutionError(enriched, documentId);
-                throw enriched;
+                // Recorded once by the per-document handler in ExecuteCmd (as a Transformation error),
+                // not here, so a failed patch isn't double-counted as both transformation and load.
+                throw new CdcSinkScriptExecutionException(_sb.ToString(), e);
             }
 
 
