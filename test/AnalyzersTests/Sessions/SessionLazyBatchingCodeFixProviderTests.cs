@@ -47,6 +47,133 @@ class Order { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task TwoUnawaitedAsyncLoads_Offer_No_Fix()
+        {
+            // Un-awaited async loads assigned to Task<T> locals. The extraction awaits the lazy .Value
+            // (yielding User) but the original declared type is still Task<User>, so a rewrite would emit
+            // 'Task<User> a = await lazyA.Value;' (CS0029). The analyzer still reports RVN012, but the fix
+            // must decline rather than produce uncompilable code.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IAsyncDocumentSession session, string id1, string id2)
+    {
+        Task<User> a = session.LoadAsync<User>(id1);
+        Task<User> b = session.LoadAsync<User>(id2);
+    }
+}
+
+class User { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes", ex.Message);
+        }
+
+        [Fact]
+        public async Task QueryRewrite_Adds_Missing_RavenClientDocuments_Using()
+        {
+            // The file imports enough to write session.Query<T>().Where(...).ToList() (Session + Linq +
+            // System.Linq) but NOT Raven.Client.Documents, where Lazily()/LazilyAsync() live. After the
+            // rename the fix must add 'using Raven.Client.Documents;' or the result would not compile (CS1061).
+            const string source = @"
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Linq;
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var active = session.Query<User>().Where(u => u.Active).ToList();
+        var inactive = session.Query<User>().Where(u => !u.Active).ToList();
+    }
+}
+
+class User { public string Id { get; set; } public bool Active { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("using Raven.Client.Documents;", fixed_code);
+            Assert.Contains(".Lazily()", fixed_code);
+        }
+
+        [Fact]
+        public async Task QueryRewrite_Does_Not_Duplicate_Existing_Using()
+        {
+            // When Raven.Client.Documents is already imported (via CommonUsings), the query rewrite must
+            // not add a second 'using Raven.Client.Documents;' directive.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var active = session.Query<User>().Where(u => u.Active).ToList();
+        var inactive = session.Query<User>().Where(u => !u.Active).ToList();
+    }
+}
+
+class User { public string Id { get; set; } public bool Active { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            int count = 0;
+            int pos = 0;
+            while (true)
+            {
+                int idx = fixed_code.IndexOf("using Raven.Client.Documents;", pos, System.StringComparison.Ordinal);
+                if (idx < 0)
+                    break;
+                count++;
+                pos = idx + 1;
+            }
+
+            Assert.Equal(1, count);
+        }
+
+        [Fact]
+        public async Task InlineComment_On_FirstLoad_SameLine_As_Brace_Is_Not_Duplicated()
+        {
+            // The first batched load sits on the same line as the opening brace, preceded by an inline
+            // block comment. Its leading trivia has no EndOfLineTrivia, so GetIndentationTrivia's no-EOL
+            // fallback previously returned the whole trivia list (comment included) and copied the comment
+            // onto the .Value extraction, duplicating it. The comment must appear exactly once.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId)
+    { /* load the user */ var user = session.Load<User>(userId);
+        var order = session.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            int commentCount = 0;
+            int searchFrom = 0;
+            while (true)
+            {
+                int idx = fixed_code.IndexOf("/* load the user */", searchFrom, System.StringComparison.Ordinal);
+                if (idx < 0)
+                    break;
+                commentCount++;
+                searchFrom = idx + 1;
+            }
+
+            Assert.Equal(1, commentCount);
+        }
+
+        [Fact]
         public async Task ExplicitlyTypedLoads_Keep_Lazy_As_Var_But_Restore_Declared_Type_On_Extraction()
         {
             // The rewritten lazy local holds a Lazy<T>, so the original explicit type ('User') must
