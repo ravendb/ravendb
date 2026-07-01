@@ -12,11 +12,16 @@ using CoraxAnalyzer = Corax.Analyzers.Analyzer;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Config;
+using Raven.Server.Logging;
 using Corax;
 using Corax.Mappings;
 using Raven.Client.Documents.Indexes.Vector;
 using Constants = Raven.Client.Constants;
+using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 using Voron;
 using VectorOptions = Corax.Mappings.VectorOptions;
@@ -25,7 +30,75 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public static class CoraxIndexingHelpers
 {
-    private static readonly ConcurrentDictionary<Type, bool> NotForQuerying = new ConcurrentDictionary<Type, bool>();
+    private static readonly ConcurrentDictionary<Type, bool> NotForQuerying = new();
+
+    private static readonly RavenLogger Logger =
+        RavenLogManager.Instance.GetLoggerForServer(typeof(CoraxIndexingHelpers));
+
+    private static void ValidateCompoundFieldAnalyzers(Index index, MapIndexDefinition mapIndexDefinition, IndexFieldsMapping mapping)
+    {
+        IndexDefinition definition = mapIndexDefinition.IndexDefinition;
+        if (definition.CompoundFields is not { Count: > 0 })
+            return;
+
+        // Don't fault indexes that predate this validation: an upgraded index keeps its stored version,
+        // so anything below the gate was built (and works) under the old, unvalidated behavior.
+        if (index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxCompoundFieldFirstFieldValidation)
+            return;
+
+        bool ignoreInvalid = index.Configuration.CoraxIgnoreInvalidTokenizedCompoundFields;
+
+        foreach (string[] compoundField in definition.CompoundFields)
+        {
+            if (compoundField is not { Length: >= 1 })
+                continue;
+
+            string firstField = compoundField[0];
+            if (string.IsNullOrEmpty(firstField))
+                continue;
+
+            if (mapping.TryGetByFieldName(firstField, out IndexFieldBinding binding) == false)
+                continue;
+
+            if (binding.FieldNameLong.HasValue || binding.FieldNameDouble.HasValue)
+                continue; // numerics has no analyzers
+
+            CoraxAnalyzer analyzer = binding.Analyzer;
+            if (analyzer == null)
+            {
+                // FieldIndexing.No bindings have no analyzer and cannot participate in compound fields.
+                string noIndexMessage =
+                    $"Compound field 'compound({string.Join(",", compoundField)})' on index '{definition.Name}' " +
+                    $"cannot be built because the first source field '{firstField}' is not indexed (no analyzer was assigned). " +
+                    $"Configure '{firstField}' with FieldIndexing.Default or FieldIndexing.Exact, " +
+                    $"or set '{RavenConfiguration.GetKey(x => x.Indexing.CoraxIgnoreInvalidTokenizedCompoundFields)}' to 'true' to suppress this check.";
+
+                if (ignoreInvalid == false)
+                    throw new IndexInvalidException(noIndexMessage);
+
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn(noIndexMessage);
+                continue;
+            }
+
+            if (analyzer.IsCompoundFieldCompatible)
+                continue;
+
+            string message =
+                $"Compound field 'compound({string.Join(",", compoundField)})' on index '{definition.Name}' " +
+                $"cannot be built because the analyzer assigned to its first source field '{firstField}' " +
+                $"('{analyzer.GetType().FullName}') is a tokenizing or user-defined analyzer that is not compatible with compound fields. " +
+                $"Compound fields require a KeywordTokenizer-based analyzer (FieldIndexing.Default or FieldIndexing.Exact). " +
+                $"Either change the indexing option for '{firstField}', remove the compound field, " +
+                $"or set '{RavenConfiguration.GetKey(x => x.Indexing.CoraxIgnoreInvalidTokenizedCompoundFields)}' to 'true' to suppress this check.";
+
+            if (ignoreInvalid == false)
+                throw new IndexInvalidException(message);
+
+            if (Logger.IsWarnEnabled)
+                Logger.Warn(message);
+        }
+    }
 
     private static CoraxAnalyzer GetCoraxAnalyzer(string fieldName, string analyzer, Dictionary<Type, CoraxAnalyzer> analyzers, bool forQuerying, string databaseName)
     {
@@ -187,9 +260,16 @@ public static class CoraxIndexingHelpers
             //See more at: https://github.com/ravendb/ravendb/pull/16157#discussion_r1158259732
             mappingBuilder.AddBindingToEnd(storedValueFieldName, fieldIndexingMode: FieldIndexingMode.No, shouldStore: true);
         }
-        
-        
-        return mappingBuilder.Build();
+
+
+        IndexFieldsMapping mapping = mappingBuilder.Build();
+
+        if (forQuerying == false && indexDefinition is MapIndexDefinition mapIndexDefinition)
+        {
+            ValidateCompoundFieldAnalyzers(index, mapIndexDefinition, mapping);
+        }
+
+        return mapping;
 
         CoraxAnalyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType, bool isForQuerying, Func<ByteStringContext, string, Type, bool, CoraxAnalyzer> createAnalyzer)
         {

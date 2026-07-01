@@ -5,3 +5,4 @@
 [assembly: InternalsVisibleTo("SlowTests")]
 [assembly: InternalsVisibleTo("Voron.Benchmark")]
 [assembly: InternalsVisibleTo("Raven.Server")]
+[assembly: InternalsVisibleTo("Corax")]

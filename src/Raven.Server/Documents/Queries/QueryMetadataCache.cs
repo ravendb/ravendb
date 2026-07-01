@@ -30,7 +30,10 @@ namespace Raven.Server.Documents.Queries
                 var nextProbe = Hashing.Mix(metadataHash) % CacheSize;
                 metadata = _cache[nextProbe];
                 if (metadata == null || metadata.CacheKey != metadataHash)
+                {
+                    metadata = null; // Try-contract: a false return must not leak a non-matching slot through `out metadata`.
                     return false;
+                }
             }
 
             // we don't compare the query parameters because they don't matter
@@ -42,6 +45,10 @@ namespace Raven.Server.Documents.Queries
             if (shouldUseCachedItem)
             {
                 metadata.LastQueriedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                metadata = null; // Try-contract: a false return must not leak a non-matching slot through `out metadata`.
             }
             return shouldUseCachedItem;
         }

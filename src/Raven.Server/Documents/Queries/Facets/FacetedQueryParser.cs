@@ -445,21 +445,22 @@ namespace Raven.Server.Documents.Queries.Facets
             public IAggregationProvider GetAggregation(IndexSearcher searcher, in FieldMetadata metadata, bool forward = true)
             {
                 var type = IsNumerical ? RangeType.Double : RangeType.None;
-                var lowValueRange = RangeTypeToCoraxRange(_leftSide);
-                var highValueRange = RangeTypeToCoraxRange(_rightSide);
-                
+
                 //Between
                 if (LowValue != null && HighValue != null)
                 {
+                    var lowValueRange = RangeTypeToCoraxRange(_leftSide);
+                    var highValueRange = RangeTypeToCoraxRange(_rightSide);
                     return type switch
                     {
                         RangeType.Double or RangeType.Long => searcher.BetweenAggregation(metadata, LowValueAsDouble, HighValueAsDouble, lowValueRange, highValueRange, forward),
                         _ => searcher.BetweenAggregation(metadata, LowValue, HighValue, lowValueRange, highValueRange, forward)
                     };
                 }
-                
+
                 if (LowValue != null)
                 {
+                    var lowValueRange = RangeTypeToCoraxRange(_leftSide);
                     return type switch
                     {
                         RangeType.Double or RangeType.Long => searcher.GreaterAggregationBuilder(metadata, LowValueAsDouble, lowValueRange, forward),
@@ -467,21 +468,24 @@ namespace Raven.Server.Documents.Queries.Facets
                     };
                 }
 
-                return type switch
                 {
-                    RangeType.Double or RangeType.Long => searcher.LowAggregationBuilder(metadata, HighValueAsDouble, highValueRange, forward),
-                    _ => searcher.LowAggregationBuilder(metadata, HighValue, highValueRange, forward)
-                };
+                    var highValueRange = RangeTypeToCoraxRange(_rightSide);
+                    return type switch
+                    {
+                        RangeType.Double or RangeType.Long => searcher.LowAggregationBuilder(metadata, HighValueAsDouble, highValueRange, forward),
+                        _ => searcher.LowAggregationBuilder(metadata, HighValue, highValueRange, forward)
+                    };
+                }
             }
 
-            public MultiTermMatch GetQuery(IndexSearcher searcher, in FieldMetadata metadata, bool forward = true)
+            public IQueryMatch GetQuery(IndexSearcher searcher, in FieldMetadata metadata, bool forward = true)
             {
                 var type = IsNumerical ? RangeType.Double : RangeType.None;
-                var lowValueRange = RangeTypeToCoraxRange(_leftSide);
-                var highValueRange = RangeTypeToCoraxRange(_rightSide);
 
                 if (LowValue != null && HighValue != null)
                 {
+                    var lowValueRange = RangeTypeToCoraxRange(_leftSide);
+                    var highValueRange = RangeTypeToCoraxRange(_rightSide);
                     return type switch
                     {
                         RangeType.Double or RangeType.Long => searcher.BetweenQuery(metadata, LowValueAsDouble, HighValueAsDouble, lowValueRange, highValueRange, forward),
@@ -491,30 +495,32 @@ namespace Raven.Server.Documents.Queries.Facets
 
                 if (LowValue != null)
                 {
+                    var lowValueRange = RangeTypeToCoraxRange(_leftSide);
                     if (type is RangeType.Double or RangeType.Long)
-                        return searcher.BetweenQuery(metadata, LowValueAsDouble, double.MaxValue, lowValueRange, UnaryMatchOperation.LessThanOrEqual, forward);
+                        return searcher.BetweenQuery(metadata, LowValueAsDouble, double.MaxValue, lowValueRange, ComparisonOperator.LessThanOrEqual, forward);
 
-                    return lowValueRange == UnaryMatchOperation.GreaterThan
+                    return lowValueRange == ComparisonOperator.GreaterThan
                         ? searcher.GreaterThanQuery(metadata, LowValue, forward)
-                        : searcher.GreatThanOrEqualsQuery(metadata, LowValue, forward);
+                        : searcher.GreaterThanOrEqualsQuery(metadata, LowValue, forward);
                 }
 
-                if (type is RangeType.Double or RangeType.Long)
-                    return searcher.BetweenQuery(metadata, double.MinValue, HighValueAsDouble, UnaryMatchOperation.GreaterThanOrEqual, highValueRange, forward);
+                {
+                    var highValueRange = RangeTypeToCoraxRange(_rightSide);
+                    if (type is RangeType.Double or RangeType.Long)
+                        return searcher.BetweenQuery(metadata, double.MinValue, HighValueAsDouble, ComparisonOperator.GreaterThanOrEqual, highValueRange, forward);
 
-                return highValueRange == UnaryMatchOperation.LessThan
-                    ? searcher.LessThanQuery(metadata, HighValue, forward)
-                    : searcher.LessThanOrEqualsQuery(metadata, HighValue, forward);
+                    return highValueRange == ComparisonOperator.LessThan
+                        ? searcher.LessThanQuery(metadata, HighValue, forward)
+                        : searcher.LessThanOrEqualsQuery(metadata, HighValue, forward);
+                }
             }
 
-            private UnaryMatchOperation RangeTypeToCoraxRange(Operation o) => o switch
+            private ComparisonOperator RangeTypeToCoraxRange(Operation o) => o switch
             {
-                Operation.LowerThan => UnaryMatchOperation.LessThan,
-                Operation.GreaterThan => UnaryMatchOperation.GreaterThan,
-                Operation.Equal => UnaryMatchOperation.Equals,
-                Operation.LowerOrEqualThan => UnaryMatchOperation.LessThanOrEqual,
-                Operation.GreaterOrEqualThan => UnaryMatchOperation.GreaterThanOrEqual,
-                Operation.None => UnaryMatchOperation.None,
+                Operation.LowerThan => ComparisonOperator.LessThan,
+                Operation.GreaterThan => ComparisonOperator.GreaterThan,
+                Operation.LowerOrEqualThan => ComparisonOperator.LessThanOrEqual,
+                Operation.GreaterOrEqualThan => ComparisonOperator.GreaterThanOrEqual,
                 _ => throw new ArgumentOutOfRangeException(nameof(o), o, null)
             };
             

@@ -150,6 +150,13 @@ public partial class Hnsw
             private readonly List<int> _indexes = [];
             private readonly List<int> _requiresEdgeFiltering = [];
             private readonly List<UnmanagedSpan> _vectors = [];
+
+            // Per-task, point-in-time copy of the current (node, level) edge indexes: filled on the LLT
+            // thread in PrepareEdgesOnLLT, read by the worker in PopulateWorkListsOnWorker. Decouples the
+            // worker from the shared, growable EdgesIndexesPerLevel native buffer, whose backing store the
+            // LLT thread can free/realloc in a later dispatch round while the worker still runs (RavenDB-26809).
+            // Only one WorkItem per task is in flight, so this buffer is safe to clear+refill each dispatch.
+            private readonly List<int> _edgeIndexSnapshot = [];
             private readonly PriorityQueue<int, float> _candidatesQ = new();
             private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
             private ulong[] _visitedBitmap = [];
@@ -648,6 +655,12 @@ public partial class Hnsw
                     }
                 }
 
+                // Snapshot the now-in-sync edge indexes into the per-task buffer on the LLT thread (see
+                // _edgeIndexSnapshot): a consistent point-in-time copy the worker reads without racing
+                // a later grow/realloc of EdgesIndexesPerLevel (RavenDB-26809).
+                _edgeIndexSnapshot.Clear();
+                _edgeIndexSnapshot.AddRange(edgesIndexes.ToSpan());
+
                 return true; // always dispatch; worker decides via _indexes.Count after fill
             }
 
@@ -676,8 +689,10 @@ public partial class Hnsw
                     _vectors.Add(n.GetVectorUnmanagedSpan(_searchState));
                 }
 
-                ref var edgesIndexes = ref n.EdgesIndexesPerLevel[level];
-                foreach (var idx in edgesIndexes)
+                parent._forTestingPurposes?.OnWorkerCapturedEdgeListRef(_searchState, currentNodeIndex, level);
+                // Iterate the per-task snapshot, not the shared EdgesIndexesPerLevel buffer (see
+                // _edgeIndexSnapshot): avoids the RavenDB-26809 use-after-free.
+                foreach (var idx in _edgeIndexSnapshot)
                 {
                     if (MarkVisited(idx) is false)
                         continue;
@@ -710,6 +725,7 @@ public partial class Hnsw
             private readonly CancellationTokenSource _mainCts;
             private readonly List<Exception> _errors = [];
             private readonly LinkedList<int> _inFlightIndexes = [];
+            private readonly Registration.TestingStuff _forTestingPurposes;
 
             // Latches to true once an iteration completes with nothing left to preload, meaning
             // every node touched so far is resident. From that point we skip the RegisterForPreloading
@@ -738,13 +754,9 @@ public partial class Hnsw
                 _activeTasksCount = activeTasksCount;
                 _searchState = parent._searchState;
 
-                // Pre-size SearchState._nodes so that AllocateNodeIndex calls during the
-                // build never reallocate the underlying ByteString. Workers in
-                // PopulateWorkListsOnWorker hold ref Node values into that storage across
-                // LLT-side dispatch; a Grow → Release between dispatch and worker access
-                // would invalidate those refs. Headroom of 16 K covers edge nodes that get
-                // lazily loaded on top of CreatedNodes.
-                _searchState.EnsureNodesCapacity(_searchState.CreatedNodes + 16 * 1024);
+                _forTestingPurposes = parent._forTestingPurposes;
+                if (_forTestingPurposes is { SimulateConcurrentRealloc: true })
+                    _forTestingPurposes.WakeLltLoop = () => _ready.Set();
 
                 for (int i = 0; i < activeTasksCount; i++)
                 {
@@ -760,7 +772,9 @@ public partial class Hnsw
                 {
                     _ready.Wait();
                     _ready.Reset();
-                    
+
+                    _forTestingPurposes?.OnLltRunRound(_searchState);
+
                     while(_placementTasks.TryDequeue(out var it))
                     {
                         if (it.MoveNext())

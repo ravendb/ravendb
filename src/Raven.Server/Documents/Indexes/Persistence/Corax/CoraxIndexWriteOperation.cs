@@ -89,23 +89,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             using (var commitStats = stats.For(IndexingOperation.Corax.Commit))
             {
-                if (_persistence != null)
-                    _persistence.ActiveWriter = _indexWriter;
-                try
-                {
-                    _indexWriter.Commit(new CoraxIndexingStats(commitStats), token);
+                _indexWriter.Commit(new CoraxIndexingStats(commitStats), token);
 
-                    // RecreateSearcher fires later from the outer storage tx's commit hook,
-                    // by which time the writer reference is gone. Snapshot the dirty sets now
-                    // so the post-commit cache update has the data it needs.
-                    if (_persistence != null)
-                        _persistence.PendingDirtyVectorSets = _indexWriter.DirtyVectorSets;
-                }
-                finally
-                {
-                    if (_persistence != null)
-                        _persistence.ActiveWriter = null;
-                }
+                // RecreateSearcher fires later from the outer storage tx's commit hook,
+                // by which time the writer reference is gone. Snapshot the dirty sets now
+                // so the post-commit cache update has the data it needs.
+                _persistence?.PendingDirtyVectorSets = _indexWriter.DirtyVectorSets;
             }
         }
 

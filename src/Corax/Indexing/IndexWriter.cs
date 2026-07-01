@@ -604,101 +604,108 @@ namespace Corax.Indexing
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage,
             HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
-            using var _ = llt.AcquireCompactKey(out var key);
-            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages, key);
-
-            reader.Reset();
-            while (reader.MoveNextStoredField())
+            var entryReaderKey = llt.AcquireCompactKey();
+            try
             {
-                // Null/empty is not stored in a container, just exists as a marker.
-                if (reader.TermId == Constants.IndexSearcher.InvalidId)
-                    continue;
+                var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages, entryReaderKey);
 
-                if (reader.IsVectorHash)
+                reader.Reset();
+                while (reader.MoveNextStoredField())
                 {
-                    bool exists = fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field);
-                    PortableExceptions.ThrowIfNot<InvalidOperationException>(exists, "Tried to remove vector but couldn't find the associated indexed field.");
-                    var vectorIndexer = field!.GetVectorIndexer(_transaction.LowLevelTransaction);
-                    Debug.Assert(vectorIndexer != null && reader.StoredField is { Length: 32 });
-                    vectorIndexer.Remove((long)entryToDelete, reader.StoredField.Value.ToSpan());
+                    // Null/empty is not stored in a container, just exists as a marker.
+                    if (reader.TermId == Constants.IndexSearcher.InvalidId)
+                        continue;
+
+                    if (reader.IsVectorHash)
+                    {
+                        bool exists = fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field);
+                        PortableExceptions.ThrowIfNot<InvalidOperationException>(exists, "Tried to remove vector but couldn't find the associated indexed field.");
+                        var vectorIndexer = field!.GetVectorIndexer(_transaction.LowLevelTransaction);
+                        Debug.Assert(vectorIndexer != null && reader.StoredField is { Length: 32 });
+                        vectorIndexer.Remove((long)entryToDelete, reader.StoredField.Value.ToSpan());
+                    }
+
+                    Container.Delete(llt, _storedFieldsContainerId, new ContainerEntryId(reader.TermId));
                 }
 
-                Container.Delete(llt, _storedFieldsContainerId, new ContainerEntryId(reader.TermId));
+                reader.Reset();
+                while (reader.MoveNext())
+                {
+                    if (fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field) == false)
+                    {
+                        ThrowUnableToFindMatchingField(reader);
+                    }
+
+                    if (reader.IsNull)
+                    {
+                        RemoveMarkerTerm(field, reader, Constants.NullValueSlice, entryToDelete, termsPerEntryIndex);
+                        continue;
+                    }
+
+                    if (reader.IsNonExisting)
+                    {
+                        RemoveMarkerTerm(field, reader, Constants.NonExistingValueSlice, entryToDelete, termsPerEntryIndex);
+                        continue;
+                    }
+
+                    if (reader.IsVectorHash)
+                        PortableExceptions.Throw<InvalidOperationException>($"Field with vector object should not have any textual/numerical/etc values!");
+
+                    var decodedKey = reader.Current.Decoded();
+                    var scope = Slice.From(_entriesAllocator, decodedKey, out Slice termSlice);
+                    if (field.HasSuggestions)
+                        RemoveSuggestions(field, decodedKey);
+
+                    // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                    ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
+                    if (exists == false || termLocation == Constants.IndexWriter.InvalidStorageIndex)
+                    {
+                        termLocation = Constants.IndexWriter.InvalidStorageIndex;
+                        var newIndex = field.Storage.Count;
+                        field.Storage.AddByRef(new EntriesModifications(decodedKey.Length));
+                        termLocation = newIndex;
+
+                        scope = default; // We don't want to reclaim the term name
+                    }
+
+                    ref var term = ref field.Storage.GetAsRef(termLocation);
+                    term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
+                    scope.Dispose();
+
+                    if (reader.HasNumeric == false)
+                        continue;
+
+                    // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                    ref var longTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
+                    if (exists == false || longTermLocation == Constants.IndexWriter.InvalidStorageIndex)
+                    {
+                        longTermLocation = Constants.IndexWriter.InvalidStorageIndex;
+                        var newIndex = field.Storage.Count;
+                        field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
+                        longTermLocation = newIndex;
+                    }
+
+                    term = ref field.Storage.GetAsRef(longTermLocation);
+                    term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+
+                    // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                    ref var doubleTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
+                    if (exists == false || doubleTermLocation == Constants.IndexWriter.InvalidStorageIndex)
+                    {
+                        doubleTermLocation = Constants.IndexWriter.InvalidStorageIndex;
+                        var newIndex = field.Storage.Count;
+                        field.Storage.AddByRef(new EntriesModifications(sizeof(double)));
+                        doubleTermLocation = newIndex;
+                    }
+
+                    term = ref field.Storage.GetAsRef(doubleTermLocation);
+                    term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                }
             }
-
-            reader.Reset();
-            while (reader.MoveNext())
+            finally
             {
-                if (fieldsByRootPage.TryGetValue(reader.FieldRootPage, out var field) == false)
-                {
-                    PortableExceptions.Throw<InvalidOperationException>(
-                        $"Unable to find matching field for {reader.FieldRootPage} with root page:  {reader.FieldRootPage}. Term: '{reader.Current}'");
-                }
-
-                if (reader.IsNull)
-                {
-                    RemoveMarkerTerm(field, reader, Constants.NullValueSlice, entryToDelete, termsPerEntryIndex);
-                    continue;
-                }
-
-                if (reader.IsNonExisting)
-                {
-                    RemoveMarkerTerm(field, reader, Constants.NonExistingValueSlice, entryToDelete, termsPerEntryIndex);
-                    continue;
-                }
-
-                if (reader.IsVectorHash)
-                    PortableExceptions.Throw<InvalidOperationException>($"Field with vector object should not have any textual/numerical/etc values!");
-
-                var decodedKey = reader.Current.Decoded();
-                var scope = Slice.From(_entriesAllocator, decodedKey, out Slice termSlice);
-                if (field.HasSuggestions)
-                    RemoveSuggestions(field, decodedKey);
-
-                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
-                ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
-                if (exists == false || termLocation == Constants.IndexWriter.InvalidStorageIndex)
-                {
-                    termLocation = Constants.IndexWriter.InvalidStorageIndex;
-                    var newIndex = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(decodedKey.Length));
-                    termLocation = newIndex;
-
-                    scope = default; // We don't want to reclaim the term name
-                }
-
-                ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
-                scope.Dispose();
-
-                if (reader.HasNumeric == false)
-                    continue;
-
-                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
-                ref var longTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
-                if (exists == false || longTermLocation == Constants.IndexWriter.InvalidStorageIndex)
-                {
-                    longTermLocation = Constants.IndexWriter.InvalidStorageIndex;
-                    var newIndex = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
-                    longTermLocation = newIndex;
-                }
-
-                term = ref field.Storage.GetAsRef(longTermLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
-
-                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
-                ref var doubleTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
-                if (exists == false || doubleTermLocation == Constants.IndexWriter.InvalidStorageIndex)
-                {
-                    doubleTermLocation = Constants.IndexWriter.InvalidStorageIndex;
-                    var newIndex = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(sizeof(double)));
-                    doubleTermLocation = newIndex;
-                }
-
-                term = ref field.Storage.GetAsRef(doubleTermLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                // Always return the key to the transaction pool, even if a deletion loop throws.
+                llt.ReleaseCompactKey(ref entryReaderKey);
             }
         }
 
@@ -740,7 +747,14 @@ namespace Corax.Indexing
 
         private void ReadPersistedVectorRootPages(out long[] persistedVectorRootPages)
         {
-            persistedVectorRootPages = _indexMetadata?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
+            if (_indexMetadata != null && _indexMetadata.TryRead(Constants.IndexWriter.VectorFieldsRootPagesSlice, out var reader))
+            {
+                persistedVectorRootPages = reader.ToUnmanagedSpan<long>().ToSpan().ToArray();
+            }
+            else
+            {
+                persistedVectorRootPages = [];
+            }
         }
 
         private void PersistVectorRootPages()

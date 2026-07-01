@@ -506,7 +506,7 @@ public sealed unsafe class HnswIndexCache : IDisposable
             _locations.GetFor(keys, keys, -1);
 
             var spans = new UnmanagedSpan[keys.Length];
-            Container.GetAll(_llt, keys, spans.AsSpan(), -1, _llt.PageLocator);
+            Container.GetAllSortedByPage(_llt, keys, spans.AsSpan(), _llt.PageLocator);
             for (int i = 0; i < keys.Length; i++)
             {
                 // Reachable from the post-commit hook: a throw here would block every later

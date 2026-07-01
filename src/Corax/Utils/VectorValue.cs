@@ -10,7 +10,12 @@ public struct VectorValue : IDisposable
     private readonly Memory<byte> _memory;
     private int _length;
     public int Length => _length;
-    
+
+    // Bit-packed Binary embeddings lose the exact dimension count (ceil(dims/8) loses accuracy when not exactly 8 bits
+    // 0 means uknown
+    private int _sourceDimensions;
+    public int SourceDimensions => _sourceDimensions;
+
     public readonly bool IsNull;
     public static readonly VectorValue Null = new(true);
 
@@ -22,10 +27,6 @@ public struct VectorValue : IDisposable
     public Memory<byte> GetEmbeddingMemory()
     {
         return _memory.Slice(0, _length);
-    }
-
-    public VectorValue()
-    {
     }
     
     private VectorValue(bool isNull)
@@ -41,6 +42,8 @@ public struct VectorValue : IDisposable
     }
 
     public void OverrideLength(int len) => _length = len;
+
+    public void SetSourceDimensions(int dimensions) => _sourceDimensions = dimensions;
 
     public void Dispose()
     {

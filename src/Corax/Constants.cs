@@ -171,7 +171,7 @@ namespace Corax
         }
         
         /// <summary>
-        /// Constants used for QueryPlan.
+        /// Constants used for QueryExecution.
         /// </summary>
         internal static class QueryInspectionNode
         {
@@ -211,14 +211,15 @@ namespace Corax
             internal const string IteratorDirection = nameof(IteratorDirection);
             
             /// <summary>
-            /// Confidence of count. Look into IQueryMatch.cs for details.
-            /// </summary>
-            internal const string CountConfidence = nameof(CountConfidence);
-            
-            /// <summary>
             /// Count of documents from primitive.
             /// </summary>
             internal const string Count = nameof(Count);
+
+            /// <summary>
+            /// Final number of results a post-filter match (spatial/vector) actually produced,
+            /// surfaced so the query-plan graph's Result node can show output=N.
+            /// </summary>
+            internal const string MatchedResults = nameof(MatchedResults);
             
             /// <summary>
             /// Boost factor for boost(InnerQuery, BoostFactor)
@@ -226,7 +227,7 @@ namespace Corax
             internal const string BoostFactor = nameof(BoostFactor);
             
             /// <summary>
-            /// Used for MultiUnaryMatch. This primitive can have multiple comparers inside, so we will output the settings as a string.
+            /// Used for entry scan predicates. Multiple comparers are serialized as a string for inspection output.
             /// </summary>
             internal const string Comparer = nameof(Comparer);
             

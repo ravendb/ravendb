@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax;
 using Corax.Mappings;
-using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Raven.Client.Documents.Indexes;
@@ -50,20 +49,8 @@ public static class QueryBuilderHelper
 
             if (parameterValue is BlittableJsonReaderArray array)
             {
-                ValueTokenType? expectedValueType = null;
-                var unwrappedArray = UnwrapArray(array, metadata.QueryText, parameters);
-                foreach (var item in unwrappedArray)
-                {
-                    if (expectedValueType == null)
-                        expectedValueType = item.Type;
-                    else
-                    {
-                        if (AreValueTokenTypesValid(expectedValueType.Value, item.Type) == false)
-                            ThrowInvalidParameterType(expectedValueType.Value, item, metadata.QueryText, parameters);
-                    }
-
+                foreach (var item in UnwrapArray(array, metadata.QueryText, parameters))
                     yield return item;
-                }
 
                 yield break;
             }
@@ -366,17 +353,6 @@ public static class QueryBuilderHelper
         throw new InvalidOperationException($"Value should be a '{expectedType}' but was '{fieldType}'.");
     }
 
-    internal static UnaryMatchOperation TranslateUnaryMatchOperation(OperatorType current) => current switch
-    {
-        OperatorType.Equal => UnaryMatchOperation.Equals,
-        OperatorType.NotEqual => UnaryMatchOperation.NotEquals,
-        OperatorType.LessThan => UnaryMatchOperation.LessThan,
-        OperatorType.GreaterThan => UnaryMatchOperation.GreaterThan,
-        OperatorType.LessThanEqual => UnaryMatchOperation.LessThanOrEqual,
-        OperatorType.GreaterThanEqual => UnaryMatchOperation.GreaterThanOrEqual,
-        _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
-    };
-
     internal static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
         Query query,
         InExpression expression,
@@ -499,26 +475,24 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
     }
 
-    internal static FieldMetadata GetFieldIdForOrderBy(ByteStringContext allocator, string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+    internal static FieldMetadata GetFieldIdForOrderBy(ByteStringContext allocator, string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null,
         bool isForQuery = true)
     {
         if (fieldName is "score()")
             return FieldMetadata.Build(allocator, fieldName, -1, FieldIndexingMode.Normal, null);
 
-
-
-        return GetFieldMetadata(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery: isForQuery, isSorting: true);
+        return GetFieldMetadata(allocator, fieldName, index, indexMapping, hasDynamics, dynamicFields, isForQuery: isForQuery, isSorting: true);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static FieldMetadata GetFieldMetadata(in CoraxQueryBuilder.Parameters parameters, string fieldName, bool isForQuery = true,
-        bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false)
+    internal static FieldMetadata GetFieldMetadata(in QueryBuilderParameters parameters, string fieldName, bool isForQuery = true,
+        bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false, bool forceDefaultSearchAnalyzer = false)
     {
-        return GetFieldMetadata(parameters.Allocator, fieldName, parameters.Index, parameters.IndexFieldsMapping, parameters.FieldsToFetch, parameters.HasDynamics, parameters.DynamicFields, isForQuery, exact, isSorting, hasBoost, handleSearch);
+        return GetFieldMetadata(parameters.Allocator, fieldName, parameters.Index, parameters.IndexFieldsMapping, parameters.HasDynamics, parameters.DynamicFields, isForQuery, exact, isSorting, hasBoost, handleSearch, forceDefaultSearchAnalyzer);
     }
-    
+
     internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping,
-        FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
+        bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
         bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false, bool forceDefaultSearchAnalyzer = false)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -570,7 +544,7 @@ public static class QueryBuilderHelper
         }
 
         return metadata;
-        void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index.Name}'.");
+        void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index?.Name ?? "unknown"}'.");
     }
 
     internal static bool IsExact(Index index, bool exact, QueryFieldName fieldName)
@@ -678,7 +652,7 @@ public static class QueryBuilderHelper
         DescendingSpatial
     }
 
-    internal static IShape HandleWkt(CoraxQueryBuilder.Parameters builderParameters, string fieldName, MethodExpression expression,
+    internal static IShape HandleWkt(QueryBuilderParameters builderParameters, string fieldName, MethodExpression expression,
         SpatialField spatialField, out SpatialUnits units)
     {
         var wktValue = QueryBuilderHelper.GetValue(builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters, (ValueExpression)expression.Arguments[0]);
@@ -1130,5 +1104,90 @@ public static class QueryBuilderHelper
             ValueTokenType.Null => null,
             _ => GetValueAsString(value),
         };
+    }
+
+    /// <summary>Split a search value on whitespace, respecting double-quoted phrases.
+    /// Escapes (<c>\"</c> and <c>\\</c>) are honored — a quote is treated as a literal
+    /// when preceded by an odd number of backslashes, and the backslashes themselves
+    /// are stripped from the yielded values.</summary>
+    /// <example>
+    /// <c>nonexists "second third" nonexsts</c> -> <c>["nonexists", "second third", "nonexsts"]</c>
+    /// </example>
+    public static IEnumerable<string> SplitSearchValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            yield break;
+
+        List<int> escapePositions = null;
+        var quoted = false;
+        var lastWordStart = 0;
+
+        for (var i = 0; i < value.Length; i++)
+        {
+            switch (value[i])
+            {
+                case '\\' when IsEscaped(value, i):
+                    AddEscapePosition(i);
+                    break;
+                case '"':
+                    if (IsEscaped(value, i))
+                    {
+                        AddEscapePosition(i);
+                        continue;
+                    }
+
+                    if (lastWordStart != i)
+                        yield return YieldValue(value, lastWordStart, i - lastWordStart, escapePositions);
+
+                    quoted = !quoted;
+                    lastWordStart = i + 1;
+                    break;
+                case '\t':
+                case ' ':
+                    if (quoted)
+                        continue;
+
+                    if (lastWordStart != i)
+                        yield return YieldValue(value, lastWordStart, i - lastWordStart, escapePositions);
+
+                    lastWordStart = i + 1;
+                    break;
+            }
+        }
+
+        if (value.Length - lastWordStart > 0)
+            yield return YieldValue(value, lastWordStart, value.Length - lastWordStart, escapePositions);
+
+        void AddEscapePosition(int i)
+        {
+            escapePositions ??= new List<int>(16);
+            escapePositions.Add(i - 1);
+        }
+
+        static string YieldValue(string input, int startIndex, int length, List<int> escapePositions)
+        {
+            if (escapePositions == null || escapePositions.Count == 0)
+                return input.Substring(startIndex, length);
+
+            var sb = new System.Text.StringBuilder(input, startIndex, length, length);
+            for (int i = escapePositions.Count - 1; i >= 0; i--)
+                sb.Remove(escapePositions[i] - startIndex, 1);
+
+            escapePositions.Clear();
+            return sb.ToString();
+        }
+
+        static bool IsEscaped(string input, int index)
+        {
+            var count = 0;
+            for (int i = index - 1; i >= 0; i--)
+            {
+                if (input[i] == '\\')
+                    count++;
+                else
+                    break;
+            }
+            return (count & 1) == 1;
+        }
     }
 }

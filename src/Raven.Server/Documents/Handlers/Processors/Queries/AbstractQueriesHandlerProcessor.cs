@@ -92,7 +92,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
     protected IndexQueryServerSide ReadIndexQueryForGet(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
         Debug.Assert(QueryMethod == HttpMethod.Get);
-        return IndexQueryServerSide.Create(_httpContext, _start, _pageSize, context, tracker, addSpatialProperties);
+        return IndexQueryServerSide.Create(_httpContext, _start, _pageSize, context, tracker, addSpatialProperties, cache: QueryMetadataCache);
     }
     
     protected static void AssertQueryDoesNotUseFilterClause(IndexQueryServerSide query)

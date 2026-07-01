@@ -3,9 +3,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
-using Sparrow.Server.Collections;
+using Sparrow.Server;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
+using Voron.Data.RoaringBitmaps;
 using Voron.Global;
 using Voron.Util;
 using Voron.Util.PFor;
@@ -28,10 +29,8 @@ public partial class Hnsw
         private bool _foundCandidateInCurrentSmallPostingList;
         private readonly IHnswSearcher _vectorsSearcher;
         private readonly Memory<byte> _vector;
-        // When the searchState-based entry points allocate a normalized copy of the query
-        // vector they hand the scope here so Dispose releases it alongside the retriever's
-        // other per-query state.
         private Sparrow.Server.ByteStringContext<Sparrow.Server.ByteStringMemoryCache>.InternalScope? _queryVectorScope;
+        private RoaringBitmap _alreadySeen;
 
         public SimilarityMethod? SimilarityMethod => _searchState?.Options.SimilarityMethod;
         
@@ -44,6 +43,8 @@ public partial class Hnsw
         public int NumberOfCandidates => _vectorsSearcher.NumberOfCandidates;
 
         public long CandidatesProcessed => _vectorsSearcher?.CandidatesProcessed ?? 0;
+
+        public long VectorComparisons => _vectorsSearcher?.VectorComparisons ?? 0;
         
         public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity,
             bool ownsSearchState = true, Sparrow.Server.ByteStringContext<Sparrow.Server.ByteStringMemoryCache>.InternalScope? queryVectorScope = null)
@@ -53,6 +54,7 @@ public partial class Hnsw
             _vectorsSearcher = vectorsSearcher;
             _vector = vector;
             _queryVectorScope = queryVectorScope;
+            _alreadySeen = new (searchState.Llt.Allocator);
             _postingListResults = new(_searchState.Llt.Allocator);
             _pforDecoder = new(searchState.Llt.Allocator);
             _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
@@ -66,15 +68,12 @@ public partial class Hnsw
         public void DistancesToScores(Span<float> distances) => _searchState.DistancesToScores(distances);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Fill(Span<long> matches, Span<float> distances, GrowableBitArray? filter)
+        public int Fill(Span<long> matches, Span<float> distances, ref RoaringBitmap filter)
         {
-            if (filter != null)
-                return Fill(matches, distances, filter.Value);
-            
-            return Fill(matches, distances);
+            return FillWithFilter(matches, distances, ref filter);
         }
         
-        private int Fill(Span<long> matches, Span<float> distances)
+        public int Fill(Span<long> matches, Span<float> distances)
         {
             long newVectorCount = 0;
             if (_vectorsSearcher.TryGetCurrentCandidates(out var indexes) == false)
@@ -97,6 +96,8 @@ public partial class Hnsw
                         continue;
                     }
 
+                    total = _alreadySeen.DedupAddNew(matches.Slice(index, total), total);
+
                     distances.Slice(index, total).Fill(distance);
                     index += total;
                     continue;
@@ -104,11 +105,12 @@ public partial class Hnsw
 
                 if (_currentMatchesIndex < _postingListResults.Count)
                 {
-                    var copy = Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
-                    _postingListResults.CopyTo(matches[index..], _currentMatchesIndex, copy);
-                    distances.Slice(index, copy).Fill(distance);
-                    index += copy;
-                    _currentMatchesIndex += copy;
+                    var amountRead = Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
+                    _postingListResults.CopyTo(matches[index..], _currentMatchesIndex, amountRead);
+                    var dedupedAmount = _alreadySeen.DedupAddNew(matches.Slice(index, amountRead), amountRead);
+                    distances.Slice(index, dedupedAmount).Fill(distance);
+                    index += dedupedAmount;
+                    _currentMatchesIndex += amountRead;
                     if (_currentMatchesIndex == _postingListResults.Count)
                     {
                         _currentMatchesIndex = 0;
@@ -138,15 +140,34 @@ public partial class Hnsw
                         _currentNode++;
                         continue;
                     case Constants.Graphs.VectorId.Single: // single item posting list
+                        _currentNode++;
+                        if(_alreadySeen.Contains(rawPostingListId))
+                            continue;
+                        _alreadySeen.Add(rawPostingListId);
                         distances[index] = distance;
                         matches[index++] = rawPostingListId;
-                        _currentNode++;
                         continue;
                     case Constants.Graphs.VectorId.SmallPostingList: // small posting list
+                        // _alreadySeen mixes entry ids (Single / FilterDuplicates) with posting-list CONTAINER ids
+                        // here, and both spaces are aligned (bits 0-1 cleared), so a container id can numerically
+                        // equal a real entry id and silently drop a result. Tag the container id with bit 0 (unused
+                        // by either space) so the two domains can't collide; the raw id is still used for the read.
+                        if (_alreadySeen.Contains(rawPostingListId | 1))
+                        {
+                            _currentNode++;
+                            continue;
+                        }
+                        _alreadySeen.Add(rawPostingListId | 1);
                         Debug.Assert(_postingListResults.Count is 0 && _currentMatchesIndex is 0);
                         _searchState.ReadPostingList(new ContainerEntryId(rawPostingListId), ref _postingListResults, ref _pforDecoder, out _);
                         continue;
                     case Constants.Graphs.VectorId.PostingList: // large posting list
+                        if (_alreadySeen.Contains(rawPostingListId | 1)) // bit-0 tag: see SmallPostingList above
+                        {
+                            _currentNode++;
+                            continue;
+                        }
+                        _alreadySeen.Add(rawPostingListId | 1);
                         var setStateSpan = Container.GetReadOnly(_searchState.Llt, new(rawPostingListId));
                         ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                         _postingList = new PostingList(_searchState.Llt, Slices.Empty, setState);
@@ -160,8 +181,8 @@ public partial class Hnsw
             Registration.InternalEntryIdToEntryId(matches.Slice(0, index));
             return index;
         }
-        
-        private int Fill(Span<long> matches, Span<float> distances, GrowableBitArray filter)
+
+        private int FillWithFilter(Span<long> matches, Span<float> distances, ref RoaringBitmap filter)
         {
             if (_vectorsSearcher.TryGetCurrentCandidates(out var indexes) == false)
                 return 0;
@@ -169,14 +190,17 @@ public partial class Hnsw
             long newVectorCount = 0;
             int index = 0;
             float distance = float.NaN;
+            // The filter is not mutated during this Fill, so its count is invariant — compute it once
+            // (ComputeCount is O(container count) and may repair lazy popcounts) and reuse across batches.
+            long filterCount = filter.ComputeCount();
             while (index < matches.Length && _returnedCandidates < _vectorsSearcher.NumberOfCandidates)
             {
                 if (_currentNode >= indexes.Count)
                 {
                     // Double the difference between accepted and searched number of candidates.
                     _vectorsSearcher.IncreaseNumberOfCandidates(_vectorsSearcher.NumberOfCandidates - _returnedCandidates);
-                    
-                    if (_vectorsSearcher.ShouldContinueSearch(filter.Count) == false)
+
+                    if (_vectorsSearcher.ShouldContinueSearch(filterCount) == false)
                     {
                         break;
                     }
@@ -194,7 +218,7 @@ public partial class Hnsw
                         // so we end the search right here.
                         break;
                     }
-                    
+
                     // Reset the current node index
                     _currentNode = 0;
                 }
@@ -216,35 +240,27 @@ public partial class Hnsw
                     //decode in bulk
                     Registration.InternalEntryIdToEntryId(matches.Slice(index, total));
 
-                    var currentDocIdx = index;
-                    var endDocIdx = index + total;
-                    for (; currentDocIdx < endDocIdx; currentDocIdx++)
-                    {
-                        if (filter.Contains(matches[currentDocIdx]) == false)
-                            continue;
-
-                        _foundCandidateInCurrentSmallPostingList = true;
-                        matches[index] = matches[currentDocIdx];
-                        distances[index] = distance;
-                        index++;
-                    }
+                    // first find only the items that are in the filter
+                    int survivors = filter.RetainPresentSorted(matches.Slice(index, total));
+                    // then add only items that we didn't previously already have
+                    int kept = _alreadySeen.DedupAddNew(matches.Slice(index, survivors), survivors);
+                    _foundCandidateInCurrentSmallPostingList |= kept > 0;
+                    distances.Slice(index, kept).Fill(distance);
+                    index += kept;
 
                     continue;
                 }
 
                 if (_currentMatchesIndex < _postingListResults.Count)
                 {
-                    var currentFillLimit = _currentMatchesIndex + Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
-                    for (; _currentMatchesIndex < currentFillLimit; _currentMatchesIndex++)
-                    {
-                        if (filter.Contains(_postingListResults[_currentMatchesIndex]) == false)
-                            continue;
-
-                        matches[index] = _postingListResults[_currentMatchesIndex];
-                        distances[index] = distance;
-                        _foundCandidateInCurrentSmallPostingList = true;
-                        index++;
-                    }
+                    var amountRead = Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
+                    _postingListResults.CopyTo(matches[index..], _currentMatchesIndex, amountRead);
+                    int survivors = filter.RetainPresentSorted(matches.Slice(index, amountRead));
+                    int kept = _alreadySeen.DedupAddNew(matches.Slice(index, survivors), survivors);
+                    _foundCandidateInCurrentSmallPostingList |= kept > 0;
+                    distances.Slice(index, kept).Fill(distance);
+                    index += kept;
+                    _currentMatchesIndex += amountRead;
 
                     if (_currentMatchesIndex == _postingListResults.Count)
                     {
@@ -261,10 +277,10 @@ public partial class Hnsw
                 var nodeIdx = indexes[_currentNode];
                 ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
-                
+
                 distance = _searchState.QueryDistance(_vector.Span, nodeIdx, ref newVectorCount);
                 Debug.Assert(newVectorCount == 0, "newVectorCount == 0");
-                
+
                 if (distance > _maximumDistance)
                 {
                     _currentNode++;
@@ -281,6 +297,10 @@ public partial class Hnsw
                         var rawEntry = Registration.InternalEntryIdToEntryId(rawPostingListId);
                         if (filter.Contains(rawEntry) == false)
                             continue;
+
+                        if (_alreadySeen.Contains(rawEntry))
+                            continue;
+                        _alreadySeen.Add(rawEntry);
 
                         distances[index] = distance;
                         matches[index++] = rawEntry;
@@ -308,6 +328,7 @@ public partial class Hnsw
         
         public void Dispose()
         {
+            _alreadySeen.Dispose();
             _postingListResults.Dispose();
             _pforDecoder.Dispose();
             _vectorsSearcher?.Dispose();

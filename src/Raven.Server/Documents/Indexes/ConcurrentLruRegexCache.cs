@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes
             // of regex queries.
             if (_count > _halfCapacity)
                 UpdateTimestamp(result);
-            return result.RegexLazy.Value; 
+            return result.RegexLazy.Value;
         }
 
         private static void UpdateTimestamp(ConcurrentLruRegexCacheNode result)
@@ -65,7 +65,10 @@ namespace Raven.Server.Documents.Indexes
             var res = _regexCache.GetOrAdd(pattern, result);
 
             if (res != result) // someone else created it
+            {
+                // we lost the race; our unused node owns a ThreadLocal, return the one from the cache
                 return res.RegexLazy.Value;
+            }
 
             //We have reached the capacity and we will now clear 25% of the cache
             var currentCount = Interlocked.Increment(ref _count);
@@ -98,8 +101,12 @@ namespace Raven.Server.Documents.Indexes
                     .Take(_capacity / 4))
                 {
                     
-                    if (_regexCache.TryRemove(kv.Key, out _))
+                    if (_regexCache.TryRemove(kv.Key, out var removed))
+                    {
                         countRemoved++;
+                        // release the evicted node's per-thread Regex instances promptly instead 
+                        // the GC's finalizer will do the final cleanup
+                    }
                 }
                 Interlocked.Add(ref _count, -countRemoved);
 
@@ -113,15 +120,16 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    internal sealed class ConcurrentLruRegexCacheNode
+    internal sealed class ConcurrentLruRegexCacheNode 
     {
         public long Timestamp;
-        public Lazy<Regex> RegexLazy { get; }
+        public ThreadLocal<Regex> RegexLazy { get; }
 
         public ConcurrentLruRegexCacheNode(string pattern, TimeSpan regexTimeout, RegexOptions options = RegexOptions.None)
         {
             var flags = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | options;
-            RegexLazy = new Lazy<Regex>(()=>new Regex(pattern, flags, 
+            // https://github.com/dotnet/runtime/issues/129445 - Concurrent regex usage allocates, so we use a single instance per thread
+            RegexLazy = new ThreadLocal<Regex>(()=>new Regex(pattern, flags,
                 // we use 50 ms as the max timeout because this is going to be evaluated
                 // on _each_ term in the results, potentially millions, so we specify a very
                 // short value to avoid very long queries
