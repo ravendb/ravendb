@@ -1,33 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
-using Corax.Utils;
-using Sparrow;
-using Sparrow.Compression;
 using Sparrow.Extensions;
-using Sparrow.Server;
-using Sparrow.Threading;
-using Voron.Data.Containers;
 using Voron.Data.Lookups;
-using Voron.Data.PostingLists;
 using Voron.Util;
 using Range = Corax.Querying.Matches.Meta.Range;
 
 
-namespace Corax.Querying.Matches.TermProviders
+namespace Corax.Querying.Matches.TermsProviders
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public struct TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal> : ITermProvider, IAggregationProvider
+    public struct TermsNumericRangeProvider<TLookupIterator, TLow, THigh, TVal> : ITermsProvider, IAggregationProvider
         where TLookupIterator : struct, ILookupIterator
         where TLow : struct, Range.Marker
         where THigh  : struct, Range.Marker
         where TVal : struct, ILookupKey
     {
-        private readonly Querying.IndexSearcher _searcher;
+        private readonly IndexSearcher _searcher;
         private readonly Lookup<TVal> _set;
         private readonly FieldMetadata _field;
         private TVal _low, _high;
@@ -37,7 +29,7 @@ namespace Corax.Querying.Matches.TermProviders
         private bool _includeLastTerm = true;
         private bool _isEmpty;
 
-        public TermNumericRangeProvider(Querying.IndexSearcher searcher, Lookup<TVal> set, in FieldMetadata field, TVal low, TVal high)
+        public TermsNumericRangeProvider(IndexSearcher searcher, Lookup<TVal> set, in FieldMetadata field, TVal low, TVal high)
         {
             _searcher = searcher;
             _set = set;
@@ -141,12 +133,10 @@ namespace Corax.Querying.Matches.TermProviders
             }
         }
 
-        public bool IsFillSupported => true;
-
-        public int Fill(Span<long> containers)
+        public int FillPostingListIds(Span<long> postingListIds)
         {
             if (_isEmpty) return 0;
-            return _iterator.Fill(containers, _lastTermId, _includeLastTerm);
+            return _iterator.Fill(postingListIds, _lastTermId, _includeLastTerm);
         }
 
         public void Reset()
@@ -158,34 +148,6 @@ namespace Corax.Querying.Matches.TermProviders
             _iterator.Seek(_iterator.IsForward ? _low : _high);
         }
         
-        public bool Next(out TermMatch term)
-        {
-            if (_isEmpty)
-            {
-                term = default;
-                return false;
-            }
-            bool hasNext = _iterator.MoveNext(out var termId);
-            if (hasNext == false)
-                goto Empty;
-
-
-            if (termId == _lastTermId)
-            {
-                _isEmpty = true;
-                if (_includeLastTerm == false)
-                    goto Empty;
-            }
-            
-            // Ratio will be always 1 (sizeof(T)/sizeof(T))
-            term = _searcher.TermQuery(_field, termId, 1);
-            return true;
-
-            Empty:
-            term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
-            return false;
-        }
-
         public QueryInspectionNode Inspect()
         {
             string lowValue;
@@ -202,10 +164,10 @@ namespace Corax.Querying.Matches.TermProviders
             else
                 highValue = _high.ToString();
             
-            return new QueryInspectionNode(nameof(TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>),
+            return new QueryInspectionNode(nameof(TermsNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>),
                             parameters: new Dictionary<string, string>()
                             {
-                                { Constants.QueryInspectionNode.FieldName, _field.ToString() },
+                                { Constants.QueryInspectionNode.FieldName, _field.FieldName.ToString() },
                                 { Constants.QueryInspectionNode.LowValue, lowValue},
                                 { Constants.QueryInspectionNode.HighValue, highValue},
                                 { Constants.QueryInspectionNode.LowOption, typeof(TLow).Name},
@@ -216,79 +178,70 @@ namespace Corax.Querying.Matches.TermProviders
 
         public string DebugView => Inspect().ToString();
         
-        public unsafe IDisposable AggregateByTerms(out List<string> terms, out Span<long> counts)
+        public IDisposable AggregateByTerms(out List<string> terms, out Span<long> counts)
         {
-            throw new NotSupportedException($"Primitive {nameof(TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>)} doesnt support aggregation by terms.");
+            throw new NotSupportedException($"Primitive {nameof(TermsNumericRangeProvider<,,,>)} doesnt support aggregation by terms.");
         }
         
-        public unsafe long AggregateByRange()
+        public long AggregateByRange()
         {
-            //we do not support Long ranges since we want to perform aggregation on doubles 
+            //we do not support Long ranges since we want to perform aggregation on doubles
             Debug.Assert(typeof(TVal) == typeof(DoubleLookupKey), "typeof(TVal) == typeof(DoubleLookupKey)");
-            
-            const long singleMarker = -1L;
+
             if (_isEmpty)
-            {
                 return 0;
-            }
 
-            var allocator = _searcher.Allocator;
-            
-            NativeList<long> postingLists = new();
-            postingLists.Initialize(allocator);
-            NativeList<TermIdMask> postingListsType = new();
-            postingListsType.Initialize(allocator);
-            
-            while (_isEmpty == false && _iterator.MoveNext(out var termId))
-            {
-                if (termId == _lastTermId)
-                {
-                    _isEmpty = true;
-                    if (_includeLastTerm == false)
-                        break;
-                }
-                
-                if ((termId & (long)TermIdMask.PostingList) != 0)
-                {
-                    postingLists.Add(allocator, (long)EntryIdEncodings.GetContainerId(termId));
-                    postingListsType.Add(allocator, TermIdMask.PostingList);
-                }
-                else if ((termId & (long)TermIdMask.SmallPostingList) != 0)
-                {
-                    postingLists.Add(allocator, (long)EntryIdEncodings.GetContainerId(termId));
-                    postingListsType.Add(allocator, TermIdMask.SmallPostingList);
-                }
-                else
-                {
-                    postingLists.Add(allocator, singleMarker);
-                    postingListsType.Add(allocator, TermIdMask.Single);
-                }
-            }
-            
-            using var _ = allocator.Allocate((sizeof(UnmanagedSpan)) * postingLists.Count, out ByteString containers);
-            var containersPtr = (UnmanagedSpan*)containers.Ptr;
-      
-            Container.GetAll(_searcher._transaction.LowLevelTransaction, postingLists.ToSpan(), new Span<UnmanagedSpan>(containersPtr, postingLists.Count), singleMarker, _searcher._transaction.LowLevelTransaction.PageLocator);
-
-            long totalCount = 0;
-            for (int i = 0; i < postingLists.Count; ++i)
-            {
-                var localCount = (postingListsType[i]) switch
-                {
-                    TermIdMask.PostingList => ((PostingListState*)(containersPtr[i].Address))->NumberOfEntries,
-                    TermIdMask.SmallPostingList => VariableSizeEncoding.Read<long>(containersPtr[i].Address, out var _),
-                    TermIdMask.Single => 1,
-                    _ => throw new InvalidDataException($"Supported posting lists types are: 'PostingList', 'SmallPostingList', 'Single' but got {postingListsType[i]}")
-                };
-
-                totalCount += localCount;
-            }
-            
-            postingLists.Dispose(allocator);
-            postingListsType.Dispose(allocator);
-            return totalCount;
+            return CountPostingsInRange(maxTerms: 0).Postings;
         }
 
-        public int NumberOfTerms => throw new NotSupportedException($"{nameof(NumberOfTerms)} is not supported in {nameof(TermNumericRangeProvider<TLookupIterator, TLow, THigh, TVal>)}."); // unknown
+        public unsafe RangePostingStats CountPostingsInRange(int maxTerms)
+        {
+            var stats = new RangePostingStats();
+            if (_isEmpty)
+                return stats;
+
+            var allocator = _searcher.Allocator;
+            var llt = _searcher._transaction.LowLevelTransaction;
+
+            Span<NativeList<long>> buckets = stackalloc NativeList<long>[RangePostingBuckets.Count];
+            RangePostingBuckets.Initialize(buckets, allocator);
+
+            try
+            {
+                while (_isEmpty == false && _iterator.MoveNext(out var termId))
+                {
+                    if (termId == _lastTermId)
+                    {
+                        _isEmpty = true;
+                        if (_includeLastTerm == false)
+                            break;
+                    }
+
+                    buckets[(int)(termId & (long)TermIdMask.EnsureIsSingleMask)].Add(allocator, termId);
+                    stats.Terms++;
+
+                    if (maxTerms > 0 && stats.Terms >= maxTerms)
+                        break;
+                }
+
+                RangePostingBuckets.Summarize(buckets, allocator, llt, ref stats);
+                return stats;
+            }
+            finally
+            {
+                RangePostingBuckets.Release(buckets, allocator);
+            }
+        }
+
+        public long EstimateTermCountInRange()
+        {
+            if (_isEmpty)
+                return 0;
+
+            // Numeric bounds are always concrete (MinValue/MaxValue for open ranges), so the estimate is always available.
+            return _set.GetNumberOfEntriesInRangeEstimate(_low, lowToStart: false, high: _high, highToEnd: false);
+        }
+
+        public long TotalTermCount() => _set.NumberOfEntries;
     }
 }

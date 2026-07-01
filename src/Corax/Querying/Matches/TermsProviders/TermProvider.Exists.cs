@@ -12,102 +12,60 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Graphs;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
+using Voron.Util;
 
-namespace Corax.Querying.Matches.TermProviders
+namespace Corax.Querying.Matches.TermsProviders
 {
-    public struct ExistsTermProvider<TLookupIterator> : ITermProvider, IAggregationProvider, IIndexedTermsRetriever
+    public struct ExistsTermsProvider<TLookupIterator> : ITermsProvider, IAggregationProvider, IIndexedTermsRetriever
         where TLookupIterator : struct, ILookupIterator
     {
         private readonly long _numberOfTerms;
-        private readonly CompactTree _tree;
-        private readonly Querying.IndexSearcher _searcher;
+        private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         
-        
         private readonly bool _nullExists;
-        private readonly PostingList _nullPostingList;
-        private PostingList.Iterator _nullIterator;
         private bool _fetchNulls;
-        private long _postingListId;
+        private readonly long _nullPostingListId;
         
         private CompactTree.Iterator<TLookupIterator> _iterator;
-        private readonly CompactKey _compactKey;
 
-        public ExistsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field, bool forAggregation = false)
+        public ExistsTermsProvider(IndexSearcher searcher, CompactTree tree, in FieldMetadata field, bool skipNulls = false)
         {
-            _tree = tree;
             _field = field;
             _searcher = searcher;
-            _nullIterator = default;
+            // A sorted index-only scan (SortedDrivingMatch / SortedDrivingWithTieBreakMatch) owns null, so we shouldn't emit it as well.
             _nullExists = false;
-            _fetchNulls = false;
-            if (_searcher.TryGetPostingListForNull(field, out  _postingListId))
+            if (skipNulls == false && _searcher.TryGetPostingListForNull(field, out _nullPostingListId))
             {
-                _nullPostingList = searcher.GetPostingList(_postingListId);
-                _nullExists = _nullPostingList.State.NumberOfEntries > 0;
-                if (_nullExists)
-                {
-                    _nullIterator = _nullPostingList.Iterate();
-                    _fetchNulls = true;
-                }
+                using var nullPostingList = _searcher.GetPostingList(_nullPostingListId);
+                // The null posting-list container can linger with zero entries after every null-valued document is deleted
+                _nullExists = nullPostingList.State.NumberOfEntries > 0;
             }
+            _fetchNulls = _nullExists;
 
-            if (forAggregation)
-            {
-                _compactKey = _searcher._transaction.LowLevelTransaction.AcquireCompactKey();
-                _compactKey.Initialize(_searcher._transaction.LowLevelTransaction);
-            }
-            
             _iterator = tree.Iterate<TLookupIterator>();
             _numberOfTerms = tree.NumberOfEntries;
             _iterator.Reset();
         }
 
-        public bool IsFillSupported => true;
-
-        public int Fill(Span<long> containers)
+        public int FillPostingListIds(Span<long> postingListIds)
         {
             if (_fetchNulls)
             {
-                if (_nullIterator.Fill(containers, out var total))
-                {
-                    return total;
-                }
-                
+                postingListIds[0] = _nullPostingListId;
                 _fetchNulls = false;
+                return 1;
             }
-            
-            return _iterator.Fill(containers);
+
+            return _iterator.Fill(postingListIds);
         }
 
         public void Reset()
         {
             _fetchNulls = _nullExists;
-            if (_fetchNulls)
-                _nullIterator = _nullPostingList.Iterate();
-
             _iterator.Reset();
         }
         
-        public bool Next(out TermMatch term)
-        {
-            if (_fetchNulls)
-            {
-                _fetchNulls = false;
-                term = _searcher.TermQuery(_field, containerId: _postingListId, 1D);
-                return true;
-            }
-            
-            while (_iterator.MoveNext(out var key, out _, out _))
-            {
-                term = _searcher.TermQuery(_field, key, _tree);
-                return true;
-            }
-
-            term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
-            return false;
-        }
-
         public bool GetNextTerm(out ReadOnlySpan<byte> term)
         {
             if (_fetchNulls)
@@ -139,7 +97,7 @@ namespace Corax.Querying.Matches.TermProviders
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(ExistsTermProvider<TLookupIterator>)}",
+            return new QueryInspectionNode($"{nameof(ExistsTermsProvider<TLookupIterator>)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { Constants.QueryInspectionNode.FieldName, _field.ToString() }
@@ -147,11 +105,8 @@ namespace Corax.Querying.Matches.TermProviders
         }
         
         /// <summary>
-        /// Created for simple facet(FieldName) purposes. This is faster than normal since we're gathering all statistics in bulks.
+        /// For simple facet(FieldName): faster than normal since statistics are gathered in bulk.
         /// </summary>
-        /// <param name="terms"></param>
-        /// <param name="counts"></param>
-        /// <returns></returns>
         public unsafe IDisposable AggregateByTerms(out List<string> terms, out Span<long> counts)
         {
             terms = new List<string>(NumberOfTerms);
@@ -162,27 +117,36 @@ namespace Corax.Querying.Matches.TermProviders
             if (_fetchNulls)
             {
                 terms.Add(Constants.ProjectionNullValue);
-                termCount[termIdx++] = _nullPostingList.State.NumberOfEntries;
+                using var nullPostingList = _searcher.GetPostingList(_nullPostingListId);
+                termCount[termIdx++] = nullPostingList.State.NumberOfEntries;
                 _fetchNulls = false;
             }
 
-            while (_iterator.MoveNext(_compactKey, out long postingListId, out _))
+            var compactKey = _searcher._transaction.LowLevelTransaction.AcquireCompactKey();
+            try
             {
-                var key = _compactKey.Decoded();
-                
-                int termSize = key.Length;
-                if (key.Length > 1)
+                while (_iterator.MoveNext(compactKey, out long postingListId))
                 {
-                    if (key[^1] == 0)
-                        termSize--;
-                }
+                    var key = compactKey.Decoded();
 
-                var term = key.SequenceEqual(Constants.EmptyStringByteSpan) 
-                    ? Constants.ProjectionEmptyString 
-                    : Encodings.Utf8.GetString(key.Slice(0, termSize));
-                
-                terms.Add(term);
-                termCount[termIdx++] = postingListId;
+                    int termSize = key.Length;
+                    if (key.Length > 1)
+                    {
+                        if (key[^1] == 0)
+                            termSize--;
+                    }
+
+                    var term = key.SequenceEqual(Constants.EmptyStringByteSpan)
+                        ? Constants.ProjectionEmptyString
+                        : Encodings.Utf8.GetString(key.Slice(0, termSize));
+
+                    terms.Add(term);
+                    termCount[termIdx++] = postingListId;
+                }
+            }
+            finally
+            {
+                _searcher._transaction.LowLevelTransaction.ReleaseCompactKey(ref compactKey);
             }
 
 
@@ -205,7 +169,7 @@ namespace Corax.Querying.Matches.TermProviders
             }
             
             
-            Voron.Data.Containers.Container.GetAll(_searcher._transaction.LowLevelTransaction, containersIds, new Span<UnmanagedSpan>(containersPtr, containersIds.Length), -1, _searcher.Transaction.LowLevelTransaction.PageLocator);
+            Voron.Data.Containers.Container.GetAll(_searcher._transaction.LowLevelTransaction, containersIds, new Span<UnmanagedSpan>(containersPtr, containersIds.Length), _searcher.Transaction.LowLevelTransaction.PageLocator);
             
             for (int i = _nullExists ? 1 : 0; i < NumberOfTerms; ++i)
             {
@@ -226,9 +190,52 @@ namespace Corax.Querying.Matches.TermProviders
 
         public long AggregateByRange()
         {
-            throw new NotSupportedException($"{nameof(ExistsTermProvider<TLookupIterator>)} supports only terms aggregation.");
+            throw new NotSupportedException($"{nameof(ExistsTermsProvider<TLookupIterator>)} supports only terms aggregation.");
         }
-        
+
+        public RangePostingStats CountPostingsInRange(int maxTerms)
+        {
+            // We count the posting lists size for each one of the terms + null. This overestimate if we have duplicate terms for a single document
+            // Callers should either accept that or guard against this - see HasMultipleTermsPerField. 
+            var stats = new RangePostingStats();
+            var allocator = _searcher.Allocator;
+            var llt = _searcher._transaction.LowLevelTransaction;
+
+            Span<NativeList<long>> buckets = stackalloc NativeList<long>[RangePostingBuckets.Count];
+            RangePostingBuckets.Initialize(buckets, allocator);
+
+            try
+            {
+                buckets[(int)(TermIdMask.PostingList)].Add(allocator, _nullPostingListId);
+                while (_iterator.MoveNext(out _, out long termId, out _))
+                {
+                    buckets[(int)(termId & (long)TermIdMask.EnsureIsSingleMask)].Add(allocator, termId);
+                    stats.Terms++;
+
+                    if (maxTerms > 0 && stats.Terms >= maxTerms)
+                        break;
+                }
+
+                RangePostingBuckets.Summarize(buckets, allocator, llt, ref stats);
+
+                return stats;
+            }
+            finally
+            {
+                RangePostingBuckets.Release(buckets, allocator);
+            }
+        }
+
+        public long EstimateTermCountInRange()
+        {
+            throw new NotSupportedException($"{nameof(ExistsTermsProvider<>)} supports only terms aggregation.");
+        }
+
+        public long TotalTermCount()
+        {
+            throw new NotSupportedException($"{nameof(ExistsTermsProvider<>)} supports only terms aggregation.");
+        }
+
         private int NumberOfTerms => (int)_numberOfTerms + (_nullExists ? 1 : 0);
     }
 }

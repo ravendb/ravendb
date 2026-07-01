@@ -16,9 +16,13 @@ using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Querying.Matches.SpatialMatch;
 
-public sealed class SpatialMatch<TBoosting> : IQueryMatch
+public sealed class SpatialMatch<TBoosting> : IPostFilterMatch
     where TBoosting : IBoostingMarker
 {
+    /// <summary>Set by <c>QueryPlanBuilder.ApplyPostFilters</c> when this spatial match was lifted to a top-level
+    /// post-filter. Left false when it is an ordinary leaf inside an OR branch.</summary>
+    public bool IsPostFilter { get; set; }
+
     private readonly Querying.IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
     private readonly double _error;
@@ -68,8 +72,6 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         _fieldRootPage = _indexSearcher.FieldCache.GetLookupRootPage(field.FieldName);
     }
 
-    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
-    
     private bool GoNextMatch()
     {
         if (_termGenerator.MoveNext())
@@ -82,14 +84,12 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
             return true;
         }
-        _currentMatch = TermMatch.CreateEmpty(_indexSearcher, _indexSearcher.Allocator);
+        _currentMatch = TermMatch.CreateEmpty();
         return false;
     }
 
-    public long Count => _indexSearcher.NumberOfEntries;
+    public long Count => -1;
 
-    public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.WillSkipSorting;
-    public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting => false;
 
     public int Fill(Span<long> matches)
@@ -130,31 +130,27 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
     private bool CheckEntryManually(long id)
     {
-        if (_alreadyReturned?.TryGetValue(id, out var _) ?? false)
+        if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
         {
             return false;
         }
         _alreadyReturned ??= new HashSet<long>();
-
-        using var _ = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
-        _indexSearcher.GetEntryTermsReader(id, ref _lastPage, out var termsReader, existingKey);
-        
+        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage);
         while (termsReader.MoveNextSpatial())
         {
             if(termsReader.FieldRootPage != _fieldRootPage)
                 continue;
-            
             _point.Reset(termsReader.Longitude, termsReader.Latitude);
-            if (!IsTrue(_point.Relate(_shape))) 
-                continue;
-            
-            if (_alreadyReturned.Add(id) && typeof(TBoosting) == typeof(HasBoosting))
+            if (IsTrue(_point.Relate(_shape)))
             {
-                ref var spatialScore = ref _spatialScore;
-                spatialScore.Push(id, (float)SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, termsReader.Longitude, termsReader.Latitude));
-            }
+                if (_alreadyReturned.Add(id) && typeof(TBoosting) == typeof(HasBoosting))
+                {
+                    ref var spatialScore = ref _spatialScore;
+                    spatialScore.Push(id, (float)SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, termsReader.Longitude, termsReader.Latitude));
+                }
                 
-            return true;
+                return true;
+            }
         }
         
         return false;
@@ -185,11 +181,14 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         return currentIdx;
     }
 
+    // Spatial scoring is distance-based per entry, independent of order; no sorted fast path.
+    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor);
+
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
         if (typeof(TBoosting) != typeof(HasBoosting))
             ThrowPrimitiveHasNoBoostingData();
-     
+
         _spatialScore.CalculateScore(matches, scores, boostFactor, _spatialRelation);
         _spatialScore.Dispose();
     }
@@ -204,11 +203,16 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         return new QueryInspectionNode($"{nameof(SpatialMatch)}",
             parameters: new Dictionary<string, string>()
             {
-                {"Field", _field.ToString()},
+                {"Field", _field.FieldName.ToString()},
                 {"Shape", _shape.ToString()},
                 {"Error", _error.ToString(CultureInfo.InvariantCulture)},
                 {"SpatialRelation", _spatialRelation.ToString()},
-            });
+            })
+        {
+            // Reflects the lifting decision recorded on this match, not the type: a spatial leaf inside an OR is
+            // a pipeline leaf, not a post-filter (see IPostFilterMatch).
+            IsPostFilter = IsPostFilter
+        };
     }
 }
 

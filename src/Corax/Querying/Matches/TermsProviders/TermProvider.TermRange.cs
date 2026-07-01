@@ -1,33 +1,26 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Runtime.CompilerServices;
 using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
-using Corax.Utils;
-using Sparrow;
-using Sparrow.Compression;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
-using Voron.Data.Containers;
 using Voron.Data.Lookups;
-using Voron.Data.PostingLists;
 using Voron.Util;
 using Range = Corax.Querying.Matches.Meta.Range;
 
-namespace Corax.Querying.Matches.TermProviders;
+namespace Corax.Querying.Matches.TermsProviders;
 
 [DebuggerDisplay("{DebugView,nq}")]
-public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, IAggregationProvider
+public struct TermsRangeProvider<TLookupIterator, TLow, THigh> : ITermsProvider, IAggregationProvider
     where TLookupIterator : struct, ILookupIterator
     where TLow : struct, Range.Marker
     where THigh : struct, Range.Marker
 {
     private readonly IndexSearcher _indexSearcher;
     private readonly FieldMetadata _field;
+    private readonly CompactTree _tree;
     private Slice _low, _high;
 
     private CompactTree.Iterator<TLookupIterator> _iterator;
@@ -38,10 +31,11 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
     private bool _shouldIncludeLastTerm;
     private long _endContainerId;
 
-    public TermRangeProvider(Querying.IndexSearcher indexSearcher, CompactTree tree, in FieldMetadata field, Slice low, Slice high)
+    public TermsRangeProvider(IndexSearcher indexSearcher, CompactTree tree, in FieldMetadata field, Slice low, Slice high)
     {
         _indexSearcher = indexSearcher;
         _field = field;
+        _tree = tree;
         _iterator = tree.Iterate<TLookupIterator>();
         _isForward = default(TLookupIterator).IsForward;
 
@@ -139,14 +133,12 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
         }
     }
 
-    public bool IsFillSupported => true;
-
-    public int Fill(Span<long> containers)
+    public int FillPostingListIds(Span<long> postingListIds)
     {
         if (_isEmpty)
             return 0;
 
-        return _iterator.Fill(containers, _endContainerId, _shouldIncludeLastTerm);
+        return _iterator.Fill(postingListIds, _endContainerId, _shouldIncludeLastTerm);
     }
 
     public void Reset()
@@ -168,29 +160,6 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
         };
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Next(out TermMatch term)
-    {
-        if (_isEmpty || _iterator.MoveNext(out var termId) == false)
-            goto ReturnEmpty;
-
-
-        if (termId == _endContainerId)
-        {
-            _isEmpty = true;
-
-            if (_shouldIncludeLastTerm == false)
-                goto ReturnEmpty;
-        }
-
-        term = _indexSearcher.TermQuery(_field, termId, 1D);
-        return true;
-
-        ReturnEmpty:
-        term = TermMatch.CreateEmpty(_indexSearcher, _indexSearcher.Allocator);
-        return false;
-    }
-
     public QueryInspectionNode Inspect()
     {
         var lowValue = _low.Options is SliceOptions.BeforeAllKeys
@@ -201,10 +170,10 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
             ? null
             : _high.ToString();
 
-        return new QueryInspectionNode(nameof(TermRangeProvider<TLookupIterator, TLow, THigh>),
+        return new QueryInspectionNode(nameof(TermsRangeProvider<,,>),
             parameters: new Dictionary<string, string>()
             {
-                { Constants.QueryInspectionNode.FieldName, _field.ToString() },
+                { Constants.QueryInspectionNode.FieldName, _field.FieldName.ToString() },
                 { Constants.QueryInspectionNode.LowValue, lowValue },
                 { Constants.QueryInspectionNode.HighValue, highValue },
                 { Constants.QueryInspectionNode.LowOption, typeof(TLow).Name },
@@ -215,79 +184,84 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
 
     public string DebugView => Inspect().ToString();
 
-    public IDisposable AggregateByTerms(out List<string> terms, out Span<long> counts)
+    public IDisposable AggregateByTerms(out List<string> terms, out Span<long> counts) => throw new NotImplementedException();
+
+    public long AggregateByRange()
     {
-        throw new NotImplementedException();
+        //we do not support Long ranges since we want to perform aggregation on doubles
+        if (_isEmpty)
+            return 0;
+
+        // maxTerms: 0 -> scan every in-range term, giving the exact (multi-valued-overcounting) total.
+        return CountPostingsInRange(maxTerms: 0).Postings;
     }
 
-    public unsafe long AggregateByRange()
+    /// <summary>
+    /// Header-only walk over the in-range terms (capped at <paramref name="maxTerms"/>; 0 = all), partitioning them
+    /// into the per-type buckets and reading their headers via <see cref="RangePostingBuckets"/>. The returned
+    /// breakdown (total postings plus the single / small / large split and their sub-totals) is the raw material the
+    /// two-ended range-cardinality probe extrapolates from.
+    /// </summary>
+    public unsafe RangePostingStats CountPostingsInRange(int maxTerms)
     {
-        //we do not support Long ranges since we want to perform aggregation on doubles 
-        const long singleMarker = -1L;
+        var stats = new RangePostingStats();
         if (_isEmpty)
-        {
-            return 0;
-        }
-        
-        var allocator = _indexSearcher.Allocator;
-        CompactKey compactKey = new();
-        compactKey.Initialize(_indexSearcher._transaction.LowLevelTransaction);
-        
-        NativeList<long> postingLists = new();
-        postingLists.Initialize(allocator);
-        
-        NativeList<TermIdMask> postingListsType = new();
-        postingListsType.Initialize(allocator);
-        
-        while (_isEmpty == false && _iterator.MoveNext(compactKey, out var termId, out var _))
-        {
-            if (termId == _endContainerId)
-            {
-                _isEmpty = true;
+            return stats;
 
-                if (_shouldIncludeLastTerm == false)
+        var allocator = _indexSearcher.Allocator;
+        var llt = _indexSearcher._transaction.LowLevelTransaction;
+        CompactKey compactKey = llt.AcquireCompactKey();
+
+        Span<NativeList<long>> buckets = stackalloc NativeList<long>[RangePostingBuckets.Count];
+        RangePostingBuckets.Initialize(buckets, allocator);
+
+        try
+        {
+            while (_isEmpty == false && _iterator.MoveNext(compactKey, out var termId))
+            {
+                if (termId == _endContainerId)
+                {
+                    _isEmpty = true;
+
+                    if (_shouldIncludeLastTerm == false)
+                        break;
+                }
+
+                buckets[(int)(termId & (long)TermIdMask.EnsureIsSingleMask)].Add(allocator, termId);
+                stats.Terms++;
+
+                if (maxTerms > 0 && stats.Terms >= maxTerms)
                     break;
             }
-            
-            if ((termId & (long)TermIdMask.PostingList) != 0)
-            {
-                postingLists.Add(allocator, (long)EntryIdEncodings.GetContainerId(termId));
-                postingListsType.Add(allocator, TermIdMask.PostingList);
-            }
-            else if ((termId & (long)TermIdMask.SmallPostingList) != 0)
-            {
-                postingLists.Add(allocator, (long)EntryIdEncodings.GetContainerId(termId));
-                postingListsType.Add(allocator, TermIdMask.SmallPostingList);
-            }
-            else
-            {
-                postingLists.Add(allocator, singleMarker);
-                postingListsType.Add(allocator, TermIdMask.Single);
-            }
+
+            RangePostingBuckets.Summarize(buckets, allocator, llt, ref stats);
+            return stats;
         }
-
-        using var _ = allocator.Allocate((sizeof(UnmanagedSpan)) * postingLists.Count, out ByteString containers);
-        var containersPtr = (UnmanagedSpan*)containers.Ptr;
-
-        Container.GetAll(_indexSearcher._transaction.LowLevelTransaction, postingLists.ToSpan(), new Span<UnmanagedSpan>(containersPtr, postingLists.Count), singleMarker,
-            _indexSearcher._transaction.LowLevelTransaction.PageLocator);
-
-        long totalCount = 0;
-        for (int i = 0; i < postingLists.Count; ++i)
+        finally
         {
-            var localCount = (postingListsType[i]) switch
-            {
-                TermIdMask.PostingList => ((PostingListState*)(containersPtr[i].Address))->NumberOfEntries,
-                TermIdMask.SmallPostingList => VariableSizeEncoding.Read<long>(containersPtr[i].Address, out var _),
-                TermIdMask.Single => 1,
-                _ => throw new InvalidDataException($"Supported posting lists types are: 'PostingList', 'SmallPostingList', 'Single' but got {postingListsType[i]}")
-            };
-            
-            totalCount += localCount;
+            RangePostingBuckets.Release(buckets, allocator);
+            llt.ReleaseCompactKey(ref compactKey);
         }
-
-        postingLists.Dispose(allocator);
-        postingListsType.Dispose(allocator);
-        return totalCount;
     }
+
+    /// <summary>
+    /// Sub-linear estimate of how many distinct terms fall in this provider's range, forwarding to
+    /// <see cref="CompactTree.GetNumberOfEntriesInRangeEstimate"/>. Open bounds are estimated directly: a
+    /// "before all keys" low is the empty span (sorts before every term, descending the leftmost leaf) and an
+    /// "after all keys" high descends the rightmost leaf, so an open-ended range counts to the edge of the tree.
+    /// </summary>
+    public long EstimateTermCountInRange()
+    {
+        if (_isEmpty)
+            return 0;
+
+        // A "before all keys" low bound is represented by the empty span, which sorts before every stored key.
+        var lowSpan = _low.Options == SliceOptions.BeforeAllKeys ? ReadOnlySpan<byte>.Empty : _low.AsSpan();
+        var highSpan = _high.Options == SliceOptions.AfterAllKeys ? ReadOnlySpan<byte>.Empty : _high.AsSpan();
+        // An "after all keys" high has no concrete key to seek; signal the descent to walk to the rightmost leaf.
+        return _tree.GetNumberOfEntriesInRangeEstimate(lowSpan, highSpan);
+    }
+
+    /// <summary>Total number of terms stored for this field (O(1)); used by the cardinality combiner's whale guard.</summary>
+    public long TotalTermCount() => _tree.NumberOfEntries;
 }

@@ -17,4 +17,10 @@ public struct EmptyAggregationProvider : IAggregationProvider
     {
         return 0;
     }
+
+    public RangePostingStats CountPostingsInRange(int maxTerms) => new();
+
+    public long EstimateTermCountInRange() => 0;
+
+    public long TotalTermCount() => 0;
 }
