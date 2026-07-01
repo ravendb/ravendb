@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
@@ -30,6 +31,9 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
         protected override bool PreventIncomingSinkDeletions => false;
+
+        protected override ThreadNames.ThreadInfo IncomingReplicationThreadInfo =>
+            ThreadNames.ForPullReplicationAsSink(ConnectionInfo.SourceDatabaseName, ConnectionInfo.SourceUrl, IncomingPullReplicationParams.Name);
 
         internal bool MatchesHubToSinkTask(PullReplicationAsSink destination)
         {

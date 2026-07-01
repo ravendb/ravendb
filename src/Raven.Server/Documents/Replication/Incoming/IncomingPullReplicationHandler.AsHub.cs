@@ -7,6 +7,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
@@ -27,6 +28,9 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override bool PreventIncomingSinkDeletions =>
             IncomingPullReplicationParams.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true;
+
+        protected override ThreadNames.ThreadInfo IncomingReplicationThreadInfo =>
+            ThreadNames.ForPullReplicationAsHub(ConnectionInfo.SourceDatabaseName, ConnectionInfo.SourceUrl, IncomingPullReplicationParams.Name);
 
         protected override void MergeSourceChangeVectorFromHeartbeat(DocumentsOperationContext documentsContext, string changeVector)
         {
