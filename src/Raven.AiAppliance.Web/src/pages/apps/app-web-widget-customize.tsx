@@ -31,7 +31,7 @@ export function AppWebWidgetCustomize() {
 
     const saveMutation = useWebWidgetStyleSave({
         save: (css) => api.services.iframe.updateCustomization(slug, widgetId, { css }),
-        invalidateKey: api.queries.webWidget.customization(slug, widgetId).queryKey,
+        invalidateKeys: [api.queries.webWidget.customization(slug, widgetId).queryKey],
         successMessage: "Customization saved",
     });
 
