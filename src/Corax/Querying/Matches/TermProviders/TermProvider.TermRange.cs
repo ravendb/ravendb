@@ -60,16 +60,18 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
 
     private void PrepareKeys()
     {
-        CompactKey key;
         ReadOnlySpan<byte> termSlice;
 
         var startKey = _isForward ? _low : _high;
         var finalKey = _isForward ? _high : _low;
 
+        using var scope = new CompactKeyCacheScope(_indexSearcher._transaction.LowLevelTransaction);
+        CompactKey key = scope.Key;
+
         if (ShouldSeek())
         {
             _iterator.Seek(startKey);
-            if (_iterator.MoveNext(out key, out _, out _) == false)
+            if (_iterator.MoveNext(key, out _, out _) == false)
             {
                 _isEmpty = true;
                 return; //empty set, we will go out of range immediately 
@@ -89,7 +91,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
 
             if (shouldInclude == false)
             {
-                if (_iterator.MoveNext(out key, out _, out _) == false)
+                if (_iterator.MoveNext(key, out _, out _) == false)
                 {
                     _isEmpty = true;
                     return; //empty set, we will go out of range immediately
@@ -115,7 +117,7 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
 
 
         _iterator.Seek(finalKey);
-        if (_iterator.MoveNext(out key, out _endContainerId, out var hasPreviousValue) == false)
+        if (_iterator.MoveNext(key, out _endContainerId, out var hasPreviousValue) == false)
         {
             _skipRangeCheck = true; //we are out of item anyway that means we can accept all items
             _endContainerId = long.MaxValue;
@@ -230,9 +232,9 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
         }
         
         var allocator = _indexSearcher.Allocator;
-        CompactKey compactKey = new();
-        compactKey.Initialize(_indexSearcher._transaction.LowLevelTransaction);
-        
+        using var scope = new CompactKeyCacheScope(_indexSearcher._transaction.LowLevelTransaction);
+        CompactKey compactKey = scope.Key;
+
         NativeList<long> postingLists = new();
         postingLists.Initialize(allocator);
         
