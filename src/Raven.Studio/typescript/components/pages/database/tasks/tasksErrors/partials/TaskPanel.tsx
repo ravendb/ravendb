@@ -59,7 +59,7 @@ import { AccessPopover } from "components/common/AccessPopover";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 interface TaskTypeRichPanelItemProps {
-    category?: TaskCategory;
+    category: TaskCategory;
     etlType?: StudioEtlType;
 }
 
@@ -161,6 +161,7 @@ interface NestedTaskPanelDetailsTableProps {
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
+    category: TaskCategory;
 }
 
 function NestedTaskPanelDetailsTable({
@@ -172,6 +173,7 @@ function NestedTaskPanelDetailsTable({
     healthStatus,
     taskId,
     etlType,
+    category,
 }: NestedTaskPanelDetailsTableProps) {
     const columns = useTasksErrorsPanelTableColumns(width, processErrors.length > 0);
     const data = useMemo<FlatError[]>(
@@ -183,8 +185,9 @@ function NestedTaskPanelDetailsTable({
                 healthStatus,
                 taskId,
                 etlType,
+                category,
             })),
-        [itemErrors, processErrors, etlName, transformationName, healthStatus, taskId, etlType]
+        [itemErrors, processErrors, etlName, transformationName, healthStatus, taskId, etlType, category]
     );
 
     const tasksErrorsPanelTable = useReactTable({
@@ -218,7 +221,7 @@ interface NestedTaskPanelDetailsProps extends TransformationWithErrors {
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
-    category?: TaskCategory;
+    category: TaskCategory;
 }
 
 function NestedTaskPanelDetails({

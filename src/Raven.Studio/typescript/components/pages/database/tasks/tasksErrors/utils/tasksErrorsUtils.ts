@@ -58,7 +58,7 @@ export interface TransformationWithErrors {
 export interface TaskWithErrors {
     etlName: string;
     etlType?: StudioEtlType;
-    category?: TaskCategory;
+    category: TaskCategory;
     transformations: TransformationWithErrors[];
 }
 
@@ -68,7 +68,7 @@ export interface TaskError {
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
-    category?: TaskCategory;
+    category: TaskCategory;
 }
 
 export type FlatError = (
@@ -105,7 +105,7 @@ export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats
             (group: TaskErrorsWithLocation[], etlName: string): TaskWithErrors => ({
                 etlName,
                 etlType: resolveEtlType(etlStats, etlName),
-                category: _.first(group)?.Category,
+                category: group[0].Category,
                 transformations: _.chain(group)
                     .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName)[1])
                     .map(
@@ -246,76 +246,23 @@ export function getStepIcon(step: TaskErrorStep): IconName {
     }
 }
 
-function getEtlTypeIcon(value: StudioEtlType): IconName {
-    switch (value) {
-        case "Raven":
-            return "ravendb-etl";
-        case "Sql":
-            return "sql-etl";
-        case "Olap":
-            return "olap-etl";
-        case "ElasticSearch":
-            return "elastic-search-etl";
-        case "Kafka":
-            return "kafka-etl";
-        case "AzureQueueStorage":
-            return "azure-queue-storage-etl";
-        case "RabbitMQ":
-            return "rabbitmq-etl";
-        case "EmbeddingsGeneration":
-            return "ai-etl";
-        case "AmazonSqs":
-            return "amazon-sqs-etl";
-        case "Snowflake":
-            return "snowflake-etl";
-        case "GenAi":
-            return "genai";
-        default:
-            return assertUnreachable(value);
-    }
-}
-
-function getEtlTypeLabel(etlType: StudioEtlType): string {
-    switch (etlType) {
-        case "Raven":
-            return "RavenDB ETL";
-        case "Sql":
-            return "SQL ETL";
-        case "Snowflake":
-            return "Snowflake ETL";
-        case "Olap":
-            return "OLAP ETL";
-        case "ElasticSearch":
-            return "ElasticSearch ETL";
-        case "Kafka":
-            return "Kafka ETL";
-        case "RabbitMQ":
-            return "RabbitMQ ETL";
-        case "AzureQueueStorage":
-            return "Azure Queue Storage ETL";
-        case "AmazonSqs":
-            return "Amazon SQS ETL";
-        case "EmbeddingsGeneration":
-            return "Embeddings Generation";
-        case "GenAi":
-            return "GenAI";
-        default:
-            return assertUnreachable(etlType);
-    }
-}
-
 export function getTaskTypeDisplay(
-    category: TaskCategory | undefined,
+    category: TaskCategory,
     etlType: StudioEtlType | undefined
 ): { icon: IconName; label: string } {
-    if (category === "CdcSink") {
-        return { icon: "sql-etl", label: "CDC Sink" };
-    }
+    return TaskUtils.studioTaskTypeToDisplay(resolveStudioTaskType(category, etlType));
+}
 
-    return {
-        icon: etlType ? getEtlTypeIcon(etlType) : "help",
-        label: etlType ? getEtlTypeLabel(etlType) : "Other",
-    };
+function resolveStudioTaskType(category: TaskCategory, etlType: StudioEtlType | undefined): StudioTaskType | undefined {
+    switch (category) {
+        case "Etl":
+        case "Ai":
+            return etlType ? TaskUtils.studioEtlTypeToStudioTaskType(etlType) : undefined;
+        case "CdcSink":
+            return "CdcSink";
+        default:
+            return assertUnreachable(category);
+    }
 }
 
 export function getPopoverMessageForErrorType(errorType: "Item" | "Process"): string {
@@ -350,7 +297,7 @@ export type TaskCategory = "Etl" | "Ai" | "CdcSink";
 
 // ETL tasks report errors per transformation and are shown as "taskName/transformationName".
 // AI and CDC tasks have no transformation, so they're shown by task name only.
-export function taskHasTransformations(category: TaskCategory | undefined): boolean {
+export function taskHasTransformations(category: TaskCategory): boolean {
     return category === "Etl";
 }
 
