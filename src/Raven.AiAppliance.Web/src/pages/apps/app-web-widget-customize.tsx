@@ -13,20 +13,20 @@ export function AppWebWidgetCustomize() {
 
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     const channel = channelsQuery.data?.find((candidate) => candidate.widgetId === widgetId);
-    // Only an existing web widget has customization to load. Gate the widget-scoped queries on the
-    // channel so an unknown/non-iFrame widgetId (which the endpoint 404s) resolves to the not-found
-    // alert below instead of a generic "could not load" error from a request bound to fail.
-    const hasChannel = Boolean(channel);
+    // Customization is web-widget-only, and the widget-scoped endpoints 404 for anything else. Gate the
+    // widget-scoped queries on the channel being an iFrame so an unknown or non-iFrame widgetId resolves
+    // to the not-found alert below instead of a generic "could not load" error from a request bound to fail.
+    const isWebWidget = channel?.type === "IFrame";
 
     const customizationQuery = useQuery({
         ...api.queries.webWidget.customization(slug, widgetId),
-        enabled: hasChannel,
+        enabled: isWebWidget,
     });
-    const styleGuideQuery = useQuery({ ...api.queries.webWidget.styleGuide(slug), enabled: hasChannel });
+    const styleGuideQuery = useQuery({ ...api.queries.webWidget.styleGuide(slug), enabled: isWebWidget });
     // Fetch the preview once we know the widget name so its header matches the live widget.
     const previewQuery = useQuery({
         ...api.queries.webWidget.preview(slug, channel?.displayName),
-        enabled: hasChannel,
+        enabled: isWebWidget,
     });
 
     const saveMutation = useWebWidgetStyleSave({
@@ -39,6 +39,7 @@ export function AppWebWidgetCustomize() {
         if (channelsQuery.isError) await channelsQuery.refetch();
         if (customizationQuery.isError) await customizationQuery.refetch();
         if (styleGuideQuery.isError) await styleGuideQuery.refetch();
+        if (previewQuery.isError) await previewQuery.refetch();
     };
 
     return (
@@ -53,14 +54,21 @@ export function AppWebWidgetCustomize() {
 
             <ApiState
                 isLoading={
-                    channelsQuery.isPending || (hasChannel && (customizationQuery.isPending || styleGuideQuery.isPending))
+                    channelsQuery.isPending ||
+                    (isWebWidget &&
+                        (customizationQuery.isPending || styleGuideQuery.isPending || previewQuery.isPending))
                 }
-                isError={channelsQuery.isError || customizationQuery.isError || styleGuideQuery.isError}
+                isError={
+                    channelsQuery.isError ||
+                    customizationQuery.isError ||
+                    styleGuideQuery.isError ||
+                    previewQuery.isError
+                }
                 errorTitle="Could not load customization"
                 onRetry={onRetry}
                 loadingLabel="Loading customization..."
             >
-                {!channel ? (
+                {!isWebWidget ? (
                     <Alert variant="destructive">No web widget “{widgetId}” in this app.</Alert>
                 ) : (
                     <>

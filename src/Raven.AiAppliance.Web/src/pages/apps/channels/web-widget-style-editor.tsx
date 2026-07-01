@@ -47,6 +47,7 @@ export function WebWidgetStyleEditor({
     });
 
     const css = useWatch({ control: form.control, name: "css" });
+    const effectiveCssTrimmed = effectiveCss.trim();
     const previewCss = css.trim() ? css : effectiveCss;
 
     return (
@@ -56,7 +57,7 @@ export function WebWidgetStyleEditor({
                 const trimmed = values.css.trim();
                 // Save empty when the editor still matches the effective default so the record clears
                 // to "inherit the default" instead of freezing a copy that stops tracking future changes.
-                onSave(trimmed === effectiveCss.trim() ? "" : trimmed);
+                onSave(trimmed === effectiveCssTrimmed ? "" : trimmed);
             })}
         >
             <div className="flex items-center justify-end gap-2">
@@ -64,7 +65,7 @@ export function WebWidgetStyleEditor({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={css === effectiveCss || isSaving}
+                    disabled={isSaving}
                     onClick={() => form.setValue("css", effectiveCss, { shouldDirty: true, shouldValidate: true })}
                 >
                     Reset to default
