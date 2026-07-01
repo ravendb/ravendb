@@ -144,7 +144,7 @@ public class RavenDB_26838 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Sinks)]
-    public async Task FailedBatch_StillPersistsBufferedItemErrors()
+    public async Task PerDocumentFailures_ArePersistedAsItemErrors()
     {
         const string taskName = "CdcSink-failing";
 
@@ -187,11 +187,11 @@ public class RavenDB_26838 : RavenTestBase
                     ops.Add(docProcessor.ProcessRow(tableProcessor, CdcSinkOperation.Upsert, data, context));
                 }
 
-                await Assert.ThrowsAnyAsync<Exception>(() => process.SubmitBatchForTest(ops));
+                await process.SubmitBatchForTest(ops);
             }
 
             var itemErrors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName);
-            Assert.NotEmpty(itemErrors);
+            Assert.Equal(100, itemErrors.Count);
             Assert.All(itemErrors, e => Assert.Equal((long)TaskErrorStep.Transformation, e.Step));
         }
     }

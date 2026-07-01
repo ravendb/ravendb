@@ -79,9 +79,8 @@ public class CdcSinkProcessStatistics
     }
 
     /// <summary>
-    /// Records a single document's processing failure (buffered for TaskErrorsStorage, fed into the
-    /// per-batch error tally), throwing when this batch's error ratio gets too high to stop the batch and
-    /// prevent LSN advancement past the failed rows.
+    /// Records a single document's processing failure: buffers it for flush to TaskErrorsStorage and feeds
+    /// the per-batch error tally that drives the health EWMA.
     /// </summary>
     public void RecordItemError(TaskErrorStep step, string error, string documentId)
     {
@@ -102,17 +101,6 @@ public class CdcSinkProcessStatistics
             });
 
             LastConsumeErrorTime = SystemTime.UtcNow;
-
-            if (_batchErrors < 100)
-                return;
-
-            if (_batchErrors <= _batchSuccesses)
-                return;
-
-            var message = $"Error ratio is too high (batch errors: {_batchErrors}, batch successes: {_batchSuccesses}). " +
-                          "Could not tolerate the error ratio and stopped the current CDC Sink batch.";
-
-            throw new InvalidOperationException($"{message}. Document: '{documentId}'. Error: {error}");
         }
     }
 

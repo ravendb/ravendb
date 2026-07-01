@@ -168,8 +168,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     _statsScope?.RecordScriptProcessingError();
 
                     // A patch/script failure is a transformation error; everything else is a load error.
-                    // RecordItemError buffers it once and throws when this batch's error ratio is too high,
-                    // preventing LSN advancement for a poisoned batch.
                     var step = e is CdcSinkScriptExecutionException ? TaskErrorStep.Transformation : TaskErrorStep.Load;
                     _statistics?.RecordItemError(step, e.ToString(), documentId);
                 }
@@ -178,8 +176,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (batchErrors == 0 || processedThisExecution > 0)
             {
                 // Advance LSN only when THIS execution made progress: either the entire batch
-                // succeeded, or some items were processed successfully and the error ratio is
-                // still tolerable (if it weren't, RecordItemError would have thrown above).
+                // succeeded, or some items were processed successfully (the failed ones are recorded
+                // as item errors and skipped). A fully-failed batch withholds the checkpoint and retries.
                 UpdateState(context);
             }
 
