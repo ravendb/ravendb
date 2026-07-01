@@ -220,42 +220,6 @@ namespace Voron.Benchmark.Corax
         private long[] _ids;
 
         [Benchmark]
-        public void RuntimeQuery()
-        {
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
-
-            var identityReader = indexSearcher.TermsReaderFor("id()");
-            var typeTerm = indexSearcher.TermQuery("Type", "Dog");
-            var familyTerm = indexSearcher.TermQuery("Age", "15");
-            var query = indexSearcher.And(typeTerm, familyTerm);
-
-            int read = 0;
-            Span<long> ids = _ids;
-            do
-            {
-                read = query.Fill(ids);
-                for (int i = 0; i < read; i++)
-                    identityReader.GetTermFor(ids[i]);
-            }
-            while (read != 0);
-        }
-
-        [Benchmark]
-        public void RuntimeQueryOnlyIteration()
-        {
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var indexSearcher = new IndexSearcher(Env, CreateFieldsMapping(bsc));
-
-            var typeTerm = indexSearcher.TermQuery("Type", "Dog");
-            var familyTerm = indexSearcher.TermQuery("Age", "15");
-            var query = indexSearcher.And(typeTerm, familyTerm);
-
-            Span<long> ids = _ids;
-            while (query.Fill(ids) != 0);
-        }
-
-        [Benchmark]
         public void ParserQuery()
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);

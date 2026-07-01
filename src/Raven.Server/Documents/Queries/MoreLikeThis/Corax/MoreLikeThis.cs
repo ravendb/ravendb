@@ -39,11 +39,11 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 
 internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
 {
-    private readonly CoraxQueryBuilder.Parameters _builderParameters;
+    private readonly QueryBuilderParameters _builderParameters;
     private readonly Analyzer _analyzer;
     private readonly AnalyzersScope _analyzersScope;
 
-    public RavenMoreLikeThis(CoraxQueryBuilder.Parameters builderParameters, Analyzer analyzer = null)
+    public RavenMoreLikeThis(QueryBuilderParameters builderParameters, Analyzer analyzer = null)
     {
         _analyzer = analyzer ?? Analyzer.CreateDefaultAnalyzer(builderParameters.Allocator);
         _builderParameters = builderParameters;
@@ -68,7 +68,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
 
             foreach (var fieldName in _fieldNames)
             {
-                var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(_builderParameters.Allocator, fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch, _builderParameters.HasDynamics, _builderParameters.DynamicFields, handleSearch: true);
+                var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(_builderParameters.Allocator, fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.HasDynamics, _builderParameters.DynamicFields, handleSearch: true);
                 var freq = indexSearcher.NumberOfDocumentsUnderSpecificTerm(fieldMetadata, word);
                 topField = freq > docFreq ? fieldName : topField;
                 docFreq = freq > docFreq ? freq : docFreq;
@@ -132,24 +132,24 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         }
     }
     
-    public IQueryMatch Like(long documentId)
+    public IQueryMatch[] Like(long documentId)
     {
         if (_fieldNames == null) throw new InvalidDataException($"FieldNames are empty!");
 
-        return CreateQuery(RetrieveTerms(documentId));
+        return CreateQueryMatches(RetrieveTerms(documentId));
     }
 
-    internal IQueryMatch Like(BlittableJsonReaderObject json)
+    internal IQueryMatch[] Like(BlittableJsonReaderObject json)
     {
-        return CreateQuery(RetrieveTerms(json));
+        return CreateQueryMatches(RetrieveTerms(json));
     }
 
-    IQueryMatch CreateQuery(PriorityQueue<object[]> q)
+    IQueryMatch[] CreateQueryMatches(PriorityQueue<object[]> q)
     {
         var indexSearcher = _builderParameters.IndexSearcher;
         object cur;
         var qterms = 0;
-        IQueryMatch query = null;
+        var matches = new List<IQueryMatch>();
         while ((cur = q.Pop()) is not null)
         {
             var ar = cur as object[];
@@ -166,17 +166,15 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
             }
 
             var fieldMetadata = indexSearcher.GetFieldMetadata(fieldName);
-            query = query is null 
-                ? indexSearcher.TermQuery(fieldMetadata, term) 
-                : indexSearcher.Or(query, indexSearcher.TermQuery(fieldMetadata, term));
-            
+            matches.Add(indexSearcher.TermQuery(fieldMetadata, term));
+
             qterms++;
 
             if (_maxQueryTerms > 0 && qterms >= _maxQueryTerms)
                 break;
         }
 
-        return query ?? indexSearcher.EmptyMatch();
+        return matches.Count > 0 ? matches.ToArray() : Array.Empty<IQueryMatch>();
     }
 
     /// <summary>
@@ -199,7 +197,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         Dictionary<string, int> termFreqMap = new();
         Page p = default;
         
-        using var _ = indexSearcher.GetEntryTermsReader(documentId, ref p, out var indexEntry);
+        var indexEntry = indexSearcher.GetEntryTermsReader(documentId, ref p);
 
         var fields = _fieldNames.Select(x => indexSearcher.FieldCache.GetLookupRootPage(x)).ToHashSet();
 

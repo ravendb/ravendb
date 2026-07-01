@@ -41,6 +41,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     private readonly bool _canContainSourceDocumentId;
     private readonly bool _legacyHandlingOfComplexFields;
+
+    private readonly long _compoundFieldNumericXorMask;
     private static ReadOnlySpan<byte> TrueLiteral => "true"u8;
     private static ReadOnlySpan<byte> FalseLiteral => "false"u8;
 
@@ -85,6 +87,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
         _legacyHandlingOfComplexFields = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior;
+        _compoundFieldNumericXorMask = _index.Definition.CompoundFieldNumericXorMask;
 
         Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         
@@ -710,7 +713,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     decimal m => (double)m,
                     _ => Convert.ToDouble(v)
                 };
-                AppendLong(Bits.DoubleToSortableLong(d));
+                AppendSortableLong(Bits.DoubleToSortableLong(d));
                 break;
             default:
                 throw new NotSupportedException(
@@ -745,10 +748,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             return analyzedTerm.Length;
         }
 
-        void AppendLong(long l)
+        // Raw signed long (numeric / date ticks): apply the order-preserving XOR mask (RavenDB-26831) so negatives
+        // sort below positives under big-endian byte order on fixed indexes; legacy indexes use a 0 mask (no-op).
+        void AppendLong(long l) => AppendSortableLong(l ^ _compoundFieldNumericXorMask);
+
+        // Writes an already order-preserving long (e.g. Bits.DoubleToSortableLong output) as big-endian bytes. No
+        // XOR mask — the value is expected to already be in sortable form.
+        void AppendSortableLong(long sortable)
         {
             EnsureHasSpace(sizeof(long));
-            BitConverter.TryWriteBytes(_compoundFieldsBuffer.AsSpan()[index..], Bits.SwapBytes(l));
+            BitConverter.TryWriteBytes(_compoundFieldsBuffer.AsSpan()[index..], Bits.SwapBytes(sortable));
             index += sizeof(long);
         }
     }

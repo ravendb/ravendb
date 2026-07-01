@@ -9,7 +9,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
-using Corax.Querying.Matches.TermProviders;
+using Corax.Querying.Matches.TermsProviders;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Server;
@@ -37,14 +37,18 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly IndexFieldsMapping _fieldMapping;
     private Dictionary<Slice, Hnsw.SearchState> _vectorSearchStateCache;
     private IReadOnlyDictionary<Slice, HnswIndexCache> _vectorNodeCaches;
+    private HashSet<string> _fieldsWithMultipleTerms;
     private HashSet<long> _nullTermsMarkers;
     private HashSet<long> _nonExistingTermsMarkers;
     private long[] _vectorFieldsMarkers;
+    // Searcher-lifetime scratch key handed to EntryTermsReaders created via GetEntryTermsReader
+    // without an explicit key. Acquired lazily from the pool on first use and released in Dispose.
+    private CompactKey _sharedEntryReaderKey;
     private Tree _persistedDynamicTreeAnalyzer;
     private long? _numberOfEntries;
     private bool _nullTermsMarkersLoaded;
     private bool _nonExistingTermsMarkersLoaded;
-
+    
     public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && (_testingConfiguration?.IsAccelerated ?? true);
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
@@ -52,12 +56,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private EntryIdPaginationSupportStatus? _entryIdPaginationSupportStatus;
 
     private long? _lastEntryId;
-
+    
     /// <summary>
     /// Used for testing purposes only.
     /// </summary>
     internal CoraxTestingConfiguration _testingConfiguration;
-    
+
     public void SetTestingConfiguration(CoraxTestingConfiguration testingConfiguration) => _testingConfiguration = testingConfiguration;
 
     
@@ -108,11 +112,16 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private long _dictionaryId;
     private Lookup<Int64LookupKey> _entryIdToLocation;
     public FieldsCache FieldCache;
+    /// <summary>Query plan cache. Lazily initialized to a new instance on first use.
+    /// Set externally to share compiled plans across IndexSearcher instances
+    /// (e.g., per-index-instance lifetime via CoraxIndexPersistence).</summary>
+    private Planning.PlanCache _planCache;
+    public Planning.PlanCache PlanCache { get => _planCache ??= new(); set => _planCache = value; }
     private bool _nullPostingListsTreeLoaded;
     private bool _nonExistingPostingListsTreeLoaded;
 
-    public long MaxMemoizationSizeInBytes = 128 * 1024 * 1024;
-
+    public long MaxFacetQueryFilterSizeInBytes = 128 * 1024 * 1024;
+ 
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
     
@@ -132,7 +141,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _transaction = tx;
         Init();
     }
-
+    
     private IndexSearcher(IndexFieldsMapping fieldsMapping)
     {
         if (fieldsMapping is null)
@@ -153,38 +162,33 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
         _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
-        _transaction.TryGetLookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice, out _entryIdToLocation);
+        _entryIdToLocation = _transaction.TryGetLookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice, out var entryIdToLocation) ? entryIdToLocation : null;
         _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
         FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
     
-    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
+    public HashSet<long> NullTermsMarkers { get { InitializeSpecialTermsMarkers(); return _nullTermsMarkers; } }
+    public HashSet<long> NonExistingTermsMarkers { get { InitializeSpecialTermsMarkers(); return _nonExistingTermsMarkers; } }
+    public long[] VectorFieldsMarkers { get { InitializeSpecialTermsMarkers(); return _vectorFieldsMarkers; } }
+    public long DictionaryId => _dictionaryId;
+
+    /// <summary>Batch-resolve entry IDs to container locations. Entry IDs MUST be sorted ascending. Unresolvable entries get -1.</summary>
+    public void ResolveEntryLocations(ReadOnlySpan<long> entryIds, Span<long> containerLocations) => _entryIdToLocation.GetFor(entryIds, containerLocations, -1);
+
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p, CompactKey key = null)
     {
-        PortableExceptions.ThrowIfNullOnDebug(existingKey);
-        
         if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
         InitializeSpecialTermsMarkers();
         ContainerEntryId loc = (ContainerEntryId)locLong;
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, existingKey);
-    }
-
-    public LowLevelTransaction.CompactKeyScope GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader)
-    {
-        if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
-            throw new InvalidOperationException("Unable to find entry id: " + id);
-
-        InitializeSpecialTermsMarkers();
-
-        var llt = _transaction.LowLevelTransaction;
-        var scope = llt.AcquireCompactKey(out var key);
-        ContainerEntryId loc = (ContainerEntryId)locLong;
-        var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, key);
-        
-        return scope;
+        // EntryTermsReader requires a caller-owned key. When the caller doesn't supply one, fall back
+        // to the searcher's scratch key (acquired once, released in Dispose). This is safe because
+        // these callers consume one reader at a time; callers that need two readers' decoded terms
+        // live simultaneously must pass their own keys.
+        key ??= _sharedEntryReaderKey ??= _transaction.LowLevelTransaction.AcquireCompactKey();
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, key);
     }
 
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
@@ -249,72 +253,111 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         Analyzer.TokensPool.Return(tokens);
         Analyzer.BufferPool.Return(buffer);
     }
-    internal Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<char> term)
-    {
-        if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
-            return Constants.EmptyStringSlice;
 
-        if (term.SequenceEqual(Constants.NullValueCharSpan.Span))
-            return Constants.NullValueSlice;
-        
-        using var _ = Allocator.Allocate(Encodings.Utf8.GetByteCount(term), out Span<byte> termBuffer);
-        var byteCount = Encodings.Utf8.GetBytes(term, termBuffer);
-        
-        ApplyAnalyzer(binding, analyzer, termBuffer.Slice(0, byteCount), out var encodedTerm);
-        return encodedTerm;
+    private Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<char> term)
+    {
+        if (TryEncodeAndApplyAnalyzer(binding, analyzer, term, out var value) == false)
+            throw new NotSupportedException($"Analyzer turned term: {term.ToString()} into multiple terms, which is not allowed in this case.");
+        return value;
     }
 
     //Function used to generate Slice from query parameters.
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
-#if !DEBUG
-    [SkipLocalsInit]
-#endif
     public Slice EncodeAndApplyAnalyzer(in FieldMetadata binding, string term)
     {
-        if (term is null)
-            return Constants.NullValueSlice; // unary match
-
-        if (ReferenceEquals(term, Constants.BeforeAllKeys))
-            return Slices.BeforeAllKeys;
-        
-        if (ReferenceEquals(term, Constants.AfterAllKeys))
-            return Slices.AfterAllKeys;
-
-        if (term.Length == 0 || term == Constants.EmptyString)
-            return Constants.EmptyStringSlice;
-
-        if (term == Constants.NullValue)
-            return Constants.NullValueSlice;
-
-        ApplyAnalyzer(binding, binding.Analyzer, Encodings.Utf8.GetBytes(term), out var encodedTerm);
-        return encodedTerm;
+        if (TryAnalyzeSingleToken(binding, term, out var value) == false)
+            throw new NotSupportedException($"Analyzer turned term: {term} into multiple terms, which is not allowed in this case.");
+        return value;
     }
 
+    // Non-throwing counterpart of the span EncodeAndApplyAnalyzer: literal/empty/null fast-paths return true;
+    // otherwise delegates to TryApplyAnalyzer, which returns false when the analyzer emits != 1 token.
+    private bool TryEncodeAndApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<char> term, out Slice value)
+    {
+        if (term.Length == 0 || term.SequenceEqual(Constants.EmptyStringCharSpan.Span))
+        {
+            value = Constants.EmptyStringSlice;
+            return true;
+        }
 
-    public void ApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
+        if (term.SequenceEqual(Constants.NullValueCharSpan.Span))
+        {
+            value = Constants.NullValueSlice;
+            return true;
+        }
+
+        using var _ = Allocator.Allocate(Encodings.Utf8.GetByteCount(term), out Span<byte> termBuffer);
+        var byteCount = Encodings.Utf8.GetBytes(term, termBuffer);
+
+        return TryApplyAnalyzer(binding, analyzer, termBuffer.Slice(0, byteCount), out value);
+    }
+
+    /// <summary>
+    /// Non-throwing single-token analysis for callers that resolve a SINGLE term's posting list id / document count
+    /// (<see cref="GetTermPostingListId(in FieldMetadata, string)"/>, <see cref="NumberOfDocumentsUnderSpecificTerm{TData}"/>).
+    /// Mirrors <see cref="EncodeAndApplyAnalyzer(in FieldMetadata, string)"/>'s literal fast-paths, but returns false
+    /// (instead of throwing <see cref="NotSupportedException"/>) when the analyzer turns <paramref name="term"/> into
+    /// more than one token: a multi-token input has no single posting list, so the caller resolves it as "absent".
+    /// </summary>
+    [SkipLocalsInit]
+    public bool TryAnalyzeSingleToken(in FieldMetadata binding, string term, out Slice termSlice)
+    {
+        if (term is null)
+        {
+            termSlice = Constants.NullValueSlice;
+            return true;
+        }
+
+        if (ReferenceEquals(term, Constants.BeforeAllKeys))
+        {
+            termSlice = Slices.BeforeAllKeys;
+            return true;
+        }
+
+        if (ReferenceEquals(term, Constants.AfterAllKeys))
+        {
+            termSlice = Slices.AfterAllKeys;
+            return true;
+        }
+
+        if (term.Length == 0 || term == Constants.EmptyString)
+        {
+            termSlice = Constants.EmptyStringSlice;
+            return true;
+        }
+
+        if (term == Constants.NullValue)
+        {
+            termSlice = Constants.NullValueSlice;
+            return true;
+        }
+
+        return TryEncodeAndApplyAnalyzer(binding, binding.Analyzer, term.AsSpan(), out termSlice);
+    }
+    
+    // Non-throwing counterpart of ApplyAnalyzer. The exact / no-analyzer path is always a single literal token
+    // (returns true); only the analyzed path can produce != 1 token, in which case it returns false.
+    private bool TryApplyAnalyzer(in FieldMetadata binding, Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
     {
         if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
         {
             analyzer = _fieldMapping.DefaultAnalyzer;
         }
-        else
+        else if (binding.Mode is FieldIndexingMode.Exact || binding.Analyzer is null)
         {
-            if (binding.Mode is FieldIndexingMode.Exact || binding.Analyzer is null)
-            {
-                _ = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Mutable, out var originalTermSliced);
-                originalTerm.CopyTo(new Span<byte>(originalTermSliced._pointer->Ptr, originalTerm.Length));
+            _ = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Mutable, out var originalTermSliced);
+            originalTerm.CopyTo(new Span<byte>(originalTermSliced._pointer->Ptr, originalTerm.Length));
 
-                value = new Slice(originalTermSliced);
-                return;
-            }
+            value = new Slice(originalTermSliced);
+            return true;
         }
 
-        AnalyzeTerm(analyzer, originalTerm, out value);
+        return TryAnalyzeTerm(analyzer, originalTerm, out value, out _);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
+    private bool TryAnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value,
+        out ByteStringContext<ByteStringMemoryCache>.InternalScope disposable)
     {
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
@@ -327,59 +370,67 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         Span<byte> bufferSpan = buffer.AsSpan();
         Span<Token> tokensSpan = tokens.AsSpan();
         analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
-        if (tokensSpan.Length != 1)
-            throw new NotSupportedException($"Analyzer turned term: {Encoding.UTF8.GetString(originalTerm)} into multiple terms ({tokensSpan.Length}), which is not allowed in this case.");
-        
-        var disposable = Indexing.IndexWriter.CreateNormalizedTerm(Allocator, bufferSpan, out value);
+
+        bool isSingleToken = tokensSpan.Length == 1;
+        if (isSingleToken)
+        {
+            disposable = Indexing.IndexWriter.CreateNormalizedTerm(Allocator, bufferSpan, out value);
+        }
+        else
+        {
+            disposable = default;
+            value = default;
+        }
 
         Analyzer.TokensPool.Return(tokens);
         Analyzer.BufferPool.Return(buffer);
 
-        return disposable;
+        return isSingleToken;
     }
     
     public AllEntriesMatch AllEntries() => new(this, _transaction);
     
-    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
+    public IQueryMatch EmptyMatch() => Matches.Meta.EmptyQueryMatch.Instance;
 
-   public long GetDictionaryIdFor(Slice field)
-   {
-       if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field, out var terms) == false)
-            return -1;
-
-       return terms.DictionaryId;
-   }
+    public long GetDictionaryIdFor(Slice field)
+    {
+        var terms = GetTermsFor(field);
+        return terms?.DictionaryId ?? -1;
+    }
    
-    public long GetTermAmountInField(in FieldMetadata field)
+    /// <summary>Number of distinct terms recorded under <paramref name="field"/>'s compact tree, plus null if exists for this field.</summary>
+    public long GetDistinctTermCountInField(in FieldMetadata field)
     {
-        long termAmount = 0;  
-        if (_fieldsTree != null && _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var fieldTree))
-            termAmount += fieldTree.NumberOfEntries;
+        long termCount = 0;
+        var fieldTree = GetTermsFor(field.FieldName);
+        termCount += fieldTree?.NumberOfEntries ?? 0;
 
-        if (TryGetPostingListForNull(field, out var nullPostingListId) == false) 
-            return termAmount;
-        
-        var nullPostingList = GetPostingList(nullPostingListId);
-        termAmount += nullPostingList?.State.NumberOfEntries ?? 0;
+        if (TryGetPostingListForNull(field, out var nullPostingListId))
+        {
+            var nullPostingList = GetPostingList(nullPostingListId);
+            termCount += nullPostingList?.State.NumberOfEntries ?? 0;
+        }
 
-        return termAmount;
+        return termCount;
     }
 
-    public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
+    public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermsProvider)
     {
-        return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermProvider);
+        return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermsProvider);
     }
 
-    public bool TryGetTermsOfField<TLookupIterator>(in FieldMetadata field, out ExistsTermProvider<TLookupIterator> existsTermProvider)
+    public bool TryGetTermsOfField<TLookupIterator>(in FieldMetadata field, out ExistsTermsProvider<TLookupIterator> existsTermsProvider)
         where TLookupIterator : struct, ILookupIterator
     {
-        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
+        var terms = GetTermsFor(field.FieldName);
+
+        if (terms == null)
         {
-            existsTermProvider = default;
+            existsTermsProvider = default;
             return false;
         }
-        
-        existsTermProvider = new ExistsTermProvider<TLookupIterator>(this, terms, field);
+
+        existsTermsProvider = new ExistsTermsProvider<TLookupIterator>(this, terms, field);
         return true;
     }
 
@@ -413,12 +464,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public FieldIndexingMode GetFieldIndexingModeForDynamic(Slice name)
     {
         _persistedDynamicTreeAnalyzer ??= _transaction.ReadTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
-
-        if (_persistedDynamicTreeAnalyzer.TryRead(name, out var reader) == false)
+        if (_persistedDynamicTreeAnalyzer == null || _persistedDynamicTreeAnalyzer.TryRead(name, out var reader) == false)
             return FieldIndexingMode.Normal;
 
-        var mode = (FieldIndexingMode)reader.Read<byte>();
-        return mode;
+        return (FieldIndexingMode)reader.Read<byte>();
     }
 
     public FieldMetadata GetFieldMetadata(string fieldName, FieldIndexingMode mode = FieldIndexingMode.Normal)
@@ -497,7 +546,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
  
     public Lookup<Int64LookupKey> EntriesToTermsReader(Slice name)
     {
-        return _entriesToTermsTree?.LookupFor<Int64LookupKey>(name);
+        return _entriesToTermsTree != null && _entriesToTermsTree.TryGetLookupFor<Int64LookupKey>(name, out var lookup) ? lookup : null;
     }
 
     
@@ -536,8 +585,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _vectorNodeCaches = caches;
     }
 
+    public void AttachTransactionCache(IReadOnlyDictionary<Slice, HnswIndexCache> vectorNodeCaches, HashSet<string> fieldsWithMultipleTerms)
+    {
+        _vectorNodeCaches = vectorNodeCaches;
+        _fieldsWithMultipleTerms = fieldsWithMultipleTerms;
+    }
+
     public void Dispose()
     {
+        if (_sharedEntryReaderKey != null)
+            _transaction.LowLevelTransaction.ReleaseCompactKey(ref _sharedEntryReaderKey);
+
         if (_vectorSearchStateCache != null)
         {
             foreach (var kvp in _vectorSearchStateCache)
@@ -557,7 +615,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public bool HasMultipleTermsInField(string fieldName)
     {
-        using var _ = Slice.From(Allocator, fieldName, out var slice);
+        if (_fieldsWithMultipleTerms is { } snapshot)
+            return snapshot.Contains(fieldName);
+
+        if (_fieldMapping.TryGetByFieldName(fieldName, out var binding)) // prefer interned slice over allocation
+            return HasMultipleTermsInField(binding.Metadata.FieldName);
+
+        using var _ = Slice.From(Allocator, fieldName, out var slice); // probably dynamic field, have to allocate
         return HasMultipleTermsInField(slice);
     }
 
@@ -587,6 +651,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return exists;
     }
     
+    public bool HasAnyNonExistingEntries(in FieldMetadata field)
+    {
+        if (TryGetPostingListForNonExisting(field.FieldName, out long postingListId, out _) == false)
+            return false;
+        return NumberOfDocumentsUnderSpecificTerm(postingListId) > 0;
+    }
+
+    /// <summary>Exact O(1) count of documents where <paramref name="field"/> exists (including explicit nulls).</summary>
+    public long NumberOfEntriesForExists(in FieldMetadata field)
+    {
+        long nonExisting = 0;
+        if (TryGetPostingListForNonExisting(field.FieldName, out long postingListId, out _))
+            nonExisting = NumberOfDocumentsUnderSpecificTerm(postingListId);
+        return NumberOfEntries - nonExisting;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool TryGetPostingListForNonExisting(in FieldMetadata field, out long postingListId) => TryGetPostingListForNonExisting(field.FieldName, out postingListId, out _);
     
@@ -615,7 +695,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId, out _);
+    public bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId, out _);
     
     internal bool TryGetPostingListForNull(Slice name, out long postingListId, out long termContainerId)
     {
@@ -635,32 +715,15 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private void InitNullPostingList()
     {
-        if (_nullPostingListsTreeLoaded) 
-            return;
-        
-        _nullPostingListsTreeLoaded = true;
-        _nullPostingListsTree = _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
+        if (_nullPostingListsTreeLoaded == false)
+        {
+            _nullPostingListsTreeLoaded = true;
+            _nullPostingListsTree = _transaction.ReadTree(Constants.IndexWriter.NullPostingLists);
+        }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullIsSmallest)
-        where TInner : IQueryMatch
-    {
-        return new IncludeNullMatch<TInner>(this, inner, field, forward, nullIsSmallest);
-    }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullIsSmallest)
-        where TInner : IQueryMatch
-    {
-        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward, nullIsSmallest);
-    }
 
-    public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner, bool forceHashset = false) 
-        where TInner : IQueryMatch 
-        => new(this, inner, forceHashset);
-    
-    private void InitializeSpecialTermsMarkers()
+    public void InitializeSpecialTermsMarkers()
     {
         if (_nullTermsMarkersLoaded == false)
         {
@@ -678,7 +741,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             LoadSpecialTermMarkers(_nonExistingPostingListsTree, out _nonExistingTermsMarkers);
         }
 
-        _vectorFieldsMarkers ??= _metadataTree?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
+        if (_vectorFieldsMarkers == null)
+        {
+            if (_metadataTree != null && _metadataTree.TryRead(Constants.IndexWriter.VectorFieldsRootPagesSlice, out var reader))
+                _vectorFieldsMarkers = reader.ToUnmanagedSpan<long>().ToSpan().ToArray();
+            else
+                _vectorFieldsMarkers = [];
+        }
     }
 
     public bool IsVectorField(string fieldName)
@@ -732,14 +801,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     internal bool TryGetRootPageByFieldName(Slice fieldName, out long rootPage)
     {
-        var result = _fieldsTree?.Read(fieldName);
-        if (result is null)
+        if (_fieldsTree == null || _fieldsTree.TryRead(fieldName, out var reader) == false)
         {
             rootPage = -1;
             return false;
         }
-        
-        var state = (LookupState*)result.Reader.Base;
+         
+        var state = (LookupState*)reader.Base;
         Debug.Assert(state->RootObjectType is RootObjectType.Lookup, "state->RootObjectType is RootObjectType.Lookup");
         rootPage = state->RootPage;
         return true;
