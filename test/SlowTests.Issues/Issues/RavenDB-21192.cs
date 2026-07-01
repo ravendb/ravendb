@@ -37,6 +37,7 @@ using Raven.Server.Utils.Metrics;
 using Raven.Server.Utils.Monitoring;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Commands;
 using Xunit;
 using Raven.Server.Documents.TasksErrors;
 
@@ -1900,12 +1901,6 @@ public class RavenDB_21192 : RavenTestBase
         public string Name { get; set; }
     }
 
-    private class SnmpEntry
-    {
-        public string OID { get; set; }
-        public string Description { get; set; }
-    }
-    
     private class GetEtlTaskErrorsCommand : RavenCommand<object>
     {
         private readonly List<string> _taskNames;
@@ -2000,29 +1995,6 @@ public class RavenDB_21192 : RavenTestBase
         public override bool IsReadRequest => true;
     }
     
-    private class GetSnmpOidsCommand : RavenCommand<object>
-    {
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/monitoring/snmp/oids";
-            
-            return new HttpRequestMessage
-            {
-                Method = HttpMethod.Get
-            };
-        }
-    
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                ThrowInvalidResponse();
-    
-            Result = response;
-        }
-    
-        public override bool IsReadRequest => true;
-    }
-
     private class GetEtlsMonitoringDataCommand : RavenCommand<object>
     {
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
