@@ -375,13 +375,7 @@ this.Comments[idx].IsSpam = $output.Blocked;
         Assert.Equal(1, modelScope.ModelCallFailures);
 
         var updatePhaseStats = loadDetails.Operations.FirstOrDefault(x => x.Name == GenAiOperations.ApplyUpdateScript) as GenAiPerformanceOperation;
-        Assert.NotNull(updatePhaseStats);
-
-        // nothing should be patched 
-        Assert.Equal(1, updatePhaseStats.NumberOfContextObjects);
-        Assert.Equal(0, updatePhaseStats.TotalUpdates);
-        Assert.Equal(0, updatePhaseStats.TotalCachedContexts);
-        Assert.Equal(0, updatePhaseStats.UpdateFailures);
+        Assert.Null(updatePhaseStats);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

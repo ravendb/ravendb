@@ -112,15 +112,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
             var refreshAt = context.DocumentDatabase.Time.GetUtcNow().Add(RefreshDelay);
             foreach (var (id, (doc, allHashes, refresh)) in hashes)
-            {
-                if (doc is null)
-                    continue;
-
-                if (allHashes.Count == 0 && refresh == false)
-                    continue;
-
-                UpdateMetadata(id, doc.Data, _taskIdentifier, allHashes, refresh ? refreshAt : null, context);
-            }
+                UpdateMetadata(id, doc?.Data, _taskIdentifier, allHashes, refresh ? refreshAt : null, context);
 
             return statsScope.TotalUpdates;
         }
@@ -139,11 +131,13 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
     internal static BlittableJsonReaderObject UpdateMetadata(string id, BlittableJsonReaderObject doc, string taskIdentifier, List<string> allHashes, DateTime? refreshAt, DocumentsOperationContext context)
     {
+        // no document, or nothing to write (no hashes and no @refresh) - nothing to persist
+        if (doc == null || (allHashes.Count == 0 && refreshAt.HasValue == false))
+            return null;
+
+        var changed = false;
         if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
         {
-            if (allHashes.Count == 0 && refreshAt.HasValue == false)
-                return doc;
-
             var newMetadata = new DynamicJsonValue();
             if (allHashes.Count > 0)
                 newMetadata[Constants.Documents.Metadata.GenAiHashes] = new DynamicJsonValue { [taskIdentifier] = allHashes };
@@ -154,10 +148,11 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
             {
                 [Constants.Documents.Metadata.Key] = newMetadata
             };
+            changed = true;
         }
         else
         {
-            var changed = allHashes.Count > 0 && TryUpdateHashesIfNeeded(metadata, taskIdentifier, allHashes);
+            changed = allHashes.Count > 0 && TryUpdateHashesIfNeeded(metadata, taskIdentifier, allHashes);
 
             if (refreshAt.HasValue && metadata.TryGet(Constants.Documents.Metadata.Refresh, out object _) == false)
             {
@@ -166,17 +161,19 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                 changed = true;
             }
 
-            if (changed == false)
-                return doc;
-
-            doc.Modifications = new DynamicJsonValue(doc)
+            if (changed)
             {
-                [Constants.Documents.Metadata.Key] = metadata
-            };
+                doc.Modifications = new DynamicJsonValue(doc)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+            }
         }
 
-        using (var old = doc)
-            doc = context.ReadObject(old, id);
+        if (changed == false)
+            return doc;
+
+        doc = context.ReadObject(doc, id);
 
         context.DocumentDatabase.DocumentsStorage.Put(context, id, expectedChangeVector: null, doc);
 

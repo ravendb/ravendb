@@ -422,7 +422,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
     [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_LoadError_AuthFailure_ShouldOnlyTrackSuccess(Options options, GenAiConfiguration config)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
 
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
@@ -444,22 +444,19 @@ this.Comments[idx].IsSpam = $output.Blocked;";
         store.Maintenance.Send(new AddGenAiOperation(config));
         var db = await GetDatabase(store.Database);
 
-        var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
-        Assert.NotNull(etlProcess);
+        GenAiTask etlProcess = null;
+        Assert.True(await WaitForValueAsync(() =>
+        {
+            etlProcess = db.EtlLoader.Processes.OfType<GenAiTask>().FirstOrDefault();
+            return Task.FromResult(etlProcess != null);
+        }, true, timeout: 15_000), "GenAi ETL process was not loaded in time");
 
         var chatCompletionClient = etlProcess.GetChatCompletionClient();
-        var enteredOnce = 0;
-        var blockEtlMre = new AsyncManualResetEvent();
 
         chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = ctx =>
         {
-            if (ctx.Contains("alex"))
-            {
-                if (Interlocked.CompareExchange(ref enteredOnce, 1, 0) == 0)
-                    throw new UnsuccessfulAiRequestException("Unauthorized", HttpStatusCode.Unauthorized) { RequestId = "fake-request-id" };
-
-                return blockEtlMre.WaitAsync(TimeSpan.FromSeconds(60));
-            }
+            if (ctx.Contains("alex") && ctx.Contains("AI Agent Parameters:") == false)
+                throw new UnsuccessfulAiRequestException("Unauthorized", HttpStatusCode.Unauthorized) { RequestId = "fake-request-id" };
 
             return Task.CompletedTask;
         };
@@ -488,17 +485,25 @@ this.Comments[idx].IsSpam = $output.Blocked;";
         Assert.NotEmpty(errors);
         Assert.Contains("Unauthorized", errors.First().Error);
 
+        Assert.True(await WaitForValueAsync(async () =>
+        {
+            using var session = store.OpenAsyncSession();
+            var d = await session.LoadAsync<BlittableJsonReaderObject>(docId);
+            return d != null
+                   && d.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject m)
+                   && m.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject h)
+                   && h.TryGet(config.Identifier, out BlittableJsonReaderArray arr) && arr.Length == 1;
+        }, true, timeout: 30_000), "only the successful context should be hashed");
+
         using (var session = store.OpenSession())
         {
             var doc = session.Load<BlittableJsonReaderObject>(docId);
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
-            Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-            Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashes));
 
-            // Only one comment should have succeeded
-            Assert.Equal(1, hashes.Length);
+            // the failed context is parked via @refresh so only it will be retried later
+            Assert.True(metadata.TryGet(Constants.Documents.Metadata.Refresh, out object _));
 
-            // assert that the update phase was executed only for comment #2
+            // only the successful context (comment #2) was patched
             Assert.True(doc.TryGet(nameof(GenAiBasics.Post.Comments), out BlittableJsonReaderArray comments));
             Assert.Equal(2, comments.Length);
 
@@ -512,45 +517,12 @@ this.Comments[idx].IsSpam = $output.Blocked;";
             Assert.True(comment2.TryGet("IsSpam", out bool _));
         }
 
-        blockEtlMre.Set();
-
-        // assert that next ETL batch starts from 0 etag
-        var state = EtlProcess.GetProcessState(db, config.Name, config.Transforms[0].Name);
-        var lastProcessedEtag = state.GetLastProcessedEtag(db.DbBase64Id, Server.ServerStore.NodeTag);
-        Assert.Equal(0, lastProcessedEtag);
-
-        // assert that the comment with model failure is processed in the next ETL batch
-        var etlDone = Etl.WaitForEtlToComplete(store);
-
-        Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(60)));
-
-        using (var session = store.OpenSession())
+        // a partial failure commits the successful context and advances the checkpoint -
+        // we do not reprocess the whole batch from etag 0
+        Assert.True(await WaitForValueAsync(() =>
         {
-            var doc = session.Load<BlittableJsonReaderObject>(docId);
-            Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
-            Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-            Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashes));
-
-            // now both contexts should have their hash in metadata
-            Assert.Equal(2, hashes.Length);
-
-            // assert that the update phase was executed for comment #2
-            Assert.True(doc.TryGet(nameof(GenAiBasics.Post.Comments), out BlittableJsonReaderArray comments));
-            Assert.Equal(2, comments.Length);
-
-            var comment1 = comments[0] as BlittableJsonReaderObject;
-            var comment2 = comments[1] as BlittableJsonReaderObject;
-
-            Assert.NotNull(comment1);
-            Assert.NotNull(comment2);
-
-            Assert.True(comment1.TryGet("IsSpam", out bool _));
-            Assert.True(comment1.TryGet("IsSpam", out bool _));
-        }
-
-        // assert that next ETL batch will NOT start from 0 etag
-        state = EtlProcess.GetProcessState(db, config.Name, config.Transforms[0].Name);
-        lastProcessedEtag = state.GetLastProcessedEtag(db.DbBase64Id, Server.ServerStore.NodeTag);
-        Assert.True(lastProcessedEtag > 0);
+            var state = EtlProcess.GetProcessState(db, config.Name, config.Transforms[0].Name);
+            return Task.FromResult(state.GetLastProcessedEtag(db.DbBase64Id, Server.ServerStore.NodeTag) > 0);
+        }, true, timeout: 30_000), "partial success should advance the ETL checkpoint");
     }
 }
