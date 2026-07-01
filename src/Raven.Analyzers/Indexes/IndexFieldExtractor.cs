@@ -108,9 +108,6 @@ namespace Raven.Analyzers.Indexes
             return IndexFieldInspection.Ok;
         }
 
-        private static ExpressionSyntax? ExtractLambdaBody(ExpressionSyntax expr) =>
-            SyntaxHelpers.TryGetLambdaBody(expr);
-
         /// <summary>
         /// Walks the lambda body (either a query expression or a method chain) to find
         /// the final Select projection expression.
@@ -160,7 +157,7 @@ namespace Raven.Analyzers.Indexes
                 // the projection is the LAST argument; the first is the collection selector. Plain Select
                 // and single-argument SelectMany carry the projection in the first argument.
                 int projectionArgIndex = name == KnownTypes.SelectManyMethodName && args.Count >= 2 ? args.Count - 1 : 0;
-                ExpressionSyntax? body = ExtractLambdaBody(args[projectionArgIndex].Expression);
+                ExpressionSyntax? body = SyntaxHelpers.TryGetLambdaBody(args[projectionArgIndex].Expression);
                 if (body == null)
                     return null;
 

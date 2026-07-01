@@ -39,6 +39,12 @@ namespace Raven.Analyzers.Sessions
                 { MethodKind: MethodKind.Ordinary or MethodKind.LocalFunction or MethodKind.Constructor })
                 return;
 
+            // The derived set is method-wide and flow-insensitive: once a symbol is fed by a materialized
+            // result it stays derived for the whole method. Reassigning that same symbol to an independent
+            // value later does not "un-derive" it, so a Load reading the reassigned symbol is treated as
+            // dependent and not flagged. That is a missed batching hint (the safe direction for this
+            // advisory rule) on an unusual scratch-variable-reuse pattern; proper handling would need
+            // per-position dataflow this two-pass walk does not carry.
             var derivedSet = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
             var pass1 = new Pass1CollectMaterializationDerivedLocals(context.SemanticModel, derivedSet);
             pass1.Visit(context.CodeBlock);
@@ -78,10 +84,13 @@ namespace Raven.Analyzers.Sessions
 
         private sealed class MaterializingCallCollector : CSharpSyntaxWalker
         {
-            // Detection uses the NARROW set: only materializers the code fix can actually rewrite to a
-            // lazy registration. Scalar/element materializers (First/Single/Count/…) are intentionally
-            // excluded so RVN012 is never raised where no working fix exists. Pass1 uses the broad
-            // SessionMaterializingMethods set for dependency tracking; the two are deliberately different.
+            // Detection uses the NARROW set: only materializers the code fix can rewrite to a lazy
+            // registration. Scalar/element materializers (First/Single/Count/…) are intentionally excluded
+            // so RVN012 targets the shapes the fix understands. (A materializer the fix cannot mechanically
+            // rewrite in a given position — e.g. a non-awaited async Load — is still reported; the fix then
+            // declines it, so the diagnostic stands on its own as advice. See the code fix's await guard.)
+            // Pass1 uses the broad SessionMaterializingMethods set for dependency tracking; the two are
+            // deliberately different.
             private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.LazyBatchableQueryMaterializers;
 
             private readonly SemanticModel _model;
@@ -189,8 +198,11 @@ namespace Raven.Analyzers.Sessions
                 foreach (IdentifierNameSyntax id in invocation.DescendantNodes().OfType<IdentifierNameSyntax>())
                 {
                     ISymbol? symbol = _model.GetSymbolInfo(id).Symbol;
-                    if (symbol is ILocalSymbol && _materializationDerivedSet.Contains(symbol))
+                    if (symbol is ILocalSymbol or IFieldSymbol or IPropertySymbol
+                        && _materializationDerivedSet.Contains(symbol))
+                    {
                         return true;
+                    }
                 }
 
                 return false;
@@ -214,9 +226,11 @@ namespace Raven.Analyzers.Sessions
                     if (symbol is IParameterSymbol)
                         return true;
 
-                    // Fields and properties are context-provided
+                    // Fields and properties are context-provided — unless a prior materialized result
+                    // flowed into them (this._customerId = order.CustomerId), in which case a Load reading
+                    // the field genuinely depends on the earlier server call and must not be batched.
                     if (symbol is IFieldSymbol or IPropertySymbol)
-                        return true;
+                        return !_materializationDerivedSet.Contains(symbol);
 
                     // Local variables: check if directly materialization-derived
                     if (symbol is ILocalSymbol local)
@@ -251,11 +265,13 @@ namespace Raven.Analyzers.Sessions
                     SymbolInfo symbolInfo = _model.GetSymbolInfo(id);
                     ISymbol? symbol = symbolInfo.Symbol;
 
-                    if (symbol is IParameterSymbol or IFieldSymbol or IPropertySymbol)
+                    if (symbol is IParameterSymbol)
                         return true;
 
-                    if (symbol is ILocalSymbol local && !_materializationDerivedSet.Contains(local))
-                        return true;
+                    // A field/property/local is context-provided only when it was not fed by a prior
+                    // materialized result (see the derived-set tracking in Pass1).
+                    if (symbol is IFieldSymbol or IPropertySymbol or ILocalSymbol)
+                        return !_materializationDerivedSet.Contains(symbol);
 
                     return false;
                 }
@@ -293,38 +309,76 @@ namespace Raven.Analyzers.Sessions
             {
                 foreach (VariableDeclaratorSyntax declarator in node.Declaration.Variables)
                 {
-                    if (declarator.Initializer?.Value is InvocationExpressionSyntax invocation)
+                    if (declarator.Initializer?.Value is ExpressionSyntax value
+                        && IsDerivedInitializer(value)
+                        && _model.GetDeclaredSymbol(declarator) is ISymbol symbol)
                     {
-                        string? methodName = SyntaxHelpers.GetMethodName(invocation);
-                        if (methodName == null)
-                            continue;
-
-                        ISymbol? symbol = _model.GetDeclaredSymbol(declarator);
-                        if (symbol == null)
-                            continue;
-
-                        // Check if initializer is a query materialization
-                        if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
-                        {
-                            ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
-                            if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
-                            {
-                                _materializationDerivedSet.Add(symbol);
-                                continue;
-                            }
-
-                            // Check if initializer is a session load
-                            if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
-                                SyntaxHelpers.IsSessionType(receiverType))
-                            {
-                                _materializationDerivedSet.Add(symbol);
-                                continue;
-                            }
-                        }
+                        _materializationDerivedSet.Add(symbol);
                     }
                 }
 
                 base.VisitLocalDeclarationStatement(node);
+            }
+
+            // A field, property, or local (re)assigned from a materialized server call — or from an
+            // expression that reads an already-derived symbol — becomes derived itself, so a later Load id
+            // or query predicate that reads it genuinely depends on the earlier round-trip and must not be
+            // batched. Handling plain assignments (not just declarations) closes the field-mediated
+            // dependency path: var o = session.Load<Order>(id); this._customerId = o.CustomerId;
+            // session.Load<Customer>(_customerId);
+            public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
+            {
+                ISymbol? target = _model.GetSymbolInfo(node.Left).Symbol;
+                if (node.IsKind(SyntaxKind.SimpleAssignmentExpression)
+                    && target is ILocalSymbol or IFieldSymbol or IPropertySymbol
+                    && IsDerivedInitializer(node.Right))
+                {
+                    _materializationDerivedSet.Add(target);
+                }
+
+                base.VisitAssignmentExpression(node);
+            }
+
+            private bool IsDerivedInitializer(ExpressionSyntax? value) =>
+                IsMaterializingSessionCall(value) || ReferencesDerivedSymbol(value);
+
+            // True when <paramref name="value"/> is a session Load or a materializing query call
+            // (unwrapping a leading await), on a RavenDB session / queryable.
+            private bool IsMaterializingSessionCall(ExpressionSyntax? value)
+            {
+                ExpressionSyntax? expr = value is AwaitExpressionSyntax awaitExpr ? awaitExpr.Expression : value;
+                if (expr is not InvocationExpressionSyntax invocation
+                    || invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                {
+                    return false;
+                }
+
+                string? methodName = SyntaxHelpers.GetMethodName(invocation);
+                if (methodName == null)
+                    return false;
+
+                ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
+
+                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
+                    return true;
+
+                return (methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName)
+                       && SyntaxHelpers.IsSessionType(receiverType);
+            }
+
+            private bool ReferencesDerivedSymbol(ExpressionSyntax? value)
+            {
+                if (value == null)
+                    return false;
+
+                foreach (IdentifierNameSyntax id in value.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
+                {
+                    ISymbol? symbol = _model.GetSymbolInfo(id).Symbol;
+                    if (symbol != null && _materializationDerivedSet.Contains(symbol))
+                        return true;
+                }
+
+                return false;
             }
 
             public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)

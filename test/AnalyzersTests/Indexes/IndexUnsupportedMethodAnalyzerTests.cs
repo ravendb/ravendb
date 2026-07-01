@@ -435,5 +435,199 @@ class Product { public string Name { get; set; } }
             Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
             Assert.Contains("Normalize", d.GetMessage());
         }
+
+        [Fact]
+        public async Task UserMethod_In_Map_With_AdditionalSources_No_Diagnostic()
+        {
+            // The index ships the helper's source to the server via AdditionalSources, so the server
+            // compiles and can translate the call. A source-defined method reference is no longer a
+            // reliable "cannot be translated" signal, so RVN009 must not fire on this index.
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+        AdditionalSources = new Dictionary<string, string>
+        {
+            { ""MyHelpers"", ""public static class MyHelpers { public static string Normalize(string s) => s; }"" }
+        };
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserMethod_In_Map_With_AdditionalAssemblies_No_Diagnostic()
+        {
+            // AdditionalAssemblies references extra assemblies compiled with the index server-side, so a
+            // helper call may be translatable. RVN009 must not fire on this index.
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+        AdditionalAssemblies = new HashSet<AdditionalAssembly>
+        {
+            AdditionalAssembly.FromRuntime(""System.Text.Json"")
+        };
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserMethod_In_Map_With_AdditionalSources_Indexer_No_Diagnostic()
+        {
+            // Populating AdditionalSources via the indexer (AdditionalSources["Key"] = source) ships code
+            // to the server just like the assignment/Add forms, so RVN009 must not fire.
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+        AdditionalSources[""MyHelpers""] = ""public static class MyHelpers { public static string Normalize(string s) => s; }"";
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserMethod_In_Map_With_Only_A_Read_Of_AdditionalSources_Reports_Diagnostic()
+        {
+            // A bare read / null-check of AdditionalSources ships no code, so it must NOT suppress RVN009 —
+            // the genuinely non-translatable helper call in Map is still flagged.
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+    }
+
+    public bool HasExtraSources() => AdditionalSources != null;
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Normalize", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_Map_With_Only_A_MemberAccess_Read_Of_AdditionalSources_Reports_Diagnostic()
+        {
+            // Reading a member of AdditionalSources (e.g. .Count) ships no code, so it must NOT suppress
+            // RVN009 — only a write (assignment / indexer populate / .Add) does. The genuinely
+            // non-translatable helper call in Map is still flagged.
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+        var count = AdditionalSources.Count;
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Normalize", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_Map_With_Unrelated_Local_Named_AdditionalSources_Reports_Diagnostic()
+        {
+            // An unrelated local that merely shares the name AdditionalSources is not the framework
+            // property and ships nothing, so it must NOT suppress RVN009.
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+    }
+
+    public int CountExtras()
+    {
+        int AdditionalSources = 3;
+        return AdditionalSources;
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Normalize", d.GetMessage());
+        }
     }
 }
