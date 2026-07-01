@@ -2,66 +2,50 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Server.Background;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Maintenance;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Server.Logging;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Commercial.WriteUsageMetering
 {
-    internal sealed class WriteUsageReporter : IDisposable
+    internal sealed class WriteUsageReporter : BackgroundWorkBase
     {
-        private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<WriteUsageReporter>();
-
         private readonly ServerStore _serverStore;
         private readonly ClusterObserver _observer;
         private readonly long _term;
         private readonly TimeSpan _interval;
-        private readonly CancellationTokenSource _cts;
-        private readonly PoolOfThreads.LongRunningWork _work;
 
         // Write-usage is only reported under a Quill license. Toggled by the LicenseChanged event so we
         // start/stop sending as the license is activated, changed, or removed.
         private volatile bool _enabled;
 
         public WriteUsageReporter(ServerStore serverStore, ClusterObserver observer, long term, TimeSpan interval, CancellationToken token)
+            : base($"Write-usage reporter for term {term}", RavenLogManager.Instance.GetLoggerForServer<WriteUsageReporter>(), token)
         {
             _serverStore = serverStore;
             _observer = observer;
             _term = term;
             _interval = interval;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
 
             UpdateEnabled();
             _serverStore.LicenseManager.LicenseChanged += OnLicenseChanged;
 
-            _work = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
-            {
-                try
-                {
-                    Run(_cts.Token);
-                }
-                catch
-                {
-                    // nothing we can do here
-                }
-            }, null, ThreadNames.ForWriteUsageReporter($"Write-usage reporter for term {_term}", _term));
+            Start();
         }
 
-        private void Run(CancellationToken token)
+        protected override async Task DoWork()
         {
-            while (_term == _serverStore.Engine.CurrentTerm && token.IsCancellationRequested == false)
-            {
-                // Wait first: gives the observer time to produce at least one snapshot, and spaces out reports.
-                if (token.WaitHandle.WaitOne(_interval))
-                    return; // signaled => cancellation / disposal
+            // Wait first: gives the observer time to produce at least one snapshot, and spaces out reports.
+            await WaitOrThrowOperationCanceled(_interval).ConfigureAwait(false);
 
-                ReportOnce(token);
-            }
+            if (_term != _serverStore.Engine.CurrentTerm)
+                return; // no longer the term this reporter was created for; the reporter will be disposed shortly.
+
+            await ReportOnceAsync().ConfigureAwait(false);
         }
 
         private void OnLicenseChanged()
@@ -84,7 +68,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                     : "License is no longer Quill; stopping write-usage reporting to api.ravendb.net.");
         }
 
-        private void ReportOnce(CancellationToken token)
+        private async Task ReportOnceAsync()
         {
             try
             {
@@ -116,9 +100,10 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
                 using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
                 {
-                    var response = ApiHttpClient
-                        .PostAsync(WriteUsageMeteringConstants.WriteUsageEndpointPath, content, token: token)
-                        .GetAwaiter().GetResult();
+                    // no client-side retry: a failed report is simply retried on the next reporting interval.
+                    var response = await ApiHttpClient
+                        .PostAsync(WriteUsageMeteringConstants.WriteUsageEndpointPath, content, shouldRetry: false, token: CancellationToken)
+                        .ConfigureAwait(false);
 
                     if (Logger.IsDebugEnabled)
                         Logger.Debug($"Reported write-usage for {report.Databases.Count} database(s) to api.ravendb.net, response: {(int)response.StatusCode} {response.StatusCode}.");
@@ -133,7 +118,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
             }
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             try
             {
@@ -144,27 +129,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                 // nothing actionable
             }
 
-            try
-            {
-                _cts.Cancel();
-            }
-            catch
-            {
-                // nothing actionable
-            }
-
-            try
-            {
-                _work?.Join((int)TimeSpan.FromSeconds(30).TotalMilliseconds);
-            }
-            catch
-            {
-                // best effort; nothing actionable on shutdown
-            }
-            finally
-            {
-                _cts.Dispose();
-            }
+            base.Dispose();
         }
     }
 }
