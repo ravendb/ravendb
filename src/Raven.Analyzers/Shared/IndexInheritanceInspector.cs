@@ -32,24 +32,11 @@ namespace Raven.Analyzers.Shared
         /// </summary>
         public static IndexChainSearch FindMapAssignmentInChain(INamedTypeSymbol classSymbol, Compilation compilation)
         {
-            // Collect every in-source class declaration in the chain (each type's partials), stopping at
-            // the framework base. A metadata-only base cannot be inspected — the Map may well live there,
-            // so report Unknown rather than a false positive.
-            List<ClassDeclarationSyntax> declarations = [];
-            for (INamedTypeSymbol? type = classSymbol; type != null; type = type.BaseType)
-            {
-                if (SyntaxHelpers.IsKnownIndexBaseType(type))
-                    break; // reached the framework base; it does not assign Map in user source
-
-                if (type.DeclaringSyntaxReferences.IsDefaultOrEmpty)
-                    return IndexChainSearch.Unknown; // base compiled in another assembly — can't inspect
-
-                foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)
-                {
-                    if (syntaxRef.GetSyntax() is ClassDeclarationSyntax decl)
-                        declarations.Add(decl);
-                }
-            }
+            // Collect every in-source class declaration in the chain, stopping at the framework base. A
+            // metadata-only base cannot be inspected — the Map may well live there, so report Unknown
+            // rather than a false positive.
+            if (!TryCollectChainDeclarations(classSymbol, out List<ClassDeclarationSyntax> declarations))
+                return IndexChainSearch.Unknown;
 
             // A Map assignment counts only when it is reachable from a constructor: directly in a ctor
             // body, or in a method the constructor invokes (transitively). Candidate methods and seed
@@ -118,6 +105,35 @@ namespace Raven.Analyzers.Shared
             }
 
             return IndexChainSearch.NotFound;
+        }
+
+        /// <summary>
+        /// Collects every in-source class declaration in the chain (each type's partials), stopping at the
+        /// framework base. Returns false when a non-framework base is metadata-only (compiled in another
+        /// assembly) and therefore cannot be inspected; <paramref name="declarations"/> then holds the
+        /// inspectable prefix gathered so far. Shared by the Map search (RVN004) and the field/stored-field
+        /// extractors (RVN007/RVN008) so they all treat a base index class the same way and all bail alike
+        /// when a base cannot be read.
+        /// </summary>
+        internal static bool TryCollectChainDeclarations(INamedTypeSymbol classSymbol, out List<ClassDeclarationSyntax> declarations)
+        {
+            declarations = [];
+            for (INamedTypeSymbol? type = classSymbol; type != null; type = type.BaseType)
+            {
+                if (SyntaxHelpers.IsKnownIndexBaseType(type))
+                    break; // reached the framework base; it does not assign Map in user source
+
+                if (type.DeclaringSyntaxReferences.IsDefaultOrEmpty)
+                    return false; // base compiled in another assembly — can't inspect
+
+                foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)
+                {
+                    if (syntaxRef.GetSyntax() is ClassDeclarationSyntax decl)
+                        declarations.Add(decl);
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

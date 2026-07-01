@@ -97,7 +97,7 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                 return false;
 
             ITypeSymbol? argType = model.GetTypeInfo(argument.Expression).Type;
-            return argType?.Name == KnownTypes.SessionOptionsTypeName;
+            return SyntaxHelpers.IsSessionOptionsType(argType);
         }
 
         private static string? FindRunLambdaBatchParameterName(SyntaxNode node, SemanticModel model)

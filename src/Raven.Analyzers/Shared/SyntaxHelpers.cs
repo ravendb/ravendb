@@ -209,13 +209,24 @@ namespace Raven.Analyzers.Shared
             IsTypeOrImplements(type, KnownTypes.IDocumentStoreName);
 
         /// <summary>
+        /// Returns true when <paramref name="type"/> is, or implements, the Raven.Client
+        /// <c>SessionOptions</c> type.
+        /// </summary>
+        public static bool IsSessionOptionsType(ITypeSymbol? type) =>
+            IsTypeOrImplements(type, KnownTypes.SessionOptionsTypeName);
+
+        /// <summary>
         /// Returns true when <paramref name="type"/>, or any base type, is a subscription worker
-        /// (<c>SubscriptionWorker</c> / <c>AbstractSubscriptionWorker</c>).
+        /// (<c>SubscriptionWorker</c> / <c>AbstractSubscriptionWorker</c>) declared in the
+        /// <c>Raven.Client</c> namespace. The namespace gate matches every other Raven-type check
+        /// (see <see cref="IsTypeOrImplements"/>) so an unrelated user type that merely happens to be
+        /// named <c>SubscriptionWorker</c> is not treated as the RavenDB type (a RVN011 false positive).
         /// </summary>
         public static bool IsSubscriptionWorkerType(ITypeSymbol? type) =>
             AnyBaseTypeOrSelf(type, t =>
-                t.Name == KnownTypes.SubscriptionWorkerTypeName
-                || t.Name == KnownTypes.AbstractSubscriptionWorkerTypeName);
+                (t.Name == KnownTypes.SubscriptionWorkerTypeName
+                 || t.Name == KnownTypes.AbstractSubscriptionWorkerTypeName)
+                && IsInRavenClientNamespace(t));
 
         /// <summary>
         /// True when <paramref name="symbol"/> is declared in the compilation's own source (a

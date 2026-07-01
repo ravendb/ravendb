@@ -38,13 +38,17 @@ namespace Raven.Analyzers.Indexes
             if (SyntaxHelpers.IsJavaScriptIndex(indexClass))
                 return IndexStoredFieldSet.Bail;
 
+            // Stored-field directives (Store(...) / Stores[...] / StoreAllFields) may live in a shared
+            // base index class, so walk the chain (same helper RVN004 and the map-field extractor use).
+            // Bail if a base is metadata-only: an unreadable base could store fields we cannot see, which
+            // under ProjectionBehavior.FromIndex would make projected fields wrongly look non-retrievable.
+            if (!IndexInheritanceInspector.TryCollectChainDeclarations(indexClass, out List<ClassDeclarationSyntax> declarations))
+                return IndexStoredFieldSet.Bail;
+
             var allFields = new HashSet<string>(System.StringComparer.Ordinal);
 
-            foreach (SyntaxReference syntaxRef in indexClass.DeclaringSyntaxReferences)
+            foreach (ClassDeclarationSyntax classDecl in declarations)
             {
-                if (syntaxRef.GetSyntax() is not ClassDeclarationSyntax classDecl)
-                    continue;
-
                 SemanticModel model = compilation.GetSemanticModel(classDecl.SyntaxTree);
 
                 foreach (ConstructorDeclarationSyntax ctor in classDecl.Members
@@ -149,16 +153,17 @@ namespace Raven.Analyzers.Indexes
             IsFieldStorageMember(expr, KnownTypes.FieldStorageNo, model);
 
         // FieldStorage.Yes / FieldStorage.No — a member access whose member name matches AND whose
-        // expression type is the FieldStorage enum. The type check is what keeps an unrelated enum
-        // member that merely happens to be named "Yes"/"No" (e.g. MyFlags.Yes) from being mistaken
-        // for a storage directive and corrupting the stored-field set.
+        // expression type is the Raven.Client FieldStorage enum. The namespace-gated type check keeps
+        // an unrelated enum member that merely happens to be named "Yes"/"No" (e.g. MyFlags.Yes) — or a
+        // user enum named FieldStorage in another namespace — from being mistaken for a storage
+        // directive and corrupting the stored-field set.
         private static bool IsFieldStorageMember(ExpressionSyntax expr, string memberName, SemanticModel model)
         {
             if (expr is not MemberAccessExpressionSyntax ma || ma.Name.Identifier.ValueText != memberName)
                 return false;
 
             ITypeSymbol? type = model.GetTypeInfo(ma).Type;
-            return type?.Name == KnownTypes.FieldStorageTypeName;
+            return SyntaxHelpers.IsTypeOrImplements(type, KnownTypes.FieldStorageTypeName);
         }
 
         /// <summary>
