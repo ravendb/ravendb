@@ -329,6 +329,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             }
             finally
             {
+                _work.Dispose();
                 _taskIsRunning = 0; // only needed for debugging                
             }
         }
@@ -544,6 +545,8 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             {
                 CancelWork(o);
             }
+
+            _work.Dispose();
         }
     }
 
