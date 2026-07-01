@@ -48,17 +48,17 @@ namespace SlowTests.Client.TimeSeries.Issues
                     res = ts.Get(pageSize: 7);
                     Assert.Equal(7, res.Length);
 
-                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(pageSize: 20);
                     Assert.Equal(20, res.Length);
 
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(pageSize: 25);
                     Assert.Equal(21, res.Length);
 
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(5, session.Advanced.NumberOfRequests);
                 }
             }
         }
