@@ -29,6 +29,7 @@ export function AppWebWidgetDefaultCustomize() {
     const onRetry = async () => {
         if (defaultQuery.isError) await defaultQuery.refetch();
         if (styleGuideQuery.isError) await styleGuideQuery.refetch();
+        if (previewQuery.isError) await previewQuery.refetch();
     };
 
     return (
@@ -42,8 +43,8 @@ export function AppWebWidgetDefaultCustomize() {
             </Link>
 
             <ApiState
-                isLoading={defaultQuery.isPending || styleGuideQuery.isPending}
-                isError={defaultQuery.isError || styleGuideQuery.isError}
+                isLoading={defaultQuery.isPending || styleGuideQuery.isPending || previewQuery.isPending}
+                isError={defaultQuery.isError || styleGuideQuery.isError || previewQuery.isError}
                 errorTitle="Could not load default styles"
                 onRetry={onRetry}
                 loadingLabel="Loading default styles..."

@@ -23,7 +23,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 // The widget inherits the app default (no CSS of its own): the editor pre-fills with the
-// formatted app default and "Reset to default" is disabled because the content is the default.
+// formatted app default, which "Reset to default" restores.
 export const InheritsAppDefault: Story = {
     parameters: {
         msw: {

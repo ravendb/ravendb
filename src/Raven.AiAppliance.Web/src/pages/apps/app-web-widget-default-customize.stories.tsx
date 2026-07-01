@@ -19,7 +19,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // No default saved yet (the common first visit): the editor pre-fills with the widget's
-// formatted base styles and "Reset to default" is disabled because the content is the default.
+// formatted base styles, which "Reset to default" restores.
 export const Default: Story = {};
 
 // A default has been saved: the editor shows it and "Reset to default" restores the base styles.
