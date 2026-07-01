@@ -23,6 +23,12 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
     public readonly UnaryMatchOperation BetweenLeft;
     public readonly UnaryMatchOperation BetweenRight;
     private readonly IndexSearcher _indexSearcher;
+
+    // RavenDB-26831: XOR mask applied to a raw signed long term before encoding it big-endian for a compound-field
+    // start-with scan, so it matches the order-preserving encoding written by the indexer. Derived from the index
+    // version identically to the indexer: long.MinValue on fixed indexes, 0 on legacy ones.
+    private readonly long _compoundFieldNumericXorMask;
+
     public bool IsBoosting => Boosting.HasValue;
     public long Count { get; }
 
@@ -36,10 +42,11 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => throw new InvalidOperationException($"{nameof(DuplicatesOccurrenceStatus)} should never be used in {nameof(CoraxBooleanItem)}");
 
 
-    private CoraxBooleanItem(IndexSearcher indexSearcher, FieldMetadata field, object term, UnaryMatchOperation operation)
+    private CoraxBooleanItem(IndexSearcher indexSearcher, long compoundFieldNumericXorMask, FieldMetadata field, object term, UnaryMatchOperation operation)
     {
         Field = field;
         Term = term;
+        _compoundFieldNumericXorMask = compoundFieldNumericXorMask;
 
         // in case of query "Field != null" or `Field != ""`
         if (Term is null || Term is string s)
@@ -73,12 +80,13 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
     }
 
 
-    private CoraxBooleanItem(IndexSearcher indexSearcher, FieldMetadata field, object leftTerm, object rightTerm,
+    private CoraxBooleanItem(IndexSearcher indexSearcher, long compoundFieldNumericXorMask, FieldMetadata field, object leftTerm, object rightTerm,
         UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
     {
         Operation = UnaryMatchOperation.Between;
         BetweenLeft = leftOperation;
         BetweenRight = rightOperation;
+        _compoundFieldNumericXorMask = compoundFieldNumericXorMask;
         Field = field;
         Count = indexSearcher.GetTermAmountInField(Field);
         _indexSearcher = indexSearcher;
@@ -94,8 +102,17 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
                           && term is not null
                           && QueryBuilderHelper.TryGetTime(index, term, out timeTicks);
         term = isTimeValue ? timeTicks : term;
-        
-        return new CoraxBooleanItem(indexSearcher, field, term, operation);
+
+        return new CoraxBooleanItem(indexSearcher, GetCompoundFieldNumericXorMask(index), field, term, operation);
+    }
+
+    // RavenDB-26831: same derivation as CoraxDocumentConverterBase so query-time compound-field encoding matches
+    // what the indexer wrote. Legacy indexes get mask 0 (byte-identical to the old encoding) so reads stay correct.
+    private static long GetCompoundFieldNumericXorMask(Index index)
+    {
+        return index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.OrderPreservingCompoundNumericEncoding
+            ? long.MinValue
+            : 0L;
     }
 
     public static IQueryMatch BuildBetween(IndexSearcher indexSearcher, Index index, FieldMetadata field, object leftValue, object rightValue,
@@ -144,15 +161,17 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
                 var term1HasTime = fieldHasTime && QueryBuilderHelper.TryGetTime(index, leftValue, out ticksFromTerm1);
                 var term2HasTime = fieldHasTime && QueryBuilderHelper.TryGetTime(index, rightValue, out ticksFromTerm2);
 
+                long compoundFieldNumericXorMask = GetCompoundFieldNumericXorMask(index);
+
                 if (term1HasTime && term2HasTime)
-                    return new CoraxBooleanItem(indexSearcher, field, ticksFromTerm1, ticksFromTerm2, leftOperator, rightOperator);
-        
+                    return new CoraxBooleanItem(indexSearcher, compoundFieldNumericXorMask, field, ticksFromTerm1, ticksFromTerm2, leftOperator, rightOperator);
+
                 // since the field has time values, and time values are indexed in the exact manner,
-                // we disable analyzer (matching Lucene behavior) 
+                // we disable analyzer (matching Lucene behavior)
                 if (term1HasTime || term2HasTime)
                     field = field.ChangeAnalyzer(FieldIndexingMode.Exact);
-        
-                return new CoraxBooleanItem(indexSearcher, field, leftValue, rightValue, leftOperator, rightOperator);
+
+                return new CoraxBooleanItem(indexSearcher, compoundFieldNumericXorMask, field, leftValue, rightValue, leftOperator, rightOperator);
             }
         }
     }
@@ -181,15 +200,21 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
     Slice GetStartWithTerm()
     {
         var t = Term;
+        // RavenDB-26831: a genuine (integer) long term must get the same XOR mask the indexer applied to make the
+        // big-endian encoding order-preserving. A double is already order-preserving via DoubleToSortableLong and
+        // must NOT be masked, so encode it directly here rather than falling through to the long branch.
         if (t is double d)
         {
-            t = Bits.DoubleToSortableLong(d);
+            long sortable = Bits.DoubleToSortableLong(d);
+            _indexSearcher.Allocator.Allocate(sizeof(long), out var doubleBuffer);
+            BitConverter.TryWriteBytes(doubleBuffer.ToSpan(), Bits.SwapBytes(sortable));
+            return new Slice(doubleBuffer);
         }
         if (t is long l)
-        {        
+        {
             _indexSearcher.Allocator.Allocate(sizeof(long) , out var bs);
             Span<byte> buffer = bs.ToSpan();
-            BitConverter.TryWriteBytes(buffer, Bits.SwapBytes(l));
+            BitConverter.TryWriteBytes(buffer, Bits.SwapBytes(l ^ _compoundFieldNumericXorMask));
             return new Slice(bs);
         }
 
