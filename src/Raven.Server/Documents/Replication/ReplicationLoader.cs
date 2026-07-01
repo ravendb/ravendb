@@ -575,11 +575,13 @@ namespace Raven.Server.Documents.Replication
 
                 ForTestingPurposes?.BeforePullReplicationAsSinkHandoff?.Invoke();
 
-                if (RemoveOutgoingHandler(source) && TryRegisterIncomingInstance(newIncoming))
-                {
-                    if (_outgoingFailureInfo.TryRemove(destination, out ConnectionShutdownInfo info))
-                        _reconnectQueue.TryRemove(info);
+                RemoveOutgoingHandler(source);
 
+                if (_outgoingFailureInfo.TryRemove(source.Destination, out ConnectionShutdownInfo info))
+                    _reconnectQueue.TryRemove(info);
+
+                if (TryRegisterIncomingInstance(newIncoming))
+                {
                     newIncoming.Start();
                     ForceTryReconnectAll();
                 }
@@ -625,17 +627,16 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        private bool RemoveOutgoingHandler(DatabaseOutgoingReplicationHandler instance)
+        private void RemoveOutgoingHandler(DatabaseOutgoingReplicationHandler instance)
         {
             instance.Failed -= OnOutgoingSendingFailed;
             instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
             instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
 
             if (_outgoing.TryRemove(instance) == false)
-                return false;
+                return;
 
             OutgoingReplicationRemoved?.Invoke(instance);
-            return true;
         }
 
         private void OnAttachmentStreamsReceived(IncomingReplicationHandler source, int attachmentsStreamCount)
