@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public IncomingConnectionInfo ConnectionInfo { get; protected set; }
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
         public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
-        protected string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
+        protected virtual ThreadNames.ThreadInfo IncomingReplicationThreadInfo => ThreadNames.ForIncomingReplication(_databaseName, ConnectionInfo.SourceDatabaseName, FromToString);
         public virtual string FromToString => $"In database {_server.NodeTag}-{_databaseName} @ {_server.GetNodeTcpServerUrl()} " +
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
@@ -114,8 +114,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, ThreadNames.ForIncomingReplication(IncomingReplicationThreadName,
-                    _databaseName, ConnectionInfo.SourceDatabaseName));
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadInfo);
             }
 
             if (Logger.IsDebugEnabled)

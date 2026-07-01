@@ -567,22 +567,29 @@ namespace Raven.Server.Documents.Replication
                     Type = PullReplicationParams.ConnectionType.Incoming,
                     TaskId = destination.TaskId
                 };
+
                 var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
                 newIncoming.Failed += RetryPullReplication;
 
                 ForTestingPurposes?.BeforePullReplicationAsSinkHandoff?.Invoke();
 
-                if (CompletePullReplicationAsSinkHandoff(source, destination, newIncoming) == false)
+                if (RemoveOutgoingHandler(source) && TryRegisterIncomingInstance(newIncoming))
                 {
+                    if (_outgoingFailureInfo.TryRemove(destination, out ConnectionShutdownInfo info))
+                        _reconnectQueue.TryRemove(info);
+
+                    newIncoming.Start();
+                    ForceTryReconnectAll();
+                }
+                else
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
+                    }
                     newIncoming.Failed -= RetryPullReplication;
                     newIncoming.Dispose();
-                    return;
                 }
-
-                PoolOfThreads.PooledThread.ResetCurrentThreadName();
-                Thread.CurrentThread.Name = ThreadNames.GetNameToUse(ThreadNames.ForPullReplicationAsSink($"Pull Replication as Sink from {destination.Database} at {destination.Url}", destination.Database, destination.Url));
-
-                newIncoming.DoIncomingReplication();
 
                 void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
                 {
@@ -604,12 +611,8 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool CompletePullReplicationAsSinkHandoff(DatabaseOutgoingReplicationHandler source, ReplicationNode destination, IncomingReplicationHandler newIncoming)
+        private bool TryRegisterIncomingInstance(IncomingReplicationHandler newIncoming)
         {
-            // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
-            if (RemoveOutgoingHandler(source) == false)
-                return false;
-
             var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
                 (_, val) => val.IsDisposed ? newIncoming : val);
 
@@ -617,10 +620,6 @@ namespace Raven.Server.Documents.Replication
                 return false;
 
             IncomingReplicationAdded?.Invoke(newIncoming);
-
-            if (_outgoingFailureInfo.TryRemove(destination, out ConnectionShutdownInfo info))
-                _reconnectQueue.TryRemove(info);
-
             return true;
         }
 
@@ -648,13 +647,9 @@ namespace Raven.Server.Documents.Replication
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
-            var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
-                (_, val) => val.IsDisposed ? newIncoming : val);
-
-            if (current == newIncoming)
+            if (TryRegisterIncomingInstance(newIncoming))
             {
                 newIncoming.Start();
-                IncomingReplicationAdded?.Invoke(newIncoming);
                 ForceTryReconnectAll();
             }
             else
@@ -663,6 +658,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
                 }
+                newIncoming.Failed -= OnIncomingReceiveFailed;
                 newIncoming.Dispose();
             }
         }
