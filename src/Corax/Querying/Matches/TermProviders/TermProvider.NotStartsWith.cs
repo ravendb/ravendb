@@ -50,7 +50,9 @@ namespace Corax.Querying.Matches.TermProviders
         public bool Next(out TermMatch term)
         {
             var startWith = _startWith.Decoded();
-            while (_iterator.MoveNext(out var key, out _, out _))
+            using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
+            var key = scope.Key;
+            while (_iterator.MoveNext(key, out _, out _))
             {
                 _token.ThrowIfCancellationRequested();
                 var termSlice = key.Decoded();

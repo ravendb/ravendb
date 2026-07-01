@@ -47,9 +47,11 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
     public bool Next(out TermMatch term)
     {
         char[] buffer = null;
+        using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
+        var compactKey = scope.Key;
         try
         {
-            while (_iterator.MoveNext(out var compactKey, out _, out _))
+            while (_iterator.MoveNext(compactKey, out _, out _))
             {
                 var key = compactKey.Decoded();
                 if (_regex.IsMatch(ToChars(key, ref buffer)) == false)
