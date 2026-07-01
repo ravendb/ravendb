@@ -12,6 +12,8 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.CdcSink;
@@ -193,6 +195,125 @@ public class RavenDB_26838 : RavenTestBase
             var itemErrors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName);
             Assert.Equal(100, itemErrors.Count);
             Assert.All(itemErrors, e => Assert.Equal((long)TaskErrorStep.Transformation, e.Step));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public void HealthStatus_BecomesFailedOnErrorsAndRecovers()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+            var stats = new CdcSinkProcessStatistics("CdcSink1", database.Configuration.CdcSink);
+
+            Assert.Equal(EtlProcessHealthStatus.Healthy, stats.HealthStatus);
+
+            // A fully-failed batch seeds the EWMA at ratio 1.0, so health drops to Failed.
+            RunBatch(stats, errors: 100, successes: 0);
+            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+
+            // Successful batches decay the ratio back below the thresholds, recovering to Healthy.
+            for (int i = 0; i < 500 && stats.HealthStatus != EtlProcessHealthStatus.Healthy; i++)
+                RunBatch(stats, errors: 0, successes: 100);
+
+            Assert.Equal(EtlProcessHealthStatus.Healthy, stats.HealthStatus);
+        }
+
+        static void RunBatch(CdcSinkProcessStatistics stats, int errors, int successes)
+        {
+            stats.NewBatch();
+            for (int i = 0; i < errors; i++)
+                stats.RecordItemError(TaskErrorStep.Load, "error", "orders/" + i);
+            if (successes > 0)
+                stats.ConsumeSuccess(successes);
+            stats.OnBatchCompletion();
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public void HealthStatus_StaysFailedAfterPermanentFault()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+            var stats = new CdcSinkProcessStatistics("CdcSink1", database.Configuration.CdcSink);
+
+            stats.SetHealthStatusToFailed();
+            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+
+            // A clean batch must not clear a latched permanent-fault status.
+            stats.NewBatch();
+            stats.ConsumeSuccess(100);
+            stats.OnBatchCompletion();
+
+            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public async Task HealthThresholds_MustHaveFailedGreaterThanImpaired()
+    {
+        using (var store = GetDocumentStore())
+        {
+            await store.Maintenance.SendAsync(new PutDatabaseSettingsOperation(store.Database, new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusFailedThreshold)] = "0.1",
+                [RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusImpairedThreshold)] = "0.9"
+            }));
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                Server.ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(store.Database));
+
+            Assert.Contains(RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusFailedThreshold), ex.Message);
+            Assert.Contains(RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusImpairedThreshold), ex.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public void ErrorTables_AreDroppedWhenSinkDeleted()
+    {
+        const string taskName = "CdcSink1";
+
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            var connectionString = new SqlConnectionString
+            {
+                Name = "cdc-cs",
+                FactoryName = "Microsoft.Data.SqlClient",
+                ConnectionString = "Server=localhost;Database=TestDb;User Id=sa;Password=pass;"
+            };
+            store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(connectionString));
+
+            var addResult = store.Maintenance.Send(new AddCdcSinkOperation(new CdcSinkConfiguration
+            {
+                Name = taskName,
+                ConnectionStringName = connectionString.Name,
+                Disabled = true,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        Columns = new List<CdcColumnMapping> { new CdcColumnMapping { Column = "order_id", Name = "OrderId" } },
+                        PrimaryKeyColumns = new List<string> { "order_id" }
+                    }
+                }
+            }));
+
+            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, taskName,
+            [
+                new TaskItemError { DocumentId = "orders/1", TaskName = taskName, CreatedAt = DateTime.UtcNow, Step = TaskErrorStep.Load, Error = "e1" }
+            ]);
+            Assert.NotEmpty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName));
+
+            store.Maintenance.Send(new DeleteOngoingTaskOperation(addResult.TaskId, OngoingTaskType.CdcSink));
+
+            // Deleting the sink removes its config from the record; the loader drops the dedicated error tables.
+            Assert.Equal(0, WaitForValue(() => database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName).Count, 0, timeout: 15000, interval: 500));
         }
     }
 
