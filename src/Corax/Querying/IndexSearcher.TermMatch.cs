@@ -98,18 +98,21 @@ public partial class IndexSearcher
             termKey = null;
         }
 
-        return termKey is null 
-            ? TermMatch.CreateEmpty(this, Allocator) 
-            : TermQuery(field, termKey, terms);
+        if (termKey is null)
+            return TermMatch.CreateEmpty(this, Allocator);
+
+        var match = TermQuery(field, termKey, terms);
+        _fieldsTree.Llt.ReleaseCompactKey(ref termKey);
+        return match;
     }
-    
+
     //Should be already analyzed...
     public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
     {
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
         {
-            // If either the term or the field does not exist the request will be empty. 
+            // If either the term or the field does not exist the request will be empty.
             return TermMatch.CreateEmpty(this, Allocator);
         }
 
@@ -124,7 +127,10 @@ public partial class IndexSearcher
             termKey = null;
         }
 
-        return TermQuery(field, termKey, terms);
+        var match = TermQuery(field, termKey, terms);
+        if (termKey != null)
+            _fieldsTree.Llt.ReleaseCompactKey(ref termKey);
+        return match;
     }
 
     public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
