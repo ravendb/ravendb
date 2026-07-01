@@ -107,6 +107,21 @@ namespace Raven.Analyzers.Queries
             || name == KnownTypes.ThenByDescendingMethodName
             || name == KnownTypes.SearchMethodName;
 
+        // True when the invocation has at least one lambda argument (l => ... or (l) => ...). Such an
+        // argument introduces an inner range variable, which is the hallmark of a range-binding
+        // collection operator (Any/All/Where/Select/SelectMany). Used to tell a fan-out collection hop
+        // (skip the collection member) from a direct collection query such as Contains/Count (check it).
+        private static bool HasLambdaArgument(InvocationExpressionSyntax invocation)
+        {
+            foreach (ArgumentSyntax argument in invocation.ArgumentList.Arguments)
+            {
+                if (argument.Expression is LambdaExpressionSyntax)
+                    return true;
+            }
+
+            return false;
+        }
+
         private static void CheckLambdaFields(
             ExpressionSyntax lambdaExpr,
             ImmutableHashSet<string> indexedFields,
@@ -143,11 +158,35 @@ namespace Raven.Analyzers.Queries
                 // queried and must still be checked. The distinction: an intermediate hop's enclosing
                 // member access is a property reference, not an invocation target.
                 if (memberAccess.Parent is MemberAccessExpressionSyntax parentAccess &&
-                    parentAccess.Expression == memberAccess &&
-                    parentAccess.Parent is not InvocationExpressionSyntax)
-                    continue;
+                    parentAccess.Expression == memberAccess)
+                {
+                    // Nested property hop (o.Address.City): the enclosing access is itself the receiver
+                    // of a further property reference, not an invocation target.
+                    if (parentAccess.Parent is not InvocationExpressionSyntax collectionInvocation)
+                        continue;
+
+                    // Fan-out collection hop (o.Lines.Any(l => l.Product == "x")): the collection member
+                    // is the receiver of a range-binding operator whose lambda introduces an inner range
+                    // variable (l). A fan-out index (from o in orders from l in o.Lines select new
+                    // { l.Product }) projects from that inner variable, not from the collection member,
+                    // so "Lines" is legitimately absent from the field set and must not be flagged. A
+                    // lambda argument is the signal that binds the inner elements; a lambda-less
+                    // collection method (o.Tags.Contains(scalar), o.Tags.Count()) queries the collection
+                    // field itself and stays checked below.
+                    if (HasLambdaArgument(collectionInvocation))
+                        continue;
+                }
 
                 string fieldName = memberAccess.Name.Identifier.Text;
+
+                // RavenDB always exposes the document id for a static-index query (translated to the
+                // id() field), regardless of whether the index Map projects Id. Mirror the sibling
+                // RVN008 guard (QueryProjectionFieldAnalyzer.CheckSelectInitializerRhs) so filtering /
+                // ordering by the id is never reported as not-indexed. Use continue, not return: other
+                // fields referenced in the same lambda still need to be checked.
+                if (fieldName == KnownTypes.IdPropertyName)
+                    continue;
+
                 if (!indexedFields.Contains(fieldName) && reportedFields.Add(fieldName))
                 {
                     reportDiagnostic(Diagnostic.Create(

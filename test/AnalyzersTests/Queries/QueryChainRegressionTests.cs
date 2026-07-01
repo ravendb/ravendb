@@ -85,5 +85,76 @@ class Doc { public string Id { get; set; } public Tag Tag { get; set; } }
 
             Assert.Empty(diagnostics);
         }
+
+        [Fact]
+        public async Task OrderBy_After_Identity_Select_Is_Not_Flagged()
+        {
+            // A pure identity Select keeps each member's source name, so RavenDB remaps the OrderBy back
+            // to the source field. RVN002 must not flag it (the confirmed false positive this fix removes).
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(o => new { o.Company, o.Total })
+            .OrderBy(x => x.Total);
+    }
+}
+class Order { public string Company { get; set; } public int Total { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task OrderBy_On_Renamed_Select_Member_Reports_Diagnostic()
+        {
+            // A renamed projection member (Renamed = o.Company) has no matching source field, so ordering
+            // by it sorts by the alias server-side — wrong results. The Select is not a pure identity
+            // projection, so RVN002 must still flag the OrderBy.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(o => new { Renamed = o.Company, o.Total })
+            .OrderBy(x => x.Renamed);
+    }
+}
+class Order { public string Company { get; set; } public int Total { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
+        }
+
+        [Fact]
+        public async Task Where_On_Computed_Select_Member_Reports_Diagnostic()
+        {
+            // A computed projection member (Full = o.First + o.Last) has no source field, so filtering by
+            // it matches nothing server-side. The Select is not a pure identity projection, so RVN002
+            // must still flag the Where.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(o => new { Full = o.First + o.Last })
+            .Where(x => x.Full == ""John Doe"");
+    }
+}
+class Order { public string First { get; set; } public string Last { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
+        }
     }
 }

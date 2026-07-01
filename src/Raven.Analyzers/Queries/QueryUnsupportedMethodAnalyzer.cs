@@ -119,7 +119,7 @@ namespace Raven.Analyzers.Queries
                 if (context.SemanticModel.GetSymbolInfo(nested).Symbol is not IMethodSymbol method)
                     continue;
 
-                if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method))
+                if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method, exemptObjectMethodOverrides: false))
                     continue;
 
                 context.ReportDiagnostic(Diagnostic.Create(

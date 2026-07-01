@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -24,12 +26,16 @@ namespace Raven.Analyzers.Shared
     internal static class IndexInheritanceInspector
     {
         /// <summary>
-        /// Looks for a Map assignment in any constructor of the index class or a user-defined base.
-        /// Returns <see cref="IndexChainSearch.Unknown"/> when a base class is only available as
+        /// Looks for a Map assignment reachable from a constructor of the index class or a user-defined
+        /// base. Returns <see cref="IndexChainSearch.Unknown"/> when a base class is only available as
         /// metadata so the caller can suppress rather than report a false positive.
         /// </summary>
         public static IndexChainSearch FindMapAssignmentInChain(INamedTypeSymbol classSymbol, Compilation compilation)
         {
+            // Collect every in-source class declaration in the chain (each type's partials), stopping at
+            // the framework base. A metadata-only base cannot be inspected — the Map may well live there,
+            // so report Unknown rather than a false positive.
+            List<ClassDeclarationSyntax> declarations = [];
             for (INamedTypeSymbol? type = classSymbol; type != null; type = type.BaseType)
             {
                 if (SyntaxHelpers.IsKnownIndexBaseType(type))
@@ -40,14 +46,73 @@ namespace Raven.Analyzers.Shared
 
                 foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)
                 {
-                    if (syntaxRef.GetSyntax() is not ClassDeclarationSyntax decl)
+                    if (syntaxRef.GetSyntax() is ClassDeclarationSyntax decl)
+                        declarations.Add(decl);
+                }
+            }
+
+            // A Map assignment counts only when it is reachable from a constructor: directly in a ctor
+            // body, or in a method the constructor invokes (transitively). Candidate methods and seed
+            // constructors are gathered across the WHOLE chain and all partials, so a ctor that delegates
+            // to a base-class or other-partial helper — MyIndex() { Setup(); } with void Setup() { Map =
+            // ...; } declared elsewhere — is followed correctly. A Map in a method no constructor ever
+            // reaches (a dead helper, a finalizer, an operator) does not count, so a genuinely map-less
+            // index still reports RVN004. RVN001 separately flags a Map assigned outside a constructor.
+            Dictionary<string, List<MethodDeclarationSyntax>> methodsByName = new(StringComparer.Ordinal);
+            Queue<(SyntaxNode Body, SemanticModel Model)> pending = new();
+
+            foreach (ClassDeclarationSyntax decl in declarations)
+            {
+                SemanticModel model = compilation.GetSemanticModel(decl.SyntaxTree);
+
+                foreach (MemberDeclarationSyntax member in decl.Members)
+                {
+                    if (member is MethodDeclarationSyntax method)
+                    {
+                        if (!methodsByName.TryGetValue(method.Identifier.Text, out List<MethodDeclarationSyntax>? overloads))
+                        {
+                            overloads = [];
+                            methodsByName[method.Identifier.Text] = overloads;
+                        }
+
+                        overloads.Add(method);
+                    }
+                    else if (member is ConstructorDeclarationSyntax ctor && ctor.GetBodyNode() is SyntaxNode ctorBody)
+                    {
+                        pending.Enqueue((ctorBody, model));
+                    }
+                }
+            }
+
+            HashSet<string> visitedMethodNames = new(StringComparer.Ordinal);
+
+            while (pending.Count > 0)
+            {
+                (SyntaxNode body, SemanticModel model) = pending.Dequeue();
+
+                if (ContainsMapAssignment(body, model))
+                    return IndexChainSearch.Found;
+
+                // Follow calls to methods declared anywhere in the chain/partials (Setup(), this.Setup(),
+                // Setup<T>()); enqueue every overload sharing the name. DescendantNodesAndSelf so an
+                // expression-bodied ctor/method (=> Setup()) is covered too. GetMethodName returns null
+                // for a bare unqualified call, so fall back to the plain identifier.
+                foreach (InvocationExpressionSyntax invocation in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
+                {
+                    string? invokedName = SyntaxHelpers.GetMethodName(invocation);
+                    if (invokedName == null && invocation.Expression is IdentifierNameSyntax invokedId)
+                        invokedName = invokedId.Identifier.Text;
+
+                    if (invokedName == null || !visitedMethodNames.Add(invokedName))
                         continue;
 
-                    SemanticModel model = compilation.GetSemanticModel(decl.SyntaxTree);
-                    foreach (ConstructorDeclarationSyntax ctor in decl.Members.OfType<ConstructorDeclarationSyntax>())
+                    if (methodsByName.TryGetValue(invokedName, out List<MethodDeclarationSyntax>? targets))
                     {
-                        if (ctor.GetBodyNode() is SyntaxNode body && ContainsMapAssignment(body, model))
-                            return IndexChainSearch.Found;
+                        foreach (MethodDeclarationSyntax target in targets)
+                        {
+                            if (target.GetBodyNode() is SyntaxNode targetBody)
+                                pending.Enqueue((targetBody, compilation.GetSemanticModel(target.SyntaxTree)));
+                        }
                     }
                 }
             }
