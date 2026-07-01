@@ -1,7 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {
@@ -40,5 +44,29 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("CdcSink.Postgres.ReplicationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting PostgresReplicationTimeout { get; protected set; }
+
+        public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
+        {
+            base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
+
+            if (ProcessHealthStatusFailedThreshold is < 0f or > 1f)
+            {
+                throw new InvalidOperationException(
+                    $"The value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusFailedThreshold)}' ({ProcessHealthStatusFailedThreshold}) must be between 0 and 1.");
+            }
+
+            if (ProcessHealthStatusImpairedThreshold is < 0f or > 1f)
+            {
+                throw new InvalidOperationException(
+                    $"The value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusImpairedThreshold)}' ({ProcessHealthStatusImpairedThreshold}) must be between 0 and 1.");
+            }
+
+            if (ProcessHealthStatusFailedThreshold <= ProcessHealthStatusImpairedThreshold)
+            {
+                throw new InvalidOperationException(
+                    $"The value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusFailedThreshold)}' ({ProcessHealthStatusFailedThreshold}) must be greater than " +
+                    $"the value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusImpairedThreshold)}' ({ProcessHealthStatusImpairedThreshold}).");
+            }
+        }
     }
 }
