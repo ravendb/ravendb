@@ -966,7 +966,7 @@ namespace SlowTests.Server.Replication
                 await AssertPullReplicationAsSinkTaskDisabled(sink, sinkTask.TaskId);
                 Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId) == false, true, timeout),
                     "Disabling the HubToSink task should remove the tracked incoming handler.");
-                Assert.False(HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId),
+                Assert.True(WaitForValue(() => HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId) == false, true, timeout),
                     "The disabled HubToSink task should not have an outgoing connector.");
 
                 using (var session = hub.OpenSession())
