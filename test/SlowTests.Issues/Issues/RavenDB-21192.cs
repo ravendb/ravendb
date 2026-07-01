@@ -12,7 +12,6 @@ using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
