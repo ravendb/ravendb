@@ -138,10 +138,15 @@ namespace Raven.Analyzers.Sessions
                 if (QueryMaterializingMethods.Contains(methodName)
                     && invocation.ArgumentList.Arguments.Count == 0
                     && SyntaxHelpers.IsRavenQueryable(receiverType)
-                    && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol))
+                    && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol)
+                    && !DependsOnMaterializedLocal(invocation))
                 {
                     // The matched name is the genuine framework materializer (Enumerable.ToList,
                     // Raven's async query extensions), not a same-named user-defined extension.
+                    // The DependsOnMaterializedLocal gate mirrors the Load path's IsIndependentArg
+                    // check: a query whose chain (a Where/Select predicate, an id argument, …)
+                    // references a local produced by a prior materialized call genuinely depends on
+                    // that result and cannot share a multi-get batch, so it must not be flagged.
                     ISymbol? sessionSymbol = _model.GetSymbolInfo(SyntaxHelpers.WalkInvocationChainToRoot(memberAccess.Expression)).Symbol;
                     BatchableCalls.Add((invocation, methodName, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
                     base.VisitInvocationExpression(invocation);
@@ -171,6 +176,24 @@ namespace Raven.Analyzers.Sessions
                 }
 
                 base.VisitInvocationExpression(invocation);
+            }
+
+            // True when any part of the query invocation (chain receiver, predicate/projection
+            // lambdas, indexer/id arguments) references a local that a prior materialized session
+            // call produced. Such a query depends on that result and cannot be folded into the same
+            // lazy multi-get, so it must be excluded from the batchable set — the query counterpart
+            // of IsIndependentArg for loads. Symbols are compared (not identifier text) so an
+            // unrelated lambda parameter that merely shares a name does not trigger a false exclusion.
+            private bool DependsOnMaterializedLocal(InvocationExpressionSyntax invocation)
+            {
+                foreach (IdentifierNameSyntax id in invocation.DescendantNodes().OfType<IdentifierNameSyntax>())
+                {
+                    ISymbol? symbol = _model.GetSymbolInfo(id).Symbol;
+                    if (symbol is ILocalSymbol && _materializationDerivedSet.Contains(symbol))
+                        return true;
+                }
+
+                return false;
             }
 
             private bool IsIndependentArg(ArgumentSyntax arg)

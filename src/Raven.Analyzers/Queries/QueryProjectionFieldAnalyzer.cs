@@ -176,8 +176,11 @@ namespace Raven.Analyzers.Queries
         /// </summary>
         private static string ResolveProjectionBehavior(ExpressionSyntax chainExpression, SemanticModel model)
         {
-            string result = KnownTypes.ProjectionBehaviorDefault;
-
+            // EnumerateInvocationChain yields the chain outer-to-inner, i.e. the LAST-applied call
+            // first. At runtime AbstractDocumentQuery.Projection(...) is a plain assignment, so the
+            // last-applied Projection wins; the first Projection customize we encounter here (the
+            // outermost) is therefore the effective behavior. Return on that match rather than
+            // continuing inward, which would incorrectly keep the first-applied (innermost) value.
             foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(chainExpression, model))
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
@@ -214,11 +217,11 @@ namespace Raven.Analyzers.Queries
                 if (typeIdent != KnownTypes.ProjectionBehaviorTypeName)
                     return "bail";
 
-                result = behaviorAccess.Name.Identifier.Text;
-                // Take the last Customize call in the chain; keep walking
+                // Outermost (last-applied) Projection customize — this is the effective behavior.
+                return behaviorAccess.Name.Identifier.Text;
             }
 
-            return result;
+            return KnownTypes.ProjectionBehaviorDefault;
         }
 
         private static void CheckProjectInto(

@@ -40,13 +40,18 @@ namespace Raven.Analyzers.Indexes
             if (SyntaxHelpers.IsJavaScriptIndex(indexClass))
                 return IndexFieldSet.Bail;
 
+            // Walk the index class together with its user-defined base classes: the Map may be defined
+            // in a shared base (the abstract-base pattern that RVN004 already understands via the same
+            // helper). If a base is metadata-only we cannot read its Map, so bail rather than validate
+            // queries against a partial — possibly empty — field set, which would false-positive on
+            // every queried field.
+            if (!IndexInheritanceInspector.TryCollectChainDeclarations(indexClass, out List<ClassDeclarationSyntax> declarations))
+                return IndexFieldSet.Bail;
+
             var allFields = new HashSet<string>(System.StringComparer.Ordinal);
 
-            foreach (SyntaxReference syntaxRef in indexClass.DeclaringSyntaxReferences)
+            foreach (ClassDeclarationSyntax classDecl in declarations)
             {
-                if (syntaxRef.GetSyntax() is not ClassDeclarationSyntax classDecl)
-                    continue;
-
                 SemanticModel model = compilation.GetSemanticModel(classDecl.SyntaxTree);
 
                 foreach (ConstructorDeclarationSyntax ctor in classDecl.Members
