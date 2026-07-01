@@ -438,7 +438,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         // We *intentionally* submit the command here, even if we have no entries
         // to update the checkpoint and table load state in a timely manner
 
-        // Per-batch stats aggregator, mirroring the ETL/QueueSink stats lifecycle: chain the
+        // Per-batch stats aggregator: chain the
         // start time off the previous batch, open a scope the batch command records into,
         // start the timer and register it as the latest (and in the ring buffer), then
         // Complete() once the batch finishes. CreateScope() returns an unstarted scope, so
@@ -495,7 +495,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             statsAggregator.Complete();
         }
 
-        // Only a successfully persisted batch raises the completion event (mirrors ETL's loader callback).
+        // Only a successfully persisted batch raises the completion event.
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
         return (checkpoint, ops.Count);
     }
