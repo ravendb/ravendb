@@ -22,7 +22,7 @@ public class CdcSinkProcessStatistics
 
     // Per-batch item errors (per-document apply failures + JS-script failures). Buffered here while
     // the batch executes inside the TxMerger and flushed to TaskErrorsStorage from the process
-    // thread once the batch completes (see CdcSinkProcess.SubmitBatch), mirroring EtlProcessStatistics.
+    // thread once the batch completes (see CdcSinkProcess.SubmitBatch).
     private readonly List<TaskItemError> _itemErrors = new();
 
     private readonly CdcSinkConfiguration _configuration;
@@ -35,7 +35,7 @@ public class CdcSinkProcessStatistics
     private long _batchErrors;
     private long _batchSuccesses;
 
-    /// <summary>EWMA of the per-batch error ratio, mirroring EtlProcessStatistics.AverageErrorsRatio.</summary>
+    /// <summary>EWMA of the per-batch error ratio.</summary>
     public TimeAgnosticEwma AverageErrorsRatio { get; } = new();
 
     /// <summary>
@@ -150,8 +150,8 @@ public class CdcSinkProcessStatistics
 
     /// <summary>
     /// Feeds the per-batch error/success tally into <see cref="AverageErrorsRatio"/> and recomputes
-    /// <see cref="HealthStatus"/> from the EWMA error ratio vs the configured thresholds, mirroring
-    /// EtlProcessStatistics.OnBatchCompletion. Called on the process thread after a batch is written.
+    /// <see cref="HealthStatus"/> from the EWMA error ratio vs the configured thresholds. Called on the
+    /// process thread after a batch is written.
     /// </summary>
     public void OnBatchCompletion()
     {
