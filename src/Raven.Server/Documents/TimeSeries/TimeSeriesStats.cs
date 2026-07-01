@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.TimeSeries
             name = slicer.NameSlice;
             mergedChangeVector = null;
 
-            if (table == null || table.ReadByKey(slicer.StatsKey, out var tvr) == false)
+            if (table.ReadByKey(slicer.StatsKey, out var tvr) == false)
                 return null;
 
             count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
@@ -131,7 +131,6 @@ namespace Raven.Server.Documents.TimeSeries
                 // this is delete a stats, that we re-create, so we need to treat is as a new one.
                 start = DateTime.MaxValue;
                 end = DateTime.MinValue;
-                return null;
             }
 
             mergedChangeVector = ReadMergedChangeVector(context, ref tvr);
@@ -315,7 +314,7 @@ namespace Raven.Server.Documents.TimeSeries
             return GetStats(context, slicer.StatsKey);
         }
 
-        public (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, Slice statsKey)
+        public static (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, Slice statsKey)
         {
             var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
             if (table.ReadByKey(statsKey, out var tvr) == false)
@@ -324,7 +323,7 @@ namespace Raven.Server.Documents.TimeSeries
             return GetStats(ref tvr);
         }
 
-        public (long Count, DateTime Start, DateTime End) GetStats(ref TableValueReader tvr)
+        public static (long Count, DateTime Start, DateTime End) GetStats(ref TableValueReader tvr)
         {
             var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
             var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)), DateTimeKind.Utc);
@@ -463,7 +462,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public bool DeleteStats(DocumentsOperationContext context, CollectionName collection, Slice key)
+        public static bool Delete(DocumentsOperationContext context, CollectionName collection, Slice key)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             return table.DeleteByKey(key);
