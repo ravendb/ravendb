@@ -1,36 +1,38 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router";
-import { toast } from "sonner";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { appRoutes } from "@/lib/app-routes";
+import { useWebWidgetStyleSave } from "@/pages/apps/channels/use-web-widget-style-save";
 import { WebWidgetStyleEditor } from "@/pages/apps/channels/web-widget-style-editor";
 
 export function AppWebWidgetCustomize() {
     const { slug = "", widgetId = "" } = useParams();
-    const queryClient = useQueryClient();
 
     const channelsQuery = useQuery(api.queries.channels.list(slug));
     const channel = channelsQuery.data?.find((candidate) => candidate.widgetId === widgetId);
+    // Only an existing web widget has customization to load. Gate the widget-scoped queries on the
+    // channel so an unknown/non-iFrame widgetId (which the endpoint 404s) resolves to the not-found
+    // alert below instead of a generic "could not load" error from a request bound to fail.
+    const hasChannel = Boolean(channel);
 
-    const customizationQuery = useQuery(api.queries.webWidget.customization(slug, widgetId));
-    const styleGuideQuery = useQuery(api.queries.webWidget.styleGuide(slug));
+    const customizationQuery = useQuery({
+        ...api.queries.webWidget.customization(slug, widgetId),
+        enabled: hasChannel,
+    });
+    const styleGuideQuery = useQuery({ ...api.queries.webWidget.styleGuide(slug), enabled: hasChannel });
     // Fetch the preview once we know the widget name so its header matches the live widget.
     const previewQuery = useQuery({
         ...api.queries.webWidget.preview(slug, channel?.displayName),
-        enabled: Boolean(channel),
+        enabled: hasChannel,
     });
 
-    const saveMutation = useMutation({
-        mutationFn: (css: string) => api.services.iframe.updateCustomization(slug, widgetId, { css: css || null }),
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({
-                queryKey: api.queries.webWidget.customization(slug, widgetId).queryKey,
-            });
-            toast.success("Customization saved");
-        },
+    const saveMutation = useWebWidgetStyleSave({
+        save: (css) => api.services.iframe.updateCustomization(slug, widgetId, { css }),
+        invalidateKey: api.queries.webWidget.customization(slug, widgetId).queryKey,
+        successMessage: "Customization saved",
     });
 
     const onRetry = async () => {
@@ -50,7 +52,9 @@ export function AppWebWidgetCustomize() {
             </Link>
 
             <ApiState
-                isLoading={channelsQuery.isPending || customizationQuery.isPending || styleGuideQuery.isPending}
+                isLoading={
+                    channelsQuery.isPending || (hasChannel && (customizationQuery.isPending || styleGuideQuery.isPending))
+                }
                 isError={channelsQuery.isError || customizationQuery.isError || styleGuideQuery.isError}
                 errorTitle="Could not load customization"
                 onRetry={onRetry}

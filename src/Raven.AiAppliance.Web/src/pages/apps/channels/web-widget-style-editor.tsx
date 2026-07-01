@@ -50,7 +50,15 @@ export function WebWidgetStyleEditor({
     const previewCss = css.trim() ? css : effectiveCss;
 
     return (
-        <form className="grid gap-4" onSubmit={form.handleSubmit((values) => onSave(values.css.trim()))}>
+        <form
+            className="grid gap-4"
+            onSubmit={form.handleSubmit((values) => {
+                const trimmed = values.css.trim();
+                // Save empty when the editor still matches the effective default so the record clears
+                // to "inherit the default" instead of freezing a copy that stops tracking future changes.
+                onSave(trimmed === effectiveCss.trim() ? "" : trimmed);
+            })}
+        >
             <div className="flex items-center justify-end gap-2">
                 <Button
                     type="button"
@@ -75,7 +83,7 @@ export function WebWidgetStyleEditor({
                     label="Custom CSS"
                     height="560px"
                     actions={[{ component: <AceEditor.FormatAction /> }, { component: <AceEditor.FullScreenAction /> }]}
-                    labelClassName="justify-center"
+                    labelClassName="w-full justify-center"
                 />
 
                 <div className="grid content-start gap-1.5">
