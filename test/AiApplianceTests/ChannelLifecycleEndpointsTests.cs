@@ -5,6 +5,7 @@ using System.Text.Json;
 using AiApplianceTests.E2E.Fixtures;
 using FastTests;
 using Raven.AiAppliance.Channels;
+using Raven.AiAppliance.Endpoints;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
@@ -217,10 +218,10 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         var restricted = await client.GetAsync($"/embed/{restrictedToken}");
         Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
         var csp = Assert.Single(restricted.Headers.GetValues("Content-Security-Policy"));
-        Assert.Equal("frame-ancestors 'self' http://localhost", csp);
+        Assert.Equal($"{EmbedEndpoints.BaseCsp}; frame-ancestors 'self' http://localhost", csp);
 
-        // Empty origins -> NO CSP header at all: the embed page is intentionally
-        // embeddable from anywhere (M1 decision 2026-06-04).
+        // Empty origins -> the resource CSP is still present, but with NO frame-ancestors: the embed
+        // page stays embeddable from anywhere (M1 decision 2026-06-04) while operator CSS stays contained.
         await ApplianceTestSeed.SeedMockAgentAsync(client, "app-b", "demo-agent");
         var openProvision = await client.PostAsJsonAsync("/api/apps/app-b/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
@@ -228,7 +229,9 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         var openToken = await MintLinkAsync(client, "app-b");
         var open = await client.GetAsync($"/embed/{openToken}");
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
-        Assert.False(open.Headers.Contains("Content-Security-Policy"));
+        var openCsp = Assert.Single(open.Headers.GetValues("Content-Security-Policy"));
+        Assert.Equal(EmbedEndpoints.BaseCsp, openCsp);
+        Assert.DoesNotContain("frame-ancestors", openCsp);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]

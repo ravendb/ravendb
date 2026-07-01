@@ -29,6 +29,15 @@ public static class EmbedEndpoints
     /// route (configured in <c>Program.cs</c>). RavenDB-26775 backstop.</summary>
     public const string ChatRateLimitPolicy = "embed-chat";
 
+    // Resource CSP for the embed page: default-deny with only what the self-contained widget needs —
+    // inline <style>/<script>, same-origin (+ data:) images/fonts, and same-origin fetch for the chat
+    // stream. This contains operator-authored CSS so it can't @import or url(...) to a foreign origin
+    // (beaconing/exfiltration). frame-ancestors is appended per-request from the channel's allowed
+    // origins (see ServeEmbedPageAsync); IFrameCss.Sanitize handles the </style> HTML-breakout case.
+    internal const string BaseCsp =
+        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+        "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'none'";
+
     public static void Map(WebApplication app)
     {
         app.MapGet("/embed/{token}", ServeEmbedPageAsync)
@@ -49,16 +58,18 @@ public static class EmbedEndpoints
     {
         var ct = ctx.RequestAborted;
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveCss: true, ct);
         if (resolved is null)
             return;
 
-        var (app, _, channel) = resolved.Value;
+        var (_, _, channel, customCss) = resolved.Value;
 
-        // frame-ancestors from the configured origins; empty list = embeddable
-        // anywhere (M1 contract). 'self' (the public.* embed host) plus the operator
-        // dashboard origin are always included so the appliance's own UI can preview
-        // the widget cross-origin (the dashboard frames the public.* page).
+        // Contain the page — and, above all, operator-authored __CUSTOM_CSS__ — with a default-deny
+        // resource policy, then append frame-ancestors from the configured origins (empty list =
+        // embeddable anywhere, the M1 contract). 'self' (the public.* embed host) plus the operator
+        // dashboard origin are always included so the appliance's own UI can preview the widget
+        // cross-origin (the dashboard frames the public.* page).
+        var csp = BaseCsp;
         if (channel.AllowedOrigins.Length > 0)
         {
             // 'self' (the public.* embed host) + the operator dashboard origin so the in-appliance
@@ -66,30 +77,15 @@ public static class EmbedEndpoints
             // dashboard origin when a configured origin already lists it (single-host dev collapses them).
             var dashboardOrigin = $"{ctx.Request.Scheme}://{ApplianceHost.WithSubdomain(ctx.Request.Host, "dashboard").ToUriComponent()}";
             var head = Array.IndexOf(channel.AllowedOrigins, dashboardOrigin) >= 0 ? "'self'" : $"'self' {dashboardOrigin}";
-            ctx.Response.Headers["Content-Security-Policy"] = $"frame-ancestors {head} {string.Join(' ', channel.AllowedOrigins)}";
+            csp += $"; frame-ancestors {head} {string.Join(' ', channel.AllowedOrigins)}";
         }
+        ctx.Response.Headers["Content-Security-Policy"] = csp;
 
         // Keep the bearer token out of cross-origin referer logs.
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
 
-        var customCss = await ResolveEffectiveCssAsync(store, app.Database, channel, ct);
-
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName, customCss), ct);
-    }
-
-    /// <summary>Resolves the CSS to inject for a channel: its own
-    /// <see cref="Channel.CustomCss"/> when set, otherwise the app-level
-    /// <see cref="IFrameStyleDefaults"/> (null when neither exists).</summary>
-    private static async Task<string?> ResolveEffectiveCssAsync(
-        IDocumentStore store, string database, Channel channel, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(channel.CustomCss) == false)
-            return channel.CustomCss;
-
-        using var session = store.OpenAsyncSession(database);
-        var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
-        return defaults?.Css;
     }
 
     private static async Task StreamEmbedChatAsync(
@@ -109,11 +105,11 @@ public static class EmbedEndpoints
             return;
         }
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveCss: false, ct);
         if (resolved is null)
             return;
 
-        var (app, link, channel) = resolved.Value;
+        var (app, link, channel, _) = resolved.Value;
 
         // M1b Origin defense-in-depth (see IsOriginAllowed).
         if (IsOriginAllowed(ctx.Request, channel.AllowedOrigins) == false)
@@ -323,8 +319,8 @@ public static class EmbedEndpoints
     /// (unresolved / malformed) or 410 (disabled channel / revoked / expired) and
     /// returning null in those cases; otherwise the live (App, EmbedLink, Channel).
     /// The invocation cap is enforced separately at chat time (429).</summary>
-    private static async Task<(App app, EmbedLink link, Channel channel)?> TryResolveLiveLinkAsync(
-        HttpContext ctx, IDocumentStore store, string token, CancellationToken ct)
+    private static async Task<(App app, EmbedLink link, Channel channel, string? effectiveCss)?> TryResolveLiveLinkAsync(
+        HttpContext ctx, IDocumentStore store, string token, bool resolveCss, CancellationToken ct)
     {
         if (EmbedLink.IsWellFormedToken(token) == false)
         {
@@ -332,14 +328,14 @@ public static class EmbedEndpoints
             return null;
         }
 
-        var resolved = await ResolveAsync(store, token, ct);
+        var resolved = await ResolveAsync(store, token, resolveCss, ct);
         if (resolved is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return null;
         }
 
-        var (_, link, channel) = resolved.Value;
+        var (_, link, channel, _) = resolved.Value;
 
         // 410 Gone: link existed but is no longer usable (channel paused, link
         // revoked, or TTL elapsed). All collapse to the same "this link is dead".
@@ -354,9 +350,13 @@ public static class EmbedEndpoints
 
     /// <summary>Resolves a token by hopping config DB → app DB:
     /// <c>link-index/{token}</c> → <c>apps/{slug}</c> → (<c>embed-links/{token}</c>,
-    /// <c>channels/{widgetId}</c>). Null on any miss (callers surface as 404).</summary>
-    private static async Task<(App app, EmbedLink link, Channel channel)?> ResolveAsync(
-        IDocumentStore store, string token, CancellationToken ct)
+    /// <c>channels/{widgetId}</c>). Null on any miss (callers surface as 404). When
+    /// <paramref name="resolveCss"/> is set (the page render path) the effective embed CSS is
+    /// resolved on the same app-DB session — the channel's own <see cref="Channel.CustomCss"/> if
+    /// present, else the app-level <see cref="IFrameStyleDefaults"/> — so rendering needs no second
+    /// session. The chat path passes <c>false</c> and skips that load.</summary>
+    private static async Task<(App app, EmbedLink link, Channel channel, string? effectiveCss)?> ResolveAsync(
+        IDocumentStore store, string token, bool resolveCss, CancellationToken ct)
     {
         App? app;
         using (var cfg = store.OpenAsyncSession())
@@ -373,6 +373,7 @@ public static class EmbedEndpoints
 
         EmbedLink? link;
         Channel? channel;
+        string? effectiveCss = null;
         using (var session = store.OpenAsyncSession(app.Database))
         {
             link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token, ct);
@@ -380,24 +381,37 @@ public static class EmbedEndpoints
                 return null;
 
             channel = await session.LoadAsync<Channel>(Channel.IdPrefix + link.WidgetId, ct);
+
+            // Resolve the embed CSS while the app-DB session is open (render path only): the channel's
+            // own CSS wins, otherwise fall back to the app-level default, loaded only when needed. This
+            // keeps the page render to a single app-DB session instead of opening a second one.
+            if (resolveCss && channel is { Type: ChannelType.IFrame })
+            {
+                effectiveCss = string.IsNullOrWhiteSpace(channel.CustomCss) == false
+                    ? channel.CustomCss
+                    : (await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct))?.Css;
+            }
         }
 
         // iFrame-only surface — a non-IFrame channel sharing the prefix is a miss.
         if (channel is null || channel.Type != ChannelType.IFrame)
             return null;
 
-        return (app, link, channel);
+        return (app, link, channel, effectiveCss);
     }
 
     private static string BuildEmbedHtml(string token, string displayName, string? customCss)
     {
         var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
-        // __CUSTOM_CSS__ is substituted last so operator CSS can't reintroduce another placeholder.
+        // Substitute the trusted placeholders (token, base styles) first, then the operator-controlled
+        // ones (custom CSS, then title) last — so nothing an operator can set (DisplayName via __TITLE__,
+        // or custom CSS) can reintroduce __TOKEN__ or another placeholder for a later Replace to expand.
+        // In particular the bearer token can never leak into the rendered title/header.
         return EmbedHtmlTemplate
-            .Replace("__TITLE__", title)
             .Replace("__TOKEN__", token)
             .Replace("__BASE_CSS__", WidgetBaseCss)
-            .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(customCss));
+            .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(customCss))
+            .Replace("__TITLE__", title);
     }
 
     /// <summary>Builds the dashboard's customization preview: the same base styles
