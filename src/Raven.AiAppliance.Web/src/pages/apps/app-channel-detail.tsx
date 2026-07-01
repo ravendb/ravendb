@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Palette } from "lucide-react";
 import { Link, useParams } from "react-router";
 import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
@@ -52,19 +52,34 @@ export function AppChannelDetail() {
                 {channelsQuery.data &&
                     (channel ? (
                         <div className="grid gap-5">
-                            <div className="grid gap-1">
-                                <div className="flex items-center gap-3">
-                                    <h2 className="text-lg font-semibold">{channel.displayName}</h2>
-                                    <StatusIndicator
-                                        tone={channel.enabled ? "positive" : "muted"}
-                                        label={channel.enabled ? "Connected" : "Disabled"}
-                                    />
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="grid gap-1">
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-lg font-semibold">{channel.displayName}</h2>
+                                        <StatusIndicator
+                                            tone={channel.enabled ? "positive" : "muted"}
+                                            label={channel.enabled ? "Connected" : "Disabled"}
+                                        />
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}
+                                        {agent?.name ? ` · ${agent.name}` : ""}
+                                        <span className="font-mono"> · {channel.widgetId}</span>
+                                    </p>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}
-                                    {agent?.name ? ` · ${agent.name}` : ""}
-                                    <span className="font-mono"> · {channel.widgetId}</span>
-                                </p>
+                                {isIFrame && (
+                                    <Button asChild variant="outline" size="sm" className="shrink-0">
+                                        <Link
+                                            to={appRoutes.app(
+                                                slug,
+                                                `web-widget/${encodeURIComponent(channel.widgetId)}/customize`,
+                                            )}
+                                        >
+                                            <Palette aria-hidden="true" />
+                                            Customize appearance
+                                        </Link>
+                                    </Button>
+                                )}
                             </div>
 
                             {isIFrame ? (

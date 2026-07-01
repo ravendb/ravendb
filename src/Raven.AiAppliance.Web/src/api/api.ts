@@ -5,6 +5,7 @@ import { createAgentTestService } from "@/api/custom-services/agent-test-service
 import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createAgentsQueries } from "@/api/queries/agents-queries";
 import { createChannelsQueries } from "@/api/queries/channels-queries";
+import { createWebWidgetQueries } from "@/api/queries/web-widget-queries";
 import { createEmbedLinksQueries } from "@/api/queries/embed-links-queries";
 import { createBootstrapQueries } from "@/api/queries/bootstrap-queries";
 import { createSetupQueries } from "@/api/queries/setup-queries";
@@ -22,6 +23,7 @@ export type ApiQueries = {
     apps: ReturnType<typeof createAppsQueries>;
     agents: ReturnType<typeof createAgentsQueries>;
     channels: ReturnType<typeof createChannelsQueries>;
+    webWidget: ReturnType<typeof createWebWidgetQueries>;
     embedLinks: ReturnType<typeof createEmbedLinksQueries>;
     setup: ReturnType<typeof createSetupQueries>;
     aiConnectionStrings: ReturnType<typeof createAiConnectionStringsQueries>;
@@ -52,6 +54,7 @@ export function createApi(options?: ApiClientOptions): Api {
             apps: createAppsQueries(services.apps),
             agents: createAgentsQueries(services.agents),
             channels: createChannelsQueries(services.channels),
+            webWidget: createWebWidgetQueries(services.iframe),
             embedLinks: createEmbedLinksQueries(services.embedLinks),
             setup: createSetupQueries(services.setup),
             aiConnectionStrings: createAiConnectionStringsQueries(services.aiConnectionStrings),

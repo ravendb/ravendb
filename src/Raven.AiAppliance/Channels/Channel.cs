@@ -56,6 +56,14 @@ internal sealed class Channel
     /// <summary>UTC creation timestamp.</summary>
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>Operator-authored CSS injected into this channel's embed page
+    /// (after the widget's base styles, so it overrides them). Null or empty
+    /// means "fall back to the app-level default" (see
+    /// <see cref="IFrameStyleDefaults"/>). This is the iFrame channel's slice of
+    /// the per-type theme config the class summary notes will later move into a
+    /// polymorphic <c>Config</c> sub-object.</summary>
+    public string? CustomCss { get; set; }
+
     /// <summary>Doc id of the corresponding <see cref="ChannelBinding"/>:
     /// <c>channel-bindings/{slug}/{type}/{agentId}</c>. Stored for
     /// forward-compat: the delete flow reads it instead of recomputing it from

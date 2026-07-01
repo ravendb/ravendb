@@ -53,7 +53,7 @@ public static class EmbedEndpoints
         if (resolved is null)
             return;
 
-        var (_, _, channel) = resolved.Value;
+        var (app, _, channel) = resolved.Value;
 
         // frame-ancestors from the configured origins; empty list = embeddable
         // anywhere (M1 contract). 'self' (the public.* embed host) plus the operator
@@ -72,8 +72,24 @@ public static class EmbedEndpoints
         // Keep the bearer token out of cross-origin referer logs.
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
 
+        var customCss = await ResolveEffectiveCssAsync(store, app.Database, channel, ct);
+
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName), ct);
+        await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName, customCss), ct);
+    }
+
+    /// <summary>Resolves the CSS to inject for a channel: its own
+    /// <see cref="Channel.CustomCss"/> when set, otherwise the app-level
+    /// <see cref="IFrameStyleDefaults"/> (null when neither exists).</summary>
+    private static async Task<string?> ResolveEffectiveCssAsync(
+        IDocumentStore store, string database, Channel channel, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(channel.CustomCss) == false)
+            return channel.CustomCss;
+
+        using var session = store.OpenAsyncSession(database);
+        var defaults = await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct);
+        return defaults?.Css;
     }
 
     private static async Task StreamEmbedChatAsync(
@@ -373,16 +389,54 @@ public static class EmbedEndpoints
         return (app, link, channel);
     }
 
-    private static string BuildEmbedHtml(string token, string displayName)
+    private static string BuildEmbedHtml(string token, string displayName, string? customCss)
     {
         var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
+        // __CUSTOM_CSS__ is substituted last so operator CSS can't reintroduce another placeholder.
         return EmbedHtmlTemplate
+            .Replace("__TITLE__", title)
             .Replace("__TOKEN__", token)
-            .Replace("__TITLE__", title);
+            .Replace("__BASE_CSS__", WidgetBaseCss)
+            .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(customCss));
+    }
+
+    /// <summary>Builds the dashboard's customization preview: the same base styles
+    /// and markup as the live embed, with sample chat bubbles and an empty
+    /// <c>&lt;style id="raven-custom"&gt;</c> slot the dashboard fills client-side,
+    /// but no live chat script. Sharing <see cref="WidgetBaseCss"/> keeps the
+    /// preview faithful to the real page.</summary>
+    internal static string BuildPreviewHtml(string? displayName)
+    {
+        var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
+        return PreviewHtmlTemplate
+            .Replace("__TITLE__", title)
+            .Replace("__BASE_CSS__", WidgetBaseCss);
     }
 
     /// Logger category marker — keeps the ILogger generic-arg out of the public surface.
     internal sealed class EmbedLogger;
+
+    // Base widget styles, shared verbatim by the live embed page, the dashboard preview
+    // skeleton, and the styling editor's starter template, so none of the three can drift.
+    // Injected into a <style> element via __BASE_CSS__ (kept out of the raw-string templates
+    // so the CSS braces need no escaping). Operator CSS follows in a second <style> block so
+    // it overrides these. The :root block is generated from IFrameStyleVariables, the single
+    // source for the shipped variable defaults.
+    internal static readonly string WidgetBaseCss = IFrameStyleVariables.BuildRootBlock() + "\n" + WidgetBaseCssRules;
+
+    private const string WidgetBaseCssRules = """
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--ai-bg); color: var(--ai-fg); font-family: var(--ai-font-family); }
+  #ai-chat { display: flex; flex-direction: column; height: 100%; }
+  #ai-chat-header { padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--ai-border-color); }
+  #ai-chat-feed { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  .row { margin: 6px 0; padding: 8px 12px; border-radius: var(--ai-radius-bubble); max-width: 80%; white-space: pre-wrap; }
+  .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
+  .row.agent { background: var(--ai-bubble-agent-bg); }
+  #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ai-border-color); }
+  #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); font-size: 14px; }
+  #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: var(--ai-radius-control); background: var(--ai-user-bg); color: var(--ai-user-fg); cursor: pointer; }
+""";
 
     // Self-contained vanilla page. Placeholders are string-replaced (title is
     // HTML-encoded; token is hex-only) so JS/CSS braces need no escaping.
@@ -395,19 +449,9 @@ public static class EmbedEndpoints
 <meta name="referrer" content="no-referrer">
 <title>__TITLE__</title>
 <style>
-  :root { --ai-bubble-bg: #f1f5f9; --ai-user-bg: #2563eb; --ai-user-fg: #fff; }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-  #ai-chat { display: flex; flex-direction: column; height: 100%; }
-  #ai-chat-header { padding: 12px 16px; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
-  #ai-chat-feed { flex: 1; overflow-y: auto; padding: 12px 16px; }
-  .row { margin: 6px 0; padding: 8px 12px; border-radius: 12px; max-width: 80%; white-space: pre-wrap; }
-  .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
-  .row.agent { background: var(--ai-bubble-bg); }
-  #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #e2e8f0; }
-  #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
-  #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: 8px; background: var(--ai-user-bg); color: #fff; cursor: pointer; }
+__BASE_CSS__
 </style>
+<style id="raven-custom">__CUSTOM_CSS__</style>
 </head>
 <body>
 <div id="ai-chat">
@@ -480,6 +524,39 @@ form.addEventListener("submit", async (e) => {
   }
 });
 </script>
+</body>
+</html>
+""";
+
+    // Inert mirror of the live page for the dashboard customization preview: same
+    // head + base styles, sample bubbles, an empty <style id="raven-custom"> slot the
+    // dashboard fills as the operator types, and no token/chat script (the preview
+    // never talks to the server). __BASE_CSS__ is the only substitution besides the title.
+    private const string PreviewHtmlTemplate = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+__BASE_CSS__
+</style>
+<style id="raven-custom"></style>
+</head>
+<body>
+<div id="ai-chat">
+  <div id="ai-chat-header">__TITLE__</div>
+  <div id="ai-chat-feed">
+    <div class="row agent">Hi! I'm your AI assistant. How can I help you today?</div>
+    <div class="row user">What can you do?</div>
+    <div class="row agent">I can answer questions about your data and help you get things done — just ask.</div>
+  </div>
+  <form id="ai-chat-form" onsubmit="return false">
+    <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
+    <button type="submit">Send</button>
+  </form>
+</div>
 </body>
 </html>
 """;
