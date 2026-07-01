@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron.Data.PostingLists;
 
 namespace Corax.Utils;
@@ -17,6 +18,10 @@ public sealed unsafe class Bm25Relevance : IDisposable
     
     private readonly delegate*<Bm25Relevance, Span<long>, int, void> _processFunc;
     private readonly delegate*<Bm25Relevance, Span<long>, Span<float>, float, void> _scoreFunc;
+    // Sorted variant of _scoreFunc: used when the caller guarantees `matches` is sorted ascending (the
+    // 'order by score()' / SortInMemory path). It walks the term ids with a single forward cursor instead of a
+    // per-match BinarySearch — see CalculateScoreSortedFromMemory.
+    private readonly delegate*<Bm25Relevance, Span<long>, Span<float>, float, void> _scoreSortedFunc;
 
     /// <summary>
     /// The default score array value must be bigger than 0 because of support for document boost.
@@ -65,6 +70,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
         if (IsStored == false && dynamicalScoreFunc != null)
         {
             _scoreFunc = dynamicalScoreFunc;
+            _scoreSortedFunc = &PostingListCalculateScoreSorted;
             _processFunc = &DecodeAndDiscard;
             _bufferCapacity = MaximumDocumentCapacity;
             _currentId = MaximumDocumentCapacity;
@@ -73,6 +79,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
         {
             _processFunc = &DecodeAndSave;
             _scoreFunc = &CalculateScoreFromMemory;
+            _scoreSortedFunc = &CalculateScoreSortedFromMemory;
             _bufferCapacity = numberOfDocuments;
             _currentId = 0;
         }
@@ -105,6 +112,19 @@ public sealed unsafe class Bm25Relevance : IDisposable
     }
 
     /// <summary>
+    /// Same result as <see cref="Score"/>, but requires <paramref name="matches"/> to be sorted ascending.
+    /// Exploits that the term ids are also sorted ascending to replace the per-match BinarySearch with a single
+    /// forward-cursor (galloping) merge.
+    /// </summary>
+    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor)
+    {
+        if (_isDisposed)
+            ThrowAlreadyDisposed();
+
+        _scoreSortedFunc(this, matches, scores, boostFactor);
+    }
+
+    /// <summary>
     /// Legend (mapping code names to names from white-paper)
     /// _termRatioToWholeCollection - l_c / avg_c
     /// BFactor - B_c
@@ -132,6 +152,83 @@ public sealed unsafe class Bm25Relevance : IDisposable
 
             var weight = frequencies[idOfInner] * boostFactor / ((1 - BFactor) + BFactor * bm25._termRatioToWholeCollection);
             scores[idX] += bm25._idf * weight  / (K1 + weight);
+        }
+    }
+
+    /// <summary>In-memory sorted scoring: a single forward-cursor merge of the (ascending) query matches against
+    /// the (ascending) materialized term ids. Produces exactly the same hits as <see cref="CalculateScoreFromMemory"/>.</summary>
+    private static void CalculateScoreSortedFromMemory(Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
+    {
+        if (bm25._idf.AlmostEquals(0f))
+            return;
+
+        int matchIdx = 0;
+        ScoreSortedRun(bm25, matches, ref matchIdx, scores, boostFactor);
+    }
+
+    /// <summary>
+    /// Galloping merge of two ascending sequences — the query <paramref name="matches"/> (from
+    /// <paramref name="matchIdx"/> onward) and the term ids in <see cref="Matches"/> with their parallel
+    /// frequencies in <see cref="Scores"/>. Scores every match present in the term set, advancing a single
+    /// forward cursor over the term ids (exponential search) rather than re-searching from the start per match.
+    /// <paramref name="matchIdx"/> is updated to the first match not yet decided, so the chunked posting-list
+    /// path can resume across Fill batches without re-walking earlier matches. Equivalent in result to a
+    /// per-match BinarySearch; only the lookup strategy differs.
+    /// </summary>
+    private static void ScoreSortedRun(Bm25Relevance bm25, Span<long> matches, ref int matchIdx, Span<float> scores, float boostFactor)
+    {
+        var innerItems = bm25.Matches;
+        var frequencies = bm25.Scores;
+        int innerLen = innerItems.Length;
+        int matchesLen = matches.Length;
+
+        int m = matchIdx;
+        int n = 0;
+        while (m < matchesLen && n < innerLen)
+        {
+            long target = matches[m];
+
+            // Advance the term-id cursor to the first id >= target (galloping from the current position).
+            n = Sorting.GallopLowerBound(innerItems, n, innerLen, target);
+            if (n >= innerLen)
+                break;
+
+            long current = innerItems[n];
+            if (current == target)
+            {
+                var weight = frequencies[n] * boostFactor / ((1 - BFactor) + BFactor * bm25._termRatioToWholeCollection);
+                scores[m] += bm25._idf * weight / (K1 + weight);
+                m++;
+                n++;
+            }
+            else // current > target: target is absent from the term set; skip past every match below current.
+            {
+                m++;
+                while (m < matchesLen && matches[m] < current)
+                    m++;
+            }
+        }
+
+        matchIdx = m;
+    }
+
+    /// <summary>Sorted counterpart of the dynamic (large posting list) path: streams posting-list chunks and
+    /// merges each against the still-unprocessed tail of <paramref name="matches"/> with a forward cursor, so
+    /// each match is visited once across the whole posting list (instead of being BinarySearch'd into every
+    /// chunk). Stops early once every match has been decided.</summary>
+    private static void PostingListCalculateScoreSorted(Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
+    {
+        if (bm25._idf.AlmostEquals(0f))
+            return;
+
+        int matchIdx = 0;
+        bm25._currentId = bm25._bufferCapacity;
+        while (matchIdx < matches.Length &&
+               bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1])) && read > 0)
+        {
+            bm25._currentId = read;
+            ScoreSortedRun(bm25, matches, ref matchIdx, scores, boostFactor);
+            bm25._currentId = bm25._bufferCapacity;
         }
     }
 
