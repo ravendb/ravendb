@@ -20,6 +20,8 @@ import { AppAgents } from "@/pages/apps/app-agents";
 import { AppApiUnavailable } from "@/pages/apps/app-api-unavailable";
 import { AppChannelDetail } from "@/pages/apps/app-channel-detail";
 import { AppChannels } from "@/pages/apps/app-channels";
+import { AppWebWidgetCustomize } from "@/pages/apps/app-web-widget-customize";
+import { AppWebWidgetDefaultCustomize } from "@/pages/apps/app-web-widget-default-customize";
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
@@ -189,6 +191,18 @@ const appPages: AppRouteDefinition[] = [
         path: "channels/:widgetId",
         title: "Channel",
         element: <AppChannelDetail />,
+    },
+    {
+        // Per-widget embed styling editor + live preview. Reached from channel detail.
+        path: "web-widget/:widgetId/customize",
+        title: "Web widget appearance",
+        element: <AppWebWidgetCustomize />,
+    },
+    {
+        // App-level default web-widget styling. Reached from the Channels list.
+        path: "web-widget/default-customize",
+        title: "Default web widget appearance",
+        element: <AppWebWidgetDefaultCustomize />,
     },
     {
         path: "usage",

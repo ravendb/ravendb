@@ -3,13 +3,26 @@ import type { Ace } from "ace-builds";
 import ace from "ace-builds/src-noconflict/ace";
 import type ReactAce from "react-ace";
 import "ace-builds/src-noconflict/ext-beautify";
+import "ace-builds/src-noconflict/mode-css";
 import { ACE_EDITOR_LINE_HEIGHT_IN_PX } from "@/components/ace-editor/ace-editor-constants";
 
 type BeautifyModule = {
     beautify: (session: Ace.EditSession) => void;
 };
 
+type CssModeModule = {
+    Mode: new () => Ace.SyntaxMode;
+};
+
 const beautify = ace.require("ace/ext/beautify") as BeautifyModule;
+const cssMode = ace.require("ace/mode/css") as CssModeModule;
+
+// Beautify a CSS string without a live editor, e.g. to pre-format server CSS before it fills the form.
+export function formatCss(css: string): string {
+    const session = ace.createEditSession(css, new cssMode.Mode());
+    beautify.beautify(session);
+    return session.getValue();
+}
 
 export function handleFormat(reactAce: RefObject<ReactAce | null>) {
     const session = reactAce.current?.editor.session;

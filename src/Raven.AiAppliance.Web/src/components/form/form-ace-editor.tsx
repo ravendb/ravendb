@@ -11,6 +11,7 @@ type FormAceEditorProps<TFieldValues extends FieldValues, TName extends FieldPat
         description?: ReactNode;
         editorName?: string;
         label?: ReactNode;
+        labelClassName?: string;
     };
 
 export function FormAceEditor<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -26,6 +27,7 @@ export function FormAceEditor<TFieldValues extends FieldValues, TName extends Fi
     readOnly,
     rules,
     shouldUnregister,
+    labelClassName,
     ...props
 }: FormAceEditorProps<TFieldValues, TName>) {
     const generatedId = useId();
@@ -45,7 +47,9 @@ export function FormAceEditor<TFieldValues extends FieldValues, TName extends Fi
 
     return (
         <Field className={className} data-invalid={invalid}>
-            <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+            <FieldLabel htmlFor={inputId} className={labelClassName}>
+                {label}
+            </FieldLabel>
             <AceEditor
                 aria-invalid={invalid}
                 mode={mode}

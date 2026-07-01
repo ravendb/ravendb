@@ -293,6 +293,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/iframe/{widgetId}/customization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns a web-widget channel's own embed CSS plus the app default, for the styling editor. */
+        get: operations["iframe.getCustomization"];
+        /** @description Saves a web-widget channel's embed CSS. An empty body clears it so the channel falls back to the app default. */
+        put: operations["iframe.updateCustomization"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/iframe/default-customization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns the app-level default web-widget embed CSS applied to channels with no CSS of their own. */
+        get: operations["iframe.getDefaultCustomization"];
+        /** @description Saves the app-level default web-widget embed CSS. An empty body clears it. */
+        put: operations["iframe.updateDefaultCustomization"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/iframe/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns the inert web-widget preview document (base styles + sample bubbles) the dashboard frames to live-preview CSS edits. */
+        get: operations["iframe.preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/iframe/style-guide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns the web-widget embed page's base CSS, used as the styling editor's starter template and "reset to default" content. */
+        get: operations["iframe.getStyleGuide"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/embed-links": {
         parameters: {
             query?: never;
@@ -1137,6 +1207,19 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        IFrameCustomizationResponse: {
+            css: null | string;
+            defaultCss: null | string;
+        };
+        IFrameDefaultCustomizationResponse: {
+            css: null | string;
+        };
+        IFramePreviewResponse: {
+            html: string;
+        };
+        IFrameStyleGuideResponse: {
+            baseCss: string;
+        };
         JsonElement: unknown;
         LicensePlan: {
             slug: string;
@@ -1372,6 +1455,9 @@ export interface components {
             displayName: null | string;
             allowedOrigins: null | string[];
             enabled: null | boolean;
+        };
+        UpdateIFrameCustomizationRequest: {
+            css: null | string;
         };
         UsageGranularity: unknown;
         UsagePoint: {
@@ -2006,6 +2092,222 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    "iframe.getCustomization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                widgetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IFrameCustomizationResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "iframe.updateCustomization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                widgetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIFrameCustomizationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IFrameCustomizationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "iframe.getDefaultCustomization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IFrameDefaultCustomizationResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "iframe.updateDefaultCustomization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIFrameCustomizationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IFrameDefaultCustomizationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "iframe.preview": {
+        parameters: {
+            query?: {
+                title?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IFramePreviewResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "iframe.getStyleGuide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IFrameStyleGuideResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -2915,6 +3217,10 @@ export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryRe
 export type GoogleAIVersion = components["schemas"]["GoogleAIVersion"];
 export type GoogleSettings = components["schemas"]["GoogleSettings"];
 export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
+export type IFrameCustomizationResponse = components["schemas"]["IFrameCustomizationResponse"];
+export type IFrameDefaultCustomizationResponse = components["schemas"]["IFrameDefaultCustomizationResponse"];
+export type IFramePreviewResponse = components["schemas"]["IFramePreviewResponse"];
+export type IFrameStyleGuideResponse = components["schemas"]["IFrameStyleGuideResponse"];
 export type JsonElement = components["schemas"]["JsonElement"];
 export type LicensePlan = components["schemas"]["LicensePlan"];
 export type LicenseResponse = components["schemas"]["LicenseResponse"];
@@ -2949,6 +3255,7 @@ export type TokensByAppResponse = components["schemas"]["TokensByAppResponse"];
 export type TopCapability = components["schemas"]["TopCapability"];
 export type TopTable = components["schemas"]["TopTable"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
+export type UpdateIFrameCustomizationRequest = components["schemas"]["UpdateIFrameCustomizationRequest"];
 export type UsageGranularity = components["schemas"]["UsageGranularity"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type UsageWindow = components["schemas"]["UsageWindow"];
@@ -2994,6 +3301,14 @@ export const API_ENDPOINTS = {
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
         mint: (slug: string) => `/apps/${encodeURIComponent(slug)}/embed-links`,
         revoke: (slug: string, token: string) => `/apps/${encodeURIComponent(slug)}/embed-links/${encodeURIComponent(token)}`,
+    },
+    iframe: {
+        getCustomization: (slug: string, widgetId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(widgetId)}/customization`,
+        getDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
+        getStyleGuide: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/style-guide`,
+        preview: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/preview`,
+        updateCustomization: (slug: string, widgetId: string) => `/apps/${encodeURIComponent(slug)}/iframe/${encodeURIComponent(widgetId)}/customization`,
+        updateDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
     },
     settings: {
         license: "/settings/license",
@@ -3064,6 +3379,14 @@ export function createServerApi(client: ApiClient) {
             list: (slug: string) => client.get<EmbedLinkSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.embedLinks.list(slug)),
             mint: (slug: string, request: MintEmbedLinkRequest) => client.post<MintEmbedLinkResponse, ApiErrorResponse>(API_ENDPOINTS.embedLinks.mint(slug), request),
             revoke: (slug: string, token: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.embedLinks.revoke(slug, token)),
+        },
+        iframe: {
+            getCustomization: (slug: string, widgetId: string) => client.get<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getCustomization(slug, widgetId)),
+            getDefaultCustomization: (slug: string) => client.get<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getDefaultCustomization(slug)),
+            getStyleGuide: (slug: string) => client.get<IFrameStyleGuideResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.getStyleGuide(slug)),
+            preview: (slug: string, searchParams?: { title?: string; }) => client.get<IFramePreviewResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.preview(slug), { searchParams }),
+            updateCustomization: (slug: string, widgetId: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateCustomization(slug, widgetId), request),
+            updateDefaultCustomization: (slug: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultCustomization(slug), request),
         },
         settings: {
             license: (searchParams?: { demoState?: string; }) => client.get<LicenseResponse>(API_ENDPOINTS.settings.license, { searchParams }),
