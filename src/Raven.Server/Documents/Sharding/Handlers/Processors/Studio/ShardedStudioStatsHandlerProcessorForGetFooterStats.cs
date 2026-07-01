@@ -30,15 +30,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
             var op = new ShardedGetStudioFooterStatsOperation(RequestHandler.HttpContext);
             var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
             stats.CountOfIndexes = RequestHandler.DatabaseContext.DatabaseRecord.Indexes.Count;
-            (stats.CountOfEtlTasksErrors, stats.CountOfAiTasksErrors) = await GetTaskErrorCountsAcrossAllReplicasAsync();
+            (stats.CountOfEtlTasksErrors, stats.CountOfAiTasksErrors, stats.CountOfCdcSinkTasksErrors) = await GetTaskErrorCountsAcrossAllReplicasAsync();
 
             return stats;
         }
 
-        private async Task<(long EtlErrorsCount, long AiErrorsCount)> GetTaskErrorCountsAcrossAllReplicasAsync()
+        private async Task<(long EtlErrorsCount, long AiErrorsCount, long CdcSinkErrorsCount)> GetTaskErrorCountsAcrossAllReplicasAsync()
         {
             long etlErrorsCount = 0;
             long aiErrorsCount = 0;
+            long cdcSinkErrorsCount = 0;
 
             var serverStore = RequestHandler.ServerStore;
             var record = RequestHandler.DatabaseContext.DatabaseRecord;
@@ -67,11 +68,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
                         etlErrorsCount += cmd.Result.CountOfEtlTasksErrors;
                         aiErrorsCount += cmd.Result.CountOfAiTasksErrors;
+                        cdcSinkErrorsCount += cmd.Result.CountOfCdcSinkTasksErrors;
                     }
                 }
             }
 
-            return (etlErrorsCount, aiErrorsCount);
+            return (etlErrorsCount, aiErrorsCount, cdcSinkErrorsCount);
         }
 
         private readonly struct ShardedGetStudioFooterStatsOperation : IShardedOperation<FooterStatistics>

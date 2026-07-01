@@ -18,6 +18,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.Commands.ETL;
+using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide.Context;
@@ -142,6 +143,49 @@ public class RavenDB_26838 : RavenTestBase
                 Assert.Equal("orders/2", task.ItemErrors[0].DocumentId);
                 Assert.Equal(TaskErrorStep.Load, task.ItemErrors[0].Step);
             }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public async Task FooterStatistics_CountsCdcSinkErrorsSeparately()
+    {
+        const string cdcSinkName = "CdcSink1";
+        const string etlProcessName = "ETL1/Transformation1";
+
+        using (var store = GetDocumentStore())
+        {
+            var database = await GetDatabase(store.Database);
+            var now = DateTime.UtcNow;
+
+            database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+            {
+                CreatedAt = now,
+                TaskName = cdcSinkName,
+                Step = TaskErrorStep.Extraction,
+                Error = "consume error"
+            });
+
+            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, cdcSinkName,
+            [
+                new TaskItemError { DocumentId = "orders/1", TaskName = cdcSinkName, CreatedAt = now, Step = TaskErrorStep.Load, Error = "e1" },
+                new TaskItemError { DocumentId = "orders/2", TaskName = cdcSinkName, CreatedAt = now, Step = TaskErrorStep.Load, Error = "e2" }
+            ]);
+
+            // An ETL error in the same database must not be counted as a CDC Sink error.
+            database.TaskErrorsStorage.StoreProcessError(TaskCategory.Etl, new TaskProcessError
+            {
+                CreatedAt = now,
+                TaskName = etlProcessName,
+                Step = TaskErrorStep.Transformation,
+                Error = "etl error"
+            });
+
+            var stats = store.Maintenance.Send(new GetStudioFooterStatisticsOperation());
+
+            Assert.NotNull(stats);
+            Assert.Equal(3, stats.CountOfCdcSinkTasksErrors);
+            Assert.Equal(1, stats.CountOfEtlTasksErrors);
+            Assert.Equal(0, stats.CountOfAiTasksErrors);
         }
     }
 
