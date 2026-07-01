@@ -683,12 +683,27 @@ public class ControlCharacterTests : ClusterTestBase
 
     public static async Task AssertThrowsAnyAsync<T>(Func<Task> testCode) where T : Exception
     {
-        var e = await Assert.ThrowsAnyAsync<Exception>(testCode);
+        var actual = await Assert.ThrowsAnyAsync<Exception>(testCode);
 
-        while (e.InnerException is { } temp)
-            e = temp;
+        Assert.True(Flatten(actual).OfType<T>().Any(),
+            $"Expected an exception of type '{typeof(T)}' somewhere in the exception tree, but none was found.{Environment.NewLine}" +
+            $"Actual exception tree:{Environment.NewLine}{actual}");
+        return;
 
-        Assert.IsType<T>(e);
+        static IEnumerable<Exception> Flatten(Exception exception)
+        {
+            if (exception == null)
+                yield break;
+
+            yield return exception;
+
+            IEnumerable<Exception> inner = exception is AggregateException aggregate
+                ? aggregate.InnerExceptions.SelectMany(Flatten)
+                : Flatten(exception.InnerException);
+
+            foreach (var child in inner)
+                yield return child;
+        }
     }
     
     private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)
