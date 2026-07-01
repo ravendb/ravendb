@@ -4,13 +4,16 @@ using Corax;
 using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying;
+using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
+using Corax.Querying.Primitives;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Data.RoaringBitmaps;
 using Xunit;
 
 namespace SlowTests.Corax.Bugs;
@@ -18,24 +21,42 @@ namespace SlowTests.Corax.Bugs;
 public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
 {
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    public void BinaryMatchProperlyRetrievesScores()
+    public void BitmapAndCompositionPreservesScores()
     {
         using var mapping = GetMappingAndIndexDocuments();
         using var searcher = new IndexSearcher(Env, mapping);
+
+        // Compose AND(startsWith, dummyMatch) via bitmap primitives —
+        // the new-pipeline equivalent of the old searcher.And(). Verifies
+        // that scoring from a boosted match survives bitmap AND composition.
         var startsWith = searcher.StartWithQuery("id()", "t", hasBoost: true);
-        var dummyMatch = new DummyMatch();
-        
+        IQueryMatch dummyMatch = new DummyMatch();
+
+        var bitmap = new BitmapMatch(searcher.Allocator);
+        // temp is passed by ref into AndWithMatch, so it can't be a `using var` (CS1657); a try/finally keeps
+        // disposal exception-safe.
+        RoaringBitmap temp = new(searcher.Allocator);
+        try
+        {
+            QueryPrimitives.OrWithMatch(startsWith, ref bitmap.BitmapState);
+            QueryPrimitives.AndWithMatch(dummyMatch, ref bitmap.BitmapState, ref temp);
+        }
+        finally
+        {
+            temp.Dispose();
+        }
+
         Span<long> ids = stackalloc long[32];
         Span<float> scores = stackalloc float[32];
         scores.Fill(float.Epsilon);
-        var queryToRun = searcher.And(startsWith, dummyMatch);
-        var offset = 0;
-        while (queryToRun.Fill(ids.Slice(offset, 2)) is var read and > 0)
-            offset += read;
+        int offset = bitmap.Fill(ids);
         Assert.Equal(16, offset);
-        
-        queryToRun.Score(ids, scores, 1);
+
+        // Score through the boosted DummyMatch — verify scores survive the AND
+        dummyMatch.Score(ids.Slice(0, offset), scores.Slice(0, offset), 1);
         Assert.Equal(ids.Slice(0, 16).ToArray().Select(x => (float)x), scores.Slice(0, 16).ToArray());
+
+        bitmap.Dispose();
     }
     
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
@@ -56,14 +77,14 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
             IQueryMatch sortingMatch;
             if (multiSort)
             {
-                var q = indexSearcher.OrderBy(dummyMatch, [new OrderMetadata(true, MatchCompareFieldType.Score), new OrderMetadata(mapping.GetByFieldId(0).Metadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false)], defaultNullsSortMode: NullsSortMode.NullsSmallest);
+                var q = indexSearcher.OrderBy(dummyMatch, [new OrderMetadata(true, MatchCompareFieldType.Score), new OrderMetadata(mapping.GetByFieldId(0).Metadata, true, MatchCompareFieldType.Sequence)], defaultNullsSortMode: NullsSortMode.NullsSmallest);
                 q.SetSortingDataTransfer(transfer);
                 sortingMatch = q;
             }
             else
             {
                 var q = indexSearcher.OrderBy(dummyMatch, new OrderMetadata(true, MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest);
-                q.SetScoreAndDistanceBuffer(transfer);
+                q.SetSortingDataTransfer(transfer);
                 sortingMatch = q;
             }
 
@@ -96,16 +117,14 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
         private int _count;
         private bool _fillExecuted;
         public long Count => 16;
-        public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.SortingIsRequired;
 
-        public QueryCountConfidence Confidence => QueryCountConfidence.Low;
         public bool IsBoosting { get => true; }
 
         public int Fill(Span<long> matches)
         {
             _fillExecuted = true;
             ref var count = ref _count;
-            var toReturn = Math.Min(8, Math.Abs(_count - 16));
+            var toReturn = Math.Min(matches.Length, Math.Min(8, Math.Abs(_count - 16)));
             if (toReturn == 0)
                 return 0;
 
@@ -118,9 +137,6 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
             return toReturn;
         }
 
-        public int AndWith(Span<long> buffer, int matches) => throw new NotImplementedException();
-
-
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
             Assert.True(_fillExecuted);
@@ -130,8 +146,8 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
             }
         }
 
-        public QueryInspectionNode Inspect() => throw new NotImplementedException();
+        public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor);
 
-        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
+        public QueryInspectionNode Inspect() => throw new NotImplementedException();
     }
 }

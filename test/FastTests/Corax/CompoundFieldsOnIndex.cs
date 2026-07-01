@@ -131,16 +131,45 @@ public class CompoundFieldsOnIndex : RavenTestBase
     
     private async Task CanOptimizeToSkipSorting<TIndex>()  where TIndex : AbstractIndexCreationTask, new()
     {
-        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
+        await TestQueryBuilder<CompiledQueryMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Location, "Hadera")
             .OrderBy(x => x.Name)
             .GetIndexQuery()
         );
-        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
+        await TestQueryBuilder<CompiledQueryMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Name, "Corax")
             .OrderBy(x => x.Birthday)
             .GetIndexQuery()
         );
+    }
+
+    [RavenFact(RavenTestCategory.Querying)]
+    public void CompoundExactMustApplyResidualClause()
+    {
+        // (Location, Name) is a compound field. A query with THREE equals clauses
+        // (Location, Name, Birthday) is a CompoundExact candidate: the (Location, Name) pair
+        // forms the compound. The third clause (Birthday) is a residual that the compound
+        // TermQuery does not encode, so it must still be applied — otherwise rows that match
+        // the compound but not the residual leak into the result.
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        new Users_Idx().Execute(store);
+        using (var s = store.OpenSession())
+        {
+            s.Store(new User("A", "IL", new DateTime(2014, 4, 1)));
+            s.Store(new User("A", "IL", new DateTime(2009, 4, 1)));
+            s.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+        using (var s = store.OpenSession())
+        {
+            var users = s.Query<User, Users_Idx>()
+                .Where(x => x.Location == "IL" && x.Name == "A" && x.Birthday == new DateTime(2014, 4, 1))
+                .ToList();
+
+            Assert.Equal(1, users.Count);
+            Assert.Equal(2014, users[0].Birthday.Year);
+        }
     }
 
     [RavenFact(RavenTestCategory.Querying)]

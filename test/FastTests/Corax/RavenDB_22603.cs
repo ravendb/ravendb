@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Corax;
 using Corax.Mappings;
-using Corax.Querying.Matches;
-using Corax.Querying.Matches.Meta;
 using FastTests.Voron;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries.Timings;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
+using Raven.Server.Documents.Queries;
 using ClientQueryInspectionNode = Raven.Client.Documents.Queries.Timings.QueryInspectionNode;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -74,11 +74,11 @@ public class RavenDB_22603 : RavenTestBase
             // Verify optimization: Equals + NotEquals should use MultiUnaryMatch, not AndNot
             var plan = (ClientQueryInspectionNode)timings.QueryPlan;
             Assert.True(
-                ContainsOperation(plan, "MultiUnaryMatch"),
-                $"Expected MultiUnaryMatch but got: {FormatPlan(plan)}");
+                ContainsOperation(plan, "CompiledQuery"),
+                $"Expected CompiledQuery but got: {FormatPlan(plan)}");
             Assert.False(
-                ContainsOperation(plan, "AndNot"),
-                $"Expected no AndNot but found it in plan: {FormatPlan(plan)}");
+                ContainsOperation(plan, "BinaryMatch [AndNot]"),
+                $"Expected no BinaryMatch [AndNot] but found it in plan: {FormatPlan(plan)}");
         }
     }
 
@@ -124,8 +124,8 @@ public class RavenDB_22603 : RavenTestBase
             // Verify optimization: Equals + NotEquals + GreaterThan should use MultiUnaryMatch
             var plan = (ClientQueryInspectionNode)timings.QueryPlan;
             Assert.True(
-                ContainsOperation(plan, "MultiUnaryMatch"),
-                $"Expected MultiUnaryMatch but got: {FormatPlan(plan)}");
+                ContainsOperation(plan, "CompiledQuery"),
+                $"Expected CompiledQuery but got: {FormatPlan(plan)}");
         }
     }
 
@@ -169,8 +169,8 @@ public class RavenDB_22603 : RavenTestBase
             // Verify optimization: Equals + NotEquals should use MultiUnaryMatch
             var plan = (ClientQueryInspectionNode)timings.QueryPlan;
             Assert.True(
-                ContainsOperation(plan, "MultiUnaryMatch"),
-                $"Expected MultiUnaryMatch but got: {FormatPlan(plan)}");
+                ContainsOperation(plan, "CompiledQuery"),
+                $"Expected CompiledQuery but got: {FormatPlan(plan)}");
         }
     }
 
@@ -220,8 +220,8 @@ public class RavenDB_22603 : RavenTestBase
             // Verify optimization path was chosen
             var plan = (ClientQueryInspectionNode)timings.QueryPlan;
             Assert.True(
-                ContainsOperation(plan, "MultiUnaryMatch"),
-                $"Expected MultiUnaryMatch but got: {FormatPlan(plan)}");
+                ContainsOperation(plan, "CompiledQuery"),
+                $"Expected CompiledQuery but got: {FormatPlan(plan)}");
         }
     }
 
@@ -291,7 +291,6 @@ public class RavenDB_22603_Primitive : StorageTest
     private List<Entry> _entries;
     private const int IdFieldId = 0, NameFieldId = 1, ColorFieldId = 2, NumberFieldId = 3;
     private IndexFieldsMapping _knownFields;
-    private FieldMetadata _nameFieldMetadata, _colorFieldMetadata, _numberFieldMetadata;
 
     public RavenDB_22603_Primitive(ITestOutputHelper output) : base(output)
     {
@@ -306,34 +305,16 @@ public class RavenDB_22603_Primitive : StorageTest
     {
         PrepareData();
         IndexEntries();
-        using var searcher = new IndexSearcher(Env, _knownFields);
 
         // Expected: entries where Name == "apple" AND Color != "red"
         var expected = _entries.Where(e => e.Name == "apple" && e.Color != "red").Select(e => e.Id).ToList();
 
-        // Unoptimized approach: And(TermMatch(name=apple), AndNot(AllEntries, TermMatch(color=red)))
-        var nameMatch1 = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var allEntries = searcher.AllEntries();
-        var colorRedMatch1 = searcher.TermQuery(_colorFieldMetadata, "red");
-        var andNotAllEntries = searcher.AndNot(allEntries, colorRedMatch1);
-        var unoptimized = searcher.And(nameMatch1, andNotAllEntries);
-
-        var unoptimizedResults = FetchIds(searcher, ref unoptimized);
-
-        // Optimized approach: AndNot(TermMatch(name=apple), TermMatch(color=red))
-        var nameMatch2 = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var colorRedMatch2 = searcher.TermQuery(_colorFieldMetadata, "red");
-        var optimized = searcher.AndNot(nameMatch2, colorRedMatch2);
-
-        var optimizedResults = FetchIds(searcher, ref optimized);
-
-        // Both should produce the same results
-        unoptimizedResults.Sort();
-        optimizedResults.Sort();
+        // Both paths (And+AndNot vs. direct AndNot) compile to the same CompiledQueryMatch; verify results via RQL.
+        var results = ExecuteRQLQuery("FROM TestIndex WHERE Name = 'apple' AND NOT Color = 'red'");
+        results.Sort();
         expected.Sort();
 
-        Assert.Equal(expected, unoptimizedResults);
-        Assert.Equal(expected, optimizedResults);
+        Assert.Equal(expected, results);
     }
 
     /// <summary>
@@ -344,21 +325,11 @@ public class RavenDB_22603_Primitive : StorageTest
     {
         PrepareData();
         IndexEntries();
-        using var searcher = new IndexSearcher(Env, _knownFields);
 
         // Expected: entries where Name != "apple" AND Color != "yellow"
         var expected = _entries.Where(e => e.Name != "apple" && e.Color != "yellow").Select(e => e.Id).ToList();
 
-        // Optimized: AndNot(AndNot(AllEntries, apple), yellow)
-        var allEntries = searcher.AllEntries();
-        var appleMatch = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var firstAndNot = searcher.AndNot(allEntries, appleMatch);
-
-        var yellowMatch = searcher.TermQuery(_colorFieldMetadata, "yellow");
-        var secondAndNot = searcher.AndNot(firstAndNot, yellowMatch);
-
-        var results = FetchIds(searcher, ref secondAndNot);
-
+        var results = ExecuteRQLQuery("FROM TestIndex WHERE Name != 'apple' AND Color != 'yellow'");
         results.Sort();
         expected.Sort();
 
@@ -373,21 +344,11 @@ public class RavenDB_22603_Primitive : StorageTest
     {
         PrepareData();
         IndexEntries();
-        using var searcher = new IndexSearcher(Env, _knownFields);
 
         // Expected: entries where Name == "apple" AND Color != "red" AND Number > 1
         var expected = _entries.Where(e => e.Name == "apple" && e.Color != "red" && e.Number > 1).Select(e => e.Id).ToList();
 
-        // Build: AndNot(And(TermMatch(name=apple), GreaterThan(number>1)), TermMatch(color=red))
-        var nameMatch = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var numberGt = searcher.GreaterThanQuery<long>(_numberFieldMetadata, 1L);
-        var positiveConditions = searcher.And(nameMatch, numberGt);
-
-        var colorRedMatch = searcher.TermQuery(_colorFieldMetadata, "red");
-        var result = searcher.AndNot(positiveConditions, colorRedMatch);
-
-        var results = FetchIds(searcher, ref result);
-
+        var results = ExecuteRQLQuery("FROM TestIndex WHERE Name = 'apple' AND NOT Color = 'red' AND Number > 1");
         results.Sort();
         expected.Sort();
 
@@ -402,17 +363,11 @@ public class RavenDB_22603_Primitive : StorageTest
     {
         PrepareData();
         IndexEntries();
-        using var searcher = new IndexSearcher(Env, _knownFields);
 
         // Expected: entries where Name == "apple" AND Number != 1
         var expected = _entries.Where(e => e.Name == "apple" && e.Number != 1).Select(e => e.Id).ToList();
 
-        var nameMatch = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var number1Match = searcher.TermQuery(_numberFieldMetadata, 1L);
-        var result = searcher.AndNot(nameMatch, number1Match);
-
-        var results = FetchIds(searcher, ref result);
-
+        var results = ExecuteRQLQuery("FROM TestIndex WHERE Name = 'apple' AND NOT Number = 1");
         results.Sort();
         expected.Sort();
 
@@ -428,22 +383,12 @@ public class RavenDB_22603_Primitive : StorageTest
     {
         PrepareData();
         IndexEntries();
-        using var searcher = new IndexSearcher(Env, _knownFields);
 
         // Expected: entries where Name != "apple" AND Name != "banana"
         // This means: cherry entries only (entries/5 and entries/6)
         var expected = _entries.Where(e => e.Name != "apple" && e.Name != "banana").Select(e => e.Id).ToList();
 
-        // Build: AndNot(AndNot(AllEntries, apple), banana)
-        var allEntries = searcher.AllEntries();
-        var appleMatch = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var firstAndNot = searcher.AndNot(allEntries, appleMatch);
-
-        var bananaMatch = searcher.TermQuery(_nameFieldMetadata, "banana");
-        var secondAndNot = searcher.AndNot(firstAndNot, bananaMatch);
-
-        var results = FetchIds(searcher, ref secondAndNot);
-
+        var results = ExecuteRQLQuery("FROM TestIndex WHERE Name != 'apple' AND Name != 'banana'");
         results.Sort();
         expected.Sort();
 
@@ -464,57 +409,42 @@ public class RavenDB_22603_Primitive : StorageTest
     {
         PrepareData();
         IndexEntries();
-        using var searcher = new IndexSearcher(Env, _knownFields);
 
-        // This test verifies behavior through actual CoraxAndQueries
         // Setup: entries/1 (apple,red), entries/2 (apple,green), entries/7 (apple,red), entries/8 (apple,green)
         // Query: Name == "apple" AND Color != "red"
         // Expected: entries/2, entries/8 (green apples only)
-
-        // Build using MultiUnaryMatch (the optimized path after fix)
-        var nameMatch = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var multiUnaryItems = new MultiUnaryItem[]
-        {
-            new(searcher, _colorFieldMetadata, "red", UnaryMatchOperation.NotEquals)
-        };
-        var optimizedResult = searcher.CreateMultiUnaryMatch(nameMatch, multiUnaryItems);
-        var optimizedIds = FetchIds(searcher, ref optimizedResult);
-
-        // Build using AndNot (the fallback path)
-        var nameMatch2 = searcher.TermQuery(_nameFieldMetadata, "apple");
-        var colorRedMatch = searcher.TermQuery(_colorFieldMetadata, "red");
-        var andNotResult = searcher.AndNot(nameMatch2, colorRedMatch);
-        var andNotIds = FetchIds(searcher, ref andNotResult);
-
-        // Both approaches should return identical results
-        optimizedIds.Sort();
-        andNotIds.Sort();
-
-        Assert.Equal(andNotIds, optimizedIds);
+        // Both the MultiUnaryMatch path and the AndNot path compile to the same CompiledQueryMatch; verify results via RQL.
+        var results = ExecuteRQLQuery("FROM TestIndex WHERE Name = 'apple' AND NOT Color = 'red'");
+        results.Sort();
 
         // Verify expected entries
-        Assert.Contains("entries/2", optimizedIds);
-        Assert.Contains("entries/8", optimizedIds);
-        Assert.DoesNotContain("entries/1", optimizedIds);  // red apple
-        Assert.DoesNotContain("entries/7", optimizedIds);  // red apple
+        Assert.Contains("entries/2", results);
+        Assert.Contains("entries/8", results);
+        Assert.DoesNotContain("entries/1", results);  // red apple
+        Assert.DoesNotContain("entries/7", results);  // red apple
     }
 
-    private List<string> FetchIds<TMatch>(IndexSearcher searcher, ref TMatch match)
-        where TMatch : IQueryMatch
+    private List<string> ExecuteRQLQuery(string rqlQuery)
     {
+        using var searcher = new IndexSearcher(Env, _knownFields);
+        var queryMetadata = new QueryMetadata(rqlQuery, null, 0);
+        var planParams = new PlanParameters
+        {
+            IndexSearcher = searcher,
+            Metadata = queryMetadata,
+            QueryParameters = null,
+            Allocator = Allocator
+        };
+        var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, null, _knownFields), null, false, default);
+
         var list = new List<string>();
         Span<long> ids = stackalloc long[256];
-        int read;
-
-        while ((read = match.Fill(ids)) > 0)
+        int count;
+        while ((count = match.Fill(ids)) > 0)
         {
-            for (int i = 0; i < read; i++)
-            {
-                var id = searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(ids[i]);
-                list.Add(id);
-            }
+            for (int i = 0; i < count; i++)
+                list.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(ids[i]));
         }
-
         return list;
     }
 
@@ -537,15 +467,6 @@ public class RavenDB_22603_Primitive : StorageTest
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         _knownFields = CreateKnownFields(bsc);
-
-        _knownFields.TryGetByFieldId(NameFieldId, out var nameBinding);
-        _nameFieldMetadata = nameBinding.Metadata;
-
-        _knownFields.TryGetByFieldId(ColorFieldId, out var colorBinding);
-        _colorFieldMetadata = colorBinding.Metadata;
-
-        _knownFields.TryGetByFieldId(NumberFieldId, out var numberBinding);
-        _numberFieldMetadata = numberBinding.Metadata;
 
         using var indexWriter = new IndexWriter(Env, _knownFields, SupportedFeatures.All);
 

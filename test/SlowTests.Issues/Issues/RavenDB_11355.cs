@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
                          .WhereStartsWith("Name", null)
                          .ToList());
 
-                    Assert.Contains("Method startsWith() expects to get an argument of type String while it got Null", e.Message);
+                    Assert.Contains("Method startsWith() expects to get an argument of type String while it got Null", e.Message, StringComparison.OrdinalIgnoreCase);
                 }
 
                 using (var session = store.OpenSession())
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
                         .RawQuery<Person>("from index 'Index1' where startsWith(Name, null)")
                         .ToList());
 
-                    Assert.Contains("Method startsWith() expects to get an argument of type String while it got Null", e.Message);
+                    Assert.Contains("Method startsWith() expects to get an argument of type String while it got Null", e.Message, StringComparison.OrdinalIgnoreCase);
                 }
             }
         }

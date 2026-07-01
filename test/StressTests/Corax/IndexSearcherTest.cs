@@ -6,11 +6,15 @@ using System.Text;
 using Corax;
 using Corax.Analyzers;
 using Corax.Mappings;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
+using Corax.Querying.Primitives;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Data.RoaringBitmaps;
 using Xunit;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
@@ -72,6 +76,39 @@ public class IndexSearcherTest : StorageTest
     {
     }
 
+    // IndexSearcher has no And/AndNot — build equivalents via bitmap primitives.
+    private static BitmapMatch AndNot(IndexSearcher searcher, IQueryMatch left, IQueryMatch right)
+    {
+        var bitmap = new BitmapMatch(searcher.Allocator);
+        RoaringBitmap tempData = new(searcher.Allocator);
+        try
+        {
+            QueryPrimitives.OrWithMatch(left, ref bitmap.BitmapState);
+            QueryPrimitives.AndNotWithMatch(right, ref bitmap.BitmapState, ref tempData);
+        }
+        finally
+        {
+            tempData.Dispose();
+        }
+        return bitmap;
+    }
+
+    private static BitmapMatch And(IndexSearcher searcher, IQueryMatch left, IQueryMatch right)
+    {
+        var bitmap = new BitmapMatch(searcher.Allocator);
+        RoaringBitmap tempData = new(searcher.Allocator);
+        try
+        {
+            QueryPrimitives.OrWithMatch(left, ref bitmap.BitmapState);
+            QueryPrimitives.AndWithMatch(right, ref bitmap.BitmapState, ref tempData);
+        }
+        finally
+        {
+            tempData.Dispose();
+        }
+        return bitmap;
+    }
+
     [RavenFact(RavenTestCategory.Corax)]
     public void BigAndNotMemoized()
     {
@@ -97,11 +134,11 @@ public class IndexSearcherTest : StorageTest
 
         using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
-        var allEntries = searcher.AllEntries();
-        var allEntriesMemoized = searcher.Memoize(allEntries);
+        // No Memoize available; AllEntries() is cheap (just iterates the entry index), so call it
+        // fresh each time a multi-consumer expression needs a new source.
 
         {
-            var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), allEntriesMemoized.Replay());
+            var andNotMatch = AndNot(searcher,searcher.AllEntries(), searcher.AllEntries());
 
             Span<long> ids = stackalloc long[4096];
 
@@ -117,7 +154,7 @@ public class IndexSearcherTest : StorageTest
         }
 
         {
-            var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "J"));
+            var andNotMatch = AndNot(searcher,searcher.AllEntries(), searcher.StartWithQuery("Content", "J"));
 
             Span<long> ids = stackalloc long[4096];
             int counter = 0;
@@ -132,7 +169,7 @@ public class IndexSearcherTest : StorageTest
         }
 
         {
-            var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "00"));
+            var andNotMatch = AndNot(searcher,searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
 
             Span<long> ids = stackalloc long[4096];
 
@@ -155,8 +192,10 @@ public class IndexSearcherTest : StorageTest
         }
 
         {
-            var andNotMatch = searcher.AndNot(allEntriesMemoized.Replay(), searcher.StartWithQuery("Content", "00"));
-            var andMatch = searcher.And(allEntriesMemoized.Replay(), andNotMatch);
+            // And(AllEntries(), AndNot(AllEntries(), StartWith("00"))) — tests AND composition
+            // on top of ANDNOT. The outer AND should not change the result.
+            using var andNotResult = AndNot(searcher, searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
+            using var andMatch = And(searcher, searcher.AllEntries(), andNotResult);
 
             Span<long> ids = stackalloc long[4096];
 
@@ -205,7 +244,7 @@ public class IndexSearcherTest : StorageTest
         using var searcher = new IndexSearcher(base.Env, CreateKnownFields(bsc));
 
         {
-            var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.AllEntries());
+            var andNotMatch = AndNot(searcher,searcher.AllEntries(), searcher.AllEntries());
 
             Span<long> ids = stackalloc long[4096];
 
@@ -221,7 +260,7 @@ public class IndexSearcherTest : StorageTest
         }
 
         {
-            var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "J"));
+            var andNotMatch = AndNot(searcher,searcher.AllEntries(), searcher.StartWithQuery("Content", "J"));
 
             Span<long> ids = stackalloc long[4096];
             int counter = 0;
@@ -236,7 +275,7 @@ public class IndexSearcherTest : StorageTest
         }
 
         {
-            var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
+            var andNotMatch = AndNot(searcher,searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
 
             Span<long> ids = stackalloc long[4096];
 
@@ -259,8 +298,10 @@ public class IndexSearcherTest : StorageTest
         }
 
         {
-            var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
-            var andMatch = searcher.And(searcher.AllEntries(), andNotMatch);
+            // And(AllEntries(), AndNot(AllEntries(), StartWith("00"))) — tests AND composition
+            // on top of ANDNOT. The outer AND should not change the result.
+            using var andNotResult = AndNot(searcher, searcher.AllEntries(), searcher.StartWithQuery("Content", "00"));
+            using var andMatch = And(searcher, searcher.AllEntries(), andNotResult);
 
             Span<long> ids = stackalloc long[4096];
 
@@ -353,29 +394,4 @@ public class IndexSearcherTest : StorageTest
         }
     }
 
-    [RavenFact(RavenTestCategory.Corax)]
-    public void BigMemoizationQueries()
-    {
-        int total = 100000;
-
-        int startWith = 0;
-        var entries = new List<IndexSingleEntry>();
-        for (int i = 0; i < total; i++)
-        {
-            var content = i.ToString("000000");
-            entries.Add(new IndexSingleEntry {Id = $"entry/{content}", Content = content});
-            if (content.StartsWith("00"))
-                startWith++;
-        }
-
-
-        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-        IndexEntries(bsc, entries, CreateKnownFields(bsc));
-
-        using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-        Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-        Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
-        using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-    }
 }

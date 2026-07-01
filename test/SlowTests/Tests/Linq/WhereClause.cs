@@ -318,7 +318,7 @@ namespace SlowTests.Tests.Linq
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
 
-                    // Note: this can be generated also a smaller query: 
+                    // Note: this can be generated also a smaller query:
                     // Assert.Equal("*:* and (Name:[[NULL_VALUE]] or Name:[[EMPTY_STRING]])", q.ToString());
                 }
             }

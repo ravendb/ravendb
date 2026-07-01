@@ -1,14 +1,13 @@
-﻿﻿﻿﻿﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
-using Corax.Querying;
 using Corax.Mappings;
-using Corax.Querying.Matches.Meta;
-using Corax.Querying.Matches.SortingMatches.Meta;
-using Corax.Utils;
 using FastTests.Voron;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
+using Raven.Server.Documents.Queries;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -54,39 +53,36 @@ namespace FastTests.Corax
         [RavenFact(RavenTestCategory.Corax)]
         public void OrBoosting()
         {
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); //  2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0}); //  2 
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/111", Content1 = 0}); //  2
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/2", Content1 = 1}); //  10            
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4", Content1 = 1}); //  10
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/111", Content1 = 0});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/2", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4", Content1 = 1});
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2});
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            {
-                var startWithMatch = searcher.StartWithQuery(searcher.FieldMetadataBuilder("Id", hasBoost: true), "list/1");
-                var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
-                var contentMatch = searcher.TermQuery(searcher.FieldMetadataBuilder("Content1", hasBoost: true), "1");
-                var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
-                var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var orderByScore = searcher.OrderBy(boostedOrMatch, new OrderMetadata(true, MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest);
-                Span<long> ids = stackalloc long[2048];
-                int read = orderByScore.Fill(ids);
-                ids = ids.Slice(0, read);
 
-                List<string> idsName = new();
-                for (int i = 0; i < read; ++i)
-                {
-                    long id = ids[i];
-                    idsName.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
+            // list/1 matches both startsWith (boost 2x) and Content1='1' → highest score.
+            // list/11, list/111 match startsWith only (boost 2x) → second tier.
+            // list/2, list/4 match Content1='1' only (no extra boost) → third tier.
+            // list/3 (Content1=2) doesn't match either condition → excluded.
+            var idsName = ExecuteRQLQueryByScore(
+                "FROM TestIndex WHERE boost(startsWith(Id, 'list/1'), 2) OR Content1 = '1' ORDER BY score()");
 
-                Assert.Equal("list/1", idsName[0]); // most unique 
-                Assert.Equal("list/11", idsName[1]); // 2nd
-                Assert.Equal("list/111", idsName[2]); // 3th
-                Assert.Equal("list/2", idsName[3]); // those scoring has no impact
-                Assert.Equal("list/4", idsName[4]); //
-            }
+            Assert.Equal(5, idsName.Count);
+            Assert.Equal("list/1", idsName[0]);
+            Assert.True(new HashSet<string> {"list/11", "list/111"}.SetEquals(idsName.GetRange(1, 2)));
+            Assert.True(new HashSet<string> {"list/2", "list/4"}.SetEquals(idsName.GetRange(3, 2)));
+
+            // Also verify OR-wrapped boost: boost(A OR B, factor) applies the factor to all branches.
+            // Score order is the same as above; list/1 (matches both) remains first.
+            var idsWrappedBoost = ExecuteRQLQueryByScore(
+                "FROM TestIndex WHERE boost(startsWith(Id, 'list/1') OR Content1 = '1', 10) ORDER BY score()");
+
+            Assert.Equal(5, idsWrappedBoost.Count);
+            Assert.Equal("list/1", idsWrappedBoost[0]);
+            Assert.True(new HashSet<string> {"list/11", "list/111"}.SetEquals(idsWrappedBoost.GetRange(1, 2)));
+            Assert.True(new HashSet<string> {"list/2", "list/4"}.SetEquals(idsWrappedBoost.GetRange(3, 2)));
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
@@ -99,109 +95,68 @@ namespace FastTests.Corax
         {
             longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> {Id = $"list/{i}", Content1 = i % mod}).ToList();
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
-            {
-                IQueryMatch match = searcher.Boost(
-                    searcher.InQuery(contentMetadata, new() {"1", "2", "3"})
-                    , 10);
 
-                match = searcher.OrderBy(match,new OrderMetadata(true, MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest);
-                Span<long> ids = stackalloc long[amount];
-                var read = match.Fill(ids);
-                List<string> result = new();
-                for (int i = 0; i < read; ++i)
-                {
-                    long id = ids[i];
-                    result.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
+            // Wrap the IN clause in boost() to exercise score propagation through an IN match.
+            var result = ExecuteRQLQueryByScore("FROM TestIndex WHERE boost(Content1 IN ('1', '2', '3'), 2) ORDER BY score()");
 
-                Assert.Equal(result.Count, result.Distinct().Count());
+            Assert.Equal(result.Count, result.Distinct().Count());
 
-                var localResults = longList.Where(x => x.Content1 is 1 or 2 or 3).Select(y => y.Id).ToArray();
-                var highestScore = result.ToArray().AsSpan(0, localResults.Length).ToArray();
-                Array.Sort(localResults);
-                Array.Sort(highestScore);
-                Assert.True(localResults.SequenceEqual(highestScore));
-            }
+            var localResults = longList.Where(x => x.Content1 is 1 or 2 or 3).Select(y => y.Id).ToArray();
+            var highestScore = result.ToArray();
+            Array.Sort(localResults);
+            Array.Sort(highestScore);
+            Assert.True(localResults.SequenceEqual(highestScore));
         }
         
         [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoosting()
         {
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0}); // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/111", Content1 = 0}); // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/2", Content1 = 1}); //     10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4", Content1 = 1}); //     10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2}); //      0
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/111", Content1 = 0});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/2", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2});
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            {
-                var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
-                var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
-                var contentMatch = searcher.TermQuery("Content1", "1", hasBoost: true);
-                var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
-                var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var contentMatch2 = searcher.TermQuery("Content1", "2", hasBoost: true);
-                var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
-                var sortedMatch = searcher.OrderBy(orMatch2, new OrderMetadata(true, MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest);
 
-                Span<long> ids = stackalloc long[2048];
-                int read = sortedMatch.Fill(ids);
-                ids = ids.Slice(0, read);
+            // boost(startsWith, 20) = inner boost 2 * outer boost 10; boost(Content1='1', 10) = outer boost only.
+            // list/1 matches startsWith (boost 20) + Content1='1' (boost 10) → highest.
+            // list/11, list/111 match startsWith only (boost 20) → second tier.
+            // list/2, list/4 match Content1='1' only (boost 10) → third tier.
+            // list/3 matches Content1='2' (no extra boost) → lowest.
+            var sortedByCorax = ExecuteRQLQueryByScore(
+                "FROM TestIndex WHERE boost(startsWith(Id, 'list/1'), 20) OR boost(Content1 = '1', 10) OR Content1 = '2' ORDER BY score()");
 
-                List<string> sortedByCorax = new();
-                for (int i = 0; i < read; ++i)
-                {
-                    long id = ids[i];
-                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
-
-                for (int i = 0; i < longList.Count; ++i)
-                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
-            }
+            Assert.Equal(6, sortedByCorax.Count);
+            Assert.Equal("list/1", sortedByCorax[0]);
+            Assert.True(new HashSet<string> {"list/11", "list/111"}.SetEquals(sortedByCorax.GetRange(1, 2)));
+            Assert.True(new HashSet<string> {"list/2", "list/4"}.SetEquals(sortedByCorax.GetRange(3, 2)));
+            Assert.Equal("list/3", sortedByCorax[5]);
         }
 
 
         [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoostingTake4()
         {
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0}); // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/111", Content1 = 0}); // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/2", Content1 = 1}); //     10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4", Content1 = 1}); //     10
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2}); //      0
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/11", Content1 = 0});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/111", Content1 = 0});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/2", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4", Content1 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 2});
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            {
-                var startWithMatch = searcher.StartWithQuery("Id", "list/1", hasBoost: true);
-                var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
-                var contentMatch = searcher.TermQuery("Content1", "1", hasBoost: true);
-                var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
-                var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var contentMatch2 = searcher.TermQuery("Content1", "2", hasBoost: true);
-                var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
-                var sortedMatch = searcher.OrderBy(orMatch2, new OrderMetadata(true, MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest, 4);
 
-                // TODO: Check what happens in OrderBy statements when the buffer is too small. 
-                Span<long> ids = stackalloc long[1024];
+            // Pass take=4 as a server-side sorter limit to exercise limit propagation through SortingMatch.
+            var sortedByCorax = ExecuteRQLQueryByScore(
+                "FROM TestIndex WHERE boost(startsWith(Id, 'list/1'), 20) OR boost(Content1 = '1', 10) OR Content1 = '2' ORDER BY score()",
+                take: 4);
 
-                var read = sortedMatch.Fill(ids);
-
-                List<string> sortedByCorax = new();
-                for (int i = 0; i < read; ++i)
-                {
-                    long id = ids[i];
-                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
-
-                for (int i = 0; i < 4; ++i)
-                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
-            }
+            Assert.Equal(4, sortedByCorax.Count);
+            Assert.Equal("list/1", sortedByCorax[0]);
+            Assert.True(new HashSet<string> {"list/11", "list/111"}.SetEquals(sortedByCorax.GetRange(1, 2)));
+            Assert.True(sortedByCorax[3] == "list/2" || sortedByCorax[3] == "list/4");
         }
 
         private static int CompareAscending(IndexSingleNumericalEntry<long, long> value1, IndexSingleNumericalEntry<long, long> value2)
@@ -217,47 +172,27 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/3", Content1 = 1}); // 1/4
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4", Content1 = 1}); // 1/4
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/5", Content1 = 1}); // 1/4
-            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/6", Content1 = 1}); // 1/4            
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/6", Content1 = 1}); // 1/4
 
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+
+            // BM25 IDF: Content1=0 (2 entries) scores higher than Content1=1 (4 entries).
+            var sortedByCorax = ExecuteRQLQueryByScore(
+                "FROM TestIndex WHERE Content1 = '0' OR Content1 = '1' ORDER BY score()");
+
+            for (int i = 0; i < longList.Count; ++i)
             {
-                var content0Match = searcher.TermQuery("Content1", "0", hasBoost: true);
-                var boostedContent0 = searcher.Boost(content0Match, 1);
-
-                var content1Match = searcher.TermQuery("Content1", "1", hasBoost: true);
-                var boostedContent1 = searcher.Boost(content1Match, 1);
-
-                var orMatch = searcher.Or(boostedContent0, boostedContent1);
-                var boostedOrMatch = searcher.Boost(orMatch, 10);
-                var sortedMatch = searcher.OrderBy(boostedOrMatch,new OrderMetadata(true,MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest);
-
-                Span<long> ids = stackalloc long[1024];
-                var read = sortedMatch.Fill(ids);
-
-                List<string> sortedByCorax = new();
-                for (int i = 0; i < read; ++i)
+                if (longList[i].Id != sortedByCorax[i])
                 {
-                    long id = ids[i];
-                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    // Since documents can change places (unstable sort), verify the Content1 group is correct.
+                    var originalEntry = longList.Single(isne => isne.Id == sortedByCorax[i]);
+                    Assert.Equal(longList[i].Content1, originalEntry.Content1);
                 }
-
-
-                for (int i = 0; i < longList.Count; ++i)
-                {
-                    if (longList[i].Id != sortedByCorax[i])
-                    {
-                        // Since documents can change places (we're using unstable sort), we can assert if the boosted value is exactly the same as in the asserted document.
-                        var originalEntry = longList.Single(isne => isne.Id == sortedByCorax[i]);
-                        Assert.Equal(longList[i].Content1, originalEntry.Content1);
-                    }
-                    else
-                        Assert.Equal(longList[i].Id, sortedByCorax[i]);
-                }
+                else
+                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
             }
         }
 
-        //todo
         [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoostingOrBasedInQuery()
         {
@@ -268,35 +203,22 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/5", Content1 = 1}); // 1/4
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/6", Content1 = 1}); // 1/4
 
-
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
+
+            // BM25 IDF: Content1=0 (2 entries) scores higher than Content1=1 (4 entries).
+            var sortedByCorax = ExecuteRQLQueryByScore(
+                "FROM TestIndex WHERE Content1 IN ('0', '1') ORDER BY score()");
+
+            for (int i = 0; i < longList.Count; ++i)
             {
-                var query = searcher.OrderBy(searcher.InQuery(contentMetadata, new List<string>() {"0", "1"})
-                    ,new OrderMetadata(true,MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest);
-
-                Span<long> ids = stackalloc long[1024];
-                var read = query.Fill(ids);
-
-                List<string> sortedByCorax = new();
-                for (int i = 0; i < read; ++i)
+                if (longList[i].Id != sortedByCorax[i])
                 {
-                    long id = ids[i];
-                    sortedByCorax.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+                    // Since documents can change places (unstable sort), verify the Content1 group is correct.
+                    var originalEntry = longList.Single(isne => isne.Id == sortedByCorax[i]);
+                    Assert.Equal(longList[i].Content1, originalEntry.Content1);
                 }
-
-                for (int i = 0; i < longList.Count; ++i)
-                {
-                    if (longList[i].Id != sortedByCorax[i])
-                    {
-                        // Since documents can change places (we're using unstable sort), we can assert if the boosted value is exactly the same as in the asserted document.
-                        var originalEntry = longList.Single(isne => isne.Id == sortedByCorax[i]);
-                        Assert.Equal(longList[i].Content1, originalEntry.Content1);
-                    }
-                    else
-                        Assert.Equal(longList[i].Id, sortedByCorax[i]);
-                }
+                else
+                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
             }
         }
 
@@ -350,28 +272,83 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/4444", Content1 = 3}); // 1/4
 
             IndexEntries();
-
             longList.Sort(CompareAscending);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1, hasBoost: true);
+
+            // BM25 IDF: Content1=0 (1 entry) > Content1=1 (2) > Content1=2 (3) > Content1=3 (4 entries).
+            // After sorting longList ascending by Content1, sortedByCorax[i].Content1 must equal longList[i].Content1.
+            var sortedByCorax = ExecuteRQLQueryByScoreReadContent1(
+                "FROM TestIndex WHERE Content1 IN ('0', '1', '2', '3') ORDER BY score()");
+
+            for (int i = 0; i < longList.Count; ++i)
+                Assert.Equal(longList[i].Content1, sortedByCorax[i]);
+        }
+
+        private List<string> ExecuteRQLQueryByScore(string rqlQuery, long take = long.MaxValue)
+        {
+            using var knownFields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, knownFields);
+            var queryMetadata = new QueryMetadata(rqlQuery, null, 0);
+            var planParams = new PlanParameters
             {
-                var query = searcher.InQuery(contentMetadata, new List<string>() {"0", "1", "2", "3"});
-                var sortedMatch = searcher.OrderBy(query,new OrderMetadata(true,MatchCompareFieldType.Score), defaultNullsSortMode: NullsSortMode.NullsSmallest);
+                IndexSearcher = searcher,
+                Metadata = queryMetadata,
+                HasBoost = true,
+                Allocator = Allocator
+            };
+            var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, null, knownFields, hasBoost: true), null, false, default);
+            match = ApplyScoreOrderingIfRequested(searcher, queryMetadata, match, take);
+            var list = new List<string>();
+            Span<long> ids = stackalloc long[256];
+            int count;
+            while ((count = match.Fill(ids)) > 0)
+                for (int i = 0; i < count; i++)
+                    list.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(ids[i]));
+            return list;
+        }
 
-                Span<long> ids = stackalloc long[1024];
-                var read = sortedMatch.Fill(ids);
+        private List<long> ExecuteRQLQueryByScoreReadContent1(string rqlQuery)
+        {
+            using var knownFields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, knownFields);
+            var queryMetadata = new QueryMetadata(rqlQuery, null, 0);
+            var planParams = new PlanParameters
+            {
+                IndexSearcher = searcher,
+                Metadata = queryMetadata,
+                HasBoost = true,
+                Allocator = Allocator
+            };
+            var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, null, knownFields, hasBoost: true), null, false, default);
+            match = ApplyScoreOrderingIfRequested(searcher, queryMetadata, match, long.MaxValue);
+            var list = new List<long>();
+            var termsReader = searcher.TermsReaderFor("Content1");
+            Span<long> ids = stackalloc long[256];
+            int count;
+            while ((count = match.Fill(ids)) > 0)
+                for (int i = 0; i < count; i++)
+                    list.Add(long.Parse(termsReader.GetTermFor(ids[i])));
+            return list;
+        }
 
-                List<long> sortedByCorax = new();
-                var termsReader = searcher.TermsReaderFor("Content1");
+        // Wraps the searcher's score-ordering primitive directly. Production OrderBy(QueryBuilderParameters, ...)
+        // needs the full server-side query pipeline that these direct-IndexSearcher tests bypass.
+        private static global::Corax.Querying.Matches.Meta.IQueryMatch ApplyScoreOrderingIfRequested(IndexSearcher searcher, QueryMetadata queryMetadata, global::Corax.Querying.Matches.Meta.IQueryMatch match, long take)
+        {
+            var orderByFields = queryMetadata.OrderBy;
+            if (orderByFields is null || orderByFields.Length == 0)
+                return match;
 
-                for (int i = 0; i < read; ++i)
+            int takeInt = take > int.MaxValue ? global::Corax.Constants.IndexSearcher.TakeAll : (int)take;
+            foreach (var field in orderByFields)
+            {
+                if (field.OrderingType == Raven.Server.Documents.Queries.AST.OrderByFieldType.Score)
                 {
-                    sortedByCorax.Add(long.Parse(termsReader.GetTermFor(ids[i])));
+                    var meta = new global::Corax.Utils.OrderMetadata(true, global::Corax.Querying.Matches.SortingMatches.Meta.MatchCompareFieldType.Score, field.Ascending);
+                    return searcher.OrderBy(match, meta, global::Corax.Utils.NullsSortMode.NullsLargest, take: takeInt);
                 }
-
-                for (int i = 0; i < longList.Count; ++i)
-                    Assert.Equal(longList[i].Content1, sortedByCorax[i]);
             }
+
+            return match;
         }
 
         private void PrepareData(bool inverse = false)

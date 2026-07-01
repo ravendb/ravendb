@@ -4,11 +4,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FastTests.Voron;
-using FastTests.Voron.Graphs;
-using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Graphs;
+using Voron.Data.RoaringBitmaps;
 using Xunit;
 
 namespace SlowTests.Voron.Graphs;
@@ -51,32 +50,36 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         using (var rTx = Env.ReadTransaction())
         {
             var qV = MemoryMarshal.Cast<float, byte>(queryVector);
-            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
+            var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
                 numberOfCandidates: totalEntries, qV.ToArray(), minimumSimilarity: 0f, hasFilterMatch: true);
-
-            var filter = new GrowableBitArray(Allocator, totalEntries + 1);
-            using var __ = filter;
-            for (int i = 1; i <= totalEntries; i++)
-                filter.Add(i);
-            filter.Count = totalEntries;
-
-            var matches = new long[128];
-            var distances = new float[128];
-            List<long> allResults = new();
-
-            int read;
-            do
+            try
             {
-                read = nearest.Fill(matches, distances, filter);
-                allResults.AddRange(matches[..read]);
-            } while (read != 0);
+                var filterBitmap = new RoaringBitmap(Allocator);
+                for (int i = 1; i <= totalEntries; i++)
+                    filterBitmap.Add(i);
 
-            var expectedIds = Enumerable.Range(1, totalEntries).Select(i => (long)i).ToHashSet();
-            var actualIds = allResults.ToHashSet();
-            var missing = expectedIds.Except(actualIds);
-            Assert.Empty(missing);
-            var unexpected = actualIds.Except(expectedIds);
-            Assert.Empty(unexpected);
+                var matches = new long[128];
+                var distances = new float[128];
+                List<long> allResults = new();
+
+                int read;
+                do
+                {
+                    read = nearest.Fill(matches, distances, ref filterBitmap);
+                    allResults.AddRange(matches[..read]);
+                } while (read != 0);
+
+                var expectedIds = Enumerable.Range(1, totalEntries).Select(i => (long)i).ToHashSet();
+                var actualIds = allResults.ToHashSet();
+                var missing = expectedIds.Except(actualIds);
+                Assert.Empty(missing);
+                var unexpected = actualIds.Except(expectedIds);
+                Assert.Empty(unexpected);
+            }
+            finally
+            {
+                nearest.Dispose();
+            }
         }
     }
 
@@ -105,30 +108,33 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         using (var rTx = Env.ReadTransaction())
         {
             var qV = MemoryMarshal.Cast<float, byte>(commonVector);
-            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
+            var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
                 numberOfCandidates: 100, qV.ToArray(), minimumSimilarity: 0f, hasFilterMatch: true);
-
-            var filter = new GrowableBitArray(Allocator, entriesWithSameVector + 1);
-            using var __ = filter;
-
-            for (int i = 1; i <= entriesWithSameVector; i++)
-                filter.Add(i);
-            filter.Count = entriesWithSameVector;
-
-            var matches = new long[matchesBufferSize];
-            var distances = new float[matchesBufferSize];
-            List<long> allResults = new();
-
-            int read;
-            do
+            try
             {
-                read = nearest.Fill(matches, distances, filter);
-                allResults.AddRange(matches[..read]);
-            } while (read != 0);
+                var filterBitmap = new RoaringBitmap(Allocator);
+                for (int i = 1; i <= entriesWithSameVector; i++)
+                    filterBitmap.Add(i);
 
-            Assert.Equal(entriesWithSameVector, allResults.Count);
-            allResults.Sort();
-            Assert.Equal(Enumerable.Range(1, entriesWithSameVector).Select(x => (long)x), allResults);
+                var matches = new long[matchesBufferSize];
+                var distances = new float[matchesBufferSize];
+                List<long> allResults = new();
+
+                int read;
+                do
+                {
+                    read = nearest.Fill(matches, distances, ref filterBitmap);
+                    allResults.AddRange(matches[..read]);
+                } while (read != 0);
+
+                Assert.Equal(entriesWithSameVector, allResults.Count);
+                allResults.Sort();
+                Assert.Equal(Enumerable.Range(1, entriesWithSameVector).Select(x => (long)x), allResults);
+            }
+            finally
+            {
+                nearest.Dispose();
+            }
         }
     }
 
@@ -176,7 +182,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
             var read = 0;
             do
             {
-                read = nearest.Fill(matches, distances, filter: null);
+                read = nearest.Fill(matches, distances);
                 totalReturned += read;
                 returnedDocuments.AddRange(matches[..read]);
             } while (read != 0);

@@ -78,7 +78,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L);
+                var match = indexSearcher.GreaterThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L);
                 Assert.Equal(_longList.Count, match.Fill(ids));
             }
 
@@ -91,7 +91,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L);
+                var match = indexSearcher.GreaterThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L);
                 Assert.Equal(_longList.Count -1, match.Fill(ids));
             }
         }

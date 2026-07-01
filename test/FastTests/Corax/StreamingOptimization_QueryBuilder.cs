@@ -19,6 +19,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -87,7 +88,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)] // where Name = X and Field < 1 order by Name => where Name = x and Field < 1
-    public async Task SortingMatchIsSkippedWhenIsAndBinaryMatch(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, session =>
+    public async Task SortingMatchIsSkippedWhenIsAndBinaryMatch(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereEquals(p => p.Name, "maciej")
             .AndAlso()
@@ -109,7 +110,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)] // where (Name = x and F < 1) and (S = 2 and F < 2 ) order by Name => skip order by
-    public async Task BinaryMatchOfBinaryMatchAnd(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, session =>
+    public async Task BinaryMatchOfBinaryMatchAnd(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .OpenSubclause()
             .WhereEquals(p => p.Name, "maciej")
@@ -187,7 +188,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task LessThanOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task LessThanOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereLessThan(p => p.First, 10)
             .OrderBy(x => x.First)
@@ -207,7 +208,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task LessThanOrEqualOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task LessThanOrEqualOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereLessThanOrEqual(p => p.First, 10)
             .OrderBy(x => x.First)
@@ -227,7 +228,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task GreaterThanOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task GreaterThanOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereGreaterThan(p => p.First, 10)
             .OrderBy(x => x.First)
@@ -247,7 +248,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task GreaterThanOrEqualOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task GreaterThanOrEqualOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereGreaterThanOrEqual(p => p.First, 10)
             .OrderBy(x => x.First)
@@ -267,7 +268,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task StartsWithOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task StartsWithOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereStartsWith(p => p.Name, "mac")
             .OrderBy(x => x.Name)
@@ -315,7 +316,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task EndsWithOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task EndsWithOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereEndsWith(p => p.Name, "mac")
             .OrderBy(x => x.Name)
@@ -344,7 +345,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereExists(p => p.Name)
             .OrderBy(x => x.Name)
@@ -373,7 +374,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task RegexOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task RegexOptimization(bool hasMultipleValues) => await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereRegex(p => p.Name, "^[a-z ]{2,4}love")
             .OrderBy(x => x.Name)
@@ -403,7 +404,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [MemberData(nameof(RangesTests))]
     public async Task RangeTests(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
     {
-        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+        await TestQueryBuilder<CompiledQueryMatch>(hasMultipleValues, session =>
             {
                 var query = session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>();
 
@@ -484,10 +485,9 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             using var session = store.OpenAsyncSession();
             var coraxQuery = await GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues);
 
-            if (hasMultipleValues == false)
-                Assert.IsType<TExpectedForSingleValues>(coraxQuery);
-            else
-                Assert.IsType<SortingMatch>(coraxQuery);
+            // With the bitmap pipeline, BuildCompiledQueryMatch always returns CompiledQueryMatch.
+            // Sorting is applied later by CoraxIndexReadOperation.
+            Assert.IsType<CompiledQueryMatch>(coraxQuery);
         }
     }
 
@@ -595,9 +595,20 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             {
                 var indexQueryServerSide = new IndexQueryServerSide(indexQuery.Query, blittableParameters);
                 using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-                CoraxQueryBuilder.Parameters parameters = new(indexSearcher, bsc, null, null, indexQueryServerSide, index, blittableParameters,
-                    queryBuilderFactories, mapping, null, null, int.MaxValue, false);
-                var coraxQuery = CoraxQueryBuilder.BuildQuery(parameters, out _);
+                var planParams = new PlanParameters
+                {
+                    IndexSearcher = indexSearcher,
+                    Metadata = indexQueryServerSide.Metadata,
+                    QueryParameters = blittableParameters,
+                    Allocator = bsc,
+                    Index = index,
+                    IndexFieldsMapping = mapping,
+                    HasDynamics = index.Definition.HasDynamicFields,
+                    DynamicFields = index.Definition.HasDynamicFields
+                        ? new Lazy<List<string>>(() => indexSearcher.GetFields())
+                        : null,
+                };
+                var coraxQuery = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(indexSearcher, bsc, indexQueryServerSide.Metadata, blittableParameters, mapping), null, false, default);
 
                 return coraxQuery;
             }

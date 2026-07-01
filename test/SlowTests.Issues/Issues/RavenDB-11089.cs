@@ -276,7 +276,6 @@ namespace SlowTests.Issues
                             .Execute();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
-WaitForUserToContinueTheTest(store);
                         CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                     }
                 }
