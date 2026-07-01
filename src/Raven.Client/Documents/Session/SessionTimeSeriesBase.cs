@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
@@ -90,6 +91,11 @@ namespace Raven.Client.Documents.Session
             {
                 Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: new List<TimeSeriesOperation.AppendOperation> { op }, deletes: null));
             }
+
+            if (Session.SessionInfo.NoCaching == false)
+            {
+                TrackTimeseriesInCache(timestamp, values, tag);
+            }
         }
 
         /// <inheritdoc cref="ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime)"/>
@@ -127,11 +133,19 @@ namespace Raven.Client.Documents.Session
         private void RemoveFromCacheIfNeeded(DateTime? from = null, DateTime? to = null)
         {
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
+            {
+                AddRemovedTimeSeriesRange(from, to);
                 return;
-
+            }
+            
             if (from == null && to == null)
             {
-                cache.Remove(Name);
+                if (cache.TryGetValue(Name, out var allRanges))
+                {
+                    foreach (var range in allRanges)
+                        range.IsDeleted = true;
+                }
+                AddRemovedTimeSeriesRange(from, to);
                 return;
             }
 
@@ -140,8 +154,58 @@ namespace Raven.Client.Documents.Session
                 from ??= DateTime.MinValue;
                 to ??= DateTime.MaxValue;
 
-                ranges.RemoveAll(range => range.From <= from && range.To >= to);
+                for (int i=0; i< ranges.Count; i++)
+                {
+                    var index = FindStartIndex(ranges[i].CachedEntries, from.Value);
+                    if (ranges[i].From >= from && ranges[i].To <= to)
+                        ranges[i].IsDeleted = true;
+                    for (; index < ranges[i].CachedEntries.Count; index++)
+                    {
+                        if (ranges[i].CachedEntries[index].Timestamp >= from && ranges[i].CachedEntries[index].Timestamp <= to)
+                        {
+                            ranges[i].CachedEntries.RemoveAt(index--);
+                        }
+                    }
+
+                    if (ranges[i].CachedEntries.Count == 0)
+                    {
+                        ranges.Remove(ranges[i--]);
+                    }
+                }
+
+                //ranges.RemoveAll(range => range.From <= from && range.To >= to);
+                AddRemovedTimeSeriesRange(from, to);
             }
+        }
+
+        private void AddRemovedTimeSeriesRange(DateTime? from = null, DateTime? to = null)
+        {
+            var range = new TimeSeriesRangeResult()
+            {
+                From = (from ?? DateTime.MinValue)
+                    .EnsureUtc()
+                    .EnsureMilliseconds(),
+                To = (to ?? DateTime.MaxValue)
+                    .EnsureUtc()
+                    .EnsureMilliseconds()
+            };
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache) == false)
+            {
+                cache = new Dictionary<string, List<TimeSeriesRangeResult>>();
+                cache.Add(Name, new List<TimeSeriesRangeResult>());
+                cache[Name].Add(range);
+                Session.DeletedTimeSeries.Add(DocId, cache);
+                return;
+            }
+
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out cache) && cache.TryGetValue(Name, out var ranges) == false)
+            {
+                cache.Add(Name, new List<TimeSeriesRangeResult>());
+                cache[Name].Add(range);
+                Session.DeletedTimeSeries[DocId] = cache;
+                return;
+            }
+            Session.DeletedTimeSeries[DocId][Name].Add(range);
         }
 
         public void Increment<TValues>(DateTime timestamp, TValues value)
@@ -173,10 +237,16 @@ namespace Raven.Client.Documents.Session
             {
                 var tsCmd = (IncrementalTimeSeriesBatchCommandData)command;
                 tsCmd.TimeSeries.Increment(op);
+                var timeSeriesExistedOperation = tsCmd.TimeSeries.Increments.FirstOrDefault(x => x.Timestamp == timestamp);
+                if (timeSeriesExistedOperation != null)
+                    TrackTimeseriesInCache(timeSeriesExistedOperation.Timestamp, timeSeriesExistedOperation.Values);
+                else
+                    TrackTimeseriesInCache(timestamp, values);
             }
             else
             {
                 Session.Defer(new IncrementalTimeSeriesBatchCommandData(DocId, Name, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
+                TrackTimeseriesInCache(timestamp, values);
             }
         }
 
@@ -210,5 +280,152 @@ namespace Raven.Client.Documents.Session
                                         "Use documentId instead or track the entity in the session.");
         }
 
+        private void TrackTimeseriesInCache(DateTime timestamp, IEnumerable<double> values, string tag = null)
+        {
+            var utcTimestamp = timestamp.EnsureUtc().EnsureMilliseconds();
+            var valuesArray = values as double[] ?? values.ToArray();
+
+            //No timeseries were loaded for this document, we need to create the cache for it
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
+            {
+                cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+                Session.TimeSeriesByDocId[DocId] = cache;
+            }
+
+            RemoveFromDeletedCacheIfNeeded(timestamp);
+            var earlier = Session.SessionCreatedAt < timestamp
+                ? Session.SessionCreatedAt
+                : timestamp;
+
+            var latest = Session.SessionCreatedAt > timestamp
+                ? Session.SessionCreatedAt
+                : timestamp;
+
+            //No timeseries with this name were loaded for this document, we need to create the cached range for it
+            if (cache.TryGetValue(Name, out var ranges) == false)
+            {
+                ranges = new List<TimeSeriesRangeResult>();
+                cache[Name] = ranges;
+
+                var initialEntry = new TimeSeriesEntry
+                {
+                    Timestamp = utcTimestamp,
+                    Tag = tag,
+                    IsLocal = true,
+                    Values = valuesArray
+                };
+
+                ranges.Add(new TimeSeriesRangeResult
+                {
+                    From = earlier,
+                    To = latest,
+                    IsLocal = true,
+                    CachedEntries = new List<TimeSeriesEntry> { initialEntry },
+                    Entries = new[] { initialEntry }
+                });
+
+                return;
+            }
+
+            //There are timeseries with this name for this document, we need to find the right range to add the new entry
+            var tse = new TimeSeriesEntry
+            {
+                Timestamp = utcTimestamp,
+                Tag = tag,
+                Values = valuesArray
+            };
+
+            bool inserted = false;
+            for (int i = ranges.Count - 1; i >= 0; i--)
+            {
+                if (ranges[i].From <= timestamp && ranges[i].To >= timestamp)
+                {
+                    inserted = true;
+                    ranges[i].CachedEntries ??= ranges[i].Entries?.ToList() ?? new List<TimeSeriesEntry>();
+
+                    if (ranges[i].CachedEntries.Count > 0 && ranges[i].CachedEntries[ranges[i].CachedEntries.Count - 1].Timestamp == tse.Timestamp)
+                    {
+                        ranges[i].CachedEntries[ranges[i].CachedEntries.Count - 1] = tse;
+                    }
+                    else
+                    {
+                        int index = FindStartIndex(ranges[i].CachedEntries, tse.Timestamp);
+                        ranges[i].CachedEntries.Insert(index,tse);
+                    }
+                    break;
+                }
+            }
+
+            if (inserted)
+                return;
+
+            //Timeseries entry is out of the range of the cached timeseries, we need to create a new range for it
+            ranges.Add(new TimeSeriesRangeResult
+            {
+                From = earlier,
+                To = latest,
+                IsLocal = true,
+                CachedEntries = new List<TimeSeriesEntry> { tse },
+                Entries = new[] { tse }
+            });
+        }
+
+        private void RemoveFromDeletedCacheIfNeeded(DateTime timestamp)
+        {
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache))
+            {
+                if (cache.TryGetValue(Name, out var ranges))
+                {
+                    for (int i = 0; i < ranges.Count; i++)
+                    {
+                        if (timestamp >= ranges[i].From && timestamp <= ranges[i].To)
+                        {
+
+                            if (ranges[i].From == ranges[i].To)
+                            {
+                                //single tse range deletion
+                                ranges.RemoveAt(i--);
+                            }
+                            else
+                            {
+                                //split the range by the timestamp
+                                var newRange = new TimeSeriesRangeResult()
+                                {
+                                    To = ranges[i].To,
+                                    From = timestamp.AddMilliseconds(1)
+                                };
+
+                                ranges[i].To = timestamp.AddMilliseconds(-1);
+                                ranges.Insert(++i, newRange);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private int FindStartIndex(List<TimeSeriesEntry> entries, DateTime from)
+        {
+            int left = 0;
+            int right = entries.Count - 1;
+            int result = -1;
+
+            while (left <= right)
+            {
+                int mid = left + (right - left) / 2;
+
+                if (entries[mid].Timestamp >= from)
+                {
+                    result = mid;
+                    right = mid - 1;
+                }
+                else
+                {
+                    left = mid + 1;
+                }
+            }
+
+            return result == -1 ? entries.Count : result;
+        }
     }
 }

@@ -29,6 +29,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -57,6 +58,7 @@ namespace Raven.Client.Documents.Session
 
         private BatchOptions _saveChangesOptions;
 
+        protected internal DateTime SessionCreatedAt = DateTime.UtcNow.EnsureMilliseconds();
         internal readonly bool? DisableAtomicDocumentWritesInClusterWideTransaction;
 
         public TransactionMode TransactionMode;
@@ -144,6 +146,11 @@ namespace Raven.Client.Documents.Session
             _timeSeriesByDocId ??= new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesByDocId;
+
+        private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _deletedTimeSeries;
+
+        protected internal Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> DeletedTimeSeries =>
+            _deletedTimeSeries ??= new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
 
         protected readonly DocumentStoreBase _documentStore;
 
