@@ -124,6 +124,13 @@ namespace Raven.Analyzers
         public const string AddMapMethodName = "AddMap";
         public const string AddMapForAllMethodName = "AddMapForAll";
 
+        // AbstractIndexCreationTask members that ship user C# to the server: AdditionalSources compiles
+        // extra source alongside the index, AdditionalAssemblies references extra assemblies. When an
+        // index uses either, a helper method called from its Map/Reduce may be translatable server-side
+        // after all, so RVN009 suppresses on such indexes (see IndexUnsupportedMethodAnalyzer).
+        public const string AdditionalSourcesPropertyName = "AdditionalSources";
+        public const string AdditionalAssembliesPropertyName = "AdditionalAssemblies";
+
         // Session query method names
         public const string QueryMethodName = "Query";
         public const string WhereMethodName = "Where";

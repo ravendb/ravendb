@@ -9,6 +9,14 @@ namespace Raven.Analyzers.Shared
     public static class SyntaxHelpers
     {
         /// <summary>
+        /// Hop budget for the chain walkers that follow a query/projection through local-variable
+        /// initializers. Guards against a pathological self-referential declaration. Shared so every
+        /// spine walk uses the same bound rather than each picking its own magic number.
+        /// </summary>
+        internal const int MaxInvocationChainHops = 32;
+
+
+        /// <summary>
         /// Enumerates the invocation chain starting from <paramref name="expression"/>,
         /// walking from outer to inner by following the receiver of each MemberAccessExpression.
         /// </summary>
@@ -53,7 +61,7 @@ namespace Raven.Analyzers.Shared
                         continue;
 
                     default:
-                        if (variableHops++ >= 32)
+                        if (variableHops++ >= MaxInvocationChainHops)
                             yield break;
                         expression = TryResolveLocalInitializer(expression, model);
                         continue;
@@ -177,7 +185,7 @@ namespace Raven.Analyzers.Shared
         /// True when <paramref name="symbol"/> is declared in the <c>Raven.Client</c> namespace or a
         /// nested namespace under it (e.g. <c>Raven.Client.Documents.Session</c>).
         /// </summary>
-        private static bool IsInRavenClientNamespace(ISymbol symbol)
+        internal static bool IsInRavenClientNamespace(ISymbol symbol)
         {
             INamespaceSymbol? ns = symbol.ContainingNamespace;
             if (ns == null || ns.IsGlobalNamespace)

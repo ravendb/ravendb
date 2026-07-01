@@ -156,5 +156,198 @@ class Order { public string First { get; set; } public string Last { get; set; }
 
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
         }
+
+        [Fact]
+        public async Task Where_On_Captured_Variable_Projection_Reports_Diagnostic()
+        {
+            // The anonymous member reads a captured outer variable (captured.Name), not the lambda
+            // parameter, so the projected member does not come from the source element under its source
+            // name. It is not an identity projection, so RVN002 must flag the following Where. (Before the
+            // fix the receiver was only required to be some identifier, so this was a missed diagnostic.)
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, Order captured)
+    {
+        var q = session.Query<Order>()
+            .Select(o => new { captured.Name })
+            .Where(x => x.Name == ""x"");
+    }
+}
+class Order { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
+        }
+
+        [Fact]
+        public async Task OrderBy_After_WholeElement_Identity_Select_Is_Not_Flagged()
+        {
+            // o => o is a whole-element identity projection: the element is the source document unchanged,
+            // so a following OrderBy still resolves to a source field. RVN002 must not flag it.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(o => o)
+            .OrderBy(x => x.Total);
+    }
+}
+class Order { public string Company { get; set; } public int Total { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Where_After_Verbatim_Parameter_Identity_Select_Is_Not_Flagged()
+        {
+            // A verbatim lambda parameter (@class) is a legitimate identity projection off the parameter.
+            // Names must be compared decoded (ValueText) so @class.Name matches parameter @class rather
+            // than being mis-flagged over the raw @-prefixed text.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(@class => new { @class.Name })
+            .Where(x => x.Name == ""x"");
+    }
+}
+class Order { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task OrderBy_After_Verbatim_WholeElement_Identity_Select_Is_Not_Flagged()
+        {
+            // @o => @o is the whole-element identity projection with a verbatim parameter.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(@o => @o)
+            .OrderBy(x => x.Total);
+    }
+}
+class Order { public string Company { get; set; } public int Total { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Unbounded_Result_Not_Flagged_When_Take_Applied_By_Reassignment()
+        {
+            // The query is bounded by a reassignment (q = q.Take(10)) inside a branch rather than in the
+            // declarator. The chain walk only follows the declarator initializer, so before the
+            // reassignment-aware check this was a false positive on a genuinely bounded query.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, bool paged)
+    {
+        var q = session.Query<Doc>();
+        if (paged)
+            q = q.Take(10);
+        var results = q.ToList();
+    }
+}
+class Doc { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Unbounded_Result_Still_Flagged_When_Local_Reassigned_Without_Take()
+        {
+            // A query local reassigned to another still-unbounded query is genuinely unbounded — the
+            // reassignment-aware suppression must not swallow this real case.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Doc>();
+        q = q.Where(d => d.Id != null);
+        var results = q.ToList();
+    }
+}
+class Doc { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
+
+        [Fact]
+        public async Task Unbounded_Result_Still_Flagged_When_Take_Reassignment_Comes_After_The_Call()
+        {
+            // The materialization happens while the query is still unbounded; the Take is applied only
+            // afterwards. The reassignment-aware suppression must consider lexical order and NOT let the
+            // later Take retroactively silence the earlier, genuinely-unbounded call.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Doc>();
+        var results = q.ToList();
+        q = q.Take(10);
+    }
+}
+class Doc { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
+
+        [Fact]
+        public async Task Unbounded_Result_Still_Flagged_When_A_Bounded_Query_Is_Only_Read_In_A_Predicate()
+        {
+            // A separate bounded query (recent) is captured inside the Where predicate of the unbounded
+            // query. It is not on the materialized query's receiver spine, so it must not suppress the
+            // outer, genuinely-unbounded ToList.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var recent = session.Query<Doc>().Take(10);
+        var q = session.Query<Doc>();
+        var all = q.Where(d => recent.Any(r => r.Id == d.Id)).ToList();
+    }
+}
+class Doc { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
     }
 }

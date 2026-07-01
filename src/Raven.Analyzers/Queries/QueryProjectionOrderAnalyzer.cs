@@ -136,11 +136,15 @@ namespace Raven.Analyzers.Queries
         }
 
         /// <summary>
-        /// True when the Select projects an anonymous object in which every member is a straight
-        /// pass-through of a source member under its own name — <c>new { o.A, o.B }</c> or
-        /// <c>new { A = o.A }</c>. A renamed member (<c>new { X = o.A }</c>), a computed member
-        /// (<c>new { X = o.A + o.B }</c>), a nested path, a non-anonymous/DTO projection, or an
-        /// unreadable lambda body all make it non-identity, so the caller conservatively keeps flagging.
+        /// True when the Select is a pure identity projection whose element keeps every member under its
+        /// source name, so a following Where/OrderBy member path still resolves to a source field. Two
+        /// shapes qualify: the whole-element pass-through <c>o =&gt; o</c>, and an anonymous object in which
+        /// every member is a straight pass-through of a source member off the lambda parameter under its
+        /// own name — <c>new { o.A, o.B }</c> or <c>new { A = o.A }</c>. A renamed member
+        /// (<c>new { X = o.A }</c>), a computed member (<c>new { X = o.A + o.B }</c>), a member off a
+        /// <em>captured variable</em> rather than the lambda parameter (<c>new { captured.A }</c>), a
+        /// nested path, a non-anonymous/DTO projection, or an unreadable lambda body all make it
+        /// non-identity, so the caller conservatively keeps flagging.
         /// </summary>
         private static bool IsPureIdentitySelectProjection(InvocationExpressionSyntax selectInvocation)
         {
@@ -148,24 +152,48 @@ namespace Raven.Analyzers.Queries
             if (args.Count == 0)
                 return false;
 
-            if (SyntaxHelpers.TryGetLambdaBody(args[0].Expression) is not AnonymousObjectCreationExpressionSyntax anon)
+            ExpressionSyntax lambda = args[0].Expression;
+
+            // The element name the projection binds against. A multi-parameter Select ((o, i) => …) has no
+            // single element parameter, so GetLambdaParameterName returns null and we conservatively flag.
+            string? parameterName = SyntaxHelpers.GetLambdaParameterName(lambda);
+            if (parameterName == null)
                 return false;
 
-            if (anon.Initializers.Count == 0)
+            ExpressionSyntax? body = SyntaxHelpers.TryGetLambdaBody(lambda);
+            if (body == null)
+                return false;
+
+            // Whole-element identity: o => o. The projected element is the source document unchanged.
+            // Compare decoded names (ValueText) so a verbatim parameter (@o => @o) is recognized —
+            // GetLambdaParameterName returns ValueText, so both sides must use it.
+            if (body is IdentifierNameSyntax bodyIdentifier)
+                return bodyIdentifier.Identifier.ValueText == parameterName;
+
+            if (body is not AnonymousObjectCreationExpressionSyntax anon || anon.Initializers.Count == 0)
                 return false;
 
             foreach (AnonymousObjectMemberDeclaratorSyntax initializer in anon.Initializers)
             {
-                // The value must be a single-hop member access off the lambda parameter (o.Member).
+                // The value must be a single-hop member access off the LAMBDA PARAMETER (o.Member) — a
+                // member off a captured variable (captured.Member) does not come from the source element,
+                // so filtering/ordering by it is not remapped to a source field and must be flagged.
+                // Names are compared as ValueText so a verbatim parameter (@class => new { @class.Name })
+                // matches its receiver rather than being mis-flagged over the raw @-prefixed text.
                 if (initializer.Expression is not MemberAccessExpressionSyntax ma
-                    || ma.Expression is not IdentifierNameSyntax)
+                    || ma.Expression is not IdentifierNameSyntax receiver
+                    || receiver.Identifier.ValueText != parameterName)
+                {
                     return false;
+                }
 
                 // Implicit name (new { o.Member }) is inferred as the member name — always identity.
                 // An explicit name (new { Alias = o.Member }) is identity only when Alias == Member.
                 if (initializer.NameEquals != null
-                    && initializer.NameEquals.Name.Identifier.Text != ma.Name.Identifier.Text)
+                    && initializer.NameEquals.Name.Identifier.ValueText != ma.Name.Identifier.ValueText)
+                {
                     return false;
+                }
             }
 
             return true;
