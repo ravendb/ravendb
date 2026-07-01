@@ -6,9 +6,10 @@ using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Primitives;
 using Corax.Utils;
+using Voron.Data.RoaringBitmaps;
 using Sparrow;
-using Sparrow.Server.Collections;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -32,79 +33,102 @@ public partial class IndexSearcher
             return shouldScan;
         }
 
-        public static GrowableBitArray LoadFilterMatches(IndexSearcher indexSearcher, ref IQueryMatch query)
+        public static RoaringBitmap LoadFilterMatches(IndexSearcher indexSearcher, ref IQueryMatch query, out bool owned)
         {
-            using var _ = indexSearcher.Allocator.Allocate(1024, out Span<long> workingBuffer);
-
-            var totalCount = 0;
-            GrowableBitArray filter = new(indexSearcher.Allocator, indexSearcher.LastEntryId);
-            while (query.Fill(workingBuffer) is var read and > 0)
+            if (query is IBitmapQueryMatch bitmapMatch) // fast path, when source already has a bitmap
             {
-                for (int i = 0; i < read; ++i)
-                {
-                    totalCount += filter.Add(workingBuffer[i]).ToInt32();
-                }
+                owned = false;
+                ref RoaringBitmap borrowed = ref bitmapMatch.BitmapState;
+                borrowed.PrepareForReading();
+                return borrowed;
             }
 
-            filter.Count = totalCount;
+            owned = true;
+            RoaringBitmap filter = new(indexSearcher.Allocator);
+
+            using var _ = indexSearcher.Allocator.Allocate(4096, out Span<long> workingBuffer);
+            int read;
+            while ((read = query.Fill(workingBuffer)) > 0)
+            {
+                for (int i = 0; i < read; i++)
+                    filter.Add(workingBuffer[i]);
+            }
+
+            filter.PrepareForReading();
             return filter;
         }
 
         /// <summary>
-        /// To save memory, this enumerator modifies the source during iteration to avoid materialization of the bitmap.
-        /// It restores the original state on disposal. However, it is designed in a way to not be evaluated to the end and rather for probing random nodes from document sets.
-        /// Otherwise, it's better to evaluate and perform Shuffle on the list.
+        /// Materializes all entry IDs from a RoaringBitmap filter, shuffles them for random access,
+        /// and converts each entry to its corresponding HNSW node ID(s) on demand.
+        /// Designed for probing random starting nodes during approximate filtered nearest neighbor search.
         /// </summary>
+        [System.Runtime.CompilerServices.SkipLocalsInit]
         public struct RandomNodesFromFilterEnumerator : IEnumerator<long>
         {
             private List<long> _results;
             private long _current;
             private readonly IndexSearcher _indexSearcher;
-            private GrowableBitArray _filterResults;
-            private readonly Random _random;
+            private readonly long[] _entryIds;
+            private int _entryIndex;
             private bool _isDone;
-            private readonly HashSet<long> _returnedDocuments = new();
             private Page p = default;
             private CompactKey _key;
-            private LowLevelTransaction.CompactKeyScope _keyScope;
-            private long _start = 1;
-            private long _end = 0;
             private readonly CompactTree _vectorsByHash;
             private readonly Lookup<Int64LookupKey> _nodesByVectorId;
             private readonly long _vectorRootPage;
 
-            public RandomNodesFromFilterEnumerator(IndexSearcher indexSearcher, FieldMetadata metadata, GrowableBitArray filterResults, Random random = null)
+            public RandomNodesFromFilterEnumerator(IndexSearcher indexSearcher, FieldMetadata metadata, RoaringBitmap filterResults, Random random = null)
             {
                 _indexSearcher = indexSearcher;
-                _filterResults = filterResults;
-                _random = random ?? Random.Shared;
-                _keyScope = indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out _key);
-
+                _key = indexSearcher._transaction.LowLevelTransaction.AcquireCompactKey();
                 var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
-                _vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
+                indexSearcher._transaction.TryGetCompactTreeFor(Hnsw.VectorsIdByHashSlice, out _vectorsByHash);
                 _nodesByVectorId = searchState.NodeIdsByVectorId;
-                _current = 1L;
+                _current = -1L;
 
-                _start = 1L;
-                _end = indexSearcher.LastEntryId;
-                
-                _isDone = 
-                    indexSearcher.TryGetRootPageByFieldName(metadata.FieldName, out _vectorRootPage) == false 
-                    || _filterResults.Count == 0;
+                var filterCount = filterResults.ComputeCount();
+                _isDone = indexSearcher.TryGetRootPageByFieldName(metadata.FieldName, out _vectorRootPage) == false
+                          || filterCount == 0;
+
+                if (_isDone)
+                {
+                    _entryIds = Array.Empty<long>();
+                    return;
+                }
+
+                const int maxFilterSampleSize = 8192;
+                random ??= Random.Shared;
+                var sampleSize = (int)Math.Min(filterCount, maxFilterSampleSize);
+                _entryIds = new long[sampleSize];
+                var ranks = new long[sampleSize];
+                if (filterCount <= maxFilterSampleSize)
+                {
+                    // small enough that we can just take it all 
+                    for (int i = 0; i < sampleSize; i++)
+                        ranks[i] = i;
+                }
+                else
+                {
+                    // select random matches from the filter to fit the sample size
+                    for (int i = 0; i < sampleSize; i++)
+                        ranks[i] = random.NextInt64(filterCount);
+                }
+
+                filterResults.Select(_indexSearcher.Allocator, ranks, _entryIds);
+
+                // ensure we scan in random order
+                random.Shuffle(_entryIds.AsSpan());
+                _entryIndex = 0;
             }
-            
-            public RandomNodesFromFilterEnumerator()
-            {
-                throw new NotSupportedException($"Default constructor is not supported for {nameof(RandomNodesFromFilterEnumerator)}");
-            }
-            
+
+            public RandomNodesFromFilterEnumerator() => throw new NotSupportedException($"Default constructor is not supported for {nameof(RandomNodesFromFilterEnumerator)}");
+
             public void Dispose()
             {
-                foreach (var idX in _returnedDocuments)
-                    _filterResults.Add(idX);
                 _current = -1;
                 _isDone = true;
-                _keyScope.Dispose();
+                _indexSearcher._transaction.LowLevelTransaction.ReleaseCompactKey(ref _key);
             }
 
             public bool MoveNext()
@@ -120,21 +144,11 @@ public partial class IndexSearcher
                 }
 
                 _current = -1L;
-                do
+                while (_entryIndex < _entryIds.Length)
                 {
-                    var randomStart = _random.NextInt64(_start, _end);
-                    var it = _filterResults.GetIterator(randomStart);
-                    var anythingExists = it.MoveNext();
-                    if (anythingExists == false)
-                    {
-                        _end = randomStart;
-                        continue;
-                    }
+                    var entryId = _entryIds[_entryIndex++];
 
-                    _returnedDocuments.Add(it.Current);
-                    _filterResults.Remove(it.Current);
-
-                    _indexSearcher.GetEntryTermsReader(it.Current, ref p, out var entryTermsReader, _key);
+                    var entryTermsReader = _indexSearcher.GetEntryTermsReader(entryId, ref p, _key);
                     bool found = false;
                     while (entryTermsReader.FindNextStored(_vectorRootPage))
                     {
@@ -150,17 +164,14 @@ public partial class IndexSearcher
                         }
                         else
                         {
-                            if (_results is null or { Count: 0 })
-                                _results ??= new();
-
+                            _results ??= new();
                             _results.Add(nodeId);
                         }
                     }
 
                     if (found)
                         return true;
-
-                } while (_start < _end && _filterResults.Count > _returnedDocuments.Count);
+                }
 
                 _isDone = true;
                 return false;
@@ -179,10 +190,10 @@ public partial class IndexSearcher
             }
         }
 
-        public static bool TryConvertDocumentsIdsToNodesIds(IndexSearcher indexSearcher, in FieldMetadata metadata, GrowableBitArray filterResults, out ContextBoundNativeList<long> nodesIdsToScan)
+        public static bool TryConvertDocumentsIdsToNodesIds(IndexSearcher indexSearcher, in FieldMetadata metadata, ref RoaringBitmap filterResults, out ContextBoundNativeList<long> nodesIdsToScan)
         {
             var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
-            var vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
+            indexSearcher._transaction.TryGetCompactTreeFor(Hnsw.VectorsIdByHashSlice, out var vectorsByHash);
             var nodesByVectorId = searchState.NodeIdsByVectorId;
             if (indexSearcher.TryGetRootPageByFieldName(metadata.FieldName, out var vectorRootPage) is false)
             {
@@ -192,30 +203,27 @@ public partial class IndexSearcher
 
             nodesIdsToScan = new ContextBoundNativeList<long>(indexSearcher.Allocator);
 
-            // Scan all entries from the filter to retrieve all node IDs. This is important for returning the correct number of results.
-            // To satisfy the NumberOfCandidates requirement, we need to return up to `NumberOfCandidates` posting lists with the filter applied to the query.
-            // Instead of building a mapping of nodes to matching posting lists (and distances),
-            // we reuse ExactSearch mechanisms to find the nearest nodes to the vector (so we know that each node has at least one matching document)
-            // and then filter the documents stored in the posting list of each node individually.
-            // Ideally, each node represents only a single document.
             Page p = default;
-            var it = filterResults.GetIterator(0);
-            using var _ = indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
-
-            while (it.MoveNext())
+            using var iterator = filterResults.GetIterator();
+            Span<long> batch = stackalloc long[QueryPrimitives.EntryScanBatchSize];
+            int read;
+            while ((read = iterator.Fill(ref filterResults, batch)) > 0)
             {
-                indexSearcher.GetEntryTermsReader(it.Current, ref p, out var entryTermsReader, existingKey);
-                while (entryTermsReader.FindNextStored(vectorRootPage))
+                for (int i = 0; i < read; i++)
                 {
-                    var vectorHash = entryTermsReader.StoredField.Value;
-                    if (vectorsByHash.TryGetValue(vectorHash, out var vectorId))
+                    var entryTermsReader = indexSearcher.GetEntryTermsReader(batch[i], ref p);
+                    while (entryTermsReader.FindNextStored(vectorRootPage))
                     {
-                        if (nodesByVectorId.TryGetValue(vectorId, out var nodeId))
-                            nodesIdsToScan.Add(nodeId);
+                        var vectorHash = entryTermsReader.StoredField.Value;
+                        if (vectorsByHash.TryGetValue(vectorHash, out var vectorId))
+                        {
+                            if (nodesByVectorId.TryGetValue(vectorId, out var nodeId))
+                                nodesIdsToScan.Add(nodeId);
+                        }
                     }
                 }
             }
-
+            // we get _all_ the node ids, so we can then use exact nearest neighbour to find the closest matches 
             var uniqueCount = Sorting.SortAndRemoveDuplicates(nodesIdsToScan.ToSpan());
             nodesIdsToScan.Count = uniqueCount;
 
@@ -225,7 +233,7 @@ public partial class IndexSearcher
                 nodesIdsToScan = default;
                 return false;
             }
-            
+
             return nodesIdsToScan.Count > 0;
         }
     }
@@ -238,18 +246,19 @@ public partial class IndexSearcher
 
     public IQueryMatch VectorSearch(in FieldMetadata metadata, in string documentId, float minimumMatch, in int numberOfCandidates, bool isExact, bool isSingleVectorSearch, IQueryMatch filterQuery = null, int scanningThreshold = 1024)
     {
-        var idField = _fieldsTree.CompactTreeFor(_fieldMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
+        var idField = GetTermsFor(_fieldMapping.GetByFieldId(Constants.IndexWriter.PrimaryKeyFieldId).FieldName);
         string loweredDocumentId = documentId.ToLowerInvariant();
-        if (idField.TryGetValue(loweredDocumentId, out var rawId) is false ||
-            TryGetRootPageByFieldName(metadata.FieldName, out var vectorRootPage) is false)
+        if (idField == null ||
+            idField.TryGetValue(loweredDocumentId, out var rawId) is false ||
+            TryGetRootPageByFieldName(metadata.FieldName, out var vectorRootPage) is false ||
+            _transaction.TryGetCompactTreeFor(Hnsw.VectorsIdByHashSlice, out var vectorsByHash) is false)
             return EmptyMatch();
-        var vectorsByHash = _transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
         PortableExceptions.ThrowIf<InvalidOperationException>((rawId & (long)TermIdMask.EnsureIsSingleMask) != (long)TermIdMask.Single,
             "The provided id must be a document id mapped to a single value, but got: " + documentId + ", which maps to: " + rawId);
 
         Page page = default;
         var singleEntryId = EntryIdEncodings.GetContainerId(rawId);
-        using var _ = GetEntryTermsReader((long)singleEntryId, ref page, out var reader);
+        var reader = GetEntryTermsReader((long)singleEntryId, ref page);
 
         var searchState = new Hnsw.SearchState(_transaction.LowLevelTransaction, metadata.FieldName);
 
