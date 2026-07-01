@@ -103,7 +103,6 @@ public sealed partial class CompactTree : IPrepareForCommit
             }
             
             Key = llt.AcquireCompactKey();
-            Key.Initialize(llt);
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return Key;
         }
@@ -427,7 +426,30 @@ public sealed partial class CompactTree : IPrepareForCommit
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
         return _inner.TryGetValue(new CompactKeyLookup(scope.Key), out value);
     }
-    
+
+    /// <summary>
+    /// Counts how many terms have a key in <c>[low, high]</c> (both bounds inclusive), forwarding to the inner
+    /// <see cref="Lookup{TLookupKey}"/>. Exact and O(#in-range terms); see
+    /// <see cref="Lookup{TLookupKey}.GetNumberOfEntriesInRange"/>.
+    /// </summary>
+    public long GetNumberOfEntriesInRange(ReadOnlySpan<byte> low, ReadOnlySpan<byte> high)
+    {
+        using var lowScope = new CompactKeyCacheScope(_inner.Llt, low, _inner.State.DictionaryId);
+        using var highScope = new CompactKeyCacheScope(_inner.Llt, high, _inner.State.DictionaryId);
+        return _inner.GetNumberOfEntriesInRange(new CompactKeyLookup(lowScope.Key), new CompactKeyLookup(highScope.Key));
+    }
+
+    /// <summary>
+    /// Sub-linear estimate of how many terms have a key in <c>[low, high]</c> (both bounds inclusive), forwarding to
+    /// the inner <see cref="Lookup{TLookupKey}"/>. See <see cref="Lookup{TLookupKey}.GetNumberOfEntriesInRangeEstimate"/>.
+    /// </summary>
+    public long GetNumberOfEntriesInRangeEstimate(ReadOnlySpan<byte> low, ReadOnlySpan<byte> high)
+    {
+        using var lowScope = new CompactKeyCacheScope(_inner.Llt, low, _inner.State.DictionaryId);
+        using var highScope = new CompactKeyCacheScope(_inner.Llt, high, _inner.State.DictionaryId);
+        return _inner.GetNumberOfEntriesInRangeEstimate(new CompactKeyLookup(lowScope.Key), low.IsEmpty, new CompactKeyLookup(highScope.Key), high.IsEmpty);
+    }
+
     public bool TryGetValue(ReadOnlySpan<byte> key, out ContainerEntryId termContainerId, out long value)
     {
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);

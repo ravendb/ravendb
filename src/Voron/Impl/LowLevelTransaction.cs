@@ -964,12 +964,20 @@ namespace Voron.Impl
             return _freedPages;
         }
 
-        private static readonly ObjectPool<CompactKey> _sharedCompactKeyPool = new(() => new CompactKey());
+        // The factory rents each pooled key's buffers once (Initialize(null) rents without touching the tx);
+        // AcquireCompactKey then Rebinds to the current transaction and ReleaseCompactKey only Unbinds, so the
+        // rented buffers stay attached to the pooled object instead of churning through the ArrayPool per call.
+        private static readonly ObjectPool<CompactKey> SharedCompactKeyPool = new(static () =>
+        {
+            var key = new CompactKey();
+            key.Initialize(null);
+            return key;
+        }, ProcessorInfo.ProcessorCount * 8);
 
         public CompactKey AcquireCompactKey()
         {
-            var key = _sharedCompactKeyPool.Allocate();
-            key.Initialize(this);
+            var key = SharedCompactKeyPool.Allocate();
+            key.Rebind(this);
             return key;
         }
 
@@ -983,8 +991,8 @@ namespace Voron.Impl
 
         public CompactKeyScope AcquireCompactKey(out CompactKey key)
         {
-            key = _sharedCompactKeyPool.Allocate();
-            key.Initialize(this);
+            key = SharedCompactKeyPool.Allocate();
+            key.Rebind(this);
             return new CompactKeyScope(this, key);
         }
 
@@ -993,12 +1001,13 @@ namespace Voron.Impl
             if (key == null)
                 return;
 
-            // The reason why we reset the key, which in turn will null the storage is to avoid cases of reused keys
-            // been used by multiple operations. Eventually someone wil restore
             if (ReferenceEquals(key, CompactKey.NullInstance) == false)
             {
-                key.Reset();
-                _sharedCompactKeyPool.Free(key);
+                // Unbind drops the transaction reference but keeps the rented buffers, so the next
+                // AcquireCompactKey reuses them. A released key still carries stale storage, but its
+                // owner is null, so any decode use after release fails fast on the null owner.
+                key.Unbind();
+                SharedCompactKeyPool.Free(key);
             }
             key = null;
         }

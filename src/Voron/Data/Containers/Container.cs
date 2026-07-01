@@ -9,7 +9,9 @@ using System.Runtime.Intrinsics;
 using System.Text;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron.Data.Lookups;
+using Voron.Data.RoaringBitmaps;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
@@ -1226,7 +1228,8 @@ namespace Voron.Data.Containers
 
         public static void Delete(LowLevelTransaction llt, ContainerId containerId, ContainerEntryId id)
         {
-            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
+            var pageNum = (long)id >> Constants.Storage.PageSizeShift;
+            var offset = (long)id & Constants.Storage.PageSizeMask;
             var page = llt.ModifyPage(pageNum);
             Container rootContainer = new Container(llt.ModifyPage((long)containerId));
             rootContainer.UpdateNumberOfEntries(-1);
@@ -1336,7 +1339,8 @@ namespace Voron.Data.Containers
             if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
+            var pageNum = (long)id >> Constants.Storage.PageSizeShift;
+            var offset = (long)id & Constants.Storage.PageSizeMask;
             var page = llt.ModifyPage(pageNum);
 
             if (page.IsOverflow)
@@ -1359,7 +1363,8 @@ namespace Voron.Data.Containers
             if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
+            var pageNum = (long)id >> Constants.Storage.PageSizeShift;
+            var offset = (long)id & Constants.Storage.PageSizeMask;
             var page = llt.ModifyPage(pageNum);
 
             if (page.IsOverflow)
@@ -1381,7 +1386,8 @@ namespace Voron.Data.Containers
             if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
+            var pageNum = (long)id >> Constants.Storage.PageSizeShift;
+            var offset = (long)id & Constants.Storage.PageSizeMask;
             var page = llt.GetPage(pageNum);
             if (page.IsOverflow)
             {
@@ -1403,7 +1409,8 @@ namespace Voron.Data.Containers
             if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
+            var pageNum = (long)id >> Constants.Storage.PageSizeShift;
+            var offset = (long)id & Constants.Storage.PageSizeMask;
             var page = llt.GetPage(pageNum);
             if (page.IsOverflow)
             {
@@ -1424,7 +1431,8 @@ namespace Voron.Data.Containers
             if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
+            var pageNum = (long)id >> Constants.Storage.PageSizeShift;
+            var offset = (long)id & Constants.Storage.PageSizeMask;
             if(!page.IsValid || pageNum != page.PageNumber)
                 page = llt.GetPage(pageNum);
 
@@ -1458,66 +1466,76 @@ namespace Voron.Data.Containers
                 throw new InvalidDataException("Page " + _page.PageNumber + " is not a container page");
         }
 
-        public readonly struct Item
+        public readonly struct Item(Page page, byte* ptr, int size)
         {
-            public static readonly Item Invalid = new Item(default, null, 0);
-            public bool IsInvalid => _ptr == null;
-            
-            private readonly Page _page;
-            private readonly byte* _ptr;
-            public readonly int Length;
+            public readonly int Length = size;
 
-            public Item(Page page, byte* ptr, int size)
-            {
-                _page = page;
-                _ptr = ptr;
-                Length = size;
-            }
-
-            public byte* Address => _ptr;
-            public long PageLevelMetadata => ((ContainerPageHeader*)_page.Pointer)->PageLevelMetadata;
-            public Span<byte> ToSpan() => new Span<byte>(_ptr, Length);
-            public UnmanagedSpan ToUnmanagedSpan() => new UnmanagedSpan(_ptr, Length);
-
-            public Item IncrementOffset(int offset)
-            {
-                return new Item(_page, _ptr + offset, Length - offset);
-            }
+            public byte* Address => ptr;
+            public long PageLevelMetadata => ((ContainerPageHeader*)page.Pointer)->PageLevelMetadata;
+            public Span<byte> ToSpan() => new Span<byte>(ptr, Length);
+            public UnmanagedSpan ToUnmanagedSpan() => new UnmanagedSpan(ptr, Length);
         }
 
-        /// <summary>
-        /// Assumes that ids is sorted 
-        /// </summary>
-        public static void GetAll(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, long missingValue, PageLocator pageCache)
+        public static void GetAllSortedByPage(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, PageLocator pageCache)
         {
+            int n = ids.Length;
+            if (n == 0)
+                return;
+
+            using var keysScope = llt.Allocator.Allocate(n, out Span<long> keys);
+            // idx is padded to the Vector256 width, so InitializeIndices can SIMD-store it without a scalar tail.
+            using var idxScope = llt.Allocator.Allocate(RoaringBitmap.PadToVector256Width(n), out Span<int> idx);
+            ids.CopyTo(keys);
+            RoaringBitmap.InitializeIndices(idx, n);
+            keys.Sort(idx[..n]); // keys ascending (page order)
+
+            GetAllCore(llt, keys, spans, idx[..n], pageCache);
+        }
+
+        public static void GetAll(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, PageLocator pageCache) => GetAllCore(llt, ids, spans, permutation: default, pageCache);
+        
+        private static void GetAllCore(LowLevelTransaction llt, Span<long> ids, Span<UnmanagedSpan> spans, ReadOnlySpan<int> permutation, PageLocator pageCache)
+        {
+            bool permuted = permutation.IsEmpty == false;
+            long currentPageNum = -1;
+            Container container = default;
+            Page page = default;
             for (int i = 0; i < ids.Length; i++)
             {
-                if (ids[i]== missingValue)
+                int target = permuted ? permutation[i] : i;
+                if (ids[i] < 0)
                 {
-                    spans[i] = default;
+                    spans[target] = default;
                     continue;
                 }
-                var (pageNum, offset) = Math.DivRem(ids[i], Constants.Storage.PageSize);
 
-                if (pageCache.TryGetReadOnlyPage(pageNum, out var page) == false)
+                var pageNum = ids[i] >> Constants.Storage.PageSizeShift;
+                var offset = ids[i] & Constants.Storage.PageSizeMask;
+
+                if (pageNum != currentPageNum)
                 {
-                    page = llt.GetPage(pageNum);
-                    pageCache.SetReadable(page);
+                    if (pageCache.TryGetReadOnlyPage(pageNum, out page) == false)
+                    {
+                        page = llt.GetPage(pageNum);
+                        pageCache.SetReadable(page);
+                    }
+
+                    currentPageNum = pageNum;
+
+                    if (page.IsOverflow)
+                    {
+                        spans[target] = new(page.DataPointer, page.OverflowSize);
+                        continue;
+                    }
+
+                    container = new Container(page);
                 }
 
-                if (page.IsOverflow)
-                {
-                    spans[i] = new(page.DataPointer, page.OverflowSize);
-                    continue;
-                }
-                
-                var container = new Container(page);
-                
                 var metadata = container.MetadataFor(OffsetToIndex(offset));
                 Debug.Assert(metadata.IsFree == false);
                 var p = page.Pointer;
                 int size = metadata.Get(ref p);
-                spans[i] = new(p, size);
+                spans[target] = new(p, size);
             }
         }
 
