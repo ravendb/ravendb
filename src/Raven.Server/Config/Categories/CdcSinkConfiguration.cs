@@ -8,12 +8,12 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.CdcSink)]
     public class CdcSinkConfiguration : ConfigurationCategory
     {
-        [Description($"Weighted EWMA ratio threshold of errored items to successfully processed items above which the CDC Sink process health status will be set to '{nameof(EtlProcessHealthStatus.Failed)}'")]
+        [Description($"Weighted EWMA ratio threshold of errored items to successfully processed items above which the process health status will be set to '{nameof(EtlProcessHealthStatus.Failed)}'")]
         [DefaultValue(0.9f)]
         [ConfigurationEntry("CdcSink.ProcessHealthStatusFailedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public float ProcessHealthStatusFailedThreshold { get; protected set; }
 
-        [Description($"Weighted EWMA ratio threshold of errored items to successfully processed items above which the CDC Sink process health status will be set to '{nameof(EtlProcessHealthStatus.Impaired)}'")]
+        [Description($"Weighted ratio threshold of errored items to successfully processed items above which the process health status will be set to '{nameof(EtlProcessHealthStatus.Impaired)}'")]
         [DefaultValue(0.1f)]
         [ConfigurationEntry("CdcSink.ProcessHealthStatusImpairedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public float ProcessHealthStatusImpairedThreshold { get; protected set; }
