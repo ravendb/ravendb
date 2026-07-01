@@ -708,8 +708,8 @@ namespace Voron.Impl.Journal
             }
 
             private LastFlushState _lastFlushed = LastFlushState.Empty;
-            // touched only under _flushingLock
-            private readonly List<(long Start, long Count)> _pendingSparseRegions = new();
+            // free-space-tree sections with freed space pending a hole-punch; touched only under _flushingLock
+            private readonly HashSet<long> _pendingSparseSections = new();
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
@@ -888,8 +888,17 @@ namespace Voron.Impl.Journal
                         throw;
                     }
 
-                    if (currentState.SparseRegions is { Count: > 0 } regionsToPunchAfterSync)
-                        _pendingSparseRegions.AddRange(regionsToPunchAfterSync);
+                    if (currentState.SparseRegions is { Count: > 0 } freedRegions)
+                    {
+                        foreach (var (start, count) in freedRegions)
+                        {
+                            for (var section = start / FreeSpaceHandling.NumberOfPagesInSection;
+                                 section <= (start + count - 1) / FreeSpaceHandling.NumberOfPagesInSection; section++)
+                            {
+                                _pendingSparseSections.Add(section);
+                            }
+                        }
+                    }
 
                     _waj._env.SuggestSyncDataFile();
                 }
@@ -1519,24 +1528,15 @@ namespace Voron.Impl.Journal
             // Space reclamation only (cf. DisableSparseRegions), so failures are swallowed and never fail the sync.
             private void ApplyPendingSparseRegions()
             {
-                if (_pendingSparseRegions.Count == 0)
+                if (_pendingSparseSections.Count == 0)
                     return;
 
                 try
                 {
-                    // re-validate against the live free-space tree: a page reused (allocated) since it was freed is no longer free here, so it's excluded and never zeroed
-                    var sections = new HashSet<long>();
-                    foreach (var (start, count) in _pendingSparseRegions)
-                    {
-                        for (var section = start / FreeSpaceHandling.NumberOfPagesInSection;
-                             section <= (start + count - 1) / FreeSpaceHandling.NumberOfPagesInSection;
-                             section++)
-                            sections.Add(section);
-                    }
-
                     using (var readTx = _waj._env.ReadTransaction())
                     {
-                        var stillFree = _waj._env.FreeSpaceHandling.GetSparseRegions(readTx.LowLevelTransaction, sections);
+                        // re-validate against the live free-space tree: a page reused (allocated) since it was freed is no longer free here, so it's excluded and never zeroed
+                        var stillFree = _waj._env.FreeSpaceHandling.GetSparseRegions(readTx.LowLevelTransaction, _pendingSparseSections);
                         if (stillFree.Count > 0)
                         {
                             MarkSparseRegionsInDataFile(stillFree);
@@ -1554,7 +1554,7 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
-                    _pendingSparseRegions.Clear();
+                    _pendingSparseSections.Clear();
                 }
             }
 
