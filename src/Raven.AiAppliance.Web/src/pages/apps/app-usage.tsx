@@ -20,7 +20,7 @@ const getDefaultRange = (): DateRange => {
     return { from: subDays(today, 6), to: today };
 };
 
-// The endpoint binds start/end as DateTime, so send the full inclusive span of the picked days.
+// The endpoint accepts ISO start/end query strings and parses them as UTC; send the full inclusive span of the picked days
 function toApiRange(range: DateRange | undefined) {
     if (!range?.from) {
         return undefined;
