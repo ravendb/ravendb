@@ -77,6 +77,123 @@ class ProductIndex : AbstractIndexCreationTask<Product>
         }
 
         [Fact]
+        public async Task UserOverrideOfToString_In_Map_No_Diagnostic()
+        {
+            // A user override of Object.ToString() is rebound by the server onto DynamicBlittableJson,
+            // so it works at deployment and must not be flagged as unsupported.
+            const string source = CommonUsings + @"
+class Product
+{
+    public string Name { get; set; }
+    public override string ToString() => Name;
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Text = p.ToString() };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserOverrideOfEqualsAndGetHashCode_In_Map_No_Diagnostic()
+        {
+            // Overrides of Object.Equals(object) and Object.GetHashCode() are rebound by the server too,
+            // so calling them inside a Map must not be flagged.
+            const string source = CommonUsings + @"
+class Product
+{
+    public string Name { get; set; }
+    public override bool Equals(object obj) => obj is Product p && p.Name == Name;
+    public override int GetHashCode() => Name == null ? 0 : Name.GetHashCode();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Same = p.Equals(p), Hash = p.GetHashCode() };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task TransitiveOverrideOfToString_In_Map_No_Diagnostic()
+        {
+            // An override declared through an intermediate user base class still (transitively) overrides
+            // Object.ToString(), so the exemption must walk the OverriddenMethod chain to System.Object.
+            const string source = CommonUsings + @"
+class BaseDoc
+{
+    public override string ToString() => ""base"";
+}
+
+class Product : BaseDoc
+{
+    public string Name { get; set; }
+    public override string ToString() => Name;
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Text = p.ToString() };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserMethodNamedToString_NotAnObjectOverride_In_Map_Reports_Diagnostic()
+        {
+            // A user method named ToString but with a different signature is an overload, not an
+            // override of Object.ToString(), so the Object-override exemption must not apply — it is
+            // real user logic and stays flagged.
+            const string source = CommonUsings + @"
+class Product
+{
+    public string Name { get; set; }
+    public string ToString(string format) => Name + format;
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Text = p.ToString(""x"") };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("ToString", d.GetMessage());
+        }
+
+        [Fact]
         public async Task UserMethod_In_Reduce_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"

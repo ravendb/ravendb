@@ -44,6 +44,38 @@ namespace Raven.Analyzers
         ];
 
         /// <summary>
+        /// Query chain methods that must not appear after a <c>Select</c> projection. This is the
+        /// subset of <see cref="PostProjectionForbiddenMethods"/> that stays unsafe after <c>Select</c>.
+        /// Unlike <c>ProjectInto</c> (which fetches the projected member names verbatim and changes the
+        /// element type with no remapping), RavenDB's LINQ provider resolves a subsequent Where/OrderBy
+        /// member path back to the underlying source field (LinqPathProvider path resolution plus
+        /// transparent-identifier stripping) and applies it server-side. So <c>Where</c>, <c>OrderBy</c>,
+        /// <c>OrderByDescending</c>, <c>ThenBy</c> and <c>ThenByDescending</c> are supported after a
+        /// <c>Select</c> projection and are omitted here. <c>GroupBy</c> stays forbidden because it
+        /// re-groups the projected shape rather than mapping a member back to the source, and the
+        /// remaining Raven query-builder operators (Search, Spatial, OrderByScore, Filter, etc.) bind
+        /// against the source / index shape and are not part of the projection member-remap path.
+        /// </summary>
+        public static readonly HashSet<string> PostSelectProjectionForbiddenMethods =
+        [
+            nameof(Queryable.GroupBy),
+
+            "Search",
+            "Spatial",
+            "OrderByDistance",
+            "OrderByDistanceDescending",
+            "OrderByScore",
+            "OrderByScoreDescending",
+            "ThenByScore",
+            "ThenByScoreDescending",
+            "MoreLikeThis",
+            "VectorSearch",
+            "Filter",
+            "GroupByArrayValues",
+            "GroupByArrayContent",
+        ];
+
+        /// <summary>
         /// Methods in an IRavenQueryable chain that accept lambda arguments and whose
         /// lambda bodies are translated server-side. User-defined method calls inside
         /// these lambdas may not survive RavenDB's expression-tree translation.

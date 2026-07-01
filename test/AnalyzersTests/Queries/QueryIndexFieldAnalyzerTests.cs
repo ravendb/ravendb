@@ -421,6 +421,132 @@ class Test
         }
 
         [Fact]
+        public async Task Where_On_Document_Id_No_Diagnostic()
+        {
+            // RavenDB always exposes the document id for a static-index query even when the Map does
+            // not project it, so filtering by Id must never be flagged as not-indexed.
+            const string source = CommonUsings + @"
+class Order { public string Id { get; set; } public string Company { get; set; } }
+
+class Orders_ByCompany : AbstractIndexCreationTask<Order>
+{
+    public Orders_ByCompany()
+    {
+        Map = orders => from o in orders select new { o.Company };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, Orders_ByCompany>().Where(x => x.Id == ""orders/1"");
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Where_On_Id_And_Non_Indexed_Field_Reports_Only_Non_Indexed()
+        {
+            // The Id guard must suppress only Id: a non-indexed field referenced in the same lambda is
+            // still a real diagnostic, so Id is skipped with continue rather than aborting the lambda.
+            const string source = CommonUsings + @"
+class Order { public string Id { get; set; } public string Company { get; set; } public decimal Price { get; set; } }
+
+class Orders_ByCompany : AbstractIndexCreationTask<Order>
+{
+    public Orders_ByCompany()
+    {
+        Map = orders => from o in orders select new { o.Company };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, Orders_ByCompany>().Where(x => x.Id == ""orders/1"" && x.Price > 5);
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task FanOut_Collection_With_Lambda_Operator_Not_Flagged()
+        {
+            // A fan-out index (from o in orders from l in o.Lines select new { l.Product }) projects
+            // Product from the inner range variable, not the collection member Lines. A query that
+            // fans out over the same collection (o.Lines.Any(l => l.Product == ...)) references Lines
+            // only as an intermediate hop, so Lines must not be flagged.
+            const string source = CommonUsings + @"
+class Line { public string Product { get; set; } }
+class Order { public List<Line> Lines { get; set; } }
+
+class Orders_ByLineProduct : AbstractIndexCreationTask<Order>
+{
+    public Orders_ByLineProduct()
+    {
+        Map = orders => from o in orders from l in o.Lines select new { l.Product };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, Orders_ByLineProduct>().Where(o => o.Lines.Any(l => l.Product == ""x""));
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task FanOut_Collection_Outer_Non_Indexed_Field_Still_Flagged()
+        {
+            // Skipping the collection hop must not suppress a genuinely non-indexed field referenced on
+            // the OUTER lambda parameter. Here Status (o.Status) is not in the Map, so it is still
+            // flagged, while Lines (the fan-out hop) is skipped.
+            const string source = CommonUsings + @"
+class Line { public string Product { get; set; } }
+class Order { public string Status { get; set; } public List<Line> Lines { get; set; } }
+
+class Orders_ByLineProduct : AbstractIndexCreationTask<Order>
+{
+    public Orders_ByLineProduct()
+    {
+        Map = orders => from o in orders from l in o.Lines select new { l.Product };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, Orders_ByLineProduct>()
+            .Where(o => o.Status == ""open"" && o.Lines.Any(l => l.Product == ""x""));
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
+            Assert.Contains("Status", d.GetMessage());
+        }
+
+        [Fact]
         public async Task Where_With_Multiple_Fields_All_Indexed_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"

@@ -63,5 +63,44 @@ class Doc { public string Id { get; set; } }
 
             Assert.Contains("No code fixes", ex.Message);
         }
+
+        [Fact]
+        public async Task OpenSession_In_Select_Projection_Inside_RunLambda_Flags_But_Fix_Bails()
+        {
+            // Pins the intended asymmetry: store.OpenSession() inside a nested .Select(...) projection
+            // lambda that is itself inside worker.Run(batch => ...) still runs during batch processing,
+            // so the diagnostic fires. But the batch parameter is not the directly-enclosing lambda's
+            // parameter, and a mechanical receiver swap into the projection could bind wrong or defer
+            // execution past the batch, so the fix declines. A diagnostic without an auto-fix is the
+            // correct outcome — the developer must restructure by hand.
+            const string source = CommonUsings + @"
+using System.Collections.Generic;
+using System.Linq;
+
+class Test
+{
+    void Run(SubscriptionWorker<Doc> worker, IDocumentStore store, List<int> docs)
+    {
+        worker.Run(batch =>
+        {
+            var ids = docs.Select(d => store.OpenSession()).ToList();
+        });
+    }
+}
+
+class Doc { public string Id { get; set; } }
+";
+
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SubscriptionOpenSessionAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.SubscriptionStoreOpenSession, d.Id);
+
+            InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes", ex.Message);
+        }
     }
 }

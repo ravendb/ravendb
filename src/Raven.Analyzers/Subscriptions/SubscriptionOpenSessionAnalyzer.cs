@@ -85,6 +85,15 @@ namespace Raven.Analyzers.Subscriptions
                     return false;
                 }
 
+                // Detection is intentionally broader than the code fix. We do NOT stop at the first
+                // enclosing lambda: an OpenSession nested inside e.g. a .Select(...) projection or an
+                // unrelated Run lambda still executes during batch processing, so it is the same
+                // anti-pattern and must be flagged. We keep walking up until we either find the
+                // subscription-worker Run lambda (flag) or hit a real scope boundary (method/type/
+                // static local function) without one (do not flag). The code fix, by contrast, only
+                // rewrites when the batch parameter is directly in scope and therefore bails at the
+                // first non-Run lambda; that asymmetry (a diagnostic without an auto-fix) is deliberate
+                // and covered by the nested-lambda tests.
                 if (current is SimpleLambdaExpressionSyntax or
                                ParenthesizedLambdaExpressionSyntax)
                 {

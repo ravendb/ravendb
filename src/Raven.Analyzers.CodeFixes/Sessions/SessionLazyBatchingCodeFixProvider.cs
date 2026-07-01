@@ -98,6 +98,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (batchableIndices.Count < 2)
                 return;
 
+            // The auto-fix only rewrites a contiguous run of batchable statements: a non-batchable
+            // statement between them may read one load's result or have side effects, so folding them
+            // into a single lazy batch could reorder observable behavior. The RVN012 diagnostic is still
+            // reported by the analyzer in this case (batching is valid advice a developer can apply by
+            // reordering); the fix deliberately declines rather than emit a risky rewrite.
             for (int i = 1; i < batchableIndices.Count; i++)
             {
                 if (batchableIndices[i] != batchableIndices[i - 1] + 1)
@@ -139,6 +144,20 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             }
             if (anyAsync && anySync)
                 return;
+
+            // Bail if any async batchable call was not awaited (e.g. 'Task<User> a = session.LoadAsync<User>(id);').
+            // The extraction awaits the lazy .Value (materializing User) but the original declared type is
+            // still 'Task<User>', so reusing it would emit 'Task<User> a = await lazyA.Value;' (CS0029).
+            // Batching an un-awaited fire-and-forget Task local would also change semantics, so decline.
+            foreach (var (statement, methodName, _, _, _) in directBatchableCalls)
+            {
+                if (!methodName.EndsWith("Async", StringComparison.Ordinal))
+                    continue;
+
+                if (statement.Declaration.Variables.Count != 1
+                    || statement.Declaration.Variables[0].Initializer?.Value is not AwaitExpressionSyntax)
+                    return;
+            }
 
             // Bail if any batched declaration has a missing/empty variable name (incomplete code while
             // typing). The rewrite derives the lazy name from the original identifier's first char, so
@@ -207,6 +226,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             Dictionary<int, LocalDeclarationStatementSyntax> replacements = [];
             List<(string lazyName, string originalName, string methodName, TypeSyntax originalType, SyntaxTriviaList originalTrivia)> renamings = [];
 
+            // The query rewrite renames the materializer to Lazily/LazilyAsync, which are extension
+            // methods in the Raven.Client.Documents namespace; track whether any is emitted so the
+            // missing using directive can be added below.
+            bool anyQueryRewrite = false;
+
             // Transform each batchable statement
             for (int i = 0; i < batchableCalls.Count; i++)
             {
@@ -221,9 +245,14 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
                 ExpressionSyntax? newInitializer;
                 if (isLoad)
+                {
                     newInitializer = BuildLazyLoadInitializer(stmt, sessionReceiver, methodName);
+                }
                 else
+                {
                     newInitializer = BuildLazyQueryInitializer(stmt, methodName);
+                    anyQueryRewrite = true;
+                }
 
                 if (newInitializer == null)
                     return document; // bail rather than apply a partial fix
@@ -332,7 +361,44 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             BlockSyntax newBlock = block.WithStatements(newStatements);
             SyntaxNode newRoot = root.ReplaceNode(block, newBlock);
 
+            // Lazily()/LazilyAsync() live in Raven.Client.Documents. A file that only imports
+            // Raven.Client.Documents.Session/.Linq (enough to write session.Query<T>().Where(...).ToList())
+            // would fail with CS1061 after the rename, so add the using when a query was rewritten and it
+            // is not already imported anywhere in the file.
+            if (anyQueryRewrite)
+                newRoot = EnsureRavenClientDocumentsUsing(newRoot);
+
             return document.WithSyntaxRoot(newRoot);
+        }
+
+        // Adds 'using Raven.Client.Documents;' to the compilation unit when the query lazy rewrite is used
+        // and no existing using directive already imports that namespace. Idempotent: the existing-using
+        // scan prevents a duplicate. Uses only SyntaxFactory / Microsoft.CodeAnalysis.CSharp.Syntax types,
+        // keeping the code fix RS1038-compiler-safe.
+        private static SyntaxNode EnsureRavenClientDocumentsUsing(SyntaxNode root)
+        {
+            const string targetNamespace = "Raven.Client.Documents";
+
+            if (root is not CompilationUnitSyntax compilationUnit)
+                return root;
+
+            // Using directives only appear at compilation-unit or namespace level, never inside a
+            // method body, so scanning descendant nodes catches an existing import wherever it sits.
+            foreach (SyntaxNode node in root.DescendantNodes())
+            {
+                if (node is UsingDirectiveSyntax existing
+                    && existing.Alias == null
+                    && existing.StaticKeyword.IsKind(SyntaxKind.None)
+                    && existing.Name?.ToString() == targetNamespace)
+                {
+                    return root;
+                }
+            }
+
+            UsingDirectiveSyntax directive = SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(targetNamespace))
+                .WithTrailingTrivia(SyntaxFactory.ElasticCarriageReturnLineFeed);
+
+            return compilationUnit.AddUsings(directive);
         }
 
         // Returns only the newline-and-indentation tail of the trivia list, dropping comments.
@@ -352,7 +418,18 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             }
 
             if (lastEol < 0)
-                return trivia;
+            {
+                // No newline in the leading trivia (the statement sits on the same line as the opening
+                // brace). Keep only whitespace so a preceding inline comment is not duplicated onto the
+                // extraction; the comment stays with the renamed lazy declaration.
+                List<SyntaxTrivia> whitespaceOnly = [];
+                foreach (SyntaxTrivia t in trivia)
+                {
+                    if (t.IsKind(SyntaxKind.WhitespaceTrivia))
+                        whitespaceOnly.Add(t);
+                }
+                return SyntaxFactory.TriviaList(whitespaceOnly);
+            }
 
             List<SyntaxTrivia> result = [trivia[lastEol]];
             for (int i = lastEol + 1; i < trivia.Count; i++)
