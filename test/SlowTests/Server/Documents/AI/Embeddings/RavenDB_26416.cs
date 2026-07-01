@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
@@ -131,6 +132,56 @@ public class RavenDB_26416(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
         // completed and drained -> WaitToReadAsync returns false, which is what makes the consumer loops exit
         Assert.False(queue.WaitToReadAsync().AsTask().GetAwaiter().GetResult());
+    }
+
+    [RavenFact(RavenTestCategory.Vector)]
+    public async Task CompletableQueue_CompleteWhileWaiting_ReturnsQueueState_WithoutLeakingCancellation()
+    {
+        // empty queue, a reader is waiting, then Complete() -> returns false (not an OperationCanceledException)
+        var empty = new CompletableQueue<int>();
+        var waitOnEmpty = empty.WaitToReadAsync().AsTask();
+        Assert.False(waitOnEmpty.IsCompleted); // genuinely parked on the event
+
+        empty.Complete();
+        Assert.False(await waitOnEmpty.WaitAsync(TimeSpan.FromSeconds(5)));
+
+        // items still queued at Complete() -> the reader returns true and can drain them, then the next wait returns false
+        var withItem = new CompletableQueue<int>();
+        Assert.True(withItem.TryEnqueue(42));
+        withItem.Complete();
+
+        Assert.True(await withItem.WaitToReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(withItem.TryDequeue(out var drained));
+        Assert.Equal(42, drained);
+        Assert.False(await withItem.WaitToReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [RavenFact(RavenTestCategory.Vector)]
+    public async Task CompletableQueue_ExternalCancellation_WhenNotCompleted_Propagates()
+    {
+        var queue = new CompletableQueue<int>();
+        using var cts = new CancellationTokenSource();
+
+        var wait = queue.WaitToReadAsync(cts.Token).AsTask();
+        Assert.False(wait.IsCompleted);
+
+        // the queue is NOT completed - a caller's own cancellation must surface as OperationCanceledException,
+        // not be swallowed by the completion path
+        cts.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => wait.WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    [RavenFact(RavenTestCategory.Vector)]
+    public void CompletableQueue_StaleCallsAfterCompleteAndDispose_DoNotThrow()
+    {
+        // a stale reference to a removed/shut-down worker may still call TryEnqueue/Wake even after Dispose();
+        // those must be safe (reject / no-op), never ObjectDisposedException
+        var queue = new CompletableQueue<int>();
+        queue.Complete();
+        queue.Dispose();
+
+        Assert.False(queue.TryEnqueue(1));
+        queue.Wake();
     }
 
     [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Etl, RavenArchitecture.AllX64)]

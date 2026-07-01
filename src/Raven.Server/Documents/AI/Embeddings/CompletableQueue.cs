@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
@@ -5,21 +6,24 @@ using Sparrow.Server;
 
 namespace Raven.Server.Documents.AI.Embeddings;
 
-internal sealed class CompletableQueue<T>
+internal sealed class CompletableQueue<T> : IDisposable
 {
     private readonly ConcurrentQueue<T> _queue = new();
-    private readonly AsyncManualResetEvent _hasWork = new();
+    private readonly AsyncManualResetEvent _hasWork;
     private readonly object _lock = new();
-    private bool _completed;
+    private readonly CancellationTokenSource _completed;
 
-    // Intentionally does not wake readers.
-    // ETL relies on enqueueing multiple items and waking once from WaitForGenerationAsync.
-    // Call Wake() explicitly after enqueue when immediate processing is required.
+    public CompletableQueue()
+    {
+        _completed = new CancellationTokenSource();
+        _hasWork = new AsyncManualResetEvent(_completed.Token);
+    }
+
     public bool TryEnqueue(T item)
     {
         lock (_lock)
         {
-            if (_completed)
+            if (_completed.IsCancellationRequested)
                 return false;
 
             _queue.Enqueue(item);
@@ -33,7 +37,10 @@ internal sealed class CompletableQueue<T>
     {
         lock (_lock)
         {
-            _completed = true;
+            if (_completed.IsCancellationRequested)
+                return;
+
+            _completed.Cancel();
         }
 
         _hasWork.Set();
@@ -45,23 +52,35 @@ internal sealed class CompletableQueue<T>
     {
         while (true)
         {
-            lock (_lock)
+            if (IsCompleted())
+                return _queue.IsEmpty == false;
+
+            try
             {
-                if (_completed)
-                    return _queue.IsEmpty == false;
+                await _hasWork.WaitAsync(token);
             }
 
-            await _hasWork.WaitAsync(token);
+            catch (OperationCanceledException) when (IsCompleted())
+            {
+                return _queue.IsEmpty == false;
+            }
+
             _hasWork.Reset();
 
-            lock (_lock)
-            {
-                if (_completed)
-                    return _queue.IsEmpty == false;
-
-                if (_queue.IsEmpty == false)
-                    return true;
-            }
+            if (_queue.IsEmpty == false)
+                return true;
         }
+    }
+
+    private bool IsCompleted()
+    {
+        // ReSharper disable once InconsistentlySynchronizedField
+        return _completed.IsCancellationRequested;
+    }
+
+    public void Dispose()
+    {
+        _hasWork.Dispose();
+        _completed.Dispose();
     }
 }
