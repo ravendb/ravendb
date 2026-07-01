@@ -361,6 +361,58 @@ public class RavenDB_26838 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Sinks)]
+    public void ErrorTables_AreDroppedWhenSinkConfigurationChanges()
+    {
+        const string taskName = "CdcSink1";
+
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            var connectionString = new SqlConnectionString
+            {
+                Name = "cdc-cs",
+                FactoryName = "Microsoft.Data.SqlClient",
+                ConnectionString = "Server=localhost;Database=TestDb;User Id=sa;Password=pass;"
+            };
+            store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(connectionString));
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = taskName,
+                ConnectionStringName = connectionString.Name,
+                Disabled = true,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        Columns = new List<CdcColumnMapping> { new CdcColumnMapping { Column = "order_id", Name = "OrderId" } },
+                        PrimaryKeyColumns = new List<string> { "order_id" }
+                    }
+                }
+            };
+
+            var addResult = store.Maintenance.Send(new AddCdcSinkOperation(config));
+
+            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, taskName,
+            [
+                new TaskItemError { DocumentId = "orders/1", TaskName = taskName, CreatedAt = DateTime.UtcNow, Step = TaskErrorStep.Load, Error = "e1" }
+            ]);
+            Assert.NotEmpty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName));
+
+            // Changing the configuration recreates the process on this node; the loader drops the stale error tables.
+            config.TaskId = addResult.TaskId;
+            config.Tables[0].SourceTableName = "updated_orders";
+            store.Maintenance.Send(new UpdateCdcSinkOperation(addResult.TaskId, config));
+
+            Assert.Equal(0, WaitForValue(() => database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName).Count, 0, timeout: 15000, interval: 500));
+        }
+    }
+
     [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Sinks)]
     public async Task CanGetCdcSinkErrorsSnmpMetrics_V2C()
     {

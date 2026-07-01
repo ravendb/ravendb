@@ -372,8 +372,9 @@ public class CdcSinkLoader : IDisposable
             });
         }
 
-        // Drop dedicated error storage for sinks whose configuration was deleted from the record
-        // (not merely moved to another node).
+        // Drop dedicated error storage when a sink is deleted from the record, or when its
+        // configuration changed and it stays on this node (the replacement process starts clean).
+        // Errors are preserved when the sink merely moved to another node.
         if (toRemoveList.Count > 0)
         {
             var existingConfigNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -382,7 +383,13 @@ public class CdcSinkLoader : IDisposable
 
             foreach (var process in toRemoveList)
             {
-                if (existingConfigNames.Contains(process.Configuration.Name) == false)
+                var name = process.Configuration.Name;
+
+                var deleted = existingConfigNames.Contains(name) == false;
+                var reconfiguredOnThisNode = responsibleNodes.TryGetValue(name, out var responsibleNode) &&
+                                             responsibleNode == _serverStore.NodeTag;
+
+                if (deleted || reconfiguredOnThisNode)
                     _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
             }
         }
