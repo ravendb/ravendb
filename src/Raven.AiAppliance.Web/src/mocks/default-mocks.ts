@@ -7,6 +7,7 @@ import { bootstrapMocks } from "./bootstrap-mocks";
 import { channelsMocks } from "./channels-mocks";
 import { chatMocks } from "./chat-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
+import { iframeHandlers } from "./iframe-mocks";
 import { settingsMocks } from "./settings-mocks";
 import { setupMocks } from "./setup-mocks";
 import { statsMocks } from "./stats-mocks";
@@ -43,6 +44,7 @@ export const defaultApiMocks = {
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
     chat: [chatMocks.stream()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
+    iframe: iframeHandlers(),
     settings: [settingsMocks.license(), settingsMocks.usage()],
     stats: [
         statsMocks.dashboard(),
