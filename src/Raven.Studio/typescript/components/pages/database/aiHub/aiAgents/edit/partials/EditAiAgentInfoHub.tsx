@@ -1,15 +1,14 @@
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function EditAiAgentInfoHub() {
+    const aiAgentsOverviewDocsLink = useRavenLink({ hash: "XNWAXB" });
+    const aiAgentsCreateAgentDocsLink = useRavenLink({ hash: "72VEQI" });
+
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <div>
                     In this view, you can define an AI Agent - <br /> a natural language{" "}
                     <strong>conversational assistant</strong> powered by an LLM.
@@ -53,6 +52,15 @@ export default function EditAiAgentInfoHub() {
                         </li>
                     </ul>
                 </div>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={aiAgentsOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - AI Agents Overview
+                </a>
+                <br />
+                <a href={aiAgentsCreateAgentDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Create AI Agent
+                </a>
             </AccordionItemWrapper>
         </AboutViewFloating>
     );

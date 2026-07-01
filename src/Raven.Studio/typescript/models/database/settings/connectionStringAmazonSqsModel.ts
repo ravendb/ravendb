@@ -123,6 +123,7 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
         return new connectionStringAmazonSqsModel({
             Type: "Queue",
             BrokerType: "AmazonSqs",
+            UsedBy: [],
             Name: "",
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,
@@ -134,7 +135,8 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
                     RegionName: ""
                 },
                 Passwordless: false,
-            }
+            },
+            AzureServiceBusConnectionSettings: null,
         }, true, []);
     }
     
@@ -157,11 +159,13 @@ class connectionStringAmazonSqsModel extends connectionStringModel {
         return {
             Type: "Queue",
             BrokerType: "AmazonSqs",
+            UsedBy: [],
             Name: this.connectionStringName(),
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
-            AmazonSqsConnectionSettings: this.authenticationToDto()
+            AmazonSqsConnectionSettings: this.authenticationToDto(),
+            AzureServiceBusConnectionSettings: null,
         };
     }
 

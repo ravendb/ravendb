@@ -49,7 +49,8 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             Type: "Queue",
             BrokerType: "RabbitMq",
             Name: "",
-            
+            UsedBy: [],
+
             RabbitMqConnectionSettings: {
                 ConnectionString: ""
             },
@@ -57,6 +58,7 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             KafkaConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         }, true, []);
     }
     
@@ -65,7 +67,8 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             Type: "Queue",
             BrokerType: "RabbitMq",
             Name: this.connectionStringName(),
-            
+            UsedBy: [],
+
             RabbitMqConnectionSettings: {
                 ConnectionString: this.rabbitMqConnectionString()
             },
@@ -73,6 +76,7 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             KafkaConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         };
     }
 

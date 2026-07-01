@@ -233,7 +233,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 handler.SetClient(_chatCompletionClient);
                 try
                 {
-                    task = handler.HandleRequest(batchToken);
+                    task = handler.HandleRequestAsync(batchToken);
                 }
                 catch (Exception e)
                 {

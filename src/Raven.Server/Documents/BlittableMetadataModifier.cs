@@ -105,15 +105,8 @@ namespace Raven.Server.Documents
             _allocations.Add(mem);
             Memory.Copy(mem.Address, state.StringBuffer, state.StringSize);
             var lazyStringValueFromParserState = _ctx.AllocateStringValue(null, mem.Address, state.StringSize);
-            if (escapePositionsCount > 0)
-            {
-                lazyStringValueFromParserState.EscapePositions = state.EscapePositions.ToArray();
-            }
-            else
-            {
-                lazyStringValueFromParserState.EscapePositions = Array.Empty<int>();
-            }
 
+            lazyStringValueFromParserState.EscapePositions = escapePositionsCount > 0 ? state.EscapePositions.ToArray() : [];
             return lazyStringValueFromParserState;
         }
 

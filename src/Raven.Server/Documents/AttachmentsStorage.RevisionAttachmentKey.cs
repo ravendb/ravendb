@@ -399,8 +399,8 @@ namespace Raven.Server.Documents
             LazyStringValue name, LazyStringValue contentType, Slice base64Hash, long size, RemoteAttachmentParameters remoteParams,
             string changeVector)
         {
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out _, out Slice nameSlice))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out _, out Slice contentTypeSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, name, out _, out Slice nameSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out _, out Slice contentTypeSlice))
             {
                 PutRevisionAttachmentDirect(context, in pair, nameSlice, contentTypeSlice, base64Hash, size, remoteParams, changeVector);
             }

@@ -147,7 +147,7 @@ namespace InterversionTests.Revisions
             var table = database.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(
                 context.Transaction.InnerTransaction, collectionName);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out Slice lowerId, out Slice idSlice))
             using (RevisionsStorage.BuildRevisionKey(context.Allocator, compoundCv, out var key))
             using (var docBlittable = BuildBlittableDocument(context, name: "Legacy"))
             using (table.Allocate(out TableValueBuilder tvb))

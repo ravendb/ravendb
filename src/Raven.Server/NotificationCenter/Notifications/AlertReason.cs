@@ -1,4 +1,5 @@
 ﻿// ReSharper disable InconsistentNaming
+
 namespace Raven.Server.NotificationCenter.Notifications
 {
     public enum AlertReason
@@ -112,5 +113,11 @@ namespace Raven.Server.NotificationCenter.Notifications
         GcThreadContention = 71,
         
         Etl_HealthStatusChange = 72,
+
+        HighReadAheadKb = 73, // 72 is used in 7.2
+
+        CdcSink_Error = 74,
+        CdcSink_ScriptError = 75,
+        CdcSink_ConsumeError = 76
     }
 }

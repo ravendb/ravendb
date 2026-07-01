@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.Revisions
                     database.DocumentsStorage.AttachmentsStorage.PutAttachment(
                         ctx, docId, attachmentName, contentType, base64Hash, size: 1L,
                         remoteParams: remoteParams, expectedChangeVector: null, stream: null,
-                        updateDocument: true, extractCollectionName: true, fromSmuggler: false, fromEtl: true);
+                        updateDocument: true, extractCollectionName: true);
                     tx.Commit();
                 }
 
@@ -138,8 +138,8 @@ namespace SlowTests.Server.Documents.Revisions
                 {
                     using (RevisionsStorage.BuildRevisionKey(ctx, docChangeVector, out RevisionKey revKey))
                     using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, docId, out Slice lowerDocId))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(ctx, attachmentName, out Slice lowerName, out Slice nameSlice))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(ctx, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ctx, attachmentName, out Slice lowerName, out Slice nameSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ctx, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.From(ctx.Allocator, base64Hash, out Slice hashSlice))
                     {
                         var remoteParams = new RemoteAttachmentParameters(identifier, remoteAt) { Flags = RemoteAttachmentFlags.Remote };

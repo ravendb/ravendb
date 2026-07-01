@@ -1,15 +1,14 @@
 import React from "react";
 import { AboutViewFloating, AccordionItemWrapper } from "components/common/AboutView";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function TasksErrorsAboutView() {
+    const taskErrorsOverviewDocsLink = useRavenLink({ hash: "17261M" });
+
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper icon="about" color="info">
                 <p>
                     This view displays recent errors from your ongoing tasks, including <strong>ETL tasks</strong>{" "}
                     (RavenDB, SQL, OLAP, ElasticSearch, Kafka, RabbitMQ, Azure Queue Storage, Amazon SQS, Snowflake) and{" "}
@@ -77,6 +76,11 @@ export default function TasksErrorsAboutView() {
                         The task health will recover gradually as new batches complete successfully.
                     </li>
                 </ul>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={taskErrorsOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Task Errors Overview
+                </a>
             </AccordionItemWrapper>
         </AboutViewFloating>
     );

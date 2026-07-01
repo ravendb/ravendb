@@ -13,7 +13,8 @@ namespace FastTests.Sparrow
 {
     public unsafe class TensorsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        private const float Eps = 1e-6f;
+        // not tighter than 1e-5: ARM64 SIMD/FMA reductions diverge from the scalar reference by ~1e-6 over ~1k elements
+        private const float Eps = 1e-5f;
 
         // Test that for identical vectors, we get maximum similarity (and so a distance of zero).
         [RavenFact(RavenTestCategory.Core)]
@@ -548,6 +549,32 @@ namespace FastTests.Sparrow
                 bSpan = b.AsSpan().Slice(location - 1, size + 1);
                 Assert.NotEqual(Functions.HammingBitDistance<byte>(aSpan, bSpan), 0);
             }
+        }
+
+        // DotProduct dispatches to a two-accumulator Vector512 kernel once size is large enough
+        // for a SIMD path. The boundary sizes — exactly one vector wide, and exactly two vectors
+        // wide — are the ones most likely to hit off-by-one conditions in the loop/tail guards.
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(16)]
+        [InlineData(17)]
+        [InlineData(31)]
+        [InlineData(32)]
+        [InlineData(33)]
+        [InlineData(63)]
+        [InlineData(128)]
+        public void DotProduct_MatchesTensorPrimitives_AtVector512Boundaries(int size)
+        {
+            var rng = new Random(size);
+            var a = new float[size];
+            var b = new float[size];
+            for (int i = 0; i < size; i++)
+            {
+                a[i] = (float)(rng.NextDouble() * 2 - 1);
+                b[i] = (float)(rng.NextDouble() * 2 - 1);
+            }
+            var actual = Functions.DotProduct(a, b);
+            var expected = TensorPrimitives.Dot<float>(a, b);
+            Assert.InRange(actual - expected, -1e-4f, 1e-4f);
         }
     }
 }

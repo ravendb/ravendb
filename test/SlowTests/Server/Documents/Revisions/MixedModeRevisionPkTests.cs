@@ -456,7 +456,7 @@ namespace SlowTests.Server.Documents.Revisions
                     }
 
                     var parentRevCv = readCtx.GetChangeVector(legacyAttCvString);
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "users/1", out Slice lowerIdSlice, out _))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "users/1", out Slice lowerIdSlice, out _))
                     using (RevisionsStorage.BuildRevisionKey(readCtx.Allocator, parentRevCv, out var parentRevKey))
                     using (AttachmentsStorage.BuildRevisionAttachmentPrefix(readCtx, in parentRevKey, lowerIdSlice, out var prefix))
                     {
@@ -468,7 +468,7 @@ namespace SlowTests.Server.Documents.Revisions
                         Assert.Contains(attachments, a => a.Name == "att-a");
                     }
 
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "users/1", out Slice lowerIdSlice, out _))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "users/1", out Slice lowerIdSlice, out _))
                     using (RevisionsStorage.BuildRevisionKey(readCtx.Allocator, parentRevCv, out var parentRevKey))
                     {
                         var attTombTable = readCtx.Transaction.InnerTransaction.OpenTable(
@@ -476,8 +476,8 @@ namespace SlowTests.Server.Documents.Revisions
 
                         unsafe
                         {
-                            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "att-b", out Slice lowerNameSlice, out _))
-                            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "text/plain", out Slice lowerContentTypeSlice, out _))
+                            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "att-b", out Slice lowerNameSlice, out _))
+                            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "text/plain", out Slice lowerContentTypeSlice, out _))
                             using (Slice.From(readCtx.Allocator, Hash44B, out Slice hashSlice))
                             using (AttachmentsStorage.BuildRevisionAttachmentKey(
                                        readCtx, in parentRevKey,
@@ -606,7 +606,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (readCtx.OpenReadTransaction())
                 {
                     var parentRevCv = readCtx.GetChangeVector(parentRevCvString);
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "users/1", out Slice lowerIdSlice, out _))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "users/1", out Slice lowerIdSlice, out _))
                     using (RevisionsStorage.BuildRevisionKey(readCtx.Allocator, parentRevCv, out var parentRevKey))
                     using (AttachmentsStorage.BuildRevisionAttachmentPrefix(readCtx, in parentRevKey, lowerIdSlice, out var prefix))
                     {
@@ -661,9 +661,9 @@ namespace SlowTests.Server.Documents.Revisions
                 using (readCtx.OpenReadTransaction())
                 {
                     var parentRevCv = readCtx.GetChangeVector(parentRevCvString);
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "users/1", out Slice lowerIdSlice, out _))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "x", out Slice lowerNameSlice, out _))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(readCtx, "text/plain", out Slice lowerCtSlice, out _))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "users/1", out Slice lowerIdSlice, out _))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "x", out Slice lowerNameSlice, out _))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(readCtx, "text/plain", out Slice lowerCtSlice, out _))
                     using (Slice.From(readCtx.Allocator, Hash44A, out Slice hashSlice))
                     using (RevisionsStorage.BuildRevisionKey(readCtx.Allocator, parentRevCv, out var parentRevKey))
                     {
@@ -788,9 +788,9 @@ namespace SlowTests.Server.Documents.Revisions
                 database.DocumentsStorage.AttachmentsStorage.AttachmentsSchema, AttachmentsMetadataSlice);
             var newEtag = database.DocumentsStorage.GenerateNextEtag();
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice lowerId, out _))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachmentName, out Slice lowerName, out Slice nameStorage))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerCt, out Slice ctStorage))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, docId, out Slice lowerId, out _))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachmentName, out Slice lowerName, out Slice nameStorage))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerCt, out Slice ctStorage))
             using (Slice.From(context.Allocator, base64Hash, out Slice hashSlice))
             using (RevisionsStorage.BuildRevisionKey(context.Allocator, parentRevisionCv, out var parentRevKey))
             using (AttachmentsStorage.BuildRevisionAttachmentKey(
@@ -838,9 +838,9 @@ namespace SlowTests.Server.Documents.Revisions
                 database.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
             var newEtag = database.DocumentsStorage.GenerateNextEtag();
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out Slice lowerId, out _))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachmentName, out Slice lowerName, out _))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerCt, out _))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, docId, out Slice lowerId, out _))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachmentName, out Slice lowerName, out _))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerCt, out _))
             using (Slice.From(context.Allocator, base64Hash, out Slice hashSlice))
             using (RevisionsStorage.BuildRevisionKey(context.Allocator, parentRevisionCv, out var parentRevKey))
             using (AttachmentsStorage.BuildRevisionAttachmentKey(

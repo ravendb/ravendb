@@ -1,6 +1,4 @@
 ﻿#if RUN_NPGSQL_TESTS
-using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Npgsql;
 using Xunit;
@@ -10,7 +8,7 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
     public class RavenDB_17478 : PostgreSqlIntegrationTestBase
     {
         [Fact]
-        public async Task ShouldThrowException_WithFirstPartOfQuery_SplittedBySemicolons_WhenGivenQueryContainsSemicolons()
+        public async Task ShouldRejectDeclareFunctionWithSemicolonsInBody_WithJsFragmentDiagnostic()
         {
             const string query =
                 @"declare function name(e) {
@@ -23,18 +21,13 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
                 load e.ReportsTo as boss
                 select { Name: name(e), Manager: name(boss) }";
 
-            var firstQueryPart = query.Split(";").First();
-
-            var expectedErrorMessage =
-                "54001: Unhandled query (Are you using ; in your query? " +
-                $"That is likely causing the postgres client to split the query and results in partial queries): {Environment.NewLine}" +
-                $"{firstQueryPart}";
-
             using (var store = GetDocumentStore())
             {
                 var pgException = await Assert.ThrowsAsync<PostgresException>(async () => await Act(store, query));
 
-                Assert.Equal(expectedErrorMessage, pgException.Message);
+                Assert.Equal("0A000", pgException.SqlState);
+                Assert.Contains("declare function", pgException.MessageText);
+                Assert.Contains("Remove the semicolons from the JS body", pgException.MessageText);
             }
         }
     }

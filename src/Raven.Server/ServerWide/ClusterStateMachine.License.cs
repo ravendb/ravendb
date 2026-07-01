@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -36,6 +37,7 @@ public sealed partial class ClusterStateMachine
     private const int MinBuildVersion60000 = 60_000;
     private const int MinBuildVersion60102 = 60_026;
     private const int MinBuildVersion60105 = 60_039;
+    private const int MinBuildVersion72000 = 72_000;
 
     private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
     {
@@ -63,6 +65,8 @@ public sealed partial class ClusterStateMachine
         nameof(AddElasticSearchEtlCommand),
         nameof(AddQueueSinkCommand),
         nameof(UpdateQueueSinkCommand),
+        nameof(AddCdcSinkCommand),
+        nameof(UpdateCdcSinkCommand),
         nameof(AddEmbeddingsGenerationCommand),
         nameof(UpdateEmbeddingsGenerationCommand),
         nameof(EditDataArchivalCommand),
@@ -142,6 +146,11 @@ public sealed partial class ClusterStateMachine
             case nameof(AddQueueSinkCommand):
             case nameof(UpdateQueueSinkCommand):
                 AssertQueueSink(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
+                break;
+
+            case nameof(AddCdcSinkCommand):
+            case nameof(UpdateCdcSinkCommand):
+                AssertCdcSink(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
 
             case nameof(EditDataArchivalCommand):
@@ -250,6 +259,7 @@ public sealed partial class ClusterStateMachine
             AssertDatabaseClientConfiguration(databaseRecord, newLicenseLimits, context);
             AssertDatabaseStudioConfiguration(databaseRecord, newLicenseLimits, context);
             AssertQueueSink(databaseRecord, newLicenseLimits, context);
+            AssertCdcSink(databaseRecord, newLicenseLimits, context);
             AssertDataArchival(databaseRecord, newLicenseLimits, context);
             AssertEncryptionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertDynamicNodesDistribution(databaseRecord, newLicenseLimits, context);
@@ -595,6 +605,20 @@ public sealed partial class ClusterStateMachine
         throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
     }
 
+    private void AssertCdcSink(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasCdcSink)
+            return;
+
+        if (databaseRecord.CdcSinks == null || databaseRecord.CdcSinks.Count == 0)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion72000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.CdcSink, "Your license doesn't support using the CDC sink feature.");
+    }
+
     private void AssertDataArchival(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
         if (licenseStatus.HasDataArchival)
@@ -849,6 +873,12 @@ public sealed partial class ClusterStateMachine
             case LicenseAttribute.ServerWideAnalyzers:
                 if (serverStore.LicenseManager.LicenseStatus.HasServerWideAnalyzers == false)
                     throw new LicenseLimitException(LimitType.ServerWideAnalyzers, "Your license doesn't support adding server wide analyzers.");
+
+                break;
+
+            case LicenseAttribute.ServerWideConnectionStrings:
+                if (serverStore.LicenseManager.LicenseStatus.HasServerWideConnectionStrings == false)
+                    throw new LicenseLimitException(LimitType.ServerWideConnectionStrings, "Your license doesn't support adding server wide connection strings.");
 
                 break;
 
@@ -1302,6 +1332,9 @@ public sealed partial class ClusterStateMachine
                     break;
                 case OngoingTaskType.QueueSink:
                     AssertQueueSink(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.CdcSink:
+                    AssertCdcSink(databaseRecord, licenseStatus, context);
                     break;
                 case OngoingTaskType.EmbeddingsGeneration:
                     AssertEmbeddingsGeneration(databaseRecord, licenseStatus, context);

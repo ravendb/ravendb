@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
@@ -69,7 +70,7 @@ namespace SlowTests.Smuggler
                 .Select(field => field.Name)
                 .ToList();
 
-            Assert.Equal(54, fieldNames.Count);
+            Assert.Equal(55, fieldNames.Count);
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64)]
@@ -229,7 +230,30 @@ namespace SlowTests.Smuggler
                         MentorNode = "A",
                         Transforms = new List<Transformation> { new() { Script = "loadToOrders(this)", Collections = new List<string> { "Orders" }, Name = "testScript" } }
                     }));
-                    
+
+                    store1.Maintenance.Send(new AddCdcSinkOperation(new CdcSinkConfiguration
+                    {
+                        Name = "CdcSink",
+                        ConnectionStringName = "connection",
+                        Disabled = false,
+                        MentorNode = "A",
+                        Tables = new List<CdcSinkTableConfig>
+                        {
+                            new CdcSinkTableConfig
+                            {
+                                CollectionName = "Orders",
+                                SourceTableSchema = "dbo",
+                                SourceTableName = "orders",
+                                PrimaryKeyColumns = new List<string> { "id" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                                    new CdcColumnMapping { Column = "name", Name = "Name" }
+                                }
+                            }
+                        }
+                    }));
+
                     //put embedding generation store 1
                     var aiConnectionString = new AiConnectionString { Name = "aiconnection", EmbeddedSettings = new EmbeddedSettings() };
                     aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();
@@ -363,7 +387,19 @@ namespace SlowTests.Smuggler
                     Assert.Equal("connection", record.SnowflakeEtls.First().ConnectionStringName);
                     Assert.Equal(true, record.SnowflakeEtls.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(true, record.SnowflakeEtls.First().Disabled);
-                    
+
+                    Assert.NotNull(record.CdcSinks);
+                    Assert.Equal(1, record.CdcSinks.Count);
+                    Assert.Equal("CdcSink", record.CdcSinks.First().Name);
+                    Assert.Equal("connection", record.CdcSinks.First().ConnectionStringName);
+                    Assert.Equal(true, record.CdcSinks.First().Disabled);
+                    Assert.Equal(1, record.CdcSinks.First().Tables.Count);
+                    Assert.Equal("Orders", record.CdcSinks.First().Tables.First().CollectionName);
+                    Assert.Equal("orders", record.CdcSinks.First().Tables.First().SourceTableName);
+                    Assert.Equal("dbo", record.CdcSinks.First().Tables.First().SourceTableSchema);
+                    Assert.Equal(new List<string> { "id" }, record.CdcSinks.First().Tables.First().PrimaryKeyColumns);
+                    Assert.Equal(2, record.CdcSinks.First().Tables.First().Columns.Count);
+
                     Assert.Equal(1, record.AiConnectionStrings.Count);
                     Assert.Equal("aiconnection", record.AiConnectionStrings.First().Value.Name);
                     
@@ -1416,7 +1452,30 @@ namespace SlowTests.Smuggler
                     ConnectionStringName = "test",
                     Scripts = new List<QueueSinkScript>(){ new QueueSinkScript(){Script = "from Users", Disabled = false, Name = "QueueSinkScript"}}
                 }));
-                
+
+                store.Maintenance.Send(new AddCdcSinkOperation(new CdcSinkConfiguration
+                {
+                    Name = "CdcSink",
+                    ConnectionStringName = "connection",
+                    Disabled = false,
+                    MentorNode = "A",
+                    Tables = new List<CdcSinkTableConfig>
+                    {
+                        new CdcSinkTableConfig
+                        {
+                            CollectionName = "Orders",
+                            SourceTableSchema = "dbo",
+                            SourceTableName = "orders",
+                            PrimaryKeyColumns = new List<string> { "id" },
+                            Columns = new List<CdcColumnMapping>
+                            {
+                                new CdcColumnMapping { Column = "id", Name = "Id" },
+                                new CdcColumnMapping { Column = "name", Name = "Name" }
+                            }
+                        }
+                    }
+                }));
+
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var schemaDefinitionObj =
@@ -1550,6 +1609,18 @@ namespace SlowTests.Smuggler
                     Assert.False(record.QueueSinks.First().Disabled);
                     Assert.Equal("QueueSink", record.QueueSinks.First().Name);
                     Assert.Equal(1, record.QueueSinks.First().Scripts.Count);
+
+                    Assert.NotNull(record.CdcSinks);
+                    Assert.Equal(1, record.CdcSinks.Count);
+                    Assert.False(record.CdcSinks.First().Disabled);
+                    Assert.Equal("CdcSink", record.CdcSinks.First().Name);
+                    Assert.Equal("connection", record.CdcSinks.First().ConnectionStringName);
+                    Assert.Equal(1, record.CdcSinks.First().Tables.Count);
+                    Assert.Equal("Orders", record.CdcSinks.First().Tables.First().CollectionName);
+                    Assert.Equal("orders", record.CdcSinks.First().Tables.First().SourceTableName);
+                    Assert.Equal("dbo", record.CdcSinks.First().Tables.First().SourceTableSchema);
+                    Assert.Equal(new List<string> { "id" }, record.CdcSinks.First().Tables.First().PrimaryKeyColumns);
+                    Assert.Equal(2, record.CdcSinks.First().Tables.First().Columns.Count);
 
                     Assert.NotNull(record.AiConnectionStrings);
                     Assert.Equal(1, record.AiConnectionStrings.Count);

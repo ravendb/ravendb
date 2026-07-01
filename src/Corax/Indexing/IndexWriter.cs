@@ -85,6 +85,23 @@ namespace Corax.Indexing
         private PostingList _largePostingListSet;
         public int? MaximumConcurrentBatchesForHnswAcceleration;
 
+        /// <summary>
+        /// Per-field set of node ids whose container record was rewritten by the just-finished
+        /// vector commit. Populated as each <see cref="Hnsw.Registration.Commit"/> completes and
+        /// drained by the post-commit hook via <see cref="DrainDirtyVectorSets"/>; the registration
+        /// itself is cleared on field reset, so this dictionary is the only surviving handle to
+        /// the dirty set after <see cref="ResetWriter"/> runs.
+        /// </summary>
+        private Dictionary<Slice, HashSet<long>> _dirtyVectorSets;
+
+        /// <summary>
+        /// Per-field set of node ids that the just-finished commit rewrote in the underlying
+        /// HNSW container. Read by <c>CoraxIndexPersistence.RecreateSearcher</c> to apply
+        /// incremental updates to the long-lived <c>HnswIndexCache</c>; null when no vector
+        /// field saw any modification.
+        /// </summary>
+        public Dictionary<Slice, HashSet<long>> DirtyVectorSets => _dirtyVectorSets;
+
         private long _compactTreeDictionaryId = Constants.IndexSearcher.InvalidId;
         private EntriesToTermsTracker _entriesToTermsTracker;
 
@@ -1094,6 +1111,15 @@ namespace Corax.Indexing
                     if (MaximumConcurrentBatchesForHnswAcceleration != null)
                         indexedField.VectorIndexer.MaxConcurrentBatches = MaximumConcurrentBatchesForHnswAcceleration.Value;
                     indexedField.VectorIndexer.Commit(token);
+
+                    // Snapshot DirtyNodeIds before ResetWriter clears the field's VectorIndexer.
+                    // The post-commit hook (CoraxIndexPersistence.RecreateSearcher) consumes this
+                    // to apply incremental updates against the long-lived HnswIndexCache.
+                    if (indexedField.VectorIndexer.DirtyNodeIds.Count > 0)
+                    {
+                        _dirtyVectorSets ??= new Dictionary<Slice, HashSet<long>>(SliceComparer.Instance);
+                        _dirtyVectorSets[indexedField.Name] = indexedField.VectorIndexer.DirtyNodeIds;
+                    }
                 }
 
                 if (indexedField.Textual.Count == 0)

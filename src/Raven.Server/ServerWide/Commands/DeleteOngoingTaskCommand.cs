@@ -167,6 +167,13 @@ namespace Raven.Server.ServerWide.Commands
                         record.QueueSinks.Remove(queueSink);
                     }
                     break;
+                case OngoingTaskType.CdcSink:
+                    var cdcSink = record.CdcSinks?.Find(x => x.TaskId == TaskId);
+                    if (cdcSink != null)
+                    {
+                        record.CdcSinks.Remove(cdcSink);
+                    }
+                    break;
                 case OngoingTaskType.EmbeddingsGeneration:
                     var embeddingsGenerationTask = record.EmbeddingsGenerations?.Find(x => x.TaskId == TaskId);
                     if (embeddingsGenerationTask != null)

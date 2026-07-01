@@ -11,7 +11,7 @@ export default function Certificates() {
     return (
         <div className="content-padding">
             <div className="hstack justify-content-between mb-4">
-                <AboutViewHeading title="Certificates" icon="certificate" marginBottom={0} />
+                <AboutViewHeading title="User Access Management" icon="certificate" marginBottom={0} />
                 <CertificatesInfoHub />
             </div>
             {isSecureServer ? <CertificatesAuthEnabled /> : <CertificatesAuthDisabled />}

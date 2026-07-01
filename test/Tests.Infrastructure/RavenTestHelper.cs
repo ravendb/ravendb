@@ -60,6 +60,8 @@ namespace Tests.Infrastructure
             public const string RabbitMqConnectionStringEnvName = "RAVEN_RABBITMQ_CONNECTION_STRING";
             public const string AzureQueueStorageConnectionStringEnvName = "RAVEN_AZURE_QUEUE_STORAGE_CONNECTION_STRING";
             public const string AmazonSqsEmulatorUrlEnvName = AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable;
+            public const string AzureConnectionStringEnvName = "RAVEN_AZURE_SERVICE_BUS_CONNECTION_STRING";
+            public const string AzureConnectionStringAdminEnvName = "RAVEN_AZURE_SERVICE_BUS_ADMIN_CONNECTION_STRING";
 
             // SQL / external databases - env var names
             public const string MsSqlConnectionStringEnvName = "RAVEN_MSSQL_CONNECTION_STRING";
@@ -598,7 +600,7 @@ namespace Tests.Infrastructure
                 throw new InvalidOperationException($"Operation '{caller}' is forbidden, because tests are running on CI.");
         }
 
-        internal static HashSet<(string Method, string Path)> ServerEndpointsToIgnore = 
+        internal static HashSet<(string Method, string Path)> ServerEndpointsToIgnore =
         [
             ("POST", "/admin/replication/conflicts/solver"),                          // access handled internally
             ("POST", "/setup/dns-n-cert"),                                            // only available in setup mode
@@ -632,7 +634,7 @@ namespace Tests.Infrastructure
             ("POST", "/license/free/download"),                                       // only available in setup mode
          ];
 
-        internal static HashSet<(string Method, string Path)> DatabaseEndpointsToIgnore = 
+        internal static HashSet<(string Method, string Path)> DatabaseEndpointsToIgnore =
         [
             ("POST", "/databases/*/admin/pull-replication/generate-certificate"),     // heavy
             ("POST", "/databases/*/studio/sample-data")                               // heavy

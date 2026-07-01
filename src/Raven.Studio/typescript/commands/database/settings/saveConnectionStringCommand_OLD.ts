@@ -10,6 +10,7 @@ import connectionStringKafkaModel = require("models/database/settings/connection
 import connectionStringRabbitMqModel = require("models/database/settings/connectionStringRabbitMqModel");
 import connectionStringAzureQueueStorageModel = require("models/database/settings/connectionStringAzureQueueStorageModel");
 import connectionStringAmazonSqsModel = require("models/database/settings/connectionStringAmazonSqsModel");
+import connectionStringAzureServiceBusModel = require("models/database/settings/connectionStringAzureServiceBusModel");
 
 class saveConnectionStringCommand_OLD extends commandBase {
 
@@ -21,7 +22,8 @@ class saveConnectionStringCommand_OLD extends commandBase {
         connectionStringKafkaModel |
         connectionStringRabbitMqModel |
         connectionStringAzureQueueStorageModel |
-        connectionStringAmazonSqsModel) {
+        connectionStringAmazonSqsModel |
+        connectionStringAzureServiceBusModel) {
         super();
     }
  

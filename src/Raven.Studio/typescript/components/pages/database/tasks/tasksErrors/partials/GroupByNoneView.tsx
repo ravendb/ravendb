@@ -41,7 +41,7 @@ import {
 } from "./TasksErrorsCells";
 import { DeleteErrorsModal } from "./DeleteModals";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
+import { AccessPopover } from "components/common/AccessPopover";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 function useGroupByNoneTableColumns(availableWidth: number, hasProcessErrors: boolean) {
@@ -205,12 +205,12 @@ function GroupByNoneTable({
     return (
         <div className="d-flex flex-column h-100">
             <div className="d-flex justify-content-between mb-1 flex-shrink-0">
-                <DatabaseAccessPopover accessRequired="DatabaseReadWrite">
+                <AccessPopover accessRequired="DatabaseReadWrite">
                     <Button variant="danger" disabled={!hasDatabaseWriteAccess} onClick={toggleDeleteAllErrorsModal}>
                         <Icon icon="trash" />
                         <span>Delete all errors</span>
                     </Button>
-                </DatabaseAccessPopover>
+                </AccessPopover>
                 <TableDisplaySettings table={table} />
             </div>
             <SizeGetter

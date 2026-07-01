@@ -1,19 +1,21 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron.Global;
 using Voron.Logging;
 using Voron.Util.Settings;
 using static Sparrow.Server.Platform.Pal;
 using static Sparrow.Server.Platform.PalDefinitions;
 using static Sparrow.Server.Platform.PalFlags;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging
 {
@@ -248,5 +250,25 @@ namespace Voron.Impl.Paging
             if (Logger.IsDebugEnabled)
                 Logger.Debug($"Unable to un-protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Unprotect, errorCode={errorCode}");
         }
+
+        public void TrySetSequentialScanHint()
+        {
+            if (PlatformDetails.RunningOnLinux == false)
+                return;
+
+            if (_handle.IsInvalid || _handle.IsClosed)
+                return;
+
+            var fd = *(int*)_handle.DangerousGetHandle();
+            if (fd < 0)
+                return;
+
+            PosixFadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+        }
+
+        [DllImport("libc", EntryPoint = "posix_fadvise", SetLastError = false)]
+        private static extern int PosixFadvise(int fd, long offset, long len, int advice);
+
+        private const int POSIX_FADV_SEQUENTIAL = 2;
     }
 }

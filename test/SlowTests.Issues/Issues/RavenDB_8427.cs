@@ -20,12 +20,13 @@ namespace SlowTests.Issues
                 {
                     var lazyString = context.GetLazyString("abc \b cba");
                     Assert.NotNull(lazyString.EscapePositions);
+                    Assert.NotEmpty(lazyString.EscapePositions);
                 }
 
                 using (pool.AllocateOperationContext(out var context))
                 {
                     var lazyString = context.GetLazyString("abc");
-                    Assert.Null(lazyString.EscapePositions);
+                    Assert.Empty(lazyString.EscapePositions);
                 }
             }
         }

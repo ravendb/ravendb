@@ -66,10 +66,16 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute, Xunit.v3.I
         set => Requires = value ? Requires | RavenServiceRequirement.MongoDB : Requires & ~RavenServiceRequirement.MongoDB;
     }
     
-    public bool SnowflakeRequired   
-    { 
+    public bool SnowflakeRequired
+    {
         get => Requires.HasFlag(RavenServiceRequirement.Snowflake);
         set => Requires = value ? Requires | RavenServiceRequirement.Snowflake : Requires & ~RavenServiceRequirement.Snowflake;
+    }
+
+    public bool AzureServiceBusRequired
+    {
+        get => Requires.HasFlag(RavenServiceRequirement.AzureServiceBus);
+        set => Requires = value ? Requires | RavenServiceRequirement.AzureServiceBus : Requires & ~RavenServiceRequirement.AzureServiceBus;
     }
 
     public new string Skip

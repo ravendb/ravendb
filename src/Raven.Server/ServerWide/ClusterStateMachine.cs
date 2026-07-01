@@ -29,6 +29,8 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -50,6 +52,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
@@ -90,7 +93,7 @@ namespace Raven.Server.ServerWide
         public static readonly TableSchema ReplicationCertificatesSchema;
         public static readonly TableSchema SubscriptionStateSchema;
 
-        public sealed class ServerWideConfigurationKey
+        public sealed partial class ServerWideConfigurationKey
         {
             public static string Backup = "server-wide/backup/configurations";
 
@@ -459,6 +462,7 @@ namespace Raven.Server.ServerWide
                     case nameof(AddElasticSearchEtlCommand):
                     case nameof(AddQueueEtlCommand):
                     case nameof(AddQueueSinkCommand):
+                    case nameof(AddCdcSinkCommand):
                     case nameof(AddSnowflakeEtlCommand):
                     case nameof(AddEmbeddingsGenerationCommand):
                     case nameof(AddOrUpdateAiAgentCommand):
@@ -469,6 +473,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateElasticSearchEtlCommand):
                     case nameof(UpdateQueueEtlCommand):
                     case nameof(UpdateQueueSinkCommand):
+                    case nameof(UpdateCdcSinkCommand):
                     case nameof(UpdateSnowflakeEtlCommand):
                     case nameof(UpdateEmbeddingsGenerationCommand):
                     case nameof(DeleteOngoingTaskCommand):
@@ -523,6 +528,8 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveEtlProcessStateCommand):
                     case nameof(UpdateQueueSinkProcessStateCommand):
                     case nameof(RemoveQueueSinkProcessStateCommand):
+                    case nameof(UpdateCdcSinkProcessStateCommand):
+                    case nameof(RemoveCdcSinkProcessStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
 
                         if (result != null)
@@ -644,6 +651,18 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleServerWideTaskStateCommand):
                         var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, skipNotifyValueChanged: true);
                         ToggleServerWideTaskState(cmd, parameters, context, type, index);
+                        break;
+
+                    case nameof(PutServerWideConnectionStringCommand):
+                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
+                        var serverWideConnectionString = UpdateValue<ServerWideConnectionString>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        UpdateDatabasesWithServerWideConnectionString(context, type, serverWideConnectionString, index);
+                        break;
+
+                    case nameof(RemoveServerWideConnectionStringCommand):
+                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
+                        var deleteCSConfiguration = UpdateValue<RemoveServerWideConnectionStringCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        RemoveServerWideConnectionStringFromAllDatabases(deleteCSConfiguration, context, type, index);
                         break;
 
                     case nameof(PutCertificateWithSamePinningHashCommand):
@@ -1771,6 +1790,7 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.QueueEtls),
             nameof(DatabaseRecord.SnowflakeEtls),
             nameof(DatabaseRecord.QueueSinks),
+            nameof(DatabaseRecord.CdcSinks),
             nameof(DatabaseRecord.EmbeddingsGenerations),
             nameof(DatabaseRecord.GenAis),
             nameof(DatabaseRecord.AiAgents)
@@ -1973,6 +1993,7 @@ namespace Raven.Server.ServerWide
                 // (only by using the dedicated UpdatePeriodicBackup command)
                 UpdatePeriodicBackups();
                 UpdateExternalReplications();
+                UpdateServerWideConnectionStrings();
             }
 
             if (TopologyChanged())
@@ -2048,7 +2069,7 @@ namespace Raven.Server.ServerWide
                     if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
                         continue;
 
-                    if (IsExcluded(configurationBlittable, addDatabaseCommand.Name))
+                    if (IsExcluded(configurationBlittable, addDatabaseCommand.Name, nameof(IServerWideTask.ExcludedDatabases)))
                         continue;
 
                     configurationBlittable.TryGet(nameof(ServerWideBackupConfiguration.BackupType), out BackupType backupType);
@@ -2112,7 +2133,7 @@ namespace Raven.Server.ServerWide
                     if (configurationBlittable.TryGet(nameof(ServerWideExternalReplication.TopologyDiscoveryUrls), out BlittableJsonReaderArray topologyDiscoveryUrlsBlittableArray) == false)
                         continue;
 
-                    if (IsExcluded(configurationBlittable, addDatabaseCommand.Name))
+                    if (IsExcluded(configurationBlittable, addDatabaseCommand.Name, nameof(IServerWideTask.ExcludedDatabases)))
                         continue;
 
                     var topologyDiscoveryUrls = topologyDiscoveryUrlsBlittableArray.Select(x => x.ToString()).ToArray();
@@ -2123,6 +2144,12 @@ namespace Raven.Server.ServerWide
                     addDatabaseCommand.Record.RavenConnectionStrings[connectionString.Name] = connectionString;
                     hasChanges = true;
                 }
+            }
+
+            void UpdateServerWideConnectionStrings()
+            {
+                if (PopulateServerWideConnectionStrings(context, addDatabaseCommand))
+                    hasChanges = true;
             }
         }
 
@@ -2144,9 +2171,9 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private static bool IsExcluded(BlittableJsonReaderObject configurationBlittable, string databaseName)
+        private static bool IsExcluded(BlittableJsonReaderObject configurationBlittable, string databaseName, string excludedDatabasesPropertyName)
         {
-            if (configurationBlittable.TryGet(nameof(IServerWideTask.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases) == false)
+            if (configurationBlittable.TryGet(excludedDatabasesPropertyName, out BlittableJsonReaderArray excludedDatabases) == false || excludedDatabases == null)
                 return false;
 
             foreach (object excludedDatabase in excludedDatabases)
@@ -2804,8 +2831,9 @@ namespace Raven.Server.ServerWide
                 case nameof(AddOlapEtlCommand):
                 case nameof(AddQueueEtlCommand):
                 case nameof(AddQueueSinkCommand):
+                case nameof(AddCdcSinkCommand):
                 case nameof(AddSnowflakeEtlCommand):
-                case nameof(AddEmbeddingsGenerationCommand): 
+                case nameof(AddEmbeddingsGenerationCommand):
                 case nameof(AddGenAiCommand):
                 case nameof(AddOrUpdateAiAgentCommand):
                 case nameof(DeleteAiAgentCommand):
@@ -2854,6 +2882,7 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(UpdateQueueEtlCommand):
                 case nameof(UpdateQueueSinkCommand):
+                case nameof(UpdateCdcSinkCommand):
                 case nameof(UpdateSnowflakeEtlCommand):
                 case nameof(UpdateEmbeddingsGenerationCommand):
                 case nameof(UpdateRavenEtlCommand):
@@ -3597,6 +3626,66 @@ namespace Raven.Server.ServerWide
                     yield return def;
                 }
             }
+        }
+
+        public IEnumerable<CertificateDefinition> GetSsoServerCertificates<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage == CertificateUsage.SsoServer)
+                    yield return def;
+            }
+        }
+
+        public IEnumerable<CertificateDefinition> GetSsoClientCertificates<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage == CertificateUsage.SsoClient)
+                    yield return def;
+            }
+        }
+
+        public CertificateDefinition GetSsoClientCertificateByIdentity<TTransaction>(TransactionOperationContext<TTransaction> context, SsoExtensionPayload payload)
+            where TTransaction : RavenTransaction
+        {
+            if (payload.IsEmpty)
+                return null;
+
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage != CertificateUsage.SsoClient)
+                    continue;
+
+                if (def.SsoIdentifiers == null || def.SsoIdentifiers.Count == 0)
+                    continue;
+
+                foreach (var id in def.SsoIdentifiers)
+                {
+                    if (id.Provider != payload.Provider)
+                        continue;
+
+                    if (payload.Provider == SsoProvider.Windows &&
+                        string.Equals(id.Domain, payload.Domain, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    if (string.Equals(id.Identifier, payload.Username, StringComparison.OrdinalIgnoreCase))
+                        return def;
+                }
+            }
+
+            return null;
         }
 
         public Raven.Client.ServerWide.Sharding.ShardingConfiguration ReadShardingConfiguration(string database)

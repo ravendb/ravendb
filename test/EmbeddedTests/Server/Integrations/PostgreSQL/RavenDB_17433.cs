@@ -12,6 +12,34 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
     public class RavenDB_17433 : PostgreSqlIntegrationTestBase
     {
         [Fact]
+        public async Task Fetch_wrapped_inner_rql_with_load_should_work_end_to_end()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                const string sql = @"select ""_"".""Name"",
+        ""_"".""Manager""
+from
+(
+    from Employees as e
+    where id() in ('employees/1-A')
+    load e.ReportsTo as boss
+    select { Name: e.FirstName, Manager: boss.FirstName }
+) ""_""
+limit 1000";
+
+                var result = await Act(store, sql);
+
+                Assert.NotNull(result);
+                Assert.True(result.Rows.Count > 0);
+
+                Assert.True(result.Columns.Contains("Name"));
+                Assert.True(result.Columns.Contains("Manager"));
+            }
+        }
+
+        [Fact]
         public async Task QueryWithSingleReplaceShouldWork()
         {
             const string queryWithSingleReplace = @"select ""_"".""id()"" as ""id()"",

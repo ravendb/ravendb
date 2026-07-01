@@ -33,7 +33,7 @@ type OlapEtlPanelProps = EtlPanelBaseProps<OngoingTaskOlapEtlInfo>;
 export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editOlapEtl(data.shared.taskId)();
 
     const {
@@ -50,7 +50,6 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Olap", data.shared.connectionStringName);
 
     return (
         <RichPanel>
@@ -97,7 +96,8 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Olap"
+                    databaseName={databaseName}
                 />
                 {data.shared.destinations.map((dst) => (
                     <RichPanelDetailItem data-testid="destination" label="Destination" key={dst} title={dst}>

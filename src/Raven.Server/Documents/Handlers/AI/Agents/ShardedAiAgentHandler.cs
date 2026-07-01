@@ -37,5 +37,17 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
             throw new NotSupportedInShardingException("AI Agents for a sharded database are currently not supported");
         }
+        
+        [RavenShardedAction("/databases/*/admin/ai/agent/generate-code", "GET")]
+        public Task AiAgentGenerateCode()
+        {
+            throw new NotSupportedInShardingException("AI Agents for a sharded database are currently not supported");
+        }
+
+        [RavenShardedAction("/databases/*/ai/agent/conversation/messages", "GET")]
+        public Task GetConversationMessages()
+        {
+            throw new NotSupportedInShardingException("AI Agents for a sharded database are currently not supported");
+        }
     }
 }

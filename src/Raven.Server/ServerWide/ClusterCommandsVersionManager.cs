@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
@@ -210,11 +211,18 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteAiAgentCommand)] = 71_001,
 
             [nameof(EditRemoteAttachmentsCommand)] = EditRemoteAttachmentsCommand.CommandVersion,
-            [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
-            [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] =  72_000,
 
             [nameof(UpdateSnmpDatabaseAiTasksMappingCommand)] = 72_000,
-            [nameof(ModifyDatabaseSupportedFeaturesCommand)] = 72_001
+            [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] = 72_000,
+
+            [nameof(ModifyDatabaseSupportedFeaturesCommand)] = 72_001,
+            [nameof(AddCdcSinkCommand)] = 72_001,
+            [nameof(UpdateCdcSinkCommand)] = 72_001,
+            [nameof(RemoveCdcSinkProcessStateCommand)] = 72_001,
+            [nameof(UpdateCdcSinkProcessStateCommand)] = 72_001,
+            [nameof(PutServerWideConnectionStringCommand)] = 72_001,
+            [nameof(RemoveServerWideConnectionStringCommand)] = 72_001,
+            [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
         };
 
         public bool CanPutCommand(string command)

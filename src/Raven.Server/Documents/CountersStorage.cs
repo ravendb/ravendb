@@ -295,13 +295,13 @@ namespace Raven.Server.Documents
             return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists);
         }
 
-        public string PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta)
+        public string PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta, bool validate = true)
         {
-            return PutOrIncrementCounter(context, documentId, collection, name, delta, out _, overrideExisting: true);
+            return PutOrIncrementCounter(context, documentId, collection, name, delta, out _, overrideExisting: true, validate: validate);
         }
 
         public string PutOrIncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta, out bool exists,
-            bool overrideExisting = false)
+            bool overrideExisting = false, bool validate = true)
         {
             if (context.Transaction == null)
             {
@@ -309,10 +309,8 @@ namespace Raven.Server.Documents
                 Debug.Assert(false); // never hit
             }
 
-            if (name.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowCounterNameTooBig(name);
-            }
+            if(validate)
+                ValidateCounterName(name);
 
             try
             {
@@ -387,7 +385,7 @@ namespace Raven.Server.Documents
                                 }
 
                                 // now we retry and know that we have enough space
-                                return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists, overrideExisting);
+                                return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists, overrideExisting, false);
                             }
 
                             CreateNewCounterOrOverrideExisting(context, lowerName, dbIdIndex, value, counterEtag, counters);
@@ -463,6 +461,15 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void ValidateCounterName(string name)
+        {
+            if (name.Length > DocumentIdWorker.MaxIdSize)
+                ThrowCounterNameTooBig(name);
+
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                DocumentIdWorker.CheckAndThrowContainsControlCharacters(name, "Counter name");
+        }
+        
         [DoesNotReturn]
         internal static void ThrowMissingProperty(Slice counterKeySlice, string property)
         {
@@ -482,13 +489,16 @@ namespace Raven.Server.Documents
         {
             var (fst, snd) = SplitCounterDocument(context, values, dbIds, originalNames);
 
-            using (Slice.From(context.Allocator, changeVector, out var cv))
+            var firstEtag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+            var firstChangeVector = ChangeVector.MergeWithNewDatabaseChangeVector(context, new ChangeVector(changeVector, context), firstEtag);
+
+            using (Slice.From(context.Allocator, firstChangeVector, out var cv))
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             {
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(countersGroupKey);
-                    tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
+                    tvb.Add(Bits.SwapBytes(firstEtag));
                     tvb.Add(cv);
                     tvb.Add(fst.BasePointer, fst.Size);
                     tvb.Add(collectionSlice);
@@ -1077,6 +1087,9 @@ namespace Raven.Server.Documents
                             }
 
                             var etag = _documentsStorage.GenerateNextEtag();
+                            if (putCountersData.Modified)
+                                changeVectorToSave = ChangeVector.MergeWithNewDatabaseChangeVector(context, changeVectorToSave, etag);
+
                             using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
                             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                             using (table.Allocate(out TableValueBuilder tvb))

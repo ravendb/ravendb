@@ -1,6 +1,7 @@
 ﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -676,45 +677,131 @@ for(const comment of this.Comments)
     private async Task ShouldResendContextOnConfigChange(GenAiConfiguration config, Action<GenAiConfiguration> changeConfig)
     {
         using var store = GetDocumentStore();
-        const string docId = "posts/1";
-
-        store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-        var sampleObject = JsonConvert.SerializeObject(new { Translation = "translated text" });
-        var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObject);
-
-        config.Prompt = "Translate this text to Polish";
-        config.JsonSchema = schema;
-        config.UpdateScript = "this.TextInPolish = $output.Translation;";
-        config.Collection = "Posts";
-        config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
-        config.Identifier = "posts-translation-check";
-
-        store.Maintenance.Send(new AddGenAiOperation(config));
-
-        var etlDone = Etl.WaitForEtlToComplete(store);
-
-        using (var session = store.OpenSession())
-        {
-            session.Store(new Post([new Comment("RavenDB is amazing", "Alex")], "Understanding RavenDB Indexing", "Indexes in RavenDB are powerful..."), docId);
-            session.SaveChanges();
-        }
-
-        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
-
-        string originalHash;
-        using (var session = store.OpenAsyncSession())
-        {
-            var doc = await session.LoadAsync<BlittableJsonReaderObject>(docId);
-            Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
-            Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-            Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashesArray));
-            Assert.NotNull(hashesArray);
-            originalHash = hashesArray.Last().ToString();
-        }
+        await ConfigGenAi(config, store);
 
         var db = await GetDatabase(store.Database);
+        var extractedByEtl = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        db.ForTestingPurposesOnly().OnEtlItemExtracted = (process, item, batchId) =>
+            extractedByEtl.Enqueue($"[{DateTime.UtcNow:HH:mm:ss.fff}] taskId={process.TaskId} batchId={batchId} tag={process.Tag} docId={item.DocumentId} etag={item.Etag} cv={item.ChangeVector} doc={item.Document.Data.ToString()}");
+
+        var etlDone = Etl.WaitForEtlToComplete(store);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Post([new Comment("RavenDB is amazing", "Alex")], "Understanding RavenDB Indexing", "Indexes in RavenDB are powerful..."), "posts/1");
+            session.SaveChanges();
+        }
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
+
+        var originalHash = await GetDocumentHash(config, store);
+
         var etlProcess = db.EtlLoader.Processes.SingleOrDefault() as GenAiTask;
+        await Assert1DocUpdatedInStats(etlProcess, store);
+        var taskId = etlProcess.TaskId;
+
+        // disable task
+        var oldTaskDebugInfo = await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60));
+        await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.GenAi, disable: true));
+        var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
+        Assert.Equal(OngoingTaskState.Disabled, taskInfo.TaskState);
+        await AssertWaitForTrueAsync(() => Task.FromResult(etlProcess.IsRunning == false));
+
+        var (etagBefore, etag) = await ChangeDoc(store, db); // (2, 3)
+        var baselineUtc = DateTime.UtcNow;
+
+        // update the configuration & re-enable task (delete the old task & create new enabled) task & wait it'll be done
+        changeConfig(config);
+        await store.Maintenance.SendAsync(new UpdateGenAiOperation(taskId, config));
+        taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
+        Assert.Equal(OngoingTaskState.Enabled, taskInfo.TaskState);
+        var genAiTaskInfo = taskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
+        Assert.NotNull(genAiTaskInfo);
+        Assert.Equal(genAiTaskInfo.Configuration.Prompt, config.Prompt);
+        Assert.Equal(genAiTaskInfo.Configuration.JsonSchema, config.JsonSchema);
+        Assert.Equal(genAiTaskInfo.Configuration.UpdateScript, config.UpdateScript);
+
+        // assert that context was sent again
+        etlDone = Etl.WaitForEtlToComplete(store);
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
+        etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
+        Assert.NotNull(etlProcess);
+
+        try
+        {
+            EtlPerformanceStats[] stats2 = null;
+
+            var value = await WaitForValueAsync(() =>
+            {
+                stats2 = etlProcess.GetPerformanceStats()
+                    .Where(x => x != null
+                                && x.Started >= baselineUtc
+                                // LastLoadedEtag is the max etag of the batch docs before GenAiUpdate
+                                // (LastLoadedEtag is the max of 'LastTransformedEtags', which is the etags of the batch docs before in the Transform stage - before the Load stage, which include the GenAiUpdate)
+                                // So it should be == the etag of the doc
+                                && x.LastLoadedEtag == etag
+                                && x.NumberOfLoadedItems > 0
+                                && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
+                    .ToArray();
+                return stats2.Length > 0;
+            }, expectedVal: true, timeout: 60_000);
+
+            Assert.True(value);
+            Assert.NotEmpty(stats2);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<BlittableJsonReaderObject>("posts/1");
+                Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
+                Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
+                Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashesArray));
+                Assert.NotNull(hashesArray);
+
+                var newHash = hashesArray.Last().ToString();
+                Assert.NotEqual(originalHash, newHash);
+            }
+
+            var resend = stats2.FirstOrDefault(s =>
+            {
+                var load = s.Details.Operations[^1];
+                var op = load.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel)
+                    as GenAiPerformanceOperation;
+                return op is { TotalSentToModel: 1, NumberOfContextObjects: 1, TotalCachedContexts: 0 };
+            });
+
+            Assert.True(resend != null);
+        }
+        catch (Exception e)
+        {
+            var debugInfoSb = new StringBuilder().Append($"Failed - baselineUtc: {baselineUtc}, etag before change: {etagBefore}, etag after change: {etag} ")
+                .AppendLine().AppendLine("Task before disable:")
+                .AppendLine(oldTaskDebugInfo).AppendLine().AppendLine("Task after re-enable:")
+                .AppendLine(await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+            foreach (var line in extractedByEtl)
+                debugInfoSb.AppendLine(line);
+            throw new AggregateException(debugInfoSb.ToString(), e);
+        }
+    }
+
+    private static async Task<(long etagBefore, long etagAfter)> ChangeDoc(DocumentStore store, DocumentDatabase db)
+    {
+        long etagBefore, etagAfter;
+        using (var session = store.OpenAsyncSession())
+        {
+            var doc = await session.LoadAsync<Post>("posts/1");
+            doc.Comments.Add(new Comment("spam comment", "evil bot"));
+            etagBefore = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
+            await session.SaveChangesAsync();
+        }
+        
+        using (var session = store.OpenAsyncSession())
+        {
+            var doc = await session.LoadAsync<Post>("posts/1");
+            etagAfter = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
+        }
+        return (etagBefore, etagAfter);
+    }
+
+    private async Task Assert1DocUpdatedInStats(GenAiTask etlProcess, DocumentStore store)
+    {
         Assert.NotNull(etlProcess);
 
         EtlPerformanceStats[] stats = null;
@@ -733,97 +820,36 @@ for(const comment of this.Comments)
         var genAiStats = loadDetails.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel) as GenAiPerformanceOperation;
         Assert.Equal(1, genAiStats?.NumberOfContextObjects);
         Assert.Equal(1, genAiStats?.TotalSentToModel);
+    }
 
-        var taskId = etlProcess.TaskId;
-
-        // disable task
-        await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.GenAi, disable: true));
-
-        var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
-        Assert.Equal(OngoingTaskState.Disabled, taskInfo.TaskState);
-
-        await AssertWaitForTrueAsync(() => Task.FromResult(etlProcess.IsRunning == false));
-
-        long etag = 0;
-        var baselineUtc = DateTime.UtcNow;
-        using (var session = store.OpenSession())
-        {
-            // modify the doc to trigger etl 
-            // the post's Body remains the same - this change won't affect the generated context object 
-            // context should be resent because of the hash-mismatch, not because of the comments addition
-
-            var doc = session.Load<Post>(docId);
-            doc.Comments.Add(new Comment("spam comment", "evil bot"));
-            etag = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
-
-            session.SaveChanges();
-        }
-
-        // update the configuration
-        changeConfig(config);
-        store.Maintenance.Send(new UpdateGenAiOperation(taskId, config));
-
-        // re-enable task
-        await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.GenAi, disable: false));
-        taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
-        Assert.Equal(OngoingTaskState.Enabled, taskInfo.TaskState);
-
-        var genAiTaskInfo = taskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
-        Assert.NotNull(genAiTaskInfo);
-        Assert.Equal(genAiTaskInfo.Configuration.Prompt, config.Prompt);
-        Assert.Equal(genAiTaskInfo.Configuration.JsonSchema, config.JsonSchema);
-        Assert.Equal(genAiTaskInfo.Configuration.UpdateScript, config.UpdateScript);
-
-        etlDone = Etl.WaitForEtlToComplete(store);
-
-        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
-
-        // assert that context was sent again
-
-        etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
-        Assert.NotNull(etlProcess);
-
-        EtlPerformanceStats[] stats2 = null;
-
-        value = await WaitForValueAsync(() =>
-        {
-            stats2 = etlProcess.GetPerformanceStats()
-                .Where(x => x != null
-                            && x.Started >= baselineUtc
-                            && x.LastLoadedEtag >= etag + 1
-                            && x.NumberOfLoadedItems > 0
-                            && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
-                .ToArray();
-            return stats2.Length > 0;
-        }, expectedVal: true, timeout: 60_000);
-
-        Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
-
-        Assert.NotEmpty(stats2);
-
+    private static async Task<string> GetDocumentHash(GenAiConfiguration config, DocumentStore store)
+    {
         using (var session = store.OpenAsyncSession())
         {
-            var doc = await session.LoadAsync<BlittableJsonReaderObject>(docId);
+            var doc = await session.LoadAsync<BlittableJsonReaderObject>("posts/1");
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
             Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashesArray));
             Assert.NotNull(hashesArray);
-
-            var newHash = hashesArray.Last().ToString();
-            Assert.NotEqual(originalHash, newHash);
+            return hashesArray.Last().ToString();
         }
+    }
 
-        var resend = stats2.FirstOrDefault(s =>
-        {
-            var load = s.Details.Operations[^1];
-            var op = load.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel)
-                as GenAiPerformanceOperation;
-            return op is { TotalSentToModel: 1, NumberOfContextObjects: 1, TotalCachedContexts: 0 };
-        });
+    private static async Task ConfigGenAi(GenAiConfiguration config, DocumentStore store)
+    {
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        Assert.True(resend != null, $"baselineUtc: {baselineUtc}, etag: {etag} " + 
-                                    Environment.NewLine + await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+        var sampleObject = JsonConvert.SerializeObject(new { Translation = "translated text" });
+        var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObject);
 
+        config.Prompt = "Translate this text to Polish";
+        config.JsonSchema = schema;
+        config.UpdateScript = "this.TextInPolish = $output.Translation;";
+        config.Collection = "Posts";
+        config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
+        config.Identifier = "posts-translation-check";
+
+        await store.Maintenance.SendAsync(new AddGenAiOperation(config));
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

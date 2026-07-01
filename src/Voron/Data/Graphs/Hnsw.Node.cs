@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server.Utils;
@@ -14,16 +15,78 @@ public partial class Hnsw
     public unsafe struct Node
     {
         internal const long VectorIdMask = ~0xFFF;
+
+        // Hot fields read by the search inner loop are colocated at the start of the struct so a
+        // single cache line covers PostingListId (tombstone check), _vectorSpan (kernel input),
+        // Visited (RW per candidate), and the QueryDistance memo. VectorId / NodeId follow to keep
+        // line 0 saturated; the resolve-only fields (EdgesPerLevel / EdgesIndexesPerLevel /
+        // Cached*) land on line 1.
         public long PostingListId;
+        internal UnmanagedSpan _vectorSpan;
+        public int Visited;
+        public int QueryDistanceVersion;
+        // Cached distance between this node and the current query vector. Valid only when
+        // QueryDistanceVersion == SearchState._queryVectorVersion. SearchState bumps that
+        // version whenever the query vector changes (see OnQueryVector), which in turn
+        // invalidates this entry without touching the node.
+        public float QueryDistanceValue;
         public long VectorId;
         public long NodeId;
+
         public NativeList<NativeList<long>> EdgesPerLevel;
         public NativeList<NativeList<int>> EdgesIndexesPerLevel;
-        private UnmanagedSpan _vectorSpan;
-        public int Visited;
-        public float? QueryDistance;
+
+        // When non-null, this node's edge data lives in the HnswIndexCache buffer rather than in
+        // EdgesPerLevel. Set during search-side LoadNodeIndexes when the node hits the cache and
+        // the alternative copy was elided. Indexing-side code paths never set this pointer and
+        // continue to read/write EdgesPerLevel as before.
+        internal HnswIndexCache.CachedNodeHeader* CachedHeader;
+        internal int* CachedOffsets;
+        internal long* CachedEdges;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int GetLevelCount() => CachedHeader != null ? CachedHeader->LevelCount : EdgesPerLevel.Count;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int EdgeCountAtLevel(int level)
+        {
+            if (CachedHeader != null)
+                return CachedOffsets[level + 1] - CachedOffsets[level];
+            return EdgesPerLevel[level].Count;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ReadOnlySpan<long> EdgesAtLevel(int level)
+        {
+            if (CachedHeader != null)
+            {
+                int start = CachedOffsets[level];
+                int end = CachedOffsets[level + 1];
+                return new ReadOnlySpan<long>(CachedEdges + start, end - start);
+            }
+            return EdgesPerLevel[level].ToSpan();
+        }
 
         public bool VectorLoaded => _vectorSpan.Length > 0;
+
+        /// <summary>
+        /// Returns the vector's memory address and length without triggering I/O.
+        /// Returns false if the vector hasn't been loaded yet.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetVectorAddress(out byte* address, out int length)
+        {
+            if (_vectorSpan.Length > 0)
+            {
+                address = _vectorSpan.Address;
+                length = _vectorSpan.Length;
+                return true;
+            }
+
+            address = null;
+            length = 0;
+            return false;
+        }
 
         public long GetVectorContainerId()
         {
@@ -102,7 +165,7 @@ public partial class Hnsw
             return GetVectorUnmanagedSpan(state).ToSpan();
         }
 
-        internal void SetVector(SearchState searchState, UnmanagedSpan span)
+        internal void SetVector(in Options options, UnmanagedSpan span)
         {
             if ((VectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
             {
@@ -111,8 +174,8 @@ public partial class Hnsw
             }
 
             var count = (byte)(VectorId >> 1);
-            var offset = count * searchState.Options.VectorSizeBytes;
-            _vectorSpan = new UnmanagedSpan(span.Address + offset, searchState.Options.VectorSizeBytes);
+            var offset = count * options.VectorSizeBytes;
+            _vectorSpan = new UnmanagedSpan(span.Address + offset, options.VectorSizeBytes);
         }
     }
 }

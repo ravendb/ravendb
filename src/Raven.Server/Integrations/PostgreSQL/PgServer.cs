@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Config;
@@ -40,6 +41,10 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public bool Active { get; private set; }
 
+        // Count of in-flight sessions (for tests / diagnostics). Converges to 0 after connections
+        // close; a steady non-zero points at a regression of the ContinueWith cleanup below.
+        public int InFlightConnectionCount => _connections.Count;
+
         public void Execute()
         {
             HandleServerActivation();
@@ -71,6 +76,15 @@ namespace Raven.Server.Integrations.PostgreSQL
                                          "this is an experimental feature and the current server configuration does not allow to use experimental features. " +
                                          $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
                     }
+                }
+
+                if (activate && PgSqlParserNative.IsAvailable == false)
+                {
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"PostgreSQL integration is enabled but the native SQL parser (libpg_query) could not be loaded " +
+                                     $"on this platform ({RuntimeInformation.RuntimeIdentifier}). The integration will not be started. " +
+                                     "The pgsqlparser package does not bundle a native libpg_query binary for this architecture.");
+                    activate = false;
                 }
 
                 if (activate)
@@ -180,7 +194,20 @@ namespace Raven.Server.Integrations.PostgreSQL
                         if (client == null)
                             continue;
 
-                        _connections.TryAdd(client, HandleConnection(client));
+                        // Capture the accepted client into a fresh local so the continuation
+                        // sees this iteration's instance, not the outer `client` variable that
+                        // the next AcceptTcpClientAsync will overwrite.
+                        var capturedClient = client;
+                        var task = HandleConnection(capturedClient);
+                        _connections.TryAdd(capturedClient, task);
+                        // Remove the dictionary entry when the session finishes, else the (TcpClient, Task)
+                        // tuple leaks for the server's lifetime - one per connection. The socket is freed
+                        // (PgSession.Run disposes it); the dictionary wrappers aren't.
+                        _ = task.ContinueWith(static (_, state) =>
+                        {
+                            var (connections, key) = ((ConcurrentDictionary<TcpClient, Task>, TcpClient))state;
+                            connections.TryRemove(key, out _);
+                        }, (_connections, capturedClient), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                     }
                 }
                 finally

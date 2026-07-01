@@ -368,6 +368,8 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var item in items)
                 {
+                    Database.ForTestingPurposes?.OnEtlItemExtracted?.Invoke(this, item, _statsId); // _statsId == current batch's EtlPerformanceStats.Id
+
                     extractedItemsSize++;
                     var changeVector = context.GetChangeVector(item.ChangeVector);
 
@@ -554,7 +556,11 @@ namespace Raven.Server.Documents.ETL
                 // double the fallback time (but don't cross Etl.MaxFallbackTime)
                 var secondsSinceLastError = (now - lastErrorTime.Value).TotalSeconds;
 
-                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
+                // Jitter: add up to 10% random variation to avoid synchronized retries
+                // across multiple ETL processes when a shared destination goes down.
+                var baseSeconds = Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2));
+                var jitter = baseSeconds * Random.Shared.NextDouble() * 0.1;
+                FallbackTime = TimeSpan.FromSeconds(baseSeconds + jitter);
             }
             
             Statistics.NextBatchRetryTime = now + FallbackTime;

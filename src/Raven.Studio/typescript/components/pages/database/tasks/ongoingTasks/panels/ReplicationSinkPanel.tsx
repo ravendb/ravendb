@@ -34,10 +34,7 @@ type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicatio
 function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const connectionStringDefined = !!data.shared.destinationDatabase;
-    const { appUrl } = useAppUrls();
-
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
 
     const mode = formatReplicationMode(data.shared.mode);
 
@@ -49,7 +46,8 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
                 connectionStringDefined={connectionStringDefined}
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
+                connectionStringType="Raven"
+                databaseName={databaseName}
             />
             {data.shared.destinationDatabase && (
                 <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>

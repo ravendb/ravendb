@@ -115,6 +115,20 @@ public sealed class RemoteAttachmentsS3Settings : IS3Settings, IRemoteAttachment
     public string RemoteFolderName { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to disable checksum validation.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This property disables checksum validation for S3 uploads.
+    /// Checksum Validation ensures data integrity and should not be disabled if not necessary.
+    /// </para>
+    /// <para>
+    /// Set this to <c>true</c> if your S3-compatible storage does not support modern object integrity checks.
+    /// </para>
+    /// </remarks>
+    public bool DisableChecksumValidation { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the S3 bucket where attachments will be stored.
     /// </summary>
     /// <remarks>
@@ -216,7 +230,7 @@ public sealed class RemoteAttachmentsS3Settings : IS3Settings, IRemoteAttachment
 
     internal bool HasSettings()
     {
-        // Minimal enabling condition – bucket must be set.
+        // Minimal enabling condition ï¿½ bucket must be set.
         return string.IsNullOrWhiteSpace(BucketName) == false;
     }
 
@@ -231,7 +245,8 @@ public sealed class RemoteAttachmentsS3Settings : IS3Settings, IRemoteAttachment
             [nameof(RemoteFolderName)] = RemoteFolderName,
             [nameof(BucketName)] = BucketName,
             [nameof(CustomServerUrl)] = CustomServerUrl,
-            [nameof(ForcePathStyle)] = ForcePathStyle
+            [nameof(ForcePathStyle)] = ForcePathStyle,
+            [nameof(DisableChecksumValidation)] = DisableChecksumValidation
         };
 
         if (StorageClass.HasValue)
@@ -248,6 +263,7 @@ public sealed class RemoteAttachmentsS3Settings : IS3Settings, IRemoteAttachment
         hc.Add(RemoteFolderName);
         hc.Add(CustomServerUrl);
         hc.Add(ForcePathStyle);
+        hc.Add(DisableChecksumValidation);
         hc.Add(StorageClass);
         hc.Add(AwsAccessKey);
         hc.Add(AwsSecretKey);
@@ -267,6 +283,7 @@ public sealed class RemoteAttachmentsS3Settings : IS3Settings, IRemoteAttachment
                RemoteFolderName == other.RemoteFolderName &&
                CustomServerUrl == other.CustomServerUrl &&
                ForcePathStyle == other.ForcePathStyle &&
+               DisableChecksumValidation == other.DisableChecksumValidation &&
                StorageClass == other.StorageClass &&
                AwsAccessKey == other.AwsAccessKey &&
                AwsSecretKey == other.AwsSecretKey &&

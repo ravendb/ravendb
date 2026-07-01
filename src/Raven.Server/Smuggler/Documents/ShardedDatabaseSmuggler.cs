@@ -88,6 +88,11 @@ namespace Raven.Server.Smuggler.Documents
                 AddWarning(DatabaseRecordItemType.QueueSinks);
             }
 
+            if (databaseRecord.CdcSinks.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.CdcSinks))
+            {
+                AddWarning(DatabaseRecordItemType.CdcSinks);
+            }
+
             if (databaseRecord.RemoteAttachments != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RemoteAttachments))
             {
                 AddWarning(DatabaseRecordItemType.RemoteAttachments);

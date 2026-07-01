@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -20,6 +21,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Sharding;
@@ -33,6 +35,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
@@ -91,6 +94,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, PrefixedShardingSetting> PrefixedShardingSetting = GenerateJsonDeserializationRoutine<PrefixedShardingSetting>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerWideExternalReplication> ServerWideExternalReplication = GenerateJsonDeserializationRoutine<ServerWideExternalReplication>();
+
+        public static readonly Func<BlittableJsonReaderObject, ServerWideConnectionString> ServerWideConnectionString = blittable => Client.ServerWide.Operations.ConnectionStrings.ServerWideConnectionString.FromBlittable(blittable);
 
         public static readonly Func<BlittableJsonReaderObject, ExternalReplicationState> ExternalReplicationState = GenerateJsonDeserializationRoutine<ExternalReplicationState>();
 
@@ -157,6 +162,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, AiConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiConnectionString>();
         
         public static readonly Func<BlittableJsonReaderObject, QueueSinkConfiguration> QueueSinkConfiguration = GenerateJsonDeserializationRoutine<QueueSinkConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, CdcSinkConfiguration> CdcSinkConfiguration = GenerateJsonDeserializationRoutine<CdcSinkConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 
@@ -256,6 +263,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddElasticSearchEtlCommand)] = GenerateJsonDeserializationRoutine<AddElasticSearchEtlCommand>(),
             [nameof(AddQueueEtlCommand)] = GenerateJsonDeserializationRoutine<AddQueueEtlCommand>(),
             [nameof(AddQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
+            [nameof(AddCdcSinkCommand)] = GenerateJsonDeserializationRoutine<AddCdcSinkCommand>(),
             [nameof(AddSnowflakeEtlCommand)] = GenerateJsonDeserializationRoutine<AddSnowflakeEtlCommand>(),
             [nameof(AddEmbeddingsGenerationCommand)] = GenerateJsonDeserializationRoutine<AddEmbeddingsGenerationCommand>(),
             [nameof(AddGenAiCommand)] = GenerateJsonDeserializationRoutine<AddGenAiCommand>(),
@@ -303,6 +311,8 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteServerWideAnalyzerCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideAnalyzerCommand>(),
             [nameof(PutServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<PutServerWideSorterCommand>(),
             [nameof(DeleteServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideSorterCommand>(),
+            [nameof(PutServerWideConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutServerWideConnectionStringCommand>(),
+            [nameof(RemoveServerWideConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveServerWideConnectionStringCommand>(),
             [nameof(DelayBackupCommand)] = GenerateJsonDeserializationRoutine<DelayBackupCommand>(),
             [nameof(EditLockModeCommand)] = GenerateJsonDeserializationRoutine<EditLockModeCommand>(),
             [nameof(EditPostgreSqlConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSqlConfigurationCommand>(),
@@ -319,6 +329,9 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkCommand>(),
             [nameof(UpdateQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkProcessStateCommand>(),
             [nameof(RemoveQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueSinkProcessStateCommand>(),
+            [nameof(UpdateCdcSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateCdcSinkCommand>(),
+            [nameof(UpdateCdcSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateCdcSinkProcessStateCommand>(),
+            [nameof(RemoveCdcSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveCdcSinkProcessStateCommand>(),
             [nameof(UpdateResponsibleNodeForTasksCommand)] = GenerateJsonDeserializationRoutine<UpdateResponsibleNodeForTasksCommand>(),
             [nameof(AddPrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<AddPrefixedShardingSettingCommand>(),
             [nameof(DeletePrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<DeletePrefixedShardingSettingCommand>(),

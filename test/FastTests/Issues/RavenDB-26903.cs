@@ -36,7 +36,7 @@ namespace FastTests.Issues
         public void DirectUpload_multipart_upload_must_not_capture_the_backup_synchronization_context()
         {
             var client = new AsyncCompletingS3Client();
-            var uploader = new AwsS3MultiPartUploader(client, bucketName: "bucket", storageClass: S3StorageClass.Standard,
+            var uploader = new AwsS3MultiPartUploader(client, bucketName: "bucket", storageClass: S3StorageClass.Standard, disableChecksumValidation: false,
                 progress: null, key: "key", metadata: new Dictionary<string, string>(), cancellationToken: default);
 
             // Initialize() runs without a synchronization context (fast path), exactly like during backup setup.

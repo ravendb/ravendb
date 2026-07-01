@@ -3,13 +3,7 @@ import AboutViewFloating, { AccordionItemWrapper } from "components/common/About
 export default function ClusterDebugAboutView() {
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>This view shows the Raft command log state and entries for each node in the cluster.</p>
 
                 <p>

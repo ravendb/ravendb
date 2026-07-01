@@ -54,15 +54,15 @@ namespace Raven.Server.Documents.Revisions
     // RECEIVE / EMIT factories don't surface this -- they have no original-case docId to begin with.
     // Owns the underlying byte-string allocation: one call to GetLowerIdSliceAndStorageKey produces both
     // slices in a single scope, disposed when this struct is disposed.
-    internal readonly struct DocIdSlices : IDisposable
+    internal struct DocIdSlices : IDisposable
     {
         public readonly Slice LowerId;   // lowered docId -- prefix scans, RevisionsTable.LowerId (field 1)
         public readonly Slice Id;        // storage-key form -- RevisionsTable.Id (field 4)
-        private readonly ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
 
         internal DocIdSlices(ByteStringContext allocator, string docId)
         {
-            _scope = DocumentIdWorker.GetLowerIdSliceAndStorageKey(allocator, docId, out LowerId, out Id);
+            _scope = DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, docId, out LowerId, out Id);
         }
 
         public void Dispose() => _scope.Dispose();

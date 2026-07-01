@@ -33,7 +33,7 @@ type KafkaEtlPanelProps = EtlPanelBaseProps<OngoingTaskKafkaEtlInfo>;
 export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editKafkaEtl(data.shared.taskId)();
 
     const {
@@ -50,7 +50,6 @@ export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformation
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Kafka", data.shared.connectionStringName);
 
     return (
         <RichPanel>
@@ -97,7 +96,8 @@ export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformation
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Kafka"
+                    databaseName={databaseName}
                 />
                 <RichPanelDetailItem label="Bootstrap Servers">{data.shared.url}</RichPanelDetailItem>
                 <EtlPanelHealthBadge taskHealth={taskHealth} />

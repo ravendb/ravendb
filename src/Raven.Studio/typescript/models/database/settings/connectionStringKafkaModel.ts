@@ -154,6 +154,7 @@ class connectionStringKafkaModel extends connectionStringModel {
             Type: "Queue",
             BrokerType: "Kafka",
             Name: "",
+            UsedBy: [],
 
             KafkaConnectionSettings: {
                 BootstrapServers: "",
@@ -164,12 +165,14 @@ class connectionStringKafkaModel extends connectionStringModel {
             RabbitMqConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         }, true, []);
     }
     
     toDto(): Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString  {
         return {
             Type: "Queue",
+            UsedBy: [],
             BrokerType: "Kafka",
             Name: this.connectionStringName(),
             
@@ -182,6 +185,7 @@ class connectionStringKafkaModel extends connectionStringModel {
             RabbitMqConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         };
     }
 

@@ -291,9 +291,9 @@ namespace Raven.Server.Web.System
                 {
                     databaseRecord.SupportedFeatures = new List<string>
                     {
-                        Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix,
                         Constants.DatabaseRecord.SupportedFeatures.HashedRevisionPk,
-                        Constants.DatabaseRecord.SupportedFeatures.PullReplicationCompositeChangeVectors
+                        Constants.DatabaseRecord.SupportedFeatures.PullReplicationCompositeChangeVectors,
+                        Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier
                     };
                 }
 

@@ -37,7 +37,16 @@ class footer {
     urlForStaleIndexes = ko.pureComputed(() => appUrl.forIndexes(this.db(), null, true));
     urlForIndexingErrors = ko.pureComputed(() => appUrl.forIndexErrors(this.db()));
     urlForAbout = appUrl.forAbout();
-    
+
+    ssoAppUrl = ko.pureComputed<string | null>(() => {
+        const cert = clientCertificateModel.certificateInfo();
+        if (!cert || cert.Usage !== "SsoClient") {
+            return null;
+        }
+        const ssoHostname = window.location.hostname.replace(/^[^.]+\./, "");
+        return `${window.location.protocol}//${ssoHostname}/clusters`;
+    });
+
     twoFactorSessionExpiration: KnockoutComputed<moment.Moment>;
 
     licenseClass = license.licenseCssClass;

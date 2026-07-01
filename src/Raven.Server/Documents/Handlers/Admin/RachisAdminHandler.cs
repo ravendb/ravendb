@@ -470,7 +470,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                                     NotAfter = certificate.NotAfter,
                                     NotBefore = certificate.NotBefore,
                                     Name = "Server Certificate for " + nodeUrl,
-                                    SecurityClearance = SecurityClearance.ClusterNode
+                                    SecurityClearance = SecurityClearance.ClusterNode,
+                                    Usage = CertificateUsage.RavenServer
                                 };
 
                                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certificate.Thumbprint, certificateDefinition,

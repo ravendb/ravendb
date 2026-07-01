@@ -296,7 +296,9 @@ export default function FeatureAvailabilitySummaryWrapper({
                             <div className="hstack flex-wrap gap-1">
                                 <h4 className="m-0">Licensing</h4>
                             </div>
-                            <small className="description">See which plans offer this and more exciting features</small>
+                            <small className="description">
+                                See which plans include this feature and other exciting features
+                            </small>
                         </div>
                     </button>
                 </h2>
@@ -324,7 +326,7 @@ function FeatureAvailabilitySummaryModal({
                         <>
                             <br />
                             <div>
-                                If you are developing you can test this and many more features using free{" "}
+                                If you are developing, you can test this and many more features with a free{" "}
                                 <a href="https://ravendb.net/license/request/dev" className="text-developer">
                                     Developer license <Icon icon="newtab" margin="m-0" />
                                 </a>

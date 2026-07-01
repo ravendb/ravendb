@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -96,10 +98,7 @@ public class RavenDB_24984 : RavenTestBase
         agent.OutputSchema = schemaJson;
         await store.AI.CreateAgentAsync(agent);
 
-        var chat = store.AI.Conversation(
-            agent.Identifier,
-            "chats/",
-            creationOptions: null);
+        var chat = store.AI.Conversation(agent.Identifier, "chats/", creationOptions: null, debug: true);
 
         int lastNumber = 1;
         chat.Handle<object>("MyTool", _ => lastNumber++.ToString());
@@ -114,7 +113,11 @@ public class RavenDB_24984 : RavenTestBase
         var lastToolResult = lastNumber - 1;
         Assert.False(string.IsNullOrEmpty(result.Answer.Answer),
             "Model must produce some final answer after tool-iteration cap is reached");
-        Assert.Equal(maxModelIterationsPerCall, lastToolResult);
+
+        Assert.True(maxModelIterationsPerCall == lastToolResult,
+            $"Expected the tool to be called exactly {maxModelIterationsPerCall} times (the iteration cap), " +
+            $"but it was called {lastToolResult} times.{Environment.NewLine}" +
+            BuildConversationDump(store, chat.Id));
 
         using (var session = store.OpenSession())
         {
@@ -122,5 +125,31 @@ public class RavenDB_24984 : RavenTestBase
             Assert.True(conversationDoc.TryGet(nameof(ConversationDocument.RemainingToolIterations), out int remainingToolIterations));
             Assert.Equal(maxModelIterationsPerCall, remainingToolIterations); // should be reset after successful completion
         }
+    }
+
+    private static string BuildConversationDump(IDocumentStore store, string conversationId)
+    {
+        using var session = store.OpenSession();
+        var sb = new StringBuilder();
+
+        sb.AppendLine("================ AI CONVERSATION DUMP (RavenDB-25299) ================");
+        sb.AppendLine($"Conversation id: {conversationId}");
+
+        var conversationDoc = session.Load<BlittableJsonReaderObject>(conversationId);
+        sb.AppendLine("---------------- Conversation document ----------------");
+        sb.AppendLine(conversationDoc?.ToString() ?? "<null>");
+
+        var prefix = $"{conversationId}/{AiDebugTrace.TraceSegment}/";
+        var traces = session.Advanced.LoadStartingWith<BlittableJsonReaderObject>(prefix, pageSize: 1024);
+
+        sb.AppendLine($"---------------- Debug traces: {traces.Length} model iteration(s) under '{prefix}' ----------------");
+        for (var i = 0; i < traces.Length; i++)
+        {
+            sb.AppendLine($"==== Trace #{i + 1} of {traces.Length} ====");
+            sb.AppendLine(traces[i]?.ToString() ?? "<null>");
+        }
+
+        sb.AppendLine("================ END AI CONVERSATION DUMP ================");
+        return sb.ToString();
     }
 }

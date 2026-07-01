@@ -26,23 +26,47 @@ public partial class Hnsw
         return Functions.CosineDistance(aSingles, bSingles);
     }
 
+    /// <summary>
+    /// Distance kernel for the <c>SinglesWithL2Norm</c> on-disk layout: both operands
+    /// are pre-normalized unit vectors with the original L2 norm stored in the trailing
+    /// <see cref="MagnitudeSizeInBytes"/> bytes of the buffer. For unit-norm inputs
+    /// <c>cosDistance(a,b) = 1 - a·b</c>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static float CosineDistanceSinglesNormalized(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
+    {
+        Debug.Assert(a.Length == b.Length, "a.Length == b.Length");
+
+        // Degenerate inputs: both zero-norm -> NaN (undefined direction on both sides);
+        // exactly one zero-norm -> similarity 0 (distance 1).
+        var aNorm = ReadTensorMagnitude(a);
+        var bNorm = ReadTensorMagnitude(b);
+        if (aNorm == 0f && bNorm == 0f)
+            return float.NaN;
+        if (aNorm == 0f || bNorm == 0f)
+            return 1f;
+
+        // Both operands are unit vectors here, so cosine distance collapses to 1 - a·b.
+        var aUnit = ReadTensorVector<float>(a);
+        var bUnit = ReadTensorVector<float>(b);
+        return 1f - Sparrow.Server.Tensors.Functions.DotProduct(aUnit, bUnit);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static float CosineDistanceI8(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         Debug.Assert(a.Length == b.Length, "a.Length == b.Length");
-        var vectorLength = a.Length - sizeof(float);
 
-        var aRef = MemoryMarshal.Cast<byte, sbyte>(a[..vectorLength]);
-        var bRef = MemoryMarshal.Cast<byte, sbyte>(b[..vectorLength]);
-
-        var aMag = Unsafe.ReadUnaligned<float>(ref MemoryMarshal.GetReference(a[vectorLength..]));
-        var bMag = Unsafe.ReadUnaligned<float>(ref MemoryMarshal.GetReference(b[vectorLength..]));
+        var aRef = ReadTensorVector<sbyte>(a);
+        var bRef = ReadTensorVector<sbyte>(b);
+        var aMag = ReadTensorMagnitude(a);
+        var bMag = ReadTensorMagnitude(b);
 
         return Functions.CosineDistance(aRef, aMag, bRef, bMag);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static float HammingDistance(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
+    internal static float HammingDistance(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         return Functions.HammingBitDistance(a, b);
     }

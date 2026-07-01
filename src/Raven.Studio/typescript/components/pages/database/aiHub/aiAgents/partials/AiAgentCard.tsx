@@ -13,6 +13,8 @@ import Button from "react-bootstrap/Button";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import Badge from "react-bootstrap/Badge";
 import classNames from "classnames";
+import { useViewSheet } from "components/common/splitView/ViewSheet";
+import AiAgentGenerateCodeViewSheet from "components/pages/database/aiHub/aiAgents/partials/AiAgentGenerateCodeViewSheet";
 
 interface AiAgentCardProps {
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
@@ -37,6 +39,8 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
         (isDisabled: boolean) => aiAgentService.saveAiAgent(databaseName, { ...config, Disabled: isDisabled }),
         { onSuccess: reloadAiAgents }
     );
+
+    const codeViewSheet = useViewSheet();
 
     const handleDelete = async () => {
         const isConfirmed = await confirm({
@@ -102,16 +106,28 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
                     </a>
                 )}
                 {hasDatabaseAdminAccess && (
-                    <Dropdown autoClose="outside">
+                    <Dropdown>
                         <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
                             <Icon icon="more" margin="m-0" />
                         </Dropdown.Toggle>
                         <Dropdown.Menu>
+                            <Dropdown.Item
+                                onClick={() => {
+                                    codeViewSheet.open({
+                                        component: <AiAgentGenerateCodeViewSheet agentId={config.Identifier} />,
+                                    });
+                                }}
+                            >
+                                <Icon icon="magic-wand" />
+                                Generate client code
+                            </Dropdown.Item>
                             <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier)}>
-                                <Icon icon="edit" /> Edit
+                                <Icon icon="edit" />
+                                Edit
                             </Dropdown.Item>
                             <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier, true)}>
-                                <Icon icon="copy" /> Clone
+                                <Icon icon="copy" />
+                                Clone
                             </Dropdown.Item>
                             <Dropdown.Item
                                 onClick={() => asyncToggleAiAgent.execute(!config.Disabled)}

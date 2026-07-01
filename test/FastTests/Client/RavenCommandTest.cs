@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -75,9 +78,12 @@ namespace FastTests.Client
                 "AddPrefixedShardingSettingCommand", "DeletePrefixedShardingSettingCommand", "UpdatePrefixedShardingSettingCommand", "RevertRevisionsByIdCommand",
                 "DeleteRevisionsCommand", "ConfigureRevisionsBinCleanerCommand",
                 "GetCollectionRevisionsStatisticsCommand", "AddGenAiCommand","UpdateGenAiCommand", "AddEmbeddingsGenerationCommand",
-                "AddOrUpdateAiAgentOperationCommand","DeleteAiAgentOperationCommand","RunConversationOperationCommand","GetAiAgentOperationCommand",
+                "AddOrUpdateAiAgentOperationCommand","DeleteAiAgentOperationCommand","RunConversationOperationCommand","GetAiAgentOperationCommand","GetConversationMessagesCommand",
                 "ConfigureAttachmentsRemoteCommand", "GetRemoteAttachmentsConfigurationCommand", "DeleteAttachmentsCommand",
-                "ConfigureSchemaValidationCommand", "GetSchemaValidationCommand", "StartSchemaValidationCommand"
+                "ConfigureSchemaValidationCommand", "GetSchemaValidationCommand", "StartSchemaValidationCommand",
+                "AddCdcSinkCommand", "UpdateCdcSinkCommand",
+                "GetCdcSinkSchemaCommand", "TestCdcSinkMappingCommand",
+                "GetServerWideConnectionStringsCommand", "PutServerWideConnectionStringCommand", "RemoveServerWideConnectionStringCommand",
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
@@ -162,7 +168,10 @@ namespace FastTests.Client
                 "PutServerWideExternalReplicationCommand",
                 "GetServerWideExternalReplicationCommand",
                 "GetServerWideExternalReplicationsCommand",
-                "GetServerWideOperationStateCommand"
+                "GetServerWideOperationStateCommand",
+                "GetServerWideConnectionStringsCommand",
+                "PutServerWideConnectionStringCommand",
+                "RemoveServerWideConnectionStringCommand"
             };
 
             var commandBaseType = typeof(RavenCommand<>);
@@ -211,8 +220,9 @@ namespace FastTests.Client
                 "GetServerWideExternalReplicationsCommand",
                 "GetServerWideOperationStateCommand",
                 "PutServerWideStudioConfigurationCommand",
-                "PutServerWideSorterCommand"
-
+                "PutServerWideSorterCommand",
+                "PutServerWideConnectionStringCommand",
+                "RemoveServerWideConnectionStringCommand"
             };
 
             var clusterVersionList = ClusterCommandsVersionManager.ClusterCommandsVersions
@@ -234,6 +244,72 @@ namespace FastTests.Client
                 $" All server-wide commands (including Delete/Get) must be added to this list to ensure proper handling and visibility." +
                 $"{Environment.NewLine}Please update the `expected` list accordingly.");
 }
-    }
 
+        [RavenFact(RavenTestCategory.Configuration)]
+        public void AllConnectionStringTypesShouldBeHandledInServerWideConnectionStrings()
+        {
+            var connectionStringTypes = Enum.GetValues<ConnectionStringType>()
+                .Where(t => t != ConnectionStringType.None)
+                .ToList();
+
+            // every type must have a key in ServerWideConfigurationKey
+            foreach (var type in connectionStringTypes)
+            {
+                var key = ClusterStateMachine.ServerWideConfigurationKey.GetConnectionStringKeyByType(type);
+                Assert.False(string.IsNullOrEmpty(key),
+                    $"{nameof(ClusterStateMachine.ServerWideConfigurationKey)}.{nameof(ClusterStateMachine.ServerWideConfigurationKey.GetConnectionStringKeyByType)} " +
+                    $"does not handle {nameof(ConnectionStringType)}.{type}");
+            }
+
+            // AllConnectionStringKeys must contain all types
+            Assert.Equal(connectionStringTypes.Count, ClusterStateMachine.ServerWideConfigurationKey.AllConnectionStringKeys.Length);
+
+            // every type must have a dictionary property mapping in PutServerWideConnectionStringCommand
+            foreach (var type in connectionStringTypes)
+            {
+                var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(type);
+                Assert.False(string.IsNullOrEmpty(propertyName),
+                    $"{nameof(PutServerWideConnectionStringCommand)}.{nameof(PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName)} " +
+                    $"does not handle {nameof(ConnectionStringType)}.{type}");
+
+                // the property must exist on DatabaseRecord
+                var field = typeof(DatabaseRecord).GetField(propertyName);
+                Assert.True(field != null,
+                    $"{nameof(DatabaseRecord)} does not have a field named '{propertyName}' " +
+                    $"for {nameof(ConnectionStringType)}.{type}");
+            }
+
+            // every connection string dictionary on DatabaseRecord must be accounted for
+            // if a new *ConnectionStrings field is added to DatabaseRecord, this test will fail
+            // reminding you to also handle it in DatabaseSource.GetDatabaseRecordAsync and RestoreSnapshotTask.FilterOutServerWideConnectionStrings
+            var expectedConnectionStringFields = new HashSet<string>
+            {
+                nameof(DatabaseRecord.RavenConnectionStrings),
+                nameof(DatabaseRecord.SqlConnectionStrings),
+                nameof(DatabaseRecord.OlapConnectionStrings),
+                nameof(DatabaseRecord.ElasticSearchConnectionStrings),
+                nameof(DatabaseRecord.QueueConnectionStrings),
+                nameof(DatabaseRecord.SnowflakeConnectionStrings),
+                nameof(DatabaseRecord.AiConnectionStrings)
+            };
+
+            var actualConnectionStringFields = typeof(DatabaseRecord)
+                .GetFields()
+                .Where(f => f.Name.Contains("ConnectionStrings"))
+                .Select(f => f.Name)
+                .ToHashSet();
+
+            var missingFromExpected = actualConnectionStringFields.Except(expectedConnectionStringFields).ToList();
+            var extraInExpected = expectedConnectionStringFields.Except(actualConnectionStringFields).ToList();
+
+            Assert.True(missingFromExpected.Count == 0,
+                $"New connection string fields found on {nameof(DatabaseRecord)} that are not handled: {string.Join(", ", missingFromExpected)}.{Environment.NewLine}" +
+                $"Please update this test's expected list AND add FilterOutServerWideConnectionStrings calls in:{Environment.NewLine}" +
+                $"  - DatabaseSource.GetDatabaseRecordAsync (smuggler export){Environment.NewLine}" +
+                $"  - RestoreSnapshotTask.FilterOutServerWideConnectionStrings (snapshot restore)");
+
+            Assert.True(extraInExpected.Count == 0,
+                $"Connection string fields listed in test but no longer on {nameof(DatabaseRecord)}: {string.Join(", ", extraInExpected)}. Please update this test.");
+        }
+    }
 }

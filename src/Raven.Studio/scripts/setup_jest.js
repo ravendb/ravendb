@@ -107,6 +107,20 @@ if (!window.ResizeObserver) {
   window.ResizeObserver = ROP.ResizeObserver;
 }
 
+if (!window.IntersectionObserver) {
+  window.IntersectionObserver = class {
+    constructor(callback) {
+      this.callback = callback;
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  };
+}
+
 window.HTMLElement.prototype.getBoundingClientRect = () => ({
     width: 500,
     height: 500,

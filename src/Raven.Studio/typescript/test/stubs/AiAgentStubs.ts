@@ -1,3 +1,4 @@
+import { AiAgentGenerateCodeResultDto } from "commands/database/aiAgents/generateCodeAiAgentCommand";
 import document from "models/database/documents/document";
 
 export class AiAgentStubs {
@@ -372,5 +373,12 @@ export class AiAgentStubs {
                 "@last-modified": "2025-08-20T09:27:14.9226011Z",
             },
         });
+    }
+
+    static getGeneratedCode(): AiAgentGenerateCodeResultDto {
+        return {
+            GeneratedCode:
+                'using System;\r\nusing System.Collections.Generic;\r\nusing Raven.Client.Documents.Operations.AI.Agents;\r\n\r\npublic class GeneratedAgentTest\r\n{\r\n    public void Run()\r\n    {\r\n        var agentCSharp = new AiAgentConfiguration\r\n        {\r\n            Identifier = "sub-agent-1",\r\n            Name = "sub-agent-1",\r\n            ConnectionStringName = "openai-gpt5.4-mini",\r\n            SystemPrompt = "Please provide comprehensive and accurate answers to any questions posed.",\r\n            SampleObject = "{\n    \\"Answer\\": \\"Answer\\"\n}",\r\n            ChatTrimming = new AiAgentChatTrimmingConfiguration\r\n            {\r\n                Tokens = new AiAgentSummarizationByTokens\r\n                {\r\n                    SummarizationTaskBeginningPrompt = "Summarize the following AI conversation into a concise, linear narrative that retains all critical information. Ensure the summary:\r\n- Includes key identifiers, usernames, timestamps, and any reference codes\r\n- Preserves the original intent of both the user and the assistant in each exchange\r\n- Reflects decisions made, suggestions given, preferences expressed, and any changes in direction\r\n- Captures tone when relevant (e.g., sarcastic, formal, humorous, concerned)\r\n- Omits general filler or small talk unless it contributes to context or tone Format the output in a structured manner (such as bullet points or labeled sections) suitable for fitting into a limited context window. Do not discard any information that contributes to understanding the conversation\'s flow and outcome.\r\n- If the transcript ends with tool output, your summary must explicitly include the key results from those tool calls - extract the key facts (IDs, names, prices, dates, etc.) and include them in a Results Cache block inside your summary, so they are preserved for the next turns and the conversation can continue without re-running the same tools.",\r\n                    SummarizationTaskEndPrompt = "Reminder:\r\n- Go over the entire previous conversation and summarize that according to the original instructions.\r\n- Make sure the final summary message contains the essential tool results already obtained, so they are available for future turns.",\r\n                    ResultPrefix = "Summary of previous conversation: "\r\n                }\r\n            }\r\n        };\r\n    }\r\n}',
+        };
     }
 }

@@ -55,7 +55,7 @@ import {
 } from "./TasksErrorsCells";
 import { DeleteErrorsModal } from "./DeleteModals";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
+import { AccessPopover } from "components/common/AccessPopover";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 interface EtlTypeRichPanelItemProps {
@@ -307,12 +307,12 @@ export function TaskPanel({ etlName, etlType, transformations, etlStats, onRefre
                         </a>
                     </RichPanelInfo>
                     <RichPanelActions>
-                        <DatabaseAccessPopover accessRequired="DatabaseReadWrite">
+                        <AccessPopover accessRequired="DatabaseReadWrite">
                             <Button variant="danger" disabled={!hasDatabaseWriteAccess} onClick={toggleDeleteModal}>
                                 <Icon icon="trash" />
                                 Delete errors
                             </Button>
-                        </DatabaseAccessPopover>
+                        </AccessPopover>
                     </RichPanelActions>
                 </RichPanelHeader>
                 <RichPanelDetails>
