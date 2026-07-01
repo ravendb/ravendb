@@ -81,7 +81,7 @@ public sealed unsafe class CompactKey : IDisposable
         MaxLength = 0;
 
         _storage = GetPoolFrom(SharedBytesPools).Rent(2 * Constants.CompactTree.MaximumKeySize);
-        _keyMappingCache = GetPoolFrom(SharedKeyMappingPools).Rent(2 * MappingTableMask);
+        _keyMappingCache = GetPoolFrom(SharedKeyMappingPools).Rent(2 * MappingTableSize);
     }
 
     public void Reset()
