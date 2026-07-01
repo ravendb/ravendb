@@ -97,6 +97,59 @@ namespace Raven.Analyzers.Queries
 
                 current = outerInvocation;
             }
+
+            // The method-chain walk above only sees the fluent form. When the query is written in C#
+            // query-expression syntax (from o in session.Query<T, TIndex>() where o.X orderby o.Y ...),
+            // the Query() call is the source of a from-clause rather than the receiver of a .Where/.OrderBy
+            // invocation, so handle that shape here too.
+            AnalyzeQueryExpressionClauses(queryInvocation, fieldSet.Fields, indexClass.Name, reportDiagnostic);
+        }
+
+        /// <summary>
+        /// Handles the query-expression form of RVN007: when the Query() call is the source expression of
+        /// a <c>from</c> clause, checks the <c>where</c>/<c>orderby</c> clauses of that query's body
+        /// against the index field set, using the from-clause range variable as the lambda parameter.
+        /// </summary>
+        private static void AnalyzeQueryExpressionClauses(
+            InvocationExpressionSyntax queryInvocation,
+            ImmutableHashSet<string> indexedFields,
+            string indexClassName,
+            Action<Diagnostic> reportDiagnostic)
+        {
+            if (queryInvocation.Parent is not FromClauseSyntax fromClause
+                || fromClause.Expression != queryInvocation)
+                return;
+
+            // Only the first from-clause (whose parent is the QueryExpression itself) introduces the
+            // source range variable that binds to the index. A secondary `from` (fan-out) sits in the
+            // query body and is intentionally not treated as the index source.
+            if (fromClause.Parent is not QueryExpressionSyntax queryExpr)
+                return;
+
+            string paramName = fromClause.Identifier.ValueText;
+
+            // Only the clauses of the first query body operate on the source document / index. A
+            // continuation (select … into g …) rebinds to the projected shape, so its clauses live in
+            // queryExpr.Body.Continuation and are intentionally skipped — mirrors the method-chain path
+            // stopping at Select/ProjectInto.
+            foreach (QueryClauseSyntax clause in queryExpr.Body.Clauses)
+            {
+                switch (clause)
+                {
+                    case WhereClauseSyntax whereClause:
+                        CheckFieldReferences(whereClause.Condition, paramName, indexedFields,
+                            KnownTypes.WhereMethodName, indexClassName, reportDiagnostic);
+                        break;
+
+                    case OrderByClauseSyntax orderByClause:
+                        foreach (OrderingSyntax ordering in orderByClause.Orderings)
+                        {
+                            CheckFieldReferences(ordering.Expression, paramName, indexedFields,
+                                KnownTypes.OrderByMethodName, indexClassName, reportDiagnostic);
+                        }
+                        break;
+                }
+            }
         }
 
         private static bool IsFilterOrOrderMethod(string name) =>
@@ -137,6 +190,21 @@ namespace Raven.Analyzers.Queries
             if (body == null)
                 return;
 
+            CheckFieldReferences(body, paramName, indexedFields, methodName, indexClassName, reportDiagnostic);
+        }
+
+        // Reports RVN007 for each first-hop member access off <paramref name="paramName"/> within
+        // <paramref name="body"/> whose field is absent from the index field set. Shared by the
+        // method-chain path (Where/OrderBy/Search lambda bodies) and the query-expression path (where /
+        // orderby clause expressions) so both forms of a query enforce the rule identically.
+        private static void CheckFieldReferences(
+            ExpressionSyntax body,
+            string paramName,
+            ImmutableHashSet<string> indexedFields,
+            string methodName,
+            string indexClassName,
+            Action<Diagnostic> reportDiagnostic)
+        {
             // A field can be referenced several times in the same lambda (e.g. o.Price > 0 ||
             // o.Price < 0); report it only once so we don't emit duplicate diagnostics for one
             // logical issue.

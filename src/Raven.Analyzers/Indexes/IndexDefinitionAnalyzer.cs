@@ -45,9 +45,20 @@ namespace Raven.Analyzers.Indexes
             if (!SyntaxHelpers.IsIndexCreationTask(classSymbol))
                 return;
 
-            // RVN001 — Map/Reduce assigned in a regular method (not a constructor)
+            // RVN001 — Map/Reduce assigned in a regular method (not a constructor). This is independent
+            // of RVN004: it fires even when the method is reachable from the constructor (ctor → Init() →
+            // Map = …), because the Map should be assigned directly in the constructor body; RVN004
+            // separately confirms the Map exists at all.
             foreach (MethodDeclarationSyntax method in classDecl.Members.OfType<MethodDeclarationSyntax>())
                 CheckForMapReduceAssignmentsInMethod(context, method);
+
+            // An abstract index base is never instantiated or deployed on its own — its concrete
+            // subclasses supply the Map/AddMap. Skip the "missing"/"single" definition checks
+            // (RVN004/RVN005/RVN006) for it; otherwise an abstract base whose subclasses define the map
+            // is falsely flagged as map-less. RVN001 above still applies, since assigning Map outside a
+            // constructor is a problem regardless of whether the class is abstract.
+            if (classSymbol.IsAbstract)
+                return;
 
             bool isMultiMap = SyntaxHelpers.IsMultiMapIndexCreationTask(classSymbol);
 

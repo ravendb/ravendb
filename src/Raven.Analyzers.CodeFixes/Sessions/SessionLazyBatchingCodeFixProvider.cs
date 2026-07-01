@@ -240,8 +240,13 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     return document; // bail rather than apply a partial fix
 
                 VariableDeclaratorSyntax declarator = stmt.Declaration.Variables[0];
+
+                // Text preserves the verbatim '@' so the extraction below re-declares the exact original
+                // identifier (e.g. '@int'). The lazy name, however, is derived from ValueText (the '@'-less
+                // semantic name) so a verbatim identifier like '@int' yields the valid 'lazyInt' rather
+                // than the uncompilable 'lazy@int'.
                 string originalName = declarator.Identifier.Text;
-                string lazyName = GenerateLazyName(originalName, reservedNames);
+                string lazyName = GenerateLazyName(declarator.Identifier.ValueText, reservedNames);
 
                 ExpressionSyntax? newInitializer;
                 if (isLoad)
