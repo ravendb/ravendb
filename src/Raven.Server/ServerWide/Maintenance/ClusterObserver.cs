@@ -176,7 +176,7 @@ namespace Raven.Server.ServerWide.Maintenance
             List<DestinationMigrationConfirmCommand> confirmCommands = null;
             List<string> databases;
 
-            var writeUsageSnapshot = new List<WriteUsageDatabaseSnapshot>();
+            var writeUsageSnapshots = new List<WriteUsageDatabaseSnapshot>();
 
             using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -255,14 +255,11 @@ namespace Raven.Server.ServerWide.Maintenance
                                 if (memberReport == null)
                                     continue;
 
-                                // The DatabaseChangeVector may contain special, non-node entries such as RAFT (cluster
-                                // transactions) and MOVE (resharding). These are not real node tags and must not be counted
-                                // as write-usage nodes, so strip them before merging into the snapshot's change vector.
-                                memberChangeVectors.Add(ChangeVectorUtils.StripSpecialTags(memberReport.DatabaseChangeVector));
+                                memberChangeVectors.Add(ChangeVector.StripMoveTag(memberReport.DatabaseChangeVector, context).AsString());
                             }
 
                             var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
-                            writeUsageSnapshot.Add(new WriteUsageDatabaseSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
+                            writeUsageSnapshots.Add(new WriteUsageDatabaseSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
 
                             try
                             {
@@ -331,7 +328,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            _latestWriteUsageSnapshot = new WriteUsageSnapshot(writeUsageSnapshot);
+            _latestWriteUsageSnapshot = new WriteUsageSnapshot(writeUsageSnapshots);
 
             if (cleanupIndexes)
             {

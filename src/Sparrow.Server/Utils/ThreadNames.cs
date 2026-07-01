@@ -170,14 +170,6 @@ public static class ThreadNames
         };
     }
 
-    public static ThreadInfo ForWriteUsageReporter(string threadName, long term)
-    {
-        return new ThreadInfo(threadName)
-        {
-            Details = new ThreadDetails.WriteUsageReporter(term)
-        };
-    }
-
     public static ThreadInfo ForUpdateTopologyChangeNotificationTask(string threadName)
     {
         return new ThreadInfo(threadName)
@@ -594,21 +586,6 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return "Cluster Maintenance Setup Task";
-            }
-        }
-
-        public sealed class WriteUsageReporter : IThreadDetails
-        {
-            private readonly long _term;
-
-            public WriteUsageReporter(long term)
-            {
-                _term = term;
-            }
-
-            public string GetShortName()
-            {
-                return $"Write-Usage Reporter {_term}";
             }
         }
 

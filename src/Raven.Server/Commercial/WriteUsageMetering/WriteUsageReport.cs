@@ -31,9 +31,9 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         {
             return new DynamicJsonValue
             {
-                ["databaseName"] = DatabaseName,
-                ["topologyId"] = TopologyId,
-                ["changeVector"] = ChangeVector
+                [nameof(DatabaseName)] = DatabaseName,
+                [nameof(TopologyId)] = TopologyId,
+                [nameof(ChangeVector)] = ChangeVector
             };
         }
     }

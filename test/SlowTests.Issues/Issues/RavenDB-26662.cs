@@ -88,11 +88,12 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
-        public void SpecialTags_AreStripped_FromMergedSnapshotChangeVector()
+        public async Task SpecialTags_AreStripped_FromMergedSnapshotChangeVector()
         {
-            // A member's DatabaseChangeVector can carry special, non-node entries: RAFT (cluster transactions),
-            // MOVE (resharding), and (defensively) TRXN/SINK. These are not real node tags and must not be counted
-            // as write-usage nodes, so the snapshot collection must strip them before merging.
+            // A member's DatabaseChangeVector can carry a MOVE (resharding) entry, which is a migration index
+            // rather than a per-write counter; the migrated documents are already counted via their preserved
+            // node-tag entries, so MOVE must be stripped before merging to avoid double-counting. All other
+            // entries - RAFT (cluster transactions), TRXN, SINK, and real node tags - are counted and kept.
             var nodeAId = Guid.NewGuid().ToBase64Unpadded();
             var nodeBId = Guid.NewGuid().ToBase64Unpadded();
             var raftId = Guid.NewGuid().ToBase64Unpadded();
@@ -107,18 +108,26 @@ namespace SlowTests.Issues
                 $"B:9-{nodeBId}, TRXN:4-{trxnId}, SINK:1-{sinkId}",
             };
 
-            // Mirror the snapshot collection in ClusterObserver: strip special tags per member, then merge.
+            using var store = GetDocumentStore();
+            var database = await GetDatabase(store.Database);
+
+            // Mirror the snapshot collection in ClusterObserver: strip the MOVE tag per member, then merge.
             var memberChangeVectors = new List<string>();
-            foreach (var report in memberReports)
-                memberChangeVectors.Add(ChangeVectorUtils.StripSpecialTags(report));
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                foreach (var report in memberReports)
+                    memberChangeVectors.Add(ChangeVector.StripMoveTag(report, context).AsString());
+            }
 
             var merged = ChangeVectorUtils.MergeVectors(memberChangeVectors);
 
-            // The special tags are absent from the final merged change vector that goes into the payload.
-            Assert.DoesNotContain("RAFT", merged);
+            // Only MOVE is stripped from the final merged change vector that goes into the payload.
             Assert.DoesNotContain("MOVE", merged);
-            Assert.DoesNotContain("TRXN", merged);
-            Assert.DoesNotContain("SINK", merged);
+
+            // RAFT, TRXN, and SINK are kept so they are counted as write-usage.
+            Assert.Contains("RAFT", merged);
+            Assert.Contains("TRXN", merged);
+            Assert.Contains("SINK", merged);
 
             // The real node entries (and their database ids) survive the strip+merge.
             Assert.Contains(nodeAId, merged);
@@ -126,8 +135,8 @@ namespace SlowTests.Issues
             Assert.Contains("A:7", merged);
             Assert.Contains("B:9", merged);
 
-            // Exactly the two real node entries remain.
-            Assert.Equal(2, merged.ToChangeVectorList().Count);
+            // Every entry except the single MOVE remains: A, B, RAFT, TRXN, SINK => 5 entries.
+            Assert.Equal(5, merged.ToChangeVectorList().Count);
         }
 
         [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
@@ -445,13 +454,13 @@ namespace SlowTests.Issues
                         .Cast<BlittableJsonReaderObject>()
                         .Single(d =>
                         {
-                            d.TryGet("topologyId", out string id);
+                            d.TryGet("TopologyId", out string id);
                             return id == zeroEtagTopologyId;
                         });
 
                     // Each database entry carries a single merged change vector; the brand-new db has an
                     // empty one.
-                    zeroEtagEntry.TryGet("changeVector", out string zeroEtagChangeVector);
+                    zeroEtagEntry.TryGet("ChangeVector", out string zeroEtagChangeVector);
                     Assert.True(string.IsNullOrEmpty(zeroEtagChangeVector),
                         $"Brand-new database should report an empty change vector, got '{zeroEtagChangeVector}'.");
                 }
