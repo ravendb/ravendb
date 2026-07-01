@@ -114,8 +114,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
-        if (e is AggregateException ae &&
-            ae.InnerExceptions.OfType<RateLimitException>().FirstOrDefault() is { } rateLimitException)
+        var rateLimitException = e as RateLimitException ??
+                                 (e as AggregateException)?.Flatten().InnerExceptions.OfType<RateLimitException>().FirstOrDefault();
+
+        if (rateLimitException != null)
         {
             FallbackTime = rateLimitException.RetryAfter;
             return;
@@ -178,6 +180,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         using (EnterLoadStep(TaskErrorStep.Persistence))
         {
             ApplyUpdateScript(results, scope);
+        }
+
+        if (exceptions?.OfType<RateLimitException>().Any() == true)
+        {
+            LoadErrorStep = TaskErrorStep.ModelInference;
+            _maxConcurrency = 1;
+
+            throw new AggregateException(exceptions).ExtractSingleInnerException();
         }
 
         // Whole attempted failures were handled above by throwing.
@@ -596,22 +606,13 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                         debugOutput = lastPatch.DebugOutput;
                     }
 
-                    // Clone stored document data because UpdateMetadata may dispose the blittable it receives.
-                    // ModifiedDocument is already an owned patch result and can be passed directly.
-                    BlittableJsonReaderObject documentToUpdate = lastPatch?.PatchResult?.ModifiedDocument;
-                    if (documentToUpdate == null && (hashes.Count > 0 || refreshAt.HasValue))
-                        documentToUpdate = document?.Data?.Clone(context);
-
-                    if ((hashes.Count > 0 || refreshAt.HasValue) && documentToUpdate != null)
-                    {
-                        outputDocument = GenAiBatchPatchCommand.UpdateMetadata(
-                            document.Id,
-                            documentToUpdate,
-                            Configuration.Identifier,
-                            hashes,
-                            refreshAt,
-                            context);
-                    }
+                    outputDocument = GenAiBatchPatchCommand.UpdateMetadata(
+                        document?.Id,
+                        lastPatch?.PatchResult?.ModifiedDocument ?? document?.Data,
+                        Configuration.Identifier,
+                        hashes,
+                        refreshAt,
+                        context);
 
                     break;
                 }
