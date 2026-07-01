@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -13,7 +12,6 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Client.Http;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.CdcSink;
@@ -23,6 +21,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Commands;
 using Xunit;
 using Raven.Server.Documents.TasksErrors;
 
@@ -322,35 +321,6 @@ public class RavenDB_26838 : RavenTestBase
 
             Assert.Equal(SnmpType.TimeTicks, SnmpGet(taskLastBatchOid).TypeCode);
         }
-    }
-
-    private class SnmpEntry
-    {
-        public string OID { get; set; }
-        public string Description { get; set; }
-    }
-
-    private class GetSnmpOidsCommand : RavenCommand<object>
-    {
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/monitoring/snmp/oids";
-
-            return new HttpRequestMessage
-            {
-                Method = HttpMethod.Get
-            };
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                ThrowInvalidResponse();
-
-            Result = response;
-        }
-
-        public override bool IsReadRequest => true;
     }
 
     private sealed class TestCdcSinkProcess : CdcSinkProcess
