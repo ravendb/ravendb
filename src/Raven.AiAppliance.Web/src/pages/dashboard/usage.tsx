@@ -103,7 +103,7 @@ export function DashboardUsage() {
                 <CardHeader>
                     <CardTitle>Token usage per app</CardTitle>
                     <CardDescription>
-                        Tracked for this period.
+                        All-time totals.
                         {refreshedAt !== undefined && ` Refreshed ${formatRelativeTime(refreshedAt)}.`}
                     </CardDescription>
                     <CardAction>
