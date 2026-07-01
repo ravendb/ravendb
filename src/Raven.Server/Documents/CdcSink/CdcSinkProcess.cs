@@ -471,13 +471,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
         finally
         {
-            // Flush per-document item errors accumulated during the batch to dedicated storage.
-            // Done here on the process thread - never from inside the merged command - so the
-            // enqueue-sync TaskErrorsStorage API is safe to use. Flushing in finally ensures the
-            // errors are persisted even when the batch threw (e.g. the error-ratio threshold was
-            // exceeded) - those are exactly the errors the user needs to see, and the next
-            // NewBatch() would otherwise clear them. The flush is guarded so a failure here never
-            // masks the original batch exception.
+            // Flush the batch's buffered item errors from the process thread (safe for the enqueue-sync
+            // API), in finally so a failed batch's errors still persist before the next NewBatch() clears
+            // them; guarded so a flush failure can't mask the original batch exception.
             try
             {
                 if (Statistics.InMemoryItemErrorsCount > 0)
