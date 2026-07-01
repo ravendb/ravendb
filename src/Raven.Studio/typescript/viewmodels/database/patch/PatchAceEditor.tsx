@@ -6,6 +6,7 @@ import { scripts, methodGroups } from "./patchSamplesData";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import ReactAce from "react-ace";
+import { AnimatePresence, motion } from "motion/react";
 
 export interface PatchAceEditorProps {
     query: KnockoutObservable<string>;
@@ -24,7 +25,6 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
     const [value, setValue] = useState(() => query());
     const [showSamples, setShowSamples] = useState(false);
     const aceRef = useRef<ReactAce>(null);
-    const wrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const subscription = query.subscribe((newValue) => {
@@ -32,17 +32,6 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
         });
         return () => subscription.dispose();
     }, [query]);
-
-    useEffect(() => {
-        if (!showSamples) return;
-        const handleOutsideClick = (e: MouseEvent) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-                setShowSamples(false);
-            }
-        };
-        document.addEventListener("mousedown", handleOutsideClick);
-        return () => document.removeEventListener("mousedown", handleOutsideClick);
-    }, [showSamples]);
 
     const handleChange = useCallback(
         (newValue: string) => {
@@ -67,7 +56,7 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
     }, []);
 
     return (
-        <div className="patch-ace-editor-wrapper" ref={wrapperRef}>
+        <div className="patch-ace-editor-wrapper">
             <AceEditor
                 aceRef={aceRef}
                 mode="rql"
@@ -87,16 +76,25 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
                     },
                 ]}
             />
-            {showSamples && (
-                <div className="patch-samples-panel bs5">
-                    <SampleQueriesTabs
-                        scripts={scripts}
-                        methodGroups={methodGroups}
-                        onSelect={handleLoadScript}
-                        onClose={() => setShowSamples(false)}
-                    />
-                </div>
-            )}
+            <AnimatePresence>
+                {showSamples && (
+                    <motion.div
+                        className="patch-samples-panel bs5"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{ overflow: "hidden" }}
+                    >
+                        <SampleQueriesTabs
+                            scripts={scripts}
+                            methodGroups={methodGroups}
+                            onSelect={handleLoadScript}
+                            onClose={() => setShowSamples(false)}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {!value && (
                 <div className="patch-ace-placeholder">
                     <span className="patch-ace-placeholder__text">

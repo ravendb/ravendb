@@ -2,7 +2,9 @@
 
 .show-test {
     .backdrop {
-        display: block !important;
+        // Keep the backdrop hidden in patch test mode so it does not dim the editor
+        // and the samples panel that can stay open below it.
+        display: none !important;
     }
 }
 

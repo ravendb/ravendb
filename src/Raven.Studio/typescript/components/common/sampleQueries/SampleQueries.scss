@@ -140,11 +140,7 @@
 }
 
 .patch-samples-panel {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 102%;
-    z-index: 1050;
+    margin-top: sizes.sizes.$gutter-xxxs;
     border-radius: sizes.$border-radius;
 
     .tab-content {
