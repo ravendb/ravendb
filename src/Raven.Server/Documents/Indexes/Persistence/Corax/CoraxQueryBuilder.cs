@@ -12,7 +12,6 @@ using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-using NetTopologySuite.Utilities;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
@@ -27,7 +26,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Spatial4n.Shapes;
-using Analyzer = Corax.Analyzers.Analyzer;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxConstants = Corax.Constants;
@@ -1240,9 +1238,8 @@ public static class CoraxQueryBuilder
             // We need to retrieve the analyzer for the dynamic field since the field metadata is created dynamically.
             if (original.IsDynamic)
                 result = fieldMetadata.ChangeAnalyzer(original.Mode, builderParameters.IndexFieldsMapping.SearchAnalyzer(original.FieldName.ToString()));
-
             
-            if (original.Analyzer is LuceneAnalyzerAdapter laa)
+            if (result.Analyzer is LuceneAnalyzerAdapter laa)
             {
                 //logic from LuceneQueryBuilder
                 var luceneAnalyzer = laa.Analyzer switch
@@ -1257,9 +1254,9 @@ public static class CoraxQueryBuilder
                     // in wildcard queries
                     _ => null
                 };
-            
-                if (luceneAnalyzer != null) 
-                    result = original.ChangeAnalyzer(FieldIndexingMode.Search, luceneAnalyzer);
+
+                if (luceneAnalyzer != null)
+                    result = result.ChangeAnalyzer(FieldIndexingMode.Search, luceneAnalyzer);
             }
             
             // Currently, we do not have any custom Corax analyzers, so we don't need to address them.
