@@ -5,6 +5,7 @@ function makeTask(overrides: Partial<TaskWithErrors> = {}): TaskWithErrors {
     return {
         etlName: "MyTask",
         etlType: "Raven",
+        category: "Etl",
         transformations: [
             {
                 transformationName: "Script1",
