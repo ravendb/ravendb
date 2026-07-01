@@ -31,6 +31,13 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract long Version { get; }
 
+        private long? _compoundFieldNumericXorMask;
+
+        // RavenDB-26831: order-preserving XOR mask for raw signed-long compound-field members. long.MinValue
+        // flips the sign bit so signed longs sort in unsigned byte order (negatives below positives); 0 keeps
+        // the legacy (non-order-preserving) encoding for indexes built before the fix. 
+        public long CompoundFieldNumericXorMask => _compoundFieldNumericXorMask ??= Version >= IndexVersion.OrderPreservingCompoundNumericEncoding ? long.MinValue : 0L;
+
         public HashSet<string> Collections { get; protected set; }
 
         public IndexLockMode LockMode { get; set; }
@@ -200,11 +207,24 @@ namespace Raven.Server.Documents.Indexes
             private const long LowerCasedReferences_62 = 62_005; // RavenDB-23100
             public const long CoraxPagingBasedOnEntriesId_62 = 62_006; // RavenDB-23100
 
+            // RavenDB-26831: compound-field numeric (long) members were encoded as raw two's-complement big-endian,
+            // which is not order-preserving for negative values (negatives sort above positives). Indexes at this
+            // version or higher encode them order-preserving (sign-bit flipped), so compound sorts/ranges over a
+            // numeric field with negative values are correct. Older indexes keep the legacy encoding (and behavior);
+            // resetting/rebuilding an index upgrades it to the fixed encoding.
+            public const long OrderPreservingCompoundNumericEncoding = 72_001; // RavenDB-26831
+
+            // RavenDB-25281: Corax rejects a compound field whose first source field is tokenized/non-keyword
+            // (it cannot produce the order-preserving prefix a compound field needs). Gated by version so indexes
+            // created before this validation existed keep working after an upgrade; only indexes at this version
+            // or higher are validated.
+            public const long CoraxCompoundFieldFirstFieldValidation = 72_002; // RavenDB-25281
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxPagingBasedOnEntriesId_62;
-
+            public const long CurrentVersion = CoraxCompoundFieldFirstFieldValidation;
+            
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
                 if (indexVersion >= Base62Version)
