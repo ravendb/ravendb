@@ -17,7 +17,12 @@ export function AppWebWidgetDefaultCustomize() {
 
     const saveMutation = useWebWidgetStyleSave({
         save: (css) => api.services.iframe.updateDefaultCustomization(slug, { css }),
-        invalidateKey: api.queries.webWidget.defaultCustomization(slug).queryKey,
+        invalidateKeys: [
+            api.queries.webWidget.defaultCustomization(slug).queryKey,
+            // Each channel's customization embeds this default as its fallback (defaultCss), so the
+            // saved default must also refresh their cached customizations, not just this page's query.
+            api.queries.webWidget.customizationsKey(slug),
+        ],
         successMessage: "Default styles saved",
     });
 
