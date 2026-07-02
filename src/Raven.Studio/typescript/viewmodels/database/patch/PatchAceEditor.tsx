@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "motion/react";
 export interface PatchAceEditorProps {
     query: KnockoutObservable<string>;
     languageService: LanguageService;
+    validationErrorMessage?: string;
 }
 
 function SamplesToggleButton({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
@@ -21,7 +22,7 @@ function SamplesToggleButton({ onClick }: { onClick: (e: React.MouseEvent) => vo
     );
 }
 
-export default function PatchAceEditor({ query, languageService }: PatchAceEditorProps) {
+export default function PatchAceEditor({ query, languageService, validationErrorMessage }: PatchAceEditorProps) {
     const [value, setValue] = useState(() => query());
     const [showSamples, setShowSamples] = useState(false);
     const aceRef = useRef<ReactAce>(null);
@@ -32,6 +33,18 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
         });
         return () => subscription.dispose();
     }, [query]);
+
+    const debouncedSyntaxCheck = useRef(
+        _.debounce((editor: AceAjax.Editor) => {
+            languageService.syntaxCheck(editor);
+        }, 500)
+    );
+
+    useEffect(() => {
+        if (aceRef.current?.editor) {
+            debouncedSyntaxCheck.current(aceRef.current.editor);
+        }
+    }, [value]);
 
     const handleChange = useCallback(
         (newValue: string) => {
@@ -62,6 +75,7 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
                 value={value}
                 onChange={handleChange}
                 languageService={languageService}
+                validationErrorMessage={validationErrorMessage}
                 height="300px"
                 minHeight={300}
                 maxHeight={300}
