@@ -930,6 +930,46 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task ServerRangeContainedInLocalRangeShouldKeepEntriesWithinTheirRange()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 10; i++)
+                    tsf.Append(baseline.AddHours(i), 1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // wide local range [baseline+1h, now]
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline.AddHours(1), 1);
+
+                // server range [+2h,+3h] is contained in the local range -> merge CASE 5 splits it
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(2), baseline.AddHours(3));
+
+                Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue(bookId1, out var cache));
+                Assert.True(cache.TryGetValue(nameof(Book), out var ranges));
+
+                // every cached entry must lie within its own range's [From, To]
+                // (previously CASE 5 let the server range absorb out-of-range entries)
+                foreach (var range in ranges)
+                {
+                    foreach (var e in range.Entries)
+                    {
+                        Assert.True(e.Timestamp >= range.From && e.Timestamp <= range.To,
+                            $"entry {e.Timestamp:O} escapes its range [{range.From:O}..{range.To:O}]");
+                    }
+                }
+            }
+        }
+
         private static void AssertNoDuplicateRanges(List<TimeSeriesRangeResult> ranges)
         {
             for (int i = 0; i < ranges.Count; i++)

@@ -286,16 +286,19 @@ namespace Raven.Client.Documents.Session
                         if (A.From <= B.From && B.From <= A.To && A.To <= B.To)
                         {
                             var left = A.CloneRange(A.From, B.From);
+                            left.CachedEntries.RemoveAll(e => e.Timestamp >= B.From);
 
-                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
-                            
-                            if (left.IsLocal)
+                            if (left.IsLocal && left.CachedEntries.Count > 0)
                             {
+                                // keep A's pre-B entries as a local remainder; B absorbs only A's entries inside B
+                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
                                 ranges[i] = left;
                             }
                             else
                             {
+                                // no local remainder to preserve: fold all of A into B
                                 B.From = A.From;
+                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
                                 ranges.RemoveAt(i);
                                 i--;
                             }
@@ -306,39 +309,46 @@ namespace Raven.Client.Documents.Session
                         if (B.From <= A.From && A.From <= B.To && B.To <= A.To)
                         {
                             var right = A.CloneRange(B.To, A.To);
+                            right.CachedEntries.RemoveAll(e => e.Timestamp <= B.To);
 
-                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
-                            
-                            if (right.IsLocal)
+                            if (right.IsLocal && right.CachedEntries.Count > 0)
                             {
+                                // keep A's post-B entries as a local remainder; B absorbs only A's entries inside B
+                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
                                 ranges[i] = right;
                             }
                             else
                             {
+                                // no local remainder to preserve: fold all of A into B
                                 B.To = A.To;
+                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
                                 ranges.RemoveAt(i);
                                 i--;
                             }
                             continue;
                         }
 
-                        // CASE 5: A contains B
+                        // CASE 5: A contains B -> left [A.From, B.From) + B [B.From, B.To] + right (B.To, A.To]
                         if (A.From <= B.From && A.To >= B.To)
                         {
                             var left = A.CloneRange(A.From, B.From);
-                            var right = A.CloneRange(B.To, A.To);
+                            left.CachedEntries.RemoveAll(e => e.Timestamp >= B.From);
 
-                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
+                            var right = A.CloneRange(B.To, A.To);
+                            right.CachedEntries.RemoveAll(e => e.Timestamp <= B.To);
+
+                            // B absorbs only A's entries that fall inside B's range (no duplication with left/right)
+                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
 
                             ranges.RemoveAt(i);
 
-                            if (right.Entries?.Length > 0)
+                            if (right.CachedEntries.Count > 0)
                                 ranges.Insert(i, right);
 
                             ranges.Insert(i, B);
                             inserted = true;
 
-                            if (left.Entries?.Length > 0)
+                            if (left.CachedEntries.Count > 0)
                                 ranges.Insert(i, left);
 
                             continue;
