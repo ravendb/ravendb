@@ -40,25 +40,38 @@ export default function PatchAceEditor({ query, languageService, validationError
         }, 500)
     );
 
-    useEffect(() => {
-        if (aceRef.current?.editor) {
-            debouncedSyntaxCheck.current(aceRef.current.editor);
+    const checkSyntax = useCallback((newValue: string) => {
+        if (!aceRef.current?.editor) {
+            return;
         }
-    }, [value]);
+
+        if (!newValue.trim()) {
+            aceRef.current.editor.getSession().clearAnnotations();
+            return;
+        }
+
+        debouncedSyntaxCheck.current(aceRef.current.editor);
+    }, []);
 
     const handleChange = useCallback(
         (newValue: string) => {
             query(newValue);
+            checkSyntax(newValue);
         },
-        [query]
+        [query, checkSyntax]
     );
 
     const handleLoadScript = useCallback(
         (script: string) => {
             query(script);
+            checkSyntax(script);
         },
-        [query]
+        [query, checkSyntax]
     );
+
+    const handleEditorLoad = useCallback(() => {
+        checkSyntax(query());
+    }, [query, checkSyntax]);
 
     const handleBrowseSamplesClick = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
@@ -74,6 +87,7 @@ export default function PatchAceEditor({ query, languageService, validationError
                 mode="rql"
                 value={value}
                 onChange={handleChange}
+                onLoad={handleEditorLoad}
                 languageService={languageService}
                 validationErrorMessage={validationErrorMessage}
                 height="300px"

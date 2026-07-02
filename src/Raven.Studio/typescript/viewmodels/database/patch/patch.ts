@@ -191,14 +191,19 @@ class patch extends shardViewModelBase {
         this.bindToCurrentInstance("savePatch");
         this.initObservables();
 
-        this.patchAceEditorView = ko.pureComputed(() => ({
-            component: PatchAceEditor.default,
-            props: {
-                query: this.patchDocument().query,
-                languageService: this.languageService,
-                validationErrorMessage: this.patchDocument().query.error(),
-            },
-        }));
+        this.patchAceEditorView = ko.pureComputed(() => {
+            const query = this.patchDocument().query;
+            const isModified = query.isModified && query.isModified();
+
+            return {
+                component: PatchAceEditor.default,
+                props: {
+                    query,
+                    languageService: this.languageService,
+                    validationErrorMessage: isModified ? query.error() : null,
+                },
+            };
+        });
 
         this.infoHubView = ko.pureComputed(() => ({
             component: PatchSamplesAboutView.default,
