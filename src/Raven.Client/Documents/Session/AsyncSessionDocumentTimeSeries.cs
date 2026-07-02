@@ -189,10 +189,10 @@ namespace Raven.Client.Documents.Session
             {
                 foreach (var range in ranges)
                 {
-                    // A server-backed range that overlaps the request means ServeFromCache can
-                    // serve it - fully, by page size, or by fetching only the missing gaps.
-                    // Local-only ranges are not authoritative for a window, so they still go to the server.
-                    if (range.IsLocal == false && range.From <= to && range.To >= from)
+                    // Only a server-backed range that FULLY covers the request may be served from cache.
+                    // A looser (overlap-based) check routes requests into ServeFromCache's stitching path,
+                    // which is corrupted by locally-appended (IsLocal) ranges sharing the same list.
+                    if (range.From <= from && range.To >= to && range.IsLocal == false)
                         return false;
                 }
             }
@@ -288,15 +288,16 @@ namespace Raven.Client.Documents.Session
                             var left = A.CloneRange(A.From, B.From);
                             left.CachedEntries.RemoveAll(e => e.Timestamp >= B.From);
 
-                            if (left.IsLocal && left.CachedEntries.Count > 0)
+                            if (left.IsLocal)
                             {
-                                // keep A's pre-B entries as a local remainder; B absorbs only A's entries inside B
+                                // keep A's pre-B part as a local remainder; B absorbs only A's entries inside B.
+                                // Do NOT extend B over A's local-only territory - that claims false server coverage.
                                 B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
                                 ranges[i] = left;
                             }
                             else
                             {
-                                // no local remainder to preserve: fold all of A into B
+                                // A is server-backed: fold all of A into B
                                 B.From = A.From;
                                 B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
                                 ranges.RemoveAt(i);
@@ -311,15 +312,16 @@ namespace Raven.Client.Documents.Session
                             var right = A.CloneRange(B.To, A.To);
                             right.CachedEntries.RemoveAll(e => e.Timestamp <= B.To);
 
-                            if (right.IsLocal && right.CachedEntries.Count > 0)
+                            if (right.IsLocal)
                             {
-                                // keep A's post-B entries as a local remainder; B absorbs only A's entries inside B
+                                // keep A's post-B part as a local remainder; B absorbs only A's entries inside B.
+                                // Do NOT extend B over A's local-only territory - that claims false server coverage.
                                 B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
                                 ranges[i] = right;
                             }
                             else
                             {
-                                // no local remainder to preserve: fold all of A into B
+                                // A is server-backed: fold all of A into B
                                 B.To = A.To;
                                 B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
                                 ranges.RemoveAt(i);

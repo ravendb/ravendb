@@ -270,7 +270,9 @@ namespace Raven.Client.Documents.Session
         private void TrackTimeseriesInCache(DateTime timestamp, IEnumerable<double> values, string tag = null, bool increment = false)
         {
             var utcTimestamp = timestamp.EnsureUtc().EnsureMilliseconds();
-            var valuesArray = values as double[] ?? values.ToArray();
+            // copy the values: for increments the caller's array is the deferred command's operation,
+            // which the command mutates in place (existing.Values[i] += ...); sharing it would corrupt the cache.
+            var valuesArray = values.ToArray();
 
             //No timeseries were loaded for this document, we need to create the cache for it
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
