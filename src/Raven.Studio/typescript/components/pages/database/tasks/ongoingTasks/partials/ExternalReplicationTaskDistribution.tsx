@@ -8,12 +8,13 @@ import {
 } from "components/models/tasks";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
-import { ReplicationTaskProgressTooltip } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationTaskProgressTooltip";
+import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import { useViewSheet } from "components/common/splitView/ViewSheet";
 
 interface ExternalReplicationTaskDistributionProps {
     task: OngoingTaskExternalReplicationInfo | OngoingTaskReplicationHubInfo | OngoingTaskReplicationSinkInfo;
@@ -21,12 +22,25 @@ interface ExternalReplicationTaskDistributionProps {
 
 interface ItemWithTooltipProps {
     nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
+    allNodes: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>[];
     sharded: boolean;
     task: OngoingTaskExternalReplicationInfo | OngoingTaskReplicationHubInfo | OngoingTaskReplicationSinkInfo;
+    isActive: boolean;
+    setActiveNodeIndex: (index: number | null) => void;
+    ownerId: string;
+}
+
+function getTaskTypeLabel(taskType: string): string {
+    const labels: Record<string, string> = {
+        Replication: "External Replication",
+        PullReplicationAsHub: "Replication Hub",
+        PullReplicationAsSink: "Replication Sink",
+    };
+    return labels[taskType] ?? taskType;
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded, task } = props;
+    const { nodeInfo, allNodes, sharded, task, isActive, setActiveNodeIndex, ownerId } = props;
 
     const shard = (
         <div className="top shard">
@@ -47,11 +61,41 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
 
     const key = taskNodeInfoKey(task, nodeInfo);
     const hasError = !!nodeInfo.details?.error;
-    const [node, setNode] = useState<HTMLDivElement>();
+
+    const { open } = useViewSheet();
+
+    const nodeIndex = allNodes.indexOf(nodeInfo);
+
+    const openProgressSheet = () => {
+        setActiveNodeIndex(nodeIndex);
+        open({
+            ownerId,
+            component: (
+                <ReplicationProgressDetailsSheet
+                    key={ownerId}
+                    taskType={getTaskTypeLabel(task.shared.taskType)}
+                    taskName={task.shared.taskName}
+                    allNodes={allNodes}
+                    initialNodeIndex={nodeIndex}
+                    onNodeChange={setActiveNodeIndex}
+                />
+            ),
+            initialWidth: "40%",
+            minWidth: "25%",
+            maxWidth: "60%",
+            onClose: () => setActiveNodeIndex(null),
+        });
+    };
+
+    const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
 
     return (
-        <div ref={setNode}>
-            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"} key={key}>
+        <div>
+            <DistributionItem
+                loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}
+                key={key}
+                className={classNames({ active: isActive })}
+            >
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
                     {!sharded && <Icon icon="node" />}
@@ -72,24 +116,13 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         "-"
                     )}
                 </div>
-                <ExternalReplicationTaskProgress task={task} nodeInfo={nodeInfo} />
+                <ExternalReplicationTaskProgress
+                    task={task}
+                    nodeInfo={nodeInfo}
+                    onClick={canOpenSheet ? openProgressSheet : undefined}
+                />
             </DistributionItem>
-            {node &&
-                (errorToDisplay ? (
-                    <ErrorModal key="modal" toggleErrorModal={toggleErrorModal} error={errorToDisplay} />
-                ) : (
-                    <ReplicationTaskProgressTooltip
-                        hasError={!!nodeInfo.details?.error}
-                        toggleErrorModal={toggleErrorModal}
-                        target={node}
-                        progress={nodeInfo.progress}
-                        status={nodeInfo.status}
-                        lastAcceptedChangeVectorFromDestination={
-                            nodeInfo.details?.lastAcceptedChangeVectorFromDestination
-                        }
-                        sourceDatabaseChangeVector={nodeInfo.details?.sourceDatabaseChangeVector}
-                    />
-                ))}
+            {errorToDisplay && <ErrorModal key="modal" toggleErrorModal={toggleErrorModal} error={errorToDisplay} />}
         </div>
     );
 }
@@ -97,16 +130,30 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
 export function ExternalReplicationTaskDistribution(props: ExternalReplicationTaskDistributionProps) {
     const { task } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
+    const [activeNodeIndex, setActiveNodeIndex] = useState<number | null>(null);
+    const ownerId = useId();
+    const { activeSheetOwnerId } = useViewSheet();
 
     const visibleNodes = task.nodesInfo.filter(
         (nodeInfo) =>
             nodeInfo.details && task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
     );
 
-    const items = visibleNodes.map((nodeInfo) => {
+    const items = visibleNodes.map((nodeInfo, index) => {
         const key = taskNodeInfoKey(task, nodeInfo);
 
-        return <ItemWithTooltip key={key} nodeInfo={nodeInfo} sharded={sharded} task={task} />;
+        return (
+            <ItemWithTooltip
+                key={key}
+                nodeInfo={nodeInfo}
+                allNodes={visibleNodes}
+                sharded={sharded}
+                task={task}
+                isActive={activeSheetOwnerId === ownerId && activeNodeIndex === index}
+                setActiveNodeIndex={setActiveNodeIndex}
+                ownerId={ownerId}
+            />
+        );
     });
 
     return (
@@ -144,26 +191,46 @@ export function ExternalReplicationTaskDistribution(props: ExternalReplicationTa
 interface ExternalReplicationTaskProgressProps {
     nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
     task: OngoingTaskInfo;
+    onClick?: () => void;
+}
+
+function ClickableProgress({ onClick, children }: { onClick?: () => void; children: React.ReactNode }) {
+    if (!onClick) {
+        return <>{children}</>;
+    }
+    return (
+        <div className="clickable-progress">
+            {children}
+            <div className="clickable-progress-hint cursor-pointer" onClick={onClick}>
+                <Icon icon="preview" margin="me-1" />
+                See details
+            </div>
+        </div>
+    );
 }
 
 export function ExternalReplicationTaskProgress(props: ExternalReplicationTaskProgressProps) {
-    const { nodeInfo, task } = props;
+    const { nodeInfo, task, onClick } = props;
 
     const disabled = task.shared.taskState === "Disabled";
 
     if (!nodeInfo.progress || nodeInfo.progress.length === 0) {
         return (
-            <ProgressCircle icon={disabled ? "stop" : null} state="running">
-                {disabled ? "Disabled" : "?"}
-            </ProgressCircle>
+            <ClickableProgress onClick={onClick}>
+                <ProgressCircle icon={disabled ? "stop" : null} state="running" onClick={onClick}>
+                    {disabled ? "Disabled" : "?"}
+                </ProgressCircle>
+            </ClickableProgress>
         );
     }
 
     if (nodeInfo.progress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
         return (
-            <ProgressCircle state="success" icon="check">
-                up to date
-            </ProgressCircle>
+            <ClickableProgress onClick={onClick}>
+                <ProgressCircle state="success" icon="check" onClick={onClick}>
+                    up to date
+                </ProgressCircle>
+            </ClickableProgress>
         );
     }
 
@@ -174,9 +241,11 @@ export function ExternalReplicationTaskProgress(props: ExternalReplicationTaskPr
     const percentage = totalItems === 0 ? 1 : Math.floor((totalProcessed * 100) / totalItems) / 100;
 
     return (
-        <ProgressCircle state="running" icon={disabled ? "stop" : null} progress={percentage}>
-            {disabled ? "Disabled" : "Running"}
-        </ProgressCircle>
+        <ClickableProgress onClick={onClick}>
+            <ProgressCircle state="running" icon={disabled ? "stop" : null} progress={percentage} onClick={onClick}>
+                {disabled ? "Disabled" : "Running"}
+            </ProgressCircle>
+        </ClickableProgress>
     );
 }
 

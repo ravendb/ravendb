@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import {
     AnyEtlOngoingTaskInfo,
     OngoingEtlTaskNodeInfo,
@@ -12,11 +11,7 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
-import {
-    BaseOngoingTaskPanelProps,
-    ICanShowTransformationScriptPreview,
-    useTasksOperations,
-} from "../../shared/shared";
+import { BaseOngoingTaskPanelProps, useTasksOperations } from "../../shared/shared";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import {
@@ -27,6 +22,42 @@ import {
 } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
 export type EtlHealthStatus = Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus;
+
+const etlTaskTypeLabels: Partial<Record<StudioTaskType, string>> = {
+    RavenEtl: "RavenDB ETL",
+    SqlEtl: "SQL ETL",
+    OlapEtl: "OLAP ETL",
+    ElasticSearchEtl: "Elasticsearch ETL",
+    KafkaQueueEtl: "Kafka ETL",
+    RabbitQueueEtl: "RabbitMQ ETL",
+    AzureQueueStorageQueueEtl: "Azure Queue Storage ETL",
+    AmazonSqsQueueEtl: "Amazon SQS ETL",
+    SnowflakeEtl: "Snowflake ETL",
+    EmbeddingsGeneration: "Embeddings Generation",
+    GenAi: "GenAI",
+};
+
+export function getEtlTaskTypeLabel(taskType: StudioTaskType): string {
+    return etlTaskTypeLabels[taskType] ?? taskType;
+}
+
+const etlTaskTypeIcons: Partial<Record<StudioTaskType, IconName>> = {
+    RavenEtl: "ravendb-etl",
+    SqlEtl: "sql-etl",
+    OlapEtl: "olap-etl",
+    ElasticSearchEtl: "elastic-search-etl",
+    KafkaQueueEtl: "kafka-etl",
+    RabbitQueueEtl: "rabbitmq-etl",
+    AzureQueueStorageQueueEtl: "azure-queue-storage-etl",
+    AmazonSqsQueueEtl: "amazon-sqs-etl",
+    SnowflakeEtl: "snowflake-etl",
+    EmbeddingsGeneration: "ai-etl",
+    GenAi: "genai",
+};
+
+export function getEtlTaskTypeIcon(taskType: StudioTaskType): IconName {
+    return etlTaskTypeIcons[taskType] ?? "etl";
+}
 
 export function getPopoverMessageForTaskHealth(status: EtlHealthStatus): string {
     switch (status) {
@@ -125,14 +156,13 @@ export function computeEtlPanelProgress(
     };
 }
 
-export type EtlPanelBaseProps<T extends AnyEtlOngoingTaskInfo> = BaseOngoingTaskPanelProps<T> &
-    ICanShowTransformationScriptPreview & {
-        etlStats?: EtlTaskStats[];
-        taskErrors?: TaskErrorsWithLocation[];
-    };
+export type EtlPanelBaseProps<T extends AnyEtlOngoingTaskInfo> = BaseOngoingTaskPanelProps<T> & {
+    etlStats?: EtlTaskStats[];
+    taskErrors?: TaskErrorsWithLocation[];
+};
 
 export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBaseProps<T>, editUrl: string) {
-    const { data, showItemPreview, etlStats, taskErrors } = props;
+    const { data, etlStats, taskErrors } = props;
 
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const { appUrl } = useAppUrls();
@@ -142,11 +172,6 @@ export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBase
     const goToTaskErrors = appUrl.forTasksErrors(databaseName, { taskName: data.shared.taskName });
 
     const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
-
-    const showPreview = useCallback(
-        (transformationName: string) => showItemPreview(data, transformationName),
-        [data, showItemPreview]
-    );
 
     const taskHealth = getTaskHealthStatus(etlStats ?? [], data.shared.taskName);
     const healthBadge = healthStatusToBadge(taskHealth);
@@ -164,7 +189,6 @@ export function useEtlPanel<T extends AnyEtlOngoingTaskInfo>(props: EtlPanelBase
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         healthBadge,
         errorCount,

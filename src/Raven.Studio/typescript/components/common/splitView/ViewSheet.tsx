@@ -90,15 +90,18 @@ function SheetFooter(props: Required<PropsWithChildren> & ClassNameProps) {
 
 export interface OpenSheetOptions {
     component: ReactNode;
+    ownerId?: string;
     initialWidth?: ViewSheetWidth;
     minWidth?: ViewSheetWidth;
     maxWidth?: ViewSheetWidth;
     isPinned?: boolean;
+    onClose?: () => void;
 }
 
 export function useViewSheet() {
     const dispatch = useAppDispatch();
-    const { setSheetComponent, sheetComponent } = useSplitViewContext();
+    const { setSheetComponent, sheetComponent, registerSheetClose, activeSheetOwnerId, setActiveSheetOwnerId } =
+        useSplitViewContext();
     const viewWidthInPx = useAppSelector(splitViewSelectors.viewWidthInPx);
 
     const getWidthInPx = useCallback(
@@ -112,6 +115,8 @@ export function useViewSheet() {
     );
 
     const open = (options: OpenSheetOptions) => {
+        registerSheetClose(options.onClose ?? null);
+        setActiveSheetOwnerId(options.ownerId ?? null);
         setSheetComponent(options.component);
         dispatch(splitViewActions.isSheetPinnedSet(options.isPinned ?? false));
         dispatch(splitViewActions.initialPanelWidthInPxSet(getWidthInPx(options.initialWidth ?? "50%")));
@@ -123,6 +128,7 @@ export function useViewSheet() {
         open,
         close: () => setSheetComponent(null),
         isOpen: !!sheetComponent,
+        activeSheetOwnerId,
     };
 }
 

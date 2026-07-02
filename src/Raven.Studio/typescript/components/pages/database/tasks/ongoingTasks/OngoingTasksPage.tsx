@@ -42,8 +42,6 @@ import {
 } from "./partials/OngoingTaskProgressProviders";
 import { BaseOngoingTaskPanelProps, taskKey, useOngoingTasksOperations } from "../shared/shared";
 import "./OngoingTaskPage.scss";
-import etlScriptDefinitionCache from "models/database/stats/etlScriptDefinitionCache";
-import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "./panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "./panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
@@ -126,7 +124,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
         useBoolean(false);
     const { value: replicationProgressEnabled, setTrue: startTrackingReplicationProgress } = useBoolean(false);
     const { value: etlProgressEnabled, setTrue: startTrackingEtlProgress } = useBoolean(false);
-    const [definitionCache] = useState(() => new etlScriptDefinitionCache(db.name));
     const [filter, setFilter] = useState<OngoingTasksFilterCriteria>({
         searchText: "",
         types: [],
@@ -241,15 +238,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
             });
         },
         [dispatch]
-    );
-
-    const showItemPreview = useCallback(
-        (task: OngoingTaskInfo, scriptName: string) => {
-            const taskType = TaskUtils.studioTaskTypeToTaskType(task.shared.taskType);
-            const etlType = TaskUtils.taskTypeToEtlType(taskType);
-            definitionCache.showDefinitionFor(etlType, task.shared.taskId, scriptName);
-        },
-        [definitionCache]
     );
 
     const filteredTasks = getFilteredTasks(tasks, filter);
@@ -558,7 +546,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
-                                        showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
                                         taskErrors={flatTaskErrors}
                                     />
@@ -568,7 +555,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                         {...sharedPanelProps}
                                         key={taskKey(x.shared)}
                                         data={x}
-                                        showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
                                         taskErrors={flatTaskErrors}
                                     />
@@ -701,7 +687,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {elasticSearchEtls.map((x) => (
@@ -711,7 +696,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {kafkaEtls.map((x) => (
@@ -721,7 +705,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {sqlEtls.map((x) => (
@@ -731,7 +714,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {snowflakeEtls.map((x) => (
@@ -741,7 +723,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {olapEtls.map((x) => (
@@ -751,7 +732,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {rabbitMqEtls.map((x) => (
@@ -761,7 +741,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {azureQueueStorageEtls.map((x) => (
@@ -771,7 +750,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                         {amazonSqsEtls.map((x) => (
@@ -781,7 +759,6 @@ export function OngoingTasksPage({ isAiOnly = false, queryParams }: OngoingTasks
                                                 data={x}
                                                 etlStats={flatEtlStats}
                                                 taskErrors={flatTaskErrors}
-                                                showItemPreview={showItemPreview}
                                             />
                                         ))}
                                     </div>
