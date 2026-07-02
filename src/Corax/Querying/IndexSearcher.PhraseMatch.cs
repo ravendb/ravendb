@@ -30,17 +30,20 @@ public partial class IndexSearcher
         if (TryGetRootPageByFieldName(termsVectorFieldName, out var vectorRootPage) == false || TryGetRootPageByFieldName(field.FieldName, out var rootPage) == false)
             return EmptyQueryMatch.Instance;
         
-        for (var i = 0; i < terms.Length; ++i)
+        // Acquire one pooled key and reuse it across terms (Set restarts its arena per term); the using scope
+        // guarantees a single matching ReleaseCompactKey on every exit, including the early return below.
+        using (_fieldsTree.Llt.AcquireCompactKey(out var termKey))
         {
-            var term = terms[i];
-            CompactKey termKey = _fieldsTree.Llt.AcquireCompactKey();
-            termKey.Set(term);
+            for (var i = 0; i < terms.Length; ++i)
+            {
+                termKey.Set(terms[i]);
 
-            // When the term doesn't exist, that means no document matches our query (phrase query is performing "AND" between them).
-            if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
-                return EmptyQueryMatch.Instance;
+                // When the term doesn't exist, that means no document matches our query (phrase query is performing "AND" between them).
+                if (compactTree.TryGetTermContainerId(termKey, out var termContainerId) == false)
+                    return EmptyQueryMatch.Instance;
 
-            sequence[i] = termContainerId;
+                sequence[i] = termContainerId;
+            }
         }
         
         return new PhraseMatch<TInner>(field, this, inner, sequenceBuffer, vectorRootPage, rootPage: rootPage);
