@@ -85,9 +85,14 @@ export interface TasksFiltersState {
     taskTypes: StudioTaskType[];
 }
 
-export function parseProcessName(processName: string): [etlName: string, transformationName: string] {
+// ETL errors are stored as "taskName/transformationName". AI and CDC tasks have no transformation,
+// and their user-defined task name may itself contain "/", so only ETL names are split.
+export function parseProcessName(
+    processName: string,
+    category: TaskCategory
+): [etlName: string, transformationName: string] {
     const slashIndex = processName.indexOf("/");
-    if (slashIndex === -1) {
+    if (!taskHasTransformations(category) || slashIndex === -1) {
         return [processName, ""];
     }
     return [processName.slice(0, slashIndex), processName.slice(slashIndex + 1)];
@@ -100,14 +105,14 @@ export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats
 
     return _.chain(processes)
         .filter((p: TaskErrorsWithLocation) => _.size(p?.ProcessErrors) || _.size(p?.ItemErrors))
-        .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName)[0])
+        .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName, p.Category)[0])
         .map(
             (group: TaskErrorsWithLocation[], etlName: string): TaskWithErrors => ({
                 etlName,
                 etlType: resolveEtlType(etlStats, etlName),
                 category: group[0].Category,
                 transformations: _.chain(group)
-                    .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName)[1])
+                    .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName, p.Category)[1])
                     .map(
                         (
                             transformationGroup: TaskErrorsWithLocation[],
