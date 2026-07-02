@@ -450,6 +450,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         stats.Start();
         AddPerformanceStats(statsAggregator);
 
+        string persistedCheckpoint = null;
         try
         {
             var command = new Commands.CdcSinkBatchCommand(
@@ -463,11 +464,20 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             await Database.TxMerger.Enqueue(command);
 
             LastBatchTime = Database.Time.GetUtcNow();
-            if (checkpoint != null)
+
+            // Advance the checkpoint only if the command actually persisted it. A fully-failed batch
+            // withholds the checkpoint (ExecuteCmd skips UpdateState), so its rows are retried on the
+            // next read from persisted state. Advancing the in-memory position - or handing the
+            // checkpoint to OnBatchFlushed below - would defeat that, and on PostgreSQL would ack an
+            // LSN that isn't durable, letting the server recycle WAL for rows that were never applied.
+            if (command.CheckpointPersisted)
+            {
+                persistedCheckpoint = checkpoint;
                 LastCheckpoint = checkpoint;
+            }
 
             if (Logger.IsDebugEnabled)
-                Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={checkpoint ?? "(none)"}");
+                Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={persistedCheckpoint ?? "(none)"}");
         }
         finally
         {
@@ -493,7 +503,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         // Only a successfully persisted batch raises the completion event.
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
-        return (checkpoint, ops.Count);
+        return (persistedCheckpoint, ops.Count);
     }
 
 

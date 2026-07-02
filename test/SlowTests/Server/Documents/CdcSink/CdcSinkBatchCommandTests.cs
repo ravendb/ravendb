@@ -926,6 +926,93 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
+        public async Task FullyFailedBatch_DoesNotPersistCheckpoint()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Every document in the batch hits a tolerable per-document error (a throwing patch).
+            var badConfig = CreateRootTableConfig("Products", patch: "throw new Error('intentional failure');");
+            var badProcessor = CreateRootProcessor(badConfig, "Products");
+            var badData = new DynamicJsonValue
+            {
+                ["ProductId"] = 99,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Products"
+                }
+            };
+
+            const string checkpoint = "0/16B3748";
+            var ops = new List<CdcSinkDocumentOp> { CreatePutOp("Products/99", badData, processor: badProcessor) };
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", checkpoint, null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            // A fully-failed batch must withhold the checkpoint so its rows are retried on the next
+            // read from persisted state (and, on PostgreSQL, the replication slot is not acked past them).
+            Assert.False(command.CheckpointPersisted);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                Assert.Null(database.DocumentsStorage.Get(readCtx, "Products/99")); // the failing doc was not applied
+                Assert.Null(database.DocumentsStorage.Get(readCtx, CdcSinkTaskState.GetDocumentId("test-config"))); // checkpoint not persisted
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task PartiallyFailedBatch_PersistsCheckpoint()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // One document succeeds, one hits a tolerable per-document error.
+            var goodData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+
+            var badConfig = CreateRootTableConfig("Products", patch: "throw new Error('intentional failure');");
+            var badProcessor = CreateRootProcessor(badConfig, "Products");
+            var badData = new DynamicJsonValue
+            {
+                ["ProductId"] = 99,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Products"
+                }
+            };
+
+            const string checkpoint = "0/16B3748";
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Orders/1", goodData, processor: CreateRootProcessor()),
+                CreatePutOp("Products/99", badData, processor: badProcessor)
+            };
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", checkpoint, null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            // The batch made progress (one document applied), so the checkpoint is persisted; the
+            // failed row is recorded as an item error and skipped, exactly like ETL.
+            Assert.True(command.CheckpointPersisted);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                Assert.NotNull(database.DocumentsStorage.Get(readCtx, "Orders/1"));
+
+                var state = database.DocumentsStorage.Get(readCtx, CdcSinkTaskState.GetDocumentId("test-config"));
+                Assert.NotNull(state);
+                Assert.True(state.Data.TryGet(nameof(CdcSinkTaskState.LastLsn), out string lastLsn));
+                Assert.Equal(checkpoint, lastLsn);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task BinaryToAttachment()
         {
             using var store = GetDocumentStore();
