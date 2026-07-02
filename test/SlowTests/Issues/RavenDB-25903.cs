@@ -763,6 +763,29 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task ShouldTrackTypedTimeSeriesEvenIfNoTimeseriesLoaded()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.LoadAsync<Book>(bookId1);
+                session.TimeSeriesFor<HeartRateMeasure>(bookId1).Append(DateTime.UtcNow, new HeartRateMeasure { HeartRate = 59d });
+
+                var tse = await session.TimeSeriesFor<HeartRateMeasure>(bookId1).GetAsync();
+                Assert.Equal(1, tse.Length);
+                Assert.Equal(59d, tse[0].Value.HeartRate);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task TypedGetAfterFullDeleteShouldNotThrow()
         {
             using var store = GetDocumentStore();
