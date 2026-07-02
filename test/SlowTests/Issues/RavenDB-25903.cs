@@ -763,6 +763,51 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task NoCachingSessionShouldNotTrackAppends()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { NoCaching = true }))
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(DateTime.UtcNow, 1);
+
+                // with NoCaching the append must not be tracked in the session's time series cache
+                Assert.False(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue(bookId1, out _));
+
+                await session.SaveChangesAsync();
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public void SyncTypedGetAfterFullDeleteShouldNotThrow()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.Today.EnsureUtc();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.TimeSeriesFor<HeartRateMeasure>(bookId1).Append(baseline, new HeartRateMeasure { HeartRate = 59d });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var first = session.TimeSeriesFor<HeartRateMeasure>(bookId1).Get();
+                Assert.Equal(59d, first.Single().Value.HeartRate);
+
+                session.TimeSeriesFor<HeartRateMeasure>(bookId1).Delete();
+
+                // sync typed read (delegates through the async path) must not throw after an in-session delete
+                var afterDelete = session.TimeSeriesFor<HeartRateMeasure>(bookId1).Get();
+                Assert.True(afterDelete == null || afterDelete.Length == 0);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task ShouldTrackTypedTimeSeriesEvenIfNoTimeseriesLoaded()
         {
             using var store = GetDocumentStore();
