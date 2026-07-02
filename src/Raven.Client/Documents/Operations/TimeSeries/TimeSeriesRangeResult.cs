@@ -16,10 +16,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         // Backing field for server-returned entries
         private TimeSeriesEntry[] _entries;
 
-        // Public API stays EXACTLY the same
+        // Public API stays EXACTLY the same.
+        // CachedEntries is kept sorted and de-duplicated and is a superset of the server entries
+        // (the setter merges into it), so it is the source of truth - no need to re-merge on every get.
         public TimeSeriesEntry[] Entries
         {
-            get => MergeWithCached(_entries, CachedEntries);
+            get => CachedEntries.ToArray();
             set
             {
                 _entries = MergeWithCached(value, CachedEntries);
@@ -132,7 +134,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private TValues[] _entries;
         public new TValues[] Entries
         {
-            get => MergeWithCached(_entries, CachedEntries);
+            get => CachedEntries.OfType<TValues>().ToArray();
             set
             {
                 _entries = MergeWithCached(value, CachedEntries);
