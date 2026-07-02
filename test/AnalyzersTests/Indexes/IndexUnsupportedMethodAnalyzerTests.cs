@@ -470,6 +470,46 @@ class Product { public string Name { get; set; } }
         }
 
         [Fact]
+        public async Task UserMethod_In_Map_With_AdditionalSources_In_Base_Class_No_Diagnostic()
+        {
+            // The AdditionalSources write that ships the helper source lives in a shared BASE index class,
+            // while the Map that calls the helper lives in the derived class. RVN009 must still suppress:
+            // the suppression check walks the user-defined base chain, matching the field extractors.
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+abstract class IndexBase<T> : AbstractIndexCreationTask<T>
+{
+    protected IndexBase()
+    {
+        AdditionalSources = new Dictionary<string, string>
+        {
+            { ""MyHelpers"", ""public static class MyHelpers { public static string Normalize(string s) => s; }"" }
+        };
+    }
+}
+
+class ProductIndex : IndexBase<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
         public async Task UserMethod_In_Map_With_AdditionalAssemblies_No_Diagnostic()
         {
             // AdditionalAssemblies references extra assemblies compiled with the index server-side, so a

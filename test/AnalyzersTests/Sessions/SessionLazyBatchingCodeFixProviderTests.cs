@@ -138,6 +138,41 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
         }
 
         [Fact]
+        public async Task QueryRewrite_Does_Not_Add_Using_When_Provided_By_Global_Using_In_Another_File()
+        {
+            // Raven.Client.Documents is imported by a `global using` in a SEPARATE file, so it is already
+            // in scope for the rewritten code. The fix must not append a redundant
+            // `using Raven.Client.Documents;` to this file (which a TreatWarningsAsErrors build would
+            // reject as an unnecessary using). A purely syntactic file-local scan would miss the global
+            // using; the semantic scope check catches it.
+            const string source = @"
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Linq;
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var active = session.Query<User>().Where(u => u.Active).ToList();
+        var inactive = session.Query<User>().Where(u => !u.Active).ToList();
+    }
+}
+
+class User { public string Id { get; set; } public bool Active { get; set; } }
+";
+            const string globalUsings = "global using Raven.Client.Documents;\n";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(
+                source, new[] { globalUsings });
+
+            Assert.Contains(".Lazily()", fixed_code);
+            Assert.DoesNotContain("using Raven.Client.Documents;", fixed_code);
+        }
+
+        [Fact]
         public async Task InlineComment_On_FirstLoad_SameLine_As_Brace_Is_Not_Duplicated()
         {
             // The first batched load sits on the same line as the opening brace, preceded by an inline

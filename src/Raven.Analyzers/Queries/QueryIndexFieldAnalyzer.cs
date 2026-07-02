@@ -81,11 +81,17 @@ namespace Raven.Analyzers.Queries
 
                 string methodName = memberAccess.Name.Identifier.Text;
 
-                // Stop at a projection boundary: operators after Select/ProjectInto bind to the
-                // projected shape, not the index, so their fields must not be checked against the
-                // index field set (the operator-after-projection case is RVN002's concern).
-                // Without this, a post-projection Where/OrderBy would produce a false RVN007.
-                if (methodName == KnownTypes.SelectMethodName || methodName == KnownTypes.ProjectIntoMethodName)
+                // Stop at an element-type-changing boundary: after a projection (Select / ProjectInto),
+                // a grouping (GroupBy -> IGrouping<TKey, TElement>), or a fan-out (SelectMany), a
+                // subsequent Where/OrderBy binds to the new shape rather than the source document /
+                // index, so its fields must not be checked against the index field set (the
+                // operator-after-projection case is RVN002's concern). Without this, e.g.
+                // GroupBy(o => o.Category).Where(g => g.Key == "x") would flag the IGrouping member
+                // "Key" as not indexed — a false RVN007.
+                if (methodName == KnownTypes.SelectMethodName
+                    || methodName == KnownTypes.ProjectIntoMethodName
+                    || methodName == KnownTypes.SelectManyMethodName
+                    || methodName == KnownTypes.GroupByMethodName)
                     break;
 
                 if (IsFilterOrOrderMethod(methodName))

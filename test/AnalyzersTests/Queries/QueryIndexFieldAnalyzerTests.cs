@@ -358,6 +358,96 @@ class Test
         }
 
         [Fact]
+        public async Task Filter_After_GroupBy_Is_Not_Flagged()
+        {
+            // GroupBy changes the element type from Order to IGrouping<TKey, Order>, so a subsequent
+            // Where binds to the grouping, not the source document. Its members (e.g. g.Key) are never
+            // index fields and must not be checked against the index field set — otherwise "Key" would
+            // be flagged as not indexed, a false positive.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .GroupBy(o => o.Status)
+            .Where(g => g.Key == ""open"");
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task OrderBy_After_GroupBy_Is_Not_Flagged()
+        {
+            // Same as above for an OrderBy after GroupBy: g.Key is an IGrouping member, not an index field.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .GroupBy(o => o.Status)
+            .OrderBy(g => g.Key);
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Filter_Before_GroupBy_Is_Still_Flagged()
+        {
+            // The boundary must only suppress operators AFTER the grouping: a Where on a non-indexed
+            // field placed before the GroupBy still binds to the source document and is a real RVN007.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Where(x => x.Price > 5)
+            .GroupBy(o => o.Status);
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+        }
+
+        [Fact]
         public async Task Filter_Before_Projection_Is_Still_Flagged()
         {
             // The projection boundary must only suppress operators that come AFTER it: a Where on a

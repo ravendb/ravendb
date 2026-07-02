@@ -36,11 +36,7 @@ namespace Raven.Analyzers.Queries
             if (methodName == null || !KnownTypes.QueryChainLambdaMethods.Contains(methodName))
                 return;
 
-            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
-                return;
-
-            ITypeSymbol? receiverType = context.SemanticModel.GetTypeInfo(memberAccess.Expression).Type;
-            if (!SyntaxHelpers.IsRavenQueryable(receiverType))
+            if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, context.SemanticModel) == null)
                 return;
 
             foreach (ArgumentSyntax arg in invocation.ArgumentList.Arguments)
@@ -116,7 +112,7 @@ namespace Raven.Analyzers.Queries
                 if (owningQuery != null && IsOwnedByAnotherCallback(context, nested, root, owningQuery))
                     continue;
 
-                if (context.SemanticModel.GetSymbolInfo(nested).Symbol is not IMethodSymbol method)
+                if (SyntaxHelpers.GetMethodSymbol(nested, context.SemanticModel) is not IMethodSymbol method)
                     continue;
 
                 if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method, exemptObjectMethodOverrides: false))
@@ -150,8 +146,7 @@ namespace Raven.Analyzers.Queries
                 if (current.Parent is ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax outer } }
                     && SyntaxHelpers.GetMethodName(outer) is { } outerName
                     && KnownTypes.QueryChainLambdaMethods.Contains(outerName)
-                    && outer.Expression is MemberAccessExpressionSyntax outerMember
-                    && SyntaxHelpers.IsRavenQueryable(context.SemanticModel.GetTypeInfo(outerMember.Expression).Type))
+                    && SyntaxHelpers.GetRavenQueryableReceiver(outer, context.SemanticModel) != null)
                 {
                     return true;
                 }

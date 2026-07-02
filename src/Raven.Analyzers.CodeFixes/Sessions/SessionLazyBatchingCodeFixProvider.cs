@@ -369,41 +369,56 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             // Lazily()/LazilyAsync() live in Raven.Client.Documents. A file that only imports
             // Raven.Client.Documents.Session/.Linq (enough to write session.Query<T>().Where(...).ToList())
             // would fail with CS1061 after the rename, so add the using when a query was rewritten and it
-            // is not already imported anywhere in the file.
+            // is not already in scope. Scope is resolved from the semantic model at the rewritten block, so
+            // a global using in another file (or an implicit using) counts too.
             if (anyQueryRewrite)
-                newRoot = EnsureRavenClientDocumentsUsing(newRoot);
+                newRoot = EnsureRavenClientDocumentsUsing(newRoot, semanticModel, block.SpanStart);
 
             return document.WithSyntaxRoot(newRoot);
         }
 
         // Adds 'using Raven.Client.Documents;' to the compilation unit when the query lazy rewrite is used
-        // and no existing using directive already imports that namespace. Idempotent: the existing-using
-        // scan prevents a duplicate. Uses only SyntaxFactory / Microsoft.CodeAnalysis.CSharp.Syntax types,
-        // keeping the code fix RS1038-compiler-safe.
-        private static SyntaxNode EnsureRavenClientDocumentsUsing(SyntaxNode root)
+        // and that namespace is not already in scope. Idempotent. The in-scope check queries the semantic
+        // model's import scopes at the rewritten block rather than scanning this file's using directives,
+        // so it also honors a 'global using Raven.Client.Documents;' declared in another file and implicit
+        // usings — a purely syntactic file-local scan would miss those and append a redundant using
+        // (an IDE0005 'unnecessary using' that a TreatWarningsAsErrors build would reject). The edit itself
+        // uses only SyntaxFactory / Microsoft.CodeAnalysis.CSharp.Syntax types, keeping it RS1038-safe.
+        private static SyntaxNode EnsureRavenClientDocumentsUsing(SyntaxNode root, SemanticModel semanticModel, int position)
         {
             const string targetNamespace = "Raven.Client.Documents";
 
             if (root is not CompilationUnitSyntax compilationUnit)
                 return root;
 
-            // Using directives only appear at compilation-unit or namespace level, never inside a
-            // method body, so scanning descendant nodes catches an existing import wherever it sits.
-            foreach (SyntaxNode node in root.DescendantNodes())
-            {
-                if (node is UsingDirectiveSyntax existing
-                    && existing.Alias == null
-                    && existing.StaticKeyword.IsKind(SyntaxKind.None)
-                    && existing.Name?.ToString() == targetNamespace)
-                {
-                    return root;
-                }
-            }
+            if (IsNamespaceInScope(semanticModel, position, targetNamespace))
+                return root;
 
             UsingDirectiveSyntax directive = SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(targetNamespace))
                 .WithTrailingTrivia(SyntaxFactory.ElasticCarriageReturnLineFeed);
 
             return compilationUnit.AddUsings(directive);
+        }
+
+        // True when <paramref name="targetNamespace"/> is imported at <paramref name="position"/> — via a
+        // using in this file, a global using anywhere in the compilation, or an implicit using. Reading the
+        // semantic model's import scopes (rather than scanning this file's using directives) is what catches
+        // the global / implicit cases the syntactic scan used to miss.
+        private static bool IsNamespaceInScope(SemanticModel semanticModel, int position, string targetNamespace)
+        {
+            foreach (IImportScope scope in semanticModel.GetImportScopes(position))
+            {
+                foreach (ImportedNamespaceOrType import in scope.Imports)
+                {
+                    if (import.NamespaceOrType is INamespaceSymbol ns
+                        && ns.ToDisplayString() == targetNamespace)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         // Returns only the newline-and-indentation tail of the trivia list, dropping comments.

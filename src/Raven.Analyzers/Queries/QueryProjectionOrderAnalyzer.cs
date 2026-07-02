@@ -36,15 +36,11 @@ namespace Raven.Analyzers.Queries
             if (methodName == null)
                 return;
 
-            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+            // Only act when the immediate receiver is an IRavenQueryable<T>
+            if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, context.SemanticModel) is not MemberAccessExpressionSyntax memberAccess)
                 return;
 
             ExpressionSyntax receiver = memberAccess.Expression;
-            ITypeSymbol? receiverType = context.SemanticModel.GetTypeInfo(receiver).Type;
-
-            // Only act when the immediate receiver is an IRavenQueryable<T>
-            if (!SyntaxHelpers.IsRavenQueryable(receiverType))
-                return;
 
             // RVN002 — filtering/ordering after projection. The chain walk follows the receiver
             // through a local variable so a projection stored in a prior statement
@@ -96,12 +92,8 @@ namespace Raven.Analyzers.Queries
                     continue;
 
                 // Confirm the receiver of this projection is also IRavenQueryable<T>
-                if (invocation.Expression is MemberAccessExpressionSyntax ma)
-                {
-                    ITypeSymbol? innerReceiverType = model.GetTypeInfo(ma.Expression).Type;
-                    if (SyntaxHelpers.IsRavenQueryable(innerReceiverType))
-                        return invocation;
-                }
+                if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, model) != null)
+                    return invocation;
             }
 
             return null;

@@ -34,14 +34,7 @@ namespace Raven.Analyzers.Queries
             if (methodName == null || !KnownTypes.UnboundedMaterializingMethods.Contains(methodName))
                 return;
 
-            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
-                return;
-
-            ITypeSymbol? receiverType = context.SemanticModel.GetTypeInfo(memberAccess.Expression).Type;
-            if (receiverType == null)
-                return;
-
-            if (!SyntaxHelpers.IsRavenQueryable(receiverType))
+            if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, context.SemanticModel) is not MemberAccessExpressionSyntax memberAccess)
                 return;
 
             // Walk the receiver chain. A .Take(...) call anywhere before the materializing
