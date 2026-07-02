@@ -372,25 +372,38 @@ public class CdcSinkLoader : IDisposable
             });
         }
 
-        // Drop dedicated error storage when a sink is deleted from the record, or when its
-        // configuration changed and it stays on this node (the replacement process starts clean).
-        // Errors are preserved when the sink merely moved to another node.
+        // Drop the dedicated error storage only when past errors no longer apply: the sink was
+        // deleted, or reconfigured on this node so a fresh replacement starts clean. Preserve it
+        // when the sink merely moved to another node, or only had its enabled/disabled flag toggled
+        // - toggling doesn't invalidate past errors, so an operator disabling a failing sink can
+        // still inspect why it failed.
         if (toRemoveList.Count > 0)
         {
-            var existingConfigNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var configsByName = new Dictionary<string, CdcSinkConfiguration>(StringComparer.OrdinalIgnoreCase);
             foreach (var config in record.CdcSinks)
-                existingConfigNames.Add(config.Name);
+                configsByName[config.Name] = config;
 
             foreach (var process in toRemoveList)
             {
                 var name = process.Configuration.Name;
 
-                var deleted = existingConfigNames.Contains(name) == false;
-                var reconfiguredOnThisNode = responsibleNodes.TryGetValue(name, out var responsibleNode) &&
-                                             responsibleNode == _serverStore.NodeTag;
-
-                if (deleted || reconfiguredOnThisNode)
+                if (configsByName.TryGetValue(name, out var newConfig) == false)
+                {
+                    // Deleted from the record.
                     _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
+                    continue;
+                }
+
+                var onThisNode = responsibleNodes.TryGetValue(name, out var responsibleNode) &&
+                                 responsibleNode == _serverStore.NodeTag;
+                if (onThisNode == false)
+                    continue; // Moved to another node - keep the history.
+
+                var diff = process.Configuration.Compare(newConfig, record.SqlConnectionStrings);
+                if (diff == CdcSinkConfigurationCompareDifferences.ConfigurationDisabled)
+                    continue; // Only the enabled/disabled flag toggled - keep the history.
+
+                _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
             }
         }
 
