@@ -99,7 +99,11 @@ public sealed unsafe class CompactKey : IDisposable
     /// the entry-scan loop) pay the pool rent once rather than per query.</summary>
     public void Rebind(LowLevelTransaction tx)
     {
-        Debug.Assert(_storage is not null && _keyMappingCache is not null, "Rebind requires an initialized key; call Initialize first.");
+        // A pooled key keeps its rented buffers across Acquire/Release (only Unbind runs, never Reset). If the
+        // buffers are gone the key was Reset/Disposed and must never have re-entered the shared pool — fail fast
+        // here rather than NRE'ing later in Set() (Release strips the assert) or silently corrupting the ArrayPool.
+        if (_storage is null || _keyMappingCache is null)
+            throw new InvalidOperationException("Rebind on a CompactKey whose pooled buffers were released (Reset/Dispose); a disposed key must not be reused from the pool.");
 
         _owner = tx;
 
