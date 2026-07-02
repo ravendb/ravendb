@@ -1,5 +1,15 @@
 import "./SplitView.scss";
-import { createContext, CSSProperties, PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
+import {
+    createContext,
+    CSSProperties,
+    PropsWithChildren,
+    ReactNode,
+    useCallback,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 import ColumnResize from "../ColumnResize";
 import useResizableWidth from "components/hooks/useResizableWidth";
 import classNames from "classnames";
@@ -11,6 +21,9 @@ import { splitViewActions, splitViewSelectors } from "components/common/splitVie
 const SplitViewContext = createContext<{
     sheetComponent: ReactNode;
     setSheetComponent: (sheetComponent: ReactNode) => void;
+    registerSheetClose: (callback: (() => void) | null) => void;
+    activeSheetOwnerId: string | null;
+    setActiveSheetOwnerId: (ownerId: string | null) => void;
 }>(null);
 
 export const useSplitViewContext = () => useContext(SplitViewContext);
@@ -21,14 +34,31 @@ export function SplitViewProvider(props: Required<PropsWithChildren>) {
 
 function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx: number }) {
     const dispatch = useAppDispatch();
-    const [sheetComponent, setSheetComponent] = useState<ReactNode>(null);
+    const [sheetComponent, setSheetComponentState] = useState<ReactNode>(null);
+    const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
+    const onSheetCloseRef = useRef<(() => void) | null>(null);
+
+    const setSheetComponent = useCallback((component: ReactNode) => {
+        if (component === null) {
+            onSheetCloseRef.current?.();
+            onSheetCloseRef.current = null;
+            setActiveSheetOwnerId(null);
+        }
+        setSheetComponentState(component);
+    }, []);
+
+    const registerSheetClose = useCallback((callback: (() => void) | null) => {
+        onSheetCloseRef.current = callback;
+    }, []);
 
     useEffect(() => {
         dispatch(splitViewActions.viewWidthInPxSet(props.viewWidthInPx));
     }, [props.viewWidthInPx]);
 
     return (
-        <SplitViewContext.Provider value={{ sheetComponent, setSheetComponent }}>
+        <SplitViewContext.Provider
+            value={{ sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, setActiveSheetOwnerId }}
+        >
             <div className="split-view">
                 <BodyWrapper>{props.children}</BodyWrapper>
                 <SheetWrapper>{sheetComponent}</SheetWrapper>

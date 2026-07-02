@@ -23,6 +23,20 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getOngoingTasks, dto, TasksStubs.getTasksList());
     }
 
+    withGetTasksPerLocation(
+        customize: (dto: OngoingTasksResult, location: databaseLocationSpecifier) => void,
+        shouldThrow?: (location: databaseLocationSpecifier) => boolean
+    ) {
+        return this.mocks.getOngoingTasks.mockImplementation(async (db, location) => {
+            if (shouldThrow?.(location)) {
+                throw mockJQueryError("This is error message");
+            }
+            const dto = TasksStubs.getTasksList();
+            customize(dto, location);
+            return dto;
+        });
+    }
+
     withThrowingGetTasks(
         shouldThrow: (databaseName: string, location: databaseLocationSpecifier) => boolean,
         dto?: MockedValue<OngoingTasksResult>

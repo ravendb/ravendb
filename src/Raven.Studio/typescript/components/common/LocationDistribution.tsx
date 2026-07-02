@@ -10,10 +10,10 @@ interface DistributionItemProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function DistributionItem(props: DistributionItemProps) {
-    const { loading, children, ...rest } = props;
+    const { loading, children, className, ...rest } = props;
     return (
         <LazyLoad active={loading ?? false}>
-            <div className={classNames("distribution-item")} {...rest}>
+            <div className={classNames("distribution-item", className)} {...rest}>
                 {children}
             </div>
         </LazyLoad>

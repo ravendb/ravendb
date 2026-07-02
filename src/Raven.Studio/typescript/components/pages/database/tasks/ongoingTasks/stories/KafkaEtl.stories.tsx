@@ -146,3 +146,11 @@ export const EmptyScript: StoryObj<KafkaProps> = {
         emptyScript: true,
     },
 };
+
+export const MultipleScripts: StoryObj<KafkaProps> = {
+    ...Default,
+    args: {
+        ...Default.args,
+        multipleScripts: true,
+    },
+};

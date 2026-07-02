@@ -1,0 +1,32 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.replication-progress-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: sizes.$gutter-xs;
+
+    .replication-progress-card {
+        background: colors.$panel-bg-2;
+        border-radius: sizes.$border-radius;
+        padding: sizes.$gutter-xs sizes.$gutter-sm;
+
+        .progress-percentage {
+            font-size: 11px;
+        }
+
+        .progress {
+            margin-top: 4px;
+            height: 3px;
+            margin-bottom: 0;
+
+            .progress-bar {
+                background-color: colors.$progress-color;
+
+                &.completed {
+                    background-color: colors.$success;
+                }
+            }
+        }
+    }
+}

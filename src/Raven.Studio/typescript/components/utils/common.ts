@@ -46,6 +46,11 @@ export function createFailureState(error?: any): loadableData<undefined> {
     };
 }
 
+export function getErrorHeadline(error: string): string {
+    const colonIndex = error.indexOf(":");
+    return colonIndex === -1 ? error : error.slice(0, colonIndex).trim();
+}
+
 export async function delay(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }

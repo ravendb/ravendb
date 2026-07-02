@@ -1,24 +1,41 @@
 import {
     OngoingInternalReplicationNodeInfo,
     OngoingTaskNodeInternalReplicationProgressDetails,
+    OngoingReplicationProgressAwareTaskNodeInfo,
+    OngoingTaskAbstractReplicationNodeInfoDetails,
 } from "components/models/tasks";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
-import { ReplicationTaskProgressTooltip } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationTaskProgressTooltip";
+import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
 import { withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import { useViewSheet } from "components/common/splitView/ViewSheet";
 
 interface ItemWithTooltipProps {
     nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">;
     sharded: boolean;
     progress: OngoingTaskNodeInternalReplicationProgressDetails;
+    allSyntheticNodes: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>[];
+    syntheticNodeIndex: number;
+    isActive: boolean;
+    setActiveNodeIndex: (index: number | null) => void;
+    ownerId: string;
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded, progress } = props;
+    const {
+        nodeInfo,
+        sharded,
+        progress,
+        allSyntheticNodes,
+        syntheticNodeIndex,
+        isActive,
+        setActiveNodeIndex,
+        ownerId,
+    } = props;
 
     const shard = (
         <div className="top shard">
@@ -37,12 +54,38 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         setErrorToDisplay((error) => (error ? null : nodeInfo.error));
     };
 
-    const [node, setNode] = useState<HTMLDivElement>();
-
     const hasError = nodeInfo.status === "failure";
+
+    const { open } = useViewSheet();
+
+    const openProgressSheet = () => {
+        setActiveNodeIndex(syntheticNodeIndex);
+        open({
+            ownerId,
+            component: (
+                <ReplicationProgressDetailsSheet
+                    key={ownerId}
+                    taskType="Internal Replication"
+                    allNodes={allSyntheticNodes}
+                    initialNodeIndex={syntheticNodeIndex}
+                    onNodeChange={setActiveNodeIndex}
+                />
+            ),
+            initialWidth: "40%",
+            minWidth: "25%",
+            maxWidth: "60%",
+            onClose: () => setActiveNodeIndex(null),
+        });
+    };
+
+    const canOpenSheet = nodeInfo.status !== "loading" && nodeInfo.status !== "idle";
+
     return (
-        <div ref={setNode}>
-            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
+        <div>
+            <DistributionItem
+                loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}
+                className={classNames({ active: isActive })}
+            >
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
                     {!sharded && <Icon icon="node" />}
@@ -59,22 +102,12 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         "-"
                     )}
                 </div>
-                <InternalReplicationTaskProgress progress={progress} />
+                <InternalReplicationTaskProgress
+                    progress={progress}
+                    onClick={canOpenSheet ? openProgressSheet : undefined}
+                />
             </DistributionItem>
-            {node &&
-                (errorToDisplay ? (
-                    <ErrorModal key="modal" toggleErrorModal={toggleErrorModal} error={errorToDisplay} />
-                ) : (
-                    <ReplicationTaskProgressTooltip
-                        hasError={nodeInfo.status === "failure"}
-                        toggleErrorModal={toggleErrorModal}
-                        target={node}
-                        progress={progress ? [progress] : []}
-                        status={nodeInfo.status}
-                        lastAcceptedChangeVectorFromDestination={progress?.lastAcceptedChangeVectorFromDestination}
-                        sourceDatabaseChangeVector={progress?.sourceDatabaseChangeVector}
-                    />
-                ))}
+            {errorToDisplay && <ErrorModal key="modal" toggleErrorModal={toggleErrorModal} error={errorToDisplay} />}
         </div>
     );
 }
@@ -83,22 +116,83 @@ interface InternalReplicationTaskDistributionProps {
     data: OngoingInternalReplicationNodeInfo[];
 }
 
+function buildSyntheticNode(
+    nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">,
+    progress: OngoingTaskNodeInternalReplicationProgressDetails | null,
+    label: string
+): OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails> {
+    return {
+        location: { nodeTag: label, shardNumber: nodeInfo.location.shardNumber },
+        status: nodeInfo.status,
+        details: {
+            sourceDatabaseChangeVector: progress?.sourceDatabaseChangeVector ?? null,
+            lastAcceptedChangeVectorFromDestination: progress?.lastAcceptedChangeVectorFromDestination ?? null,
+            error: nodeInfo.error ?? null,
+            taskConnectionStatus: null,
+            responsibleNode: nodeInfo.location.nodeTag,
+            handlerId: null,
+            fromToString: label,
+            lastSentEtag: progress?.lastSentEtag ?? 0,
+            lastDatabaseEtag: progress?.lastDatabaseEtag ?? 0,
+        } as OngoingTaskAbstractReplicationNodeInfoDetails,
+        progress: progress ? [progress] : [],
+    };
+}
+
 export function InternalReplicationTaskDistribution(props: InternalReplicationTaskDistributionProps) {
     const { data } = props;
 
     const sharded = data.some((x) => x.location.shardNumber != null);
+    const [activeNodeIndex, setActiveNodeIndex] = useState<number | null>(null);
+    const ownerId = useId();
+    const { activeSheetOwnerId } = useViewSheet();
 
-    const items = data.flatMap((nodeInfo) => {
+    // Build a flat list of (nodeInfo, progress) pairs with synthetic nodes for the sheet
+    interface InternalEntry {
+        nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">;
+        progress: OngoingTaskNodeInternalReplicationProgressDetails | null;
+        key: string;
+        syntheticNode: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
+    }
+
+    const entries: InternalEntry[] = data.flatMap((nodeInfo) => {
         if (!nodeInfo.progress.length) {
-            const key = taskNodeInfoKey(nodeInfo) + "->" + "?";
-            return <ItemWithTooltip key={key} nodeInfo={nodeInfo} sharded={sharded} progress={null} />;
+            const label = `${nodeInfo.location.nodeTag} → ?`;
+            return [
+                {
+                    nodeInfo,
+                    progress: null,
+                    key: taskNodeInfoKey(nodeInfo) + "->?",
+                    syntheticNode: buildSyntheticNode(nodeInfo, null, label),
+                },
+            ];
         }
-
         return nodeInfo.progress.map((progress) => {
-            const key = taskNodeInfoKey(nodeInfo) + "->" + progress.destinationNodeTag;
-            return <ItemWithTooltip key={key} nodeInfo={nodeInfo} progress={progress} sharded={sharded} />;
+            const label = `${nodeInfo.location.nodeTag} → ${progress.destinationNodeTag}`;
+            return {
+                nodeInfo,
+                progress,
+                key: taskNodeInfoKey(nodeInfo) + "->" + progress.destinationNodeTag,
+                syntheticNode: buildSyntheticNode(nodeInfo, progress, label),
+            };
         });
     });
+
+    const allSyntheticNodes = entries.map((e) => e.syntheticNode);
+
+    const items = entries.map((entry, index) => (
+        <ItemWithTooltip
+            key={entry.key}
+            nodeInfo={entry.nodeInfo}
+            sharded={sharded}
+            progress={entry.progress}
+            allSyntheticNodes={allSyntheticNodes}
+            syntheticNodeIndex={index}
+            isActive={activeSheetOwnerId === ownerId && activeNodeIndex === index}
+            setActiveNodeIndex={setActiveNodeIndex}
+            ownerId={ownerId}
+        />
+    ));
 
     return (
         <div className="px-3 pb-2">
@@ -131,18 +225,19 @@ export function InternalReplicationTaskDistribution(props: InternalReplicationTa
 
 interface InternalReplicationTaskProgressProps {
     progress: OngoingTaskNodeInternalReplicationProgressDetails;
+    onClick?: () => void;
 }
 
 export function InternalReplicationTaskProgress(props: InternalReplicationTaskProgressProps) {
-    const { progress } = props;
+    const { progress, onClick } = props;
 
     if (!progress) {
-        return <ProgressCircle state="running" />;
+        return <ProgressCircle state="running" onClick={onClick} />;
     }
 
     if (progress.completed) {
         return (
-            <ProgressCircle state="success" icon="check">
+            <ProgressCircle state="success" icon="check" onClick={onClick}>
                 up to date
             </ProgressCircle>
         );
@@ -155,7 +250,7 @@ export function InternalReplicationTaskProgress(props: InternalReplicationTaskPr
     const percentage = Math.floor((totalProcessed * 100) / totalItems) / 100;
 
     return (
-        <ProgressCircle state="running" icon={null} progress={percentage}>
+        <ProgressCircle state="running" icon={null} progress={percentage} onClick={onClick}>
             Running
         </ProgressCircle>
     );

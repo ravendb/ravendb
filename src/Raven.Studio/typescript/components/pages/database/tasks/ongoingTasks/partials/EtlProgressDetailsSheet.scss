@@ -1,0 +1,58 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.etl-progress-details-sheet {
+    .named-progress {
+        padding: 0;
+    }
+
+    .progress-item {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        background: colors.$panel-bg-2;
+        border-radius: sizes.$border-radius;
+        padding: sizes.$gutter-xs sizes.$gutter-sm;
+
+        .progress-label {
+            order: 1;
+            flex: 1;
+        }
+
+        .progress-percentage {
+            order: 2;
+            font-size: 11px;
+        }
+
+        .progress {
+            order: 3;
+            flex-basis: 100%;
+            margin-top: 4px;
+            height: 3px;
+            margin-bottom: 0;
+        }
+    }
+
+    .script-separator {
+        margin: 18.54px 0;
+    }
+
+    .script-preview {
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: sizes.$gutter-sm;
+            padding: sizes.$gutter-xs 0;
+            border-bottom: 1px solid colors.$border-color-light;
+
+            &:last-of-type {
+                border-bottom: none;
+            }
+        }
+
+        .detail-label {
+            color: colors.$text-muted-color;
+        }
+    }
+}
