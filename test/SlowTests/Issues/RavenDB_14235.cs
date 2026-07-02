@@ -25,7 +25,11 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(4)]
         [InlineData(8)]
+        [InlineData(16)]
         [InlineData(32)]
         [InlineData(64)]
         [InlineData(128)]
