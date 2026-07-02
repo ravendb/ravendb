@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Collapse from "react-bootstrap/Collapse";
@@ -11,6 +10,7 @@ import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { StickyHeader } from "components/common/StickyHeader";
 import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
+import LoadButton from "./LoadButton";
 
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
@@ -136,18 +136,5 @@ function MethodRow({ method, onSelect }: MethodRowProps) {
                 </Collapse>
             )}
         </>
-    );
-}
-
-interface LoadButtonProps {
-    onSelect: () => void;
-}
-
-function LoadButton({ onSelect }: LoadButtonProps) {
-    return (
-        <Button variant="link" className="text-emphasis" title="Load into editor" onClick={onSelect}>
-            <Icon icon="arrow-left" margin="me-1" />
-            Load
-        </Button>
     );
 }

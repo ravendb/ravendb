@@ -1,8 +1,7 @@
 import React from "react";
 import { SampleScript } from "./sampleQueriesTypes";
 import Code from "components/common/Code";
-import Button from "react-bootstrap/Button";
-import { Icon } from "components/common/Icon";
+import LoadButton from "./LoadButton";
 
 interface SampleScriptsListProps {
     scripts: SampleScript[];
@@ -36,18 +35,5 @@ function SampleScriptCard({ sample, onSelect }: SampleScriptCardProps) {
                 extraActions={<LoadButton onSelect={() => onSelect(sample.script)} />}
             />
         </div>
-    );
-}
-
-interface LoadButtonProps {
-    onSelect: () => void;
-}
-
-function LoadButton({ onSelect }: LoadButtonProps) {
-    return (
-        <Button variant="link" className="text-emphasis" title="Load into editor" onClick={onSelect}>
-            <Icon icon="arrow-left" margin="me-1" />
-            Load
-        </Button>
     );
 }
