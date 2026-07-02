@@ -3,6 +3,7 @@ import Tab from "react-bootstrap/Tab";
 import Nav from "react-bootstrap/Nav";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import { motion } from "motion/react";
 import { Icon } from "components/common/Icon";
 import SampleScriptsList from "./partials/SampleScriptsList";
@@ -72,17 +73,24 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect, onC
                         </Button>
                     )}
                 </Nav>
+                {activeTab === "methods" && (
+                    <div className="methods-search-wrapper position-relative panel-bg-1 px-3">
+                        <Icon icon="search" margin="m-0" className="methods-search-icon position-absolute" />
+                        <Form.Control
+                            type="search"
+                            placeholder="Search by signature"
+                            className="rounded-1 methods-search-input"
+                            value={methodSearch}
+                            onChange={(e) => setMethodSearch(e.target.value)}
+                        />
+                    </div>
+                )}
                 <Tab.Content ref={tabContentRef}>
                     <Tab.Pane eventKey="scripts">
                         <SampleScriptsList scripts={scripts} onSelect={onSelect} />
                     </Tab.Pane>
                     <Tab.Pane eventKey="methods">
-                        <MethodsTable
-                            methodGroups={methodGroups}
-                            search={methodSearch}
-                            onSearchChange={setMethodSearch}
-                            onSelect={onSelect}
-                        />
+                        <MethodsTable methodGroups={methodGroups} search={methodSearch} onSelect={onSelect} />
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>

@@ -2,24 +2,21 @@ import React, { useState } from "react";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Collapse from "react-bootstrap/Collapse";
-import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import classNames from "classnames";
 import { motion } from "motion/react";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
-import { StickyHeader } from "components/common/StickyHeader";
 import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
 import LoadButton from "./LoadButton";
 
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
     search: string;
-    onSearchChange: (value: string) => void;
     onSelect: (script: string) => void;
 }
 
-export default function MethodsTable({ methodGroups, search, onSearchChange, onSelect }: MethodsTableProps) {
+export default function MethodsTable({ methodGroups, search, onSelect }: MethodsTableProps) {
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
@@ -29,18 +26,6 @@ export default function MethodsTable({ methodGroups, search, onSearchChange, onS
 
     return (
         <div className="methods-table vstack gap-3 px-3 py-2">
-            <StickyHeader className="panel-bg-1 px-3">
-                <div className="methods-search-wrapper position-relative">
-                    <Icon icon="search" margin="m-0" className="methods-search-icon position-absolute" />
-                    <Form.Control
-                        type="search"
-                        placeholder="Search by signature"
-                        className="rounded-1 methods-search-input"
-                        value={search}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                    />
-                </div>
-            </StickyHeader>
             {filteredGroups.map((group) => (
                 <MethodGroupCard key={group.category} group={group} onSelect={onSelect} />
             ))}

@@ -43,6 +43,8 @@
 }
 
 .methods-search-wrapper {
+    padding: sizes.$gutter-xs 0;
+
     .methods-search-icon {
         top: 50%;
         left: sizes.$gutter-xs;
