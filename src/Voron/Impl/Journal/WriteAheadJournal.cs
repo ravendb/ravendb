@@ -844,11 +844,16 @@ namespace Voron.Impl.Journal
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
                     Pager.State dataPagerState;
-                    List<(long Start, long Count)> flushedPageRanges;
+
+                    // the flushed page ranges are needed only when there are sparse regions to subtract them from
+                    List<(long Start, long Count)> flushedPageRanges = null;
+                    if (_applyLogsToDataFileStateFromPreviousFailedAttempt.SparseRegions is { Count: > 0 } || _pendingSparseRegions.Count > 0)
+                        flushedPageRanges = new List<(long Start, long Count)>();
+
                     try
                     {
                         byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
-                        dataPagerState = ApplyPagesToDataFileFromScratch(_applyLogsToDataFileStateFromPreviousFailedAttempt, out flushedPageRanges);
+                        dataPagerState = ApplyPagesToDataFileFromScratch(_applyLogsToDataFileStateFromPreviousFailedAttempt, flushedPageRanges);
                     }
                     catch (Exception e) when (e is OutOfMemoryException or EarlyOutOfMemoryException)
                     {
@@ -1475,7 +1480,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state, out List<(long Start, long Count)> flushedPageRanges)
+            private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state, List<(long Start, long Count)> flushedPageRanges)
             {
                 long written = 0;
                 var sp = Stopwatch.StartNew();
@@ -1484,7 +1489,6 @@ namespace Voron.Impl.Journal
                 var currentStateRecord = _waj._env.CurrentStateRecord;
                 var dataPagerState = currentStateRecord.DataPagerState;
                 var record = state.Record;
-                flushedPageRanges = null;
                 using (var meter = options.IoMetrics.MeterIoRate(dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                 {
                     var pagesBuffer = ArrayPool<Pal.page_to_write>.Shared.Rent(record.ScratchPagesTable.Count);
@@ -1495,9 +1499,8 @@ namespace Voron.Impl.Journal
                         if (pages.IsEmpty)
                             return dataPagerState;
 
-                        if (state.SparseRegions is { Count: > 0 } || _pendingSparseRegions.Count > 0)
+                        if (flushedPageRanges != null)
                         {
-                            flushedPageRanges = new List<(long Start, long Count)>(pages.Length);
                             foreach (var page in pages)
                                 flushedPageRanges.Add((page.page_num, page.count_of_pages));
                         }
