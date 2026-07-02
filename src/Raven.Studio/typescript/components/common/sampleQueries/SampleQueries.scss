@@ -1,11 +1,6 @@
 @use "Content/scss/sizes";
 @use "Content/scss/colors";
 
-.sample-queries-page {
-    display: flex;
-    flex-direction: column;
-}
-
 .sample-queries-tabs {
     &.card {
         border-radius: sizes.$border-radius;
@@ -150,27 +145,8 @@
         padding: 0;
     }
 
-    .tab-pane.fade,
-    .alert.fade {
+    .tab-pane.fade {
         opacity: 1;
         transition: none;
-    }
-
-    // BS3 styles.css loads after bs5-styles.css, so BS3's block layout and hardcoded
-    // .alert-info colors override BS5. Re-apply them here since main.css loads last.
-    .alert {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center;
-        gap: 0.5rem;
-        background-color: var(--bs-alert-bg);
-        border-color: var(--bs-alert-border-color);
-        color: var(--bs-alert-color);
-        padding: var(--bs-alert-padding-y) var(--bs-alert-padding-x);
-        border-radius: var(--bs-alert-border-radius, var(--bs-border-radius));
-
-        .w-100 {
-            font-size: 0.875rem;
-        }
     }
 }
