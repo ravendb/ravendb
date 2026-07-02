@@ -66,22 +66,47 @@ namespace Raven.Client.Documents.Session
 
             foreach (var range in ranges)
             {
-                // Skip ranges of the wrong type
-                if (range.CachedEntries is not List<TTValues> typedList)
+                if (range.To < from || range.From > to || range.IsLocal == false || range.CachedEntries == null)
                     continue;
 
-                if (range.To < from || range.From > to || range.IsLocal == false)
-                    continue;
-
-                for (int i = 0; i < typedList.Count; i++)
+                foreach (var e in range.CachedEntries)
                 {
-                    var e = typedList[i];
-                    if (e.Timestamp >= from && e.Timestamp <= to)
-                        result.Add(e);
+                    if (e.Timestamp < from || e.Timestamp > to)
+                        continue;
+
+                    // Locally-appended entries are cached untyped; convert to the requested entry type.
+                    var converted = ConvertCachedEntry<TTValues>(e);
+                    if (converted != null)
+                        result.Add(converted);
                 }
             }
 
             return result.Count == 0 ? null : result;
+        }
+
+        // Cached entries are stored untyped (base TimeSeriesEntry). A typed read must reconstruct
+        // the strongly-typed Value from the raw values, the same way GetTypedFromCache does.
+        private TTValues ConvertCachedEntry<TTValues>(TimeSeriesEntry entry) where TTValues : TimeSeriesEntry
+        {
+            if (entry is TTValues alreadyTyped)
+                return alreadyTyped;
+
+            var typed = new TimeSeriesEntry<TValues>
+            {
+                Timestamp = entry.Timestamp,
+                Tag = entry.Tag,
+                Values = entry.Values,
+                IsRollup = entry.IsRollup,
+                Value = TimeSeriesValuesHelper.SetMembers<TValues>(entry.Values, entry.IsRollup)
+            };
+
+            if (typed is TTValues typedResult)
+                return typedResult;
+
+            if (typeof(TTValues) == typeof(TimeSeriesRollupEntry<TValues>))
+                return (TTValues)(object)typed.AsRollupEntry();
+
+            return null;
         }
 
         internal List<TEntry> RemoveDeletedTimeSeries<TEntry>(List<TEntry> entries) where TEntry : TimeSeriesEntry
