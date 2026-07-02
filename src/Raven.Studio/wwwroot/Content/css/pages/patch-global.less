@@ -1,13 +1,3 @@
-// this is fix for global class applied to document.body in test patch mode
-
-.show-test {
-    .backdrop {
-        // Keep the backdrop hidden in patch test mode so it does not dim the editor
-        // and the samples panel that can stay open below it.
-        display: none !important;
-    }
-}
-
 .show-test .patch, .show-test .edit-kafka-sink-task, .edit-rabbitmq-sink-task {
     
     .syntax-help {
