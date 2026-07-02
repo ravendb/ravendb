@@ -1045,6 +1045,7 @@ namespace Voron
         public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null)
         {
             var r = new Dictionary<long, string>();
+            var sectionOwnerHashToTableName = new Dictionary<ulong, string>();
             RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
             for (long pageNumber = NextPageNumber; pageNumber < tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages; pageNumber++)
             {
@@ -1146,6 +1147,7 @@ namespace Voron
                                 var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
                                 long pageNumber = readResult.Reader.Read<long>();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
+                                sectionOwnerHashToTableName[activeDataSmallSection.SectionOwnerHash] = name;
                                 RegisterSectionPages(activeDataSmallSection, name + "/" + TableSchema.ActiveSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
@@ -1181,6 +1183,32 @@ namespace Voron
                                 throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
                         }
                     } while (rootIterator.MoveNext());
+                }
+            }
+            
+            var numberOfAllocatedPages = tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages;
+            for (long pageNumber = 0; pageNumber < numberOfAllocatedPages; pageNumber++)
+            {
+                if (r.ContainsKey(pageNumber))
+                    continue;
+
+                var page = tx.LowLevelTransaction.GetPage(pageNumber);
+                if (page.PageNumber != pageNumber ||
+                    page.IsOverflow == false ||
+                    (page.Flags & PageFlags.RawData) != PageFlags.RawData ||
+                    page.OverflowSize <= 0)
+                    continue;
+
+                var header = (RawDataOverflowPageHeader*)page.Pointer;
+                var owner = sectionOwnerHashToTableName.TryGetValue(header->SectionOwnerHash, out var tableName)
+                    ? tableName + "/LargeValue"
+                    : $"NoKnownOwner/LargeValue (unknown table, type: {header->TableType})";
+
+                var numberOfPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                for (long i = 0; i < numberOfPages && pageNumber + i < numberOfAllocatedPages; i++)
+                {
+                    if (r.TryAdd(pageNumber + i, owner) == false)
+                        break;
                 }
             }
 

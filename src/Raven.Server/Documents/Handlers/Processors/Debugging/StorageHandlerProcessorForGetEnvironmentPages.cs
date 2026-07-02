@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -268,6 +267,8 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
             return ("🚨", "Sparse DUPE (BUG!)");
         if (owner == "Gap")
             return ("🚨", "Gap (BUG!)");
+        if (owner.StartsWith("NoKnownOwner/LargeValue"))
+            return ("🚨", "Large value without a known table (BUG?)");
         if (owner == "Sparse")
             return ("🗑️", "Sparse (returned to OS...)");
         if (owner == "Unassigned")
