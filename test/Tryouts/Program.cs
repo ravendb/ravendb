@@ -4,8 +4,6 @@ using System.IO;
 using System.Threading.Tasks;
 using FastTests.Voron.Util;
 using Raven.Server.Utils;
-using SlowTests.Client.TimeSeries.BulkInsert;
-using SlowTests.Client.TimeSeries.Issues;
 using SlowTests.Corax;
 using SlowTests.Issues;
 using SlowTests.Server;
@@ -33,11 +31,11 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RavenDB_25903(testOutputHelper))
+                using (var test = new RavenDB_21273(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    await test.ShouldRemoveTimeseriesFromCache();
+                    await test.ExceptionWhenImportingDelayedExternalReplicationWithProLicense();
                 }
             }
             catch (Exception e)

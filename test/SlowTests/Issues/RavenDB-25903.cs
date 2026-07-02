@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Amqp;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow;
@@ -761,6 +762,79 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task TypedGetAfterFullDeleteShouldNotThrow()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.Today.EnsureUtc();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.TimeSeriesFor<HeartRateMeasure>(bookId1).Append(baseline, new HeartRateMeasure { HeartRate = 59d });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // populate the cache with a server-backed range
+                var first = await session.TimeSeriesFor<HeartRateMeasure>(bookId1).GetAsync();
+                Assert.Equal(59d, first.Single().Value.HeartRate);
+
+                // delete the whole series in-session -> the covering cached range is marked IsDeleted
+                session.TimeSeriesFor<HeartRateMeasure>(bookId1).Delete();
+
+                // typed read served from cache must not throw and must reflect the delete
+                var afterDelete = await session.TimeSeriesFor<HeartRateMeasure>(bookId1).GetAsync();
+                Assert.True(afterDelete == null || afterDelete.Length == 0);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task ServerRangeContainedInLocalRangeShouldNotDuplicateCacheRange()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 10; i++)
+                    tsf.Append(baseline.AddHours(i), 1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // local append creates a wide IsLocal range [baseline+1h, sessionCreatedAt(now)]
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline.AddHours(1), 1);
+
+                // this sub-window goes to the server (NotInCache ignores local ranges);
+                // the returned server range is fully contained in the local range -> merge CASE 5,
+                // which used to re-add the server range a second time (duplicate).
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(2), baseline.AddHours(3));
+
+                Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue(bookId1, out var cache));
+                Assert.True(cache.TryGetValue(nameof(Book), out var ranges));
+                AssertNoDuplicateRanges(ranges);
+            }
+        }
+
+        private static void AssertNoDuplicateRanges(List<TimeSeriesRangeResult> ranges)
+        {
+            for (int i = 0; i < ranges.Count; i++)
+            {
+                for (int j = i + 1; j < ranges.Count; j++)
+                {
+                    Assert.False(ranges[i].From == ranges[j].From && ranges[i].To == ranges[j].To,
+                        $"duplicate cached range [{ranges[i].From:O}..{ranges[i].To:O}] at indexes {i} and {j}");
+                }
+            }
+        }
+
         public bool IsOrdered(TimeSeriesEntry[] entries)
         {
             for (int i = 1; i < entries.Length; i++)
@@ -769,6 +843,11 @@ namespace SlowTests.Issues
                     return false;
             }
             return true;
+        }
+
+        private struct HeartRateMeasure
+        {
+            [TimeSeriesValue(0)] public double HeartRate;
         }
 
         private class Book
