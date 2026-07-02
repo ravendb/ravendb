@@ -50,6 +50,10 @@ public sealed class PostFilterMatch : IQueryMatch
     public long Count => _inner.Count;
     public bool IsBoosting => _inner.IsBoosting;
 
+    /// <summary>The wrapped match. Exposed so a score-sorting SortingMatch can reach the underlying
+    /// CompiledQueryMatch (its ScoreSorted delegates to this inner) to set PreserveLeavesForScoring.</summary>
+    internal IQueryMatch InnerMatch => _inner;
+
     public int Fill(Span<long> matches)
     {
         long t0 = _wantTimings ? Stopwatch.GetTimestamp() : 0;

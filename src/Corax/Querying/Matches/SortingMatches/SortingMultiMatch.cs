@@ -69,6 +69,19 @@ public sealed unsafe partial class SortingMultiMatch<TInner> : SortingMultiMatch
         _alreadyReadIdx = 0;
         _results = new ContextBoundNativeList<long>(searcher.Allocator);
         TotalResults = NotStarted;
+
+        // If any sort field is score(), the score pass re-reads every leaf's bitmap after the fold; tell the
+        // inner CompiledQueryMatch to clone leaves into the fold so their BitmapState survives for scoring.
+        // Must be set before the fold runs (first Count/Fill on the inner match).
+        foreach (var order in orderMetadata)
+        {
+            if (order.FieldType == MatchCompareFieldType.Score)
+            {
+                CompiledQueryMatch.MarkPreserveLeavesForScoring(_inner);
+                break;
+            }
+        }
+
         _fillFunc = SortBy(orderMetadata);
         
         _nextComparers = orderMetadata.Length > NextComparerOffset 

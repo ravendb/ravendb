@@ -92,14 +92,14 @@ public static class QueryPrimitives
     {
         long remaining = bitmapSlot == 0 ? ctx.OpLimit - ctx.Bitmaps[0].ComputeCount() : ctx.OpLimit;
         if (remaining <= 0) return;
-        OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], remaining, ctx.Token);
+        OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], remaining, ctx.Token, ctx.PreserveLeavesForScoring);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxFillFromMatch(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
         ctx.Bitmaps[bitmapSlot].Clear();
-        OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit, ctx.Token);
+        OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit, ctx.Token, ctx.PreserveLeavesForScoring);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,7 +122,7 @@ public static class QueryPrimitives
     public static void CtxAndFromMatch(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
         Debug.Assert(bitmapSlot != EphemeralBitmapSlot, "AND destination must not alias the AND scratch slot.");
-        AndWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ref ctx.Bitmaps[EphemeralBitmapSlot], ctx.Token);
+        AndWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ref ctx.Bitmaps[EphemeralBitmapSlot], ctx.Token, ctx.PreserveLeavesForScoring);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -145,7 +145,7 @@ public static class QueryPrimitives
     public static void CtxAndNotFromMatch(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
         Debug.Assert(bitmapSlot != EphemeralBitmapSlot, "ANDNOT destination must not alias the AND scratch slot.");
-        AndNotWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ref ctx.Bitmaps[EphemeralBitmapSlot], ctx.Token);
+        AndNotWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ref ctx.Bitmaps[EphemeralBitmapSlot], ctx.Token, ctx.PreserveLeavesForScoring);
     }
 
     /// <summary>Resolve a posting-list leaf slot to its raw posting-list id, or a synthetic sentinel
@@ -356,7 +356,7 @@ public static class QueryPrimitives
     ///     skipping the per-batch IQueryMatch + function-pointer indirection.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
-    public static void OrWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, long limit = long.MaxValue, CancellationToken token = default)
+    public static void OrWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, long limit = long.MaxValue, CancellationToken token = default, bool preserveLeaf = false)
     {
         if (match is IBitmapQueryMatch bm)
         {
@@ -366,6 +366,15 @@ public static class QueryPrimitives
             ref RoaringBitmap srcData = ref bm.BitmapState;
             if (srcData.IsEmpty)
                 return;
+            if (preserveLeaf)
+            {
+                // Score-sorted query: OrWith would steal this leaf's unique containers and mark it consumed,
+                // but the score pass re-reads it afterwards. Fold a clone instead so the leaf stays intact.
+                var clone = srcData.Clone();
+                bitmap.OrWith(ref clone);
+                clone.Dispose(); // OrWith stole only unique containers (detached from the clone); the clone still owns any shared ones, so dispose to release them.
+                return;
+            }
             bitmap.OrWith(ref srcData);
             return;
         }
@@ -397,11 +406,20 @@ public static class QueryPrimitives
     ///     the full posting list into a temp bitmap.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
-    public static void AndWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, ref RoaringBitmap tempBitmap, CancellationToken token = default)
+    public static void AndWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, ref RoaringBitmap tempBitmap, CancellationToken token = default, bool preserveLeaf = false)
     {
         if (match is IBitmapQueryMatch bm)
         {
             ref RoaringBitmap srcData = ref bm.BitmapState;
+            if (preserveLeaf)
+            {
+                // Score-sorted query: AndWith consumes the leaf (right side). Fold a clone so the leaf stays
+                // intact for the score pass; the result lands in `bitmap` exactly as before.
+                var clone = srcData.Clone();
+                bitmap.AndWith(ref clone);
+                clone.Dispose();
+                return;
+            }
             bitmap.AndWith(ref srcData);
             return;
         }
@@ -420,11 +438,20 @@ public static class QueryPrimitives
     /// bounded range scan <see cref="AndNotWithPostings"/> for TermMatch with a large posting list.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
-    public static void AndNotWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, ref RoaringBitmap tempBitmap, CancellationToken token = default)
+    public static void AndNotWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, ref RoaringBitmap tempBitmap, CancellationToken token = default, bool preserveLeaf = false)
     {
         if (match is IBitmapQueryMatch bm)
         {
             ref RoaringBitmap srcData = ref bm.BitmapState;
+            if (preserveLeaf)
+            {
+                // Score-sorted query: AndNotWith consumes the leaf (right side). Fold a clone so the leaf stays
+                // intact for the score pass; the result lands in `bitmap` exactly as before.
+                var clone = srcData.Clone();
+                bitmap.AndNotWith(ref clone);
+                clone.Dispose();
+                return;
+            }
             bitmap.AndNotWith(ref srcData);
             return;
         }

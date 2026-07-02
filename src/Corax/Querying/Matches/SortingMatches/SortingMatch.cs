@@ -74,6 +74,10 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
 
         if (_orderMetadata.HasBoost)
         {
+            // Score-sorted: the score pass re-reads every leaf's bitmap AFTER the plan folds them into the
+            // result accumulator. Tell the inner CompiledQueryMatch to clone leaves into the fold so their
+            // BitmapState survives intact for scoring. Must be set before the fold runs (first Count/Fill below).
+            CompiledQueryMatch.MarkPreserveLeavesForScoring(_inner);
             _fillFunc = SortBy<EntryComparerByScore, NoIterationOptimization, NoIterationOptimization>(orderMetadata);
         }
         else
