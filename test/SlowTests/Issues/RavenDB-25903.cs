@@ -23,6 +23,42 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task ServeFromCacheShouldOverlayLocalEntriesAndFetchServerGaps()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 10; i++)
+                    tsf.Append(baseline.AddHours(i), 1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // wide local range [baseline+1h, now] with one entry not on the server
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline.AddMinutes(30), 5);
+
+                // a server sub-range gets cached (this used to leave a poisoned local range in the list)
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(2), baseline.AddHours(3));
+
+                // cross-range read: server-covered region is fetched/stitched, and the local entry is overlaid.
+                // Previously this tripped MergeRangesWithResults' Debug.Assert / returned wrong data.
+                var tse = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, baseline.AddHours(5));
+
+                var timestamps = tse.Select(x => x.Timestamp).ToList();
+                Assert.Equal(timestamps.Count, timestamps.Distinct().Count());
+                Assert.True(IsOrdered(tse));
+                Assert.Contains(tse, e => e.Timestamp == baseline.AddMinutes(30) && e.Value == 5); // local overlay
+                Assert.Equal(6, tse.Length); // server +1h..+5h (5) + local +30m (1)
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task ShouldCacheTimeSeriesAndGoToServer()
         {
             using var store = GetDocumentStore();
@@ -142,13 +178,17 @@ namespace SlowTests.Issues
                 Assert.Equal(15, tse.Length);
                 Assert.True(IsOrdered(tse));
 
+                // in-session appends now live in the separate local overlay; the range list holds only
+                // the server-backed range fetched for [baseline, max]
                 Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue(bookId1, out var cache));
                 Assert.True(cache.TryGetValue(nameof(Book), out var ranges));
-                Assert.Equal(2, ranges.Count);
+                Assert.Equal(1, ranges.Count);
+                Assert.Equal(ranges[0].From, baseline);
+                Assert.Equal(ranges[0].To, DateTime.MaxValue);
 
-                Assert.Equal(ranges[0].From, baseline.AddMinutes(-5));
-                Assert.Equal(ranges[1].From, baseline);
-                Assert.Equal(ranges[1].To, DateTime.MaxValue);
+                Assert.True(((InMemoryDocumentSessionOperations)session).LocalTimeSeries.TryGetValue(bookId1, out var localByName));
+                Assert.True(localByName.TryGetValue(nameof(Book), out var localEntries));
+                Assert.Equal(3, localEntries.Count); // baseline-5, baseline-3, baseline+1:30
 
                 await session.SaveChangesAsync();
             }
@@ -165,9 +205,10 @@ namespace SlowTests.Issues
                 Assert.Equal(18, tse.Length);
                 Assert.True(IsOrdered(tse));
 
+                // only the server-backed range for [MinValue, baseline+13m] is in the range list
                 Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue(bookId1, out var cache));
                 Assert.True(cache.TryGetValue(nameof(Book), out var ranges));
-                Assert.Equal(2, ranges.Count);
+                Assert.Equal(1, ranges.Count);
 
                 Assert.Equal(ranges[0].From, DateTime.MinValue);
 
