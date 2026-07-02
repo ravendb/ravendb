@@ -131,6 +131,9 @@ namespace Raven.Client.Documents.Session
 
         private void RemoveFromCacheIfNeeded(DateTime? from = null, DateTime? to = null)
         {
+            // drop in-session local entries that fall in the deleted window
+            RemoveLocalEntries(from, to);
+
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
             {
                 AddRemovedTimeSeriesRange(from, to);
@@ -195,6 +198,30 @@ namespace Raven.Client.Documents.Session
                 cache[Name] = ranges = new List<TimeSeriesRangeResult>();
 
             ranges.Add(range);
+        }
+
+        private void RemoveLocalEntries(DateTime? from, DateTime? to)
+        {
+            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false ||
+                byName.TryGetValue(Name, out var entries) == false ||
+                entries.Count == 0)
+                return;
+
+            var f = (from ?? DateTime.MinValue).EnsureUtc();
+            var t = (to ?? DateTime.MaxValue).EnsureUtc();
+
+            List<DateTime> toRemove = null;
+            foreach (var key in entries.Keys)
+            {
+                if (key >= f && key <= t)
+                    (toRemove ??= new List<DateTime>()).Add(key);
+            }
+
+            if (toRemove == null)
+                return;
+
+            foreach (var key in toRemove)
+                entries.Remove(key);
         }
 
         public void Increment<TValues>(DateTime timestamp, TValues value)
@@ -274,96 +301,59 @@ namespace Raven.Client.Documents.Session
             // which the command mutates in place (existing.Values[i] += ...); sharing it would corrupt the cache.
             var valuesArray = values.ToArray();
 
-            //No timeseries were loaded for this document, we need to create the cache for it
-            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
-            {
-                cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
-                Session.TimeSeriesByDocId[DocId] = cache;
-            }
+            // an increment accumulates onto the currently-known value at this timestamp
+            // (a prior in-session local value, or a loaded server value); an append replaces it.
+            if (increment)
+                valuesArray = AddValues(CurrentValuesAt(utcTimestamp), valuesArray);
 
             RemoveFromDeletedCacheIfNeeded(timestamp);
-            var earlier = Session.SessionCreatedAt < timestamp
-                ? Session.SessionCreatedAt
-                : timestamp;
 
-            var latest = Session.SessionCreatedAt > timestamp
-                ? Session.SessionCreatedAt
-                : timestamp;
-
-            //No timeseries with this name were loaded for this document, we need to create the cached range for it
-            if (cache.TryGetValue(Name, out var ranges) == false)
-            {
-                ranges = new List<TimeSeriesRangeResult>();
-                cache[Name] = ranges;
-
-                var initialEntry = new TimeSeriesEntry
-                {
-                    Timestamp = utcTimestamp,
-                    Tag = tag,
-                    IsLocal = true,
-                    Values = valuesArray
-                };
-
-                ranges.Add(new TimeSeriesRangeResult
-                {
-                    From = earlier,
-                    To = latest,
-                    IsLocal = true,
-                    CachedEntries = new List<TimeSeriesEntry> { initialEntry },
-                    Entries = new[] { initialEntry }
-                });
-
-                return;
-            }
-
-            //There are timeseries with this name for this document, we need to find the right range to add the new entry
-            var tse = new TimeSeriesEntry
+            var entry = new TimeSeriesEntry
             {
                 Timestamp = utcTimestamp,
                 Tag = tag,
+                IsLocal = true,
                 Values = valuesArray
             };
 
-            bool inserted = false;
-            for (int i = ranges.Count - 1; i >= 0; i--)
+            // In-session appends/increments are kept OUT of the server-backed range list and overlaid
+            // on top of server results at read time. This keeps TimeSeriesByDocId a clean, non-overlapping
+            // server-coverage list (so NotInCache / the merge / the stitch stay correct).
+            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false)
+                Session.LocalTimeSeries[DocId] = byName = new Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>(StringComparer.OrdinalIgnoreCase);
+
+            if (byName.TryGetValue(Name, out var entries) == false)
+                byName[Name] = entries = new SortedList<DateTime, TimeSeriesEntry>();
+
+            entries[utcTimestamp] = entry;
+        }
+
+        // The currently-known value at a timestamp: a prior in-session local value if present,
+        // otherwise a loaded server value from a cached range (used to accumulate increments onto).
+        private double[] CurrentValuesAt(DateTime utcTimestamp)
+        {
+            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) &&
+                byName.TryGetValue(Name, out var localEntries) &&
+                localEntries.TryGetValue(utcTimestamp, out var local))
+                return local.Values;
+
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
+                cache.TryGetValue(Name, out var ranges))
             {
-                if (ranges[i].From <= timestamp && ranges[i].To >= timestamp)
+                foreach (var range in ranges)
                 {
-                    inserted = true;
-                    ranges[i].CachedEntries ??= ranges[i].Entries?.ToList() ?? new List<TimeSeriesEntry>();
+                    if (range.From > utcTimestamp || range.To < utcTimestamp || range.CachedEntries == null)
+                        continue;
 
-                    int index = FindStartIndex(ranges[i].CachedEntries, tse.Timestamp);
-                    var existsAtTimestamp = index < ranges[i].CachedEntries.Count &&
-                                            ranges[i].CachedEntries[index].Timestamp == tse.Timestamp;
-
-                    if (existsAtTimestamp)
+                    foreach (var e in range.CachedEntries)
                     {
-                        // increment accumulates onto the existing value; a plain append overrides it
-                        if (increment)
-                            tse.Values = AddValues(ranges[i].CachedEntries[index].Values, valuesArray);
-
-                        ranges[i].CachedEntries[index] = tse;
+                        if (e.Timestamp == utcTimestamp)
+                            return e.Values;
                     }
-                    else
-                    {
-                        ranges[i].CachedEntries.Insert(index, tse);
-                    }
-                    break;
                 }
             }
 
-            if (inserted)
-                return;
-
-            //Timeseries entry is out of the range of the cached timeseries, we need to create a new range for it
-            ranges.Add(new TimeSeriesRangeResult
-            {
-                From = earlier,
-                To = latest,
-                IsLocal = true,
-                CachedEntries = new List<TimeSeriesEntry> { tse },
-                Entries = new[] { tse }
-            });
+            return Array.Empty<double>();
         }
 
         private void RemoveFromDeletedCacheIfNeeded(DateTime timestamp)

@@ -49,7 +49,20 @@ namespace Raven.Client.Documents.Session
             if (resultToUser == null)
                 return null;
 
+            resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
+
             return RemoveDeletedTimeSeries(resultToUser.Take(pageSize).ToList())?.ToArray();
+        }
+
+        // Overlay in-session local appends/increments on top of a server-served result
+        // (local wins on the same timestamp).
+        private IEnumerable<TimeSeriesEntry> OverlayLocalEntries(IEnumerable<TimeSeriesEntry> serverEntries, DateTime from, DateTime to)
+        {
+            var local = GetCachedEntriesInRange<TimeSeriesEntry>(from, to);
+            if (local == null || local.Count == 0)
+                return serverEntries;
+
+            return MergeSorted(serverEntries as List<TimeSeriesEntry> ?? serverEntries.ToList(), local);
         }
 
         private List<TTValues> GetCachedEntriesInRange<TTValues>(
@@ -57,28 +70,23 @@ namespace Raven.Client.Documents.Session
             DateTime to)
             where TTValues : TimeSeriesEntry
         {
-            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false ||
-                cache.TryGetValue(Name, out var ranges) == false ||
-                ranges.Count == 0)
+            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false ||
+                byName.TryGetValue(Name, out var entries) == false ||
+                entries.Count == 0)
                 return null;
 
             var result = new List<TTValues>();
 
-            foreach (var range in ranges)
+            foreach (var kv in entries) // SortedList -> ascending by timestamp
             {
-                if (range.To < from || range.From > to || range.IsLocal == false || range.CachedEntries == null)
+                var e = kv.Value;
+                if (e.Timestamp < from || e.Timestamp > to)
                     continue;
 
-                foreach (var e in range.CachedEntries)
-                {
-                    if (e.Timestamp < from || e.Timestamp > to)
-                        continue;
-
-                    // Locally-appended entries are cached untyped; convert to the requested entry type.
-                    var converted = ConvertCachedEntry<TTValues>(e);
-                    if (converted != null)
-                        result.Add(converted);
-                }
+                // Locally-appended entries are stored untyped; convert to the requested entry type.
+                var converted = ConvertCachedEntry<TTValues>(e);
+                if (converted != null)
+                    result.Add(converted);
             }
 
             return result.Count == 0 ? null : result;
@@ -155,6 +163,8 @@ namespace Raven.Client.Documents.Session
             if (resultToUser == null)
                 return null;
 
+            resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
+
             var asList = RemoveDeletedTimeSeries(resultToUser.ToList());
             if (asList.Count == 0)
                 return Array.Empty<TimeSeriesEntry<TEntry>>();
@@ -189,10 +199,11 @@ namespace Raven.Client.Documents.Session
             {
                 foreach (var range in ranges)
                 {
-                    // Only a server-backed range that FULLY covers the request may be served from cache.
-                    // A looser (overlap-based) check routes requests into ServeFromCache's stitching path,
-                    // which is corrupted by locally-appended (IsLocal) ranges sharing the same list.
-                    if (range.From <= from && range.To >= to && range.IsLocal == false)
+                    // A server-backed range overlapping the request is enough: ServeFromCache serves it
+                    // fully, by page size, or by fetching only the missing gaps. In-session local appends
+                    // live in a separate overlay (LocalTimeSeries), so the range list here is clean
+                    // server coverage and can't corrupt the stitch.
+                    if (range.From <= to && range.To >= from)
                         return false;
                 }
             }

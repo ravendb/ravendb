@@ -152,6 +152,13 @@ namespace Raven.Client.Documents.Session
         protected internal Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> DeletedTimeSeries =>
             _deletedTimeSeries ??= new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
 
+        private Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>> _localTimeSeries;
+
+        // In-session appended / incremented time series entries, kept OUT of the server-backed
+        // TimeSeriesByDocId range list. They are overlaid on top of server results at read time.
+        protected internal Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>> LocalTimeSeries =>
+            _localTimeSeries ??= new Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>>(StringComparer.OrdinalIgnoreCase);
+
         protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
@@ -1355,6 +1362,7 @@ more responsive application.
                 DocumentsById.Remove(documentInfo.Id);
                 _countersByDocId?.Remove(documentInfo.Id);
                 _timeSeriesByDocId?.Remove(documentInfo.Id);
+                _localTimeSeries?.Remove(documentInfo.Id);
 
                 documentInfo.Dispose();
             }
