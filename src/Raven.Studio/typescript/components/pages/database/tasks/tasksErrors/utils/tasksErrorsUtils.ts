@@ -82,7 +82,7 @@ export interface TasksFiltersState {
     nodeTags: string[];
     shardNumbers: string[];
     healthStatuses: EtlHealthStatus[];
-    taskTypes: StudioEtlType[];
+    taskTypes: StudioTaskType[];
 }
 
 export function parseProcessName(processName: string): [etlName: string, transformationName: string] {
@@ -253,7 +253,10 @@ export function getTaskTypeDisplay(
     return TaskUtils.studioTaskTypeToDisplay(resolveStudioTaskType(category, etlType));
 }
 
-function resolveStudioTaskType(category: TaskCategory, etlType: StudioEtlType | undefined): StudioTaskType | undefined {
+export function resolveStudioTaskType(
+    category: TaskCategory,
+    etlType: StudioEtlType | undefined
+): StudioTaskType | undefined {
     switch (category) {
         case "Etl":
         case "Ai":
@@ -291,7 +294,7 @@ export function getPopoverMessageForTaskHealth(status: EtlHealthStatus): string 
 
 export const SHOW_WIDTH_SIZE = 70;
 
-export const AI_ONLY_TASK_TYPES: StudioEtlType[] = ["EmbeddingsGeneration", "GenAi"];
+export const AI_ONLY_TASK_TYPES: StudioTaskType[] = ["EmbeddingsGeneration", "GenAi"];
 
 export type TaskCategory = "Etl" | "Ai" | "CdcSink";
 

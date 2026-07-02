@@ -19,18 +19,19 @@ export const taskHealthOptions: SelectOption<EtlHealthStatus>[] = [
     { label: "Impaired", value: "Impaired" },
 ];
 
-export const taskTypeOptions: SelectOption<StudioEtlType>[] = [
-    { label: "RavenDB ETL", value: "Raven" },
-    { label: "SQL ETL", value: "Sql" },
-    { label: "Snowflake ETL", value: "Snowflake" },
-    { label: "Azure Queue Storage ETL", value: "AzureQueueStorage" },
-    { label: "OLAP ETL", value: "Olap" },
-    { label: "Kafka ETL", value: "Kafka" },
-    { label: "Elastic Search ETL", value: "ElasticSearch" },
-    { label: "RabbitMQ ETL", value: "RabbitMQ" },
-    { label: "Amazon SQS ETL", value: "AmazonSqs" },
+export const taskTypeOptions: SelectOption<StudioTaskType>[] = [
+    { label: "RavenDB ETL", value: "RavenEtl" },
+    { label: "SQL ETL", value: "SqlEtl" },
+    { label: "Snowflake ETL", value: "SnowflakeEtl" },
+    { label: "Azure Queue Storage ETL", value: "AzureQueueStorageQueueEtl" },
+    { label: "OLAP ETL", value: "OlapEtl" },
+    { label: "Kafka ETL", value: "KafkaQueueEtl" },
+    { label: "Elastic Search ETL", value: "ElasticSearchEtl" },
+    { label: "RabbitMQ ETL", value: "RabbitQueueEtl" },
+    { label: "Amazon SQS ETL", value: "AmazonSqsQueueEtl" },
     { label: "Embeddings Generation", value: "EmbeddingsGeneration" },
     { label: "GenAI", value: "GenAi" },
+    { label: "CDC Sink", value: "CdcSink" },
 ];
 
 export const groupByOptions: InputItem<GroupByType>[] = [
@@ -41,7 +42,7 @@ export const groupByOptions: InputItem<GroupByType>[] = [
 export function useTasksFilters(
     buildUrl: (filters: TasksFiltersState) => string,
     initialSearchText = "",
-    initialTaskTypes: StudioEtlType[] = [],
+    initialTaskTypes: StudioTaskType[] = [],
     initialNodeTags: string[] = [],
     initialShardNumbers: string[] = [],
     initialHealthStatuses: EtlHealthStatus[] = [],

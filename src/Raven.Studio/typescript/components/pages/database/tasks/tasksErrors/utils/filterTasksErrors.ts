@@ -1,4 +1,4 @@
-import { TaskWithErrors, TasksFiltersState, getTaskHealthStatus } from "./tasksErrorsUtils";
+import { TaskWithErrors, TasksFiltersState, getTaskHealthStatus, resolveStudioTaskType } from "./tasksErrorsUtils";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 export function filterTasksWithErrors(
@@ -10,7 +10,8 @@ export function filterTasksWithErrors(
 
     return tasksWithErrors
         .filter((task) => {
-            const matchesTaskType = !taskTypes.length || (task.etlType != null && taskTypes.includes(task.etlType));
+            const studioTaskType = resolveStudioTaskType(task.category, task.etlType);
+            const matchesTaskType = !taskTypes.length || (studioTaskType != null && taskTypes.includes(studioTaskType));
             const taskHealth = getTaskHealthStatus(etlStats, task.etlName);
             const matchesHealth = !healthStatuses.length || healthStatuses.includes(taskHealth);
             return matchesTaskType && matchesHealth;
