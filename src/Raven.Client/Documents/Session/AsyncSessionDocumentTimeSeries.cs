@@ -211,17 +211,16 @@ namespace Raven.Client.Documents.Session
             from = (from ?? DateTime.MinValue).EnsureUtc();
             to = (to ?? DateTime.MaxValue).EnsureUtc();
 
-            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache))
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
+                cache.TryGetValue(Name, out var ranges))
             {
-                if (cache.TryGetValue(Name, out var ranges))
+                foreach (var range in ranges)
                 {
-                    foreach (var range in ranges)
-                    {
-                        if (range.From <= from && range.To >= to && range.IsLocal == false)
-                        {
-                            return false;
-                        }
-                    }
+                    // A server-backed range that overlaps the request means ServeFromCache can
+                    // serve it - fully, by page size, or by fetching only the missing gaps.
+                    // Local-only ranges are not authoritative for a window, so they still go to the server.
+                    if (range.IsLocal == false && range.From <= to && range.To >= from)
+                        return false;
                 }
             }
 
@@ -644,6 +643,17 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        // The first entry of a range should be skipped when merging only if it duplicates the last
+        // entry already merged (adjacent ranges share a boundary entry). When ranges don't share a
+        // boundary, skipping unconditionally would drop a real entry.
+        private static bool DuplicatesLastMerged(TimeSeriesEntry[] entries, List<TimeSeriesEntry> mergedValues)
+        {
+            return mergedValues.Count > 0 &&
+                   entries != null &&
+                   entries.Length > 0 &&
+                   entries[0].Timestamp == mergedValues[mergedValues.Count - 1].Timestamp;
+        }
+
         private static TimeSeriesEntry[] MergeRangesWithResults(DateTime from, DateTime to, List<TimeSeriesRangeResult> ranges,
             int fromRangeIndex,
             int toRangeIndex,
@@ -689,10 +699,11 @@ namespace Raven.Client.Documents.Session
                     resultFromServer[currentResultIndex].From < ranges[i].From)
                 {
                     // add current result from server to the merged list
-                    // in order to avoid duplication, skip first item in range
-                    // (unless this is the first time we're adding to the merged list)
+                    // skip its first item only if it duplicates the last merged entry
+                    // (ranges don't always share a boundary entry)
 
-                    mergedValues.AddRange(resultFromServer[currentResultIndex++].Entries.Skip(mergedValues.Count == 0 ? 0 : 1));
+                    var serverEntries = resultFromServer[currentResultIndex++].Entries;
+                    mergedValues.AddRange(serverEntries.Skip(DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0));
                 }
 
                 if (i == toRangeIndex)
@@ -703,10 +714,12 @@ namespace Raven.Client.Documents.Session
                         // so we might need to trim a part of it when we return the
                         // result to the user (i.e. trim [to, toRange.to])
 
-                        for (var index = mergedValues.Count == 0 ? 0 : 1; index < ranges[i].Entries.Length; index++)
+                        var toEntries = ranges[i].Entries;
+                        var index = DuplicatesLastMerged(toEntries, mergedValues) ? 1 : 0;
+                        for (; index < toEntries.Length; index++)
                         {
-                            mergedValues.Add(ranges[i].Entries[index]);
-                            if (ranges[i].Entries[index].Timestamp > to)
+                            mergedValues.Add(toEntries[index]);
+                            if (toEntries[index].Timestamp > to)
                             {
                                 trim++;
                             }
@@ -719,11 +732,7 @@ namespace Raven.Client.Documents.Session
                 // add current range from cache to the merged list.
                 // in order to avoid duplication, skip first item in range if needed
 
-                bool shouldSkip = false;
-                if (mergedValues.Count > 0)
-                    shouldSkip = ranges[i].Entries[0].Timestamp == mergedValues[mergedValues.Count - 1].Timestamp;
-
-                mergedValues.AddRange(ranges[i].Entries.Skip(shouldSkip == false ? 0 : 1));
+                mergedValues.AddRange(ranges[i].Entries.Skip(DuplicatesLastMerged(ranges[i].Entries, mergedValues) ? 1 : 0));
             }
 
             if (currentResultIndex < resultFromServer.Count)
@@ -732,7 +741,8 @@ namespace Raven.Client.Documents.Session
                 // so the last missing part is from server
                 // add last missing part to the merged list
 
-                mergedValues.AddRange(resultFromServer[currentResultIndex++].Entries.Skip(mergedValues.Count == 0 ? 0 : 1));
+                var serverEntries = resultFromServer[currentResultIndex++].Entries;
+                mergedValues.AddRange(serverEntries.Skip(DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0));
             }
 
             Debug.Assert(currentResultIndex == resultFromServer.Count);
