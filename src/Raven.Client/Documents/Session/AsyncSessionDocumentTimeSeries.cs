@@ -179,7 +179,10 @@ namespace Raven.Client.Documents.Session
                 await ServeFromCache(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, start, pageSize, includes, token)
                     .ConfigureAwait(false);
 
-            var asList = resultToUser.ToList();
+            if (resultToUser == null)
+                return null;
+
+            var asList = RemoveDeletedTimeSeries(resultToUser.ToList());
             if (asList.Count == 0)
                 return Array.Empty<TimeSeriesEntry<TEntry>>();
 
@@ -270,8 +273,9 @@ namespace Raven.Client.Documents.Session
                 if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
                 {
                     // update
-                    //var result = new List<TimeSeriesRangeResult>(ranges);
-                    //result.Add(rangeResult);
+                    // 'inserted' tracks whether the merge below already placed 'rangeResult' (B)
+                    // into the list, so we don't add it a second time at the end.
+                    var inserted = false;
 
                     for (int i = 0; i < ranges.Count; i++)
                     {
@@ -290,6 +294,7 @@ namespace Raven.Client.Documents.Session
                         if (A.From == B.From && A.To == B.To)
                         {
                             ranges[i] = B;
+                            inserted = true;
                             continue;
                         }
 
@@ -362,6 +367,7 @@ namespace Raven.Client.Documents.Session
                                 ranges.Insert(i, right);
 
                             ranges.Insert(i, B);
+                            inserted = true;
 
                             if (left.Entries?.Length > 0)
                                 ranges.Insert(i, left);
@@ -401,7 +407,8 @@ namespace Raven.Client.Documents.Session
                     //    ranges.RemoveAt(i);
                     //    i--; // Adjust index because we removed an element
                     //}
-                    ranges.Add(rangeResult);
+                    if (inserted == false)
+                        ranges.Add(rangeResult);
 
                     // Optional: keep ranges sorted by From (no LINQ)
                     for (int i = 0; i < ranges.Count - 1; i++)
