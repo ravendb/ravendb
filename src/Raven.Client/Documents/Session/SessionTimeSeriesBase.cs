@@ -237,17 +237,15 @@ namespace Raven.Client.Documents.Session
             {
                 var tsCmd = (IncrementalTimeSeriesBatchCommandData)command;
                 tsCmd.TimeSeries.Increment(op);
-                var timeSeriesExistedOperation = tsCmd.TimeSeries.Increments.FirstOrDefault(x => x.Timestamp == timestamp);
-                if (timeSeriesExistedOperation != null)
-                    TrackTimeseriesInCache(timeSeriesExistedOperation.Timestamp, timeSeriesExistedOperation.Values);
-                else
-                    TrackTimeseriesInCache(timestamp, values);
             }
             else
             {
                 Session.Defer(new IncrementalTimeSeriesBatchCommandData(DocId, Name, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
-                TrackTimeseriesInCache(timestamp, values);
             }
+
+            // an increment accumulates onto whatever value is already known for this timestamp
+            // (a server-loaded base and/or previous in-session increments), matching server semantics
+            TrackTimeseriesInCache(timestamp, op.Values, increment: true);
         }
 
         /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment"/>
@@ -280,7 +278,7 @@ namespace Raven.Client.Documents.Session
                                         "Use documentId instead or track the entity in the session.");
         }
 
-        private void TrackTimeseriesInCache(DateTime timestamp, IEnumerable<double> values, string tag = null)
+        private void TrackTimeseriesInCache(DateTime timestamp, IEnumerable<double> values, string tag = null, bool increment = false)
         {
             var utcTimestamp = timestamp.EnsureUtc().EnsureMilliseconds();
             var valuesArray = values as double[] ?? values.ToArray();
@@ -343,14 +341,21 @@ namespace Raven.Client.Documents.Session
                     inserted = true;
                     ranges[i].CachedEntries ??= ranges[i].Entries?.ToList() ?? new List<TimeSeriesEntry>();
 
-                    if (ranges[i].CachedEntries.Count > 0 && ranges[i].CachedEntries[ranges[i].CachedEntries.Count - 1].Timestamp == tse.Timestamp)
+                    int index = FindStartIndex(ranges[i].CachedEntries, tse.Timestamp);
+                    var existsAtTimestamp = index < ranges[i].CachedEntries.Count &&
+                                            ranges[i].CachedEntries[index].Timestamp == tse.Timestamp;
+
+                    if (existsAtTimestamp)
                     {
-                        ranges[i].CachedEntries[ranges[i].CachedEntries.Count - 1] = tse;
+                        // increment accumulates onto the existing value; a plain append overrides it
+                        if (increment)
+                            tse.Values = AddValues(ranges[i].CachedEntries[index].Values, valuesArray);
+
+                        ranges[i].CachedEntries[index] = tse;
                     }
                     else
                     {
-                        int index = FindStartIndex(ranges[i].CachedEntries, tse.Timestamp);
-                        ranges[i].CachedEntries.Insert(index,tse);
+                        ranges[i].CachedEntries.Insert(index, tse);
                     }
                     break;
                 }
@@ -402,6 +407,20 @@ namespace Raven.Client.Documents.Session
                     }
                 }
             }
+        }
+
+        private static double[] AddValues(double[] existing, double[] delta)
+        {
+            existing ??= Array.Empty<double>();
+            delta ??= Array.Empty<double>();
+
+            var result = new double[Math.Max(existing.Length, delta.Length)];
+            for (int i = 0; i < existing.Length; i++)
+                result[i] = existing[i];
+            for (int i = 0; i < delta.Length; i++)
+                result[i] += delta[i];
+
+            return result;
         }
 
         private int FindStartIndex(List<TimeSeriesEntry> entries, DateTime from)

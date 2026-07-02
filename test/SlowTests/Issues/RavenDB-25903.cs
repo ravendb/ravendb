@@ -458,8 +458,9 @@ namespace SlowTests.Issues
                 session.IncrementalTimeSeriesFor(bookId1, Constants.Headers.IncrementalTimeSeriesPrefix + "BookPrice").Increment(baseline, new double[] { 60, 59 });
 
                 tse = await session.IncrementalTimeSeriesFor(bookId1, Constants.Headers.IncrementalTimeSeriesPrefix + "BookPrice").GetAsync();
-                Assert.Equal(new double[] {60, 59}, tse[0].Values);
-                
+                // the in-session increment accumulates onto the server value [59] -> {119, 59}, matching the server
+                Assert.Equal(new double[] {119, 59}, tse[0].Values);
+
                 await session.SaveChangesAsync();
             }
 
@@ -788,6 +789,45 @@ namespace SlowTests.Issues
                 // typed read served from cache must not throw and must reflect the delete
                 var afterDelete = await session.TimeSeriesFor<HeartRateMeasure>(bookId1).GetAsync();
                 Assert.True(afterDelete == null || afterDelete.Length == 0);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task IncrementalTimeSeriesCacheShouldAccumulateOntoServerValue()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "Views";
+            var baseline = DateTime.UtcNow;
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.IncrementalTimeSeriesFor(bookId1, tsName).Increment(baseline, 50d);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // load the server value (50) into the cache
+                var loaded = await session.IncrementalTimeSeriesFor(bookId1, tsName).GetAsync();
+                Assert.Equal(50d, loaded[0].Value);
+
+                // an in-session increment must accumulate onto the known server value, not override it
+                session.IncrementalTimeSeriesFor(bookId1, tsName).Increment(baseline, 60d);
+
+                var inSession = await session.IncrementalTimeSeriesFor(bookId1, tsName).GetAsync();
+                Assert.Equal(1, inSession.Length);
+                Assert.Equal(110d, inSession[0].Value);
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var afterSave = await session.IncrementalTimeSeriesFor(bookId1, tsName).GetAsync();
+                Assert.Equal(1, afterSave.Length);
+                Assert.Equal(110d, afterSave[0].Value);
             }
         }
 
