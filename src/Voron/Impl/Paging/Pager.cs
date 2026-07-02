@@ -128,7 +128,7 @@ public unsafe partial class Pager : IDisposable
         Options = options;
         _flags = flags;
         FileName = filename;
-        _canPrefetch = PlatformDetails.CanPrefetch == false || options.EnablePrefetching == false;
+        _canPrefetch = PlatformDetails.CanPrefetch && options.EnablePrefetching;
         _encryptionBuffersPool = options.Encryption.EncryptionBuffersPool;
         _masterKey = options.Encryption.MasterKey;
         _functions = functions;
