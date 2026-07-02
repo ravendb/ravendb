@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Amqp;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;

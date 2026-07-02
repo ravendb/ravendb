@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
@@ -173,7 +172,6 @@ namespace Raven.Client.Documents.Session
                     }
                 }
 
-                //ranges.RemoveAll(range => range.From <= from && range.To >= to);
                 AddRemovedTimeSeriesRange(from, to);
             }
         }
@@ -189,23 +187,14 @@ namespace Raven.Client.Documents.Session
                     .EnsureUtc()
                     .EnsureMilliseconds()
             };
-            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache) == false)
-            {
-                cache = new Dictionary<string, List<TimeSeriesRangeResult>>();
-                cache.Add(Name, new List<TimeSeriesRangeResult>());
-                cache[Name].Add(range);
-                Session.DeletedTimeSeries.Add(DocId, cache);
-                return;
-            }
 
-            if (Session.DeletedTimeSeries.TryGetValue(DocId, out cache) && cache.TryGetValue(Name, out var ranges) == false)
-            {
-                cache.Add(Name, new List<TimeSeriesRangeResult>());
-                cache[Name].Add(range);
-                Session.DeletedTimeSeries[DocId] = cache;
-                return;
-            }
-            Session.DeletedTimeSeries[DocId][Name].Add(range);
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache) == false)
+                Session.DeletedTimeSeries[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+
+            if (cache.TryGetValue(Name, out var ranges) == false)
+                cache[Name] = ranges = new List<TimeSeriesRangeResult>();
+
+            ranges.Add(range);
         }
 
         public void Increment<TValues>(DateTime timestamp, TValues value)
