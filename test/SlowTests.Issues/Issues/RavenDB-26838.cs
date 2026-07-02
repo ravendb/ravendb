@@ -295,6 +295,24 @@ public class RavenDB_26838 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Sinks)]
+    public void HealthStatus_DegradesOnProcessFailures()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+            var stats = new CdcSinkProcessStatistics("CdcSink1", database.Configuration.CdcSink);
+
+            Assert.Equal(EtlProcessHealthStatus.Healthy, stats.HealthStatus);
+
+            // A process-level failure (e.g. the source is unreachable) records a consume error without
+            // ever completing a batch. It must still degrade health - the first fully-failed sample
+            // seeds the EWMA at ratio 1.0 - so a sink stuck reconnecting no longer reports Healthy.
+            stats.RecordConsumeError();
+            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
     public async Task HealthThresholds_MustHaveFailedGreaterThanImpaired()
     {
         using (var store = GetDocumentStore())

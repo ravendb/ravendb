@@ -75,6 +75,13 @@ public class CdcSinkProcessStatistics
             WasLatestConsumeSuccessful = false;
             ConsumeErrors += count;
             LastConsumeErrorTime = SystemTime.UtcNow;
+
+            // A process-level failure (e.g. the source or target became unreachable) never completes a
+            // batch, so - mirroring ETL, which feeds RecordProcessLoadError into its per-iteration
+            // OnBatchCompletion - feed a fully-failed sample into the health EWMA and recompute
+            // HealthStatus. Without this a sink stuck reconnecting would report Healthy forever.
+            _batchErrors += count;
+            UpdateHealthStatusOnBatchCompletion();
         }
     }
 
@@ -145,26 +152,33 @@ public class CdcSinkProcessStatistics
     {
         lock (_lock)
         {
-            AverageErrorsRatio.UpdateOnBatchCompletion(_batchErrors, _batchErrors + _batchSuccesses);
-
-            if (_setHealthStatusToFailedOnFault)
-            {
-                HealthStatus = EtlProcessHealthStatus.Failed;
-            }
-            else
-            {
-                var errorsRatio = AverageErrorsRatio.GetRate();
-                HealthStatus = errorsRatio switch
-                {
-                    _ when errorsRatio > _configuration.ProcessHealthStatusFailedThreshold => EtlProcessHealthStatus.Failed,
-                    _ when errorsRatio > _configuration.ProcessHealthStatusImpairedThreshold => EtlProcessHealthStatus.Impaired,
-                    _ => EtlProcessHealthStatus.Healthy
-                };
-            }
-
-            _batchErrors = 0;
-            _batchSuccesses = 0;
+            UpdateHealthStatusOnBatchCompletion();
         }
+    }
+
+    // Feeds the current per-batch tally into the EWMA, recomputes HealthStatus from the error ratio vs
+    // the configured thresholds, then resets the tally. Caller must hold _lock.
+    private void UpdateHealthStatusOnBatchCompletion()
+    {
+        AverageErrorsRatio.UpdateOnBatchCompletion(_batchErrors, _batchErrors + _batchSuccesses);
+
+        if (_setHealthStatusToFailedOnFault)
+        {
+            HealthStatus = EtlProcessHealthStatus.Failed;
+        }
+        else
+        {
+            var errorsRatio = AverageErrorsRatio.GetRate();
+            HealthStatus = errorsRatio switch
+            {
+                _ when errorsRatio > _configuration.ProcessHealthStatusFailedThreshold => EtlProcessHealthStatus.Failed,
+                _ when errorsRatio > _configuration.ProcessHealthStatusImpairedThreshold => EtlProcessHealthStatus.Impaired,
+                _ => EtlProcessHealthStatus.Healthy
+            };
+        }
+
+        _batchErrors = 0;
+        _batchSuccesses = 0;
     }
 
     /// <summary>
