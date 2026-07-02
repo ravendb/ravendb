@@ -87,8 +87,10 @@ export function getTaskErrorCountByLocation(
 
 function filterTaskErrors<T extends TaskErrors>(taskErrors: T[], taskName: string): T[] {
     return taskErrors.filter((e) => {
+        // ETL errors are stored as "taskName/transformationName"; AI and CDC task names carry no
+        // transformation and may themselves contain "/", so only ETL names are split.
         const slashIndex = e.TaskName.indexOf("/");
-        const etlName = slashIndex === -1 ? e.TaskName : e.TaskName.slice(0, slashIndex);
+        const etlName = e.Category === "Etl" && slashIndex !== -1 ? e.TaskName.slice(0, slashIndex) : e.TaskName;
         return etlName === taskName;
     });
 }
