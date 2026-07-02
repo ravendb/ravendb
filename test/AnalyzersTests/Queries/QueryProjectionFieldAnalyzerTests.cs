@@ -380,6 +380,67 @@ class Test
         }
 
         [Fact]
+        public async Task QueryExpression_Select_FromIndex_Field_On_Source_But_Not_Stored_Reports_Diagnostic()
+        {
+            // The projection is written in C# query-expression syntax (select new { ... }) rather than the
+            // fluent .Select(...). Under FromIndex only stored fields are retrievable, so Price (on the
+            // source document but not stored by the index) must be flagged just like the fluent form.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+        Store(x => x.Name, FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order, OrderIndex>()
+                    .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+                select new { o.Price };
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+            Assert.Contains("FromIndex", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task QueryExpression_Select_Default_Field_On_Source_No_Diagnostic()
+        {
+            // A query-expression projection under the Default behavior falls back to the source document,
+            // so a field present on the source (Price) is retrievable and must not be flagged. Guards the
+            // query-expression path against over-reporting ordinary projections.
+            const string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order, OrderIndex>()
+                select new { o.Price };
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
         public async Task Select_NamedDto_FromIndexOrThrow_Id_Retrievable_No_Diagnostic()
         {
             // The named-object Select initializer (new Dto { Key = x.Id }) routes its RHS through the

@@ -46,7 +46,7 @@ namespace Raven.Analyzers.Indexes
             // helper methods the server compiles and translates, so a source-defined method reference is no
             // longer a reliable "cannot be translated" signal. Suppress RVN009 for the whole class rather
             // than emit a false positive on a working index.
-            if (ShipsServerSideCode(classDecl, context.SemanticModel))
+            if (ShipsServerSideCode(classSymbol, context.Compilation))
                 return;
 
             foreach (ConstructorDeclarationSyntax ctor in classDecl.Members.OfType<ConstructorDeclarationSyntax>())
@@ -72,8 +72,7 @@ namespace Raven.Analyzers.Indexes
 
                 foreach (InvocationExpressionSyntax invocation in lambdaBody.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
                 {
-                    ISymbol? symbol = context.SemanticModel.GetSymbolInfo(invocation).Symbol;
-                    if (symbol is not IMethodSymbol method)
+                    if (SyntaxHelpers.GetMethodSymbol(invocation, context.SemanticModel) is not IMethodSymbol method)
                         continue;
 
                     if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method, exemptObjectMethodOverrides: true))
@@ -96,9 +95,25 @@ namespace Raven.Analyzers.Indexes
         // member, so a bare read/null-check, a read such as AdditionalSources.Count, or an unrelated local
         // of the same name does NOT suppress. A write means the user ships C# the server compiles, so a
         // helper call in the Map/Reduce may be translatable and RVN009 must not fire.
-        private static bool ShipsServerSideCode(ClassDeclarationSyntax classDecl, SemanticModel model)
+        //
+        // The write may live in a shared BASE index class while the Map that calls the helper lives in the
+        // derived class, so walk the whole user-defined base chain the same way IndexFieldExtractor /
+        // IndexStoredFieldExtractor do. The chain walk (and its Compilation.GetSemanticModel calls) lives in
+        // IndexInheritanceInspector so the analyzer itself does not trip RS1030. When a base is metadata-only
+        // the chain is only partly inspectable; the inspectable prefix is enough because a metadata base
+        // cannot contain a source AdditionalSources write we could read anyway.
+        private static bool ShipsServerSideCode(INamedTypeSymbol classSymbol, Compilation compilation) =>
+            IndexInheritanceInspector.AnyChainDeclaration(classSymbol, compilation, ContainsAdditionalCodeWrite);
+
+        // True when <paramref name="decl"/> WRITES to AdditionalSources or AdditionalAssemblies. A write is
+        // an assignment (AdditionalSources = … / this.AdditionalSources = …), an indexer populate
+        // (AdditionalSources["Key"] = source), or an .Add(…) call (AdditionalSources.Add(…)). These are
+        // AbstractCommonApiForIndexes properties; the symbol is resolved and confirmed to be a Raven.Client
+        // member, so a bare read/null-check, a read such as AdditionalSources.Count, or an unrelated local
+        // of the same name does NOT suppress.
+        private static bool ContainsAdditionalCodeWrite(ClassDeclarationSyntax decl, SemanticModel model)
         {
-            foreach (SyntaxNode node in classDecl.DescendantNodes())
+            foreach (SyntaxNode node in decl.DescendantNodes())
             {
                 if (node is AssignmentExpressionSyntax assignment)
                 {

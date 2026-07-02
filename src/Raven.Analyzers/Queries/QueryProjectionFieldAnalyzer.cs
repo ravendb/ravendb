@@ -40,6 +40,7 @@ namespace Raven.Analyzers.Queries
                 var mapFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
                     SymbolEqualityComparer.Default);
                 var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
+                var pendingQueries = new ConcurrentBag<(QueryExpressionSyntax Query, SemanticModel Model)>();
 
                 startCtx.RegisterSyntaxNodeAction(ctx =>
                 {
@@ -50,10 +51,21 @@ namespace Raven.Analyzers.Queries
                     pending.Add((invocation, ctx.SemanticModel));
                 }, SyntaxKind.InvocationExpression);
 
+                // The fluent path above only sees Select/ProjectInto invocations. A projection written in
+                // C# query-expression syntax (from o in session.Query<S, I>()... select new { o.X }) has a
+                // SelectClauseSyntax, not a Select invocation, so it is collected and analyzed separately.
+                startCtx.RegisterSyntaxNodeAction(ctx =>
+                {
+                    pendingQueries.Add(((QueryExpressionSyntax)ctx.Node, ctx.SemanticModel));
+                }, SyntaxKind.QueryExpression);
+
                 startCtx.RegisterCompilationEndAction(endCtx =>
                 {
                     foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
                         AnalyzeInvocation(model, invocation, indexByName, storedFieldCache, mapFieldCache, endCtx.ReportDiagnostic);
+
+                    foreach ((QueryExpressionSyntax query, SemanticModel model) in pendingQueries)
+                        AnalyzeQueryExpression(model, query, indexByName, storedFieldCache, mapFieldCache, endCtx.ReportDiagnostic);
                 });
             });
         }
@@ -69,11 +81,7 @@ namespace Raven.Analyzers.Queries
             string? methodName = SyntaxHelpers.GetMethodName(invocation);
 
             // The receiver must be an IRavenQueryable<T>
-            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
-                return;
-
-            ITypeSymbol? receiverType = model.GetTypeInfo(memberAccess.Expression).Type;
-            if (!SyntaxHelpers.IsRavenQueryable(receiverType))
+            if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, model) is not MemberAccessExpressionSyntax memberAccess)
                 return;
 
             // Bail if another projection sits between this projection and the Query call: this
@@ -91,19 +99,100 @@ namespace Raven.Analyzers.Queries
             if (!QueryIndexResolver.IsSessionQueryCall(queryCall, model))
                 return;
 
+            // Resolve the index/source field sets and effective ProjectionBehavior from the chain up to
+            // (but not including) this projection. Shared with the query-expression path so both forms
+            // resolve the projection context identically.
+            if (!TryResolveProjectionContext(model, queryCall, memberAccess.Expression,
+                    indexByName, storedFieldCache, mapFieldCache, out ProjectionFields fields))
+                return;
+
+            // Now check projected fields based on which form this is
+            if (methodName == KnownTypes.ProjectIntoMethodName)
+            {
+                CheckProjectInto(model, invocation, fields.StoredFields, fields.SourceMembers, fields.IndexName, fields.SourceName, fields.Behavior, reportDiagnostic);
+            }
+            else // Select
+            {
+                CheckSelect(invocation, fields.StoredFields, fields.SourceMembers, fields.IndexName, fields.SourceName, fields.Behavior, reportDiagnostic);
+            }
+        }
+
+        // Analyzes a projection written in C# query-expression syntax:
+        //   from o in session.Query<TSource, TIndex>()[.Customize(...)] ... select new { o.Field, ... }
+        // Mirrors AnalyzeInvocation for the Select form. The final select clause's first-hop members off
+        // the from-clause range variable are checked against the resolved field set. A group/select ...
+        // into continuation rebinds the range variable to a projected/grouped shape, so its clauses no
+        // longer project the source document — bail there to avoid a false positive (the query-expression
+        // analog of HasInterveningProjection).
+        private static void AnalyzeQueryExpression(
+            SemanticModel model,
+            QueryExpressionSyntax query,
+            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
+            ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
+            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache,
+            Action<Diagnostic> reportDiagnostic)
+        {
+            if (query.Body.Continuation != null)
+                return;
+
+            if (query.Body.SelectOrGroup is not SelectClauseSyntax select)
+                return;
+
+            ExpressionSyntax sourceExpression = query.FromClause.Expression;
+            if (!SyntaxHelpers.IsRavenQueryable(model.GetTypeInfo(sourceExpression).Type))
+                return;
+
+            InvocationExpressionSyntax? queryCall = FindQueryCall(sourceExpression, model);
+            if (queryCall == null || !QueryIndexResolver.IsSessionQueryCall(queryCall, model))
+                return;
+
+            if (!TryResolveProjectionContext(model, queryCall, sourceExpression,
+                    indexByName, storedFieldCache, mapFieldCache, out ProjectionFields fields))
+                return;
+
+            string paramName = query.FromClause.Identifier.ValueText;
+            CheckProjectionBody(select.Expression, paramName, fields.StoredFields, fields.SourceMembers,
+                fields.IndexName, fields.SourceName, fields.Behavior, reportDiagnostic);
+        }
+
+        // The resolved projection context: the index stored-field set (or the map projection when
+        // StoreAllFields is used), the source document's public members, display names for the diagnostic
+        // message, and the effective ProjectionBehavior.
+        private readonly record struct ProjectionFields(
+            ImmutableHashSet<string> StoredFields,
+            ImmutableHashSet<string> SourceMembers,
+            string IndexName,
+            string SourceName,
+            string Behavior);
+
+        // Resolves the index class from the session.Query<TSource, TIndex>() call, extracts its stored /
+        // map field set and the source document members, and reads the effective ProjectionBehavior from
+        // the chain expression that precedes the projection. Returns false (bailing the whole check) when
+        // the index cannot be resolved, the field set cannot be analyzed, or the behavior is ambiguous.
+        private static bool TryResolveProjectionContext(
+            SemanticModel model,
+            InvocationExpressionSyntax queryCall,
+            ExpressionSyntax behaviorChainExpression,
+            ConcurrentDictionary<string, INamedTypeSymbol?> indexByName,
+            ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
+            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache,
+            out ProjectionFields fields)
+        {
+            fields = default;
+
             INamedTypeSymbol? indexClass = QueryIndexResolver.ResolveIndexClass(queryCall, model, indexByName);
             if (indexClass == null)
-                return;
+                return false;
 
             INamedTypeSymbol? sourceType = QueryIndexResolver.ResolveSourceType(queryCall, model);
             if (sourceType == null)
-                return;
+                return false;
 
             // Extract stored fields from the index (bail if analysis not possible); cached per compilation
             IndexStoredFieldSet storedSet = storedFieldCache.GetOrAdd(indexClass,
                 ic => IndexStoredFieldExtractor.Extract(ic, model.Compilation));
             if (storedSet.Status == StoredFieldsStatus.BailCannotAnalyze)
-                return;
+                return false;
 
             // If StoreAllFields was used, the stored set equals the map projection
             ImmutableHashSet<string> storedFields;
@@ -112,7 +201,7 @@ namespace Raven.Analyzers.Queries
                 IndexFieldSet mapFields = mapFieldCache.GetOrAdd(indexClass,
                     ic => IndexFieldExtractor.Extract(ic, model.Compilation));
                 if (mapFields.Status == IndexFieldInspection.BailCannotAnalyze)
-                    return;
+                    return false;
                 storedFields = mapFields.Fields;
             }
             else
@@ -123,19 +212,12 @@ namespace Raven.Analyzers.Queries
             ImmutableHashSet<string> sourceMembers = SourceMemberExtractor.GetPublicMembers(sourceType);
 
             // Resolve the effective ProjectionBehavior from Customize(x => x.Projection(...)) in the chain
-            string behavior = ResolveProjectionBehavior(memberAccess.Expression, model);
+            string behavior = ResolveProjectionBehavior(behaviorChainExpression, model);
             if (behavior == "bail")
-                return;
+                return false;
 
-            // Now check projected fields based on which form this is
-            if (methodName == KnownTypes.ProjectIntoMethodName)
-            {
-                CheckProjectInto(model, invocation, storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior, reportDiagnostic);
-            }
-            else // Select
-            {
-                CheckSelect(invocation, storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior, reportDiagnostic);
-            }
+            fields = new ProjectionFields(storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior);
+            return true;
         }
 
         /// <summary>
@@ -292,8 +374,26 @@ namespace Raven.Analyzers.Queries
             if (paramName == null)
                 return;
 
-            // Select(x => new { x.A, x.B }) — anonymous object
-            if (lambdaBody is AnonymousObjectCreationExpressionSyntax anon)
+            CheckProjectionBody(lambdaBody, paramName,
+                storedFields, sourceMembers, indexName, sourceName, behavior, reportDiagnostic);
+        }
+
+        // Checks a projection body (a fluent Select lambda body or a query-expression select clause) whose
+        // first-hop members off <paramref name="paramName"/> are the projected fields. Handles the
+        // anonymous-object and named object-initializer shapes; new Dto(...) and bare member/identifier
+        // projections are intentionally not analyzed. Shared by the fluent Select and query-expression paths.
+        private static void CheckProjectionBody(
+            ExpressionSyntax projectionBody,
+            string paramName,
+            ImmutableHashSet<string> storedFields,
+            ImmutableHashSet<string> sourceMembers,
+            string indexName,
+            string sourceName,
+            string behavior,
+            Action<Diagnostic> reportDiagnostic)
+        {
+            // new { x.A, x.B } / new { X = x.A } — anonymous object
+            if (projectionBody is AnonymousObjectCreationExpressionSyntax anon)
             {
                 foreach (AnonymousObjectMemberDeclaratorSyntax initializer in anon.Initializers)
                 {
@@ -303,15 +403,15 @@ namespace Raven.Analyzers.Queries
                 return;
             }
 
-            // Select(x => new Dto { X = x.A }) — named object initializer
-            if (lambdaBody is ObjectCreationExpressionSyntax objCreation)
+            // new Dto { X = x.A } — named object initializer
+            if (projectionBody is ObjectCreationExpressionSyntax objCreation)
             {
                 CheckObjectInitializer(objCreation.Initializer, paramName,
                     storedFields, sourceMembers, indexName, sourceName, behavior, reportDiagnostic);
                 return;
             }
 
-            // Select(x => new Dto(...)) or Select(x => x.A) — bail (not analyzed)
+            // new Dto(...) or x.A — bail (not analyzed)
         }
 
         private static void CheckObjectInitializer(

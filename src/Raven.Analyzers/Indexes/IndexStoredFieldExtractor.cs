@@ -187,11 +187,8 @@ namespace Raven.Analyzers.Indexes
             }
 
             // String literal form
-            if (expr is LiteralExpressionSyntax literal
-                && literal.IsKind(SyntaxKind.StringLiteralExpression))
-            {
-                return literal.Token.ValueText;
-            }
+            if (SyntaxHelpers.TryGetStringLiteral(expr, out string? literalValue))
+                return literalValue;
 
             return null; // variable or complex expression — bail
         }
