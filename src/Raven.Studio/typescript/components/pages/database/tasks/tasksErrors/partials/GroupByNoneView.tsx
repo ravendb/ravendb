@@ -23,6 +23,7 @@ import {
     TaskWithErrors,
     FlatError,
     flattenAllTasksErrors,
+    resolveStudioTaskType,
     SHOW_WIDTH_SIZE,
     TasksFiltersState,
 } from "../utils/tasksErrorsUtils";
@@ -177,7 +178,8 @@ function GroupByNoneTable({
             const matchesShard = !shardNumbers.length || shardNumbers.includes(String(error.shardNumber));
             const matchesHealth =
                 !healthStatuses.length || healthStatuses.includes(error.healthStatus as EtlHealthStatus);
-            const matchesTaskType = !taskTypes.length || taskTypes.includes(error.etlType);
+            const studioTaskType = resolveStudioTaskType(error.category, error.etlType);
+            const matchesTaskType = !taskTypes.length || (studioTaskType != null && taskTypes.includes(studioTaskType));
 
             return matchesSearch && matchesNode && matchesShard && matchesHealth && matchesTaskType;
         });

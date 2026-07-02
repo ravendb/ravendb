@@ -69,7 +69,7 @@ export default function TasksErrorsPage({
                 initialTaskTypes={
                     aiOnly
                         ? AI_ONLY_TASK_TYPES
-                        : (queryParams?.taskTypes?.split(",").filter(Boolean) as StudioEtlType[])
+                        : (queryParams?.taskTypes?.split(",").filter(Boolean) as StudioTaskType[])
                 }
                 initialNodeTags={queryParams?.nodeTags?.split(",").filter(Boolean)}
                 initialShardNumbers={queryParams?.shardNumbers?.split(",").filter(Boolean)}
@@ -89,7 +89,7 @@ interface TasksErrorsPageBodyProps {
     tasksWithErrors: TaskWithErrors[];
     flattenAllEtlStats: EtlTaskStats[];
     initialSearchText?: string;
-    initialTaskTypes?: StudioEtlType[];
+    initialTaskTypes?: StudioTaskType[];
     initialNodeTags?: string[];
     initialShardNumbers?: string[];
     initialHealthStatuses?: Raven.Server.Documents.ETL.EtlProcessHealthStatus[];
