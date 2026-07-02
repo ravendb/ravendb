@@ -413,6 +413,74 @@ public class RavenDB_26838 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Sinks)]
+    public void ErrorTables_ArePreservedWhenSinkOnlyDisabled()
+    {
+        const string taskName = "CdcSink1";
+
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            var connectionString = new SqlConnectionString
+            {
+                Name = "cdc-cs",
+                FactoryName = "Microsoft.Data.SqlClient",
+                ConnectionString = "Server=localhost;Database=TestDb;User Id=sa;Password=pass;"
+            };
+            store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(connectionString));
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = taskName,
+                ConnectionStringName = connectionString.Name,
+                Disabled = false,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        Columns = new List<CdcColumnMapping> { new CdcColumnMapping { Column = "order_id", Name = "OrderId" } },
+                        PrimaryKeyColumns = new List<string> { "order_id" }
+                    }
+                }
+            };
+
+            var addResult = store.Maintenance.Send(new AddCdcSinkOperation(config));
+
+            // Wait until the enabled sink is running on this node (the connection is bogus, so it just
+            // retries - what matters is that the loader tracks its process).
+            Assert.True(WaitForValue(() =>
+            {
+                var p = database.CdcSinkLoader.Processes.FirstOrDefault(x => string.Equals(x.Name, taskName, StringComparison.OrdinalIgnoreCase));
+                return p != null && p.Configuration.Disabled == false;
+            }, true, timeout: 15000, interval: 500));
+
+            database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, taskName,
+            [
+                new TaskItemError { DocumentId = "orders/1", TaskName = taskName, CreatedAt = DateTime.UtcNow, Step = TaskErrorStep.Load, Error = "e1" }
+            ]);
+            Assert.NotEmpty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName));
+
+            // Disabling a sink is not a data-affecting reconfigure: the loader must keep the error
+            // history so an operator can inspect why the sink was failing before they disabled it.
+            config.TaskId = addResult.TaskId;
+            config.Disabled = true;
+            store.Maintenance.Send(new UpdateCdcSinkOperation(addResult.TaskId, config));
+
+            // Once the disabled replacement is in place the record change (and its cleanup) has run.
+            Assert.True(WaitForValue(() =>
+            {
+                var p = database.CdcSinkLoader.Processes.FirstOrDefault(x => string.Equals(x.Name, taskName, StringComparison.OrdinalIgnoreCase));
+                return p != null && p.Configuration.Disabled;
+            }, true, timeout: 15000, interval: 500));
+
+            Assert.NotEmpty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName));
+        }
+    }
+
     [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Sinks)]
     public async Task CanGetCdcSinkErrorsSnmpMetrics_V2C()
     {
