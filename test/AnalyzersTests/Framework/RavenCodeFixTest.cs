@@ -28,7 +28,17 @@ namespace AnalyzersTests.Framework
         /// diagnostic produced by <typeparamref name="TAnalyzer"/> in <paramref name="source"/>.
         /// Returns the resulting document text. Throws if no diagnostics or fixes are found.
         /// </summary>
-        internal static async Task<string> ApplyFixAsync<TAnalyzer, TFix>(string source)
+        internal static Task<string> ApplyFixAsync<TAnalyzer, TFix>(string source)
+            where TAnalyzer : DiagnosticAnalyzer, new()
+            where TFix : CodeFixProvider, new()
+            => ApplyFixAsync<TAnalyzer, TFix>(source, System.Array.Empty<string>());
+
+        /// <summary>
+        /// Overload that compiles <paramref name="additionalSources"/> (e.g. a GlobalUsings.cs) into the
+        /// same compilation/project so cross-file symbols and <c>global using</c>s resolve, but applies the
+        /// fix only to the primary <paramref name="source"/> document and returns its fixed text.
+        /// </summary>
+        internal static async Task<string> ApplyFixAsync<TAnalyzer, TFix>(string source, string[] additionalSources)
             where TAnalyzer : DiagnosticAnalyzer, new()
             where TFix : CodeFixProvider, new()
         {
@@ -37,13 +47,17 @@ namespace AnalyzersTests.Framework
             CSharpParseOptions parseOptions = new(LanguageVersion.Preview);
             SyntaxTree tree = CSharpSyntaxTree.ParseText(source, parseOptions);
 
+            List<SyntaxTree> trees = [tree];
+            foreach (string additional in additionalSources)
+                trees.Add(CSharpSyntaxTree.ParseText(additional, parseOptions));
+
             CSharpCompilationOptions compilationOptions =
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithNullableContextOptions(NullableContextOptions.Enable);
 
             CSharpCompilation compilation = CSharpCompilation.Create(
                 assemblyName: "TestAssembly",
-                syntaxTrees: [tree],
+                syntaxTrees: trees,
                 references: DefaultReferences.Value,
                 options: compilationOptions);
 
@@ -66,8 +80,10 @@ namespace AnalyzersTests.Framework
 
             // Order by source position: analyzer diagnostics aren't ordered (more so under concurrent
             // execution), so picking the "first" must be deterministic to keep the fix tests stable.
+            // Restrict to the primary tree so a diagnostic in an additional source cannot be picked.
             ImmutableArray<Diagnostic> diagnostics =
                 [.. (await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync())
+                    .Where(d => d.Location.SourceTree == tree)
                     .OrderBy(d => d.Location.SourceSpan.Start)];
 
             if (diagnostics.IsEmpty)
@@ -89,13 +105,25 @@ namespace AnalyzersTests.Framework
 
             Project project = workspace.AddProject(projectInfo);
 
-            DocumentInfo docInfo = DocumentInfo.Create(
-                DocumentId.CreateNewId(project.Id),
+            DocumentId primaryDocumentId = DocumentId.CreateNewId(project.Id);
+            workspace.AddDocument(DocumentInfo.Create(
+                primaryDocumentId,
                 name: "TestDocument.cs",
                 sourceCodeKind: SourceCodeKind.Regular,
-                loader: TextLoader.From(TextAndVersion.Create(SourceText.From(source), VersionStamp.Create())));
+                loader: TextLoader.From(TextAndVersion.Create(SourceText.From(source), VersionStamp.Create()))));
 
-            Document document = workspace.AddDocument(docInfo);
+            for (int i = 0; i < additionalSources.Length; i++)
+            {
+                workspace.AddDocument(DocumentInfo.Create(
+                    DocumentId.CreateNewId(project.Id),
+                    name: $"AdditionalDocument{i}.cs",
+                    sourceCodeKind: SourceCodeKind.Regular,
+                    loader: TextLoader.From(TextAndVersion.Create(SourceText.From(additionalSources[i]), VersionStamp.Create()))));
+            }
+
+            // Retrieve the primary document from the final solution so its semantic model sees the
+            // additional documents (a document handle from an earlier AddDocument is a stale snapshot).
+            Document document = workspace.CurrentSolution.GetDocument(primaryDocumentId)!;
 
             // Get the root and semantic model for the document
             SyntaxNode? root = await document.GetSyntaxRootAsync();

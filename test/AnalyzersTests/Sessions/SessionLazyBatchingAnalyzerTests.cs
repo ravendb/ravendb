@@ -76,6 +76,34 @@ class User { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task TwoQueries_FirstSplitAcrossStatements_Reports_Diagnostics()
+        {
+            // The first query is split across statements (var q = session.Query<T>(); ... q.ToList();).
+            // Its session receiver must resolve to `session` by following the local to its initializer,
+            // not to the local `q`, so it groups with the inline second query on the same session and
+            // both are flagged. Grouping under the local would leave two singletons and miss the hint.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<User>();
+        var users = q.ToList();
+        var orders = session.Query<Order>().ToList();
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            Assert.Equal(2, diagnostics.Length);
+            Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
+        }
+
+        [Fact]
         public async Task TwoQueries_InSameMethod_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"

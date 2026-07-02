@@ -156,7 +156,7 @@ namespace Raven.Analyzers.Sessions
                     // check: a query whose chain (a Where/Select predicate, an id argument, …)
                     // references a local produced by a prior materialized call genuinely depends on
                     // that result and cannot share a multi-get batch, so it must not be flagged.
-                    ISymbol? sessionSymbol = _model.GetSymbolInfo(SyntaxHelpers.WalkInvocationChainToRoot(memberAccess.Expression)).Symbol;
+                    ISymbol? sessionSymbol = ResolveQuerySessionSymbol(memberAccess.Expression);
                     BatchableCalls.Add((invocation, methodName, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
                     base.VisitInvocationExpression(invocation);
                     return;
@@ -185,6 +185,29 @@ namespace Raven.Analyzers.Sessions
                 }
 
                 base.VisitInvocationExpression(invocation);
+            }
+
+            // Resolves the session instance a materializing query executes against, for grouping. Walks the
+            // fluent chain — following a 'var q = session.Query<T>()...;' split to the local's initializer
+            // via the model-aware EnumerateInvocationChain — to the originating Query() call and returns
+            // that call's receiver symbol. This keeps an inline query (session.Query<T>().ToList()) and a
+            // split one (var q = session.Query<T>(); q.ToList();) grouped under the SAME session symbol, so
+            // two independent materializers on one session are flagged whichever way they are written.
+            // Without it the split form resolves to the local q and lands in its own singleton group,
+            // silently missing the batching hint. Falls back to the syntactic chain root when the chain has
+            // no Query() call (e.g. a queryable returned from a helper), matching the previous behavior.
+            private ISymbol? ResolveQuerySessionSymbol(ExpressionSyntax queryExpression)
+            {
+                foreach (InvocationExpressionSyntax inv in SyntaxHelpers.EnumerateInvocationChain(queryExpression, _model))
+                {
+                    if (SyntaxHelpers.GetMethodName(inv) == KnownTypes.QueryMethodName
+                        && inv.Expression is MemberAccessExpressionSyntax queryAccess)
+                    {
+                        return _model.GetSymbolInfo(queryAccess.Expression).Symbol;
+                    }
+                }
+
+                return _model.GetSymbolInfo(SyntaxHelpers.WalkInvocationChainToRoot(queryExpression)).Symbol;
             }
 
             // True when any part of the query invocation (chain receiver, predicate/projection

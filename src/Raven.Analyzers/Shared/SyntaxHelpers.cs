@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Analyzers.Shared
@@ -141,6 +142,16 @@ namespace Raven.Analyzers.Shared
         }
 
         /// <summary>
+        /// Resolves <paramref name="invocation"/> to the method it calls, or null when the symbol does not
+        /// bind to a single <see cref="IMethodSymbol"/> (an unresolved or ambiguous call). Centralizes the
+        /// repeated <c>GetSymbolInfo(...).Symbol as IMethodSymbol</c> resolution shared by the resolvers and
+        /// unsupported-method analyzers; callers keep their own follow-up predicates (containing-type,
+        /// generic arity, translatability) so no matching logic is folded away.
+        /// </summary>
+        public static IMethodSymbol? GetMethodSymbol(ExpressionSyntax invocation, SemanticModel model) =>
+            model.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
+
+        /// <summary>
         /// Returns true when <paramref name="type"/>, or any base type up the chain, satisfies
         /// <paramref name="predicate"/>. The single base-type walk shared by every "is this a known
         /// Raven base class" check so they cannot drift apart.
@@ -201,6 +212,22 @@ namespace Raven.Analyzers.Shared
         /// </summary>
         public static bool IsRavenQueryable(ITypeSymbol? type) =>
             IsTypeOrImplements(type, KnownTypes.IRavenQueryableName);
+
+        /// <summary>
+        /// When <paramref name="invocation"/> is a member call (<c>receiver.Method(...)</c>) whose receiver
+        /// is an <c>IRavenQueryable&lt;T&gt;</c>, returns that member access (its <c>.Expression</c> is the
+        /// receiver); otherwise null. Collapses the repeated "require a member-access receiver, then
+        /// <see cref="IsRavenQueryable"/> its static type" guard shared by the query analyzers so they cannot
+        /// drift on what counts as a Raven-queryable receiver. The namespace gate inside
+        /// <see cref="IsRavenQueryable"/> is preserved.
+        /// </summary>
+        public static MemberAccessExpressionSyntax? GetRavenQueryableReceiver(InvocationExpressionSyntax invocation, SemanticModel model)
+        {
+            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                return null;
+
+            return IsRavenQueryable(model.GetTypeInfo(memberAccess.Expression).Type) ? memberAccess : null;
+        }
 
         /// <summary>
         /// Returns true when <paramref name="type"/> is, or implements, IDocumentSession or
@@ -395,8 +422,7 @@ namespace Raven.Analyzers.Shared
                 if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)
                     return IndexMapNodeKind.NotAMapNode;
 
-                ISymbol? sym = model.GetSymbolInfo(invocation).Symbol;
-                if (sym is not IMethodSymbol method || !IsMultiMapBase(method.ContainingType))
+                if (GetMethodSymbol(invocation, model) is not IMethodSymbol method || !IsMultiMapBase(method.ContainingType))
                     return IndexMapNodeKind.NotAMapNode;
 
                 SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
@@ -499,5 +525,24 @@ namespace Raven.Analyzers.Shared
                 IdentifierNameSyntax identifier => identifier.GetLocation(),
                 _ => invocation.GetLocation(),
             };
+
+        /// <summary>
+        /// When <paramref name="expression"/> is a string-literal expression, outputs its decoded text and
+        /// returns true; otherwise outputs null and returns false. The <c>StringLiteralExpression</c> kind
+        /// gate keeps numeric/char/bool/null literals from matching. Shared by the index-name and
+        /// stored-field-name extractors so they read a string literal identically.
+        /// </summary>
+        internal static bool TryGetStringLiteral(ExpressionSyntax? expression, out string? value)
+        {
+            if (expression is LiteralExpressionSyntax literal
+                && literal.IsKind(SyntaxKind.StringLiteralExpression))
+            {
+                value = literal.Token.ValueText;
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
     }
 }

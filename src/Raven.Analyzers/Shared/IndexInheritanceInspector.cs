@@ -137,6 +137,30 @@ namespace Raven.Analyzers.Shared
         }
 
         /// <summary>
+        /// Walks the index class and its user-defined base classes (each paired with its own semantic
+        /// model) and returns true as soon as <paramref name="declarationPredicate"/> matches one. The
+        /// <see cref="Compilation.GetSemanticModel"/> call lives here rather than in the calling analyzer
+        /// so it does not trip RS1030, matching <c>IndexFieldExtractor</c> / <c>IndexStoredFieldExtractor</c>.
+        /// A metadata-only base cannot be inspected and is skipped (the inspectable prefix is still walked).
+        /// </summary>
+        internal static bool AnyChainDeclaration(
+            INamedTypeSymbol classSymbol,
+            Compilation compilation,
+            Func<ClassDeclarationSyntax, SemanticModel, bool> declarationPredicate)
+        {
+            TryCollectChainDeclarations(classSymbol, out List<ClassDeclarationSyntax> declarations);
+
+            foreach (ClassDeclarationSyntax decl in declarations)
+            {
+                SemanticModel model = compilation.GetSemanticModel(decl.SyntaxTree);
+                if (declarationPredicate(decl, model))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Counts AddMap/AddMapForAll call sites across the index class and its user-defined base
         /// classes, and reports whether any sit inside a loop and whether a base class is metadata-only
         /// (unknown — the caller must then suppress).
@@ -175,8 +199,8 @@ namespace Raven.Analyzers.Shared
                                 continue;
 
                             // Confirm the method resolves to the AddMap defined on a multi-map index base.
-                            ISymbol? symbol = model.GetSymbolInfo(invocation).Symbol;
-                            if (symbol is not IMethodSymbol method || !SyntaxHelpers.IsMultiMapBase(method.ContainingType))
+                            if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method
+                                || !SyntaxHelpers.IsMultiMapBase(method.ContainingType))
                                 continue;
 
                             count++;

@@ -70,8 +70,7 @@ namespace Raven.Analyzers.Shared
             if (methodName != KnownTypes.QueryMethodName)
                 return false;
 
-            ISymbol? symbol = model.GetSymbolInfo(invocation).Symbol;
-            if (symbol is not IMethodSymbol method)
+            if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method)
                 return false;
 
             // Accept the session interfaces themselves as well as concrete implementations
@@ -88,8 +87,7 @@ namespace Raven.Analyzers.Shared
             SemanticModel model,
             ConcurrentDictionary<string, INamedTypeSymbol?> indexByName)
         {
-            ISymbol? symbol = model.GetSymbolInfo(invocation).Symbol;
-            if (symbol is not IMethodSymbol method)
+            if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method)
                 return null;
 
             // Generic form: Query<T, TIndexCreator>() — two type parameters.
@@ -124,8 +122,7 @@ namespace Raven.Analyzers.Shared
         /// </summary>
         internal static INamedTypeSymbol? ResolveSourceType(InvocationExpressionSyntax invocation, SemanticModel model)
         {
-            ISymbol? symbol = model.GetSymbolInfo(invocation).Symbol;
-            if (symbol is not IMethodSymbol method)
+            if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method)
                 return null;
 
             if (method.TypeArguments.Length < 1)
@@ -167,13 +164,7 @@ namespace Raven.Analyzers.Shared
             if (indexNameArg == null)
                 return null;
 
-            if (indexNameArg.Expression is LiteralExpressionSyntax literal
-                && literal.IsKind(SyntaxKind.StringLiteralExpression))
-            {
-                return literal.Token.ValueText;
-            }
-
-            return null;
+            return SyntaxHelpers.TryGetStringLiteral(indexNameArg.Expression, out string? value) ? value : null;
         }
 
         /// <summary>
@@ -196,7 +187,7 @@ namespace Raven.Analyzers.Shared
                         continue;
 
                     // Expression-bodied: => "literal"
-                    if (TryExtractStringLiteral(propDecl.ExpressionBody?.Expression, out literal))
+                    if (SyntaxHelpers.TryGetStringLiteral(propDecl.ExpressionBody?.Expression, out literal))
                         return true;
 
                     // Accessor list (get { return "literal"; } or get => "literal")
@@ -208,14 +199,14 @@ namespace Raven.Analyzers.Shared
                                 continue;
 
                             // get => "literal"
-                            if (TryExtractStringLiteral(accessor.ExpressionBody?.Expression, out literal))
+                            if (SyntaxHelpers.TryGetStringLiteral(accessor.ExpressionBody?.Expression, out literal))
                                 return true;
 
                             // get { return "literal"; }
                             ReturnStatementSyntax? returnStmt = accessor.Body?.Statements
                                 .OfType<ReturnStatementSyntax>()
                                 .FirstOrDefault();
-                            if (TryExtractStringLiteral(returnStmt?.Expression, out literal))
+                            if (SyntaxHelpers.TryGetStringLiteral(returnStmt?.Expression, out literal))
                                 return true;
                         }
                     }
@@ -227,18 +218,6 @@ namespace Raven.Analyzers.Shared
             }
 
             literal = null;
-            return false;
-        }
-
-        private static bool TryExtractStringLiteral(ExpressionSyntax? expr, out string? value)
-        {
-            if (expr is LiteralExpressionSyntax literal
-                && literal.IsKind(SyntaxKind.StringLiteralExpression))
-            {
-                value = literal.Token.ValueText;
-                return true;
-            }
-            value = null;
             return false;
         }
     }
