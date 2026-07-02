@@ -1567,27 +1567,57 @@ namespace Voron.Impl.Journal
                     return;
 
                 var result = new List<(long Start, long Count)>(sparseRegions.Count);
-                int j = 0;
-                foreach ((long start, long count) in sparseRegions)
-                {
-                    long current = start;
-                    long end = start + count;
 
-                    while (j < flushedPageRanges.Count && flushedPageRanges[j].Start + flushedPageRanges[j].Count <= current)
+                int i = 0;
+                int j = 0;
+
+                while (i < sparseRegions.Count)
+                {
+                    var (sStart, sCount) = sparseRegions[i];
+                    long sEnd = sStart + sCount;
+
+                    // no more flushed ranges left, the remaining sparse regions stay as-is
+                    if (j >= flushedPageRanges.Count)
                     {
+                        result.Add((sStart, sCount));
+                        i++;
+                        continue;
+                    }
+
+                    var (fStart, fCount) = flushedPageRanges[j];
+                    long fEnd = fStart + fCount;
+
+                    if (fEnd <= sStart)
+                    {
+                        // flushed range is entirely before the current sparse region
                         j++;
                     }
-
-                    for (int k = j; k < flushedPageRanges.Count && flushedPageRanges[k].Start < end; k++)
+                    else if (fStart >= sEnd)
                     {
-                        if (flushedPageRanges[k].Start > current)
-                            result.Add((current, flushedPageRanges[k].Start - current));
-
-                        current = Math.Max(current, flushedPageRanges[k].Start + flushedPageRanges[k].Count);
+                        // flushed range is entirely after the current sparse region
+                        result.Add((sStart, sCount));
+                        i++;
                     }
+                    else
+                    {
+                        // overlap - keep the non-overlapping left segment
+                        if (sStart < fStart)
+                        {
+                            result.Add((sStart, fStart - sStart));
+                        }
 
-                    if (current < end)
-                        result.Add((current, end - current));
+                        if (sEnd > fEnd)
+                        {
+                            // the sparse region extends past the flushed range - evaluate the remainder against the next flushed ranges
+                            sparseRegions[i] = (fEnd, sEnd - fEnd);
+                            j++;
+                        }
+                        else
+                        {
+                            // the sparse region is entirely consumed by this flushed range
+                            i++;
+                        }
+                    }
                 }
 
                 sparseRegions.Clear();
