@@ -259,9 +259,12 @@ namespace Raven.Client.Documents.Session
                         if (B.To < A.From)
                             continue;
 
-                        // CASE 7: Exact match
+                        // CASE 7: Exact match - merge A's cached entries into B (don't drop them).
+                        // Reachable only for a local A (a non-local exact match is served straight from cache),
+                        // so A holds locally-appended entries that must be preserved.
                         if (A.From == B.From && A.To == B.To)
                         {
+                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
                             ranges[i] = B;
                             inserted = true;
                             continue;

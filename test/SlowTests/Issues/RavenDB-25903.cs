@@ -970,6 +970,41 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task ExactRangeMatchShouldNotDropLocalEntries()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddDays(-1).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                tsf.Append(baseline.AddMinutes(1), 1);
+                tsf.Append(baseline.AddMinutes(2), 1);
+                tsf.Append(baseline.AddMinutes(3), 1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var sca = ((InMemoryDocumentSessionOperations)session).SessionCreatedAt;
+
+                // local append (not on the server) -> local range is exactly [baseline, sca]
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline, 1);
+
+                // server range for [baseline, sca] exactly matches the local range -> merge CASE 7
+                var first = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, sca);
+                Assert.Equal(4, first.Length); // 3 server + 1 local
+
+                // second read is served from cache; the local entry must not have been dropped by CASE 7
+                var second = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, sca);
+                Assert.Equal(4, second.Length);
+                Assert.Contains(second, e => e.Timestamp == baseline);
+            }
+        }
+
         private static void AssertNoDuplicateRanges(List<TimeSeriesRangeResult> ranges)
         {
             for (int i = 0; i < ranges.Count; i++)
