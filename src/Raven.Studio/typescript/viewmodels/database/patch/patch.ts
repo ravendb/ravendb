@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import document = require("models/database/documents/document");
@@ -12,7 +11,6 @@ import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/provi
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
-import patchSyntax = require("viewmodels/database/patch/patchSyntax");
 import patchTester = require("viewmodels/database/patch/patchTester");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import queryUtil = require("common/queryUtil");
@@ -198,6 +196,7 @@ class patch extends shardViewModelBase {
             props: {
                 query: this.patchDocument().query,
                 languageService: this.languageService,
+                validationErrorMessage: this.patchDocument().query.error(),
             },
         }));
 
@@ -503,10 +502,6 @@ class patch extends shardViewModelBase {
             });
     }
 
-    syntaxHelp() {
-        const viewModel = new patchSyntax();
-        app.showBootstrapDialog(viewModel);
-    }
 }
 
 export = patch;
