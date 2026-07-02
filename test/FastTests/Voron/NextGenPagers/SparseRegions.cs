@@ -5,6 +5,7 @@ using Sparrow.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
+using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Xunit;
 
@@ -169,6 +170,76 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
     }
 
     [RavenFact(RavenTestCategory.Voron)]
+    public void DeferredPunch_DoesNotZeroPagesStillReadByOlderReadTransaction()
+    {
+        // RavenDB-26910: a page freed by a transaction newer than an open read tx still has its last flushed content in
+        // the data file, and the reader resolves it from there - the deferred punch must not zero it (it may only cover
+        // frees older than every active read transaction, the same uptoTxIdExclusive bound the flush obeys)
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
+
+        // the flushed free must push the section's free count above NumberOfFreePagesForSparseConsideration (512)
+        // to register a sparse candidate; the reader's run only needs to be a punchable >= 128 pages
+        const int sectionMatePages = 600;
+        const int readerPages = 256;
+        const int readerOverflowSize = readerPages * Constants.Storage.PageSize - PageHeader.SizeOf;
+
+        long sectionMate;
+        long readerPage;
+        using (var tx = Env.WriteTransaction())
+        {
+            var p1 = tx.LowLevelTransaction.AllocatePage(sectionMatePages);
+            p1.Flags |= PageFlags.Overflow;
+            p1.OverflowSize = sectionMatePages * Constants.Storage.PageSize - PageHeader.SizeOf;
+            sectionMate = p1.PageNumber;
+
+            var p2 = tx.LowLevelTransaction.AllocatePage(readerPages);
+            p2.Flags |= PageFlags.Overflow;
+            p2.OverflowSize = readerOverflowSize;
+            p2.AsSpan(PageHeader.SizeOf, readerOverflowSize).Fill(3);
+            readerPage = p2.PageNumber;
+
+            tx.Commit();
+        }
+
+        Env.FlushLogToDataFile();
+
+        // both runs must share a free-space section, so the flushed free below makes the whole section a punch candidate
+        Assert.Equal(sectionMate / FreeSpaceHandling.NumberOfPagesInSection,
+            (readerPage + readerPages - 1) / FreeSpaceHandling.NumberOfPagesInSection);
+
+        using (var tx = Env.WriteTransaction())
+        {
+            for (int i = 0; i < sectionMatePages; i++)
+                tx.LowLevelTransaction.FreePage(sectionMate + i);
+            tx.Commit();
+        }
+
+        // the free above is flushed, so its sparse region is pending the deferred punch
+        Env.FlushLogToDataFile();
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            // freed by a transaction newer than rtx
+            using (var tx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < readerPages; i++)
+                    tx.LowLevelTransaction.FreePage(readerPage + i);
+                tx.Commit();
+            }
+
+            using (var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+                Assert.True(sync.SyncDataFile());
+
+            var page = rtx.LowLevelTransaction.GetPage(readerPage);
+            Assert.Equal(readerOverflowSize, page.OverflowSize);
+            Assert.False(page.AsSpan(PageHeader.SizeOf, readerOverflowSize).ContainsAnyExcept((byte)3),
+                "Page freed by a transaction newer than the read tx was zeroed by the deferred sparse-region punch");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void WillReleaseFreeSpaceAfterRestart()
     {
         RequireFileBasedPager();
@@ -233,6 +304,107 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         StorageEnvironment.MergeSparseRegions(inputSource);
 
         Assert.Equal(expectedResult , inputSource);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void SubtractRanges_ShouldRemoveFlushedPagesFromSparseRegions()
+    {
+        static void AssertSubtract(
+            List<(long Start, long Count)> sparseRegions,
+            List<(long Start, long Count)> flushedPageRanges,
+            List<(long Start, long Count)> expected)
+        {
+            WriteAheadJournal.JournalApplicator.SubtractRanges(sparseRegions, flushedPageRanges);
+            Assert.Equal(expected, sparseRegions);
+        }
+
+        // no overlap
+        AssertSubtract([(100, 50)], [(10, 20), (200, 30)], [(100, 50)]);
+
+        // touching boundaries are not overlaps
+        AssertSubtract([(100, 50)], [(80, 20), (150, 10)], [(100, 50)]);
+
+        // exact cover and superset remove the region entirely
+        AssertSubtract([(100, 50)], [(100, 50)], []);
+        AssertSubtract([(100, 50)], [(90, 100)], []);
+
+        // trim head, trim tail
+        AssertSubtract([(100, 50)], [(90, 20)], [(110, 40)]);
+        AssertSubtract([(100, 50)], [(140, 20)], [(100, 40)]);
+
+        // a flushed range strictly inside splits the region
+        AssertSubtract([(100, 50)], [(120, 10)], [(100, 20), (130, 20)]);
+
+        // multiple holes in one region
+        AssertSubtract([(100, 100)], [(110, 10), (150, 10), (190, 20)], [(100, 10), (120, 30), (160, 30)]);
+
+        // one flushed range spanning two regions must trim both
+        AssertSubtract([(100, 50), (200, 50)], [(140, 70)], [(100, 40), (210, 40)]);
+
+        // empty inputs
+        AssertSubtract([], [(100, 50)], []);
+        AssertSubtract([(100, 50)], [], [(100, 50)]);
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineDataWithRandomSeed]
+    public void SubtractRanges_Fuzzy(int seed)
+    {
+        var random = new Random(seed);
+
+        for (int i = 0; i < 128; i++)
+        {
+            // merged pending regions cannot be adjacent (minGap 1); flushed page ranges can be (minGap 0)
+            var sparseRegions = GenerateSortedRanges(random, maxEntries: 24, minGap: 1, maxGap: 64, maxCount: 96);
+            var flushedPageRanges = GenerateSortedRanges(random, maxEntries: 48, minGap: 0, maxGap: 48, maxCount: 48);
+
+            var expected = SubtractByPage(sparseRegions, flushedPageRanges);
+
+            var actual = new List<(long Start, long Count)>(sparseRegions);
+            WriteAheadJournal.JournalApplicator.SubtractRanges(actual, flushedPageRanges);
+
+            Assert.Equal(expected, actual);
+        }
+
+        static List<(long Start, long Count)> GenerateSortedRanges(Random random, int maxEntries, int minGap, int maxGap, int maxCount)
+        {
+            var result = new List<(long Start, long Count)>();
+            long cursor = random.Next(0, 64);
+            int entries = random.Next(0, maxEntries + 1);
+            for (int i = 0; i < entries; i++)
+            {
+                long start = cursor + random.Next(minGap, maxGap + 1);
+                long count = random.Next(1, maxCount + 1);
+                result.Add((start, count));
+                cursor = start + count;
+            }
+            return result;
+        }
+
+        static List<(long Start, long Count)> SubtractByPage(List<(long Start, long Count)> regions, List<(long Start, long Count)> ranges)
+        {
+            var pages = new HashSet<long>();
+            foreach (var (start, count) in regions)
+                for (long page = start; page < start + count; page++)
+                    pages.Add(page);
+
+            foreach (var (start, count) in ranges)
+                for (long page = start; page < start + count; page++)
+                    pages.Remove(page);
+
+            var sorted = new List<long>(pages);
+            sorted.Sort();
+
+            var result = new List<(long Start, long Count)>();
+            foreach (long page in sorted)
+            {
+                if (result.Count > 0 && result[^1].Start + result[^1].Count == page)
+                    result[^1] = (result[^1].Start, result[^1].Count + 1);
+                else
+                    result.Add((page, 1));
+            }
+            return result;
+        }
     }
 
     [RavenFact(RavenTestCategory.Voron)]

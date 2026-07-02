@@ -30,7 +30,6 @@ using Sparrow.Threading;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
-using Voron.Impl.FreeSpace;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
@@ -708,8 +707,8 @@ namespace Voron.Impl.Journal
             }
 
             private LastFlushState _lastFlushed = LastFlushState.Empty;
-            // free-space-tree sections with freed space pending a hole-punch; touched only under _flushingLock
-            private readonly HashSet<long> _pendingSparseSections = new();
+            // touched only under _flushingLock
+            private readonly List<(long Start, long Count)> _pendingSparseRegions = new();
             private long _totalWrittenButUnsyncedBytes;
             private bool _ignoreLockAlreadyTaken;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
@@ -845,10 +844,11 @@ namespace Voron.Impl.Journal
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
                     Pager.State dataPagerState;
+                    List<(long Start, long Count)> flushedPageRanges;
                     try
                     {
                         byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
-                        dataPagerState = ApplyPagesToDataFileFromScratch(_applyLogsToDataFileStateFromPreviousFailedAttempt);
+                        dataPagerState = ApplyPagesToDataFileFromScratch(_applyLogsToDataFileStateFromPreviousFailedAttempt, out flushedPageRanges);
                     }
                     catch (Exception e) when (e is OutOfMemoryException or EarlyOutOfMemoryException)
                     {
@@ -890,14 +890,14 @@ namespace Voron.Impl.Journal
 
                     if (currentState.SparseRegions is { Count: > 0 } freedRegions)
                     {
-                        foreach (var (start, count) in freedRegions)
-                        {
-                            for (var section = start / FreeSpaceHandling.NumberOfPagesInSection;
-                                 section <= (start + count - 1) / FreeSpaceHandling.NumberOfPagesInSection; section++)
-                            {
-                                _pendingSparseSections.Add(section);
-                            }
-                        }
+                        _pendingSparseRegions.AddRange(freedRegions);
+                        StorageEnvironment.MergeSparseRegions(_pendingSparseRegions);
+                    }
+
+                    if (flushedPageRanges != null)
+                    {
+                        // a freed page that a later transaction reused gets written by a flush - it must not be punched
+                        SubtractRanges(_pendingSparseRegions, flushedPageRanges);
                     }
 
                     _waj._env.SuggestSyncDataFile();
@@ -1475,7 +1475,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state)
+            private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state, out List<(long Start, long Count)> flushedPageRanges)
             {
                 long written = 0;
                 var sp = Stopwatch.StartNew();
@@ -1484,6 +1484,7 @@ namespace Voron.Impl.Journal
                 var currentStateRecord = _waj._env.CurrentStateRecord;
                 var dataPagerState = currentStateRecord.DataPagerState;
                 var record = state.Record;
+                flushedPageRanges = null;
                 using (var meter = options.IoMetrics.MeterIoRate(dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                 {
                     var pagesBuffer = ArrayPool<Pal.page_to_write>.Shared.Rent(record.ScratchPagesTable.Count);
@@ -1493,6 +1494,14 @@ namespace Voron.Impl.Journal
                         Span<Pal.page_to_write> pages = GetSortedPages(ref txState, record, pagesBuffer, out written);
                         if (pages.IsEmpty)
                             return dataPagerState;
+
+                        if (state.SparseRegions is { Count: > 0 } || _pendingSparseRegions.Count > 0)
+                        {
+                            flushedPageRanges = new List<(long Start, long Count)>(pages.Length);
+                            foreach (var page in pages)
+                                flushedPageRanges.Add((page.page_num, page.count_of_pages));
+                        }
+
                         dataPager.EnsureContinuous(ref dataPagerState, pages[^1].page_num, pages[^1].count_of_pages);
                         (dataPagerState.TotalAllocatedSize, dataPagerState.TotalPhysicalSpace) = dataPager.GetFileSize(dataPagerState);
                         fixed (Pal.page_to_write* ptr = pages)
@@ -1525,27 +1534,20 @@ namespace Voron.Impl.Journal
             }
 
             // Caller must hold _flushingLock and have synced first - punching a clean section is much cheaper on Windows (RavenDB-26910).
-            // Space reclamation only (cf. DisableSparseRegions), so failures are swallowed and never fail the sync.
+            // Pending holds flushed frees (older than every reader, per the flush's uptoTxIdExclusive bound) minus pages later flushes rewrote.
+            // Space reclamation only (cf. DisableSparseRegions) - failures are swallowed and never fail the sync.
             private void ApplyPendingSparseRegions()
             {
-                if (_pendingSparseSections.Count == 0)
+                if (_pendingSparseRegions.Count == 0)
                     return;
 
                 try
                 {
-                    using (var readTx = _waj._env.ReadTransaction())
-                    {
-                        // re-validate against the live free-space tree: a page reused (allocated) since it was freed is no longer free here, so it's excluded and never zeroed
-                        var stillFree = _waj._env.FreeSpaceHandling.GetSparseRegions(readTx.LowLevelTransaction, _pendingSparseSections);
-                        if (stillFree.Count > 0)
-                        {
-                            MarkSparseRegionsInDataFile(stillFree);
+                    MarkSparseRegionsInDataFile(_pendingSparseRegions);
 
-                            // punch shrinks the physical (on-disk) size, not the allocated/logical size; refresh the cached value reports read
-                            var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
-                            dataPagerState.TotalPhysicalSpace = _waj._env.DataPager.GetFileSize(dataPagerState).PhysicalSize;
-                        }
-                    }
+                    // the flush captured the file sizes before this deferred punch - refresh the physical size that storage reports read
+                    var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
+                    dataPagerState.TotalPhysicalSpace = _waj._env.DataPager.GetFileSize(dataPagerState).PhysicalSize;
                 }
                 catch (Exception e)
                 {
@@ -1554,8 +1556,42 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
-                    _pendingSparseSections.Clear();
+                    _pendingSparseRegions.Clear();
                 }
+            }
+
+            // both lists must be sorted by Start and non-overlapping
+            internal static void SubtractRanges(List<(long Start, long Count)> sparseRegions, List<(long Start, long Count)> flushedPageRanges)
+            {
+                if (sparseRegions.Count == 0 || flushedPageRanges.Count == 0)
+                    return;
+
+                var result = new List<(long Start, long Count)>(sparseRegions.Count);
+                int j = 0;
+                foreach ((long start, long count) in sparseRegions)
+                {
+                    long current = start;
+                    long end = start + count;
+
+                    while (j < flushedPageRanges.Count && flushedPageRanges[j].Start + flushedPageRanges[j].Count <= current)
+                    {
+                        j++;
+                    }
+
+                    for (int k = j; k < flushedPageRanges.Count && flushedPageRanges[k].Start < end; k++)
+                    {
+                        if (flushedPageRanges[k].Start > current)
+                            result.Add((current, flushedPageRanges[k].Start - current));
+
+                        current = Math.Max(current, flushedPageRanges[k].Start + flushedPageRanges[k].Count);
+                    }
+
+                    if (current < end)
+                        result.Add((current, end - current));
+                }
+
+                sparseRegions.Clear();
+                sparseRegions.AddRange(result);
             }
 
             private void MarkSparseRegionsInDataFile(List<(long Start, long Count)> sparseRegions)
