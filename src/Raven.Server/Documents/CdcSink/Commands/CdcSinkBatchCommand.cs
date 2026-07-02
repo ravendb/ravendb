@@ -49,6 +49,14 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     public int ProcessedSuccessfully { get; private set; }
 
     /// <summary>
+    /// True once this execution durably persisted the batch's checkpoint LSN (via <see cref="UpdateState"/>).
+    /// A fully-failed batch leaves it false so <c>SubmitBatch</c> neither advances the in-memory checkpoint
+    /// nor hands the position to the provider ack (e.g. a PostgreSQL replication slot) - which would recycle
+    /// WAL for rows that were never durably applied.
+    /// </summary>
+    public bool CheckpointPersisted { get; private set; }
+
+    /// <summary>
     /// Reusable helper for grouping ops by document ID without per-batch allocations.
     /// The caller maintains two instances (matching the two concurrent batches in the
     /// streaming pipeline) and passes one to each batch command.
@@ -138,6 +146,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
         _statistics?.NewBatch();
+        CheckpointPersisted = false;
         int batchErrors = 0;
         // Per-execution success count. The TxMerger can re-run ExecuteCmd (via
         // RunEachOperationIndependently) when a merged batch fails, so the cumulative
@@ -177,8 +186,11 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             {
                 // Advance LSN only when THIS execution made progress: either the entire batch
                 // succeeded, or some items were processed successfully (the failed ones are recorded
-                // as item errors and skipped). A fully-failed batch withholds the checkpoint and retries.
+                // as item errors and skipped). A fully-failed batch withholds the checkpoint so its
+                // rows are retried on the next read from persisted state; SubmitBatch mirrors that by
+                // not advancing the in-memory checkpoint or acking the provider (see CheckpointPersisted).
                 UpdateState(context);
+                CheckpointPersisted = _lastLsn != null;
             }
 
             return _ops.Count;
