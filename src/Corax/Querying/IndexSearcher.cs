@@ -173,20 +173,35 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public long DictionaryId => _dictionaryId;
 
     /// <summary>Batch-resolve entry IDs to container locations. Entry IDs MUST be sorted ascending. Unresolvable entries get -1.</summary>
-    public void ResolveEntryLocations(ReadOnlySpan<long> entryIds, Span<long> containerLocations) => _entryIdToLocation.GetFor(entryIds, containerLocations, -1);
+    public void ResolveEntryLocations(ReadOnlySpan<long> entryIds, Span<long> containerLocations)
+    {
+        // A zero-entry index has no EntryIdToLocation lookup (see Init), so nothing is resolvable -> all -1.
+        // Reachable in practice only via the empty-index path, where the driving match yields no entry ids.
+        if (_entryIdToLocation == null)
+        {
+            containerLocations[..entryIds.Length].Fill(-1);
+            return;
+        }
 
+        _entryIdToLocation.GetFor(entryIds, containerLocations, -1);
+    }
+
+    /// <summary>Reads the terms of a single entry.</summary>
+    /// <remarks>
+    /// Pass a caller-owned <paramref name="key"/> when two readers' decoded terms must be alive simultaneously.
+    /// When omitted, the searcher's shared scratch key is used - safe ONLY because the keyless callers
+    /// (phrase/spatial/vector/MoreLikeThis matches and the read-operation loops) consume one reader at a time.
+    /// Two live readers sharing the scratch key would corrupt one's decoded terms.
+    /// </remarks>
     public EntryTermsReader GetEntryTermsReader(long id, ref Page p, CompactKey key = null)
     {
-        if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
+        // A null _entryIdToLocation means a zero-entry index (see Init); treat as "entry not found" rather than NRE.
+        if (_entryIdToLocation == null || _entryIdToLocation.TryGetValue(id, out var locLong) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
         InitializeSpecialTermsMarkers();
         ContainerEntryId loc = (ContainerEntryId)locLong;
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        // EntryTermsReader requires a caller-owned key. When the caller doesn't supply one, fall back
-        // to the searcher's scratch key (acquired once, released in Dispose). This is safe because
-        // these callers consume one reader at a time; callers that need two readers' decoded terms
-        // live simultaneously must pass their own keys.
         key ??= _sharedEntryReaderKey ??= _transaction.LowLevelTransaction.AcquireCompactKey();
         return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, key);
     }
