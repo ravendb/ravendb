@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Cable, CodeXml, Link2, MessageCircle, Pencil, Send, Trash2, type LucideIcon } from "lucide-react";
+import { Cable, CodeXml, Link2, MessageCircle, Palette, Pencil, Send, Trash2, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { api } from "@/api/api";
@@ -88,6 +88,14 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                     <Badge variant="secondary" className="tabular-nums">
                                         {group.channels.length}
                                     </Badge>
+                                    {group.label === "Web widgets" && (
+                                        <Button asChild variant="outline">
+                                            <Link to={appRoutes.app(slug, "web-widget/default-customize")}>
+                                                <Palette aria-hidden="true" />
+                                                Customize default appearance
+                                            </Link>
+                                        </Button>
+                                    )}
                                 </div>
                                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                     {group.channels.map((channel) => (
