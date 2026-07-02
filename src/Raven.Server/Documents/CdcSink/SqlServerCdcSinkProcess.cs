@@ -48,6 +48,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     private readonly string _connectionString;
     private readonly string _factoryName;
 
+    // Set once the "SQL Server Agent not visible" advisory has been recorded, so it isn't re-stored on
+    // every reconnect; reset when the Agent becomes visible so a later regression re-reports.
+    private bool _agentAdvisoryRecorded;
+
     public SqlServerCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database, "dbo")
     {
@@ -212,17 +216,26 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
 
         if (agentSessions > 0)
+        {
+            _agentAdvisoryRecorded = false;
             return;
+        }
 
         // The Agent isn't visible. On-prem this usually means it is genuinely stopped, but an
         // under-privileged login may simply not see the session. Warn instead of failing the task so
         // capture can still proceed if the Agent is in fact running; without it the change tables just
         // won't be populated and the counts won't advance, which the alert explains.
-        RecordProcessError(TaskErrorStep.Configuration,
-            "SQL Server Agent does not appear to be running (or is not visible to this login). CDC change " +
-            "capture relies on the Agent to process the capture jobs that populate the change tables; if it " +
-            "is genuinely stopped, no CDC events will be delivered. For Docker containers start with " +
-            "-e 'MSSQL_AGENT_ENABLED=true'; for on-premises installations start the SQL Server Agent service.");
+        // Record once per process while the condition holds - VerifyAgentIsRunning re-runs on every
+        // reconnect, and this advisory (not a failure) would otherwise pile up in the error table.
+        if (_agentAdvisoryRecorded == false)
+        {
+            RecordProcessError(TaskErrorStep.Configuration,
+                "SQL Server Agent does not appear to be running (or is not visible to this login). CDC change " +
+                "capture relies on the Agent to process the capture jobs that populate the change tables; if it " +
+                "is genuinely stopped, no CDC events will be delivered. For Docker containers start with " +
+                "-e 'MSSQL_AGENT_ENABLED=true'; for on-premises installations start the SQL Server Agent service.");
+            _agentAdvisoryRecorded = true;
+        }
 
         if (Logger.IsInfoEnabled)
             Logger.Info($"[{Name}] SQL Server Agent not detected; proceeding (capture may not advance if it is truly stopped).");
