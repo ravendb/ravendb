@@ -452,7 +452,7 @@ namespace Voron.Impl
             }
             else
             {
-                newPage = AllocatePageImpl(1, num, currentPage, zeroPage: false); // allocate new page in a log file but with the same number			
+                newPage = AllocatePageImpl(1, num, currentPage, zeroPage: false); // allocate new page in a log file but with the same number
                 pageSize = Environment.Options.PageSize;
             }
 
