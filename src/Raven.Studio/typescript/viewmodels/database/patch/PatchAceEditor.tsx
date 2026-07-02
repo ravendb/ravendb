@@ -43,7 +43,6 @@ export default function PatchAceEditor({ query, languageService }: PatchAceEdito
     const handleLoadScript = useCallback(
         (script: string) => {
             query(script);
-            setValue(script);
         },
         [query]
     );
