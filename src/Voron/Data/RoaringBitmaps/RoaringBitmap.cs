@@ -761,8 +761,11 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
     private void VisitPresentSorted<TVisitor>(Span<long> sortedMatches, int count, scoped ref TVisitor visitor)
         where TVisitor : struct, IPresenceVisitor, allows ref struct
     {
-        AssertSorted(sortedMatches);
-        
+        // Only the first `count` elements are the valid, sorted region. Callers such as DedupAddNew pass a
+        // buffer whose tail (beyond count) is uninitialized ([SkipLocalsInit] stackalloc), so the assert must
+        // be bounded to the region actually walked below — otherwise it trips on stack garbage in Debug.
+        AssertSorted(sortedMatches[..count]);
+
         int* idx = _index.RawItems;
         int idxLen = _index.Count;
         ContainerEntry* entries = _entries.RawItems;
