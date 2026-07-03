@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Platform;
 using Tests.Infrastructure;
@@ -109,9 +111,9 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
     [RavenFact(RavenTestCategory.Voron)]
     public unsafe void DeferredPunch_DoesNotZeroPageReusedInLaterFlushBatch()
     {
-        // RavenDB-26910: the hole-punch is deferred to the post-sync phase and re-validated against the live free-space tree.
-        // A page freed in one flush batch can be reused + written by a later batch before the deferred punch runs; the re-validation
-        // must exclude it so it is never zeroed. If the filter is removed (punching the stale pending regions directly), this fails.
+        // RavenDB-26910: the hole-punch is deferred to the post-sync phase. A page freed in one flush batch can be reused + written
+        // by a later batch before the punch runs; that later flush subtracts its writes from the pending regions (SubtractRanges),
+        // so the reused page is never zeroed. If the subtraction is removed, this fails.
         RequireFileBasedPager();
         Options.ManualFlushing = true;
         Options.ManualSyncing = true;
@@ -155,8 +157,8 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         }
         Env.FlushLogToDataFile();
 
-        // now sync: batch N's deferred punch runs over a clean section, re-validated against the live free-space tree. The pages were
-        // reused by batch N+1, so they must be excluded from the punch and keep their content.
+        // now sync: batch N's deferred punch runs over a clean section. Batch N+1 rewrote these pages and subtracted them from the
+        // pending regions, so they are excluded from the punch and keep their content.
         using (var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
             Assert.True(sync.SyncDataFile());
 
@@ -236,6 +238,100 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(readerOverflowSize, page.OverflowSize);
             Assert.False(page.AsSpan(PageHeader.SizeOf, readerOverflowSize).ContainsAnyExcept((byte)3),
                 "Page freed by a transaction newer than the read tx was zeroed by the deferred sparse-region punch");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void DeferredPunch_MidFlushPunchDoesNotZeroPageThisFlushRewrote()
+    {
+        // RavenDB-26910 (C1): the deferred punch can execute on the FLUSH thread, mid-flush. When a user write transaction holds
+        // the tx lock, WaitForJournalStateToBeUpdated times out acquiring it and calls RunTaskIfNotAlreadyRan, which executes a
+        // queued sync's UpdateDatabaseStateAfterSync (including the punch) while the flush - which already wrote a reallocated
+        // page - still holds _flushingLock. Pending must be reconciled (this flush's writes subtracted) BEFORE
+        // ApplyJournalStateAfterFlush, or that punch zeroes the just-written page. This test builds the real interleaving:
+        // a held write tx forces the flusher into the timeout branch, and a real SyncOperation gets its punch executed mid-flush.
+        RequireFileBasedPager();
+        Options.ManualFlushing = true;
+        Options.ManualSyncing = true;
+
+        const int pages = 600; // > NumberOfFreePagesForSparseConsideration (512), so freeing the run yields a punchable region
+        const int overflowSize = pages * Constants.Storage.PageSize - PageHeader.SizeOf;
+
+        long p;
+        using (var tx = Env.WriteTransaction())
+        {
+            var page = tx.LowLevelTransaction.AllocatePage(pages);
+            page.Flags |= PageFlags.Overflow;
+            page.OverflowSize = overflowSize;
+            page.AsSpan(PageHeader.SizeOf, overflowSize).Fill(1);
+            p = page.PageNumber;
+            tx.Commit();
+        }
+        Env.FlushLogToDataFile();
+
+        // F1: free the run - its region enters _pendingSparseRegions and stays there (no sync yet)
+        using (var tx = Env.WriteTransaction())
+        {
+            for (int i = 0; i < pages; i++)
+                tx.LowLevelTransaction.FreePage(p + i);
+            tx.Commit();
+        }
+        Env.FlushLogToDataFile();
+
+        // reallocate the same run and write new content - flushed by F2 below
+        using (var tx = Env.WriteTransaction())
+        {
+            var page = tx.LowLevelTransaction.AllocatePage(pages);
+            Assert.Equal(p, page.PageNumber);
+            page.Flags |= PageFlags.Overflow;
+            page.OverflowSize = overflowSize;
+            page.AsSpan(PageHeader.SizeOf, overflowSize).Fill(2);
+            tx.Commit();
+        }
+
+        using (var txLockHeld = new ManualResetEventSlim())
+        using (var releaseTxLock = new ManualResetEventSlim())
+        using (var flushWrotePages = new ManualResetEventSlim())
+        {
+            // hold the write tx lock so F2's WaitForJournalStateToBeUpdated keeps timing out and runs the sync's tasks itself
+            var txHolder = Task.Run(() =>
+            {
+                using (Env.WriteTransaction())
+                {
+                    txLockHeld.Set();
+                    releaseTxLock.Wait(TimeSpan.FromSeconds(60));
+                }
+            });
+            Assert.True(txLockHeld.Wait(TimeSpan.FromSeconds(60)));
+
+            // fires on the flush thread after F2 wrote the reallocated page, right before it gets stuck on the tx lock
+            Env.Journal.Applicator.ForTestingPurposesOnly().OnApplyJournalStateAfterFlush += flushWrotePages.Set;
+
+            var flushTask = Task.Run(() => Env.FlushLogToDataFile());
+            try
+            {
+                Assert.True(flushWrotePages.Wait(TimeSpan.FromSeconds(60)), "expected F2 to write its pages and reach ApplyJournalStateAfterFlush");
+
+                // a real sync: its GatherInformationToStartSync and UpdateDatabaseStateAfterSync (punch included) cannot take
+                // _flushingLock, so both are executed by the stuck F2 flush thread via RunTaskIfNotAlreadyRan - the punch runs mid-flush
+                using (var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+                    Assert.True(sync.SyncDataFile());
+            }
+            finally
+            {
+                releaseTxLock.Set();
+            }
+
+            Assert.True(flushTask.Wait(TimeSpan.FromSeconds(60)), "expected F2 to complete after the tx lock was released");
+            Assert.True(txHolder.Wait(TimeSpan.FromSeconds(60)));
+        }
+
+        using (var tx = Env.ReadTransaction())
+        {
+            var page = tx.LowLevelTransaction.GetPage(p);
+            Assert.Equal(overflowSize, page.OverflowSize);
+            Assert.False(page.AsSpan(PageHeader.SizeOf, overflowSize).ContainsAnyExcept((byte)2),
+                "Page rewritten by the in-progress flush was zeroed by the mid-flush deferred punch");
         }
     }
 

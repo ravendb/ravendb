@@ -883,6 +883,18 @@ namespace Voron.Impl.Journal
 
                     Interlocked.Add(ref TotalCommittedSinceLastFlushPages, -currentTotalCommittedSinceLastFlushPages);
 
+                    // update pending _before_ ApplyJournalStateAfterFlush: that method can re-enter on this thread and run a queued sync's
+                    // punch (WaitForJournalStateToBeUpdated -> RunTaskIfNotAlreadyRan), so pending must already include this flush's frees
+                    // and exclude the pages it just wrote
+                    if (currentState.SparseRegions is { Count: > 0 } freedRegions)
+                    {
+                        _pendingSparseRegions.AddRange(freedRegions);
+                        StorageEnvironment.MergeSparseRegions(_pendingSparseRegions);
+                    }
+
+                    if (flushedPageRanges != null)
+                        SubtractRanges(_pendingSparseRegions, flushedPageRanges);
+
                     try
                     {
                         ApplyJournalStateAfterFlush(token, currentState.Buffers, currentState.Record, dataPagerState, byteStringContext);
@@ -891,18 +903,6 @@ namespace Voron.Impl.Journal
                     {
                         _failedToUpdateJournalState = true;
                         throw;
-                    }
-
-                    if (currentState.SparseRegions is { Count: > 0 } freedRegions)
-                    {
-                        _pendingSparseRegions.AddRange(freedRegions);
-                        StorageEnvironment.MergeSparseRegions(_pendingSparseRegions);
-                    }
-
-                    if (flushedPageRanges != null)
-                    {
-                        // a freed page that a later transaction reused gets written by a flush - it must not be punched
-                        SubtractRanges(_pendingSparseRegions, flushedPageRanges);
                     }
 
                     _waj._env.SuggestSyncDataFile();
@@ -930,6 +930,8 @@ namespace Voron.Impl.Journal
                 Pager.State dataPagerState,
                 ByteStringContext byteStringContext)
             {
+                _forTestingPurposes?.OnApplyJournalStateAfterFlush?.Invoke();
+
                 // the idea here is that even though we need to run the journal through its state update under the transaction lock
                 // we don't actually have to do that in our own transaction, what we'll do is to setup things so if there is a running
                 // write transaction, we'll piggy back on its commit to complete our process, without interrupting its work
@@ -1211,6 +1213,8 @@ namespace Voron.Impl.Journal
                 internal Action OnWaitForJournalStateToBeUpdated_BeforeAssigning_updateJournalStateAfterFlush;
 
                 internal Action OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush;
+
+                internal Action OnApplyJournalStateAfterFlush;
             }
 
             // This can take a LONG time, and it needs to run concurrently with the
