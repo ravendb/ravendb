@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Subscriptions
@@ -20,7 +21,7 @@ using Raven.Client.Documents.Subscriptions;
 
         // ── Flag cases ──────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoreOpenSession_In_Sync_RunLambda_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -46,7 +47,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("OpenSession", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoreOpenAsyncSession_In_Async_RunLambda_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -72,7 +73,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("OpenAsyncSession", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoreOpenSessionWithOptions_In_RunLambda_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -97,7 +98,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("OpenSession", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoreOpenAsyncSessionWithOptions_In_RunLambda_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -122,7 +123,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("OpenAsyncSession", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task FieldStore_OpenSession_In_RunLambda_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -154,7 +155,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("OpenSession", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Two_OpenSession_Calls_In_RunLambda_Reports_Two_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -183,7 +184,7 @@ class Order { public string Id { get; set; } }
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_In_NestedLambda_Inside_RunLambda_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -211,7 +212,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("OpenSession", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_In_NonStatic_LocalFunction_Inside_RunLambda_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -242,7 +243,7 @@ class Order { public string Id { get; set; } }
 
         // ── No-flag cases ────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_In_Static_LocalFunction_Inside_RunLambda_No_Diagnostic()
         {
             // A static local function cannot capture the Run lambda's batch parameter, so the
@@ -271,7 +272,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task BatchOpenSession_Correct_Usage_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -294,7 +295,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoreOpenSession_Outside_RunLambda_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -312,7 +313,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoreOpenSession_In_Where_Lambda_Not_Run_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -339,7 +340,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task BatchTyped_OpenSession_No_False_Positive()
         {
             const string source = CommonUsings + @"

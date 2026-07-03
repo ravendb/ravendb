@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Indexes
@@ -19,7 +20,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Abstract_Index_Base_Whose_Subclasses_Define_Map_Is_Not_Flagged_As_Missing()
         {
             const string source = CommonUsings + @"
@@ -43,7 +44,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain(diagnostics, d => d.Id == DiagnosticIds.IndexMissingMapAssignment);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Abstract_Multi_Map_Base_Whose_Subclasses_Add_Maps_Is_Not_Flagged_As_Missing()
         {
             const string source = CommonUsings + @"
@@ -70,7 +71,7 @@ class Employee { public string FirstName { get; set; } }
             Assert.DoesNotContain(diagnostics, d => d.Id == DiagnosticIds.MultiMapIndexMissingAddMap);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Concrete_Index_With_No_Map_Is_Still_Flagged_As_Missing()
         {
             // Guard: the abstract-class exemption must not leak to a concrete, deployable index.

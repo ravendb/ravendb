@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Indexes
@@ -19,7 +20,7 @@ using Raven.Client.Documents.Indexes;
 
         // ── Flag cases ──────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_WithSelectMany_SingleArg_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -45,7 +46,7 @@ class Line { public string Product { get; set; } public int Quantity { get; set;
             Assert.Contains("SelectMany", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_WithSelectMany_TwoArg_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -73,7 +74,7 @@ class ClickIndex : AbstractIndexCreationTask<ClickSnapshot>
             Assert.Contains("SelectMany", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_WithNestedFromClause_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -99,7 +100,7 @@ class Item { public string Value { get; set; } }
             Assert.Contains("nested from", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AddMap_WithSelectMany_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -127,7 +128,7 @@ class Invoice { public string CustomerName { get; set; } }
             Assert.Contains("SelectMany", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_WithTwoSelectMany_Reports_TwoDiagnostics()
         {
             const string source = CommonUsings + @"
@@ -155,7 +156,7 @@ class Item { public string Value { get; set; } }
 
         // ── No-flag cases ────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_WithSelectOnly_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -176,7 +177,7 @@ class Product { public string Name { get; set; } public decimal Price { get; set
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_WithWhereOnly_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -198,7 +199,7 @@ class Order { public string Id { get; set; } public string CustomerName { get; s
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task JavaScriptIndex_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -225,7 +226,7 @@ class Line { public string Product { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task NormalIndex_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -247,7 +248,7 @@ class User { public string Name { get; set; } public string Email { get; set; } 
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Reduce_WithSelectMany_No_Diagnostic()
         {
             // RVN014 is about source-document fan-out (Map/AddMap producing >1 entry per
@@ -279,7 +280,7 @@ class Order { public IEnumerable<string> Tags { get; set; } }
             Assert.Contains("SelectMany", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_ExpressionBodied_Ctor_WithSelectMany_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -299,7 +300,7 @@ class Order { public IEnumerable<string> Tags { get; set; } }
             Assert.Contains("SelectMany", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ThisMap_WithSelectMany_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"

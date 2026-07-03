@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Raven.Analyzers.Queries;
 using AnalyzersTests.Framework;
 using Raven.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Queries
@@ -17,7 +18,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_After_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -43,7 +44,7 @@ class Test
             Assert.Contains("Where", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OrderBy_After_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -68,7 +69,7 @@ class Test
             Assert.Contains("OrderBy", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task GroupBy_After_Select_On_RavenQuery_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -95,7 +96,7 @@ class Test
             Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_After_Where_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -117,7 +118,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_Then_ProjectInto_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -141,7 +142,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Non_Raven_Queryable_No_Diagnostic()
         {
             const string source = @"
@@ -167,7 +168,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Async_Where_After_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -191,7 +192,7 @@ class Test
             Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, d.Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Double_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -217,7 +218,7 @@ class Test
             Assert.Equal(DiagnosticSeverity.Info, d.Severity);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Single_ProjectInto_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -240,7 +241,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Search_After_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -266,7 +267,7 @@ class Test
             Assert.Contains("Search", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Filter_After_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -291,7 +292,7 @@ class Test
             Assert.Contains("Filter", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OrderByScore_After_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -316,7 +317,7 @@ class Test
             Assert.Contains("OrderByScore", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task GroupByArrayValues_After_ProjectInto_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -343,7 +344,7 @@ class Test
             Assert.Contains("GroupByArrayValues", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Search_Before_ProjectInto_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -366,7 +367,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Include_After_ProjectInto_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -389,7 +390,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Double_ProjectInto_With_Filter_Between_Reports_Both_Diagnostics()
         {
             const string source = CommonUsings + @"

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Subscriptions
@@ -12,7 +13,7 @@ namespace AnalyzersTests.Subscriptions
     // the diagnostic even when a real IDocumentStore session is opened inside its Run lambda.
     public class SubscriptionWorkerTypeGateRegressionTests
     {
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task User_Type_Named_SubscriptionWorker_Is_Not_Treated_As_Raven_Worker()
         {
             const string source = @"

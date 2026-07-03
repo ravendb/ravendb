@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using AnalyzersTests.Framework;
 using Raven.Analyzers.CodeFixes.Sessions;
 using Raven.Analyzers.Sessions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Sessions
@@ -18,7 +19,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoLoads_Transforms_To_Lazy()
         {
             const string source = CommonUsings + @"
@@ -46,7 +47,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("var order = lazyOrder.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoUnawaitedAsyncLoads_Offer_No_Fix()
         {
             // Un-awaited async loads assigned to Task<T> locals. The extraction awaits the lazy .Value
@@ -72,7 +73,7 @@ class User { public string Id { get; set; } }
             Assert.Contains("No code fixes", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryRewrite_Adds_Missing_RavenClientDocuments_Using()
         {
             // The file imports enough to write session.Query<T>().Where(...).ToList() (Session + Linq +
@@ -103,7 +104,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             Assert.Contains(".Lazily()", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryRewrite_Does_Not_Duplicate_Existing_Using()
         {
             // When Raven.Client.Documents is already imported (via CommonUsings), the query rewrite must
@@ -137,7 +138,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             Assert.Equal(1, count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryRewrite_Does_Not_Add_Using_When_Provided_By_Global_Using_In_Another_File()
         {
             // Raven.Client.Documents is imported by a `global using` in a SEPARATE file, so it is already
@@ -172,7 +173,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             Assert.DoesNotContain("using Raven.Client.Documents;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task InlineComment_On_FirstLoad_SameLine_As_Brace_Is_Not_Duplicated()
         {
             // The first batched load sits on the same line as the opening brace, preceded by an inline
@@ -208,7 +209,7 @@ class Order { public string Id { get; set; } }
             Assert.Equal(1, commentCount);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ExplicitlyTypedLoads_Keep_Lazy_As_Var_But_Restore_Declared_Type_On_Extraction()
         {
             // The rewritten lazy local holds a Lazy<T>, so the original explicit type ('User') must
@@ -241,7 +242,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("Order order = lazyOrder.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryAndLoad_Transforms_To_Lazy()
         {
             const string source = CommonUsings + @"
@@ -270,7 +271,7 @@ class User { public string Id { get; set; } }
             Assert.Contains("var manager = lazyManager.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task NonConsecutive_Offers_No_Fix()
         {
             const string source = CommonUsings + @"
@@ -293,7 +294,7 @@ class Order { public string Id { get; set; } }
                 () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoAsyncLoads_Transforms_To_Lazy()
         {
             const string source = CommonUsings + @"
@@ -322,7 +323,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("var order = await lazyOrder.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoLoads_OnDifferentSessions_Offers_No_Fix()
         {
             const string source = CommonUsings + @"
@@ -345,7 +346,7 @@ class Order { public string Id { get; set; } }
                 () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AsyncQueryAndAsyncLoad_Transforms_To_Lazy()
         {
             const string source = CommonUsings + @"
@@ -377,7 +378,7 @@ class User { public string Id { get; set; } }
             Assert.Contains("var manager = await lazyManager.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task NameCollision_Generates_SuffixedName()
         {
             // lazyUser is already declared in the method; the fix must produce lazyUser2 to avoid collision
@@ -405,7 +406,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("var user = lazyUser2.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Comment_On_Batchable_Statement_Is_Preserved()
         {
             const string source = CommonUsings + @"
@@ -450,7 +451,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Comment_On_Second_Batchable_Statement_Is_Not_Duplicated()
         {
             const string source = CommonUsings + @"
@@ -486,7 +487,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Playground_Shape_Multi_Comment_Block_And_Trailing_Comments_Not_Duplicated()
         {
             // Mirrors the exact shape of RVN012_SessionLazyBatching.BadExample in the playground:
@@ -552,7 +553,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain("ExecuteAllPendingLazyOperations", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task DependentLoad_Within_Batch_Offers_No_Fix()
         {
             // The middle Load depends on the first Load's result (user.ManagerId). Batching would
@@ -576,7 +577,7 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
                 () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task DependentQuery_On_Prior_Load_Offers_No_Fix()
         {
             // The query depends on the prior Load's result (user.Id). Batching would materialize
@@ -600,7 +601,7 @@ class Order { public string Id { get; set; } public string OwnerId { get; set; }
                 () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task NameCollision_With_Method_Parameter_Generates_SuffixedName()
         {
             // 'lazyUser' is a method parameter (not a local), so it is not a descendant of the body
@@ -628,7 +629,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("var user = lazyUser2.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TypeArgument_Sharing_BatchedVariable_Name_Still_Offers_Fix()
         {
             // The second Load's type argument 'User' is an identifier that matches the local named
@@ -654,7 +655,7 @@ class User { public string Id { get; set; } }
             Assert.Contains("var User = lazyUser.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task NameCollision_With_Catch_Variable_Generates_SuffixedName()
         {
             // 'lazyUser' is a catch-clause variable in a nested scope; LookupSymbols at the block
@@ -682,7 +683,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("var user = lazyUser2.Value;", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task IncludeStyleLoads_Offer_No_Fix()
         {
             // Regression: the include-builder Load overload (Load<T>(id, Action<IIncludeBuilder<T>>))
@@ -707,7 +708,7 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
                 () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AsyncQuery_With_CancellationToken_Argument_Offers_No_Fix()
         {
             // The lazy rewrite cannot carry the ToListAsync(token) argument without silently dropping

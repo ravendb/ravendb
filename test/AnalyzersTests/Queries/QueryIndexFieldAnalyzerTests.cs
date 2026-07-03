@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Raven.Analyzers.Queries;
 using AnalyzersTests.Framework;
 using Raven.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Queries
@@ -63,7 +64,7 @@ class OrderIndex : AbstractMultiMapIndexCreationTask<Order>
             MultiMapIndex
         ];
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(IndexMapVariants))]
         public async Task Where_On_Indexed_Field_No_Diagnostic(string index)
         {
@@ -81,7 +82,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(IndexMapVariants))]
         public async Task Where_On_Non_Indexed_Field_Reports_Diagnostic(string index)
         {
@@ -103,7 +104,7 @@ class Test
             Assert.Contains("Where", d.GetMessage());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(IndexMapVariants))]
         public async Task Where_References_Same_Non_Indexed_Field_Twice_Reports_One_Diagnostic(string index)
         {
@@ -123,7 +124,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Non_Indexed_Field_With_StoreAllFields_Reports_Diagnostic()
         {
             // StoreAllFields affects storage, not which fields the Map indexes, so it must not
@@ -152,7 +153,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Indexed_Field_With_StoreAllFields_No_Diagnostic()
         {
             string source = CommonUsings + OrderClass + @"
@@ -177,7 +178,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(IndexMapVariants))]
         public async Task OrderBy_On_Indexed_Field_No_Diagnostic(string index)
         {
@@ -195,7 +196,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(IndexMapVariants))]
         public async Task OrderBy_On_Non_Indexed_Field_Reports_Diagnostic(string index)
         {
@@ -216,7 +217,7 @@ class Test
             Assert.Contains("OrderBy", d.GetMessage());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(IndexMapVariants))]
         public async Task Search_On_Non_Indexed_Field_Reports_Diagnostic(string index)
         {
@@ -237,7 +238,7 @@ class Test
             Assert.Contains("Search", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ThenByDescending_On_Non_Indexed_Field_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -266,7 +267,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Nested_Member_Access_Is_Not_Flagged()
         {
             // A nested path (x.Address.City) maps to an index field name ambiguously, so it is
@@ -297,7 +298,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Nested_Member_Access_To_Mapped_Leaf_No_False_Positive()
         {
             // The index maps the leaf (City = o.Shipping.City), so the field is "City". A query on
@@ -327,7 +328,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Filter_After_Projection_Is_Not_Flagged()
         {
             // A Where after a Select binds to the projected shape, not the index, so its fields must
@@ -357,7 +358,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Filter_After_GroupBy_Is_Not_Flagged()
         {
             // GroupBy changes the element type from Order to IGrouping<TKey, Order>, so a subsequent
@@ -388,7 +389,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OrderBy_After_GroupBy_Is_Not_Flagged()
         {
             // Same as above for an OrderBy after GroupBy: g.Key is an IGrouping member, not an index field.
@@ -416,7 +417,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Filter_Before_GroupBy_Is_Still_Flagged()
         {
             // The boundary must only suppress operators AFTER the grouping: a Where on a non-indexed
@@ -447,7 +448,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Filter_Before_Projection_Is_Still_Flagged()
         {
             // The projection boundary must only suppress operators that come AFTER it: a Where on a
@@ -478,7 +479,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Collection_Field_Method_Call_Is_Still_Flagged()
         {
             // x.Tags.Contains(...) queries the collection field 'Tags' directly — Tags is a single-hop
@@ -510,7 +511,7 @@ class Test
             Assert.Contains("Tags", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Document_Id_No_Diagnostic()
         {
             // RavenDB always exposes the document id for a static-index query even when the Map does
@@ -539,7 +540,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Id_And_Non_Indexed_Field_Reports_Only_Non_Indexed()
         {
             // The Id guard must suppress only Id: a non-indexed field referenced in the same lambda is
@@ -570,7 +571,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task FanOut_Collection_With_Lambda_Operator_Not_Flagged()
         {
             // A fan-out index (from o in orders from l in o.Lines select new { l.Product }) projects
@@ -602,7 +603,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task FanOut_Collection_Outer_Non_Indexed_Field_Still_Flagged()
         {
             // Skipping the collection hop must not suppress a genuinely non-indexed field referenced on
@@ -636,7 +637,7 @@ class Test
             Assert.Contains("Status", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_With_Multiple_Fields_All_Indexed_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -662,7 +663,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_With_One_Non_Indexed_Field_Reports_Single_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -690,7 +691,7 @@ class Test
             Assert.Contains("Status", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task String_Form_Literal_Matches_Index_Class_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -717,7 +718,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task String_Form_Underscore_Name_Matched_Via_Slash_Convention()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -744,7 +745,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task String_Form_Unknown_Index_Name_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -761,7 +762,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task String_Form_Variable_Index_Name_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -787,7 +788,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Generic_Form_With_Overridden_IndexName_Still_Analyzed()
         {
             // The class is resolved from the type argument directly, so IndexName override is irrelevant
@@ -817,7 +818,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task String_Form_With_Overridden_IndexName_Resolves_Literal_And_Reports_Diagnostic()
         {
             // The overridden IndexName literal is read from the property syntax and used as the lookup key
@@ -847,7 +848,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Query_Without_Index_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -864,7 +865,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Index_With_CreateField_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -893,7 +894,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Index_Map_Is_Method_Call_Not_Lambda_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -928,7 +929,7 @@ class Test
 
         // ── Async session ─────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Async_Session_Reports_Same_Diagnostic_As_Sync()
         {
             const string source = CommonUsings + OrderClass + @"

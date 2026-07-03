@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Sessions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Sessions
@@ -22,7 +23,7 @@ using Raven.Client.Documents.Linq;
 
         // ── Flag cases ──────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoLoads_WithParamIds_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -49,7 +50,7 @@ class Order { public string Id { get; set; } }
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryToList_And_Load_WithParamId_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -75,7 +76,7 @@ class User { public string Id { get; set; } }
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoQueries_FirstSplitAcrossStatements_Reports_Diagnostics()
         {
             // The first query is split across statements (var q = session.Query<T>(); ... q.ToList();).
@@ -103,7 +104,7 @@ class Order { public string Id { get; set; } }
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoQueries_InSameMethod_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -129,7 +130,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Load_Before_Query_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -150,7 +151,7 @@ class User { public string Id { get; set; } }
             Assert.Equal(2, diagnostics.Length);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoAsyncLoads_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -172,7 +173,7 @@ class Order { public string Id { get; set; } }
             Assert.Equal(2, diagnostics.Length);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AsyncQuery_And_AsyncLoad_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -193,7 +194,7 @@ class User { public string Id { get; set; } }
             Assert.Equal(2, diagnostics.Length);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Load_With_FieldId_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -218,7 +219,7 @@ class User { public string Id { get; set; } }
 
         // ── No-flag cases ────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task SingleLoad_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -238,7 +239,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task SingleQuery_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -258,7 +259,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task DependentLoad_ComplexExpr_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -281,7 +282,7 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task DependentLoad_DerivedLocal_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -304,7 +305,7 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ChainedLoads_Second_Depends_On_First_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -327,7 +328,7 @@ class Customer { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OperationsInsideLambda_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -352,7 +353,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AlreadyLazy_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -373,7 +374,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task IncludeStyleLoads_Not_Batchable_No_Diagnostic()
         {
             // Load<T>(id, includes) has no lazy equivalent — Lazily.Load only accepts (id) or
@@ -398,7 +399,7 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ScalarMaterializers_Not_Batchable_No_Diagnostic()
         {
             // First/Any/Single/Count have no IRavenQueryable.Lazily() equivalent the code fix can
@@ -422,7 +423,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryMaterializer_With_Argument_Not_Counted_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -446,7 +447,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LoadsOnDifferentSessions_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -469,7 +470,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueriesOnDifferentSessions_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -492,7 +493,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoLoadsOnSession1_PlusOneOnSession2_Reports_Two_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -516,7 +517,7 @@ class User { public string Id { get; set; } }
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TwoLoads_OnSameNamedNonRavenSession_No_Diagnostic()
         {
             // A user type named IDocumentSession that is NOT in the Raven.Client namespace must not be

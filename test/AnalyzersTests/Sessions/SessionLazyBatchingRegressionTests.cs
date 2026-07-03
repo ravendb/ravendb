@@ -5,6 +5,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers.CodeFixes.Sessions;
 using Raven.Analyzers.Sessions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Sessions
@@ -24,7 +25,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Loads_Through_A_Factory_Method_Are_Not_Grouped()
         {
             // GetSession() may return a different instance each call, so the two loads are not
@@ -47,7 +48,7 @@ class Doc { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Loads_Through_A_Property_Are_Not_Grouped()
         {
             // A property getter may return a fresh session per access, so two loads through it are
@@ -70,7 +71,7 @@ class Doc { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Loads_Through_A_Field_Are_Still_Flagged()
         {
             // A field is a stable instance, so two loads through it are genuinely batchable.
@@ -92,7 +93,7 @@ class Doc { public string Id { get; set; } }
             Assert.NotEmpty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Explicit_Enumerable_Query_Type_Is_Preserved_On_Extraction()
         {
             // The .Value extraction must restore the original IEnumerable<T> declaration, not infer
@@ -113,7 +114,7 @@ class Doc { public string Id { get; set; } public bool Active { get; set; } }
             Assert.Contains("IEnumerable<Doc> docs = lazyDocs.Value.ToList();", fixedCode);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Mixed_Sync_And_Async_Batch_Offers_No_Fix()
         {
             // Reading a sync .Value first would force the async-registered op to dispatch through the

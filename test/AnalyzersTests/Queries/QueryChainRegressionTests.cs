@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Queries;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Queries
@@ -22,7 +23,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Unbounded_Result_Not_Flagged_When_Take_Is_In_A_Prior_Statement()
         {
             const string source = CommonUsings + @"
@@ -42,7 +43,7 @@ class Doc { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Filtering_After_Projection_Detected_Across_A_Local_Variable()
         {
             const string source = CommonUsings + @"
@@ -63,7 +64,7 @@ class View { public string Name { get; set; } }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Synthesized_Record_Equals_Is_Not_Flagged_As_Unsupported_Method()
         {
             // The record's compiler-synthesized Equals(Tag) is not a user-authored helper; RavenDB
@@ -86,7 +87,7 @@ class Doc { public string Id { get; set; } public Tag Tag { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OrderBy_After_Identity_Select_Is_Not_Flagged()
         {
             // A pure identity Select keeps each member's source name, so RavenDB remaps the OrderBy back
@@ -109,7 +110,7 @@ class Order { public string Company { get; set; } public int Total { get; set; }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OrderBy_On_Renamed_Select_Member_Reports_Diagnostic()
         {
             // A renamed projection member (Renamed = o.Company) has no matching source field, so ordering
@@ -133,7 +134,7 @@ class Order { public string Company { get; set; } public int Total { get; set; }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Computed_Select_Member_Reports_Diagnostic()
         {
             // A computed projection member (Full = o.First + o.Last) has no source field, so filtering by
@@ -157,7 +158,7 @@ class Order { public string First { get; set; } public string Last { get; set; }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Captured_Variable_Projection_Reports_Diagnostic()
         {
             // The anonymous member reads a captured outer variable (captured.Name), not the lambda
@@ -182,7 +183,7 @@ class Order { public string Name { get; set; } }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OrderBy_After_WholeElement_Identity_Select_Is_Not_Flagged()
         {
             // o => o is a whole-element identity projection: the element is the source document unchanged,
@@ -205,7 +206,7 @@ class Order { public string Company { get; set; } public int Total { get; set; }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_After_Verbatim_Parameter_Identity_Select_Is_Not_Flagged()
         {
             // A verbatim lambda parameter (@class) is a legitimate identity projection off the parameter.
@@ -229,7 +230,7 @@ class Order { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OrderBy_After_Verbatim_WholeElement_Identity_Select_Is_Not_Flagged()
         {
             // @o => @o is the whole-element identity projection with a verbatim parameter.
@@ -251,7 +252,7 @@ class Order { public string Company { get; set; } public int Total { get; set; }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Unbounded_Result_Not_Flagged_When_Take_Applied_By_Reassignment()
         {
             // The query is bounded by a reassignment (q = q.Take(10)) inside a branch rather than in the
@@ -276,7 +277,7 @@ class Doc { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Unbounded_Result_Still_Flagged_When_Local_Reassigned_Without_Take()
         {
             // A query local reassigned to another still-unbounded query is genuinely unbounded — the
@@ -300,7 +301,7 @@ class Doc { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Unbounded_Result_Still_Flagged_When_Take_Reassignment_Comes_After_The_Call()
         {
             // The materialization happens while the query is still unbounded; the Take is applied only
@@ -325,7 +326,7 @@ class Doc { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Unbounded_Result_Still_Flagged_When_A_Bounded_Query_Is_Only_Read_In_A_Predicate()
         {
             // A separate bounded query (recent) is captured inside the Where predicate of the unbounded
