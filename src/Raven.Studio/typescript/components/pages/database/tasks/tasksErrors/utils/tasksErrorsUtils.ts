@@ -85,8 +85,8 @@ export interface TasksFiltersState {
     taskTypes: StudioTaskType[];
 }
 
-// ETL errors are stored as "taskName/transformationName". AI and CDC tasks have no transformation,
-// and their user-defined task name may itself contain "/", so only ETL names are split.
+// ETL and AI errors are stored as "taskName/transformationName". CDC task names carry no
+// transformation and may themselves contain "/", so CDC names are never split.
 export function parseProcessName(
     processName: string,
     category: TaskCategory
@@ -303,10 +303,11 @@ export const AI_ONLY_TASK_TYPES: StudioTaskType[] = ["EmbeddingsGeneration", "Ge
 
 export type TaskCategory = "Etl" | "Ai" | "CdcSink";
 
-// ETL tasks report errors per transformation and are shown as "taskName/transformationName".
-// AI and CDC tasks have no transformation, so they're shown by task name only.
+// ETL and AI tasks report errors per transformation and are stored as "taskName/transformationName"
+// (AI tasks are ETL processes under the hood). CDC task names carry no transformation and may
+// themselves contain "/", so they're shown by task name only.
 export function taskHasTransformations(category: TaskCategory): boolean {
-    return category === "Etl";
+    return category === "Etl" || category === "Ai";
 }
 
 function resolveEtlType(etlStats: EtlTaskStats[], etlName: string): StudioEtlType | undefined {
