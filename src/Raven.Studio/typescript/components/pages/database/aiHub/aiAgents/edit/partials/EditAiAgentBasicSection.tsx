@@ -1,26 +1,19 @@
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormGroup, FormInput, FormLabel, FormSelect, FormErrorIcon } from "components/common/Form";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
-import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import { SelectOption } from "components/common/select/Select";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useBoolean from "components/hooks/useBoolean";
-import { useServices } from "components/hooks/useServices";
-import { useAppSelector } from "components/store";
 import TaskUtils from "components/utils/TaskUtils";
-import { sortBy } from "lodash";
-import { useAsync } from "react-async-hook";
 import Button from "react-bootstrap/Button";
-import InputGroup from "react-bootstrap/InputGroup";
 import Code from "components/common/Code";
 import Collapse from "react-bootstrap/Collapse";
 import AiAssistantWindow from "components/common/aiAssistant/AiAssistantWindow";
 import AiAssistantButton from "components/common/aiAssistant/AiAssistantButton";
 import CollapseButton from "components/common/CollapseButton";
+import { FormTaskConnectionString } from "components/common/formFields/FormTaskConnectionString";
 
 interface EditAiAgentBasicSectionProps {
     isEditAiAgent: boolean;
@@ -28,40 +21,12 @@ interface EditAiAgentBasicSectionProps {
 
 export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBasicSectionProps) {
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
+    const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
+    const { value: isAiAssistOpen, toggle: toggleIsAiAssistOpen } = useBoolean(false);
 
     const formValues = useWatch({
         control,
     });
-
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-
-    const { tasksService } = useServices();
-
-    const { value: isNewConnectionStringOpen, toggle: toggleIsNewConnectionStringOpen } = useBoolean(false);
-    const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
-    const { value: isAiAssistOpen, toggle: toggleIsAiAssistOpen } = useBoolean(false);
-
-    const asyncGetConnectionStringsOptions = useAsync(async () => {
-        const result = await tasksService.getConnectionStrings(databaseName);
-
-        const connectionStrings = Object.values(result.AiConnectionStrings)
-            .filter((x) => x.ModelType === "Chat")
-            .map((x) => x.Name);
-
-        return sortBy(connectionStrings, (x) => x.toUpperCase()).map(
-            (x) => ({ value: x, label: x }) satisfies SelectOption
-        );
-    }, []);
-
-    const handleConnectionStringSave = async (connectionName: string) => {
-        await asyncGetConnectionStringsOptions.execute();
-        setValue("connectionStringName", connectionName, {
-            shouldValidate: true,
-            shouldTouch: true,
-            shouldDirty: true,
-        });
-        toggleIsNewConnectionStringOpen();
-    };
 
     const handleGenerateIdentifier = () => {
         setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
@@ -145,40 +110,12 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                             <FormLabel>Agent State</FormLabel>
                             <FormSelect control={control} name="state" options={stateOptions} />
                         </FormGroup>
-                        <FormGroup>
-                            <FormLabel>
-                                Connection String
-                                <PopoverWithHoverWrapper message="The selected connection string determines which LLM the agent will interact with.">
-                                    <Icon icon="info-new" />
-                                </PopoverWithHoverWrapper>
-                            </FormLabel>
-                            <InputGroup>
-                                <FormSelect
-                                    control={control}
-                                    name="connectionStringName"
-                                    options={asyncGetConnectionStringsOptions.result ?? []}
-                                    isLoading={asyncGetConnectionStringsOptions.loading}
-                                />
-                                <InputGroup.Text>
-                                    <ButtonWithSpinner
-                                        variant="link"
-                                        className="text-reset px-0"
-                                        icon="plus"
-                                        isSpinning={asyncGetConnectionStringsOptions.loading}
-                                        onClick={toggleIsNewConnectionStringOpen}
-                                    >
-                                        Create a new AI connection string
-                                    </ButtonWithSpinner>
-                                </InputGroup.Text>
-                                {isNewConnectionStringOpen && (
-                                    <EditConnectionStrings
-                                        initialConnection={{ type: "Ai", modelType: "Chat" }}
-                                        afterSave={handleConnectionStringSave}
-                                        afterClose={toggleIsNewConnectionStringOpen}
-                                    />
-                                )}
-                            </InputGroup>
-                        </FormGroup>
+                        <FormTaskConnectionString
+                            control={control}
+                            name="connectionStringName"
+                            type="Ai"
+                            modelType="Chat"
+                        />
                         <FormGroup>
                             <FormLabel>
                                 System prompt
