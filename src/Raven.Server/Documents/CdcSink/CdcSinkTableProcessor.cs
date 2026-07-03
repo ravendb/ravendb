@@ -135,21 +135,30 @@ public class CdcSinkTableProcessor
 
     private readonly Queue<object[]> _valuesPool = new();
 
+    // Guards _valuesPool: streaming decode rents on a thread-pool continuation (Task.WhenAny
+    // in ProcessCdcStream) while the stream thread returns/clears pooled arrays, so all pool
+    // access must be serialized.
+    private readonly object _valuesPoolLock = new();
+
     public object[] RentValues()
     {
         var expectedLen = SourceColumnNames.Length;
-        while (_valuesPool.TryDequeue(out var arr))
+        lock (_valuesPoolLock)
         {
-            if (arr.Length == expectedLen)
-                return arr;
-            // Discard stale array from before a schema change (wrong size)
+            while (_valuesPool.TryDequeue(out var arr))
+            {
+                if (arr.Length == expectedLen)
+                    return arr;
+                // Discard stale array from before a schema change (wrong size)
+            }
         }
         return new object[expectedLen];
     }
 
     public void ReturnValues(object[] arr)
     {
-        _valuesPool.Enqueue(arr);
+        lock (_valuesPoolLock)
+            _valuesPool.Enqueue(arr);
     }
 
     /// <summary>
@@ -158,8 +167,11 @@ public class CdcSinkTableProcessor
     /// </summary>
     public void ClearPoolArrays()
     {
-        foreach (var arr in _valuesPool)
-            Array.Clear(arr, 0, arr.Length);
+        lock (_valuesPoolLock)
+        {
+            foreach (var arr in _valuesPool)
+                Array.Clear(arr, 0, arr.Length);
+        }
     }
 
     /// <summary>
@@ -167,7 +179,8 @@ public class CdcSinkTableProcessor
     /// </summary>
     public void ClearPool()
     {
-        _valuesPool.Clear();
+        lock (_valuesPoolLock)
+            _valuesPool.Clear();
     }
 
     /// <summary>
@@ -182,7 +195,10 @@ public class CdcSinkTableProcessor
     public void SetSourceColumnNames(string[] names)
     {
         if (SourceColumnNames?.Length != names.Length)
-            _valuesPool.Clear();
+        {
+            lock (_valuesPoolLock)
+                _valuesPool.Clear();
+        }
 
         SourceColumnNames = names;
 
