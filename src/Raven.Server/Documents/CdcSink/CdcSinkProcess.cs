@@ -479,10 +479,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             if (Logger.IsDebugEnabled)
                 Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={persistedCheckpoint ?? "(none)"}");
 
-            // Feed the health EWMA only for a committed batch. If Enqueue threw, the transaction rolled
-            // back: the exception propagates to RunWithRetryAsync, which records the failure for health,
-            // and feeding this batch's tallies here would count successes that were never persisted (and
-            // count them again when the batch is retried).
             Statistics.OnBatchCompletion();
         }
         finally
