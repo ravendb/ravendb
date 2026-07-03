@@ -233,7 +233,10 @@ public class RavenDB_26838 : RavenTestBase
                     ops.Add(docProcessor.ProcessRow(tableProcessor, CdcSinkOperation.Upsert, data, context));
                 }
 
-                await process.SubmitBatchForTest(ops);
+                // Every row fails, so the batch fails and withholds the checkpoint (no source row is
+                // skipped). The per-document errors are still flushed to storage for diagnostics before
+                // the failure propagates.
+                await Assert.ThrowsAnyAsync<Exception>(() => process.SubmitBatchForTest(ops));
             }
 
             var itemErrors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName);
