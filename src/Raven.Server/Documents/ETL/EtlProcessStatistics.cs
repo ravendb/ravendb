@@ -111,14 +111,10 @@ namespace Raven.Server.Documents.ETL
 
             else
             {
-                var errorsEwma = AverageErrorsRatio.GetRate();
-                
-                HealthStatus = errorsEwma switch
-                {
-                    _ when errorsEwma > _etlConfiguration.ProcessHealthStatusFailedThreshold => OngoingTaskHealthStatus.Failed,
-                    _ when errorsEwma > _etlConfiguration.ProcessHealthStatusImpairedThreshold => OngoingTaskHealthStatus.Impaired,
-                    _ => OngoingTaskHealthStatus.Healthy
-                };
+                HealthStatus = OngoingTaskHealthStatusExtensions.FromErrorRatio(
+                    AverageErrorsRatio.GetRate(),
+                    _etlConfiguration.ProcessHealthStatusFailedThreshold,
+                    _etlConfiguration.ProcessHealthStatusImpairedThreshold);
             }
             
             if (HealthStatus != previousStatus)

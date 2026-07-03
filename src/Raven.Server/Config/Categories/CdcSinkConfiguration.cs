@@ -50,24 +50,11 @@ namespace Raven.Server.Config.Categories
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
 
-            if (ProcessHealthStatusFailedThreshold is < 0f or > 1f)
-            {
-                throw new InvalidOperationException(
-                    $"The value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusFailedThreshold)}' ({ProcessHealthStatusFailedThreshold}) must be between 0 and 1.");
-            }
-
-            if (ProcessHealthStatusImpairedThreshold is < 0f or > 1f)
-            {
-                throw new InvalidOperationException(
-                    $"The value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusImpairedThreshold)}' ({ProcessHealthStatusImpairedThreshold}) must be between 0 and 1.");
-            }
-
-            if (ProcessHealthStatusFailedThreshold <= ProcessHealthStatusImpairedThreshold)
-            {
-                throw new InvalidOperationException(
-                    $"The value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusFailedThreshold)}' ({ProcessHealthStatusFailedThreshold}) must be greater than " +
-                    $"the value of '{RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusImpairedThreshold)}' ({ProcessHealthStatusImpairedThreshold}).");
-            }
+            OngoingTaskHealthStatusExtensions.ValidateThresholds(
+                ProcessHealthStatusFailedThreshold,
+                ProcessHealthStatusImpairedThreshold,
+                RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusFailedThreshold),
+                RavenConfiguration.GetKey(x => x.CdcSink.ProcessHealthStatusImpairedThreshold));
         }
     }
 }
