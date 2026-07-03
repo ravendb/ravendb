@@ -12,7 +12,6 @@ using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Schema;
-using Raven.Server.Documents.ETL;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.NpgSQL;
 using Sparrow.Json;

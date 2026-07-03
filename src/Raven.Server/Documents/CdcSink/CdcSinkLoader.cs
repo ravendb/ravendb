@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
