@@ -9,7 +9,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Monitoring;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

@@ -9,7 +9,6 @@ using Lextm.SharpSnmpLib;
 using Raven.Client;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

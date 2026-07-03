@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Utils.Metrics;
 using Raven.Server.Documents.TasksErrors;
 
@@ -76,10 +75,6 @@ public class CdcSinkProcessStatistics
             ConsumeErrors += count;
             LastConsumeErrorTime = SystemTime.UtcNow;
 
-            // A process-level failure (e.g. the source or target became unreachable) never completes a
-            // batch, so - mirroring ETL, which feeds RecordProcessLoadError into its per-iteration
-            // OnBatchCompletion - feed a fully-failed sample into the health EWMA and recompute
-            // HealthStatus. Without this a sink stuck reconnecting would report Healthy forever.
             _batchErrors += count;
             UpdateHealthStatusOnBatchCompletion();
         }

@@ -3,7 +3,6 @@ using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ETL;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
