@@ -1,84 +1,34 @@
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import CollapseButton from "components/common/CollapseButton";
 import { SelectOption } from "components/common/select/Select";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useBoolean from "components/hooks/useBoolean";
-import { useServices } from "components/hooks/useServices";
-import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { useAppDispatch, useAppSelector } from "components/store";
-import { sortBy } from "lodash";
-import { useAsync } from "react-async-hook";
+import { useAppSelector } from "components/store";
 import { useFormContext, useWatch } from "react-hook-form";
-import InputGroup from "react-bootstrap/InputGroup";
 import Collapse from "react-bootstrap/Collapse";
 import { FormErrorIcon, FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
-import { useEffect, useMemo } from "react";
-import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import { FormTaskResponsibleNode } from "components/common/formFields/FormTaskResponsibleNode";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
+import { FormTaskConnectionString } from "components/common/formFields/FormTaskConnectionString";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
 export default function EditCdcSinkTaskBasicSection() {
-    const dispatch = useAppDispatch();
-    const { tasksService } = useServices();
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-
-    const { value: isNewConnectionStringOpen, toggle: toggleIsNewConnectionStringOpen } = useBoolean(false);
     const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
-    const { control, setValue } = useFormContext<EditCdcSinkTaskFormData>();
-    const formValues = useWatch({ control });
-
-    const asyncGetConnectionStrings = useAsync(async () => {
-        if (!databaseName) {
-            return {};
-        }
-
-        const result = await tasksService.getConnectionStrings(databaseName);
-        return result.SqlConnectionStrings ?? {};
-    }, [databaseName]);
-
-    const sqlConnectionStrings = useMemo(
-        () => asyncGetConnectionStrings.result ?? {},
-        [asyncGetConnectionStrings.result]
-    );
-
-    const connectionStringOptions: SelectOption[] = sortBy(Object.values(sqlConnectionStrings), (x) =>
-        x.Name.toUpperCase()
-    ).map((x) => ({
-        value: x.Name,
-        label: x.Name,
-    }));
-
-    const selectedConnectionString = useMemo(
-        () => (formValues.connectionStringName ? sqlConnectionStrings[formValues.connectionStringName] : null),
-        [formValues.connectionStringName, sqlConnectionStrings]
-    );
-
-    // Sync selected connection string to the store
-    useEffect(() => {
-        dispatch(editCdcSinkTaskActions.connectionStringSelected(selectedConnectionString));
-    }, [selectedConnectionString]);
+    const [connectionStringName, postgresPublicationName, postgresSlotName] = useWatch({
+        control,
+        name: ["connectionStringName", "postgresPublicationName", "postgresSlotName"],
+    });
+    const sqlConnections = useAppSelector(connectionStringSelectors.connectionsByType("Sql"));
+    const selectedConnection = sqlConnections.find((x) => x.name === connectionStringName);
 
     const hasPostgresSettings =
-        selectedConnectionString?.FactoryName === "Npgsql" ||
-        Boolean(formValues.postgresPublicationName || formValues.postgresSlotName);
-
-    const handleConnectionStringSave = async (connectionName: string) => {
-        await asyncGetConnectionStrings.execute();
-
-        setValue("connectionStringName", connectionName, {
-            shouldValidate: true,
-            shouldTouch: true,
-            shouldDirty: true,
-        });
-
-        toggleIsNewConnectionStringOpen();
-    };
+        (selectedConnection && "factoryName" in selectedConnection && selectedConnection.factoryName === "Npgsql") ||
+        Boolean(postgresPublicationName || postgresSlotName);
 
     return (
         <div>
@@ -103,35 +53,7 @@ export default function EditCdcSinkTaskBasicSection() {
                             <FormLabel>Task State</FormLabel>
                             <FormSelect control={control} name="state" options={taskStateOptions} />
                         </FormGroup>
-                        <FormGroup>
-                            <FormLabel>Connection String</FormLabel>
-                            <InputGroup>
-                                <FormSelect
-                                    control={control}
-                                    name="connectionStringName"
-                                    options={connectionStringOptions}
-                                    isLoading={asyncGetConnectionStrings.loading}
-                                />
-                                <InputGroup.Text>
-                                    <ButtonWithSpinner
-                                        variant="link"
-                                        className="text-reset px-0"
-                                        icon="plus"
-                                        isSpinning={asyncGetConnectionStrings.loading}
-                                        onClick={toggleIsNewConnectionStringOpen}
-                                    >
-                                        Create a new SQL connection string
-                                    </ButtonWithSpinner>
-                                </InputGroup.Text>
-                            </InputGroup>
-                            {isNewConnectionStringOpen && (
-                                <EditConnectionStrings
-                                    initialConnection={{ type: "Sql" }}
-                                    afterSave={handleConnectionStringSave}
-                                    afterClose={toggleIsNewConnectionStringOpen}
-                                />
-                            )}
-                        </FormGroup>
+                        <FormTaskConnectionString control={control} name="connectionStringName" type="Sql" />
                         {hasPostgresSettings && (
                             <>
                                 <RichAlert variant="info">
