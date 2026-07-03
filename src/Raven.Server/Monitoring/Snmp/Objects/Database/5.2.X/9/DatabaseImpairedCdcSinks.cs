@@ -1,3 +1,4 @@
+using Raven.Server.Documents.TasksErrors;
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
@@ -14,6 +15,6 @@ public sealed class DatabaseImpairedCdcSinks : DatabaseScalarObjectBase<Integer3
 
     protected override Integer32 GetData(DocumentDatabase database)
     {
-        return new Integer32(database.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired));
+        return new Integer32(database.CdcSinkLoader.Processes.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Impaired));
     }
 }

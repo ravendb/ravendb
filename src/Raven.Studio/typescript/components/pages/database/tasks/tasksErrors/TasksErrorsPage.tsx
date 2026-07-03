@@ -76,7 +76,7 @@ export default function TasksErrorsPage({
                 initialHealthStatuses={
                     queryParams?.healthStatuses
                         ?.split(",")
-                        .filter(Boolean) as Raven.Server.Documents.ETL.EtlProcessHealthStatus[]
+                        .filter(Boolean) as Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus[]
                 }
                 initialGroupBy={queryParams?.groupBy as GroupByType}
                 onRefresh={handleRefresh}
@@ -92,7 +92,7 @@ interface TasksErrorsPageBodyProps {
     initialTaskTypes?: StudioTaskType[];
     initialNodeTags?: string[];
     initialShardNumbers?: string[];
-    initialHealthStatuses?: Raven.Server.Documents.ETL.EtlProcessHealthStatus[];
+    initialHealthStatuses?: Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus[];
     initialGroupBy?: GroupByType;
     onRefresh: () => void;
 }

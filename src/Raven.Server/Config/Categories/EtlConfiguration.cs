@@ -1,3 +1,4 @@
+using Raven.Server.Documents.TasksErrors;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -76,12 +77,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("ETL.Queue.AzureQueueStorage.VisibilityTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting AzureQueueStorageVisibilityTimeout{ get; set; }
         
-        [Description($"Weighted EWMA ratio threshold of errored items to successfully processed items above which the process health status will be set to '{nameof(EtlProcessHealthStatus.Failed)}'")]
+        [Description($"Weighted EWMA ratio threshold of errored items to successfully processed items above which the process health status will be set to '{nameof(OngoingTaskHealthStatus.Failed)}'")]
         [DefaultValue(0.9f)]
         [ConfigurationEntry("ETL.ProcessHealthStatusFailedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public float ProcessHealthStatusFailedThreshold { get; set; }
         
-        [Description($"Weighted ratio threshold of errored items to successfully processed items above which the process health status will be set to '{nameof(EtlProcessHealthStatus.Impaired)}'")]
+        [Description($"Weighted ratio threshold of errored items to successfully processed items above which the process health status will be set to '{nameof(OngoingTaskHealthStatus.Impaired)}'")]
         [DefaultValue(0.1f)]
         [ConfigurationEntry("ETL.ProcessHealthStatusImpairedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public float ProcessHealthStatusImpairedThreshold { get; set; }

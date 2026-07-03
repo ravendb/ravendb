@@ -1,4 +1,5 @@
-﻿using System;
+using Raven.Server.Documents.TasksErrors;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -412,15 +413,15 @@ namespace Raven.Server.Monitoring.Snmp
             public const string EtlErrors = "1.20.1";
             
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} ETL tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Healthy)} ETL tasks count")]
             public const string NumberOfHealthyEtls = "1.20.2";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} ETL tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Impaired)} ETL tasks count")]
             public const string NumberOfImpairedEtls = "1.20.3";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Failed)} ETL tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Failed)} ETL tasks count")]
             public const string NumberOfFailedEtls = "1.20.4";
 
             [SnmpDataType(SnmpType.Integer32)]
@@ -436,15 +437,15 @@ namespace Raven.Server.Monitoring.Snmp
             public const string AiTasksErrors = "1.21.1";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} AI tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Healthy)} AI tasks count")]
             public const string NumberOfHealthyAiTasks = "1.21.2";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} AI tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Impaired)} AI tasks count")]
             public const string NumberOfImpairedAiTasks = "1.21.3";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Failed)} AI tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Failed)} AI tasks count")]
             public const string NumberOfFailedAiTasks = "1.21.4";
 
             [SnmpDataType(SnmpType.Integer32)]
@@ -460,15 +461,15 @@ namespace Raven.Server.Monitoring.Snmp
             public const string CdcSinkErrors = "1.22.1";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} CDC Sink tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Healthy)} CDC Sink tasks count")]
             public const string NumberOfHealthyCdcSinks = "1.22.2";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} CDC Sink tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Impaired)} CDC Sink tasks count")]
             public const string NumberOfImpairedCdcSinks = "1.22.3";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Failed)} CDC Sink tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Failed)} CDC Sink tasks count")]
             public const string NumberOfFailedCdcSinks = "1.22.4";
 
             [SnmpDataType(SnmpType.Integer32)]
@@ -834,15 +835,15 @@ namespace Raven.Server.Monitoring.Snmp
             public const string DataWrittenPerSecond = "5.2.{0}.6.2";
             
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} ETL tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Healthy)} ETL tasks count")]
             public const string NumberOfHealthyEtls = "5.2.{0}.7.1";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} ETL tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Impaired)} ETL tasks count")]
             public const string NumberOfImpairedEtls = "5.2.{0}.7.2";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Failed)} ETL tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Failed)} ETL tasks count")]
             public const string NumberOfFailedEtls = "5.2.{0}.7.3";
 
             [SnmpDataType(SnmpType.Integer32)]
@@ -858,15 +859,15 @@ namespace Raven.Server.Monitoring.Snmp
             public const string EtlDocumentsProcessedPerSec = "5.2.{0}.7.6";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} AI tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Healthy)} AI tasks count")]
             public const string NumberOfHealthyAiTasks = "5.2.{0}.8.1";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} AI tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Impaired)} AI tasks count")]
             public const string NumberOfImpairedAiTasks = "5.2.{0}.8.2";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Failed)} AI tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Failed)} AI tasks count")]
             public const string NumberOfFailedAiTasks = "5.2.{0}.8.3";
 
             [SnmpDataType(SnmpType.Integer32)]
@@ -882,15 +883,15 @@ namespace Raven.Server.Monitoring.Snmp
             public const string AiTaskDocumentsProcessedPerSec = "5.2.{0}.8.6";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} CDC Sink tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Healthy)} CDC Sink tasks count")]
             public const string NumberOfHealthyCdcSinks = "5.2.{0}.9.1";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} CDC Sink tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Impaired)} CDC Sink tasks count")]
             public const string NumberOfImpairedCdcSinks = "5.2.{0}.9.2";
 
             [SnmpDataType(SnmpType.Integer32)]
-            [Description($"{nameof(EtlProcessHealthStatus.Failed)} CDC Sink tasks count")]
+            [Description($"{nameof(OngoingTaskHealthStatus.Failed)} CDC Sink tasks count")]
             public const string NumberOfFailedCdcSinks = "5.2.{0}.9.3";
 
             [SnmpDataType(SnmpType.Integer32)]

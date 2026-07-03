@@ -250,17 +250,17 @@ public class RavenDB_26838 : RavenTestBase
             var database = GetDatabase(store.Database).GetAwaiter().GetResult();
             var stats = new CdcSinkProcessStatistics("CdcSink1", database.Configuration.CdcSink);
 
-            Assert.Equal(EtlProcessHealthStatus.Healthy, stats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Healthy, stats.HealthStatus);
 
             // A fully-failed batch seeds the EWMA at ratio 1.0, so health drops to Failed.
             RunBatch(stats, errors: 100, successes: 0);
-            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, stats.HealthStatus);
 
             // Successful batches decay the ratio back below the thresholds, recovering to Healthy.
-            for (int i = 0; i < 500 && stats.HealthStatus != EtlProcessHealthStatus.Healthy; i++)
+            for (int i = 0; i < 500 && stats.HealthStatus != OngoingTaskHealthStatus.Healthy; i++)
                 RunBatch(stats, errors: 0, successes: 100);
 
-            Assert.Equal(EtlProcessHealthStatus.Healthy, stats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Healthy, stats.HealthStatus);
         }
 
         static void RunBatch(CdcSinkProcessStatistics stats, int errors, int successes)
@@ -283,14 +283,14 @@ public class RavenDB_26838 : RavenTestBase
             var stats = new CdcSinkProcessStatistics("CdcSink1", database.Configuration.CdcSink);
 
             stats.SetHealthStatusToFailed();
-            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, stats.HealthStatus);
 
             // A clean batch must not clear a latched permanent-fault status.
             stats.NewBatch();
             stats.ConsumeSuccess(100);
             stats.OnBatchCompletion();
 
-            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, stats.HealthStatus);
         }
     }
 
@@ -302,13 +302,13 @@ public class RavenDB_26838 : RavenTestBase
             var database = GetDatabase(store.Database).GetAwaiter().GetResult();
             var stats = new CdcSinkProcessStatistics("CdcSink1", database.Configuration.CdcSink);
 
-            Assert.Equal(EtlProcessHealthStatus.Healthy, stats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Healthy, stats.HealthStatus);
 
             // A process-level failure (e.g. the source is unreachable) records a consume error without
             // ever completing a batch. It must still degrade health - the first fully-failed sample
             // seeds the EWMA at ratio 1.0 - so a sink stuck reconnecting no longer reports Healthy.
             stats.RecordConsumeError();
-            Assert.Equal(EtlProcessHealthStatus.Failed, stats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, stats.HealthStatus);
         }
     }
 
@@ -618,7 +618,7 @@ public class RavenDB_26838 : RavenTestBase
             Assert.Equal(expectedErrors, ((Integer32)SnmpGet(dbErrorsOid)).ToInt32());
             Assert.Equal(expectedErrors, ((Integer32)SnmpGet(taskErrorsOid)).ToInt32());
 
-            Assert.Equal(nameof(EtlProcessHealthStatus.Healthy), SnmpGet(taskHealthOid).ToString());
+            Assert.Equal(nameof(OngoingTaskHealthStatus.Healthy), SnmpGet(taskHealthOid).ToString());
 
             Assert.Equal(Server.ServerStore.NodeTag, SnmpGet(taskResponsibleNodeOid).ToString());
 

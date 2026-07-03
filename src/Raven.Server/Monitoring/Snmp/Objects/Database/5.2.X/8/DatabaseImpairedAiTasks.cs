@@ -1,3 +1,4 @@
+using Raven.Server.Documents.TasksErrors;
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Documents.Operations.ETL;
@@ -16,7 +17,7 @@ public sealed class DatabaseImpairedAiTasks : DatabaseScalarObjectBase<Integer32
     protected override Integer32 GetData(DocumentDatabase database)
     {
         return new Integer32(database.EtlLoader.Processes
-            .Count(x => x.EtlType is EtlType.EmbeddingsGeneration or EtlType.GenAi && x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired));
+            .Count(x => x.EtlType is EtlType.EmbeddingsGeneration or EtlType.GenAi && x.Statistics.HealthStatus == OngoingTaskHealthStatus.Impaired));
     }
 }
 
