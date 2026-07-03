@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -499,6 +500,38 @@ public class RavenDB_26838 : RavenTestBase
             }, true, timeout: 15000, interval: 500));
 
             Assert.NotEmpty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.CdcSink, taskName));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public void ErrorTables_AreDroppedForConfigThatNeverLoadedAProcess()
+    {
+        const string ghostTask = "ghost-sink";
+
+        using (var store = GetDocumentStore())
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            // A configuration that never produced a process - a missing connection string, a validation
+            // failure, a duplicate name, a CreateProcess throw - still records a Configuration error keyed
+            // by its name (see CdcSinkLoader.LogConfigurationError). The per-process cleanup only visits
+            // loaded processes, so without reconciliation this error would leak forever once the task is
+            // gone from the record.
+            database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+            {
+                CreatedAt = DateTime.UtcNow,
+                TaskName = ghostTask,
+                Step = TaskErrorStep.Configuration,
+                Error = "connection string 'missing' was not found"
+            });
+            Assert.NotEmpty(database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.CdcSink, ghostTask));
+
+            // A record change that doesn't contain the task reconciles away its orphaned errors, even
+            // though no process was ever loaded (nothing was in the per-process cleanup list).
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            database.CdcSinkLoader.HandleDatabaseRecordChange(record);
+
+            Assert.Empty(database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.CdcSink, ghostTask));
         }
     }
 

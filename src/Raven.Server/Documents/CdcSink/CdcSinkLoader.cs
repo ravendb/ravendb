@@ -407,5 +407,34 @@ public class CdcSinkLoader : IDisposable
         }
 
         LoadProcesses(record, myCdcSinks, toRemoveList);
+
+        // Drop error storage for sinks that no longer exist in the record. The per-process cleanup above
+        // only visits loaded processes, so a configuration that never produced one - an invalid connection
+        // string, a validation failure, a duplicate name, a CreateProcess throw - but recorded a
+        // configuration error (see LogConfigurationError) would otherwise leak its errors forever once the
+        // task is deleted: shown against a task that no longer exists and counted in the footer badge.
+        // Names still in the record are kept, so a sink that moved to another node, is disabled, or is
+        // still misconfigured keeps its history.
+        DeleteErrorsForRemovedTasks(record);
+    }
+
+    private void DeleteErrorsForRemovedTasks(DatabaseRecord record)
+    {
+        var storedNames = _database.TaskErrorsStorage.GetStoredTaskNames(TaskCategory.CdcSink);
+        if (storedNames.Count == 0)
+            return;
+
+        var configuredNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (record.CdcSinks != null)
+        {
+            foreach (var config in record.CdcSinks)
+                configuredNames.Add(config.Name);
+        }
+
+        foreach (var storedName in storedNames)
+        {
+            if (configuredNames.Contains(storedName) == false)
+                _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(storedName, TaskCategory.CdcSink);
+        }
     }
 }
