@@ -54,7 +54,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Ongoing Tasks',
             nav: true,
             css: 'icon-manage-ongoing-tasks',
-            dynamicHash: appUrls.ongoingTasksUrl,
+            dynamicHash: appUrls.ongoingTasksUrl(),
             search: {
                 alternativeTitles:[
                     "ETL",

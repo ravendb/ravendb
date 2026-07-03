@@ -177,14 +177,10 @@ $variants: (
 
 .add-new-ongoing-task-sidebar {
     width: 250px;
+    min-width: 0;
     height: fit-content;
     background: colors.$panel-bg-1;
     border-radius: sizes.$border-radius;
-
-    .form-control.filtering-input {
-        min-width: 0;
-        width: 100%;
-    }
 
     @media (max-width: #{sizes.$screen-sm-max}) {
         display: none;
@@ -198,6 +194,21 @@ $variants: (
         display: flex;
         flex-direction: column;
         margin-top: sizes.$gutter-sm;
+    }
+}
+
+.add-new-ongoing-task-sidebar,
+.add-new-ongoing-task-horizontal-nav {
+    .form-control.filtering-input {
+        box-sizing: border-box !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 32px;
+        padding-top: 0;
+        padding-bottom: 0;
+        padding-left: sizes.$gutter-xs !important;
+        padding-right: sizes.$gutter-xs !important;
     }
 }
 
@@ -261,34 +272,21 @@ a.add-new-ongoing-task-nav-item {
     }
 }
 
-button.add-new-ongoing-task-nav-item {
-    display: flex;
-    align-items: center;
-    gap: sizes.$gutter-xxs;
-    width: 100%;
-    padding: sizes.$gutter-xxs sizes.$gutter-xs;
-    border: none;
+.add-new-ongoing-task-filter-item.form-check {
+    padding: sizes.$gutter-xxs;
     border-radius: sizes.$border-radius-sm;
-    background: transparent;
-    color: colors.$text-muted-var;
-    text-align: left;
-    cursor: pointer;
-    transition:
-        background-color 0.15s ease,
-        color 0.15s ease;
+    transition: background-color 0.15s ease;
 
-    &:hover:not(:disabled) {
+    &:hover {
         background: colors.$panel-bg-2-var;
-        color: colors.$text-emphasis-var;
     }
 
-    &.active {
-        background: colors.$panel-bg-2-var;
-        color: colors.$text-emphasis-var;
+    .form-check {
+        min-height: 0 !important;
     }
 
-    &:disabled {
-        opacity: 0.4;
-        cursor: default;
+    .form-check-label {
+        width: 100%;
+        cursor: pointer;
     }
 }

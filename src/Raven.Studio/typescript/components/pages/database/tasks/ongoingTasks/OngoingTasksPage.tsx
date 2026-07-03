@@ -69,11 +69,11 @@ import { LoadingView } from "components/common/LoadingView";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import recentError from "common/notifications/models/recentError";
 
-interface OngoingTasksPageProps {
-    queryParams?: { allowEmpty?: string };
+interface OngoingTasksPageQueryParams {
+    allowEmpty?: string;
 }
 
-export function OngoingTasksPage({ queryParams }: OngoingTasksPageProps = {}) {
+export function OngoingTasksPage({ queryParams }: ReactQueryParamsProps<OngoingTasksPageQueryParams> = {}) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
 
     const { tasksService } = useServices();
@@ -126,12 +126,14 @@ export function OngoingTasksPage({ queryParams }: OngoingTasksPageProps = {}) {
 
         const loadTasks = tasks.locations.map(fetchTasks);
         await Promise.all(loadTasks);
+
+        setIsInitialLoadDone(true);
     }, [tasks, fetchTasks, db]);
 
     useInterval(reload, 10_000);
 
     useEffect(() => {
-        reload().then(() => setIsInitialLoadDone(true));
+        reload();
     }, []);
 
     const onEtlProgress = useCallback(
@@ -352,31 +354,21 @@ export function OngoingTasksPage({ queryParams }: OngoingTasksPageProps = {}) {
 
     const showInternalReplication = DatabaseUtils.hasInternalReplication(db);
 
+    // Once tasks have been seen, don't redirect away again if they're later deleted down to zero.
     const hasSeenTasksRef = useRef(false);
     if (allTasksCount > 0 || showInternalReplication) {
         hasSeenTasksRef.current = true;
     }
 
-    useEffect(() => {
-        if (!queryParams?.allowEmpty && isInitialLoadDone && allTasksCount === 0 && !showInternalReplication) {
-            router.navigate(addNewOngoingTaskUrl + "&noBack=1");
-        }
-        // Intentionally omitting allTasksCount and showInternalReplication — redirect only on initial load
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isInitialLoadDone]);
-
-    const isRedirecting =
-        !queryParams?.allowEmpty &&
-        isInitialLoadDone &&
-        allTasksCount === 0 &&
-        !showInternalReplication &&
-        !hasSeenTasksRef.current;
-
     if (!isInitialLoadDone) {
         return <LoadingView />;
     }
 
-    if (isRedirecting) {
+    const shouldRedirectToAddTask =
+        !queryParams?.allowEmpty && allTasksCount === 0 && !showInternalReplication && !hasSeenTasksRef.current;
+
+    if (shouldRedirectToAddTask) {
+        router.navigate(addNewOngoingTaskUrl + "&noBack=1");
         return null;
     }
 

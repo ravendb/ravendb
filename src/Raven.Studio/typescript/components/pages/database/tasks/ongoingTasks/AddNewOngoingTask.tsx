@@ -16,31 +16,47 @@ import { useNewOngoingTasks } from "components/pages/database/tasks/shared/share
 import { EmptySet } from "components/common/EmptySet";
 import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
 import { RadioToggleWithIcon } from "components/common/toggles/RadioToggle";
-import { useScrollSpy } from "components/pages/database/tasks/ongoingTasks/hooks/useScrollSpy";
+import { Checkbox } from "components/common/Checkbox";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 
-interface AddNewOngoingTaskProps {
-    queryParams?: { noBack?: string };
+interface AddNewOngoingTaskQueryParams {
+    noBack?: string;
 }
 
 type DisplayMode = "expanded" | "compact";
 
-const getCategoryId = (categoryName: string) =>
-    `ongoing-task-category-${categoryName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
+const displayModeStorageKey = "ravendb.add-new-ongoing-task.display-mode";
 
-export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProps) {
+function getStoredDisplayMode(): DisplayMode {
+    return localStorage.getItem(displayModeStorageKey) === "compact" ? "compact" : "expanded";
+}
+
+export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps<AddNewOngoingTaskQueryParams>) {
     const { forCurrentDatabase, appUrl } = useAppUrls();
-    const { filteredTasks, allCategories, searchText, setSearchText } = useNewOngoingTasks();
+    const {
+        filteredTasks,
+        searchFilteredTasks,
+        allCategories,
+        searchText,
+        setSearchText,
+        selectedCategories,
+        toggleCategory,
+        resetCategories,
+    } = useNewOngoingTasks();
 
     const serverWideTasksUrl = appUrl.forServerWideTasks();
-    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl() + "&allowEmpty=1";
+    const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl(true)();
     const showBackUrl = !queryParams?.noBack;
 
-    const [displayMode, setDisplayMode] = useState<DisplayMode>("expanded");
-    const { contentRef, activeCategory, scrollToCategory } = useScrollSpy(allCategories);
+    const [displayMode, setDisplayModeState] = useState<DisplayMode>(getStoredDisplayMode);
+
+    const setDisplayMode = (mode: DisplayMode) => {
+        setDisplayModeState(mode);
+        localStorage.setItem(displayModeStorageKey, mode);
+    };
 
     return (
         <div className="add-new-ongoing-task d-flex flex-column">
@@ -68,96 +84,27 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
                 </div>
             </div>
             <div className="add-new-ongoing-task-horizontal-nav gap-1">
-                <div>
-                    <div className="small-label ms-1 mb-1">Search by name</div>
-                    <div className="clearable-input mb-2">
-                        <Form.Control
-                            type="text"
-                            accessKey="/"
-                            placeholder="e.g. External Replication"
-                            title="Filter tasks"
-                            className="filtering-input"
-                            value={searchText}
-                            onChange={(e) => setSearchText(e.target.value)}
-                        />
-                        {searchText && (
-                            <div className="clear-button">
-                                <Button variant="secondary" size="sm" onClick={() => setSearchText("")}>
-                                    <Icon icon="clear" margin="m-0" />
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div>
-                    <div className="small-label ms-1 mb-1">Task Categories</div>
-                    <div className="add-new-ongoing-task-chips-row">
-                        {allCategories.map((category) => {
-                            const isAvailable = filteredTasks.some((t) => t.categoryName === category.categoryName);
-                            return (
-                                <button
-                                    key={category.categoryName}
-                                    className={classNames("add-new-ongoing-task-chip", {
-                                        active: activeCategory === category.categoryName,
-                                    })}
-                                    onClick={() => scrollToCategory(category.categoryName)}
-                                    disabled={!isAvailable}
-                                >
-                                    <Icon icon={category.categoryIcon} margin="m-0" />
-                                    <span>{category.categoryName}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
+                <TaskSearchInput searchText={searchText} setSearchText={setSearchText} className="mb-2" />
+                <TaskCategoryFilter
+                    variant="chips"
+                    categories={allCategories}
+                    availableCategories={searchFilteredTasks}
+                    selectedCategories={selectedCategories}
+                    onToggle={toggleCategory}
+                    onReset={resetCategories}
+                />
             </div>
             <div className="add-new-ongoing-task-layout d-flex gap-4 mt-2">
                 <div className="add-new-ongoing-task-sidebar flex-shrink-0 p-3">
-                    <div className="small-label ms-1 mb-1">Search by name</div>
-                    <div className="clearable-input mb-3">
-                        <Form.Control
-                            type="text"
-                            accessKey="/"
-                            placeholder="e.g. External Replication"
-                            title="Filter tasks"
-                            className="filtering-input"
-                            value={searchText}
-                            onChange={(e) => setSearchText(e.target.value)}
-                        />
-                        {searchText && (
-                            <div className="clear-button">
-                                <Button variant="secondary" size="sm" onClick={() => setSearchText("")}>
-                                    <Icon icon="clear" margin="m-0" />
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                    {displayMode === "expanded" && (
-                        <>
-                            <div className="small-label ms-1 mb-1">Task Categories</div>
-                            <div className="d-flex flex-column">
-                                {allCategories.map((category) => {
-                                    const isAvailable = filteredTasks.some(
-                                        (t) => t.categoryName === category.categoryName
-                                    );
-                                    return (
-                                        <button
-                                            key={category.categoryName}
-                                            className={classNames("add-new-ongoing-task-nav-item", {
-                                                active: activeCategory === category.categoryName,
-                                                disabled: !isAvailable,
-                                            })}
-                                            onClick={() => scrollToCategory(category.categoryName)}
-                                            disabled={!isAvailable}
-                                        >
-                                            <Icon icon={category.categoryIcon} margin="m-0" />
-                                            <span>{category.categoryName}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    )}
+                    <TaskSearchInput searchText={searchText} setSearchText={setSearchText} className="mb-3" />
+                    <TaskCategoryFilter
+                        variant="checkbox"
+                        categories={allCategories}
+                        availableCategories={searchFilteredTasks}
+                        selectedCategories={selectedCategories}
+                        onToggle={toggleCategory}
+                        onReset={resetCategories}
+                    />
                     <hr className="my-3" />
                     <div className="small ms-1 text-muted">Need a cluster-wide task? Check out:</div>
                     <a
@@ -171,20 +118,122 @@ export default function AddNewOngoingTask({ queryParams }: AddNewOngoingTaskProp
                         <Icon icon="newtab" margin="ms-0 m-0" className="add-new-ongoing-task-nav-item__newtab" />
                     </a>
                 </div>
-                <div ref={contentRef} className="add-new-ongoing-task-content pb-4">
-                    <OngoingTasksList
-                        filteredTasks={filteredTasks}
-                        getCategoryId={getCategoryId}
-                        displayMode={displayMode}
-                    />
+                <div className="add-new-ongoing-task-content pb-4">
+                    <OngoingTasksList filteredTasks={filteredTasks} displayMode={displayMode} />
                 </div>
             </div>
         </div>
     );
 }
 
+function TaskSearchInput({
+    searchText,
+    setSearchText,
+    className,
+}: {
+    searchText: string;
+    setSearchText: (value: string) => void;
+    className?: string;
+}) {
+    return (
+        <div className={className}>
+            <div className="small-label ms-1 mb-1">Search by name</div>
+            <Form.Control
+                type="search"
+                accessKey="/"
+                placeholder="e.g. External Replication"
+                title="Filter tasks"
+                className="filtering-input"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+            />
+        </div>
+    );
+}
+
+interface CategoryNavItem {
+    categoryName: string;
+    categoryId: string;
+    categoryIcon: IconName;
+}
+
+function TaskCategoryFilter({
+    variant,
+    categories,
+    availableCategories,
+    selectedCategories,
+    onToggle,
+    onReset,
+}: {
+    variant: "chips" | "checkbox";
+    categories: CategoryNavItem[];
+    availableCategories: TaskCategory[];
+    selectedCategories: string[];
+    onToggle: (categoryName: string) => void;
+    onReset: () => void;
+}) {
+    const isChips = variant === "chips";
+    const hasActiveFilter = selectedCategories.length > 0;
+
+    return (
+        <div>
+            <div className="d-flex justify-content-between align-items-center mb-1">
+                <div className="small-label">Filter by Category</div>
+                <Button
+                    variant="link"
+                    size="xs"
+                    className={classNames("p-0", { invisible: !hasActiveFilter })}
+                    onClick={onReset}
+                    disabled={!hasActiveFilter}
+                >
+                    Reset
+                    <Icon icon="reset" margin="ms-1" />
+                </Button>
+            </div>
+            {isChips ? (
+                <div className="add-new-ongoing-task-chips-row">
+                    {categories.map((category) => {
+                        const isAvailable = availableCategories.some((c) => c.categoryName === category.categoryName);
+                        return (
+                            <button
+                                key={category.categoryName}
+                                className={classNames("add-new-ongoing-task-chip", {
+                                    active: selectedCategories.includes(category.categoryName),
+                                })}
+                                onClick={() => onToggle(category.categoryName)}
+                                disabled={!isAvailable}
+                            >
+                                <Icon icon={category.categoryIcon} margin="m-0" />
+                                <span>{category.categoryName}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="d-flex flex-column">
+                    {categories.map((category) => {
+                        const isAvailable = availableCategories.some((c) => c.categoryName === category.categoryName);
+                        return (
+                            <Checkbox
+                                key={category.categoryName}
+                                selected={selectedCategories.includes(category.categoryName)}
+                                toggleSelection={() => onToggle(category.categoryName)}
+                                disabled={!isAvailable}
+                                className="add-new-ongoing-task-filter-item"
+                            >
+                                {category.categoryName}
+                            </Checkbox>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 interface TaskCategory {
     categoryName: string;
+    categoryId: string;
     categoryHeaderName?: string;
     categoryIcon: IconName;
     tasks: TaskItemProps[];
@@ -192,11 +241,10 @@ interface TaskCategory {
 
 interface OngoingTasksListProps {
     filteredTasks: TaskCategory[];
-    getCategoryId?: (categoryName: string) => string;
     displayMode?: "expanded" | "compact";
 }
 
-export function OngoingTasksList({ filteredTasks, getCategoryId, displayMode = "expanded" }: OngoingTasksListProps) {
+export function OngoingTasksList({ filteredTasks, displayMode = "expanded" }: OngoingTasksListProps) {
     if (filteredTasks.length === 0) {
         return <EmptySet>No tasks match your filter criteria</EmptySet>;
     }
@@ -205,8 +253,8 @@ export function OngoingTasksList({ filteredTasks, getCategoryId, displayMode = "
 
     return (
         <>
-            {filteredTasks.map((category, index) => (
-                <div className="pb-2" key={index} id={getCategoryId ? getCategoryId(category.categoryName) : undefined}>
+            {filteredTasks.map((category) => (
+                <div className="pb-2" key={category.categoryName} id={category.categoryId}>
                     <HrHeader>
                         <Icon icon={category.categoryIcon} />
                         {category.categoryHeaderName ?? category.categoryName}
