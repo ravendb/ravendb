@@ -25,7 +25,7 @@ import {
     healthStatusToBadge,
 } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
-export type EtlHealthStatus = Raven.Server.Documents.ETL.EtlProcessHealthStatus;
+export type EtlHealthStatus = Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus;
 
 export function getPopoverMessageForTaskHealth(status: EtlHealthStatus): string {
     switch (status) {

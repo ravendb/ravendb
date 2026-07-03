@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using Raven.Server.Documents.TasksErrors;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Documents.ETL;
@@ -33,7 +34,7 @@ namespace Raven.Server.NotificationCenter
             _notificationCenter.Add(alert);
         }
 
-        public void AddTaskHealthChangeNotification(string processTag, string processName, EtlProcessHealthStatus status)
+        public void AddTaskHealthChangeNotification(string processTag, string processName, OngoingTaskHealthStatus status)
         {
             var existingAlert = GetAlert<EtlTaskHealthChangeDetails>(processTag, processName, AlertReason.Etl_HealthStatusChange);
 
@@ -48,7 +49,7 @@ namespace Raven.Server.NotificationCenter
 
             var key = $"{processTag}/{processName}";
 
-            var message = status == EtlProcessHealthStatus.Healthy ? $"Task recovered to {nameof(EtlProcessHealthStatus.Healthy)} status." : $"Task health status was changed to {status}.";
+            var message = status == OngoingTaskHealthStatus.Healthy ? $"Task recovered to {nameof(OngoingTaskHealthStatus.Healthy)} status." : $"Task health status was changed to {status}.";
 
             var alert = AlertRaised.Create(
                 _notificationCenter.Database,

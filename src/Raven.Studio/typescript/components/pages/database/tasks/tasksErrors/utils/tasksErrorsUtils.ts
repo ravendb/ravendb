@@ -8,7 +8,7 @@ import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import { ThemeColor } from "components/models/common";
 
 export type TaskErrorStep = Raven.Server.Documents.TasksErrors.TaskErrorStep;
-export type EtlHealthStatus = Raven.Server.Documents.ETL.EtlProcessHealthStatus;
+export type EtlHealthStatus = Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus;
 
 export type GroupByType = "task" | "none";
 

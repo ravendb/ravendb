@@ -1,3 +1,4 @@
+using Raven.Server.Documents.TasksErrors;
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents.ETL;
@@ -20,7 +21,7 @@ public class ServerHealthyEtls : ScalarObjectBase<Integer32>
         var result = 0;
 
         foreach (var database in _store.DatabasesLandlord.GetLoadedDatabases())
-            result += database.EtlLoader.GetEtlProcesses().Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+            result += database.EtlLoader.GetEtlProcesses().Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Healthy);
 
         return new Integer32(result);
     }

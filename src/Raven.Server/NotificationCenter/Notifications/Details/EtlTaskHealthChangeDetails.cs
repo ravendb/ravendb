@@ -1,3 +1,4 @@
+using Raven.Server.Documents.TasksErrors;
 using System;
 using Raven.Server.Documents.ETL;
 using Sparrow.Json.Parsing;
@@ -6,9 +7,9 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public sealed class EtlTaskHealthChangeDetails : INotificationDetails
     {
-        public EtlProcessHealthStatus HealthStatus { get; set; }
+        public OngoingTaskHealthStatus HealthStatus { get; set; }
 
-        public EtlProcessHealthStatus? PreviousHealthStatus { get; set; }
+        public OngoingTaskHealthStatus? PreviousHealthStatus { get; set; }
 
         public DateTime? PreviousHealthStatusChangeAt { get; set; }
 

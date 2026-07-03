@@ -42,7 +42,7 @@ public class CdcSinkProcessStatistics
     /// Health derived from <see cref="AverageErrorsRatio"/> vs the configured thresholds, recomputed each
     /// batch (see <see cref="OnBatchCompletion"/>). Read lock-free by monitoring; a slightly stale value is fine.
     /// </summary>
-    public EtlProcessHealthStatus HealthStatus { get; private set; } = EtlProcessHealthStatus.Healthy;
+    public OngoingTaskHealthStatus HealthStatus { get; private set; } = OngoingTaskHealthStatus.Healthy;
 
     public CdcSinkProcessStatistics(string processName, CdcSinkConfiguration configuration)
     {
@@ -164,16 +164,16 @@ public class CdcSinkProcessStatistics
 
         if (_setHealthStatusToFailedOnFault)
         {
-            HealthStatus = EtlProcessHealthStatus.Failed;
+            HealthStatus = OngoingTaskHealthStatus.Failed;
         }
         else
         {
             var errorsRatio = AverageErrorsRatio.GetRate();
             HealthStatus = errorsRatio switch
             {
-                _ when errorsRatio > _configuration.ProcessHealthStatusFailedThreshold => EtlProcessHealthStatus.Failed,
-                _ when errorsRatio > _configuration.ProcessHealthStatusImpairedThreshold => EtlProcessHealthStatus.Impaired,
-                _ => EtlProcessHealthStatus.Healthy
+                _ when errorsRatio > _configuration.ProcessHealthStatusFailedThreshold => OngoingTaskHealthStatus.Failed,
+                _ when errorsRatio > _configuration.ProcessHealthStatusImpairedThreshold => OngoingTaskHealthStatus.Impaired,
+                _ => OngoingTaskHealthStatus.Healthy
             };
         }
 
@@ -182,7 +182,7 @@ public class CdcSinkProcessStatistics
     }
 
     /// <summary>
-    /// Forces <see cref="HealthStatus"/> to <see cref="EtlProcessHealthStatus.Failed"/> when the process
+    /// Forces <see cref="HealthStatus"/> to <see cref="OngoingTaskHealthStatus.Failed"/> when the process
     /// hits a permanent configuration/schema fault and stops retrying - no further batch completes to move
     /// the EWMA, so the health would otherwise stay stale.
     /// </summary>
@@ -191,7 +191,7 @@ public class CdcSinkProcessStatistics
         lock (_lock)
         {
             _setHealthStatusToFailedOnFault = true;
-            HealthStatus = EtlProcessHealthStatus.Failed;
+            HealthStatus = OngoingTaskHealthStatus.Failed;
         }
     }
 }

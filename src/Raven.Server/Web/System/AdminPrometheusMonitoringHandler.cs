@@ -1,4 +1,5 @@
-﻿using System;
+using Raven.Server.Documents.TasksErrors;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,7 +41,7 @@ namespace Raven.Server.Web.System
             public static readonly string ArchivedDataProcessingBehavior = FormatEnumHelp<ArchivedDataProcessingBehavior>();
             public static readonly string IndexRunningStatus = FormatEnumHelp<IndexRunningStatus>();
             public static readonly string IndexType = FormatEnumHelp<IndexType>();
-            public static readonly string EtlHealthStatus = FormatEnumHelp<EtlProcessHealthStatus>();
+            public static readonly string EtlHealthStatus = FormatEnumHelp<OngoingTaskHealthStatus>();
             
             private static string FormatEnumHelp<TEnum>() where TEnum : struct, Enum
             {
