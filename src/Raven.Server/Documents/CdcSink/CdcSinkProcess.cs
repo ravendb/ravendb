@@ -277,14 +277,26 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected void RecordProcessError(TaskErrorStep step, string error, long affectedDocumentsCount = 0)
     {
-        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+        // Called from the retry loop's catch blocks, so it must never throw: StoreProcessError does a
+        // blocking TxMerger enqueue that can fault (merger disposed on unload, a prior catastrophic
+        // merger failure, or a failed write). Letting that escape would skip fallback/retry and unwind
+        // the process thread, silently stopping the sink while it still looks healthy.
+        try
         {
-            CreatedAt = SystemTime.UtcNow,
-            TaskName = Name,
-            Step = step,
-            Error = error,
-            AffectedDocumentsCount = affectedDocumentsCount
-        });
+            Database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+            {
+                CreatedAt = SystemTime.UtcNow,
+                TaskName = Name,
+                Step = step,
+                Error = error,
+                AffectedDocumentsCount = affectedDocumentsCount
+            });
+        }
+        catch (Exception e)
+        {
+            if (Logger.IsWarnEnabled)
+                Logger.Warn($"[{Name}] Failed to store CDC Sink process error to dedicated storage.", e);
+        }
     }
 
     // A CdcSinkFaultedException anywhere in the exception chain marks a permanent configuration/schema error
