@@ -495,12 +495,14 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         finally
         {
             // Flush the batch's buffered item errors from the process thread (safe for the enqueue-sync
-            // API), in finally so a failed batch's errors still persist before the next NewBatch() clears
-            // them; guarded so a flush failure can't mask the original batch exception.
+            // API), in finally so a failed batch's errors still persist; drain-on-read so they can't be
+            // re-stored if the next batch never runs. Guarded so a flush failure can't mask the original
+            // batch exception.
             try
             {
-                if (Statistics.InMemoryItemErrorsCount > 0)
-                    Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, Name, Statistics.ReadInMemoryItemErrors());
+                var itemErrors = Statistics.DrainInMemoryItemErrors();
+                if (itemErrors != null)
+                    Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, Name, itemErrors);
             }
             catch (Exception e)
             {

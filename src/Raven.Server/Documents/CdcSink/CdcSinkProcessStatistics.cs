@@ -106,22 +106,22 @@ public class CdcSinkProcessStatistics
         }
     }
 
-    public int InMemoryItemErrorsCount
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _itemErrors.Count;
-            }
-        }
-    }
-
-    public List<TaskItemError> ReadInMemoryItemErrors()
+    /// <summary>
+    /// Returns the buffered item errors and clears the buffer in one locked step. Draining on read (rather
+    /// than relying on the next <see cref="NewBatch"/> to clear) prevents a re-flush of the same errors if a
+    /// following batch is enqueued but never reaches <see cref="NewBatch"/> - e.g. the TxMerger rejects it on
+    /// shutdown - which would otherwise duplicate the previous batch's rows in TaskErrorsStorage.
+    /// </summary>
+    public List<TaskItemError> DrainInMemoryItemErrors()
     {
         lock (_lock)
         {
-            return _itemErrors.ToList();
+            if (_itemErrors.Count == 0)
+                return null;
+
+            var errors = _itemErrors.ToList();
+            _itemErrors.Clear();
+            return errors;
         }
     }
 
