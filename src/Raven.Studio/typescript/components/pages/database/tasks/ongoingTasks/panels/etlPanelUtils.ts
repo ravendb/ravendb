@@ -23,6 +23,7 @@ import {
     TaskErrorsWithLocation,
     getTaskHealthStatus,
     healthStatusToBadge,
+    parseProcessName,
 } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
 export type EtlHealthStatus = Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus;
@@ -86,13 +87,9 @@ export function getTaskErrorCountByLocation(
 }
 
 function filterTaskErrors<T extends TaskErrors>(taskErrors: T[], taskName: string): T[] {
-    return taskErrors.filter((e) => {
-        // ETL errors are stored as "taskName/transformationName"; AI and CDC task names carry no
-        // transformation and may themselves contain "/", so only ETL names are split.
-        const slashIndex = e.TaskName.indexOf("/");
-        const etlName = e.Category === "Etl" && slashIndex !== -1 ? e.TaskName.slice(0, slashIndex) : e.TaskName;
-        return etlName === taskName;
-    });
+    // Reuse the shared split rule so the panel badge and the Tasks Errors page stay in sync: ETL/AI
+    // names are "taskName/transformationName", CDC names are matched whole.
+    return taskErrors.filter((e) => parseProcessName(e.TaskName, e.Category)[0] === taskName);
 }
 
 export function computeEtlPanelProgress(
