@@ -77,7 +77,6 @@ export default function SampleQueriesTabs({ scripts, methodGroups, onSelect, onC
                     <div className="methods-search-wrapper position-relative panel-bg-1 px-3">
                         <Icon icon="search" margin="m-0" className="methods-search-icon position-absolute" />
                         <Form.Control
-                            type="search"
                             placeholder="Search by signature"
                             className="rounded-1 methods-search-input"
                             value={methodSearch}

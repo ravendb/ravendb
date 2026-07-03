@@ -47,14 +47,14 @@
 
     .methods-search-icon {
         top: 50%;
-        left: sizes.$gutter-xs;
+        left: calc(1rem + #{sizes.$gutter-xs});
         transform: translateY(-50%);
         pointer-events: none;
         opacity: 0.5;
     }
 
     .methods-search-input {
-        padding-left: calc(#{sizes.$gutter-xs} * 2 + 1em);
+        padding-left: calc(1rem + #{sizes.$gutter-xs} + 1.25em);
     }
 }
 
