@@ -837,7 +837,7 @@ namespace Voron.Impl.Journal
                             return; // nothing to do
                     }
 
-                    _forTestingPurposes?.OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile?.Invoke();
+                    _forTestingPurposes?.OnApplyLogsToDataFile_BeforeWritingToDataFile?.Invoke();
 
 
                     Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt is { Record: not null, Buffers: not null });
@@ -1208,7 +1208,7 @@ namespace Voron.Impl.Journal
 
                 internal Action OnApplyLogsToDataFileUnderFlushingLock;
 
-                internal Action OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile;
+                internal Action OnApplyLogsToDataFile_BeforeWritingToDataFile;
 
                 internal Action OnWaitForJournalStateToBeUpdated_BeforeAssigning_updateJournalStateAfterFlush;
 
