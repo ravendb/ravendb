@@ -946,10 +946,13 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 if (ops[j]?.RawValues == null)
                     continue;
                 var lastValues = ops[j].RawValues;
-                var pkIndices = ops[j].Processor.PrimaryKeyIndices;
+                var sourceColumns = ops[j].Processor.SourceColumnNames;
                 newLastKeys = new string[pkColumns.Count];
                 for (int i = 0; i < pkColumns.Count; i++)
-                    newLastKeys[i] = lastValues[pkIndices[i]]?.ToString() ?? "";
+                {
+                    var idx = CdcSinkTableProcessor.FindColumnIndex(sourceColumns, pkColumns[i]);
+                    newLastKeys[i] = lastValues[idx]?.ToString() ?? "";
+                }
                 break;
             }
 
@@ -1015,6 +1018,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             return;
         }
 
+        WarnAboutDeeplyNestedEmbeddedTables(GetDefaultSchema());
+
         // Single connection for the entire initial load — reused across all tables
         await using var conn = await OpenInitialLoadConnection(ct);
 
@@ -1039,7 +1044,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, string tableKey,
         CdcSinkTableLoadState resumeState, CancellationToken ct)
     {
-        var pkColumns = tableInfo.PrimaryKeyColumns;
+        var pkColumns = tableInfo.InitialLoadKeyColumns ?? tableInfo.PrimaryKeyColumns;
         var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
 
         string[] lastKeys = null;
@@ -1107,6 +1112,47 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             await DrainSafely(lastBatch);
             previousBatchCtx?.Dispose();
             currentBatchCtx?.Dispose();
+        }
+    }
+
+    private void WarnAboutDeeplyNestedEmbeddedTables(string defaultSchema)
+    {
+        if (Logger.IsWarnEnabled == false)
+            return;
+
+        var deeplyNested = new List<string>();
+        foreach (var table in Configuration.Tables)
+        {
+            if (table.Disabled)
+                continue;
+            CollectDeeplyNestedEmbeddedTables(table.EmbeddedTables, depth: 1, defaultSchema, deeplyNested);
+        }
+
+        if (deeplyNested.Count == 0)
+            return;
+
+        Logger.Warn(
+            $"[{Name}] The following embedded table(s) are nested 3 or more levels deep: {string.Join(", ", deeplyNested)}. " +
+            "Their initial load is paginated by the root and immediate-parent foreign keys plus the configured PrimaryKeyColumns. " +
+            "If an intermediate ancestor's key is unique only within its own parent (not across the whole source table) and is not " +
+            "denormalized into the child row, some rows may be silently skipped during initial load. Verify that these columns " +
+            "uniquely identify a source row, or denormalize the missing ancestor key column(s) into the child table.");
+    }
+
+    private static void CollectDeeplyNestedEmbeddedTables(List<CdcSinkEmbeddedTableConfig> embeddedTables, int depth, string defaultSchema, List<string> deeplyNested)
+    {
+        if (embeddedTables == null)
+            return;
+
+        foreach (var embedded in embeddedTables)
+        {
+            if (depth >= 3)
+            {
+                var schema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema;
+                deeplyNested.Add($"{schema}.{embedded.SourceTableName}");
+            }
+
+            CollectDeeplyNestedEmbeddedTables(embedded.EmbeddedTables, depth + 1, defaultSchema, deeplyNested);
         }
     }
 
