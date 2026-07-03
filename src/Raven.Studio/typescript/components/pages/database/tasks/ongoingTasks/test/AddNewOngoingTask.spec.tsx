@@ -9,6 +9,10 @@ import { fireEvent } from "@testing-library/react";
 const { Default } = composeStories(stories);
 
 describe("AddNewOngoingTask", function () {
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
     it("can render", async () => {
         const { screen } = rtlRender(<Default />);
 
@@ -20,9 +24,13 @@ describe("AddNewOngoingTask", function () {
 
         await screen.findByText(/External Replication/);
 
+        const taskDescription = /Create a live replica of your database/;
+        expect(screen.getByText(taskDescription)).toBeInTheDocument();
+
         const compactRadio = container.querySelector<HTMLInputElement>("#radio-toggle-right");
         fireEvent.click(compactRadio);
 
         expect(compactRadio).toBeChecked();
+        expect(screen.queryByText(taskDescription)).not.toBeInTheDocument();
     });
 });

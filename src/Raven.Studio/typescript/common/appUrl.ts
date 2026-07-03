@@ -64,7 +64,7 @@ class appUrl {
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
-        ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
+        ongoingTasksUrl: (allowEmpty?: boolean) => ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase(), allowEmpty)),
         addNewOngoingTaskUrl: ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
@@ -571,9 +571,10 @@ class appUrl {
         return "#databases/tasks/backups?" + databasePart;
     }
     
-    static forOngoingTasks(db: database | string): string {
+    static forOngoingTasks(db: database | string, allowEmpty?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/ongoingTasks?" + databasePart;
+        const allowEmptyPart = allowEmpty ? "&allowEmpty=1" : "";
+        return "#databases/tasks/ongoingTasks?" + databasePart + allowEmptyPart;
     }
     
     static forAddNewOngoingTasks(db: database | string): string {

@@ -386,8 +386,12 @@ export function useOngoingTasksOperations(reload: () => void) {
     };
 }
 
+export const getCategoryId = (categoryName: string) =>
+    `ongoing-task-category-${categoryName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
+
 interface OngoingTasksCategory {
     categoryName: string;
+    categoryId: string;
     categoryHeaderName?: string;
     categoryIcon: IconName;
     tasks: TaskItemProps[];
@@ -436,7 +440,16 @@ export function useNewOngoingTasks() {
         (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
 
     const [searchText, setSearchText] = useState<string>("");
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const { forCurrentDatabase } = useAppUrls();
+
+    const toggleCategory = (categoryName: string) => {
+        setSelectedCategories((prev) =>
+            prev.includes(categoryName) ? prev.filter((c) => c !== categoryName) : [...prev, categoryName]
+        );
+    };
+
+    const resetCategories = () => setSelectedCategories([]);
 
     const getSubscriptionLimitReason = () => {
         if (!isSubscriptionDisabled) {
@@ -451,6 +464,7 @@ export function useNewOngoingTasks() {
     const ongoingTasks: OngoingTasksCategory[] = [
         {
             categoryName: "Replication",
+            categoryId: getCategoryId("Replication"),
             categoryIcon: "replication",
             tasks: [
                 {
@@ -494,6 +508,7 @@ export function useNewOngoingTasks() {
         },
         {
             categoryName: "Backups",
+            categoryId: getCategoryId("Backups"),
             categoryIcon: "backup",
             tasks: [
                 {
@@ -512,6 +527,7 @@ export function useNewOngoingTasks() {
         },
         {
             categoryName: "Subscriptions",
+            categoryId: getCategoryId("Subscriptions"),
             categoryIcon: "subscriptions",
             tasks: [
                 {
@@ -536,6 +552,7 @@ export function useNewOngoingTasks() {
         },
         {
             categoryName: "ETL",
+            categoryId: getCategoryId("ETL"),
             categoryHeaderName: "ETL (RavenDB ⇛ TARGET)",
             categoryIcon: "etl",
             tasks: [
@@ -630,6 +647,7 @@ export function useNewOngoingTasks() {
         },
         {
             categoryName: "Sink",
+            categoryId: getCategoryId("Sink"),
             categoryHeaderName: "Sink (SOURCE ⇛ RavenDB)",
             categoryIcon: "hub-sink-replication",
             tasks: [
@@ -661,23 +679,32 @@ export function useNewOngoingTasks() {
         },
     ];
 
-    const filteredTasks = ongoingTasks
+    const searchFilteredTasks = ongoingTasks
         .map((category) => ({
             ...category,
             tasks: category.tasks.filter((task) => matchesSearchText(task, searchText)),
         }))
         .filter((category) => category.tasks.length > 0);
 
+    const filteredTasks = searchFilteredTasks.filter(
+        (category) => selectedCategories.length === 0 || selectedCategories.includes(category.categoryName)
+    );
+
     const allCategories = ongoingTasks.map((c) => ({
         categoryName: c.categoryName,
+        categoryId: c.categoryId,
         categoryIcon: c.categoryIcon,
     }));
 
     return {
         filteredTasks,
+        searchFilteredTasks,
         allCategories,
         searchText,
         setSearchText,
+        selectedCategories,
+        toggleCategory,
+        resetCategories,
     };
 }
 
