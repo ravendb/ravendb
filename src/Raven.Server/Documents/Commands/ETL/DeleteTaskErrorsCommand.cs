@@ -1,4 +1,3 @@
-using System;
 using System.Net.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
@@ -23,15 +22,7 @@ internal sealed class DeleteTaskErrorsCommand : RavenCommand
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        var path = _taskCategory switch
-        {
-            TaskCategory.Etl => "etl/errors",
-            TaskCategory.Ai => "ai/errors",
-            TaskCategory.CdcSink => "cdc-sink/errors",
-            _ => throw new ArgumentOutOfRangeException(nameof(_taskCategory), _taskCategory, "Unknown task type")
-        };
-
-        url = $"{node.Url}/databases/{node.Database}/{path}";
+        url = $"{node.Url}/databases/{node.Database}/{_taskCategory.ErrorsEndpoint()}";
 
         foreach (var name in _names)
             url = QueryHelpers.AddQueryString(url, "name", name);
