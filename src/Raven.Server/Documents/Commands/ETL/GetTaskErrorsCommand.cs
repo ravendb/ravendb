@@ -1,4 +1,3 @@
-using System;
 using System.Net.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Documents.Conventions;
@@ -26,15 +25,7 @@ internal sealed class GetTaskErrorsCommand : RavenCommand<TaskErrors[]>
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        var endpoint = _taskCategory switch
-        {
-            TaskCategory.Etl => "etl/errors",
-            TaskCategory.Ai => "ai/errors",
-            TaskCategory.CdcSink => "cdc-sink/errors",
-            _ => throw new ArgumentOutOfRangeException(nameof(_taskCategory), _taskCategory, null)
-        };
-
-        url = $"{node.Url}/databases/{node.Database}/{endpoint}";
+        url = $"{node.Url}/databases/{node.Database}/{_taskCategory.ErrorsEndpoint()}";
 
         if (_names is { Length: > 0 })
         {
