@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Sessions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Sessions
@@ -22,7 +23,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Query_Depending_On_Prior_Load_Result_Is_Not_Flagged()
         {
             const string source = CommonUsings + @"
@@ -43,7 +44,7 @@ class Order { public string Id { get; set; } public string OwnerId { get; set; }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Two_Independent_Queries_Are_Still_Flagged()
         {
             const string source = CommonUsings + @"
@@ -63,7 +64,7 @@ class Order { public string Id { get; set; } public string OwnerId { get; set; }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.SessionLazyBatching);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Load_Whose_Id_Comes_From_Field_Assigned_By_Prior_Load_Is_Not_Flagged()
         {
             // The second load's id is a field the first load's result flowed into
@@ -91,7 +92,7 @@ class Customer { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Load_Whose_Id_Comes_From_Property_Assigned_By_Prior_Load_Is_Not_Flagged()
         {
             // Same as the field case, through an auto-property.
@@ -116,7 +117,7 @@ class Customer { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Query_Whose_Predicate_Reads_Field_Assigned_By_Prior_Load_Is_Not_Flagged()
         {
             // A query predicate that reads a field fed by a prior load result depends on that load, so it

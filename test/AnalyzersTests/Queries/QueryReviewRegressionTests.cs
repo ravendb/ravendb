@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Queries;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Queries
@@ -42,7 +43,7 @@ class OrderIndex : OrderIndexBase { }
 
         // ── RVN007 walks the base index class for its map fields ──────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Field_Mapped_Only_In_Base_Index_Class_No_Diagnostic()
         {
             string source = CommonUsings + OrderClass + BaseClassIndex + @"
@@ -59,7 +60,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Where_On_Field_Absent_From_Base_Index_Map_Is_Still_Flagged()
         {
             // Guard: walking the base chain must still detect a genuinely unmapped field.
@@ -79,7 +80,7 @@ class Test
 
         // ── RVN007 handles C# query-expression syntax ─────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Query_Expression_Where_On_Not_Indexed_Field_Is_Flagged()
         {
             string source = CommonUsings + OrderClass + @"
@@ -105,7 +106,7 @@ class Test
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFieldNotIndexed);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Query_Expression_Where_And_OrderBy_On_Indexed_Fields_No_Diagnostic()
         {
             string source = CommonUsings + OrderClass + @"
@@ -134,7 +135,7 @@ class Test
 
         // ── RVN008 walks the base index class for stored fields ───────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Projection_Field_Stored_Only_In_Base_Index_Is_Retrievable_No_Diagnostic()
         {
             string source = CommonUsings + OrderClass + @"
@@ -165,7 +166,7 @@ class Test
 
         // ── RVN008 uses the last-applied ProjectionBehavior ───────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Last_Applied_ProjectionBehavior_Wins_When_Multiple_Customize_Calls()
         {
             // The last-applied Projection (FromDocument) is the effective behavior at runtime, so the
@@ -196,7 +197,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Last_Applied_ProjectionBehavior_FromIndex_Still_Flags_Unstored_Field()
         {
             // Guard the inverse: when the last-applied behavior is FromIndex, an unstored source field is

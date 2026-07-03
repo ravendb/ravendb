@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Raven.Analyzers.Indexes;
 using AnalyzersTests.Framework;
 using Raven.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Indexes
@@ -18,7 +19,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Indexes.Counters;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_Two_AddMap_Calls_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -41,7 +42,7 @@ class Employee { public string FirstName { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_No_AddMap_In_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -61,7 +62,7 @@ class MyResult { public string Name { get; set; } }
             Assert.Contains("MyMultiMapIndex", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_Single_AddMap_Suggests_Regular_Index()
         {
             const string source = CommonUsings + @"
@@ -85,7 +86,7 @@ class Company { public string Name { get; set; } }
             Assert.Contains("MyMultiMapIndex", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_AddMap_Only_In_Helper_Method_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -114,7 +115,7 @@ class Employee { public string FirstName { get; set; } }
             Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_AddMap_And_AddMapForAll_Counts_As_Two_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -137,7 +138,7 @@ class Employee { public string FirstName { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMapTimeSeries_Two_AddMap_Calls_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -160,7 +161,7 @@ class Employee { public string FirstName { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMapTimeSeries_No_AddMap_In_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -179,7 +180,7 @@ class MyResult { public string Name { get; set; } }
             Assert.Equal(DiagnosticSeverity.Info, d.Severity);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMapTimeSeries_Single_AddMap_Suggests_Regular_Index()
         {
             const string source = CommonUsings + @"
@@ -202,7 +203,7 @@ class Company { public string Name { get; set; } }
             Assert.Equal(DiagnosticSeverity.Info, d.Severity);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMapCounters_Two_AddMap_Calls_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -225,7 +226,7 @@ class Employee { public string FirstName { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMapCounters_No_AddMap_In_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -244,7 +245,7 @@ class MyResult { public string Name { get; set; } }
             Assert.Equal(DiagnosticSeverity.Info, d.Severity);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMapCounters_Single_AddMap_Suggests_Regular_Index()
         {
             const string source = CommonUsings + @"

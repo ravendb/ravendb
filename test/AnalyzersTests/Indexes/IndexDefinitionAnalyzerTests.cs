@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Raven.Analyzers.Indexes;
 using AnalyzersTests.Framework;
 using Raven.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Indexes
@@ -16,7 +17,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Ctor_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -36,7 +37,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Empty_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -56,7 +57,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("MyIndex", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task No_Ctor_At_All_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -73,7 +74,7 @@ class Order { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.IndexMissingMapAssignment, d.Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Reduce_Index_With_Map_In_Ctor_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -97,7 +98,7 @@ class Result { public string Name { get; set; } public int Count { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Non_Index_Class_No_Diagnostic()
         {
             const string source = @"
@@ -112,7 +113,7 @@ class PlainClass
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Helper_Method_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
@@ -140,7 +141,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain(diagnostics, d => d.Id == DiagnosticIds.IndexMissingMapAssignment);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Public_Method_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -168,7 +169,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains("Map", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Reduce_Assigned_In_Method_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -198,7 +199,7 @@ class Result { public string Name { get; set; } public int Count { get; set; } }
             Assert.Contains("Reduce", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Local_Variable_Named_Map_In_Method_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -227,7 +228,7 @@ class Order { public string Id { get; set; } }
 
         // ── Expression-bodied constructor coverage ───────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_ExpressionBodied_Ctor_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -244,7 +245,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Method_ExpressionBody_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -263,7 +264,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.IndexMapAssignedOutsideCtor);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_AddMap_In_ExpressionBodied_Ctor_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -287,7 +288,7 @@ class Product { public string Id { get; set; } }
 
         // ── this.Map / base.Map qualified assignment coverage ────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ThisMap_Assigned_In_Ctor_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -307,7 +308,7 @@ class Order { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ThisMap_Assigned_In_Method_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -333,7 +334,7 @@ class Order { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.IndexMapAssignedOutsideCtor, d.Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Same_Class_Helper_Method_Is_Not_Flagged_As_Missing()
         {
             // The ctor delegates the Map assignment to a helper method in the same class. The index
@@ -362,7 +363,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.IndexMapAssignedOutsideCtor);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Base_Class_Helper_Method_Is_Not_Flagged_As_Missing()
         {
             // Base ctor delegates the Map assignment to a private helper method. The derived class is
@@ -395,7 +396,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain(diagnostics, d => d.Id == DiagnosticIds.IndexMissingMapAssignment);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Transitively_Invoked_Helper_Is_Not_Flagged_As_Missing()
         {
             // ctor -> Setup() -> ApplyMap(): the Map assignment is two calls deep but still reachable
@@ -427,7 +428,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain(diagnostics, d => d.Id == DiagnosticIds.IndexMissingMapAssignment);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Uncalled_Helper_Method_Still_Reports_Missing()
         {
             // The Map is assigned only in a method the constructor never calls, so at runtime Map is
@@ -452,7 +453,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.IndexMissingMapAssignment);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task No_Map_Anywhere_In_Hierarchy_Still_Reports_Missing()
         {
             // True positive must still fire: no Map assignment exists in any constructor or method of
@@ -483,7 +484,7 @@ class Order { public string Id { get; set; } }
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.IndexMissingMapAssignment);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Reachable_Via_Base_Helper_From_Derived_Ctor_Is_Not_Flagged_On_Derived()
         {
             // The concrete index's constructor calls a protected helper declared on the base that assigns
@@ -516,7 +517,7 @@ class Order { public string Id { get; set; } }
             Assert.DoesNotContain(diagnostics, d => d.GetMessage().Contains("MyIndex"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Map_Assigned_In_Other_Partial_Reachable_From_Ctor_Is_Not_Flagged()
         {
             // The constructor is in one partial and the Map-setting helper it calls is in another. The

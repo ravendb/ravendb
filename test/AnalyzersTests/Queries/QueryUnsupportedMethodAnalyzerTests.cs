@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Queries;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Queries
@@ -20,7 +21,7 @@ using Raven.Client.Documents.Linq;
 
         // ── Flag cases ──────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Where_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -46,7 +47,7 @@ class Order { public string Status { get; set; } }
             Assert.Contains("IsActive", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_OrderBy_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -71,7 +72,7 @@ class Order { public int Amount { get; set; } }
             Assert.Contains("Score", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Select_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -96,7 +97,7 @@ class Order { public string Name { get; set; } }
             Assert.Contains("Map", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task InstanceMethod_On_UserType_In_Where_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -125,7 +126,7 @@ class Test
 
         // ── No-flag cases ────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task BCL_StringMethod_In_Where_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -146,7 +147,7 @@ class Order { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Math_In_Where_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -167,7 +168,7 @@ class Order { public int Qty { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_On_NonRavenQueryable_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -192,7 +193,7 @@ class Order { public string Status { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Multiple_UserMethods_In_Where_Reports_Each()
         {
             const string source = CommonUsings + @"
@@ -220,7 +221,7 @@ class Order { public string Status { get; set; } public int Amount { get; set; }
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_Outside_Lambda_In_Chain_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -246,7 +247,7 @@ class Order { public string Status { get; set; } }
 
         // ── Filter (added to QueryChainLambdaMethods) ─────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Filter_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -272,7 +273,7 @@ class Order { public string Status { get; set; } }
             Assert.Contains("IsImportant", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task BclMethod_In_Filter_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -296,7 +297,7 @@ class Order { public string Status { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_Outside_Lambda_In_OrderByDistance_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -323,7 +324,7 @@ class Place { public string Location { get; set; } }
 
         // ── Query-expression (from/where/select) form ─────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_QueryExpression_Where_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -349,7 +350,7 @@ class Order { public string Status { get; set; } }
             Assert.Contains("IsActive", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_QueryExpression_Select_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -374,7 +375,7 @@ class Order { public string Name { get; set; } }
             Assert.Contains("Map", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_QueryExpression_OrderBy_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -400,7 +401,7 @@ class Order { public int Amount { get; set; } }
             Assert.Contains("Score", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task BclMethod_In_QueryExpression_Where_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -422,7 +423,7 @@ class Order { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_NonRaven_QueryExpression_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -449,7 +450,7 @@ class Order { public string Status { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_EmbeddedRavenChain_Inside_QueryExpression_Reports_Once()
         {
             // A method-chain Raven query embedded in a 'select' clause is reported by the method-chain
@@ -476,7 +477,7 @@ class Test
             Assert.Contains("M", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_NonRavenLambda_Inside_QueryExpression_Where_Reports_Once()
         {
             // A lambda passed to a non-Raven method (Enumerable.Any) inside a clause is NOT owned by the
@@ -506,7 +507,7 @@ class Test
 
         // ── Type matching is gated on the Raven.Client namespace ───────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_On_SameNamedNonRavenQueryable_No_Diagnostic()
         {
             // A user type named IRavenQueryable that is NOT in the Raven.Client namespace must not be

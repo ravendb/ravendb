@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Raven.Analyzers.Queries;
 using AnalyzersTests.Framework;
 using Raven.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Queries
@@ -26,7 +27,7 @@ class Order { public string Name { get; set; } public string Status { get; set; 
 
         // ── ProjectInto — Default behavior ────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_All_Fields_Stored_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -53,7 +54,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_All_Fields_On_Source_Document_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -78,7 +79,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_Field_Neither_Stored_Nor_On_Source_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -109,7 +110,7 @@ class Test
             Assert.Contains("Default", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_Mixed_Stored_And_Source_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -136,7 +137,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_StoreAllFields_Treats_Map_Projection_As_Stored_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -162,7 +163,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_StoreAllFields_Field_Not_In_Map_And_Not_On_Source_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -190,7 +191,7 @@ class Test
             Assert.Contains("Ghost", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_StoreAllFields_No_Does_Not_Treat_Fields_As_Stored_Reports_Diagnostic()
         {
             // StoreAllFields(FieldStorage.No) stores nothing, so a projected field that is only in the
@@ -224,7 +225,7 @@ class Test
 
         // ── ProjectInto — FromIndex / FromIndexOrThrow ────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromIndex_Field_On_Source_But_Not_Stored_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -256,7 +257,7 @@ class Test
             Assert.Contains("FromIndex", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromIndex_All_Fields_Stored_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -284,7 +285,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromIndexOrThrow_Field_Not_Stored_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -315,7 +316,7 @@ class Test
             Assert.Contains("FromIndexOrThrow", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Select_FromIndexOrThrow_Id_Always_Retrievable_No_Diagnostic()
         {
             // In a Select projection the LINQ provider rewrites the identity property (x.Id) to the
@@ -346,7 +347,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Select_FromIndexOrThrow_Id_Retrievable_But_Other_Field_Still_Flagged()
         {
             // Id is rewritten to id() and is retrievable, but a genuinely unstored field projected next
@@ -379,7 +380,7 @@ class Test
             Assert.Contains("Ghost", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryExpression_Select_FromIndex_Field_On_Source_But_Not_Stored_Reports_Diagnostic()
         {
             // The projection is written in C# query-expression syntax (select new { ... }) rather than the
@@ -412,7 +413,7 @@ class Test
             Assert.Contains("FromIndex", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryExpression_Select_Default_Field_On_Source_No_Diagnostic()
         {
             // A query-expression projection under the Default behavior falls back to the source document,
@@ -440,7 +441,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Select_NamedDto_FromIndexOrThrow_Id_Retrievable_No_Diagnostic()
         {
             // The named-object Select initializer (new Dto { Key = x.Id }) routes its RHS through the
@@ -472,7 +473,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromIndexOrThrow_Unstored_Id_Reports_Diagnostic()
         {
             // Unlike Select, ProjectInto fetches member names verbatim (it emits `select Id`, not
@@ -510,7 +511,7 @@ class Test
 
         // ── Stored-field extraction: expression-bodied ctor & this/base receiver ──
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromIndexOrThrow_Field_Stored_Via_ThisStores_No_Diagnostic()
         {
             // The stored-field receiver is qualified (this.StoresStrings[...]); it must still be detected.
@@ -539,7 +540,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromIndexOrThrow_Stored_Via_ExpressionBodied_Ctor_No_Diagnostic()
         {
             // StoreAllFields is declared in an expression-bodied constructor; it must still be detected.
@@ -571,7 +572,7 @@ class Test
 
         // ── ProjectInto — FromDocument / FromDocumentOrThrow ─────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromDocument_Field_On_Source_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -599,7 +600,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_FromDocumentOrThrow_Field_Not_On_Source_Reports_Diagnostic()
         {
             // Ghost is not on Order; it's only reachable from the index if stored
@@ -634,7 +635,7 @@ class Test
 
         // ── ProjectInto — string-form Query ──────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_String_Form_Index_Name_Matches_Class_Checks_Fields()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -662,7 +663,7 @@ class Test
             Assert.Contains("Ghost", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_String_Form_Unknown_Index_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -682,7 +683,7 @@ class Test
 
         // ── Select form ────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Select_Anonymous_Default_Field_On_Source_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -707,7 +708,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Select_Anonymous_FromIndexOrThrow_Field_Not_Stored_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -737,7 +738,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Select_Named_Object_FromIndexOrThrow_Field_Not_Stored_Reports_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -767,7 +768,7 @@ class Test
             Assert.Contains("Price", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Chained_Select_Second_Projection_No_False_Positive()
         {
             // The second Select operates on the anonymous shape produced by the first Select, not on
@@ -798,7 +799,7 @@ class Test
 
         // ── Bail conditions ────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Query_Without_Index_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -816,7 +817,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Index_With_CreateField_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -842,7 +843,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Store_With_Variable_Field_Bails_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -870,7 +871,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Customize_With_Variable_Behavior_Bails_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -899,7 +900,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Stores_Dictionary_With_Variable_Key_Bails_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -928,7 +929,7 @@ class Test
 
         // ── Async session ──────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Async_Session_ProjectInto_Reports_Same_Diagnostic_As_Sync()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -958,7 +959,7 @@ class Test
 
         // ── Stores dictionary syntax ───────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Stores_Dictionary_Indexer_Registers_Field_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -986,7 +987,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoresStrings_Dictionary_Indexer_Registers_Field_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"
@@ -1014,7 +1015,7 @@ class Test
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task InternalProjectionRecord_FieldOnSourceDoc_No_Diagnostic()
         {
             // Regression: SourceMemberExtractor must include internal members of source-compiled types.

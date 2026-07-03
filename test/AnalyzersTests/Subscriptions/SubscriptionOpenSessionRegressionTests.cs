@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.CodeFixes.Subscriptions;
 using Raven.Analyzers.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Subscriptions
@@ -43,7 +44,7 @@ class Test
 class Doc { public string Id { get; set; } }
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Diagnostic_Still_Reported_When_OpenSession_Is_Nested_In_Unrelated_Run()
         {
             ImmutableArray<Diagnostic> diagnostics =
@@ -53,7 +54,7 @@ class Doc { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.SubscriptionStoreOpenSession, d.Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task No_Fix_Rewrites_To_An_Unrelated_Run_Lambda_Parameter()
         {
             // The inner lambda belongs to Helper.Run (not a subscription worker), so the fix must not
@@ -64,7 +65,7 @@ class Doc { public string Id { get; set; } }
             Assert.Contains("No code fixes", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_In_Select_Projection_Inside_RunLambda_Flags_But_Fix_Bails()
         {
             // Pins the intended asymmetry: store.OpenSession() inside a nested .Select(...) projection
