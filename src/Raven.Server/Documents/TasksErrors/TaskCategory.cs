@@ -19,8 +19,6 @@ public static class TaskTypeExtensions
             : TaskCategory.Etl;
     }
 
-    // Single source of truth for the per-category server route used to read/delete task errors, so the
-    // client commands can't drift apart or miss an arm when a new task category is added.
     public static string ErrorsEndpoint(this TaskCategory category)
     {
         return category switch
