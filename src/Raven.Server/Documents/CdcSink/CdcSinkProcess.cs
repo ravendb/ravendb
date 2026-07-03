@@ -16,7 +16,6 @@ using Raven.Client.Util;
 using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Sparrow.Json;

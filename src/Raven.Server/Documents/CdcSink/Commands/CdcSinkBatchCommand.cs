@@ -11,7 +11,6 @@ using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Stats;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;

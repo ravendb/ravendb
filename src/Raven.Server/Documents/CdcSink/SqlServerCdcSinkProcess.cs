@@ -13,7 +13,6 @@ using Raven.Server.Documents.CdcSink.Schema;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.MsSQL;
 using Microsoft.Data.SqlClient;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
