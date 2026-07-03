@@ -474,8 +474,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             var start = Stopwatch.GetTimestamp();
             await Database.TxMerger.Enqueue(command);
 
-            LastBatchTime = Database.Time.GetUtcNow();
-
             // Advance the checkpoint only if the command actually persisted it. A fully-failed batch
             // withholds the checkpoint (ExecuteCmd skips UpdateState), so its rows are retried on the
             // next read from persisted state. Advancing the in-memory position - or handing the
@@ -485,6 +483,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             {
                 persistedCheckpoint = checkpoint;
                 LastCheckpoint = checkpoint;
+
+                // Only a persisted batch counts as a successful one: LastBatchTime feeds the dashboard
+                // replication lag and the "last successful batch time" metric/SNMP value. A fully-failed
+                // batch must leave it untouched so the lag keeps growing until real progress is made.
+                LastBatchTime = Database.Time.GetUtcNow();
             }
 
             if (Logger.IsDebugEnabled)
@@ -514,7 +517,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             statsAggregator.Complete();
         }
 
-        // Only a successfully persisted batch raises the completion event.
+        // Raise the completion event for every batch that ran - including a fully-failed one - so the
+        // live performance view picks up its stats. Success is tracked separately via LastBatchTime and
+        // the health status; this event is purely for performance reporting.
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
         return (persistedCheckpoint, ops.Count);
     }
