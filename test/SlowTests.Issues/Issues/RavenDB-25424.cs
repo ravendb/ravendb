@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using FastTests.Voron;
 using Tests.Infrastructure;
+using Voron.Impl.Journal;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -14,6 +15,7 @@ namespace SlowTests.Issues
         public void CanHandleTransactionReleasingPagesWhileFlushing()
         {
             Options.ManualFlushing = true;
+            Options.ManualSyncing = true;
 
             const int AllocationSize= 600;
             const int OverflowSize = AllocationSize * Voron.Global.Constants.Storage.PageSize - Voron.PageHeader.SizeOf;
@@ -30,12 +32,12 @@ namespace SlowTests.Issues
             }
 
             bool alreadyRun = false;
-            Env.Journal.Applicator.ForTestingPurposesOnly().OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile += () =>
+            Env.Journal.Applicator.ForTestingPurposesOnly().OnApplyLogsToDataFile_BeforeWritingToDataFile += () =>
             {
                 if (alreadyRun)
                     return;
                 alreadyRun = true;
-                // this will be ignored, because we _already_ process spare regions
+                // committed while the flush is running - the next flush consumes this free and registers its sparse region for the deferred punch
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int i = 0; i < AllocationSize; i++)
@@ -45,7 +47,7 @@ namespace SlowTests.Issues
                     tx.Commit();
                 }
 
-                // this will be flushed to disk, since we haven't gotten to it yet
+                // the reallocation is written by the next flush, which also subtracts these pages from the pending sparse regions
                 using (var tx = Env.WriteTransaction())
                 {
                     var p = tx.LowLevelTransaction.AllocatePage(AllocationSize);
@@ -60,8 +62,12 @@ namespace SlowTests.Issues
             // first run, to create the "race" with the transactions
             Env.FlushLogToDataFile();
 
-            // second run, forcing the sparse pages to be zeroed
+            // second run flushes the free + reallocation
             Env.FlushLogToDataFile();
+
+            // punch whatever is still pending - it must not touch the reallocated pages
+            using (var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+                Assert.True(sync.SyncDataFile());
 
             using (var tx = Env.WriteTransaction())
             {

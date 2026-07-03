@@ -384,9 +384,9 @@ public class RavenDB_24327 : StorageTest
             tx.Commit();
         }
 
-        // flush so it will mark sparse regions in the data file BUT also error before writing actual data
+        // flush and simulate an error before writing the actual data
 
-        Env.Journal.Applicator.ForTestingPurposesOnly().OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile += () =>
+        Env.Journal.Applicator.ForTestingPurposesOnly().OnApplyLogsToDataFile_BeforeWritingToDataFile += () =>
         {
             throw new IOException("Simulating error on flush");
         };
