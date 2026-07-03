@@ -6,6 +6,7 @@ using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Shared;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Policy
@@ -20,7 +21,7 @@ namespace AnalyzersTests.Policy
     /// </summary>
     public class DiagnosticSeverityPolicyTests
     {
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Every_DiagnosticId_Has_Exactly_One_Policy_Entry()
         {
             HashSet<string> declaredIds = new(AllDiagnosticIds(), StringComparer.Ordinal);
@@ -38,7 +39,7 @@ namespace AnalyzersTests.Policy
                 policyIds.OrderBy(id => id, StringComparer.Ordinal));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Effective_Severity_Follows_The_Version_Policy()
         {
             // EffectiveSeverity is the descriptor's shipped DefaultSeverity; it must equal what the
@@ -50,7 +51,7 @@ namespace AnalyzersTests.Policy
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void AnalyzerReleases_Severities_Are_In_Sync_With_Code()
         {
             Dictionary<string, DiagnosticSeverity> tracked = ReadAnalyzerReleaseSeverities();
@@ -80,7 +81,7 @@ namespace AnalyzersTests.Policy
                 $"AnalyzerReleases lists rules with no descriptor: {string.Join(", ", strayTracked)}");
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         // Introduced at minor granularity ("7.2"): Info through 7.2.x, promotes at 7.3.0.
         [InlineData("7.2.5", "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info)]
         [InlineData("7.2.9", "7.2", DiagnosticSeverity.Warning, DiagnosticSeverity.Info)]

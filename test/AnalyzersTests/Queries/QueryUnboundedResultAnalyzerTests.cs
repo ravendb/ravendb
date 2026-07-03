@@ -3,6 +3,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Queries;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Queries
@@ -19,7 +20,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryToList_WithoutTake_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -41,7 +42,7 @@ class User { public string Id { get; set; } }
             Assert.Equal(DiagnosticSeverity.Info, diagnostics[0].Severity);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryToArray_WithoutTake_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -62,7 +63,7 @@ class User { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryToListAsync_WithoutTake_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -83,7 +84,7 @@ class User { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryToArrayAsync_WithoutTake_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -104,7 +105,7 @@ class User { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryWithWhereAndNoTake_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -125,7 +126,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryWithTake_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -145,7 +146,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryWithWhereThenTake_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -165,7 +166,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryWithSkipButNoTake_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -186,7 +187,7 @@ class User { public string Id { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryFirst_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -206,7 +207,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryCount_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -226,7 +227,7 @@ class User { public string Id { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LocalListToList_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -247,7 +248,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultipleUnboundedQueries_Reports_Multiple_Diagnostics()
         {
             const string source = CommonUsings + @"

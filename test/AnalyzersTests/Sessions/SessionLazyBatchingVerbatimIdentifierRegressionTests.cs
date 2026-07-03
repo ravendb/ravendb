@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using AnalyzersTests.Framework;
 using Raven.Analyzers.CodeFixes.Sessions;
 using Raven.Analyzers.Sessions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Sessions
@@ -21,7 +22,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Verbatim_Identifier_Load_Produces_Valid_Lazy_Name()
         {
             const string source = CommonUsings + @"

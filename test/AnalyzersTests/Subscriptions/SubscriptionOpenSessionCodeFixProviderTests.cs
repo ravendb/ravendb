@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using AnalyzersTests.Framework;
 using Raven.Analyzers.CodeFixes.Subscriptions;
 using Raven.Analyzers.Subscriptions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Subscriptions
@@ -16,7 +17,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_Transforms_To_Batch()
         {
             const string source = CommonUsings + @"
@@ -40,7 +41,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("var session = batch.OpenSession()", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_Transforms_Using_Actual_Run_Parameter_Name()
         {
             // The Run lambda parameter is not named "batch"; the rewrite must use the actual name.
@@ -65,7 +66,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("var session = x.OpenSession()", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSessionWithOptions_Transforms_To_Batch()
         {
             const string source = CommonUsings + @"
@@ -90,7 +91,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("var session = batch.OpenSession(options)", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenAsyncSession_Transforms_To_Batch()
         {
             const string source = CommonUsings + @"
@@ -114,7 +115,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("var session = batch.OpenAsyncSession()", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenAsyncSessionWithOptions_Transforms_To_Batch()
         {
             const string source = CommonUsings + @"
@@ -139,7 +140,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("var session = batch.OpenAsyncSession(options)", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSessionWithDatabaseName_FixBails()
         {
             // store.OpenSession(database) is flagged by RVN011, but SubscriptionBatch exposes only
@@ -169,7 +170,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("No code fixes were registered", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenAsyncSessionWithDatabaseName_FixBails()
         {
             // Same as the sync case for the async overload: store.OpenAsyncSession(string database)
@@ -195,7 +196,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("No code fixes were registered", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSessionWithNamedSessionOptionsArgument_FixBails()
         {
             // store.OpenSession(sessionOptions: opts) compiles against IDocumentStore (its parameter is
@@ -224,7 +225,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("No code fixes were registered", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSessionWithPositionalSessionOptions_Transforms_To_Batch()
         {
             // A positional SessionOptions argument is batch-compatible (SubscriptionBatch.OpenSession
@@ -251,7 +252,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("var session = batch.OpenSession(new SessionOptions", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_InDeferredAction_FixBails()
         {
             // Diagnostic fires (store.OpenSession() is inside the Run lambda) but the fix refuses to
@@ -277,7 +278,7 @@ class Document { public string Id { get; set; } }
                 () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_InNonStaticLocalFunction_Transforms_To_Batch()
         {
             // A non-static local function captures the Run lambda's batch parameter, so the
@@ -307,7 +308,7 @@ class Document { public string Id { get; set; } }
             Assert.Contains("var session = batch.OpenSession()", fixed_code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_InStaticLocalFunction_FixBails()
         {
             // A static local function cannot capture batch, so the analyzer does not flag it and
@@ -335,7 +336,7 @@ class Document { public string Id { get; set; } }
                 () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_InNestedLambda_FixBails()
         {
             // store.OpenSession() inside a nested lambda may outlive the batch; the fix refuses to
@@ -362,7 +363,7 @@ class Document { public string Id { get; set; } }
                 () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task OpenSession_InNestedAnonymousMethod_FixBails()
         {
             // store.OpenSession() inside a nested anonymous method (delegate { ... }) may outlive

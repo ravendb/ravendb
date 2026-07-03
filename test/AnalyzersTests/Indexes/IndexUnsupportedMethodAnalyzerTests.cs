@@ -4,6 +4,7 @@ using AnalyzersTests.Framework;
 using Microsoft.CodeAnalysis;
 using Raven.Analyzers;
 using Raven.Analyzers.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace AnalyzersTests.Indexes
@@ -19,7 +20,7 @@ using Raven.Client.Documents.Indexes;
 
         // ── Flag cases ──────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LocalStaticMethod_In_Map_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -49,7 +50,7 @@ class Product { public string Name { get; set; } }
             Assert.Contains("Map", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task InstanceMethod_On_UserType_In_Map_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -76,7 +77,7 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             Assert.Contains("ComputeKey", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserOverrideOfToString_In_Map_No_Diagnostic()
         {
             // A user override of Object.ToString() is rebound by the server onto DynamicBlittableJson,
@@ -103,7 +104,7 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserOverrideOfEqualsAndGetHashCode_In_Map_No_Diagnostic()
         {
             // Overrides of Object.Equals(object) and Object.GetHashCode() are rebound by the server too,
@@ -131,7 +132,7 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TransitiveOverrideOfToString_In_Map_No_Diagnostic()
         {
             // An override declared through an intermediate user base class still (transitively) overrides
@@ -163,7 +164,7 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethodNamedToString_NotAnObjectOverride_In_Map_Reports_Diagnostic()
         {
             // A user method named ToString but with a different signature is an overload, not an
@@ -193,7 +194,7 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             Assert.Contains("ToString", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Reduce_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -223,7 +224,7 @@ class Order { public string Tag { get; set; } }
             Assert.Contains("Reduce", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_AddMap_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -253,7 +254,7 @@ class Order { public string Title { get; set; } }
 
         // ── No-flag cases ────────────────────────────────────────────────────────
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task BCL_StringMethod_In_Map_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -279,7 +280,7 @@ class Product { public string Name { get; set; } public int Qty { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Linq_Methods_In_Map_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -302,7 +303,7 @@ class Line { public string Product { get; set; } public int Quantity { get; set;
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task InvocationOutsideLambda_In_Ctor_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -327,7 +328,7 @@ class Product { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task JavaScriptIndex_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -352,7 +353,7 @@ class JsIndex : AbstractJavaScriptIndexCreationTask
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Multiple_UserMethods_In_Map_Reports_Each()
         {
             const string source = CommonUsings + @"
@@ -384,7 +385,7 @@ class Product { public string Name { get; set; } public int Rating { get; set; }
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_ExpressionBodied_Ctor_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -409,7 +410,7 @@ class Product { public string Name { get; set; } }
             Assert.Contains("Normalize", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_ThisMap_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -436,7 +437,7 @@ class Product { public string Name { get; set; } }
             Assert.Contains("Normalize", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_AdditionalSources_No_Diagnostic()
         {
             // The index ships the helper's source to the server via AdditionalSources, so the server
@@ -469,7 +470,7 @@ class Product { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_AdditionalSources_In_Base_Class_No_Diagnostic()
         {
             // The AdditionalSources write that ships the helper source lives in a shared BASE index class,
@@ -509,7 +510,7 @@ class Product { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_AdditionalAssemblies_No_Diagnostic()
         {
             // AdditionalAssemblies references extra assemblies compiled with the index server-side, so a
@@ -541,7 +542,7 @@ class Product { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_AdditionalSources_Indexer_No_Diagnostic()
         {
             // Populating AdditionalSources via the indexer (AdditionalSources["Key"] = source) ships code
@@ -570,7 +571,7 @@ class Product { public string Name { get; set; } }
             Assert.Empty(diagnostics);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_Only_A_Read_Of_AdditionalSources_Reports_Diagnostic()
         {
             // A bare read / null-check of AdditionalSources ships no code, so it must NOT suppress RVN009 —
@@ -602,7 +603,7 @@ class Product { public string Name { get; set; } }
             Assert.Contains("Normalize", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_Only_A_MemberAccess_Read_Of_AdditionalSources_Reports_Diagnostic()
         {
             // Reading a member of AdditionalSources (e.g. .Count) ships no code, so it must NOT suppress
@@ -634,7 +635,7 @@ class Product { public string Name { get; set; } }
             Assert.Contains("Normalize", d.GetMessage());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_Unrelated_Local_Named_AdditionalSources_Reports_Diagnostic()
         {
             // An unrelated local that merely shares the name AdditionalSources is not the framework
