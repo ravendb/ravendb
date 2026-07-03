@@ -11,8 +11,6 @@ public enum OngoingTaskHealthStatus
 
 public static class OngoingTaskHealthStatusExtensions
 {
-    // Maps an EWMA error ratio to a health status against the configured thresholds. Shared by ETL,
-    // AI, and CDC Sink statistics so their health semantics can't drift apart.
     public static OngoingTaskHealthStatus FromErrorRatio(double errorRatio, float failedThreshold, float impairedThreshold)
     {
         return errorRatio switch
@@ -23,8 +21,6 @@ public static class OngoingTaskHealthStatusExtensions
         };
     }
 
-    // Validates a task process's failed/impaired health thresholds. Shared so ETL and CDC Sink configs
-    // enforce identical rules; the config keys are passed in for provider-specific error messages.
     public static void ValidateThresholds(float failedThreshold, float impairedThreshold, string failedThresholdKey, string impairedThresholdKey)
     {
         if (failedThreshold is < 0f or > 1f)
