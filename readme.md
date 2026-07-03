@@ -14,7 +14,7 @@ This repository contains source code for the [RavenDB](https://ravendb.net/) doc
 
 Request [your license](https://ravendb.net/free).
 
-Download [the latest version of RavenDB](https://ravendb.net/downloads).
+Download [the latest version of RavenDB](https://ravendb.net/download).
 
 ## Getting Started
 Install and [set up your database](https://ravendb.net/docs/article-page/6.2/csharp/start/getting-started).
