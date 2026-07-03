@@ -168,13 +168,10 @@ public class CdcSinkProcessStatistics
         }
         else
         {
-            var errorsRatio = AverageErrorsRatio.GetRate();
-            HealthStatus = errorsRatio switch
-            {
-                _ when errorsRatio > _configuration.ProcessHealthStatusFailedThreshold => OngoingTaskHealthStatus.Failed,
-                _ when errorsRatio > _configuration.ProcessHealthStatusImpairedThreshold => OngoingTaskHealthStatus.Impaired,
-                _ => OngoingTaskHealthStatus.Healthy
-            };
+            HealthStatus = OngoingTaskHealthStatusExtensions.FromErrorRatio(
+                AverageErrorsRatio.GetRate(),
+                _configuration.ProcessHealthStatusFailedThreshold,
+                _configuration.ProcessHealthStatusImpairedThreshold);
         }
 
         _batchErrors = 0;
