@@ -982,12 +982,3 @@
 .test-result-item > span > * + small:not(:empty) {
     border-top: 1px solid var(--border-color-light);
 }
-
-// this is fix for global class applied to document.body in test etl/sink mode
-.show-test {
-    .backdrop {
-        // Keep the backdrop hidden in test mode so it does not dim the editor
-        // and any panel that can stay open below it.
-        display: none !important;
-    }
-}
