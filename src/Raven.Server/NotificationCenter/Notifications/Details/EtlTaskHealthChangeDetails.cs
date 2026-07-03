@@ -1,6 +1,5 @@
 using Raven.Server.Documents.TasksErrors;
 using System;
-using Raven.Server.Documents.ETL;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
