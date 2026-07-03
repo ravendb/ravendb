@@ -474,11 +474,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             var start = Stopwatch.GetTimestamp();
             await Database.TxMerger.Enqueue(command);
 
-            // Advance the checkpoint only if the command actually persisted it. A fully-failed batch
-            // withholds the checkpoint (ExecuteCmd skips UpdateState), so its rows are retried on the
-            // next read from persisted state. Advancing the in-memory position - or handing the
-            // checkpoint to OnBatchFlushed below - would defeat that, and on PostgreSQL would ack an
-            // LSN that isn't durable, letting the server recycle WAL for rows that were never applied.
+            // A batch that hit any per-document error throws from ExecuteCmd (see CdcSinkBatchCommand), so
+            // it never reaches here - the process retries from the last durable checkpoint. When we do get
+            // here the batch applied every row, but still gate on CheckpointPersisted: advancing the
+            // in-memory position or acking the provider for a batch that did not persist would, on
+            // PostgreSQL, confirm an LSN that isn't durable and let the server recycle WAL for lost rows.
             if (command.CheckpointPersisted)
             {
                 persistedCheckpoint = checkpoint;
