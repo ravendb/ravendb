@@ -1299,6 +1299,9 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
 
         private bool Method(FieldExpression field, out MethodExpression op)
         {
+            if (field == null)
+                ThrowParseException("Expected a method name before '(' - this usually means an extra or misplaced '(' in the query");
+            
             if (field.FieldValue.Equals("when", StringComparison.OrdinalIgnoreCase))
             {
                 if (_insideWhenMethod)
