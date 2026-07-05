@@ -161,6 +161,24 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
+        internal void DetachTcpConnectionForPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions)
+        {
+            if (ReferenceEquals(tcpConnectionOptions.Stream, _stream) == false ||
+                ReferenceEquals(tcpConnectionOptions.TcpClient, _tcpClient) == false)
+                throw new InvalidOperationException("Cannot detach pull replication TCP connection because it was not initialized.");
+
+            Interlocked.Exchange(ref _stream, null);
+            Interlocked.Exchange(ref _tcpClient, null);
+
+            if (ReferenceEquals(_tcpConnectionOptions.Stream, tcpConnectionOptions.Stream))
+                _tcpConnectionOptions.Stream = null;
+
+            if (ReferenceEquals(_tcpConnectionOptions.TcpClient, tcpConnectionOptions.TcpClient))
+                _tcpConnectionOptions.TcpClient = null;
+
+            _interruptibleRead = null;
+        }
+
         protected override void RunReplicationWithErrorHandling(Action replicationAction)
         {
             _parent.ForTestingPurposes?.OnOutgoingReplicationStart?.Invoke(this);
