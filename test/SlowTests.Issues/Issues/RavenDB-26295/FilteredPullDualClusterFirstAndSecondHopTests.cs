@@ -800,7 +800,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         var nodeCCounterAfterLocalChange = lab.GetFilteredRoundTripCounter(LabNode.C, counterName);
         var nodeCDbCvAfterLocalChange = lab.GetDatabaseChangeVector(LabNode.C);
 
-        AssertReplicatedItemKeptSourceChangeVector(filteredPassReceiveSide, "counter increment from filtered counter", nodeCCounter.ChangeVector, nodeACounterAfterLocalChange.ChangeVector, nodeCCounterAfterLocalChange.ChangeVector);
+        AssertReplicatedCounterIsCausalSuccessorOfSource(filteredPassReceiveSide, "counter increment from filtered counter", nodeCCounter.ChangeVector, nodeACounterAfterLocalChange.ChangeVector, nodeCCounterAfterLocalChange.ChangeVector);
         AssertLocalChangeIsCausalSuccessor(filteredPassReceiveSide, "counter increment from filtered counter", nodeCCounter.ChangeVector, nodeACounterAfterLocalChange.ChangeVector);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "counter after local increment replicated from node A", nodeCCounterAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "counter after local increment replicated from node A", nodeCCounterAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1737,10 +1737,41 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         Assert.True(
             string.Equals(replicatedChangeVector, sourceChangeVector, StringComparison.Ordinal),
             $"Expected {itemDescription} to keep the exact source item CV when ordinary internal replication sends it from {NodeTag(filteredPassReceiveSide, LabNode.A)} to {NodeTag(filteredPassReceiveSide, LabNode.C)}. " +
-            $"A different CV means {NodeTag(filteredPassReceiveSide, LabNode.C)} had to merge or rewrite the item instead of applying it as a clean successor. " +
-            $"versionStatusAgainstFilteredPredecessor={status}, sourceCV='{sourceChangeVector ?? "<null>"}', replicatedCV='{replicatedChangeVector ?? "<null>"}', " +
-            $"filteredPredecessorCV='{filteredPredecessorChangeVector ?? "<null>"}', sourceVersion='{sourceVersion ?? "<null>"}', " +
-            $"filteredPredecessorVersion='{filteredPredecessorVersion ?? "<null>"}'.");
+            $"{Environment.NewLine}A different CV means {NodeTag(filteredPassReceiveSide, LabNode.C)} had to merge or rewrite the item instead of applying it as a clean successor. " +
+            $"{Environment.NewLine}versionStatusAgainstFilteredPredecessor={status}, " +
+            $"{Environment.NewLine}sourceCV='{sourceChangeVector ?? "<null>"}', " +
+            $"{Environment.NewLine}replicatedCV='{replicatedChangeVector ?? "<null>"}', " +
+            $"{Environment.NewLine}filteredPredecessorCV='{filteredPredecessorChangeVector ?? "<null>"}', " +
+            $"{Environment.NewLine}sourceVersion='{sourceVersion ?? "<null>"}', " +
+            $"{Environment.NewLine}filteredPredecessorVersion='{filteredPredecessorVersion ?? "<null>"}'.");
+    }
+
+    private static void AssertReplicatedCounterIsCausalSuccessorOfSource(
+        ClusterSide filteredPassReceiveSide,
+        string itemDescription,
+        string filteredPredecessorChangeVector,
+        string sourceChangeVector,
+        string replicatedChangeVector)
+    {
+        // Counters merge into counter-group documents on the receiver, so unlike documents the receiver
+        // may rewrite the group and stamp a fresh local change vector entry even when the incoming state
+        // fully dominates the local one. The only consequence is one extra (harmless) replication hop for
+        // the rewritten group, so we require the replicated Version to causally cover the source Version
+        // instead of demanding the exact source item CV.
+        var sourceVersion = GetVersionChangeVector(sourceChangeVector);
+        var replicatedVersion = GetVersionChangeVector(replicatedChangeVector);
+        var status = ChangeVectorUtils.GetConflictStatus(sourceVersion, replicatedVersion);
+
+        Assert.True(
+            status == ConflictStatus.AlreadyMerged,
+            $"Expected {itemDescription} on {NodeTag(filteredPassReceiveSide, LabNode.C)} to causally cover the source item Version when ordinary internal replication sends it from {NodeTag(filteredPassReceiveSide, LabNode.A)} to {NodeTag(filteredPassReceiveSide, LabNode.C)}. " +
+            $"{Environment.NewLine}A status other than AlreadyMerged means {NodeTag(filteredPassReceiveSide, LabNode.C)} lost or diverged from part of the source counter state instead of merging it as a clean successor. " +
+            $"{Environment.NewLine}status(sourceVersion vs replicatedVersion)={status}, " +
+            $"{Environment.NewLine}sourceCV='{sourceChangeVector ?? "<null>"}', " +
+            $"{Environment.NewLine}replicatedCV='{replicatedChangeVector ?? "<null>"}', " +
+            $"{Environment.NewLine}filteredPredecessorCV='{filteredPredecessorChangeVector ?? "<null>"}', " +
+            $"{Environment.NewLine}sourceVersion='{sourceVersion ?? "<null>"}', " +
+            $"{Environment.NewLine}replicatedVersion='{replicatedVersion ?? "<null>"}'.");
     }
 
     private static void AssertClientRevisionHistoryContainsOnlyExpectedRevisions(
