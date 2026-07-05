@@ -62,9 +62,20 @@ namespace Corax.Querying.Matches
                     
                     match._token.ThrowIfCancellationRequested();
                     
-                    // We got more than the matches buffer, we'll need to call AndWith multiple times
-                    // which can be really expensive, instead, let's memoize the outer and remember that 
-                    if (resultsSpan.Length == 0 && match._memoizedOuter is null)
+                    // We got more than the matches buffer, so we'll AND the outer against each inner batch.
+                    // Memoizing the outer once avoids repeating an expensive outer.AndWith per batch, but it is
+                    // only worth it when (a) AndWith is actually expensive to repeat and (b) the outer is small
+                    // enough to materialize safely:
+                    //  - A TermMatch has a cheap, seekable AndWith (Seek into the posting list + prune), so
+                    //    memoizing it is pure loss: no time saved, and we'd hold the whole set in memory.
+                    //  - A large outer would cost gigabytes to materialize AND make every per-batch merge scan
+                    //    the full memoized span (quadratic). A low-confidence count may hide such a large set.
+                    // In those cases we skip memoization and stream via outer.AndWith instead.
+                    var outerAndWithIsCheap = typeof(TOuter) == typeof(TermMatch);
+                    var outerTooBigToMemoize = outer.Confidence == QueryCountConfidence.Low ||
+                                               outer.Count > match._indexSearcher.MaxMemoizationSizeInBytes / sizeof(long) / 2;
+                    if (resultsSpan.Length == 0 && match._memoizedOuter is null &&
+                        outerAndWithIsCheap == false && outerTooBigToMemoize == false)
                     {
                         match._memoizedOuter = new MemoizationMatchProvider<TOuter>(match._indexSearcher, match._outer);
                         match._memoizedOuter.SortingRequired();
