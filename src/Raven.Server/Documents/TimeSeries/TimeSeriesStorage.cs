@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private ChangeVector InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null)
+        private ChangeVector InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null, bool createIfNoStats = false)
         {
             var collection = deletionRangeRequest.Collection;
             var documentId = deletionRangeRequest.DocumentId;
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.TimeSeries
             using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
             using (TimeSeriesStats.ReadStats(context, statsTable, sliceHolder, out var statsCount, out var statsStart, out var statsEnd, out var statsName, out var statsMergedChangeVector))
             {
-                if (remoteChangeVector == null && statsCount == 0 && statsMergedChangeVector == null)
+                if (remoteChangeVector == null && statsCount == 0 && statsMergedChangeVector == null && createIfNoStats == false)
                     return null;
 
                 long etag = _documentsStorage.GenerateNextEtag();
@@ -296,17 +296,22 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 var statsMergedChangeVectorToSet = ChangeVector.Merge(statsMergedChangeVector, deletedRangeChangeVector, context);
-                TimeSeriesStats.WriteStatsTableRecord(context, statsTable, sliceHolder, statsStart, statsEnd, statsCount, statsName, statsMergedChangeVectorToSet);
+                TimeSeriesStats.WriteStatsTableRecord(context, statsTable, sliceHolder,
+                    start: statsCount == 0 ? default : statsStart,
+                    end: statsCount == 0 ? default : statsEnd,
+                    count: statsCount,
+                    name: statsName,
+                    mergedChangeVector: statsMergedChangeVectorToSet);
                 return deletedRangeChangeVector;
             }
         }
 
-        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null, bool updateMetadata = true)
+        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null, bool updateMetadata = true, bool createDeletedRangeIfNoStats = false)
         {
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
 
-            var deletedRangeChangeVector = InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector);
+            var deletedRangeChangeVector = InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector, createDeletedRangeIfNoStats);
             if (deletedRangeChangeVector == null)
                 return null;
 
