@@ -77,12 +77,15 @@ namespace Raven.Server.Documents.TimeSeries
             if (collectionName == null)
                 return 0;
 
-            var deletedSegments = PurgeSegments(upto, context, collectionName, numberOfEntriesToDelete);
-            var deletedRanges = PurgeDeletedRanges(upto, context, collectionName, numberOfEntriesToDelete - deletedSegments);
+            var statsCleanupCandidates = new HashSet<Slice>(SliceComparer.Instance);
+            var deletedSegments = PurgeSegments(upto, context, collectionName, numberOfEntriesToDelete, statsCleanupCandidates);
+            var deletedRanges = PurgeDeletedRanges(upto, context, collectionName, numberOfEntriesToDelete - deletedSegments, statsCleanupCandidates);
+            DeleteStatsIfNeeded(context, collectionName, statsCleanupCandidates);
+
             return deletedRanges + deletedSegments;
         }
 
-        private long PurgeDeletedRanges(in long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete)
+        private long PurgeDeletedRanges(in long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete, HashSet<Slice> statsCleanupCandidates)
         {
             var tableName = collectionName.GetTableName(CollectionTableType.TimeSeriesDeletedRanges);
             var table = context.Transaction.InnerTransaction.OpenTable(DeleteRangesSchema, tableName);
@@ -90,38 +93,23 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null || table.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
                 return 0;
 
-            var deleted = PurgeDeletedRangesAndCollectTimeSeriesPrefixes(context, table, upto, numberOfEntriesToDelete, out var timeSeriesPrefixes);
-            if (deleted > 0)
-                DeleteStatsForPurgedDeletedRangesIfNeeded(context, collectionName, timeSeriesPrefixes);
-
-            return deleted;
-        }
-
-        private long PurgeDeletedRangesAndCollectTimeSeriesPrefixes(DocumentsOperationContext context, Table deletedRangesTable, long upto, long numberOfEntriesToDelete, out HashSet<Slice> timeSeriesPrefixes)
-        {
-            timeSeriesPrefixes = new HashSet<Slice>(SliceComparer.Instance);
-            var prefixes = timeSeriesPrefixes;
-            var deletedRangesEtagIndex = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
-
-            return deletedRangesTable.DeleteBackwardFrom(deletedRangesEtagIndex, upto, numberOfEntriesToDelete, beforeDelete: tableValueHolder =>
+            var deleted = table.DeleteBackwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], upto, numberOfEntriesToDelete, beforeDelete: tableValueHolder =>
             {
                 var reader = tableValueHolder.Reader;
 
                 var keyPtr = reader.Read((int)DeletedRangeTable.RangeKey, out var keySize);
-                using (Slice.From(context.Allocator, keyPtr, keySize - sizeof(long), ByteStringType.Immutable, out var prefix))
-                {
-                    if (prefixes.Contains(prefix) == false)
-                        prefixes.Add(prefix.Clone(context.Allocator));
-                }
+                AddStatsCleanupCandidate(context, statsCleanupCandidates, keyPtr, keySize);
             });
+
+            return deleted;
         }
 
-        private void DeleteStatsForPurgedDeletedRangesIfNeeded(DocumentsOperationContext context, CollectionName collectionName, HashSet<Slice> timeSeriesPrefixes)
+        private void DeleteStatsIfNeeded(DocumentsOperationContext context, CollectionName collectionName, HashSet<Slice> statsCleanupCandidates)
         {
             var timeSeriesTable = context.Transaction.InnerTransaction.OpenTable(TimeSeriesSchema, collectionName.GetTableName(CollectionTableType.TimeSeries));
             var deletedRangesTable = context.Transaction.InnerTransaction.OpenTable(DeleteRangesSchema, collectionName.GetTableName(CollectionTableType.TimeSeriesDeletedRanges));
 
-            foreach (var timeSeriesPrefix in timeSeriesPrefixes)
+            foreach (var timeSeriesPrefix in statsCleanupCandidates)
             {
                 if (HasTimeSeriesPrefix(timeSeriesTable, timeSeriesPrefix))
                     continue;
@@ -130,25 +118,20 @@ namespace Raven.Server.Documents.TimeSeries
                     continue;
 
                 using (Slice.External(context.Allocator, timeSeriesPrefix, timeSeriesPrefix.Size - 1, out var statsKey))
-                {
-                    if (TimeSeriesStats.GetStats(context, statsKey).Count == 0)
-                        TimeSeriesStats.Delete(context, collectionName, statsKey);
-                }
+                    TimeSeriesStats.Delete(context, collectionName, statsKey);
             }
         }
 
-        private long PurgeSegments(long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete)
+        private long PurgeSegments(long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete, HashSet<Slice> statsCleanupCandidates)
         {
             var tableName = collectionName.GetTableName(CollectionTableType.TimeSeries);
             var table = context.Transaction.InnerTransaction.OpenTable(TimeSeriesSchema, tableName);
 
-            if (table?.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
+            if (table == null || table.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
                 return 0;
 
-            var deleteRangesTable = context.Transaction.InnerTransaction.OpenTable(DeleteRangesSchema, collectionName.GetTableName(CollectionTableType.TimeSeriesDeletedRanges));
             var pendingDeletion = context.Transaction.InnerTransaction.CreateTree(PendingDeletionSegments);
             var outdated = new List<Slice>();
-            var uniqueTimeSeries = new HashSet<Slice>(SliceComparer.Instance);
 
             var hasMore = true;
             var deletedCount = 0;
@@ -171,15 +154,7 @@ namespace Raven.Server.Documents.TimeSeries
                         if (table.FindByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag, out var reader))
                         {
                             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
-                            using (Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out var key))
-                            {
-                                var size = key.Size - sizeof(long);
-                                using (Slice.External(context.Allocator, key, size, out var tsKey))
-                                {
-                                    if (uniqueTimeSeries.Contains(tsKey) == false)
-                                        uniqueTimeSeries.Add(tsKey.Clone(context.Allocator));
-                                }
-                            }
+                            AddStatsCleanupCandidate(context, statsCleanupCandidates, keyPtr, keySize);
                         }
 
                         if (table.DeleteByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag))
@@ -196,23 +171,18 @@ namespace Raven.Server.Documents.TimeSeries
                     pendingDeletion.MultiDelete(collectionName.Name, etagSlice);
                 }
                 outdated.Clear();
-
-                foreach (var tsKey in uniqueTimeSeries)
-                {
-                    if (table.SeekOnePrimaryKeyPrefix(tsKey, out _) == false)
-                    {
-                        using (Slice.External(context.Allocator, tsKey, tsKey.Size - 1, out var statsKey))
-                        {
-                            if (TimeSeriesStats.GetStats(context, statsKey).Count == 0 &&
-                                HasTimeSeriesPrefix(deleteRangesTable, tsKey) == false)
-                                TimeSeriesStats.Delete(context, collectionName, statsKey);
-                        }
-                    }
-                }
-                uniqueTimeSeries.Clear();
             }
 
             return deletedCount;
+        }
+
+        private static void AddStatsCleanupCandidate(DocumentsOperationContext context, HashSet<Slice> statsCleanupCandidates, byte* keyPtr, int keySize)
+        {
+            using (Slice.From(context.Allocator, keyPtr, keySize - sizeof(long), ByteStringType.Immutable, out var prefix))
+            {
+                if (statsCleanupCandidates.Contains(prefix) == false)
+                    statsCleanupCandidates.Add(prefix.Clone(context.Allocator));
+            }
         }
 
         private static bool HasTimeSeriesPrefix(Table table, Slice timeSeriesPrefix)
@@ -382,18 +352,10 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     table.DeleteByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice);
 
-                    var deleteRangesTable = context.Transaction.InnerTransaction.OpenTable(DeleteRangesSchema, collectionName.GetTableName(CollectionTableType.TimeSeriesDeletedRanges));
-                    if (HasTimeSeriesPrefix(deleteRangesTable, slicer.TimeSeriesPrefixSlice))
+                    var statsTable = TimeSeriesStats.GetOrCreateTable(context.Transaction.InnerTransaction, collectionName);
+                    using (TimeSeriesStats.ReadStats(context, statsTable, slicer, out _, start: out _, end: out _, out var statsName, out var statsMergedChangeVector))
                     {
-                        var statsTable = TimeSeriesStats.GetOrCreateTable(context.Transaction.InnerTransaction, collectionName);
-                        using (TimeSeriesStats.ReadStats(context, statsTable, slicer, out _, out _, out _, out var statsName, out var statsMergedChangeVector))
-                        {
-                            TimeSeriesStats.WriteStatsTableRecord(context, statsTable, slicer, default, default, 0, statsName, statsMergedChangeVector);
-                        }
-                    }
-                    else
-                    {
-                        TimeSeriesStats.Delete(context, collectionName, slicer.StatsKey);
+                        TimeSeriesStats.WriteStatsTableRecord(context, statsTable, slicer, start: default, end: default, count: 0, statsName, statsMergedChangeVector);
                     }
 
                     if (updateMetadata)
