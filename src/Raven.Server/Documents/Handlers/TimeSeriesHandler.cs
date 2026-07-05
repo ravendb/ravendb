@@ -169,6 +169,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (_operation.Deletes?.Count > 0)
                 {
+                    var createDeletedRangeIfNoStats = _operation.Appends?.Count > 0 || _operation.Increments?.Count > 0;
                     foreach (var removal in _operation.Deletes)
                     {
                         var deletionRange = new TimeSeriesStorage.DeletionRangeRequest
@@ -180,7 +181,7 @@ namespace Raven.Server.Documents.Handlers
                             To = removal.To ?? DateTime.MaxValue
                         };
 
-                        LastChangeVector = tss.DeleteTimestampRange(context, deletionRange);
+                        LastChangeVector = tss.DeleteTimestampRange(context, deletionRange, createDeletedRangeIfNoStats: createDeletedRangeIfNoStats);
 
                         changes++;
                     }

@@ -125,15 +125,16 @@ namespace Raven.Server.Documents.TimeSeries
             count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
             start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
             end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
+            mergedChangeVector = ReadMergedChangeVector(context, ref tvr);
 
             if (count == 0 && start == default && end == default)
             {
                 // this is delete a stats, that we re-create, so we need to treat is as a new one.
                 start = DateTime.MaxValue;
                 end = DateTime.MinValue;
+                return null;
             }
 
-            mergedChangeVector = ReadMergedChangeVector(context, ref tvr);
             return DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, ref tvr, out name);
         }
 
