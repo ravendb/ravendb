@@ -16,17 +16,15 @@ internal sealed class RvnLayoutRenderer : LayoutRenderer
     [DefaultParameter]
     public string Item { get; set; }
 
-    public string Default { get; set; }
-
     protected override void Append(StringBuilder builder, LogEventInfo logEvent)
     {
-        builder.Append(Resolve(Item) ?? Default ?? string.Empty);
+        builder.Append(Resolve(Item));
     }
 
     private static string Resolve(string item) => item switch
     {
-        "NodeTag" => NodeTag ?? RachisConsensus.InitialTag,
-        _ => null
+        nameof(NodeTag) => NodeTag ?? RachisConsensus.InitialTag,
+        _ => string.Empty
     };
 }
 
