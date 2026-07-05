@@ -577,11 +577,12 @@ namespace Raven.Server.Documents.Replication
 
                 RemoveOutgoingHandler(source);
 
-                if (_outgoingFailureInfo.TryRemove(source.Destination, out ConnectionShutdownInfo info))
+                if (_outgoingFailureInfo.TryRemove(destination, out ConnectionShutdownInfo info))
                     _reconnectQueue.TryRemove(info);
 
                 if (TryRegisterIncomingInstance(newIncoming))
                 {
+                    source.DetachTcpConnectionForPullReplicationAsSink(tcpConnectionOptions);
                     newIncoming.Start();
                     ForceTryReconnectAll();
                 }
