@@ -356,32 +356,79 @@ internal static partial class QueryPlanBuilder
     {
         IQueryMatch result = source;
 
+        // Negated post-filters (spatial and vector) are collected as factories: given the materialized candidate
+        // universe R, each returns its positive clause scoped to R. NegatedPostFilterMatch subtracts them globally.
+        List<Func<IQueryMatch, IQueryMatch>> negatedFactories = null;
+
         if (spatialMatches is { Length: > 0 })
         {
-            foreach (var spatialMatch in spatialMatches)
+            List<IQueryMatch> positiveSpatial = null;
+            for (int sf = 0; sf < spatialMatches.Length; sf++)
             {
-                if (spatialMatch is IPostFilterMatch postFilter)
+                var sm = spatialMatches[sf];
+                if (sm is IPostFilterMatch postFilter)
                     postFilter.IsPostFilter = true;
+
+                if (exec.SpatialFilters[sf].Clause.IsNegated)
+                {
+                    negatedFactories ??= new List<Func<IQueryMatch, IQueryMatch>>();
+                    var spatial = sm; // capture per-iteration
+                    negatedFactories.Add(filter =>
+                    {
+                        ((ISpatialFilterQuery)spatial).FilterQuery = filter;
+                        return spatial;
+                    });
+                }
+                else
+                {
+                    positiveSpatial ??= new List<IQueryMatch>();
+                    positiveSpatial.Add(sm);
+                }
             }
 
-            result = result is null
-                ? new PostFilterMatch(spatialMatches[0], spatialMatches.Length is 1 ? [] : spatialMatches[1..], wantTimings)
-                : new PostFilterMatch(result, spatialMatches, wantTimings);
+            if (positiveSpatial is { Count: > 0 })
+            {
+                var arr = positiveSpatial.ToArray();
+                result = result is null
+                    ? new PostFilterMatch(arr[0], arr.Length == 1 ? [] : arr[1..], wantTimings)
+                    : new PostFilterMatch(result, arr, wantTimings);
+            }
         }
 
         if (exec.VectorSelects is { Length: > 0 })
         {
             foreach (var item in ResolveVectorItems(exec, builderParameters))
             {
-                result = item.Materialize(result, isPostFilter: true, streamScoreOrder: exec.VectorPostFilterProvidesScoreOrder);
+                if (item.IsNegated)
+                {
+                    negatedFactories ??= new List<Func<IQueryMatch, IQueryMatch>>();
+                    var vec = item; // capture per-iteration
+                    negatedFactories.Add(filter =>
+                    {
+                        // CoraxVectorItem.IsNegated is the routing signal only; the wrapper does the subtraction,
+                        // so the clause itself must materialize its positive (matching) results scoped to filter.
+                        return vec.Materialize(filter, isPostFilter: true);
+                    });
+                }
+                else
+                {
+                    result = item.Materialize(result, isPostFilter: true, streamScoreOrder: exec.VectorPostFilterProvidesScoreOrder);
+                }
             }
+        }
+
+        if (negatedFactories is { Count: > 0 })
+        {
+            // A pure-negated query has no positive universe — subtract from every entry.
+            result ??= builderParameters.IndexSearcher.AllEntries();
+            result = new NegatedPostFilterMatch(builderParameters.IndexSearcher, result, negatedFactories.ToArray(), builderParameters.Token);
         }
 
         return result;
     }
 
     /// <summary>
-    /// Bypass path for queries with no real WHERE clauses — only spatial filters and/or  vector selects. 
+    /// Bypass path for queries with no real WHERE clauses — only spatial filters and/or  vector selects.
     /// </summary>
     private static IQueryMatch InstantiateAllEntriesPostFilter(QueryExecution exec, QueryBuilderParameters builderParameters, ResolutionContext walkerCtx, bool wantTimings)
     {

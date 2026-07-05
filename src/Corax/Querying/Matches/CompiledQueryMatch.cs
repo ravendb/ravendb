@@ -75,17 +75,10 @@ public class CompiledQueryMatch(
     /// <summary>
     /// When set, the plan's OR/AND fold clones each <see cref="IBitmapQueryMatch"/> leaf's bitmap instead of
     /// consuming (stealing containers from) it, so the leaf's <see cref="BitmapState"/> survives intact for the
-    /// score pass. Set only when this match is wrapped by a score-sorted SortingMatch (which re-reads every leaf
-    /// via ScoreSorted after the fold). Off by default → non-scored queries keep the zero-copy consuming fold.
-    /// MUST be set before the lazy fold runs (i.e. before the first Fill/Count/BitmapState access).
+    /// score pass. 
     /// </summary>
     public bool PreserveLeavesForScoring;
 
-    /// <summary>
-    /// Walk down a SortingMatch's inner match to the underlying <see cref="CompiledQueryMatch"/> (if any) and set
-    /// <see cref="PreserveLeavesForScoring"/> on it. Called from score-sorting SortingMatch/SortingMultiMatch
-    /// constructors, before the fold is triggered.
-    /// </summary>
     public static void MarkPreserveLeavesForScoring(IQueryMatch inner)
     {
         // Unwrap wrappers whose ScoreSorted delegates to the inner match (e.g. spatial PostFilterMatch),

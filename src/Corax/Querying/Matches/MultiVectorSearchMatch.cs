@@ -126,13 +126,13 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
     {
         if (_vectorRetrieverInitialized == false)
             InitializeVectorSearch();
-        
+
         if (_resultsPersisted == false)
             FillAndPersistResults();
-        
+
         if (_isEmpty)
             return 0;
-        
+
         var resultsLeft = _matches.Count - _positionOnPersistedValues;
 
         if (resultsLeft == 0)

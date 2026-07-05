@@ -7,16 +7,10 @@ namespace Corax.Querying.Matches;
 
 /// <summary>
 /// Chains an inner IQueryMatch through one or more additional filter matches.
-/// On Fill(), retrieves entries from the inner match, then applies each
-/// filter's AndWith() to narrow the results. Currently only used to apply
-/// spatial predicates after the bitmap filter phase builds the candidate set,
-/// but the construct itself is just an AndWith-chain — nothing here is
-/// spatial-specific.
-///
-/// When timing capture is enabled, records per-call wall time and survivor counts for the inner Fill
-/// and each post-filter AndWith; when disabled, those writes are skipped.
+/// On Fill(), applies each filter to narrow the candidate set, using that as an
+/// optimization hint.
 /// </summary>
-public sealed class PostFilterMatch : IQueryMatch
+public sealed class PostFilterMatch : IQueryMatch, IDisposable
 {
     private readonly IQueryMatch _inner;
     private readonly IQueryMatch[] _postFilters;
@@ -34,6 +28,8 @@ public sealed class PostFilterMatch : IQueryMatch
     private readonly long[] _filterSurvivors;   // survivors after that filter ran
     private readonly long[] _filterRejected;    // rejections (input - survivors)
 
+    private bool _disposed;
+
     public PostFilterMatch(IQueryMatch inner, IQueryMatch[] postFilters, bool wantTimings)
     {
         _inner = inner;
@@ -50,8 +46,6 @@ public sealed class PostFilterMatch : IQueryMatch
     public long Count => _inner.Count;
     public bool IsBoosting => _inner.IsBoosting;
 
-    /// <summary>The wrapped match. Exposed so a score-sorting SortingMatch can reach the underlying
-    /// CompiledQueryMatch (its ScoreSorted delegates to this inner) to set PreserveLeavesForScoring.</summary>
     internal IQueryMatch InnerMatch => _inner;
 
     public int Fill(Span<long> matches)
@@ -94,7 +88,7 @@ public sealed class PostFilterMatch : IQueryMatch
         {
             IPostFilterMatch postFilter => postFilter.AndWith(buffer, count),
             IBitmapQueryMatch bitmapMatch => bitmapMatch.BitmapState.AndWith(buffer, count),
-            EmptyQueryMatch => 0, 
+            EmptyQueryMatch => 0,
             _ => throw new InvalidOperationException($"Unexpected post-filter match type {filter.GetType().Name}; only spatial post-filters (per-entry, bitmap, or empty) are expected.")
         };
     }
@@ -145,5 +139,16 @@ public sealed class PostFilterMatch : IQueryMatch
             children.Add(_postFilters[i].Inspect());
 
         return new QueryInspectionNode(nameof(PostFilterMatch), parameters: parameters, children: children);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        (_inner as IDisposable)?.Dispose();
+        for (int i = 0; i < _postFilters.Length; i++)
+            (_postFilters[i] as IDisposable)?.Dispose();
     }
 }

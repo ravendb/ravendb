@@ -11,17 +11,25 @@ using Spatial4n.Context;
 using Spatial4n.Shapes;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.RoaringBitmaps;
 using Voron.Util;
 using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Querying.Matches.SpatialMatch;
 
-public sealed class SpatialMatch<TBoosting> : IPostFilterMatch
+public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQuery, IDisposable
     where TBoosting : IBoostingMarker
 {
+    private const int CandidateToIndexRatio = 32; // cost of reading a candidate entry vs. scanning the index 
     /// <summary>Set by <c>QueryPlanBuilder.ApplyPostFilters</c> when this spatial match was lifted to a top-level
     /// post-filter. Left false when it is an ordinary leaf inside an OR branch.</summary>
     public bool IsPostFilter { get; set; }
+
+    public IQueryMatch FilterQuery
+    {
+        get => _filterQuery;
+        set => _filterQuery = value;
+    }
 
     private readonly Querying.IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
@@ -43,7 +51,14 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch
     private SpatialScore _spatialScore;
     private double _xShapeCenter;
     private double _yShapeCenter;
-    
+    private IQueryMatch _filterQuery;
+
+    private RoaringBitmap _filterBitmap;
+    private RoaringBitmapIterator _filterIterator;
+    private bool _filterInitialized;
+    private bool _ownsFilterBitmap;
+    private bool _driveByShape;
+    private bool _disposed;
 
     public SpatialMatch(Querying.IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, in FieldMetadata field, IShape shape,
         CompactTree tree,
@@ -94,33 +109,90 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch
 
     public int Fill(Span<long> matches)
     {
+        if (_filterQuery != null)
+        {
+            EnsureFilterInitialized();
+            if (_driveByShape == false)
+                return FillCandidateDriven(matches);
+        }
+
+        return FillShapeDriven(matches);
+    }
+
+    private void EnsureFilterInitialized()
+    {
+        if (_filterInitialized)
+            return;
+        _filterInitialized = true;
+
+        _filterBitmap = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery, out _ownsFilterBitmap);
+
+        long candidateCount = _filterBitmap.ComputeCount();
+        long indexSize = _indexSearcher.NumberOfEntries;
+
+        bool driveByCandidates = candidateCount <= SpatialUtils.Threshold || candidateCount * CandidateToIndexRatio < indexSize;
+        _driveByShape = driveByCandidates == false;
+
+        if (driveByCandidates)
+            _filterIterator = _filterBitmap.GetIterator();
+    }
+
+    private int FillCandidateDriven(Span<long> matches)
+    {
+        while (true)
+        {
+            int read = _filterIterator.Fill(ref _filterBitmap, matches);
+            if (read == 0)
+                return 0;
+
+            int w = 0;
+            for (int i = 0; i < read; ++i)
+            {
+                if ((i & 1023) == 0)
+                    _token.ThrowIfCancellationRequested();
+
+                if (CheckEntryManually(matches[i]))
+                    matches[w++] = matches[i];
+            }
+
+            if (w > 0)
+                return w;
+        }
+    }
+
+    private int FillShapeDriven(Span<long> matches)
+    {
         int currentIdx = 0;
         do
         {
+            _token.ThrowIfCancellationRequested();
+
             int read;
             if ((read = _currentMatch.Fill(matches.Slice(currentIdx))) == 0)
             {
                 if (GoNextMatch() == false)
-                {
                     break;
-                }
 
                 continue;
             }
 
+            var slicedMatches = matches.Slice(currentIdx);
+            // Scoped to a candidate set: drop non-candidates (compacted to the front) before any geo work.
+            int kept = _driveByShape ? _filterBitmap.AndWith(slicedMatches[..read], read) : read;
+
             if (_isTermMatch)
             {
-                currentIdx += read;
+                currentIdx += kept; // Cell fully inside the shape: every (surviving) entry is a match.
             }
-            else if (read > 0)
+            else
             {
-                var slicedMatches = matches.Slice(currentIdx);
-                for (int i = 0; i < read; ++i)
+                for (int i = 0; i < kept; ++i)
                 {
+                    if ((i & 1023) == 0)
+                        _token.ThrowIfCancellationRequested();
+
                     if (CheckEntryManually(slicedMatches[i]))
-                    {
                         matches[currentIdx++] = slicedMatches[i];
-                    }
                 }
             }
         } while (currentIdx != matches.Length);
@@ -213,6 +285,23 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch
             // a pipeline leaf, not a post-filter (see IPostFilterMatch).
             IsPostFilter = IsPostFilter
         };
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        // Iterator first, then the bitmap it was built over (reverse allocation order). The iterator is default
+        // (a no-op Dispose) unless the candidate-driven path created it; the bitmap is disposed only when owned
+        // — a borrowed IBitmapQueryMatch bitmap belongs to its source.
+        _filterIterator.Dispose();
+        if (_ownsFilterBitmap)
+            _filterBitmap.Dispose();
+
+        _startsWithDisposeHandler?.Dispose();
+        _termGenerator?.Dispose();
     }
 }
 

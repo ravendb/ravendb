@@ -51,6 +51,9 @@ internal static partial class QueryPlanBuilder
         if (exec.VectorSelects is not { Length: 1 })
             return false; // if we have two vector.search(), we need to sort between them
 
+        if (exec.VectorSelects[0].IsNegated)
+            return false; // a negated vector ("not near") has no similarity order to stream
+
         if (bp.Index is not { HasBoostedFields: false }  || bp.Metadata.HasBoost || bp.IndexSearcher.DocumentsAreBoosted)
             return false; // we have to sort for boosting
 

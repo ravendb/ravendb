@@ -18,6 +18,8 @@ public sealed class CoraxVectorItem(QueryBuilderParameters parameters) : IQueryM
     private readonly bool _isVectorSingleClause = parameters.IsVectorSingleClause;
     public float? Boosting { get; set; }
 
+    public bool IsNegated { get; set; }
+
     public static CoraxVectorItem BuildForDocVector(QueryBuilderParameters parameters, FieldMetadata field, string documentId, in int numberOfCandidates, in float minimumDistance, in bool isExact)
     {
         return new(parameters)

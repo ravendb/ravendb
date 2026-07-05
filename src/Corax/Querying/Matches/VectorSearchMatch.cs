@@ -79,13 +79,13 @@ public struct VectorSearchMatch : IPostFilterMatch
 
     private bool CanStreamResults => IsBoosting == false && _singleVectorSearchDoNotSort;
 
-    public VectorSearchMatch(IndexSearcher searcher, 
-        in FieldMetadata metadata, 
+    public VectorSearchMatch(IndexSearcher searcher,
+        in FieldMetadata metadata,
         VectorValue vectorToSearch,
-        in float minimumMatch, 
-        in int numberOfCandidates, 
-        in bool isExact, 
-        in bool singleVectorSearchDoNotSort, 
+        in float minimumMatch,
+        in int numberOfCandidates,
+        in bool isExact,
+        in bool singleVectorSearchDoNotSort,
         IQueryMatch filterQuery,
         int scanningThreshold = ScanningThreshold,
         Random random = null)
@@ -178,17 +178,17 @@ public struct VectorSearchMatch : IPostFilterMatch
     {
         if (_vectorRetrieverInitialized == false)
             InitializeVectorSearch();
-        
+
         if (_isEmpty)
             return 0;
-        
+
         if (CanStreamResults) // case when we do not care about scores.
             return FillDiscardSimilarity(matches);
 
         if (_resultsPersisted == false)
             FillAndPersistResults();
 
-        
+
         var resultsLeft = _matches.Count - _positionOnPersistedValues;
         if (resultsLeft == 0)
         {
@@ -200,15 +200,15 @@ public struct VectorSearchMatch : IPostFilterMatch
         _positionOnPersistedValues += amountToCopy;
         return amountToCopy;
     }
-    
+
     public int AndWith(Span<long> buffer, int matches)
     {
         if (_vectorRetrieverInitialized == false)
             InitializeVectorSearch();
-        
+
         if (_isEmpty)
             return 0;
-        
+
         if (_resultsPersisted == false)
             FillAndPersistResults();
 
