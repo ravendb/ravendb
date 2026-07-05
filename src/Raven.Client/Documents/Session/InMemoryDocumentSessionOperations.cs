@@ -29,7 +29,6 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -57,8 +56,6 @@ namespace Raven.Client.Documents.Session
         protected internal readonly SessionInfo _sessionInfo;
 
         private BatchOptions _saveChangesOptions;
-
-        protected internal DateTime SessionCreatedAt = DateTime.UtcNow.EnsureMilliseconds();
         internal readonly bool? DisableAtomicDocumentWritesInClusterWideTransaction;
 
         public TransactionMode TransactionMode;
@@ -154,8 +151,6 @@ namespace Raven.Client.Documents.Session
 
         private Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>> _localTimeSeries;
 
-        // In-session appended / incremented time series entries, kept OUT of the server-backed
-        // TimeSeriesByDocId range list. They are overlaid on top of server results at read time.
         protected internal Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>> LocalTimeSeries =>
             _localTimeSeries ??= new Dictionary<string, Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>>(StringComparer.OrdinalIgnoreCase);
 
@@ -1363,6 +1358,7 @@ more responsive application.
                 _countersByDocId?.Remove(documentInfo.Id);
                 _timeSeriesByDocId?.Remove(documentInfo.Id);
                 _localTimeSeries?.Remove(documentInfo.Id);
+                _deletedTimeSeries?.Remove(documentInfo.Id);
 
                 documentInfo.Dispose();
             }

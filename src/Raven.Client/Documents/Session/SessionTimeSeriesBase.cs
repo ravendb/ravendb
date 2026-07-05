@@ -131,7 +131,6 @@ namespace Raven.Client.Documents.Session
 
         private void RemoveFromCacheIfNeeded(DateTime? from = null, DateTime? to = null)
         {
-            // drop in-session local entries that fall in the deleted window
             RemoveLocalEntries(from, to);
 
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
@@ -158,21 +157,8 @@ namespace Raven.Client.Documents.Session
 
                 for (int i=0; i< ranges.Count; i++)
                 {
-                    var index = FindStartIndex(ranges[i].CachedEntries, from.Value);
                     if (ranges[i].From >= from && ranges[i].To <= to)
                         ranges[i].IsDeleted = true;
-                    for (; index < ranges[i].CachedEntries.Count; index++)
-                    {
-                        if (ranges[i].CachedEntries[index].Timestamp >= from && ranges[i].CachedEntries[index].Timestamp <= to)
-                        {
-                            ranges[i].CachedEntries.RemoveAt(index--);
-                        }
-                    }
-
-                    if (ranges[i].CachedEntries.Count == 0)
-                    {
-                        ranges.Remove(ranges[i--]);
-                    }
                 }
 
                 AddRemovedTimeSeriesRange(from, to);
@@ -210,18 +196,20 @@ namespace Raven.Client.Documents.Session
             var f = (from ?? DateTime.MinValue).EnsureUtc();
             var t = (to ?? DateTime.MaxValue).EnsureUtc();
 
-            List<DateTime> toRemove = null;
-            foreach (var key in entries.Keys)
+            int start = FindStartIndex(entries.Keys, f);
+            int end = start;
+            while (end < entries.Count && entries.Keys[end] <= t)
+                end++;
+
+            //full deletion, faster than for loop
+            if (start == 0 && end == entries.Count)
             {
-                if (key >= f && key <= t)
-                    (toRemove ??= new List<DateTime>()).Add(key);
+                entries.Clear();
+                return;
             }
 
-            if (toRemove == null)
-                return;
-
-            foreach (var key in toRemove)
-                entries.Remove(key);
+            for (int i = end - 1; i >= start; i--)
+                entries.RemoveAt(i);
         }
 
         public void Increment<TValues>(DateTime timestamp, TValues value)
@@ -259,8 +247,6 @@ namespace Raven.Client.Documents.Session
                 Session.Defer(new IncrementalTimeSeriesBatchCommandData(DocId, Name, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
             }
 
-            // an increment accumulates onto whatever value is already known for this timestamp
-            // (a server-loaded base and/or previous in-session increments), matching server semantics
             TrackTimeseriesInCache(timestamp, op.Values, increment: true);
         }
 
@@ -297,12 +283,8 @@ namespace Raven.Client.Documents.Session
         private void TrackTimeseriesInCache(DateTime timestamp, IEnumerable<double> values, string tag = null, bool increment = false)
         {
             var utcTimestamp = timestamp.EnsureUtc().EnsureMilliseconds();
-            // copy the values: for increments the caller's array is the deferred command's operation,
-            // which the command mutates in place (existing.Values[i] += ...); sharing it would corrupt the cache.
             var valuesArray = values.ToArray();
 
-            // an increment accumulates onto the currently-known value at this timestamp
-            // (a prior in-session local value, or a loaded server value); an append replaces it.
             if (increment)
                 valuesArray = AddValues(CurrentValuesAt(utcTimestamp), valuesArray);
 
@@ -312,13 +294,9 @@ namespace Raven.Client.Documents.Session
             {
                 Timestamp = utcTimestamp,
                 Tag = tag,
-                IsLocal = true,
                 Values = valuesArray
             };
 
-            // In-session appends/increments are kept OUT of the server-backed range list and overlaid
-            // on top of server results at read time. This keeps TimeSeriesByDocId a clean, non-overlapping
-            // server-coverage list (so NotInCache / the merge / the stitch stay correct).
             if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false)
                 Session.LocalTimeSeries[DocId] = byName = new Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>(StringComparer.OrdinalIgnoreCase);
 
@@ -328,8 +306,6 @@ namespace Raven.Client.Documents.Session
             entries[utcTimestamp] = entry;
         }
 
-        // The currently-known value at a timestamp: a prior in-session local value if present,
-        // otherwise a loaded server value from a cached range (used to accumulate increments onto).
         private double[] CurrentValuesAt(DateTime utcTimestamp)
         {
             if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) &&
@@ -369,12 +345,10 @@ namespace Raven.Client.Documents.Session
 
                             if (ranges[i].From == ranges[i].To)
                             {
-                                //single tse range deletion
                                 ranges.RemoveAt(i--);
                             }
                             else
                             {
-                                //split the range by the timestamp
                                 var newRange = new TimeSeriesRangeResult()
                                 {
                                     To = ranges[i].To,
@@ -404,17 +378,17 @@ namespace Raven.Client.Documents.Session
             return result;
         }
 
-        private int FindStartIndex(List<TimeSeriesEntry> entries, DateTime from)
+        private static int FindStartIndex(IList<DateTime> keys, DateTime from)
         {
             int left = 0;
-            int right = entries.Count - 1;
-            int result = -1;
+            int right = keys.Count - 1;
+            int result = keys.Count;
 
             while (left <= right)
             {
                 int mid = left + (right - left) / 2;
 
-                if (entries[mid].Timestamp >= from)
+                if (keys[mid] >= from)
                 {
                     result = mid;
                     right = mid - 1;
@@ -425,7 +399,7 @@ namespace Raven.Client.Documents.Session
                 }
             }
 
-            return result == -1 ? entries.Count : result;
+            return result;
         }
     }
 }

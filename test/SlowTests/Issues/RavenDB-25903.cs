@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -1030,17 +1028,14 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenAsyncSession())
             {
-                var sca = ((InMemoryDocumentSessionOperations)session).SessionCreatedAt;
-
-                // local append (not on the server) -> local range is exactly [baseline, sca]
                 session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline, 1);
 
                 // server range for [baseline, sca] exactly matches the local range -> merge CASE 7
-                var first = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, sca);
+                var first = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, baseline.AddHours(1));
                 Assert.Equal(4, first.Length); // 3 server + 1 local
 
                 // second read is served from cache; the local entry must not have been dropped by CASE 7
-                var second = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, sca);
+                var second = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, baseline.AddHours(1));
                 Assert.Equal(4, second.Length);
                 Assert.Contains(second, e => e.Timestamp == baseline);
             }
