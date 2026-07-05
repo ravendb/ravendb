@@ -59,8 +59,8 @@ namespace SlowTests.Server.Documents.Revisions
                     var remoteParams = new RemoteAttachmentParameters(identifier, remoteAt) { Flags = RemoteAttachmentFlags.Remote };
                     database.DocumentsStorage.AttachmentsStorage.PutAttachment(
                         ctx, docId, attachmentName, contentType, base64Hash, size: 1L,
-                        remoteParams: remoteParams, expectedChangeVector: null, stream: null,
-                        updateDocument: true, extractCollectionName: true);
+                        remoteParams: remoteParams, expectedChangeVector: null, stream: null, streamAlreadyInRemoteStorage : true,
+                        updateDocument: true, extractCollectionName: true, source: AttachmentsStorage.AttachmentSource.None);
                     tx.Commit();
                 }
 
