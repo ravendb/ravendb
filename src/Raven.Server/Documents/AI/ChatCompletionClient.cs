@@ -342,7 +342,7 @@ public class ChatCompletionClient : IDisposable
             await CompleteAsync(context, request, new AiUsage(), trace: null, token);
             return true;
         }
-        catch (Exception) when (token.IsCancellationRequested == false)
+        catch (Exception)
         {
             return false;
         }
