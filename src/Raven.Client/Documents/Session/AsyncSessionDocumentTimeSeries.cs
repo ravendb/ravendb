@@ -33,9 +33,6 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc cref="IAsyncSessionDocumentTimeSeries.GetAsync(DateTime?, DateTime?, Action{ITimeSeriesIncludeBuilder}, int, int, CancellationToken)"/>
         public async Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) 
         {
-            from = (from ?? DateTime.MinValue).EnsureUtc();
-            to = (to ?? DateTime.MaxValue).EnsureUtc();
-
             if (NotInCache(from, to))
             {
                 return await GetTimeSeriesAndIncludes<TimeSeriesEntry>(from, to, includes, start, pageSize, token)
@@ -54,8 +51,6 @@ namespace Raven.Client.Documents.Session
             return RemoveDeletedTimeSeries(resultToUser.Take(pageSize).ToList())?.ToArray();
         }
 
-        // Overlay in-session local appends/increments on top of a server-served result
-        // (local wins on the same timestamp).
         private IEnumerable<TimeSeriesEntry> OverlayLocalEntries(IEnumerable<TimeSeriesEntry> serverEntries, DateTime from, DateTime to)
         {
             var local = GetCachedEntriesInRange<TimeSeriesEntry>(from, to);
@@ -65,9 +60,7 @@ namespace Raven.Client.Documents.Session
             return MergeSorted(serverEntries as List<TimeSeriesEntry> ?? serverEntries.ToList(), local);
         }
 
-        private List<TTValues> GetCachedEntriesInRange<TTValues>(
-            DateTime from,
-            DateTime to)
+        private List<TTValues> GetCachedEntriesInRange<TTValues>(DateTime from, DateTime to)
             where TTValues : TimeSeriesEntry
         {
             if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false ||
@@ -77,13 +70,12 @@ namespace Raven.Client.Documents.Session
 
             var result = new List<TTValues>();
 
-            foreach (var kv in entries) // SortedList -> ascending by timestamp
+            foreach (var kv in entries)
             {
                 var e = kv.Value;
                 if (e.Timestamp < from || e.Timestamp > to)
                     continue;
 
-                // Locally-appended entries are stored untyped; convert to the requested entry type.
                 var converted = ConvertCachedEntry<TTValues>(e);
                 if (converted != null)
                     result.Add(converted);
@@ -92,8 +84,6 @@ namespace Raven.Client.Documents.Session
             return result.Count == 0 ? null : result;
         }
 
-        // Cached entries are stored untyped (base TimeSeriesEntry). A typed read must reconstruct
-        // the strongly-typed Value from the raw values, the same way GetTypedFromCache does.
         private TTValues ConvertCachedEntry<TTValues>(TimeSeriesEntry entry) where TTValues : TimeSeriesEntry
         {
             if (entry is TTValues alreadyTyped)
@@ -199,10 +189,6 @@ namespace Raven.Client.Documents.Session
             {
                 foreach (var range in ranges)
                 {
-                    // A server-backed range overlapping the request is enough: ServeFromCache serves it
-                    // fully, by page size, or by fetching only the missing gaps. In-session local appends
-                    // live in a separate overlay (LocalTimeSeries), so the range list here is clean
-                    // server coverage and can't corrupt the stitch.
                     if (range.From <= to && range.To >= from)
                         return false;
                 }
@@ -213,6 +199,8 @@ namespace Raven.Client.Documents.Session
 
         internal async Task<TTValues[]> GetTimeSeriesAndIncludes<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
+            from = from?.EnsureUtc();
+            to = to?.EnsureUtc();
             var cachedEntries = GetCachedEntriesInRange<TTValues>(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
 
             if (pageSize == 0)
@@ -252,130 +240,10 @@ namespace Raven.Client.Documents.Session
 
                 if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
                 {
-                    // update
-                    // 'inserted' tracks whether the merge below already placed 'rangeResult' (B)
-                    // into the list, so we don't add it a second time at the end.
-                    var inserted = false;
-
-                    for (int i = 0; i < ranges.Count; i++)
-                    {
-                        var A = ranges[i];
-                        var B = rangeResult;
-
-                        // CASE 1: A before B
-                        if (A.To < B.From)
-                            continue;
-
-                        // CASE 2: B before A
-                        if (B.To < A.From)
-                            continue;
-
-                        // CASE 7: Exact match - merge A's cached entries into B (don't drop them).
-                        // Reachable only for a local A (a non-local exact match is served straight from cache),
-                        // so A holds locally-appended entries that must be preserved.
-                        if (A.From == B.From && A.To == B.To)
-                        {
-                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
-                            ranges[i] = B;
-                            inserted = true;
-                            continue;
-                        }
-
-                        // CASE 6: B contains A
-                        if (B.From <= A.From && B.To >= A.To)
-                        {
-                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
-
-                            if (A.From < B.From)
-                                B.From = A.From;
-                            if (A.To > B.To)
-                                B.To = A.To;
-
-                            ranges.RemoveAt(i);
-                            i--;
-                            continue;
-                        }
-
-                        // CASE 3: A starts first, ends inside B
-                        if (A.From <= B.From && B.From <= A.To && A.To <= B.To)
-                        {
-                            var left = A.CloneRange(A.From, B.From);
-                            left.CachedEntries.RemoveAll(e => e.Timestamp >= B.From);
-
-                            if (left.IsLocal)
-                            {
-                                // keep A's pre-B part as a local remainder; B absorbs only A's entries inside B.
-                                // Do NOT extend B over A's local-only territory - that claims false server coverage.
-                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
-                                ranges[i] = left;
-                            }
-                            else
-                            {
-                                // A is server-backed: fold all of A into B
-                                B.From = A.From;
-                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
-                                ranges.RemoveAt(i);
-                                i--;
-                            }
-                            continue;
-                        }
-
-                        // CASE 4: B starts first, ends inside A
-                        if (B.From <= A.From && A.From <= B.To && B.To <= A.To)
-                        {
-                            var right = A.CloneRange(B.To, A.To);
-                            right.CachedEntries.RemoveAll(e => e.Timestamp <= B.To);
-
-                            if (right.IsLocal)
-                            {
-                                // keep A's post-B part as a local remainder; B absorbs only A's entries inside B.
-                                // Do NOT extend B over A's local-only territory - that claims false server coverage.
-                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
-                                ranges[i] = right;
-                            }
-                            else
-                            {
-                                // A is server-backed: fold all of A into B
-                                B.To = A.To;
-                                B.CachedEntries = MergeSorted(B.CachedEntries, A.CachedEntries);
-                                ranges.RemoveAt(i);
-                                i--;
-                            }
-                            continue;
-                        }
-
-                        // CASE 5: A contains B -> left [A.From, B.From) + B [B.From, B.To] + right (B.To, A.To]
-                        if (A.From <= B.From && A.To >= B.To)
-                        {
-                            var left = A.CloneRange(A.From, B.From);
-                            left.CachedEntries.RemoveAll(e => e.Timestamp >= B.From);
-
-                            var right = A.CloneRange(B.To, A.To);
-                            right.CachedEntries.RemoveAll(e => e.Timestamp <= B.To);
-
-                            // B absorbs only A's entries that fall inside B's range (no duplication with left/right)
-                            B.CachedEntries = MergeSorted(B.CachedEntries, A.CloneRange(B.From, B.To).CachedEntries);
-
-                            ranges.RemoveAt(i);
-
-                            if (right.CachedEntries.Count > 0)
-                                ranges.Insert(i, right);
-
-                            ranges.Insert(i, B);
-                            inserted = true;
-
-                            if (left.CachedEntries.Count > 0)
-                                ranges.Insert(i, left);
-
-                            continue;
-                        }
-                    }
-
-                    if (inserted == false)
-                        ranges.Add(rangeResult);
-
-                    // keep the ranges sorted by From
-                    ranges.Sort((x, y) => x.From.CompareTo(y.From));
+                    int index = ranges.Count;
+                    while (index > 0 && ranges[index - 1].From > rangeResult.From)
+                        index--;
+                    ranges.Insert(index, rangeResult);
                 }
                 else
                 {
@@ -423,8 +291,6 @@ namespace Raven.Client.Documents.Session
 
             return result;
         }
-
-
 
         private void HandleIncludes(TimeSeriesRangeResult rangeResult)
         {
@@ -594,9 +460,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        // The first entry of a range should be skipped when merging only if it duplicates the last
-        // entry already merged (adjacent ranges share a boundary entry). When ranges don't share a
-        // boundary, skipping unconditionally would drop a real entry.
         private static bool DuplicatesLastMerged(TimeSeriesEntry[] entries, List<TimeSeriesEntry> mergedValues)
         {
             return mergedValues.Count > 0 &&

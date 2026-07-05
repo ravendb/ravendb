@@ -46,9 +46,6 @@ namespace Raven.Client.Documents.Session.TimeSeries
         /// </summary>
         public bool IsRollup { get; set; }
 
-        [JsonIgnore]
-        internal bool IsLocal { get; set; }
-
         /// <summary>
         /// Gets or sets a dictionary of node-specific values for the time series entry.
         /// The key represents the node identifier, and the value is an array of numeric data points associated with that node.
