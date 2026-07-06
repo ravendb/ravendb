@@ -68,7 +68,7 @@ public class FilteredPullSinkClusterTombstoneTests : FilteredPullDualClusterTest
         }
 
         // ---- Phase 2: mend the channel and let replication move forward -> tombstones get cleaned everywhere ----
-        sinkToHubBreak.Mend();
+        await sinkToHubBreak.MendAsync();
 
         // Author a fresh ticket on every sink node and confirm it reaches the hub and all sinks. This advances each
         // node's component in the sink cursor past the tombstone etags, which is what lets the cleaner release them.

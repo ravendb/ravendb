@@ -493,7 +493,7 @@ namespace SlowTests.Cluster
             }
 
             // release replication after the second write
-            breakRepl.Mend();
+            await breakRepl.MendAsync();
 
             using (var session = store.OpenAsyncSession())
             {
