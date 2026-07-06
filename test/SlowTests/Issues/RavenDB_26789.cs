@@ -129,8 +129,8 @@ namespace SlowTests.Issues
                 var storage = newShard.DocumentsStorage;
                 using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, name, out _, out Slice nameSlice))
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out _, out Slice contentTypeSlice))
+                using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, name, out _, out Slice nameSlice))
+                using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, contentType, out _, out Slice contentTypeSlice))
                 using (Slice.From(context.Allocator, putResult.Hash, out Slice base64Hash))
                 using (Slice.From(context.Allocator, tombstone.Key, out Slice keySlice))
                 using (var stream = new MemoryStream(attachmentBytes))
