@@ -569,6 +569,14 @@ public static class QueryBuilderHelper
             metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, analyzer, hasBoost: hasBoost);
         }
 
+        if (metadata.Mode == FieldIndexingMode.No)
+        {
+            throw new InvalidQueryException(
+                $"The field '{metadata.FieldName}' is not indexed (its indexing option is set to 'FieldIndexing.No') " +
+                "and therefore cannot be used in a query filter. A non-indexed field can only be stored and returned via " +
+                "a projection. Remove it from the query or change its indexing option.");
+        }
+        
         return metadata;
         void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index.Name}'.");
     }
