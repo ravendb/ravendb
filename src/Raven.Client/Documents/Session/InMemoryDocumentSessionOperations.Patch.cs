@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Lambda2Js;
 using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
@@ -185,8 +186,9 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            if (ShouldUseJsonPatch(value) && HasExistingJavaScriptPatch(id) == false
-                                          && TryBuildJsonPointer(path.Body, out var jsonPointer))
+            if (Conventions.SessionPatchBehavior == SessionPatchBehavior.JsonPatch
+                && ShouldUseJsonPatch(value) && HasExistingJavaScriptPatch(id) == false
+                && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 var jpd = new JsonPatchDocument();
                 var convertedValue = ConvertValueForJsonPatch(value);
@@ -234,7 +236,8 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
-            if (HasExistingJavaScriptPatch(id) == false && TryCreateArrayJsonPatch(id, path, arrayAdder))
+            if (Conventions.SessionPatchBehavior == SessionPatchBehavior.JsonPatch
+                && HasExistingJavaScriptPatch(id) == false && TryCreateArrayJsonPatch(id, path, arrayAdder))
                 return;
 
             var extension = new JavascriptConversionExtensions.CustomMethods
@@ -276,7 +279,8 @@ namespace Raven.Client.Documents.Session
             else
                 key = GetKey(call);
 
-            if (HasExistingJavaScriptPatch(id) == false && TryBuildJsonPointer(path.Body, out var jsonPointer))
+            if (Conventions.SessionPatchBehavior == SessionPatchBehavior.JsonPatch
+                && HasExistingJavaScriptPatch(id) == false && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 var keyString = key?.ToString();
                 if (IsValidJsonPointerSegment(keyString))

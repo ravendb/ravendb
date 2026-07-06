@@ -6,7 +6,9 @@ using Newtonsoft.Json;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Tests.Infrastructure;
 using Xunit;
@@ -751,6 +753,282 @@ namespace SlowTests.Issues
                     Assert.Equal(30, doc.Temp.Celsius);
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_DefaultsToJsonPatch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Assert.Equal(SessionPatchBehavior.JsonPatch, store.Conventions.SessionPatchBehavior);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_JavaScript_SimpleProperty_UsesJavaScript()
+        {
+            using (var store = GetJavaScriptPatchStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Original", Age = 25 }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Name, "Updated");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal("Updated", user.Name);
+                    Assert.Equal(25, user.Age);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_JavaScript_ArrayAdd_UsesJavaScript()
+        {
+            using (var store = GetJavaScriptPatchStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Test", Tags = new List<string> { "a", "b" } }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.Add("c"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal(3, user.Tags.Count);
+                    Assert.Equal("c", user.Tags[2]);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_JavaScript_ArrayRemoveAt_UsesJavaScript()
+        {
+            using (var store = GetJavaScriptPatchStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Test", Tags = new List<string> { "a", "b", "c" } }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.RemoveAt(1));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal(2, user.Tags.Count);
+                    Assert.Equal("a", user.Tags[0]);
+                    Assert.Equal("c", user.Tags[1]);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_JavaScript_DictionaryAdd_UsesJavaScript()
+        {
+            using (var store = GetJavaScriptPatchStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags
+                    {
+                        Name = "Test",
+                        Settings = new Dictionary<string, string> { { "theme", "light" } }
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string, string>("users/1", u => u.Settings, d => d.Add("lang", "en"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal(2, user.Settings.Count);
+                    Assert.Equal("en", user.Settings["lang"]);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_JavaScript_DictionaryRemove_UsesJavaScript()
+        {
+            using (var store = GetJavaScriptPatchStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags
+                    {
+                        Name = "Test",
+                        Settings = new Dictionary<string, string> { { "theme", "light" }, { "lang", "en" } }
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string, string>("users/1", u => u.Settings, d => d.Remove("lang"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Single(user.Settings);
+                    Assert.Equal("light", user.Settings["theme"]);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_ArrayRemoveAtOutOfRange_ThrowsUnderJsonPatch_NoOpUnderJavaScript()
+        {
+            // Default (JsonPatch): out-of-range RemoveAt reaches the server as `remove /Tags/10`,
+            // which strict RFC 6902 remove rejects -> SaveChanges throws.
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Test", Tags = new List<string> { "a", "b", "c" } }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.RemoveAt(10));
+                    Assert.ThrowsAny<RavenException>(() => session.SaveChanges());
+                }
+            }
+
+            // JavaScript convention mitigates it: legacy splice(10, 1) is a silent no-op.
+            using (var store = GetJavaScriptPatchStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Test", Tags = new List<string> { "a", "b", "c" } }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.RemoveAt(10));
+                    session.SaveChanges(); // no-op, must not throw
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal(3, user.Tags.Count); // unchanged
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public void SessionPatchBehavior_DictionaryRemoveAbsentKey_ThrowsUnderJsonPatch_NoOpUnderJavaScript()
+        {
+            // Default (JsonPatch): removing a missing key reaches the server as `remove /Settings/missing`,
+            // which strict RFC 6902 remove rejects -> SaveChanges throws.
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags
+                    {
+                        Name = "Test",
+                        Settings = new Dictionary<string, string> { { "theme", "light" } }
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string, string>("users/1", u => u.Settings, d => d.Remove("missing"));
+                    Assert.ThrowsAny<RavenException>(() => session.SaveChanges());
+                }
+            }
+
+            // JavaScript convention mitigates it: `delete obj['missing']` is a silent no-op.
+            using (var store = GetJavaScriptPatchStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags
+                    {
+                        Name = "Test",
+                        Settings = new Dictionary<string, string> { { "theme", "light" } }
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<UserWithTags, string, string>("users/1", u => u.Settings, d => d.Remove("missing"));
+                    session.SaveChanges(); // no-op, must not throw
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Single(user.Settings);
+                    Assert.Equal("light", user.Settings["theme"]);
+                }
+            }
+        }
+
+        private Raven.Client.Documents.IDocumentStore GetJavaScriptPatchStore()
+        {
+            return GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.SessionPatchBehavior = SessionPatchBehavior.JavaScript
+            });
         }
 
         private struct Temperature
