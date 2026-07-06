@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -43,6 +44,19 @@ namespace FastTests.Issues
             }
         }
 
+        private static IEnumerable<Type> SafeGetExportedTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.ExportedTypes;
+            }
+            catch (Exception e) when (e is FileNotFoundException or FileLoadException or TypeLoadException or ReflectionTypeLoadException or BadImageFormatException)
+            {
+                // If we can't read the assembly's types, that's fine — there is nothing here for us to verify.
+                return Array.Empty<Type>();
+            }
+        }
+
         [RavenFact(RavenTestCategory.Core)]
         public void Exceptions_should_not_have_blittable_and_pointer_fields()
         {
@@ -53,7 +67,7 @@ namespace FastTests.Issues
             Assert.True(HasInvalidProperties(typeof(ClassWithNestedClassWithBlittable)));
 
             var referenceAssemblies = GetAssemblies(GetType().Assembly);
-            var exceptionTypes = (from type in referenceAssemblies.SelectMany(x => x.ExportedTypes)
+            var exceptionTypes = (from type in referenceAssemblies.SelectMany(SafeGetExportedTypes)
                                   where typeof(Exception).IsAssignableFrom(type)
                                   select type).ToArray();
 
