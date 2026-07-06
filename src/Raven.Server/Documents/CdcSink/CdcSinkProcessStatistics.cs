@@ -12,16 +12,12 @@ public class CdcSinkProcessStatistics
 {
     private readonly string _processName;
 
-    // Mutated from both the process thread (RecordConsumeError / OnBatchCompletion / SetHealthStatusToFailed)
-    // and the TxMerger thread (ConsumeSuccess / RecordItemError / NewBatch). All mutations take this lock so
-    // the per-batch error/success tally and its threshold check stay atomic and the in-memory error buffer
-    // isn't corrupted by concurrent Add/Clear. Cross-thread reads of the int/bool counters for monitoring
-    // are intentionally lock-free (atomic reads; a slightly stale value is acceptable there).
-    private readonly object _lock = new();
-
-    // Per-batch item errors (per-document apply failures + JS-script failures). Buffered here while
-    // the batch executes inside the TxMerger and flushed to TaskErrorsStorage from the process
-    // thread once the batch completes (see CdcSinkProcess.SubmitBatch).
+    // Mutated only by the single CDC process pipeline, so no synchronization is needed (same as
+    // EtlProcessStatistics): the batch command writes the tally and buffer on the TxMerger thread while
+    // the process thread is parked at 'await Enqueue', and OnBatchCompletion / RecordConsumeError /
+    // SetHealthStatusToFailed / DrainInMemoryItemErrors run on the process thread only after that await
+    // returns - the writes never overlap. Cross-thread reads of the counters / HealthStatus for monitoring
+    // are lock-free; a slightly stale value there is acceptable.
     private readonly List<TaskItemError> _itemErrors = new();
 
     private readonly CdcSinkConfiguration _configuration;
@@ -59,25 +55,19 @@ public class CdcSinkProcessStatistics
 
     public void ConsumeSuccess(int items)
     {
-        lock (_lock)
-        {
-            WasLatestConsumeSuccessful = true;
-            ConsumeSuccesses += items;
-            _batchSuccesses += items;
-        }
+        WasLatestConsumeSuccessful = true;
+        ConsumeSuccesses += items;
+        _batchSuccesses += items;
     }
 
     public void RecordConsumeError(int count = 1)
     {
-        lock (_lock)
-        {
-            WasLatestConsumeSuccessful = false;
-            ConsumeErrors += count;
-            LastConsumeErrorTime = SystemTime.UtcNow;
+        WasLatestConsumeSuccessful = false;
+        ConsumeErrors += count;
+        LastConsumeErrorTime = SystemTime.UtcNow;
 
-            _batchErrors += count;
-            UpdateHealthStatusOnBatchCompletion();
-        }
+        _batchErrors += count;
+        UpdateHealthStatusOnBatchCompletion();
     }
 
     /// <summary>
@@ -86,56 +76,47 @@ public class CdcSinkProcessStatistics
     /// </summary>
     public void RecordItemError(TaskErrorStep step, string error, string documentId)
     {
-        lock (_lock)
+        WasLatestConsumeSuccessful = false;
+
+        ConsumeErrors++;
+        _batchErrors++;
+
+        _itemErrors.Add(new TaskItemError
         {
-            WasLatestConsumeSuccessful = false;
+            CreatedAt = SystemTime.UtcNow,
+            TaskName = _processName,
+            DocumentId = documentId,
+            Step = step,
+            Error = error
+        });
 
-            ConsumeErrors++;
-            _batchErrors++;
-
-            _itemErrors.Add(new TaskItemError
-            {
-                CreatedAt = SystemTime.UtcNow,
-                TaskName = _processName,
-                DocumentId = documentId,
-                Step = step,
-                Error = error
-            });
-
-            LastConsumeErrorTime = SystemTime.UtcNow;
-        }
+        LastConsumeErrorTime = SystemTime.UtcNow;
     }
 
     /// <summary>
-    /// Returns the buffered item errors and clears the buffer in one locked step. Draining on read (rather
-    /// than relying on the next <see cref="NewBatch"/> to clear) prevents a re-flush of the same errors if a
+    /// Returns the buffered item errors and clears the buffer in one step. Draining on read (rather than
+    /// relying on the next <see cref="NewBatch"/> to clear) prevents a re-flush of the same errors if a
     /// following batch is enqueued but never reaches <see cref="NewBatch"/> - e.g. the TxMerger rejects it on
     /// shutdown - which would otherwise duplicate the previous batch's rows in TaskErrorsStorage.
     /// </summary>
     public List<TaskItemError> DrainInMemoryItemErrors()
     {
-        lock (_lock)
-        {
-            if (_itemErrors.Count == 0)
-                return null;
+        if (_itemErrors.Count == 0)
+            return null;
 
-            var errors = _itemErrors.ToList();
-            _itemErrors.Clear();
-            return errors;
-        }
+        var errors = _itemErrors.ToList();
+        _itemErrors.Clear();
+        return errors;
     }
 
     public void NewBatch()
     {
-        lock (_lock)
-        {
-            // Start each batch (and each TxMerger re-run of a batch) with an empty buffer so a
-            // re-executed command stores only the errors from its final attempt. The per-batch
-            // error/success tally is reset for the same reason - only the final attempt feeds the EWMA.
-            _itemErrors.Clear();
-            _batchErrors = 0;
-            _batchSuccesses = 0;
-        }
+        // Start each batch (and each TxMerger re-run of a batch) with an empty buffer so a
+        // re-executed command stores only the errors from its final attempt. The per-batch
+        // error/success tally is reset for the same reason - only the final attempt feeds the EWMA.
+        _itemErrors.Clear();
+        _batchErrors = 0;
+        _batchSuccesses = 0;
     }
 
     /// <summary>
@@ -145,14 +126,11 @@ public class CdcSinkProcessStatistics
     /// </summary>
     public void OnBatchCompletion()
     {
-        lock (_lock)
-        {
-            UpdateHealthStatusOnBatchCompletion();
-        }
+        UpdateHealthStatusOnBatchCompletion();
     }
 
     // Feeds the current per-batch tally into the EWMA, recomputes HealthStatus from the error ratio vs
-    // the configured thresholds, then resets the tally. Caller must hold _lock.
+    // the configured thresholds, then resets the tally.
     private void UpdateHealthStatusOnBatchCompletion()
     {
         AverageErrorsRatio.UpdateOnBatchCompletion(_batchErrors, _batchErrors + _batchSuccesses);
@@ -180,10 +158,7 @@ public class CdcSinkProcessStatistics
     /// </summary>
     public void SetHealthStatusToFailed()
     {
-        lock (_lock)
-        {
-            _setHealthStatusToFailedOnFault = true;
-            HealthStatus = OngoingTaskHealthStatus.Failed;
-        }
+        _setHealthStatusToFailedOnFault = true;
+        HealthStatus = OngoingTaskHealthStatus.Failed;
     }
 }
