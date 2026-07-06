@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlType EtlType { get; }
 
-        public TaskCategory TaskCategory => TaskTypeExtensions.FromEtlType(EtlType);
+        public TaskCategory TaskCategory => TaskTypeExtensions.GetTaskCategoryFromEtlType(EtlType);
 
         public virtual string EtlSubType { get; }
 

@@ -1005,7 +1005,7 @@ namespace Raven.Server.Documents.ETL
                     if (existingProcessNames.Contains(process.Name))
                         continue;
 
-                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskTypeExtensions.FromEtlType(process.EtlType));
+                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskTypeExtensions.GetTaskCategoryFromEtlType(process.EtlType));
                 }
             }
 
