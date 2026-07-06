@@ -13,7 +13,7 @@ describe("parseProcessName", () => {
         expect(parseProcessName("prod/orders-sink", "CdcSink")).toEqual(["prod/orders-sink", ""]);
     });
 
-    test("does not split an AI task name that contains a slash", () => {
-        expect(parseProcessName("my/agent", "Ai")).toEqual(["my/agent", ""]);
+    test("splits an AI task name into task and transformation (AI tasks are ETL processes under the hood)", () => {
+        expect(parseProcessName("my/agent", "Ai")).toEqual(["my", "agent"]);
     });
 });
