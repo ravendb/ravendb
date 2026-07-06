@@ -43,8 +43,12 @@ public class CdcSinkLoader : IDisposable
     public IEnumerable<string> GetCdcSinkProcessNamesFromRecord()
     {
         if (Sinks != null)
+        {
             foreach (var config in Sinks)
+            {
                 yield return config.Name;
+            }
+        }
     }
 
     public void Initialize(DatabaseRecord record)
