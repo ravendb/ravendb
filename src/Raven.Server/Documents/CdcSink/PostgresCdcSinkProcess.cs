@@ -12,6 +12,7 @@ using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Schema;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.NpgSQL;
 using Sparrow.Json;
@@ -57,9 +58,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private string _publicationName;
     private string _slotName;
 
-    // Set once the "publication includes unconfigured tables" advisory has been recorded, so it isn't
-    // re-stored on every reconnect; reset when the condition clears so a later regression re-reports.
-    private bool _extraTablesAdvisoryRecorded;
     private uint _vectorOid = uint.MaxValue; // pgvector extension OID, resolved at setup time. MaxValue = not installed.
 
     /// <summary>
@@ -318,19 +316,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         if (extra.Count > 0)
         {
-            // Record once per process while the condition holds - EnsureReplicationSetup re-runs on
-            // every reconnect, and this advisory (not a failure) would otherwise pile up in the error table.
-            if (_extraTablesAdvisoryRecorded == false)
-            {
-                RecordProcessError(TaskErrorStep.Configuration,
-                    $"Publication '{_publicationName}' includes tables not configured in the CDC Sink task: {string.Join(", ", extra)}. " +
-                    "Rows from these tables will be discarded. Consider narrowing the publication to only the configured tables.");
-                _extraTablesAdvisoryRecorded = true;
-            }
-        }
-        else
-        {
-            _extraTablesAdvisoryRecorded = false;
+            Database.NotificationCenter.Add(AlertRaised.Create(
+                Database.Name,
+                Tag,
+                $"Publication '{_publicationName}' includes tables not configured in the CDC Sink task: {string.Join(", ", extra)}. " +
+                "Rows from these tables will be discarded. Consider narrowing the publication to only the configured tables.",
+                AlertReason.CdcSink_Warning,
+                NotificationSeverity.Warning,
+                key: $"{Tag}/{Name}/publication-extra-tables"));
         }
     }
 
