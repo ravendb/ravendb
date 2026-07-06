@@ -71,11 +71,15 @@ public class QueryPlanGraphMatchCoverageTests : RavenTestBase
     // EmptyQueryMatch is the degenerate empty-result plan (missing field/term) returned directly to the caller.
     // ToGraphviz receives it at the top level, finds no CompiledQuery/PostFilterMatch, and renders the valid
     // "no compiled op stream" fallback — it carries no DestSlot ops, so there is nothing else to draw.
+    // NegatedPostFilterMatch is the root wrapper for negated spatial/vector clauses: it materializes the
+    // candidate universe and subtracts each clause's matches. ToGraphviz recurses through it (FindNode) to render
+    // the inner CompiledQuery pipeline; surfacing its subtracted post-filters in the graph is a separate follow-up.
     private static readonly HashSet<string> RootMatches = new()
     {
         "CompiledQueryMatch",
         "PostFilterMatch",
         "EmptyQueryMatch",
+        "NegatedPostFilterMatch",
     };
 
     private static bool PostFilterPredicate(string name)
