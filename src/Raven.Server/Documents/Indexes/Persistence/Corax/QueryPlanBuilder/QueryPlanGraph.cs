@@ -69,6 +69,7 @@ internal static class QueryPlanGraph
     private const string VariantEntryScanIfTaken = "entryscan-iftaken";
 
     private const string TakenGreen = "#1a7f37";
+    private const string NegatedRed = "#b35900"; // negated (subtracting) post-filters, to distinguish from positive ones
 
      public static string ToGraphviz(QueryInspectionNode plan)
     {
@@ -404,7 +405,8 @@ internal static class QueryPlanGraph
                 break;
 
             case PostFilterOp:
-                node.Attributes["color"] = TakenGreen;
+                // Negated post-filters (subtraction) are drawn in a distinct colour from positive (intersecting) ones.
+                node.Attributes["color"] = node.Data.GetValueOrDefault("Negated") == "true" ? NegatedRed : TakenGreen;
                 node.Attributes["label"] = PostFilterLabel(node.Data);
                 break;
 
@@ -734,6 +736,11 @@ internal static class QueryPlanGraph
             parts = [match];
             AddIf(p, parts, "FieldName");
         }
+
+        // A negated post-filter subtracts its matches (candidates \ matches) rather than intersecting them;
+        // surface that so `not spatial.within(...)` / `not vector.search(...)` is not drawn as a positive filter.
+        if (p.GetValueOrDefault("Negated") == "true")
+            parts.Insert(0, "NEGATED (excluded)");
 
         for (int i = 0; i < parts.Count; i++)
         {

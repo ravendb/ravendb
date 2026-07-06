@@ -90,7 +90,13 @@ public sealed class NegatedPostFilterMatch : IQueryMatch, IDisposable
 
         var children = new List<QueryInspectionNode>(_builtClauses.Count + 1) { _universe.Inspect() };
         foreach (var clause in _builtClauses)
-            children.Add(clause.Inspect());
+        {
+            // Mark the clause node itself (not the universe subtree, which may hold positive post-filters in a
+            // mixed query) so the plan-graph renders it as a subtraction rather than an intersecting post-filter.
+            var node = clause.Inspect();
+            node.Parameters["Negated"] = "true";
+            children.Add(node);
+        }
 
         return new QueryInspectionNode(nameof(NegatedPostFilterMatch), parameters: parameters, children: children);
     }
