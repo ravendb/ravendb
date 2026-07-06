@@ -22,7 +22,7 @@ internal sealed class DeleteTaskErrorsCommand : RavenCommand
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"{node.Url}/databases/{node.Database}/{_taskCategory.ErrorsEndpoint()}";
+        url = $"{node.Url}/databases/{node.Database}/{_taskCategory.GetErrorsEndpoint()}";
 
         foreach (var name in _names)
             url = QueryHelpers.AddQueryString(url, "name", name);
