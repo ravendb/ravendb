@@ -171,18 +171,17 @@ namespace Raven.Server.Documents
                         throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
                 }
 
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, name, out Slice lowerName, out Slice namePtr))
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+                using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
+                using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                 using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
                 using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
                            lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
                 {
                     Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
-                    DeleteTombstoneIfNeeded(context, keySlice);
-
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
-                    Debug.Assert(changeVector != null);
+                    ChangeVector changeVector = null;
+                    if (DeleteTombstoneIfNeeded(context, keySlice, out var tombstoneChangeVector))
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, attachmentEtag);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     void SetTableValue(TableValueBuilder tvb, Slice cv)
@@ -201,12 +200,12 @@ namespace Raven.Server.Documents
                         // This is an update to the attachment with the same stream and content type
                         // Just updating the etag and casing of the name and the content type.
 
-                        if (expectedChangeVector != null)
-                        {
-                            var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
-                            if (ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
-                                ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
-                        }
+                        var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref oldValue);
+                        if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
+                            ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
+
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
+                        Debug.Assert(changeVector != null);
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
@@ -226,12 +225,12 @@ namespace Raven.Server.Documents
                             if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out TableValueReader partialTvr))
                             {
                                 attachmentExists = true;
-                                if (expectedChangeVector != null)
-                                {
-                                    var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
-                                    if (ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
-                                        ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
-                                }
+
+                                var oldChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref partialTvr);
+                                if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
+                                    ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
+
+                                changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
 
                                 if (fromSmuggler == false)
                                 {
@@ -278,6 +277,9 @@ namespace Raven.Server.Documents
                         {
                             PutAttachmentStream(context, keySlice, base64Hash, stream);
                         }
+
+                        changeVector ??= _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                        Debug.Assert(changeVector != null);
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
@@ -328,12 +330,14 @@ namespace Raven.Server.Documents
 
             var newEtag = _documentsStorage.GenerateNextEtag();
 
+            var hadTombstone = DeleteTombstoneIfNeeded(context, key, out var tombstoneChangeVector);
             if (string.IsNullOrEmpty(changeVector))
             {
-                changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                changeVector = hadTombstone
+                    ? ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, newEtag).AsString()
+                    : _documentsStorage.GetNewChangeVector(context, newEtag);
             }
             Debug.Assert(changeVector != null);
-            DeleteTombstoneIfNeeded(context, key);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
@@ -440,7 +444,7 @@ namespace Raven.Server.Documents
         public void DeleteAttachmentBeforeRevert(DocumentsOperationContext context, LazyStringValue lowerDocId)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, lowerDocId, out Slice lowerId, out Slice idSlice))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, lowerDocId, out Slice lowerId, out Slice idSlice))
             {
                 AttachmentKey.GetPrefix(context, lowerId.Content.Ptr, lowerId.Content.Length, AttachmentType.Document, default, out var key);
                 table.DeleteByPrimaryKeyPrefix(key);
@@ -479,8 +483,8 @@ namespace Raven.Server.Documents
                 var type = AttachmentType.Document;
 
                 using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerDocumentId))
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, name, out Slice lowerName, out Slice nameSlice))
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice nameSlice))
+                using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                 using (Slice.External(context.Allocator, hash, out Slice base64Hash))
                 using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                            base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
@@ -496,8 +500,8 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.Name, out Slice lowerName, out Slice namePtr))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.ContentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice lowerName, out Slice namePtr))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice lowerContentType, out Slice contentTypePtr))
             using (Slice.From(context.Allocator, attachment.Hash, out var hashSlice))
             using (AttachmentKey.GetKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, hashSlice,
                        lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
@@ -647,7 +651,7 @@ namespace Raven.Server.Documents
 
         public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, string docId)
         {
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, docId, out var lowerDocumentId, out _))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, docId, out var lowerDocumentId, out _))
             {
                 return GetAttachmentsMetadataForDocument(context, lowerDocumentId);
             }
@@ -743,7 +747,7 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+                    using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                     using (Slice.From(context.Allocator, hash, out Slice base64Hash))
                     {
                         scope = AttachmentKey.GetKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
@@ -902,7 +906,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             while (true)
             {
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, newName, out Slice lowerName, out _))
+                using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerName, out _))
                 using (AttachmentKey.GetPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document,
                            changeVector: null, out Slice partialKeySlice))
                 {
@@ -960,7 +964,7 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
-                        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+                        using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                         using (Slice.From(context.Allocator, hash, out Slice base64Hash))
                         {
                             scope = AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
@@ -1136,10 +1140,16 @@ namespace Raven.Server.Documents
             context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
         }
 
-        private void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
+        private bool DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice, out ChangeVector changeVector)
         {
+            changeVector = null;
             var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
-            table.DeleteByKey(keySlice);
+            if (table.ReadByKey(keySlice, out var existingTombstoneTvr) == false)
+                return false;
+
+            changeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref existingTombstoneTvr);
+            table.Delete(existingTombstoneTvr.Id);
+            return true;
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,

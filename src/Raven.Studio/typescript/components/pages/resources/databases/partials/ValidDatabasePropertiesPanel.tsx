@@ -336,14 +336,17 @@ function getLocalGeneralInfo(
     dbStates: locationAwareLoadableData<DatabaseLocalInfo>[],
     localNodeTag: string
 ): LocalGeneralInfo {
-    const allShards = new Set(
-        dbStates.filter((x) => x.location.nodeTag === localNodeTag).map((x) => x.location.shardNumber ?? -1)
+    const localDbStates = dbStates.filter((x) => x.location.nodeTag === localNodeTag);
+    const hasLocalLocations = localDbStates.length > 0;
+    const expectedShardKeys = new Set(
+        (hasLocalLocations ? localDbStates : dbStates).map((x) => x.location.shardNumber ?? -1)
     );
 
-    const localDbStatesWithoutErrors = dbStates.filter(
-        (x) => x.location.nodeTag === localNodeTag && x.status === "success" && !x.data?.loadError
-    );
-    const hasLocalNodeAllData = localDbStatesWithoutErrors.length === allShards.size;
+    // When the current node does not host this database, use the first healthy node in topology order.
+    const dbStatesToUse = hasLocalLocations ? localDbStates : getFirstAvailableDbStatesByShard(dbStates);
+    const localDbStatesWithoutErrors = dbStatesToUse.filter((x) => x.status === "success" && !x.data?.loadError);
+    const availableShardKeys = new Set(localDbStatesWithoutErrors.map((x) => x.location.shardNumber ?? -1));
+    const hasLocalNodeAllData = expectedShardKeys.size > 0 && availableShardKeys.size === expectedShardKeys.size;
 
     const totalSizeWithTempBuffers = sumBy(
         localDbStatesWithoutErrors,
@@ -361,6 +364,20 @@ function getLocalGeneralInfo(
         totalDocuments,
         backupStatus,
     };
+}
+
+function getFirstAvailableDbStatesByShard(
+    dbStates: locationAwareLoadableData<DatabaseLocalInfo>[]
+): locationAwareLoadableData<DatabaseLocalInfo>[] {
+    const shardKeys = Array.from(new Set(dbStates.map((x) => x.location.shardNumber ?? -1)));
+
+    return shardKeys
+        .map((shardKey) =>
+            dbStates.find(
+                (x) => (x.location.shardNumber ?? -1) === shardKey && x.status === "success" && !x.data?.loadError
+            )
+        )
+        .filter(Boolean);
 }
 
 export const exportedForTesting = {

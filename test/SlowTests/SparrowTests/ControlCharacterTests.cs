@@ -586,8 +586,8 @@ public class ControlCharacterTests : ClusterTestBase
         using var memoryStream = new MemoryStream();
 
         using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, id, out var withoutAsciiSliceLower, out var withoutAsciiSlice))
-        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, idWithNonAscii, out var withAsciiSliceLower, out var withAsciiSlice))
+        using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, id, out var withoutAsciiSliceLower, out var withoutAsciiSlice))
+        using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, idWithNonAscii, out var withAsciiSliceLower, out var withAsciiSlice))
         {
             var withoutAsciiLazyString = GetLazyStringValue(context, withoutAsciiSlice);
             var withAsciiLazyString = GetLazyStringValue(context, withAsciiSlice);
@@ -683,12 +683,27 @@ public class ControlCharacterTests : ClusterTestBase
 
     public static async Task AssertThrowsAnyAsync<T>(Func<Task> testCode) where T : Exception
     {
-        var e = await Assert.ThrowsAnyAsync<Exception>(testCode);
+        var actual = await Assert.ThrowsAnyAsync<Exception>(testCode);
 
-        while (e.InnerException is { } temp)
-            e = temp;
+        Assert.True(Flatten(actual).OfType<T>().Any(),
+            $"Expected an exception of type '{typeof(T)}' somewhere in the exception tree, but none was found.{Environment.NewLine}" +
+            $"Actual exception tree:{Environment.NewLine}{actual}");
+        return;
 
-        Assert.IsType<T>(e);
+        static IEnumerable<Exception> Flatten(Exception exception)
+        {
+            if (exception == null)
+                yield break;
+
+            yield return exception;
+
+            IEnumerable<Exception> inner = exception is AggregateException aggregate
+                ? aggregate.InnerExceptions.SelectMany(Flatten)
+                : Flatten(exception.InnerException);
+
+            foreach (var child in inner)
+                yield return child;
+        }
     }
     
     private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)

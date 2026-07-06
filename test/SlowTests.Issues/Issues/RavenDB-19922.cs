@@ -58,11 +58,8 @@ namespace SlowTests.Issues
 
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                string tag1;
-                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                {
-                    tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                }
+                var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                string tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
                 
@@ -73,10 +70,8 @@ namespace SlowTests.Issues
                 string tag2 = "";
                 await WaitForValueAsync(async () =>
                 {
-                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                    {
-                        tag2 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                    }
+                    var dbi = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    tag2 = dbi.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                     return tag1.Equals(tag2);
                 }, false);
 

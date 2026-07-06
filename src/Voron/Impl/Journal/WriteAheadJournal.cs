@@ -140,11 +140,12 @@ namespace Voron.Impl.Journal
             return journal;
         }
 
-        public bool RecoverDatabase(TransactionHeader* txHeader, Action<LogLevel, string> addToInitLog)
+        public bool RecoverDatabase(TransactionHeader* txHeader, Action<LogLevel, string> addToInitLog, out bool skippedInvalidJournals)
         {
             // note, we don't need to do any concurrency here, happens as a single threaded
             // fashion on db startup
             var requireHeaderUpdate = false;
+            skippedInvalidJournals = false;
 
             var logInfo = _headerAccessor.Get(ptr => ptr->Journal);
             var currentFileHeader = _headerAccessor.Get(ptr => *ptr);
@@ -247,6 +248,8 @@ namespace Voron.Impl.Journal
                 {
                     if (_env.Options.IgnoreInvalidJournalErrors == true)
                     {
+                        skippedInvalidJournals = true;
+
                         addToInitLog?.Invoke(LogLevel.Debug,
                             $"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set");
                         continue;

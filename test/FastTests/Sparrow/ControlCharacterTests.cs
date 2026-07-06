@@ -177,7 +177,7 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
     public void HasControlCharacters_Char(string input, bool expected) =>
         Assert.Equal(expected, StringUtils.HasControlCharacters(input.AsSpan()));
 
-    // ── FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility ──────
+    // ── Compatibility.FindMaxEscapePositionAndControlCharSize ────────────────
     //
     // formula: (escapeCount + 1) * 5 + controlCount * 5
     //   Escape → escapeCount++  → (1+1)*5 = 10, controlCount = 0
@@ -213,7 +213,7 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
         var bytes = Encoding.UTF8.GetBytes(input);
         fixed (byte* ptr = bytes)
         {
-            int result = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(ptr, bytes.Length, out int controlCount);
+            int result = StringUtils.Compatibility.FindMaxEscapePositionAndControlCharSize(ptr, bytes.Length, out int controlCount);
             Assert.Equal(expectedSize, result);
             Assert.Equal(expectedControlCount, controlCount);
         }
@@ -223,12 +223,12 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
     [MemberData(nameof(FindMaxEscapePositionAndControlCharSizeData))]
     public void FindMaxEscapePositionAndControlCharSize_Chars(string input, int expectedSize, int expectedControlCount)
     {
-        int result = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(input.AsSpan(), out int controlCount);
+        int result = StringUtils.Compatibility.FindMaxEscapePositionAndControlCharSize(input.AsSpan(), out int controlCount);
         Assert.Equal(expectedSize, result);
         Assert.Equal(expectedControlCount, controlCount);
     }
 
-    // ── FindEscapedPositionsAndEscapeControlsForBackwardCompatibility ────────
+    // ── Compatibility.FindEscapedPositionsAndEscapeControls ──────────────────
     //
     //   Escape → offset recorded in list, length unchanged
     //   Control     → expanded in-place to \uXXXX (len += 5), nothing added to list
@@ -256,7 +256,7 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
     [MemberData(nameof(FindEscapedPositionsData))]
     public void FindEscapedPositionsAndEscapeControls(int intVal, string input, int expectedLen, int[] expectedOffsets, string expectedContent)
     {
-        int maxSize = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(input.AsSpan(), out _);
+        int maxSize = StringUtils.Compatibility.FindMaxEscapePositionAndControlCharSize(input.AsSpan(), out _);
         var buf = new byte[input.Length + maxSize];
         Encoding.UTF8.GetBytes(input, buf);
 
@@ -265,7 +265,7 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
 
         fixed (byte* ptr = buf)
         {
-            StringUtils.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(list, ptr, ref len, maxSize);
+            StringUtils.Compatibility.FindEscapedPositionsAndEscapeControls(list, ptr, ref len, maxSize);
 
             Assert.Equal(expectedLen, len);
             Assert.Equal(expectedOffsets, list.ToArray());

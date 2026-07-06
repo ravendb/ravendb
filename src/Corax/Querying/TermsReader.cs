@@ -149,6 +149,12 @@ public unsafe struct TermsReader : IDisposable
         return xTerm;
     }
     
+    public ReadOnlySpan<byte> GetDecodedTerm(UnmanagedSpan x)
+    {
+        DecodeKey(_xKeyScope, x.Address, x.Length, _dictionaryId, out var xTerm);
+        return xTerm;
+    }
+
     public void GetDecodedTermsByIds(long dictionaryId, long xIds, out ReadOnlySpan<byte> xTerm, long yIds, out ReadOnlySpan<byte> yTerm)
     {
         var xKey = GetTerm(xIds);
