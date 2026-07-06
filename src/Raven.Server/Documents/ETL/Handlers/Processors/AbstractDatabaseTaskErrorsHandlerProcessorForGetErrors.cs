@@ -23,8 +23,9 @@ internal abstract class AbstractDatabaseTaskErrorsHandlerProcessorForGetErrors :
 
     protected abstract string EndpointDebugName { get; }
 
-    // ETL/AI enrich each result with the live process (for EtlType/subtype); CDC Sink has no ETL
-    // process and overrides this to return null.
+    // The live ETL process supplies each result's EtlType and EtlSubType (see BuildTaskErrors). ETL and AI
+    // tasks are ETL processes, so they resolve it by name here; CDC Sink is not an ETL process and overrides
+    // this to return null, leaving EtlType/EtlSubType unset on its results.
     protected virtual IReadOnlyDictionary<string, EtlProcess> GetProcessesByName() =>
         RequestHandler.Database.EtlLoader.Processes.ToDictionary(p => p.Name, p => p, StringComparer.Ordinal);
 
