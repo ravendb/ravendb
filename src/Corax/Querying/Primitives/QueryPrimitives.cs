@@ -392,20 +392,7 @@ public static class QueryPrimitives
             long remaining = limit - total;
             read = (int)Math.Min(read, remaining);
             if (read <= 0) break;
-
-            // AddRange requires strictly sorted, unique input. Fill's contract is sorted+unique per call, but some
-            // per-entry matches don't honour it — a spatial shape-scan concatenates several geohash cells into one
-            // page, and a vector search streams in similarity order — so normalize the page before the bulk insert.
-            var page = buffer.Slice(0, read);
-            page.Sort();
-            int unique = 0;
-            for (int i = 0; i < page.Length; i++)
-            {
-                if (unique == 0 || page[i] != page[unique - 1])
-                    page[unique++] = page[i];
-            }
-
-            bitmap.AddRange(page.Slice(0, unique));
+            bitmap.AddRange(buffer.Slice(0, read));
             total += read;
         }
     }

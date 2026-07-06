@@ -66,7 +66,9 @@ public sealed class CoraxVectorItem(QueryBuilderParameters parameters) : IQueryM
         if (_isEmpty)
             return parameters.IndexSearcher.EmptyMatch();
 
-        bool singleVectorSearch = _isVectorSingleClause || streamScoreOrder;
+        // A negated vector is subtracted (order irrelevant) and must materialize id-sorted for the set-difference,
+        // so it cannot take the score-order streaming path — force the persist path when negated.
+        bool singleVectorSearch = IsNegated == false && (_isVectorSingleClause || streamScoreOrder);
 
         IQueryMatch vs;
         if (_documentId != null)
