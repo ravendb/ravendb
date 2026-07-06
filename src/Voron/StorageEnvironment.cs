@@ -291,7 +291,7 @@ namespace Voron
             var header = stackalloc TransactionHeader[1];
 
             Options.AddToInitLog?.Invoke(LogMode.Information, "Starting Recovery");
-            bool hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
+            bool hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog, out var skippedInvalidJournals);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
             Options.AddToInitLog?.Invoke(LogMode.Information, $"Recovery Ended {successString}");
 
@@ -304,6 +304,14 @@ namespace Voron
 
             var entry = _headerAccessor.CopyHeader();
             var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
+
+            if (skippedInvalidJournals)
+            {
+                Debug.Assert(Options.IgnoreInvalidJournalErrors == true, "Options.IgnoreInvalidJournalErrors == true");
+
+                nextPageNumber = Math.Max(nextPageNumber, _dataPager.NumberOfAllocatedPages);
+            }
+
             State = new StorageEnvironmentState(nextPageNumber);
 
             Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
