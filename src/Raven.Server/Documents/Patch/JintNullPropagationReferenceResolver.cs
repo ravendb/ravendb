@@ -68,6 +68,18 @@ namespace Raven.Server.Documents.Patch
 
             if (value.IsNull() || value.IsUndefined())
             {
+                // Preserve the legacy "length of a missing/undefined value is 0" convenience.
+                // In Jint 4.4.2 this was handled by TryUnresolvableReference (name == "length" => 0),
+                // but since Jint 4.6.x property access on an undefined base routes through
+                // TryPropertyReference instead (see the routing note below), so we handle it here.
+                // Restricted to undefined (not null) to match the old behavior exactly: only an
+                // undefined base was an unresolvable reference, whereas null bases propagated to null.
+                if (name == "length" && value.IsUndefined())
+                {
+                    value = _numberPositiveZero;
+                    return true;
+                }
+
                 // Normalize undefined to null for null propagation.
                 // In Jint 4.6.x, Reference.IsUnresolvableReference changed from checking
                 // base._type == Undefined to ReferenceEquals(base, Unresolvable). This means
