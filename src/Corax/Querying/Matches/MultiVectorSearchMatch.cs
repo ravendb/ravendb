@@ -50,11 +50,11 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
 
 
     /// <summary>
-    /// When VectorSearch is the only condition in the WHERE statement,
-    /// do not sort to fulfill the Fill guarantees.
-    /// Otherwise, sorting is necessary as it may produce incorrect results in the upper AST statements.
+    /// When true, results are returned in score order (sorted by distance, nearest-first) — the streaming Fill
+    /// fast path. Only safe when this vector search is the sole WHERE condition; otherwise the matches must be
+    /// entry-id sorted, as the upper AST statements (AND/OR merges, set-difference) rely on that ordering.
     /// </summary>
-    private readonly bool _singleVectorSearchDoNotSort;
+    private readonly bool _sortByScore;
 
     private RoaringBitmap _filterResults;
     private bool _hasFilterResults;
@@ -62,7 +62,7 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
     private IQueryMatch _filterQuery;
 
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
-        in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold, Random random = null)
+        in bool isExact, in bool sortByScore, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold, Random random = null)
     {
         _indexSearcher = searcher;
         _metadata = metadata;
@@ -74,7 +74,7 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
         _scanningThreshold = scanningThreshold;
         _random = random;
         IsBoosting = true;
-        _singleVectorSearchDoNotSort = singleVectorSearchDoNotSortByIds;
+        _sortByScore = sortByScore;
         _isEmpty = false;
     }
 
@@ -206,8 +206,9 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
         _matches.Truncate(uniqueCount);
         _distances.Truncate(uniqueCount);
 
-        // Streaming query, we need to return already sorted
-        if (_singleVectorSearchDoNotSort) 
+        // Score order requested: re-sort into distance order (nearest-first) so Fill hands back best matches first.
+        // distances is the sort key; matches is permuted to follow.
+        if (_sortByScore)
             _distances.Results.Sort(_matches.Results);
         
         if (_hasFilterResults && _ownsFilterResults)
@@ -241,7 +242,7 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
             return;
         }
 
-        if (_singleVectorSearchDoNotSort == false)
+        if (_sortByScore == false)
         {
             if (_filterQuery != null)
             {

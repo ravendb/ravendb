@@ -68,20 +68,20 @@ public sealed class CoraxVectorItem(QueryBuilderParameters parameters) : IQueryM
 
         // A negated vector is subtracted (order irrelevant) and must materialize id-sorted for the set-difference,
         // so it cannot take the score-order streaming path — force the persist path when negated.
-        bool singleVectorSearch = IsNegated == false && (_isVectorSingleClause || streamScoreOrder);
+        bool sortByScore = IsNegated == false && (_isVectorSingleClause || streamScoreOrder);
 
         IQueryMatch vs;
         if (_documentId != null)
         {
-            vs = parameters.IndexSearcher.VectorSearch(_field, _documentId, _minimumDistance, _numberOfCandidates, _isExact, singleVectorSearch, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
+            vs = parameters.IndexSearcher.VectorSearch(_field, _documentId, _minimumDistance, _numberOfCandidates, _isExact, sortByScore, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
         }
         else if (_vectorsToSearch is not null)
         {
-            vs = parameters.IndexSearcher.MultiVectorSearch(_field, _vectorsToSearch, _minimumDistance, _numberOfCandidates, _isExact, singleVectorSearch, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
+            vs = parameters.IndexSearcher.MultiVectorSearch(_field, _vectorsToSearch, _minimumDistance, _numberOfCandidates, _isExact, sortByScore, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
         }
         else
         {
-            vs = parameters.IndexSearcher.VectorSearch(_field, _vectorToSearch, _minimumDistance, _numberOfCandidates, _isExact, singleVectorSearch, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
+            vs = parameters.IndexSearcher.VectorSearch(_field, _vectorToSearch, _minimumDistance, _numberOfCandidates, _isExact, sortByScore, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
         }
 
         if (vs is IPostFilterMatch pf)

@@ -7,6 +7,7 @@ using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Spatial4n.Context;
 using Spatial4n.Shapes;
 using Voron;
@@ -200,16 +201,7 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
         // A single Fill spans several geohash cells (each sorted on its own, but concatenated across cells), and an
         // entry can appear in both an interior and a boundary cell within the page. IQueryMatch.Fill must return
         // sorted, unique ids per call, so normalize the page before returning.
-        var page = matches[..currentIdx];
-        page.Sort();
-        int write = 0;
-        for (int read = 0; read < page.Length; read++)
-        {
-            if (write == 0 || page[read] != page[write - 1])
-                page[write++] = page[read];
-        }
-
-        return write;
+        return Sorting.SortAndRemoveDuplicates(matches[..currentIdx]);
     }
 
     private bool CheckEntryManually(long id)

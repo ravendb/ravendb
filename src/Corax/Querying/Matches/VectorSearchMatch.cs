@@ -54,11 +54,11 @@ public struct VectorSearchMatch : IPostFilterMatch
     
     
     /// <summary>
-    /// When VectorSearch is the only condition in the WHERE statement,
-    /// do not sort to fulfill the Fill guarantees.
-    /// Otherwise, sorting is necessary as it may produce incorrect results in the upper AST statements.
+    /// When true, results are returned in score order (sorted by distance, nearest-first) — the streaming Fill
+    /// fast path. Only safe when this vector search is the sole WHERE condition; otherwise the matches must be
+    /// entry-id sorted, as the upper AST statements (AND/OR merges, set-difference) rely on that ordering.
     /// </summary>
-    private readonly bool _singleVectorSearchDoNotSort;
+    private readonly bool _sortByScore;
 
     private RoaringBitmap _filterResults;
     private bool _hasFilterResults;
@@ -77,7 +77,7 @@ public struct VectorSearchMatch : IPostFilterMatch
     // distinct from the one-time InitMs setup (filter materialization + seed sampling + retriever construction).
     private double _searchDurationMs;
 
-    private bool CanStreamResults => IsBoosting == false && _singleVectorSearchDoNotSort;
+    private bool CanStreamResults => IsBoosting == false && _sortByScore;
 
     public VectorSearchMatch(IndexSearcher searcher,
         in FieldMetadata metadata,
@@ -85,12 +85,12 @@ public struct VectorSearchMatch : IPostFilterMatch
         in float minimumMatch,
         in int numberOfCandidates,
         in bool isExact,
-        in bool singleVectorSearchDoNotSort,
+        in bool sortByScore,
         IQueryMatch filterQuery,
         int scanningThreshold = ScanningThreshold,
         Random random = null)
     {
-        _singleVectorSearchDoNotSort = singleVectorSearchDoNotSort;
+        _sortByScore = sortByScore;
         _filterQuery = filterQuery;
         _metadata = metadata;
         _indexSearcher = searcher;
@@ -279,14 +279,16 @@ public struct VectorSearchMatch : IPostFilterMatch
 
         } while (currentRead != 0);
         
-        if (_singleVectorSearchDoNotSort == false)
+        if (_sortByScore == false)
         {
             var matchesCount = Sorting.SortAndMinOnDuplicates(matches.Results, distances.Results);
             distances.Truncate(matchesCount);
             matches.Truncate(matchesCount);
         }
         
-        if (_singleVectorSearchDoNotSort && _vectorSearchRetriever.IsSortedByDistance == false)
+        // Score order requested and the retriever didn't already return distance-sorted: sort by distance
+        // (nearest-first). distances is the sort key; matches is permuted to follow.
+        if (_sortByScore && _vectorSearchRetriever.IsSortedByDistance == false)
         {
             distances.Results.Sort(matches.Results);
         }
@@ -308,7 +310,7 @@ public struct VectorSearchMatch : IPostFilterMatch
             return;
         }
 
-        if (_singleVectorSearchDoNotSort == false)
+        if (_sortByScore == false)
         {
             ref var matchesRef = ref MemoryMarshal.GetReference(matches);
             ref var scoresRef = ref MemoryMarshal.GetReference(scores);
