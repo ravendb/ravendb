@@ -693,7 +693,7 @@ namespace Raven.Server.Documents.Handlers.Batches
         [DoesNotReturn]
         private static void ThrowMissingJsonPatchProperty()
         {
-            throw new InvalidOperationException($"JsonPatch command must have a '{nameof(CommandData.JsonPatchCommands)}' property");
+            throw new InvalidOperationException($"JsonPatch command must have a '{nameof(CommandPropertyName.JsonPatch)}' property");
         }
 
         [DoesNotReturn]

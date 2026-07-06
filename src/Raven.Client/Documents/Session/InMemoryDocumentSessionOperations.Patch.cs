@@ -186,7 +186,7 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            if (Conventions.SessionPatchBehavior == SessionPatchBehavior.JsonPatch
+            if (UseJsonPatchInSessionPatchMethods
                 && ShouldUseJsonPatch(value) && HasExistingJavaScriptPatch(id) == false
                 && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
@@ -202,8 +202,7 @@ namespace Raven.Client.Documents.Session
                 else
                     jpd.Replace(jsonPointer, convertedValue);
 
-                if (TryMergeJsonPatches(id, jpd) == false)
-                    Defer(new JsonPatchCommandData(id, jpd));
+                DeferJsonPatchIfNotMerged(id, jpd);
 
                 return;
             }
@@ -236,7 +235,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
-            if (Conventions.SessionPatchBehavior == SessionPatchBehavior.JsonPatch
+            if (UseJsonPatchInSessionPatchMethods
                 && HasExistingJavaScriptPatch(id) == false && TryCreateArrayJsonPatch(id, path, arrayAdder))
                 return;
 
@@ -279,7 +278,7 @@ namespace Raven.Client.Documents.Session
             else
                 key = GetKey(call);
 
-            if (Conventions.SessionPatchBehavior == SessionPatchBehavior.JsonPatch
+            if (UseJsonPatchInSessionPatchMethods
                 && HasExistingJavaScriptPatch(id) == false && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 var keyString = key?.ToString();
@@ -296,8 +295,7 @@ namespace Raven.Client.Documents.Session
 
                                 jpd.Add($"{jsonPointer}/{escapedKey}", ConvertValueForJsonPatch(value));
 
-                                if (TryMergeJsonPatches(id, jpd) == false)
-                                    Defer(new JsonPatchCommandData(id, jpd));
+                                DeferJsonPatchIfNotMerged(id, jpd);
 
                                 return;
                             }
@@ -310,8 +308,7 @@ namespace Raven.Client.Documents.Session
                             var jpd = new JsonPatchDocument();
                             jpd.Remove($"{jsonPointer}/{escapedKey}");
 
-                            if (TryMergeJsonPatches(id, jpd) == false)
-                                Defer(new JsonPatchCommandData(id, jpd));
+                            DeferJsonPatchIfNotMerged(id, jpd);
 
                             return;
                         }
@@ -602,6 +599,14 @@ namespace Raven.Client.Documents.Session
             return true;
         }
 
+        private void DeferJsonPatchIfNotMerged(string id, JsonPatchDocument patch)
+        {
+            if (TryMergeJsonPatches(id, patch) == false)
+                Defer(new JsonPatchCommandData(id, patch));
+        }
+
+        private bool UseJsonPatchInSessionPatchMethods => Conventions.SessionPatchBehavior == SessionPatchBehavior.JsonPatch;
+
         private bool HasExistingJavaScriptPatch(string id)
         {
             return DeferredCommandsDictionary.ContainsKey((id, CommandType.PATCH, null));
@@ -651,8 +656,7 @@ namespace Raven.Client.Documents.Session
                 }
             }
 
-            if (TryMergeJsonPatches(id, jpd) == false)
-                Defer(new JsonPatchCommandData(id, jpd));
+            DeferJsonPatchIfNotMerged(id, jpd);
 
             return true;
         }
