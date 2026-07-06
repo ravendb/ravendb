@@ -25,7 +25,7 @@ public class RavenTraitDiscoverer : ITraitDiscoverer
             .ToList();
 
         foreach (var category in GetFlags(list[0]))
-            yield return new KeyValuePair<string, string>("Category", category.GetDescription());
+            yield return new KeyValuePair<string, string>("Category", category.ToString());
     }
 
     private static IEnumerable<RavenTestCategory> GetFlags(RavenTestCategory category)
