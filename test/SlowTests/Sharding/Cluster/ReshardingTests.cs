@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -1242,7 +1242,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(8907, stats.Size);
+                    Assert.Equal(9308, stats.Size);
                     Assert.Equal(4, stats.NumberOfDocuments);
                 }
 
@@ -1268,7 +1268,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(2794, stats.Size); // we still have 'artificial' tombstones on this shard
+                    Assert.Equal(3169, stats.Size); // we still have 'artificial' tombstones on this shard
                     Assert.Equal(0, stats.NumberOfDocuments);
                 }
 
@@ -1314,7 +1314,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(9777, stats.Size);
+                    Assert.Equal(10813, stats.Size);
                     Assert.Equal(4, stats.NumberOfDocuments);
                 }
 

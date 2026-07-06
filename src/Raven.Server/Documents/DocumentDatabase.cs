@@ -1904,6 +1904,7 @@ namespace Raven.Server.Documents
             if (record == null || DocumentsStorage == null)
                 return;
 
+            SupportedFeatures = new SupportedFeature(record);
             ClientConfiguration = record.Client;
             StudioConfiguration = record.Studio;
             InitializeCompressionFromDatabaseRecord(record);
@@ -2291,6 +2292,8 @@ namespace Raven.Server.Documents
 
             internal AsyncManualResetEvent DelayQueryByPatch;
 
+            internal AsyncManualResetEvent DelayDeleteBucket;
+
             internal bool EnableWritesToTheWrongShard = false;
             
             internal TimeSpan? EtlFallbackTime;
@@ -2373,6 +2376,12 @@ namespace Raven.Server.Documents
 
             if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix))
                 SupportedFeatureTypes.ThrowRevisionKeyTooBigFix = true;
+
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.HashedRevisionPk))
+                SupportedFeatureTypes.HashedRevisionPk = true;
+
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.PullReplicationCompositeChangeVectors))
+                SupportedFeatureTypes.PullReplicationCompositeChangeVectors = true;
             
             if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier))
                 SupportedFeatureTypes.ThrowControlCharactersInIdentifier = true;
@@ -2382,6 +2391,10 @@ namespace Raven.Server.Documents
     public class SupportedFeatureTypes
     {
         public bool ThrowRevisionKeyTooBigFix;
+        // Gate matching the HashedRevisionPk wire token; suppresses the raw-form probe in DualFormProbe
+        // on born-clean databases.
+        public bool HashedRevisionPk;
+        public bool PullReplicationCompositeChangeVectors;
         public bool ThrowControlCharactersInIdentifier;
     }
 }

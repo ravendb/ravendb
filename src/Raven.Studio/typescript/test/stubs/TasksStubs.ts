@@ -831,6 +831,8 @@ export class TasksStubs {
             AccessName: null,
             CertificatePublicKey: null,
             PinToMentorNode: false,
+            HubCursor: "A:123-aaaaaaaaaaaaaaaaaaaaaa",
+            SinkCursor: "B:456-bbbbbbbbbbbbbbbbbbbbbb",
         };
     }
 

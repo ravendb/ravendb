@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
@@ -243,6 +242,9 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string[] AllowedHubToSinkPaths { get; set; }
         public string[] AllowedSinkToHubPaths { get; set; }
 
+        public string HubCursor { get; set; }
+        public string SinkCursor { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -258,6 +260,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(PinToMentorNode)] = PinToMentorNode;
+            json[nameof(HubCursor)] = HubCursor;
+            json[nameof(SinkCursor)] = SinkCursor;
             return json;
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -594,7 +594,7 @@ namespace Tests.Infrastructure
             public ChangeVector GetChangeVector(string version, string order)
             {
                 return new ChangeVector(new ChangeVector(version, throwOnRecursion: true, this), 
-                    new ChangeVector(version, throwOnRecursion: true, this));
+                    new ChangeVector(order, throwOnRecursion: true, this));
             }
         }
 

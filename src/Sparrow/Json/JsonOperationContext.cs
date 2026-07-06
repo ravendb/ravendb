@@ -531,6 +531,21 @@ namespace Sparrow.Json
             }
         }
 
+        // Byte-faithful copy into context memory. Skips the JSON control-character escape pass that
+        // the regular `GetLazyString(byte*, int)` runs -- use for binary buffers whose bytes (e.g. the
+        // 0x1E RecordSeparator inside revision-tombstone / revision-attachment composite PKs) must
+        // reach consumers unchanged. The Slice-accepting overload (Voron-side extension) calls this.
+        public unsafe LazyStringValue GetLazyStringRaw(byte* ptr, int size, bool longLived = false)
+        {
+            var memory = longLived ? GetLongLivedMemory(size) : GetMemory(size);
+            var address = memory.Address;
+            Memory.Copy(address, ptr, size);
+
+            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
+            result.AllocatedMemoryData = memory;
+            return result;
+        }
+
         public unsafe LazyStringValue GetLazyString(byte* ptr, int size, bool longLived = false)
         {
             var state = new JsonParserState();

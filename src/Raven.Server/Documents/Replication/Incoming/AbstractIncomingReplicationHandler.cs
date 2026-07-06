@@ -58,9 +58,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected readonly CancellationTokenSource _cts;
         protected StreamsTempFile _attachmentStreamsTempFile;
         protected long _lastDocumentEtag;
+        protected string _lastBatchChangeVector;
         protected readonly AsyncManualResetEvent _replicationFromAnotherSource;
         protected RavenLogger Logger;
         private DeescalatingWarnToDebugLogger _endOfStreamExceptionLogger;
+        private Exception _reportedFailure;
 
         public long LastDocumentEtag => _lastDocumentEtag;
 
@@ -69,7 +71,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         public IncomingConnectionInfo ConnectionInfo { get; protected set; }
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
         public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
-        protected string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
+        protected virtual ThreadNames.ThreadInfo IncomingReplicationThreadInfo => ThreadNames.ForIncomingReplication(_databaseName, ConnectionInfo.SourceDatabaseName, FromToString);
         public virtual string FromToString => $"In database {_server.NodeTag}-{_databaseName} @ {_server.GetNodeTcpServerUrl()} " +
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
@@ -112,8 +114,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, ThreadNames.ForIncomingReplication(IncomingReplicationThreadName,
-                    _databaseName, ConnectionInfo.SourceDatabaseName));
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadInfo);
             }
 
             if (Logger.IsDebugEnabled)
@@ -146,19 +147,22 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     var configuration = GetConfiguration();
                     var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
-
+                    
+                    var sinceLastReceive = Stopwatch.StartNew(); // time since the last REAL read
                     long lastTotalBytesRead = 0;
 
                     while (_cts.IsCancellationRequested == false)
                     {
                         try
                         {
+                            var remaining = readTimeout - (int)sinceLastReceive.ElapsedMilliseconds;
+
                             AddReplicationPulse(ReplicationPulseDirection.IncomingInitiate);
 
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
-                                readTimeout,
+                                remaining,
                                 _copiedBuffer.Buffer,
                                 _cts.Token))
                             {
@@ -171,6 +175,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     var currentUsed = _copiedBuffer.Buffer.Used;
                                     if (currentUsed > lastTotalBytesRead)
                                     {
+                                        sinceLastReceive.Restart(); // partial bytes = activity
                                         lastTotalBytesRead = currentUsed;
                                         if (Logger.IsInfoEnabled)
                                             Logger.Info($"Incoming replication from `{FromToString}` timed out ({readTimeout}ms) while reading next batch, " +
@@ -183,10 +188,13 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
                                 }
 
-                                lastTotalBytesRead = 0;
-
                                 if (msg.Document != null)
                                 {
+                                    // Only a fully-consumed message resets the partial-read tracker; doing it on the
+                                    // notify branch would make any residual buffered bytes look like fresh growth on the
+                                    // next timeout, which would keep restarting sinceLastReceive and defeat the read-timeout.
+                                    lastTotalBytesRead = 0;
+
                                     EnsureNotDeleted();
 
                                     using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
@@ -195,6 +203,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             msg.Document,
                                             writer);
                                     }
+
+                                    sinceLastReceive.Restart();
                                 }
                                 else // notify peer about new change vector
                                 {
@@ -247,25 +257,29 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             catch (Exception e)
             {
+                var reportedFailure = Interlocked.Exchange(ref _reportedFailure, null);
+
                 // if we are disposing, do not notify about failure (not relevant)
-                if (_cts.IsCancellationRequested == false)
+                if (_cts.IsCancellationRequested == false || reportedFailure != null)
                 {
+                    var failure = reportedFailure ?? e;
+
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", e);
+                        Logger.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", failure);
 
                     var stats = _lastStats = new IncomingReplicationStatsAggregator(GetNextReplicationStatsId(), _lastStats);
                     try
                     {
                         AddReplicationPerformance(stats);
                         using (var scope = stats.CreateScope())
-                            scope.AddError(e);
+                            scope.AddError(failure);
                     }
                     finally
                     {
                         stats.Complete();
                     }
                     
-                    InvokeOnFailed(e);
+                    InvokeOnFailed(failure);
                 }
             }
         }
@@ -284,6 +298,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag) == false)
                     throw new InvalidOperationException("Expected LastDocumentEtag property in the replication message, " +
                                                         "but didn't find it..");
+
+                message.TryGet(nameof(ReplicationMessageHeader.LastSentChangeVector), out _lastBatchChangeVector);
 
                 switch (messageType)
                 {
@@ -320,7 +336,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                     case ReplicationMessageType.Heartbeat:
                         AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
 
-                        HandleHeartbeatMessage(context, message);
+                        message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector);
+                        MergeSourceChangeVectorFromHeartbeat(context, changeVector);
                         break;
 
                     default:
@@ -634,7 +651,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected abstract int GetNextReplicationStatsId();
 
-        protected abstract void HandleHeartbeatMessage(TOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject);
+        protected abstract void MergeSourceChangeVectorFromHeartbeat(TOperationContext jsonOperationContext, string changeVector);
 
         public abstract LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType();
 
@@ -655,6 +672,17 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
             _incomingWork = null;
+        }
+
+        internal void ReportFailure(Exception exception)
+        {
+            if (exception == null)
+                throw new ArgumentNullException(nameof(exception));
+
+            if (Interlocked.CompareExchange(ref _reportedFailure, exception, null) != null)
+                return;
+
+            _cts.SafeCancel(Logger, $"Failed to cancel {nameof(CancellationTokenSource)} while reporting failure for {GetType().Name} ({FromToString})");
         }
 
         protected virtual void DisposeInternal()

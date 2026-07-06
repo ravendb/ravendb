@@ -35,6 +35,9 @@ namespace Raven.Server.Documents.Schemas
             Flags = 8,
             RemoteAt = 9,
             Identifier = 10,
+
+            // Parent revision's cv.Version; populated only on revision-attachment rows ('r' discriminator). Readers dispatch on tvr.Count >= 12.
+            RevisionVersion = 11,
         }
 
         static Attachments()

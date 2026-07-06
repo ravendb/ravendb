@@ -287,11 +287,12 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                if (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0)
+                if (index == null && (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0))
                 {
                     databaseRecord.SupportedFeatures = new List<string>
                     {
-                        Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix,
+                        Constants.DatabaseRecord.SupportedFeatures.HashedRevisionPk,
+                        Constants.DatabaseRecord.SupportedFeatures.PullReplicationCompositeChangeVectors,
                         Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier
                     };
                 }

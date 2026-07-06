@@ -18,5 +18,8 @@ namespace Raven.Server.Documents
         public short TransactionMarker;
         public long Size;
         public RemoteAttachmentParameters RemoteParameters;
+
+        // Parent revision's version-only CV; populated only on revision-attachment rows (AttachmentsTable.RevisionVersion field 11), null on doc attachments and legacy rows.
+        public string RevisionVersion;
     }
 }

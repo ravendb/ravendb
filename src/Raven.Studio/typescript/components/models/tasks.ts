@@ -137,6 +137,8 @@ export interface OngoingTaskReplicationSinkSharedInfo extends OngoingTaskSharedI
     topologyDiscoveryUrls: string[];
     hubName: string;
     mode: PullReplicationMode;
+    hubCursor: string;
+    sinkCursor: string;
 }
 
 export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {

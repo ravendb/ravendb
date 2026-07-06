@@ -509,6 +509,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdatePrefixedShardingSettingCommand):
                     case nameof(RevisionsBinConfigurationCommand):
                     case nameof(EditSchemaValidationConfigurationCommand):
+                    case nameof(ModifyDatabaseSupportedFeaturesCommand):
                         UpdateDatabase(context, type, cmd, index, serverStore);
                         break;
 

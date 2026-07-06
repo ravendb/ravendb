@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -32,10 +32,12 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
-    public class IncomingReplicationHandler : AbstractIncomingReplicationHandler<DocumentsContextPool, DocumentsOperationContext>
+    public partial class IncomingReplicationHandler : AbstractIncomingReplicationHandler<DocumentsContextPool, DocumentsOperationContext>
     {
         private readonly DocumentDatabase _database;
         private readonly ReplicationLoader _parent;
+
+        protected ReplicationLoader ReplicationLoaderParent => _parent;
 
         public long LastHeartbeatTicks;
         public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
@@ -98,153 +100,55 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override int GetNextReplicationStatsId() => _parent.GetNextReplicationStatsId();
 
-        protected virtual DocumentMergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
-        {
-            return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, connectionInfo, trigger);
-        }
-
-        protected virtual string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context, string changeVector)
-        {
-            return changeVector;
-        }
-
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
             return new MergedDocumentReplicationCommand(data, lastDocumentEtag, isInternal: ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal);
         }
 
-        internal class MergedUpdateDatabaseChangeVectorCommand : DocumentMergedTransactionCommand
+        protected override void MergeSourceChangeVectorFromHeartbeat(DocumentsOperationContext documentsContext, string changeVector)
         {
-            private readonly string _changeVector;
-            private readonly long _lastDocumentEtag;
-            private readonly IncomingConnectionInfo _connectionInfo;
-            private readonly AsyncManualResetEvent _trigger;
+            if (string.IsNullOrEmpty(changeVector))
+                return;
 
-            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, IncomingConnectionInfo connectionInfo, AsyncManualResetEvent trigger)
+            // saving the change vector and the last received document etag
+            long lastEtag;
+            string lastChangeVector;
+            using (documentsContext.OpenReadTransaction())
             {
-                _changeVector = changeVector;
-                _lastDocumentEtag = lastDocumentEtag;
-                _connectionInfo = connectionInfo;
-                _trigger = trigger;
+                lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
+                lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
             }
 
-            protected override long ExecuteCmd(DocumentsOperationContext context)
+            var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
+            if (status != ConflictStatus.Update && _lastDocumentEtag <= lastEtag)
+                return;
+
+            if (Logger.IsDebugEnabled)
             {
-                var operationsCount = 0;
-                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId);
-                if (_lastDocumentEtag > lastReplicatedEtag)
-                {
-                    DocumentsStorage.SetLastReplicatedEtagFrom(context, _connectionInfo.SourceDatabaseId, _lastDocumentEtag);
-                    operationsCount++;
-                }
-
-                if (TryUpdateChangeVector(context))
-                    operationsCount++;
-
-                return operationsCount;
+                Logger.Debug(
+                    $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status} " +
+                    $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
-            {
-                return new MergedUpdateDatabaseChangeVectorCommandDto
-                {
-                    ChangeVector = _changeVector,
-                    LastDocumentEtag = _lastDocumentEtag,
-                    IncomingConnectionInfo = _connectionInfo,
-                };
-            }
-
-            protected virtual bool TryUpdateChangeVector(DocumentsOperationContext context)
-            {
-                var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
-                if (conflictStatus != ConflictStatus.Update)
-                {
-                    if (string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false)
-                    {
-                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, _lastDocumentEtag, current);
-                        if (result.IsValid)
-                        {
-                            context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
-                        }
-                    }
-
-                    return false;
-                }
-
-                context.LastDatabaseChangeVector = current.MergeWith(_changeVector, context);
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
-                {
-                    try
-                    {
-                        _trigger.Set();
-                    }
-                    catch
-                    {
-                        //
-                    }
-                };
-
-                return true;
-            }
+            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
+            EnqueueUpdateChangeVectorCommand(cmd);
         }
 
-        internal sealed class MergedUpdateDatabaseChangeVectorCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedUpdateDatabaseChangeVectorCommand>
+        protected void EnqueueUpdateChangeVectorCommand(DocumentMergedTransactionCommand cmd)
         {
-            public string ChangeVector;
-            public long LastDocumentEtag;
-            public IncomingConnectionInfo IncomingConnectionInfo;
-
-            public MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
             {
-                var command = new MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, IncomingConnectionInfo,
-                    new AsyncManualResetEvent());
-                return command;
+                if (Logger.IsDebugEnabled)
+                {
+                    Logger.Debug(
+                        $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
+                        "nevertheless we create an additional task.");
+                }
             }
-        }
-
-        protected override void HandleHeartbeatMessage(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message)
-        {
-            if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
+            else
             {
-                // saving the change vector and the last received document etag
-                long lastEtag;
-                string lastChangeVector;
-                using (documentsContext.OpenReadTransaction())
-                {
-                    lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
-                    lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
-                }
-
-                changeVector = ReplaceUnknownEntriesWithSinkIfNeeded(documentsContext, changeVector);
-
-                var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
-                if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
-                {
-                    if (Logger.IsDebugEnabled)
-                    {
-                        Logger.Debug(
-                            $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
-                            $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
-                    }
-
-                    var cmd = GetUpdateChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo, _replicationFromAnotherSource);
-
-                    if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
-                    {
-                        if (Logger.IsDebugEnabled)
-                        {
-                            Logger.Debug(
-                                $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
-                                "nevertheless we create an additional task.");
-                        }
-                    }
-                    else
-                    {
-                        _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
-                    }
-                }
+                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
             }
         }
 
@@ -356,17 +260,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return flags;
             }
 
-            protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+            // Subclass hook (pull-replication applies sink-tag replacement); default identity.
+            protected virtual string HandleRevisionTombstone(DocumentsOperationContext context, string changeVector)
             {
-                if (docId != null)
-                {
-                    RevisionsStorage.CreateRevisionTombstoneKeySlice(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
-                }
-                else
-                {
-                    toDispose.Add(Slice.From(context.Allocator, changeVector, out keySlice));
-                    changeVectorSlice = keySlice;
-                }
+                return changeVector;
             }
 
             protected virtual void SetIsIncomingReplication()
@@ -405,7 +302,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                         var changeVectorToMerge = PreProcessItem(context, item);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
-                        var changeVectorVersion = incomingChangeVector.Version;
 
                         context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector, context);
 
@@ -416,80 +312,17 @@ namespace Raven.Server.Documents.Replication.Incoming
                         switch (item)
                         {
                             case AttachmentReplicationItem attachment:
-
-                                var result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
-                                var isRevision = AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) == AttachmentType.Revision;
-                                if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
-                                {
-                                    if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
-                                    {
-                                        Debug.Assert(result.Attachment == null || isRevision == false,
-                                            "the stream should have been written when the revision was added by the document");
-                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
-                                    }
-
-                                    handledAttachmentStreams.Add(attachment.Base64Hash);
-                                }
-
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.Name, out _, out Slice attachmentName));
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.ContentType, out _, out Slice contentType));
-
-                                var local = context.GetChangeVector(result.ChangeVector);
-                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local) switch
-                                {
-                                    // we don't need to worry about the *contents* of the attachments, that is handled by the conflict detection during document replication
-                                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, local, context),
-                                    ConflictStatus.Update => attachment.ChangeVector,
-                                    ConflictStatus.AlreadyMerged => null, // nothing to do
-                                    _ => throw new ArgumentOutOfRangeException()
-                                };
-
-                                if (newChangeVector != null)
-                                {
-                                    RemoteAttachmentParameters remoteParams = null;
-                                    if (attachment.RemoteAtUtc.HasValue)
-                                    {
-                                        remoteParams = new RemoteAttachmentParameters(attachment.RemoteIdentifier.ToString(), attachment.RemoteAtUtc.Value) { Flags = attachment.Flags };
-                                    }
-
-                                    database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, remoteParams, attachment.AttachmentSize, isRevision, newChangeVector);
-                                }
-
+                                HandleAttachmentReplicationItem(context, database, attachment, incomingChangeVector, handledAttachmentStreams);
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
-
-                                var attachmentOrTombstone = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachmentTombstone.Key);
-                                var local2 = context.GetChangeVector(attachmentOrTombstone.ChangeVector);
-
-                                if (ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local2) == ConflictStatus.AlreadyMerged)
+                                if (HandleAttachmentTombstoneReplicationItem(context, database, attachmentTombstone, incomingChangeVector, ref pendingAttachmentsTombstoneUpdates) == false)
                                     continue;
-
-                                string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key);
-                                pendingAttachmentsTombstoneUpdates ??= new();
-                                pendingAttachmentsTombstoneUpdates.Add((documentId, incomingChangeVector, attachmentTombstone.LastModifiedTicks));
-
-                                newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local2) switch
-                                {
-                                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, local2, context),
-                                    ConflictStatus.Update => attachmentTombstone.ChangeVector,
-                                    _ => throw new ArgumentOutOfRangeException()
-                                };
-
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    newChangeVector,
-                                    attachmentTombstone.LastModifiedTicks);
-
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
-
-                                RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(revisionTombstone.Id, out string id, out string revisionChangeVector);
-                                HandleRevisionTombstone(context, id, revisionChangeVector, out var changeVectorSlice, out var idKeySlice, toDispose);
-
-                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection,
-                                    changeVectorVersion, revisionTombstone.LastModifiedTicks, changeVectorSlice, fromReplication: true);
+                                string processedChangeVector = HandleRevisionTombstone(context, incomingChangeVector);
+                                database.DocumentsStorage.RevisionsStorage.WriteRevisionTombstoneFromReplication(context, revisionTombstone, processedChangeVector);
                                 break;
 
                             case CounterReplicationItem counter:
@@ -556,7 +389,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
                                 var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, options);
-                                context.LastDatabaseChangeVector = changeVectorToMerge.MergeWith(changeVector, context);
+                                context.LastDatabaseChangeVector = changeVectorToMerge.MergeWith(context.GetChangeVector(changeVector).Order, context);
 
                                 break;
 
@@ -602,20 +435,24 @@ namespace Raven.Server.Documents.Replication.Incoming
                                         document,
                                         doc.Flags,
                                         nonPersistentFlags,
-                                        changeVectorVersion,
+                                        incomingChangeVector,
                                         doc.LastModifiedTicks);
                                     continue;
                                 }
 
                                 if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
                                 {
+                                    var collection = doc.Collection != null ? 
+                                        new CollectionName(doc.Collection) : 
+                                        database.DocumentsStorage.ExtractCollectionName(context, document);
+
                                     database.DocumentsStorage.RevisionsStorage.Delete(
                                         context,
                                         doc.Id,
-                                        document,
+                                        collection,
                                         doc.Flags,
                                         nonPersistentFlags,
-                                        changeVectorVersion,
+                                        incomingChangeVector,
                                         doc.LastModifiedTicks);
                                     continue;
                                 }
@@ -785,6 +622,164 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
                 context.LastReplicationEtagFrom[_replicationInfo.SourceDatabaseId] = _lastEtag;
+            }
+
+            private void HandleAttachmentReplicationItem(
+                DocumentsOperationContext context, DocumentDatabase database, AttachmentReplicationItem attachment,
+                ChangeVector incomingChangeVector, HashSet<Slice> handledAttachmentStreams)
+            {
+                AttachmentsStorage attachmentsStorage = database.DocumentsStorage.AttachmentsStorage;
+
+                if (AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) == AttachmentType.Revision)
+                {
+                    HandleIncomingRevisionAttachment(context, attachmentsStorage, attachment, incomingChangeVector, handledAttachmentStreams);
+                }
+                else
+                {
+                    HandleIncomingDocumentAttachment(context, attachmentsStorage, attachment, incomingChangeVector, handledAttachmentStreams);
+                }
+            }
+
+            private void HandleIncomingRevisionAttachment(
+                DocumentsOperationContext context, AttachmentsStorage attachmentsStorage, AttachmentReplicationItem attachment,
+                ChangeVector incomingChangeVector, HashSet<Slice> handledAttachmentStreams)
+            {
+                using (AttachmentsStorage.BuildRevisionAttachmentKeyFromWire(context, attachment.Key, out RevisionAttachmentKey pair))
+                {
+                    AttachmentOrTombstone result = AttachmentOrTombstone.GetRevisionAttachmentOrTombstone(context, in pair);
+                    WriteIncomingAttachmentStreamIfNeeded(context, attachmentsStorage, attachment, handledAttachmentStreams, assertRowAbsent: false, result);
+
+                    string newChangeVector = ResolveIncomingChangeVectorOrSkip(context, incomingChangeVector, result.ChangeVector, attachment.ChangeVector);
+                    if (newChangeVector != null)
+                    {
+                        var remoteParams = CreateRemoteAttachmentParameters(attachment);
+                        attachmentsStorage.PutRevisionAttachmentDirect(context, in pair, attachment.Name, attachment.ContentType, attachment.Base64Hash, attachment.AttachmentSize, remoteParams, newChangeVector);
+                    }
+                }
+            }
+
+            private static RemoteAttachmentParameters CreateRemoteAttachmentParameters(AttachmentReplicationItem attachment)
+            {
+                if (attachment.RemoteAtUtc.HasValue == false)
+                    return null;
+             
+                return new RemoteAttachmentParameters(attachment.RemoteIdentifier.ToString(), attachment.RemoteAtUtc.Value) { Flags = attachment.Flags };
+            }
+
+            private void HandleIncomingDocumentAttachment(
+                DocumentsOperationContext context, AttachmentsStorage attachmentsStorage, AttachmentReplicationItem attachment,
+                ChangeVector incomingChangeVector, HashSet<Slice> handledAttachmentStreams)
+            {
+                AttachmentOrTombstone result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
+                WriteIncomingAttachmentStreamIfNeeded(context, attachmentsStorage, attachment, handledAttachmentStreams, assertRowAbsent: true, result);
+
+                string newChangeVector = ResolveIncomingChangeVectorOrSkip(context, incomingChangeVector, result.ChangeVector, attachment.ChangeVector);
+                if (newChangeVector == null)
+                    return;
+
+                var remoteParams = CreateRemoteAttachmentParameters(attachment);
+                attachmentsStorage.PutDirect(context, attachment.Key, attachment.Name, attachment.ContentType, attachment.Base64Hash,
+                    remoteParams, attachment.AttachmentSize, isRevision: false, newChangeVector);
+            }
+
+            // assertRowAbsent is true for document attachments (atomic row+stream); false for revision attachments (stream may arrive later in the batch).
+            private void WriteIncomingAttachmentStreamIfNeeded(
+                DocumentsOperationContext context, AttachmentsStorage attachmentsStorage, AttachmentReplicationItem attachment,
+                HashSet<Slice> handledAttachmentStreams, bool assertRowAbsent, AttachmentOrTombstone result)
+            {
+                if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) != true)
+                    return;
+
+                if (attachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
+                {
+                    Debug.Assert(assertRowAbsent == false || result.Attachment == null,
+                        "local document-attachment row exists without its stream -- inconsistent local state");
+                    attachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
+                }
+
+                handledAttachmentStreams.Add(attachment.Base64Hash);
+            }
+
+            // Returns false on AlreadyMerged to signal a "continue" on the caller's loop.
+            private bool HandleAttachmentTombstoneReplicationItem(
+                DocumentsOperationContext context, DocumentDatabase database, AttachmentTombstoneReplicationItem attachmentTombstone,
+                ChangeVector incomingChangeVector, ref List<(string DocumentId, string ChangeVector, long ModifiedTicks)> pendingAttachmentsTombstoneUpdates)
+            {
+                AttachmentsStorage attachmentsStorage = database.DocumentsStorage.AttachmentsStorage;
+
+                if (AttachmentsStorage.AttachmentKey.GetAttachmentType(attachmentTombstone.Key) == AttachmentType.Revision)
+                {
+                    return HandleIncomingRevisionAttachmentTombstone(context, attachmentsStorage, attachmentTombstone, incomingChangeVector, ref pendingAttachmentsTombstoneUpdates);
+                }
+
+                return HandleIncomingDocumentAttachmentTombstone(context, attachmentsStorage, attachmentTombstone, incomingChangeVector, ref pendingAttachmentsTombstoneUpdates);
+            }
+
+            private bool HandleIncomingRevisionAttachmentTombstone(
+                DocumentsOperationContext context, AttachmentsStorage attachmentsStorage, AttachmentTombstoneReplicationItem attachmentTombstone,
+                ChangeVector incomingChangeVector, ref List<(string DocumentId, string ChangeVector, long ModifiedTicks)> pendingAttachmentsTombstoneUpdates)
+            {
+                using (AttachmentsStorage.BuildRevisionAttachmentKeyFromWire(context, attachmentTombstone.Key, out RevisionAttachmentKey pair))
+                {
+                    AttachmentOrTombstone localState = AttachmentOrTombstone.GetRevisionAttachmentOrTombstone(context, in pair);
+                    if (TryResolveAndRecordAttachmentTombstone(context, attachmentTombstone, incomingChangeVector, localState.ChangeVector, ref pendingAttachmentsTombstoneUpdates, out string newChangeVector) == false)
+                        return false;
+
+                    attachmentsStorage.DeleteRevisionAttachmentDirect(context, in pair, expectedChangeVector: null, newChangeVector, attachmentTombstone.LastModifiedTicks);
+                    return true;
+                }
+            }
+
+            private bool HandleIncomingDocumentAttachmentTombstone(
+                DocumentsOperationContext context, AttachmentsStorage attachmentsStorage, AttachmentTombstoneReplicationItem attachmentTombstone,
+                ChangeVector incomingChangeVector, ref List<(string DocumentId, string ChangeVector, long ModifiedTicks)> pendingAttachmentsTombstoneUpdates)
+            {
+                AttachmentOrTombstone localState = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachmentTombstone.Key);
+                if (TryResolveAndRecordAttachmentTombstone(context, attachmentTombstone, incomingChangeVector, localState.ChangeVector, ref pendingAttachmentsTombstoneUpdates, out string newChangeVector) == false)
+                    return false;
+
+                attachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null, newChangeVector, attachmentTombstone.LastModifiedTicks);
+                return true;
+            }
+
+            // Resolves incoming CV against local state and records a pending update; returns false if already merged locally (skip-the-write).
+            private static bool TryResolveAndRecordAttachmentTombstone(
+                DocumentsOperationContext context,
+                AttachmentTombstoneReplicationItem attachmentTombstone,
+                ChangeVector incomingChangeVector,
+                string localChangeVector,
+                ref List<(string DocumentId, string ChangeVector, long ModifiedTicks)> pendingAttachmentsTombstoneUpdates,
+                out string newChangeVector)
+            {
+                newChangeVector = ResolveIncomingChangeVectorOrSkip(context, incomingChangeVector, localChangeVector, attachmentTombstone.ChangeVector);
+                if (newChangeVector == null)
+                    return false;
+
+                RecordPendingTombstoneUpdate(attachmentTombstone, incomingChangeVector, ref pendingAttachmentsTombstoneUpdates);
+                return true;
+            }
+
+            // Returns null when the incoming CV is already merged locally (skip); otherwise returns the CV string to write.
+            private static string ResolveIncomingChangeVectorOrSkip(
+                DocumentsOperationContext context, ChangeVector incomingChangeVector, string localChangeVectorString, string incomingChangeVectorString)
+            {
+                ChangeVector local = context.GetChangeVector(localChangeVectorString);
+                return ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local) switch
+                {
+                    ConflictStatus.Conflict => ChangeVector.Merge(incomingChangeVector, local, context),
+                    ConflictStatus.Update => incomingChangeVectorString,
+                    ConflictStatus.AlreadyMerged => null,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+
+            private static void RecordPendingTombstoneUpdate(
+                AttachmentTombstoneReplicationItem attachmentTombstone, ChangeVector incomingChangeVector,
+                ref List<(string DocumentId, string ChangeVector, long ModifiedTicks)> pendingAttachmentsTombstoneUpdates)
+            {
+                string documentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key);
+                pendingAttachmentsTombstoneUpdates ??= new List<(string, string, long)>();
+                pendingAttachmentsTombstoneUpdates.Add((documentId, incomingChangeVector, attachmentTombstone.LastModifiedTicks));
             }
 
             private void RecordDatabaseChangeVector(DocumentsOperationContext context)
