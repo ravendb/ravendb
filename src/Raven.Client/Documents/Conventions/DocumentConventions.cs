@@ -330,6 +330,8 @@ namespace Raven.Client.Documents.Conventions
 
             MaxNumberOfRequestsPerSession = 30;
 
+            SessionPatchBehavior = SessionPatchBehavior.JsonPatch;
+
             BulkInsert = new BulkInsertConventions(this);
             Sharding = new ShardingConventions(this);
 
@@ -379,6 +381,7 @@ namespace Raven.Client.Documents.Conventions
 
         private bool _saveEnumsAsIntegers;
         private bool _saveEnumsAsIntegersForPatching;
+        private SessionPatchBehavior _sessionPatchBehavior;
         private char _identityPartsSeparator;
         private bool _disableTopologyUpdates;
 
@@ -1117,6 +1120,23 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _saveEnumsAsIntegersForPatching = value;
+            }
+        }
+
+        /// <summary>
+        ///     Determines whether the session <c>Patch</c> methods emit RFC 6902 JsonPatch commands
+        ///     (<see cref="Conventions.SessionPatchBehavior.JsonPatch" />, the default) or legacy
+        ///     JavaScript patch commands (<see cref="Conventions.SessionPatchBehavior.JavaScript" />).
+        ///     Set to <see cref="Conventions.SessionPatchBehavior.JavaScript" /> to opt out of the
+        ///     JsonPatch code path entirely and restore the previous behavior.
+        /// </summary>
+        public SessionPatchBehavior SessionPatchBehavior
+        {
+            get => _sessionPatchBehavior;
+            set
+            {
+                AssertNotFrozen();
+                _sessionPatchBehavior = value;
             }
         }
 
