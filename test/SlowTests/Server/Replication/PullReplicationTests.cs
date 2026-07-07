@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -16,12 +15,10 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -211,18 +208,12 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Logging)]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task UpdatePullReplicationOnSink()
         {
             var definitionName1 = $"pull-replication {GetDatabaseName()}";
             var definitionName2 = $"pull-replication {GetDatabaseName()}";
             var timeout = 3000;
-            var auditLogPath = NewDataPath(suffix: "AuditLog");
-
-            LoggingSource.AuditLog.SetupLogMode(LogMode.Information, auditLogPath, TimeSpan.MaxValue, long.MaxValue, compress: false);
-            using var disposableAction = new DisposableAction(() => LoggingSource.AuditLog.SetupLogMode(LogMode.None, auditLogPath, TimeSpan.MaxValue, long.MaxValue, compress: false));
-
-            Assert.True(LoggingSource.AuditLog.IsInfoEnabled);
 
             using (var sink = GetDocumentStore())
             using (var hub = GetDocumentStore())
@@ -245,15 +236,14 @@ namespace SlowTests.Server.Replication
                     TaskId = pullTasks[0].TaskId
                 };
                 await AddWatcherToReplicationTopology(sink, pull, hub2.Urls);
-                await WaitForAssertionAsync(() =>
-                {
-                    var auditLog = ReadAuditLog();
-                    var updateSinkAuditLines = auditLog
-                        .Split(Environment.NewLine)
-                        .Where(x => x.Contains("update-sink-pull-replication"));
 
-                    Assert.Contains(updateSinkAuditLines, x => x.Contains(definitionName2));
-                    return Task.CompletedTask;
+                await WaitForAssertionAsync(async () =>
+                {
+                    var sinkTask = (OngoingTaskPullReplicationAsSink)await GetTaskInfo(sink, pullTasks[0].TaskId, OngoingTaskType.PullReplicationAsSink);
+
+                    Assert.Equal(definitionName2, sinkTask.HubName);
+                    Assert.Equal(hub2.Database, sinkTask.DestinationDatabase);
+                    Assert.Equal(hub2.Urls[0], sinkTask.DestinationUrl);
                 }, TimeSpan.FromSeconds(5));
 
                 using (var main = hub.OpenSession())
@@ -269,23 +259,6 @@ namespace SlowTests.Server.Replication
                     main.SaveChanges();
                 }
                 Assert.True(WaitForDocument(sink, "hub2", timeout), sink.Identifier);
-            }
-
-            return;
-
-            string ReadAuditLog()
-            {
-                return Directory.Exists(auditLogPath)
-                    ? string.Join(Environment.NewLine, Directory.GetFiles(auditLogPath, "*.log").Select(ReadAuditLogFile))
-                    : string.Empty;
-            }
-
-            static string ReadAuditLogFile(string path)
-            {
-                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                using var reader = new StreamReader(stream);
-
-                return reader.ReadToEnd();
             }
         }
 
