@@ -17,7 +17,8 @@ interface GetEffectiveAccessLevelArgs extends GetAccessLevelArgs {
 // Getters
 
 function getDatabaseAccessLevel(args: GetAccessLevelArgs) {
-    return databaseAccessSelectors.selectById(args.databaseAccess, args.databaseName ?? args.activeDatabaseName)?.level;
+    const databaseName = args.databaseName ?? args.activeDatabaseName;
+    return databaseAccessSelectors.selectById(args.databaseAccess, databaseName?.toLowerCase())?.level;
 }
 
 function getIsOperatorOrAbove(securityClearance: SecurityClearance) {
