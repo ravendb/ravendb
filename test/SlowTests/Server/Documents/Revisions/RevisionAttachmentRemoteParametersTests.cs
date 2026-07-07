@@ -138,8 +138,8 @@ namespace SlowTests.Server.Documents.Revisions
                 {
                     using (RevisionsStorage.BuildRevisionKey(ctx, docChangeVector, out RevisionKey revKey))
                     using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, docId, out Slice lowerDocId))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ctx, attachmentName, out Slice lowerName, out Slice nameSlice))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ctx, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                    using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(ctx, attachmentName, out Slice lowerName, out Slice nameSlice))
+                    using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(ctx, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.From(ctx.Allocator, base64Hash, out Slice hashSlice))
                     {
                         var remoteParams = new RemoteAttachmentParameters(identifier, remoteAt) { Flags = RemoteAttachmentFlags.Remote };

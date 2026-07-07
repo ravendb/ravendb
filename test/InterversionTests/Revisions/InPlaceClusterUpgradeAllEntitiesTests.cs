@@ -260,7 +260,7 @@ namespace InterversionTests.Revisions
                     var tombTable = ctx.Transaction.InnerTransaction.OpenTable(
                         database.DocumentsStorage.TombstonesSchema, RevisionsTombstonesSlice);
 
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ctx, doc.DocId, out Slice lowerIdSlice, out _))
+                    using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(ctx, doc.DocId, out Slice lowerIdSlice, out _))
                     {
                         int evictedCount = Math.Max(0, doc.RevisionCVs.Count - 2);
                         for (int i = 0; i < evictedCount; i++)
@@ -278,7 +278,7 @@ namespace InterversionTests.Revisions
                         }
                     }
 
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ctx, doc.DocId, out Slice docIdSlice, out _))
+                    using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(ctx, doc.DocId, out Slice docIdSlice, out _))
                     {
                         var attTombTable = ctx.Transaction.InnerTransaction.OpenTable(
                             database.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);

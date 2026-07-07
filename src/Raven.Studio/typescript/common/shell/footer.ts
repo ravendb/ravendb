@@ -13,13 +13,13 @@ import clientCertificateModel = require("models/auth/clientCertificateModel");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class footerStats {
-    countOfDocuments = ko.observable<number>();
-    countOfIndexes = ko.observable<number>();
-    countOfStaleIndexes = ko.observable<number>();
-    countOfIndexingErrors = ko.observable<number>();
-    countOfEtlTasksErrors = ko.observable<number>();
-    countOfAiTasksErrors = ko.observable<number>();
-    countOfCdcSinkTasksErrors = ko.observable<number>();
+    countOfDocuments = ko.observable<number>(0);
+    countOfIndexes = ko.observable<number>(0);
+    countOfStaleIndexes = ko.observable<number>(0);
+    countOfIndexingErrors = ko.observable<number>(0);
+    countOfEtlTasksErrors = ko.observable<number>(0);
+    countOfAiTasksErrors = ko.observable<number>(0);
+    countOfCdcSinkTasksErrors = ko.observable<number>(0);
 }
 
 class footer {
@@ -175,7 +175,13 @@ class footer {
             return;
         }
 
-        const stats = this.stats();
+        let stats = this.stats();
+
+        if (!stats) {
+            stats = new footerStats();
+            this.stats(stats);
+        }
+        
         stats.countOfDocuments(event.CountOfDocuments);
         stats.countOfIndexes(event.CountOfIndexes);
         stats.countOfStaleIndexes(event.CountOfStaleIndexes);

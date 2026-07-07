@@ -498,7 +498,7 @@ namespace Raven.Server.Documents.Revisions
             if (flags.Contain(DocumentFlags.Conflicted))
                 return; // but, conflicted revision can't
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out var lowerId, out _))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
             {
                 var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, flags);
                 if (conflictStatus != ConflictStatus.Update)
@@ -1474,7 +1474,7 @@ namespace Raven.Server.Documents.Revisions
         public void Delete(DocumentsOperationContext context, string id, CollectionName collectionName,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVector changeVector, long lastModifiedTicks)
         {
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out Slice lowerId, out Slice idPtr))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 Delete(context, id, lowerId, collectionName, changeVector, lastModifiedTicks, nonPersistentFlags, flags);
             }
