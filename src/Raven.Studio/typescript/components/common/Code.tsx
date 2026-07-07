@@ -12,7 +12,7 @@ require("prismjs/components/prism-json");
 require("prismjs/components/prism-python");
 require("prismjs/components/prism-java");
 
-type Language =
+export type CodeLanguage =
     | "plaintext"
     | "markup"
     | "html"
@@ -32,7 +32,7 @@ type Language =
 
 interface CodeProps {
     code: string;
-    language: Language;
+    language: CodeLanguage;
     className?: string;
     elementToCopy?: string;
 }
