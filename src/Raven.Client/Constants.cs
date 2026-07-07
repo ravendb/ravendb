@@ -842,6 +842,7 @@ namespace Raven.Client
                 }
 
                 public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
+                public const string ThrowControlCharactersInIdentifier = "ThrowControlCharactersInIdentifier";
             }
         }
 

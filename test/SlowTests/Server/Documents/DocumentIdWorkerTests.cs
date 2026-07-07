@@ -34,7 +34,7 @@ public class DocumentIdWorkerTests : ClusterTestBase
 
         var (nodes, leader) = await CreateRaftCluster(replicas, watcherCluster: true);
 
-        using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = replicas, });
+        using var store = GetDocumentStore(AllowControlCharactersInIdentifier(new Options { Server = leader, ReplicationFactor = replicas, }));
         using var s1 = GetDocumentStoreForNode(store, nodes[0]);
         using var s2 = GetDocumentStoreForNode(store, nodes[1]);
 

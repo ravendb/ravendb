@@ -771,64 +771,70 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
-            base.Dispose();
-
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
-
-            var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
-            var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
-
-            exceptionAggregator.Execute(() =>
+            try
             {
-                if (_globalServer?.ServerStore.Observer?.Suspended == true)
-                    throw new InvalidOperationException("The observer is suspended for the global server!");
-            });
-
-            Dispose(exceptionAggregator);
-
-            DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator, Context);
-
-            if (_localServer != null && _localServer != _globalServer)
-            {
-                DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _localServer, exceptionAggregator, Context);
+                var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
+                var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
 
                 exceptionAggregator.Execute(() =>
                 {
-                    DisposeServer(_localServer, _disposeTimeout);
-                    _localServer = null;
+                    if (_globalServer?.ServerStore.Observer?.Suspended == true)
+                        throw new InvalidOperationException("The observer is suspended for the global server!");
                 });
-            }
 
-            for (int i = 0; i < ServersForDisposal.Count; i++)
-            {
-                var serverForDisposal = ServersForDisposal[i];
+                Dispose(exceptionAggregator);
 
-                if (i == 0)
-                    DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator, Context);
+                DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator, Context);
 
-                exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
-            }
+                if (_localServer != null && _localServer != _globalServer)
+                {
+                    DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _localServer, exceptionAggregator, Context);
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        DisposeServer(_localServer, _disposeTimeout);
+                        _localServer = null;
+                    });
+                }
+
+                for (int i = 0; i < ServersForDisposal.Count; i++)
+                {
+                    var serverForDisposal = ServersForDisposal[i];
+
+                    if (i == 0)
+                        DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator, Context);
+
+                    exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
+                }
 
 #if DEBUG2
-            var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
-            var connections = properties.GetActiveTcpConnectionsSafely() ?? Array.Empty<TcpConnectionInformation>();
+                var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
+                var connections = properties.GetActiveTcpConnectionsSafely() ?? Array.Empty<TcpConnectionInformation>();
 
-            var sb = new StringBuilder($"TCP Connections '{Context.UniqueTestName}' ({connections.Length}): {Environment.NewLine}");
-            var groupedConnections = connections.GroupBy(x => x.State).Select(x => new { State = x.Key, Count = x.Count() }).OrderByDescending(x => x.Count);
-            foreach (var group in groupedConnections)
-            {
-                if (group.Count == 0)
-                    continue;
+                var sb = new StringBuilder($"TCP Connections '{Context.UniqueTestName}' ({connections.Length}): {Environment.NewLine}");
+                var groupedConnections = connections.GroupBy(x => x.State).Select(x => new { State = x.Key, Count = x.Count() }).OrderByDescending(x => x.Count);
+                foreach (var group in groupedConnections)
+                {
+                    if (group.Count == 0)
+                        continue;
 
-                sb.AppendLine($"- {group.State} - {group.Count}");
-            }
+                    sb.AppendLine($"- {group.State} - {group.Count}");
+                }
 
-            Output.WriteLine(sb.ToString());
+                Output.WriteLine(sb.ToString());
 #endif
 
-            ServersForDisposal = null;
+                ServersForDisposal = null;
 
-            RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+                RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+
+                exceptionAggregator.Execute(() => TryExecuteWhenNoOtherTestsAreRunning(() => DefaultRavenHttpClientFactory.Instance.Clear()));
+            }
+            finally
+            {
+                base.Dispose();
+            }
 
             exceptionAggregator.ThrowIfNeeded();
         }

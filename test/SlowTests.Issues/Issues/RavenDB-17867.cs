@@ -37,6 +37,7 @@ namespace SlowTests.Issues
                         ["PeopleUtil"] = @"
 public static class PeopleUtil
 {
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining | System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
     public static string CalculatePersonEmail(string name)
     {
         return CalculatePersonEmail(name);
@@ -52,6 +53,9 @@ public static class PeopleUtil
                 }
 
                 Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var mapErrors = WaitForValue(() =>
+                    store.Maintenance.Send(new GetIndexStatisticsOperation("Companies/WithRecursion")).MapErrors > 0, true);
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation("Companies/WithRecursion"));
 
@@ -87,6 +91,7 @@ public static class PeopleUtil
                         ["TreeUtil"] = @"
 public static class TreeUtil
 {
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining | System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
     public static int GetDepth(string name) => 1 + GetDepth(name);
 }"
                     }
@@ -99,6 +104,9 @@ public static class TreeUtil
                 }
 
                 Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var mapErrors = WaitForValue(() =>
+                    store.Maintenance.Send(new GetIndexStatisticsOperation("Companies/WithExpressionBodyRecursion")).MapErrors > 0, true);
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation("Companies/WithExpressionBodyRecursion"));
 
@@ -134,8 +142,10 @@ public static class TreeUtil
                         ["Helper"] = @"
 public static class Helper
 {
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining | System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
     public static string Process(string name)
     {
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining | System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
         string Inner(string n) { return Inner(n); }
         return Inner(name);
     }
@@ -150,6 +160,9 @@ public static class Helper
                 }
 
                 Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var mapErrors = WaitForValue(() =>
+                    store.Maintenance.Send(new GetIndexStatisticsOperation("Companies/WithLocalFunctionRecursion")).MapErrors > 0, true);
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation("Companies/WithLocalFunctionRecursion"));
 

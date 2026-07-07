@@ -508,7 +508,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                            }))
                 {
                     await SetupReplicationAsync(store1, store2);
-                    await EnsureReplicatingAsync(store1, store2);
+                    await WaitForMarkerAsync(store1, store2);
                 }
             }
         }

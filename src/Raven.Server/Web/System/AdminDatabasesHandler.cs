@@ -289,7 +289,11 @@ namespace Raven.Server.Web.System
 
                 if (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0)
                 {
-                    databaseRecord.SupportedFeatures = new List<string> { Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix };
+                    databaseRecord.SupportedFeatures = new List<string>
+                    {
+                        Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix,
+                        Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier
+                    };
                 }
 
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(databaseRecord.DatabaseName, databaseRecord, context, replicationFactor, index, raftRequestId);
@@ -1536,17 +1540,6 @@ namespace Raven.Server.Web.System
 
                                     await smuggler.ExecuteAsync();
                                 }
-
-                                if (RavenLogManager.Instance.IsAuditEnabled)
-                                {
-                                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                                    {
-                                        var configurationString = context.ReadObject(configuration.ToAuditJson(), nameof(configuration)).ToString();
-                                        LogAuditForDatabase(databaseName, "IMPORT",
-                                            $"{EnumHelper.GetDescription(OperationType.MigrationFromLegacyData)} " +
-                                            $"using configuration: '{configurationString}'");
-                                    }
-                                }
                             }
                         }
                         catch (Exception e)
@@ -1596,6 +1589,17 @@ namespace Raven.Server.Web.System
                     });
                 },
                 token: token);
+
+            if (RavenLogManager.Instance.IsAuditEnabled)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    var configurationString = context.ReadObject(configuration.ToAuditJson(), nameof(configuration)).ToString();
+                    LogAuditForDatabase(databaseName, "IMPORT",
+                        $"{EnumHelper.GetDescription(OperationType.MigrationFromLegacyData)} " +
+                        $"using configuration: '{configurationString}'");
+                }
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

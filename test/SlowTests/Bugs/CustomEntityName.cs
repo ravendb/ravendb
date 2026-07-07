@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -92,12 +93,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        private static IEnumerable<char> GetChars()
-        {
-            return Enumerable.Range(1, 31)
-                .Select(i => (char)i)
-                .Concat(new[] { 'a', '-', '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' });
-        }
+        private static IEnumerable<char> GetChars() => ['a', '-', '\'', '\"', '\\', '\b', '\f', '\n', '\r', '\t'];
 
         private static IEnumerable<object[]> GetCharactersToTest()
         {
@@ -131,14 +127,11 @@ namespace SlowTests.Bugs
 
         private async Task TestWhenCollectionAndIdContainSpecialChars<T>(char c) where T : AbstractGenericIndexCreationTask<IndexResult>, new()
         {
-            //TODO RavenDB-15533
-            if (c == '\v' || c >= 14 && c <= 31)
-                return;
-
-            using var store = GetDocumentStore(new Options
+            var options = new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
-            });
+            };
+            using var store = GetDocumentStore(AllowControlCharactersInIdentifier(options));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -170,10 +163,11 @@ namespace SlowTests.Bugs
         {
             var amre = new AsyncManualResetEvent();
 
-            using var store = GetDocumentStore(new Options
+            var options = new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
-            });
+            };
+            using var store = GetDocumentStore(AllowControlCharactersInIdentifier(options));
 
             var subscription = store.Changes();
             await subscription.EnsureConnectedNow();
@@ -211,10 +205,11 @@ namespace SlowTests.Bugs
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenQuery(char c)
         {
-            using var store = GetDocumentStore(new Options
+            var options = new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
-            });
+            };
+            using var store = GetDocumentStore(AllowControlCharactersInIdentifier(options));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -265,10 +260,11 @@ namespace SlowTests.Bugs
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenLoadWithInclude(char c)
         {
-            using var store = GetDocumentStore(new Options
+            var options = new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
-            });
+            };
+            using var store = GetDocumentStore(AllowControlCharactersInIdentifier(options));
 
             var user = new User();
             using (var session = store.OpenAsyncSession())
@@ -294,10 +290,11 @@ namespace SlowTests.Bugs
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenSubscribeWithInclude(char c)
         {
-            using var store = GetDocumentStore(new Options
+            var options = new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
-            });
+            };
+            using var store = GetDocumentStore(AllowControlCharactersInIdentifier(options));
 
             var user = new User();
             using (var session = store.OpenAsyncSession())

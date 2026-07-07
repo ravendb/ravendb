@@ -341,13 +341,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         if (rawRecord.IsSharded)
                         {
-                            if (rawRecord.Sharding.Orchestrator.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                            var isOrchestrator = rawRecord.Sharding.Orchestrator.Topology.RelevantFor(ServerStore.NodeTag);
+
+                            var localShards = rawRecord.Sharding.Shards
+                                .Where(shard => shard.Value.RelevantFor(ServerStore.NodeTag))
+                                .ToList();
+
+                            if (isOrchestrator == false && localShards.Count == 0)
                                 continue;
 
                             // write the main database record which includes the individual shards configuration
                             await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, context);
 
-                            foreach (var shard in rawRecord.Sharding.Shards)
+                            foreach (var shard in localShards)
                             {
                                 await WriteInfo($"{ShardHelper.ToShardName(databaseName, shard.Key)}", rawRecord);
                             }

@@ -51,7 +51,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
         CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
-        ValidateCommands(parsedCommands, disableAtomicDocumentWrites);
+        var supportedFeature = GetSupportedFeatures();
+        ValidateCommands(parsedCommands, disableAtomicDocumentWrites, supportedFeature.SupportedFeatureTypes.ThrowControlCharactersInIdentifier);
 
         var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
 
@@ -150,4 +151,6 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             disableAtomicDocumentWrites = true;
         }
     }
+
+    protected abstract SupportedFeature GetSupportedFeatures();
 }

@@ -13,6 +13,7 @@ function LayoutDockerPrerequisites($projectDir, $artifactsDir) {
         'build-ubuntu.ps1',
         'publish-nanoserver.ps1',
         'publish-ubuntu.ps1',
+        'publish-multiarch.ps1',
         'common.ps1'
     )
 

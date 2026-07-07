@@ -241,7 +241,7 @@ namespace FastTests.Corax
                 var token = tokens[i];
                 var word = buffer.Slice(token.Offset, (int)token.Length);
                 ReadOnlySpan<byte> wordLowerCased = Encoding.UTF8.GetBytes(words[i].ToLower());
-                Assert.True(wordLowerCased.SequenceEqual(word));
+                Assert.True(wordLowerCased.SequenceEqual(word), $"{Encodings.Utf8.GetString(word)} != {words[i].ToLower()}");
                 Assert.Equal(wordLowerCased.Length, (int)token.Length);
             }
         }
@@ -295,31 +295,6 @@ namespace FastTests.Corax
             Assert.Equal(source[1], buffer[1]);
 
             Assert.Equal((byte)'s', buffer[10]);
-        }
-
-        [RavenFact(RavenTestCategory.Corax)]
-        public void BasicInnerAnalyzerUtf16()
-        {
-            ReadOnlySpan<char> source = "This is a SiMple stop stop tEsT".AsSpan();
-
-            var analyzer = Analyzer.Create(this.Allocator, default(WhitespaceTokenizer), default(LowerCaseTransformer))
-                                   .With(default(FilterTransformer<BasicLowercaseFilter>));
-
-            analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
-
-            Span<char> buffer = new char[bufferSize];
-            Span<Token> tokens = new Token[tokenSize];
-
-            analyzer.Execute(source, ref buffer, ref tokens);
-
-            Assert.Equal(source.Length, buffer.Length);
-            Assert.Equal(5, tokens.Length);
-            Assert.Equal('t', buffer[0]);
-            Assert.NotEqual(source[0], buffer[0]);
-            Assert.Equal('h', buffer[1]);
-            Assert.Equal(source[1], buffer[1]);
-
-            Assert.Equal('s', buffer[10]);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿// ReSharper disable InconsistentNaming
+
 namespace Raven.Server.NotificationCenter.Notifications
 {
     public enum AlertReason
@@ -102,5 +103,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         SqlConnectionString_DeprecatedFactoryReplaced = 66,
 
         GcThreadContention = 71, // 67-70 are used in 7.2
+
+        HighReadAheadKb = 73 // 72 is used in 7.2
     }
 }

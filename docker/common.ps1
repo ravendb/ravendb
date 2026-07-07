@@ -117,13 +117,15 @@ function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly
 
 function GetManifestTags {
     param (
-        $repo
+        $repo,
+        $version
     )
 
     return @(
         #"${repo}:latest",
-#        "${repo}:latest-lts",
+        #"${repo}:latest-lts",
         "${repo}:7.1-latest"
+        "${repo}:${version}"
     )
 }
 
