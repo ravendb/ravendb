@@ -286,9 +286,11 @@ namespace Raven.Client.Documents.Session
             var valuesArray = values.ToArray();
 
             if (increment)
-                valuesArray = AddValues(CurrentValuesAt(utcTimestamp), valuesArray);
+                valuesArray = AddValues(CurrentLocalDeltaAt(utcTimestamp), valuesArray);
 
-            RemoveFromDeletedCacheIfNeeded(timestamp);
+            // use the normalized timestamp: the entry is stored at utcTimestamp and the deleted ranges are
+            // stored UTC/ms-normalized, so the hole must be punched at utcTimestamp too (RavenDB-25903, #4).
+            RemoveFromDeletedCacheIfNeeded(utcTimestamp);
 
             var entry = new TimeSeriesEntry
             {
@@ -306,28 +308,17 @@ namespace Raven.Client.Documents.Session
             entries[utcTimestamp] = entry;
         }
 
-        private double[] CurrentValuesAt(DateTime utcTimestamp)
+        // Returns only the in-session accumulated increment delta at the given timestamp (never the
+        // cached server value). Increments store the pure in-session delta in the local overlay; the
+        // server base is added at read time by the increment-aware merge (see MergeSorted). Reading the
+        // cached server value here would bake the base into the overlay and lose it when the base is
+        // unknown at increment time (e.g. incrementing before any read).
+        private double[] CurrentLocalDeltaAt(DateTime utcTimestamp)
         {
             if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) &&
                 byName.TryGetValue(Name, out var localEntries) &&
                 localEntries.TryGetValue(utcTimestamp, out var local))
                 return local.Values;
-
-            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
-                cache.TryGetValue(Name, out var ranges))
-            {
-                foreach (var range in ranges)
-                {
-                    if (range.From > utcTimestamp || range.To < utcTimestamp || range.CachedEntries == null)
-                        continue;
-
-                    foreach (var e in range.CachedEntries)
-                    {
-                        if (e.Timestamp == utcTimestamp)
-                            return e.Values;
-                    }
-                }
-            }
 
             return Array.Empty<double>();
         }
@@ -364,7 +355,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private static double[] AddValues(double[] existing, double[] delta)
+        protected static double[] AddValues(double[] existing, double[] delta)
         {
             existing ??= Array.Empty<double>();
             delta ??= Array.Empty<double>();

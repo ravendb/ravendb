@@ -2504,6 +2504,32 @@ more responsive application.
             var returnedTransactionIndex = result.TransactionIndex;
             _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
             _sessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
+
+            // The in-session time series mutations are now persisted on the server. Invalidate the cached
+            // ranges of any mutated series so the next read reflects the saved state, then drop the
+            // overlays. Simply clearing the overlays is NOT enough: a sub-range delete is recorded only as
+            // a read-time filter in DeletedTimeSeries (the cached ranges still physically hold the deleted
+            // entries), so clearing without invalidating would resurrect that stale data (RavenDB-25903,
+            // defect #3).
+            InvalidateMutatedTimeSeriesCache(_localTimeSeries);
+            InvalidateMutatedTimeSeriesCache(_deletedTimeSeries);
+            LocalTimeSeries.Clear();
+            DeletedTimeSeries.Clear();
+        }
+
+        private void InvalidateMutatedTimeSeriesCache<TOverlay>(Dictionary<string, Dictionary<string, TOverlay>> overlay)
+        {
+            if (overlay == null || _timeSeriesByDocId == null)
+                return;
+
+            foreach (var docEntry in overlay)
+            {
+                if (_timeSeriesByDocId.TryGetValue(docEntry.Key, out var cacheByName) == false)
+                    continue;
+
+                foreach (var name in docEntry.Value.Keys)
+                    cacheByName.Remove(name);
+            }
         }
 
         internal void OnBeforeConversionToDocumentInvoke(string id, object entity)
