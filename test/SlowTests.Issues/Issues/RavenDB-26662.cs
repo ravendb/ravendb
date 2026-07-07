@@ -1,22 +1,17 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Raven.Server.Commercial;
 using Raven.Server.Commercial.WriteUsageMetering;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -399,118 +394,6 @@ namespace SlowTests.Issues
                 Assert.NotNull(dbEntry);
                 Assert.Equal(expected, Normalize(dbEntry.ChangeVector));
             }
-        }
-
-        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster, LicenseRequired = true)]
-        public async Task SenderBody_HasNestedLicense_IsoDate_AndRetainsZeroEtagDatabases()
-        {
-            // Report quickly (the reporter waits one interval before its first send).
-            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Licensing.WriteUsageReportingInterval)] = "1";
-
-            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
-            await EnsureLicenseAsync(leader);
-
-            // Capture the genuine assembled body and mute the real POST to api.ravendb.net.
-            // The test license is not Quill, so force-enable reporting to exercise the send path.
-            var captured = new TaskCompletionSource<DynamicJsonValue>(TaskCreationOptions.RunContinuationsAsynchronously);
-            leader.ServerStore.ForTestingPurposesOnly().ForceWriteUsageReportingEnabled = true;
-            leader.ServerStore.ForTestingPurposesOnly().SkipWriteUsageActualSend = true;
-            leader.ServerStore.ForTestingPurposesOnly().OnWriteUsageReportReady = body => captured.TrySetResult(body);
-
-            string zeroEtagTopologyId;
-            using (var withWrites = GetDocumentStore(new Options { ReplicationFactor = 3, Server = leader }))
-            using (var noWrites = GetDocumentStore(new Options { ReplicationFactor = 3, Server = leader }))
-            {
-                await WriteDocsAsync(withWrites, count: 20);
-                zeroEtagTopologyId = GetDatabaseRecord(noWrites).Topology.DatabaseTopologyIdBase64;
-
-                var body = await captured.Task.WaitAsync(TimeSpan.FromSeconds(120));
-                Assert.NotNull(body);
-
-                // Serialize exactly as production does, then inspect what would go on the wire.
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (var blittable = context.ReadObject(body, "test-write-usage-report"))
-                {
-                    // License is a NESTED object (Id/Name/Keys), not a stringified blob.
-                    Assert.True(blittable.TryGet("License", out BlittableJsonReaderObject license),
-                        "License should be a nested JSON object.");
-                    Assert.True(license.TryGet("Id", out string licenseId));
-                    Assert.False(string.IsNullOrEmpty(licenseId));
-                    Assert.True(license.TryGet("Name", out string licenseName));
-                    Assert.NotNull(licenseName);
-                    Assert.True(license.TryGet("Keys", out BlittableJsonReaderArray keys));
-                    Assert.NotEmpty(keys);
-
-                    // SentAtUtc round-trips as ISO-8601.
-                    Assert.True(blittable.TryGet("SentAtUtc", out string sentAtUtc));
-                    Assert.True(DateTime.TryParse(sentAtUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _),
-                        $"SentAtUtc '{sentAtUtc}' should parse as ISO-8601.");
-
-                    // Databases present, and the brand-new (zero-etag) database is retained.
-                    Assert.True(blittable.TryGet("Databases", out BlittableJsonReaderArray databases));
-                    Assert.NotEmpty(databases);
-
-                    var zeroEtagEntry = databases
-                        .Cast<BlittableJsonReaderObject>()
-                        .Single(d =>
-                        {
-                            d.TryGet("TopologyId", out string id);
-                            return id == zeroEtagTopologyId;
-                        });
-
-                    // Each database entry carries a single merged change vector; the brand-new db has an
-                    // empty one.
-                    zeroEtagEntry.TryGet("ChangeVector", out string zeroEtagChangeVector);
-                    Assert.True(string.IsNullOrEmpty(zeroEtagChangeVector),
-                        $"Brand-new database should report an empty change vector, got '{zeroEtagChangeVector}'.");
-                }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster, LicenseRequired = true)]
-        public async Task WriteUsageReporter_RunsOnLeaderOnly()
-        {
-            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Licensing.WriteUsageReportingInterval)] = "1";
-
-            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
-            await EnsureLicenseAsync(leader);
-
-            // Arm the hook on EVERY node: only the leader constructs a WriteUsageReporter, so only its hook fires.
-            var fires = new ConcurrentDictionary<string, int>();
-            foreach (var node in nodes)
-            {
-                var tag = node.ServerStore.NodeTag;
-                node.ServerStore.ForTestingPurposesOnly().ForceWriteUsageReportingEnabled = true;
-                node.ServerStore.ForTestingPurposesOnly().SkipWriteUsageActualSend = true;
-                node.ServerStore.ForTestingPurposesOnly().OnWriteUsageReportReady = _ => fires.AddOrUpdate(tag, 1, (_, v) => v + 1);
-            }
-
-            using (var store = GetDocumentStore(new Options { ReplicationFactor = 3, Server = leader }))
-            {
-                await WriteDocsAsync(store, count: 20);
-
-                var leaderTag = leader.ServerStore.NodeTag;
-                await WaitForValueAsync(() => fires.TryGetValue(leaderTag, out var n) && n > 0, true, timeout: 120_000, interval: 200);
-
-                // The leader fired; no follower should have.
-                Assert.True(fires.TryGetValue(leaderTag, out var leaderFires) && leaderFires > 0);
-                foreach (var node in nodes.Where(n => n.ServerStore.NodeTag != leaderTag))
-                    Assert.False(fires.ContainsKey(node.ServerStore.NodeTag),
-                        $"Follower {node.ServerStore.NodeTag} should never run the write-usage reporter.");
-            }
-        }
-
-        private static async Task EnsureLicenseAsync(RavenServer leader)
-        {
-            // Auto-activation from RAVEN_LICENSE happens on startup; ensure it is present and, if not, register it.
-            if (leader.ServerStore.LoadLicense() != null)
-                return;
-
-            var licenseString = Environment.GetEnvironmentVariable(RavenTestHelper.EnvironmentVariables.LicenseEnvName);
-            Assert.True(Raven.Server.Commercial.LicenseHelper.TryDeserializeLicense(licenseString, out License license), "Failed to deserialize the test license.");
-            await leader.ServerStore.PutLicenseAsync(license, Raven.Client.Util.RaftIdGenerator.NewId());
-
-            await WaitForValueAsync(() => leader.ServerStore.LoadLicense() != null, true, timeout: 15_000, interval: 100);
         }
     }
 }

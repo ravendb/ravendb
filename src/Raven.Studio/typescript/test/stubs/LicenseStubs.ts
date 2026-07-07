@@ -243,7 +243,6 @@ export class LicenseStubs {
             SkipLeasingErrorsLogging: false,
             LicensePath: null,
             ThrowOnInvalidOrMissingLicense: false,
-            WriteUsageReportingInterval: { AsTimeSpan: "00:15:00" },
         };
     }
 
