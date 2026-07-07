@@ -69,11 +69,12 @@ namespace Corax.Querying.Matches
                     //  - A TermMatch has a cheap, seekable AndWith (Seek into the posting list + prune), so
                     //    memoizing it is pure loss: no time saved, and we'd hold the whole set in memory.
                     //  - A large outer would cost gigabytes to materialize AND make every per-batch merge scan
-                    //    the full memoized span (quadratic). A low-confidence count may hide such a large set.
-                    // In those cases we skip memoization and stream via outer.AndWith instead.
+                    //    the full memoized span (quadratic).
+                    // In those cases we skip memoization and stream via outer.AndWith instead. Note we do NOT key
+                    // off Confidence here: a low-confidence count means "unknown", not "large", and some matches
+                    // only support Fill (they rely on being memoized), so we must not route them to AndWith.
                     var outerAndWithIsCheap = typeof(TOuter) == typeof(TermMatch);
-                    var outerTooBigToMemoize = outer.Confidence == QueryCountConfidence.Low ||
-                                               outer.Count > match._indexSearcher.MaxMemoizationSizeInBytes / sizeof(long) / 2;
+                    var outerTooBigToMemoize = outer.Count > match._indexSearcher.MaxMemoizationSizeInBytes / sizeof(long) / 2;
                     if (resultsSpan.Length == 0 && match._memoizedOuter is null &&
                         outerAndWithIsCheap == false && outerTooBigToMemoize == false)
                     {
