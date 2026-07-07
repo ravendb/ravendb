@@ -158,4 +158,5 @@ export const certificatesSelectors = {
     certificateToEdit: (state: RootState) => state.certificates.certificateToEdit,
     certificateToClone: (state: RootState) => state.certificates.certificateToClone,
     isReplaceServerModalOpen: (state: RootState) => state.certificates.isReplaceServerModalOpen,
+    isRenewedModalOpen: (state: RootState) => state.certificates.isRenewedModalOpen,
 };
