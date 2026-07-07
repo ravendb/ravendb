@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import genUtils from "common/generalUtils";
+import "./CertificatesRenewedModal.scss";
 
 const serverUrlPlaceholder = "https://your_RavenDB_server_URL";
 const pfxPathPlaceholder = "C:\\path_to_your_pfx_file\\cert.pfx";
@@ -33,7 +34,7 @@ export default function CertificatesRenewedModal() {
     const close = () => dispatch(certificatesActions.isRenewedModalOpenToggled());
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal scrollable show size="lg" centered contentClassName="modal-border bulge-primary certificates-renewed-modal">
             <Modal.Header onCloseClick={close}>
                 <Icon icon="certificate" color="primary" addon="check" className="fs-2" />
                 <span className="lead">Your new certificate is ready</span>
@@ -46,20 +47,22 @@ export default function CertificatesRenewedModal() {
                 </p>
 
                 <Tab.Container activeKey={accessTab} onSelect={(key: "browser" | "api") => setAccessTab(key)}>
-                    <Nav variant="pills" className="mb-4">
-                        <Nav.Item className="flex-grow">
-                            <Nav.Link eventKey="browser">
-                                <Icon icon="global" />
-                                Browser Access
-                            </Nav.Link>
-                        </Nav.Item>
-                        <Nav.Item className="flex-grow">
-                            <Nav.Link eventKey="api">
-                                <Icon icon="code" />
-                                Application Access (API)
-                            </Nav.Link>
-                        </Nav.Item>
-                    </Nav>
+                    <div className="access-tab-container mb-4">
+                        <Nav>
+                            <Nav.Item className="flex-grow mb-0">
+                                <Nav.Link eventKey="browser" className="">
+                                    <Icon icon="global" />
+                                    Browser Access
+                                </Nav.Link>
+                            </Nav.Item>
+                            <Nav.Item className="flex-grow mb-0">
+                                <Nav.Link eventKey="api" className="">
+                                    <Icon icon="code" />
+                                    Application Access (API)
+                                </Nav.Link>
+                            </Nav.Item>
+                        </Nav>
+                    </div>
 
                     <Tab.Content>
                         <Tab.Pane eventKey="browser">
@@ -78,57 +81,60 @@ export default function CertificatesRenewedModal() {
                                         activeKey={browserTab}
                                         onSelect={(key: Browser) => setBrowserTab(key)}
                                     >
-                                        <Nav className="mb-2">
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="Chrome">
-                                                    <Icon icon="chrome" />
-                                                    Chrome
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="Firefox">
-                                                    <Icon icon="firefox" />
-                                                    Firefox
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="Safari">
-                                                    <Icon icon="safari" />
-                                                    Safari
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="Other">
-                                                    <Icon icon="global" />
-                                                    Other
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                        </Nav>
-                                        <Tab.Content className="p-2 text-break">
-                                            <Tab.Pane eventKey="Chrome">
-                                                Chrome (or any Chromium-based browser) will let you select this
-                                                certificate automatically. You may need to restart all instances of
-                                                Chrome to make sure nothing is cached.
-                                            </Tab.Pane>
-                                            <Tab.Pane eventKey="Firefox">
-                                                Firefox uses its own internal certificate store. After importing the
-                                                certificate through Firefox settings, it will be available for use
-                                                automatically. You may need to restart Firefox to ensure the new
-                                                certificate is recognized properly.
-                                            </Tab.Pane>
-                                            <Tab.Pane eventKey="Safari">
-                                                Safari uses the macOS Keychain to manage certificates. Once the
-                                                certificate is imported and marked as trusted in Keychain Access, Safari
-                                                will select it automatically when needed. Restarting Safari or the system
-                                                may help if it doesn&apos;t appear right away.
-                                            </Tab.Pane>
-                                            <Tab.Pane eventKey="Other">
-                                                Browsers that are not Chromium-based and don&apos;t use the system
-                                                certificate store typically require manual certificate import through
-                                                their own settings or preferences. Behavior may vary, and restarting the
-                                                browser is often recommended to ensure the certificate is applied.
-                                            </Tab.Pane>
-                                        </Tab.Content>
+                                        <div className="segmented-tab-container">
+                                            <Nav>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="Chrome">
+                                                        <Icon icon="chrome" />
+                                                        Chrome
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="Firefox">
+                                                        <Icon icon="firefox" />
+                                                        Firefox
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="Safari">
+                                                        <Icon icon="safari" />
+                                                        Safari
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="Other">
+                                                        <Icon icon="global" />
+                                                        Other
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                            </Nav>
+                                            <Tab.Content className="p-2 text-break">
+                                                <Tab.Pane eventKey="Chrome">
+                                                    Chrome (or any Chromium-based browser) will let you select this
+                                                    certificate automatically. You may need to restart all instances of
+                                                    Chrome to make sure nothing is cached.
+                                                </Tab.Pane>
+                                                <Tab.Pane eventKey="Firefox">
+                                                    Firefox uses its own internal certificate store. After importing the
+                                                    certificate through Firefox settings, it will be available for use
+                                                    automatically. You may need to restart Firefox to ensure the new
+                                                    certificate is recognized properly.
+                                                </Tab.Pane>
+                                                <Tab.Pane eventKey="Safari">
+                                                    Safari uses the macOS Keychain to manage certificates. Once the
+                                                    certificate is imported and marked as trusted in Keychain Access,
+                                                    Safari will select it automatically when needed. Restarting Safari or
+                                                    the system may help if it doesn&apos;t appear right away.
+                                                </Tab.Pane>
+                                                <Tab.Pane eventKey="Other">
+                                                    Browsers that are not Chromium-based and don&apos;t use the system
+                                                    certificate store typically require manual certificate import through
+                                                    their own settings or preferences. Behavior may vary, and restarting
+                                                    the browser is often recommended to ensure the certificate is
+                                                    applied.
+                                                </Tab.Pane>
+                                            </Tab.Content>
+                                        </div>
                                     </Tab.Container>
                                 </NumberedListItem>
                                 <NumberedListItem stepKey={3}>
@@ -171,62 +177,64 @@ export default function CertificatesRenewedModal() {
                                         activeKey={clientTab}
                                         onSelect={(key: ClientLanguage) => setClientTab(key)}
                                     >
-                                        <Nav className="mb-2">
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="csharp">
-                                                    <Icon icon="csharp" />
-                                                    C#
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="java">
-                                                    <Icon icon="code" />
-                                                    Java
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="nodejs">
-                                                    <Icon icon="node" />
-                                                    Node.js
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                            <Nav.Item className="flex-grow">
-                                                <Nav.Link eventKey="python">
-                                                    <Icon icon="code" />
-                                                    Python
-                                                </Nav.Link>
-                                            </Nav.Item>
-                                        </Nav>
-                                        <Tab.Content className="p-2">
-                                            <Tab.Pane eventKey="csharp">
-                                                <Code
-                                                    language="csharp"
-                                                    code={csharpSnippet(serverUrl)}
-                                                    elementToCopy={csharpSnippet(serverUrl)}
-                                                />
-                                            </Tab.Pane>
-                                            <Tab.Pane eventKey="java">
-                                                <Code
-                                                    language="plaintext"
-                                                    code={javaSnippet(serverUrl)}
-                                                    elementToCopy={javaSnippet(serverUrl)}
-                                                />
-                                            </Tab.Pane>
-                                            <Tab.Pane eventKey="nodejs">
-                                                <Code
-                                                    language="javascript"
-                                                    code={nodejsSnippet(serverUrl)}
-                                                    elementToCopy={nodejsSnippet(serverUrl)}
-                                                />
-                                            </Tab.Pane>
-                                            <Tab.Pane eventKey="python">
-                                                <Code
-                                                    language="plaintext"
-                                                    code={pythonSnippet(serverUrl)}
-                                                    elementToCopy={pythonSnippet(serverUrl)}
-                                                />
-                                            </Tab.Pane>
-                                        </Tab.Content>
+                                        <div className="segmented-tab-container">
+                                            <Nav>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="csharp">
+                                                        <Icon icon="csharp" />
+                                                        C#
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="java">
+                                                        <Icon icon="code" />
+                                                        Java
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="nodejs">
+                                                        <Icon icon="node" />
+                                                        Node.js
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                                <Nav.Item className="flex-grow">
+                                                    <Nav.Link eventKey="python">
+                                                        <Icon icon="code" />
+                                                        Python
+                                                    </Nav.Link>
+                                                </Nav.Item>
+                                            </Nav>
+                                            <Tab.Content className="p-2">
+                                                <Tab.Pane eventKey="csharp">
+                                                    <Code
+                                                        language="csharp"
+                                                        code={csharpSnippet(serverUrl)}
+                                                        elementToCopy={csharpSnippet(serverUrl)}
+                                                    />
+                                                </Tab.Pane>
+                                                <Tab.Pane eventKey="java">
+                                                    <Code
+                                                        language="java"
+                                                        code={javaSnippet(serverUrl)}
+                                                        elementToCopy={javaSnippet(serverUrl)}
+                                                    />
+                                                </Tab.Pane>
+                                                <Tab.Pane eventKey="nodejs">
+                                                    <Code
+                                                        language="javascript"
+                                                        code={nodejsSnippet(serverUrl)}
+                                                        elementToCopy={nodejsSnippet(serverUrl)}
+                                                    />
+                                                </Tab.Pane>
+                                                <Tab.Pane eventKey="python">
+                                                    <Code
+                                                        language="python"
+                                                        code={pythonSnippet(serverUrl)}
+                                                        elementToCopy={pythonSnippet(serverUrl)}
+                                                    />
+                                                </Tab.Pane>
+                                            </Tab.Content>
+                                        </div>
                                     </Tab.Container>
                                     <p className="mt-2 mb-0">
                                         For detailed code examples and more information, please refer to the official{" "}
@@ -247,7 +255,7 @@ export default function CertificatesRenewedModal() {
                     </Tab.Content>
                 </Tab.Container>
             </Modal.Body>
-            <Modal.Footer className="hstack justify-content-between">
+            <Modal.Footer className="hstack justify-content-between my-2">
                 <a href={docsLink} target="_blank" className="btn btn-info rounded-pill">
                     See documentation <Icon icon="newtab" margin="m-0" />
                 </a>
@@ -290,8 +298,8 @@ try (IDocumentStore store = new DocumentStore(
 }
 
 function nodejsSnippet(serverUrl: string): string {
-    return `const fs = require("fs");
-const { DocumentStore } = require("ravendb");
+    return `import * as fs from "fs";
+import { DocumentStore } from "ravendb";
 
 const authOptions = {
     certificate: fs.readFileSync("${pfxPathPlaceholder}"),
