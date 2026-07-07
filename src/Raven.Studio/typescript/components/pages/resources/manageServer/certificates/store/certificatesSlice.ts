@@ -44,7 +44,7 @@ const initialState: InitialState = {
     nameOrThumbprintFilter: "",
     databaseFilter: "",
     clearanceFilter: [],
-    stateFilter: [],
+    stateFilter: ["Valid"],
     sortMode: "By Name - Asc",
     isGenerateModalOpen: false,
     isUploadModalOpen: false,
