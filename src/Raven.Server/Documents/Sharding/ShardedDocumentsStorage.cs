@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -386,6 +387,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         long lastProcessedEtag = 0;
         bool hasMore = true, collectionNamesUpdated = false;
         var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase);
+        var holder = new Table.TableValueHolder(); // reused across iterations to avoid a per-row allocation
 
         while (hasMore)
         {
@@ -441,39 +443,33 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 var cv = ChangeVector.MergeWithDatabaseChangeVector(context, tombstoneChangeVector);
                 var flags = tombstone.Flags | DocumentFlags.Artificial | DocumentFlags.FromResharding;
 
+                writeTable.DirectRead(tombstone.StorageId, out holder.Reader);
+
+                using (TableValueReaderUtil.CloneTableValueReader(context, holder))
                 using (Slice.From(context.Allocator, cv, out var cvSlice))
-                using (Slice.External(context.Allocator, tombstone.LowerId, out var keySlice))
                 using (writeTable.Allocate(out TableValueBuilder tvb))
                 {
-                    var clonedKey = keySlice.Clone(context.Allocator);
-
-                    var hasCollection = tombstone.Collection != null;
-                    Slice collectionSlice = default;
-                    ByteStringContext.InternalScope collectionScope = default;
-                    if (hasCollection)
-                        collectionScope = DocumentIdWorker.GetStringPreserveCase(context, tombstone.Collection, out collectionSlice);
-
-                    using (collectionScope)
+                    for (int i = 0; i < holder.Reader.Count; i++)
                     {
-                        tvb.Add(clonedKey.Content.Ptr, clonedKey.Size);
-                        tvb.Add(Bits.SwapBytes(newEtag));
-                        tvb.Add(Bits.SwapBytes(tombstone.DeletedEtag));
-                        tvb.Add(tombstone.TransactionMarker);
-                        tvb.Add((byte)tombstone.Type);
-
-                        // Document/revision tombstones carry a collection; attachment tombstones don't, so we
-                        // write an empty 0-byte column - the same as AttachmentsStorage.CreateTombstone (tvb.Add(null, 0)).
-                        if (hasCollection)
-                            tvb.Add(collectionSlice);
-                        else
-                            tvb.Add(null, 0);
-                        tvb.Add((int)flags);
-                        tvb.Add(cvSlice.Content.Ptr, cvSlice.Size);
-                        tvb.Add(tombstone.LastModified.Ticks);
-
-                        writeTable.Update(tombstone.StorageId, tvb);
-                        context.Allocator.Release(ref clonedKey.Content);
+                        switch ((TombstoneTable)i)
+                        {
+                            case TombstoneTable.Etag:
+                                tvb.Add(Bits.SwapBytes(newEtag));
+                                break;
+                            case TombstoneTable.Flags:
+                                tvb.Add((int)flags);
+                                break;
+                            case TombstoneTable.ChangeVector:
+                                tvb.Add(cvSlice.Content.Ptr, cvSlice.Size);
+                                break;
+                            default:
+                                var ptr = holder.Reader.Read(i, out int size);
+                                tvb.Add(ptr, size);
+                                break;
+                        }
                     }
+
+                    writeTable.Update(tombstone.StorageId, tvb);
                 }
 
                 // need to re open the read iterator after we modified the tree
