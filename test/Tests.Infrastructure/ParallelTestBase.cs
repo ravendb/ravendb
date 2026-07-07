@@ -25,6 +25,7 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
     private const string XunitConfigurationFile = "xunit.runner.json";
 
     private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
+    private static readonly int MaxNumberOfConcurrentTests;
     private readonly MultipleUseFlag _concurrentTestsSemaphoreTaken = new();
 
     static ParallelTestBase()
@@ -54,6 +55,7 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
         }
 
         Console.WriteLine("Max number of concurrent tests is: " + maxNumberOfConcurrentTests);
+        MaxNumberOfConcurrentTests = maxNumberOfConcurrentTests;
         ConcurrentTestsSemaphore = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
 
         if (bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_WRITE_RUNNING_TESTS_TO_FILE"), out var writeToFile))
@@ -101,6 +103,38 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
         }
 
         return Task.CompletedTask;
+    }
+
+    protected bool TryExecuteWhenNoOtherTestsAreRunning(Action action)
+    {
+        if (action == null)
+            throw new ArgumentNullException(nameof(action));
+
+        if (_concurrentTestsSemaphoreTaken.IsRaised() == false)
+            return false;
+
+        var acquired = 0;
+        try
+        {
+            for (var i = 1; i < MaxNumberOfConcurrentTests; i++)
+            {
+                if (ConcurrentTestsSemaphore.Wait(0) == false)
+                    return false;
+
+                acquired++;
+            }
+
+            action();
+            return true;
+        }
+        finally
+        {
+            while (acquired > 0)
+            {
+                ConcurrentTestsSemaphore.Release();
+                acquired--;
+            }
+        }
     }
 
     public override void Dispose()

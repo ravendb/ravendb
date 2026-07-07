@@ -42,6 +42,7 @@ namespace Raven.Server.Documents.Sharding
         public ShardExecutor ShardExecutor;
         public AllOrchestratorNodesExecutor AllOrchestratorNodesExecutor;
         public DatabaseRecord DatabaseRecord => _record;
+        public SupportedFeature SupportedFeature { get; private set; }
 
         public RavenConfiguration Configuration { get; internal set; }
 
@@ -63,6 +64,7 @@ namespace Raven.Server.Documents.Sharding
 
             ServerStore = serverStore;
             _record = record;
+            SupportedFeature = new SupportedFeature(record);
             _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
 
             _orchestratorStateChange = new DatabasesLandlord.StateChange(ServerStore, record.DatabaseName, _logger, OnDatabaseRecordChange, 0, _databaseShutdown.Token);
@@ -153,6 +155,7 @@ namespace Raven.Server.Documents.Sharding
 
             SubscriptionsStorage.Update();
 
+            SupportedFeature = new SupportedFeature(record);
             Interlocked.Exchange(ref _record, record);
 
             return Task.CompletedTask;

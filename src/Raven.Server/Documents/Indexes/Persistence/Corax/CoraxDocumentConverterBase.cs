@@ -140,7 +140,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     }
 
     [SkipLocalsInit]
-    protected void InsertRegularField<TBuilder>(IndexField field, object value, JsonOperationContext indexContext, TBuilder builder, object sourceDocument,
+    protected unsafe void InsertRegularField<TBuilder>(IndexField field, object value, JsonOperationContext indexContext, TBuilder builder, object sourceDocument,
         out bool shouldSkip)
         where TBuilder : IIndexEntryBuilder
     {

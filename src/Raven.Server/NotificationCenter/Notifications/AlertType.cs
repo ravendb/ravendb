@@ -51,6 +51,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         ClusterTopologyWarning,
         DatabaseTopologyWarning,
         SwappingHddInsteadOfSsd,
+        HighReadAheadKb,
 
         RevisionsConfigurationNotValid,
         ArchivalConfigurationNotValid,

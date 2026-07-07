@@ -2201,6 +2201,8 @@ namespace Raven.Server.Documents
 
             internal AsyncManualResetEvent DelayQueryByPatch;
 
+            internal AsyncManualResetEvent DelayDeleteBucket;
+
             internal bool EnableWritesToTheWrongShard = false;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
@@ -2275,11 +2277,15 @@ namespace Raven.Server.Documents
 
             if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix))
                 SupportedFeatureTypes.ThrowRevisionKeyTooBigFix = true;
+            
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier))
+                SupportedFeatureTypes.ThrowControlCharactersInIdentifier = true;
         }
     }
 
     public class SupportedFeatureTypes
     {
         public bool ThrowRevisionKeyTooBigFix;
+        public bool ThrowControlCharactersInIdentifier;
     }
 }

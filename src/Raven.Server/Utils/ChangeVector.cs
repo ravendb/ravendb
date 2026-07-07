@@ -196,6 +196,18 @@ public sealed class ChangeVector
         return changeVector.MergeOrderWith(context.LastDatabaseChangeVector, context);
     }
 
+    internal static ChangeVector GetLocalCvFromPriorAndUpdateDbCv(DocumentsOperationContext context, ChangeVector priorChangeVector, DocumentDatabase database, long etag)
+    {
+        ArgumentNullException.ThrowIfNull(priorChangeVector);
+
+        ChangeVector changeVector = MergeWithDatabaseChangeVector(context, priorChangeVector);
+        changeVector = changeVector.UpdateVersion(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        changeVector = changeVector.UpdateOrder(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        context.LastDatabaseChangeVector = changeVector.Order;
+
+        return changeVector;
+    }
+
     public static void MergeWithDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
     {
         if (changeVector == null)

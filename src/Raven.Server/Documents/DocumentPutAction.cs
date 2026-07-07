@@ -126,12 +126,13 @@ namespace Raven.Server.Documents
             }
 
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
                     _documentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put, newFlags);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
+                ValidateIdAndCollection(id, collectionName.Name, newFlags, nonPersistentFlags);
                 _documentsStorage._forTestingPurposes?.OnBeforeOpenTableWhenPutDocumentWithSpecificId?.Invoke(id);
                 
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
@@ -331,6 +332,23 @@ namespace Raven.Server.Documents
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateIdAndCollection(string id, string collection, DocumentFlags newFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            const DocumentFlags internalWriteFlags = DocumentFlags.FromReplication | DocumentFlags.FromClusterTransaction | DocumentFlags.Reverted | DocumentFlags.FromResharding;
+            if (string.IsNullOrWhiteSpace(id)
+                || (newFlags & internalWriteFlags) != DocumentFlags.None
+                || nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                return;
+
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(collection, "Collection");
+            
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
+                return;
+
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(id, "Document ID");
         }
 
         [Conditional("DEBUG")]

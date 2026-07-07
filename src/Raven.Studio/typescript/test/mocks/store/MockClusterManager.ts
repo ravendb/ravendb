@@ -15,24 +15,17 @@ export class MockClusterManager {
         globalDispatch(clusterActions.serverStateLoaded({ passive }));
     }
 
-    with_Cluster() {
+    with_Cluster(nodeTags = ["A", "B", "C"], localNodeTag = "A") {
         globalDispatch(
-            clusterActions.nodesLoaded([
-                {
-                    nodeTag: "A",
-                    serverUrl: "https://a.server-url.com",
-                },
-                {
-                    nodeTag: "B",
-                    serverUrl: "https://b.server-url.com",
-                },
-                {
-                    nodeTag: "C",
-                    serverUrl: "https://c.server-url.com",
-                },
-            ])
+            clusterActions.nodesLoaded(
+                nodeTags.map((nodeTag) => ({
+                    nodeTag,
+                    serverUrl: `https://${nodeTag.toLowerCase()}.server-url.com`,
+                    type: "Member",
+                }))
+            )
         );
-        globalDispatch(clusterActions.localNodeTagLoaded("A"));
+        globalDispatch(clusterActions.localNodeTagLoaded(localNodeTag));
     }
 
     with_Single() {
