@@ -104,7 +104,7 @@ namespace InterversionTests.Revisions
         private static void AssertAttachmentTombstoneExists(
             DocumentsOperationContext ctx, DocumentDatabase database, string docId, string label)
         {
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ctx, docId, out Slice lowerIdSlice, out _))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(ctx, docId, out Slice lowerIdSlice, out _))
             {
                 var attTombTable = ctx.Transaction.InnerTransaction.OpenTable(
                     database.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);

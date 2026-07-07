@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Revisions
 
         internal DocIdSlices(ByteStringContext allocator, string docId)
         {
-            _scope = DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, docId, out LowerId, out Id);
+            _scope = DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, docId, out LowerId, out Id);
         }
 
         public void Dispose() => _scope.Dispose();

@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.Revisions
             Table table = database.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(
                 context.Transaction.InnerTransaction, collectionName);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out Slice lowerId, out Slice idSlice))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
             using (RevisionsStorage.BuildRevisionKey(context.Allocator, compoundCv, out RevisionKey key))
             using (BlittableJsonReaderObject docBlittable = BuildBlittableDocument(context, name: "Legacy"))
             using (table.Allocate(out TableValueBuilder tvb))
@@ -100,9 +100,9 @@ namespace SlowTests.Server.Documents.Revisions
                 database.DocumentsStorage.AttachmentsStorage.AttachmentsSchema, AttachmentsMetadataSlice);
             long newEtag = database.DocumentsStorage.GenerateNextEtag();
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, docId, out Slice lowerId, out _))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachmentName, out Slice lowerName, out Slice nameStorage))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerCt, out Slice ctStorage))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, docId, out Slice lowerId, out _))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, attachmentName, out Slice lowerName, out Slice nameStorage))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerCt, out Slice ctStorage))
             using (Slice.From(context.Allocator, base64Hash, out Slice hashSlice))
             using (RevisionsStorage.BuildRevisionKey(context.Allocator, parentRevisionCv, out RevisionKey parentRevKey))
             using (AttachmentsStorage.BuildRevisionAttachmentKey(
@@ -148,9 +148,9 @@ namespace SlowTests.Server.Documents.Revisions
                 database.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
             long newEtag = database.DocumentsStorage.GenerateNextEtag();
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, docId, out Slice lowerId, out _))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachmentName, out Slice lowerName, out _))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, contentType, out Slice lowerCt, out _))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, docId, out Slice lowerId, out _))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, attachmentName, out Slice lowerName, out _))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerCt, out _))
             using (Slice.From(context.Allocator, base64Hash, out Slice hashSlice))
             using (RevisionsStorage.BuildRevisionKey(context.Allocator, parentRevisionCv, out RevisionKey parentRevKey))
             using (AttachmentsStorage.BuildRevisionAttachmentKey(
