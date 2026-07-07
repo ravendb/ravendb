@@ -212,9 +212,10 @@ class accessManager {
             return null;
         }
 
-        // The certificate may define permissions with different letter casing than the actual database name
-        const groupKey = DatabaseUtils.default.shardGroupKey(name).toLowerCase();
-        const matchingName = Object.keys(accessManager.databasesAccess).find((x) => x.toLowerCase() === groupKey);
+        const groupKey = DatabaseUtils.default.shardGroupKey(name);
+        const matchingName = Object.keys(accessManager.databasesAccess).find((x) =>
+            DatabaseUtils.default.namesEqualIgnoreCase(x, groupKey)
+        );
 
         return matchingName != null ? accessManager.databasesAccess[matchingName] : undefined;
     }
