@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session
                     .ConfigureAwait(false);
 
             if (resultToUser == null)
-                return null;
+                return GetLocalEntriesForDeletedRange(from, to, pageSize)?.ToArray();
 
             resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
 
@@ -139,6 +139,19 @@ namespace Raven.Client.Documents.Session
             return result;
         }
 
+        // When ServeFromCache returns null the covering cached range is marked IsDeleted. In that case
+        // we still surface any in-session appends made AFTER the delete (kept in the local overlay), so
+        // they are not silently lost. Returns null when there are genuinely no such local entries, which
+        // preserves the "deleted series, nothing appended -> null" contract for the callers.
+        private List<TimeSeriesEntry> GetLocalEntriesForDeletedRange(DateTime? from, DateTime? to, int pageSize)
+        {
+            var localOnly = GetCachedEntriesInRange<TimeSeriesEntry>(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
+            if (localOnly == null || localOnly.Count == 0)
+                return null;
+
+            return RemoveDeletedTimeSeries(localOnly.Take(pageSize).ToList());
+        }
+
         internal async Task<TimeSeriesEntry<TEntry>[]> GetTypedFromCache<TEntry>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start,
             int pageSize, CancellationToken token = default) where TEntry : new()
         {
@@ -150,12 +163,19 @@ namespace Raven.Client.Documents.Session
                 await ServeFromCache(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, start, pageSize, includes, token)
                     .ConfigureAwait(false);
 
+            List<TimeSeriesEntry> asList;
             if (resultToUser == null)
-                return null;
+            {
+                asList = GetLocalEntriesForDeletedRange(from, to, pageSize);
+                if (asList == null)
+                    return null; // deleted series, nothing appended -> null (unchanged contract)
+            }
+            else
+            {
+                resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
+                asList = RemoveDeletedTimeSeries(resultToUser.ToList());
+            }
 
-            resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-
-            var asList = RemoveDeletedTimeSeries(resultToUser.ToList());
             if (asList.Count == 0)
                 return Array.Empty<TimeSeriesEntry<TEntry>>();
 
@@ -257,6 +277,10 @@ namespace Raven.Client.Documents.Session
             return entriesResult.ToArray();
         }
 
+        // an incremental time series accumulates values; its in-session overlay stores only the
+        // in-session delta, so the server base must be ADDED to it at read time (see CurrentLocalDeltaAt).
+        private bool IsIncremental => Name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase);
+
         private List<TEntry> MergeSorted<TEntry>(List<TEntry> a, List<TEntry> b)
             where TEntry : TimeSeriesEntry
         {
@@ -278,9 +302,28 @@ namespace Raven.Client.Documents.Session
                     result.Add(b[j++]);
                 else
                 {
-                    // same timestamp → prefer b (newer)
-                    result.Add(b[j++]);
+                    // same timestamp
+                    if (IsIncremental && typeof(TEntry) == typeof(TimeSeriesEntry))
+                    {
+                        // incremental series: the local overlay holds the in-session delta only,
+                        // so emit (server base + in-session delta). Build a new entry - a[i]/b[j] are
+                        // shared with the cache/overlay and must not be mutated in place.
+                        result.Add((TEntry)(object)new TimeSeriesEntry
+                        {
+                            Timestamp = eb.Timestamp,
+                            Tag = eb.Tag,
+                            IsRollup = eb.IsRollup,
+                            Values = AddValues(ea.Values, eb.Values)
+                        });
+                    }
+                    else
+                    {
+                        // append series: local (b) overrides the server value
+                        result.Add(b[j]);
+                    }
+
                     i++;
+                    j++;
                 }
             }
 

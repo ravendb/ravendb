@@ -89,8 +89,18 @@ namespace Sparrow.Json
                     SetValue(fieldInfo.FieldType, access, fieldValue);
                 }
 
-                foreach (var propertyInfo in typeof(T).GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                // When a 'new' property shadows a base one of the same name, GetProperties() returns BOTH.
+                // Deserialize only the most-derived (effective) member; setting the hidden base member too
+                // would overwrite the derived value with a less-specific one (e.g. the typed
+                // TimeSeriesRangeResult<T>.Entries getting clobbered by the base TimeSeriesEntry[] Entries).
+                var handledPropertyNames = new HashSet<string>();
+                foreach (var propertyInfo in typeof(T)
+                             .GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                             .OrderByDescending(p => InheritanceDepth(p.DeclaringType)))
                 {
+                    if (handledPropertyNames.Add(propertyInfo.Name) == false)
+                        continue; // a more-derived shadow of this name was already handled
+
                     if ((propertyInfo.GetGetMethod(true)?.IsPublic == false) &&
                         propertyInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false)
                         continue;
@@ -101,6 +111,14 @@ namespace Sparrow.Json
                     var propertyValue = GetValue(propertyInfo.Name, propertyInfo.PropertyType, propertyInfo.GetCustomAttributes().ToList(), json, vars);
                     var access = Expression.MakeMemberAccess(result, propertyInfo);
                     SetValue(propertyInfo.PropertyType, access, propertyValue);
+                }
+
+                static int InheritanceDepth(Type t)
+                {
+                    int depth = 0;
+                    for (var current = t; current != null; current = current.BaseType)
+                        depth++;
+                    return depth;
                 }
 
                 expressionBuilder.Add(result);

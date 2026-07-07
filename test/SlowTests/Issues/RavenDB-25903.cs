@@ -1041,6 +1041,187 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task AppendAfterFullDeleteShouldBeReturnedFromCache()
+        {
+            // Defect 1: after a full in-session Delete() marks the covering cached range IsDeleted,
+            // ServeFromCache returns null and GetAsync short-circuits (before OverlayLocalEntries),
+            // so an in-session Append made AFTER the delete is silently dropped from the read.
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline, 1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // cache a server-backed range covering the query
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, baseline.AddHours(2));
+
+                // full delete marks the covering cached range IsDeleted
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete();
+
+                // in-session append AFTER the delete (lives in the local overlay)
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline.AddHours(1), 5);
+
+                var tse = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, baseline.AddHours(2));
+
+                Assert.NotNull(tse);
+                Assert.Equal(1, tse.Length);
+                Assert.Equal(baseline.AddHours(1), tse[0].Timestamp);
+                Assert.Equal(5, tse[0].Value);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public void ReassigningEntriesWithFewerPointsShouldReplaceNotMerge()
+        {
+            // Defect 2: TimeSeriesRangeResult.Entries was a plain field (assignment REPLACED the array);
+            // it is now a property whose setter MERGES the assigned value with the pre-existing
+            // CachedEntries. Cache-update code (UpdateExistingRange / AddToCache) assigns a recomputed
+            // array that intentionally drops an entry removed on the server, but the merge re-adds it,
+            // resurrecting the stale point.
+            var baseline = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var range = new TimeSeriesRangeResult { From = DateTime.MinValue, To = DateTime.MaxValue };
+
+            range.Entries = new[]
+            {
+                new TimeSeriesEntry { Timestamp = baseline.AddHours(1), Values = new[] { 1d } },
+                new TimeSeriesEntry { Timestamp = baseline.AddHours(2), Values = new[] { 2d } },
+                new TimeSeriesEntry { Timestamp = baseline.AddHours(3), Values = new[] { 3d } },
+            };
+
+            // reassign the same range WITHOUT the +2h entry (as if it was removed on the server)
+            range.Entries = new[]
+            {
+                new TimeSeriesEntry { Timestamp = baseline.AddHours(1), Values = new[] { 1d } },
+                new TimeSeriesEntry { Timestamp = baseline.AddHours(3), Values = new[] { 3d } },
+            };
+
+            Assert.Equal(2, range.Entries.Length);
+            Assert.DoesNotContain(range.Entries, e => e.Timestamp == baseline.AddHours(2));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task InSessionTimeSeriesOverlaysShouldBeClearedAfterSaveChanges()
+        {
+            // Defect 3: the LocalTimeSeries / DeletedTimeSeries in-session overlays are removed only on
+            // Evict, never after SaveChanges (unlike deferred commands), so pending-mutation state leaks
+            // for the rest of the session and keeps overriding/filtering server truth.
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline, 1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline.AddHours(1), 5);
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete(baseline.AddHours(2));
+
+                var ops = (InMemoryDocumentSessionOperations)session;
+                Assert.True(ops.LocalTimeSeries.ContainsKey(bookId1));   // sanity: overlay populated
+                Assert.True(ops.DeletedTimeSeries.ContainsKey(bookId1)); // sanity: overlay populated
+
+                await session.SaveChangesAsync();
+
+                // after the batch is flushed, the pending-mutation overlays must not linger
+                Assert.False(ops.LocalTimeSeries.TryGetValue(bookId1, out var localByName)
+                             && localByName.TryGetValue(nameof(Book), out var local) && local.Count > 0,
+                    "LocalTimeSeries overlay still holds entries after SaveChanges");
+                Assert.False(ops.DeletedTimeSeries.TryGetValue(bookId1, out var deletedByName)
+                             && deletedByName.TryGetValue(nameof(Book), out var deleted) && deleted.Count > 0,
+                    "DeletedTimeSeries overlay still holds ranges after SaveChanges");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task AppendWithLocalKindTimestampAfterDeleteShouldNotBeFiltered()
+        {
+            // Defect 4: TrackTimeseriesInCache stores the entry at the normalized utcTimestamp but passes
+            // the RAW (un-normalized) timestamp to RemoveFromDeletedCacheIfNeeded, so the deleted-range
+            // hole is punched at the wrong instant; the just-appended entry stays inside a still-deleted
+            // range and is filtered out of the read.
+            //
+            // NOTE: this only manifests when the machine's local timezone differs from UTC, because the
+            // appended timestamp uses DateTimeKind.Local (raw != utc only when the offset != 0). The
+            // precondition below fails loudly on a UTC machine rather than passing falsely.
+            Assert.NotEqual(TimeSpan.Zero, TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow));
+
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 10; i++)
+                    tsf.Append(baseline.AddHours(i), i);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // cache a non-deleted server range covering the whole day
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, baseline.AddDays(1));
+
+                // delete a UTC sub-range around +12h. It does NOT fully contain the cached range, so the
+                // cached range is not marked IsDeleted; it only adds a deleted-range overlay [+11h,+13h].
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete(baseline.AddHours(11), baseline.AddHours(13));
+
+                // append at a DateTimeKind.Local timestamp whose UTC instant is +12h (inside the deleted range)
+                var utc12 = baseline.AddHours(12);
+                var localTs = new DateTime(utc12.Ticks, DateTimeKind.Utc).ToLocalTime();
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(localTs, 999);
+
+                var tse = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline, baseline.AddDays(1));
+
+                // the appended entry (stored at utc +12h) must be returned, not filtered by the deleted range
+                Assert.Contains(tse, e => e.Timestamp == utc12 && e.Value == 999);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task IncrementWithoutPriorReadShouldAccumulateOntoServerValue()
+        {
+            // Defect 5: an in-session Increment on an incremental series computes its overlay value as
+            // AddValues(CurrentValuesAt(ts), delta). When the server value has not yet been read into the
+            // session, CurrentValuesAt returns empty, so the overlay stores just the delta as if it were
+            // absolute; a later Get merges local-over-server and drops the accumulated server base.
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "Views";
+            var baseline = DateTime.UtcNow;
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.IncrementalTimeSeriesFor(bookId1, tsName).Increment(baseline, 50d);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // increment WITHOUT first reading the server value (50) into the session
+                session.IncrementalTimeSeriesFor(bookId1, tsName).Increment(baseline, 60d);
+
+                var tse = await session.IncrementalTimeSeriesFor(bookId1, tsName).GetAsync();
+                Assert.Equal(1, tse.Length);
+                Assert.Equal(110d, tse[0].Value);
+            }
+        }
+
         private static void AssertNoDuplicateRanges(List<TimeSeriesRangeResult> ranges)
         {
             for (int i = 0; i < ranges.Count; i++)
