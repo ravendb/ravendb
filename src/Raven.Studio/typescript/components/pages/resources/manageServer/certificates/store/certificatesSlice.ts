@@ -50,7 +50,7 @@ const initialState: InitialState = {
     nameOrThumbprintFilter: "",
     databaseFilter: "",
     clearanceFilter: [],
-    stateFilter: [],
+    stateFilter: ["Valid"],
     managementTypeFilter: [],
     sortMode: "By Name - Asc",
     isGenerateModalOpen: false,
