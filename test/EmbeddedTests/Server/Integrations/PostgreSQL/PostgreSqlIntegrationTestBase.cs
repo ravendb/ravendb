@@ -250,7 +250,7 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
 
         public override void Dispose()
         {
-            _embeddedServer.Dispose();
+            _embeddedServer?.Dispose();
 
             base.Dispose();
         }

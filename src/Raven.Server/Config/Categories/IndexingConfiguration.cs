@@ -666,6 +666,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.VectorSearchScanningThreshold", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int CoraxVectorSearchScanningThreshold { get; set; }
 
+        [Description("The maximum amount of memory for the HNSW vector search node cache per index. " +
+                     "This cache pre-loads upper-level graph nodes to accelerate vector queries. " +
+                     "Changing this value does not require re-indexing.")]
+        [DefaultValue(10)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.CacheSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public Size CoraxVectorSearchCacheSize { get; set; }
+
         [Description("Use default search analyzer for dynamic fields if not set explicitly.")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.Refresh)]

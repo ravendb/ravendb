@@ -20,16 +20,22 @@ export type StudioConnectionType =
     | "RabbitMQ"
     | "AzureQueueStorage"
     | "AmazonSqs"
+    | "AzureServiceBus"
     | "Ai";
 
-export interface ConnectionStringUsedTask {
-    id: number;
+export interface ConnectionStringUsage {
+    kind: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringUsageKind;
+    id?: number;
+    identifier?: string;
     name: string;
+    // Set only for server-wide connection strings, whose usages are aggregated across databases.
+    databaseName?: string;
 }
 
 interface ConnectionBase {
     name?: string;
-    usedByTasks?: ConnectionStringUsedTask[];
+    usedBy?: ConnectionStringUsage[];
+    excludedDatabases?: string[];
 }
 
 export interface RavenConnection extends ConnectionBase {
@@ -120,6 +126,25 @@ export interface AmazonSqsConnection extends ConnectionBase {
     };
 }
 
+export interface AzureServiceBusConnection extends ConnectionBase {
+    type: Extract<StudioConnectionType, "AzureServiceBus">;
+    authType?: AzureServiceBusAuthenticationType;
+    settings?: {
+        connectionString?: {
+            connectionStringValue?: string;
+        };
+        entraId?: {
+            namespace?: string;
+            tenantId?: string;
+            clientId?: string;
+            clientSecret?: string;
+        };
+        passwordless?: {
+            namespace?: string;
+        };
+    };
+}
+
 export interface AiConnection extends ConnectionBase {
     type: Extract<StudioConnectionType, "Ai">;
     identifier?: string;
@@ -207,6 +232,7 @@ export type Connection =
     | RabbitMqConnection
     | AzureQueueStorageConnection
     | AmazonSqsConnection
+    | AzureServiceBusConnection
     | AiConnection;
 
 export type ConnectionStringDto = Partial<
@@ -227,4 +253,17 @@ export interface EditConnectionStringFormProps {
     onSave: (x: Connection) => void;
 }
 
-export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedByTasks">;
+export type ConnectionFormData<T extends Connection> = Omit<T, "type" | "usedBy">;
+
+export type WithExcludedDatabases<T> = T & {
+    ExcludedDatabases?: string[];
+};
+
+export type ServerWideConnectionStringDto =
+    | WithExcludedDatabases<RavenConnectionStringDto>
+    | WithExcludedDatabases<SqlConnectionStringDto>
+    | WithExcludedDatabases<SnowflakeConnectionStringDto>
+    | WithExcludedDatabases<OlapConnectionStringDto>
+    | WithExcludedDatabases<ElasticSearchConnectionStringDto>
+    | WithExcludedDatabases<QueueConnectionStringDto>
+    | WithExcludedDatabases<AiConnectionSettingsDto>;

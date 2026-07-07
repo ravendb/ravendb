@@ -15,6 +15,27 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         public int To => 40_015;
         public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
 
+        public enum LegacyRevisionsTable
+        {
+            ChangeVector = 0,
+            LowerId = 1,
+            /* We are you using the record separator in order to avoid loading another documents that has the same ID prefix,
+                e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it. */
+            RecordSeparator = 2,
+            Etag = 3, // etag to keep the insertion order
+            Id = 4,
+            Document = 5,
+            Flags = 6,
+            DeletedEtag = 7,
+            LastModified = 8,
+            TransactionMarker = 9,
+
+            // Field for finding the resolved conflicts
+            Resolved = 10,
+
+            SwappedLastModified = 11,
+        }
+
         public bool Update(UpdateStep step)
         {
             step.DocumentsStorage.RevisionsStorage = new RevisionsStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx, step.DocumentsStorage.RevisionsSchema, step.DocumentsStorage.CompressedRevisionsSchema);
@@ -36,19 +57,19 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         using (writeTable.Allocate(out TableValueBuilder write))
                         {
-                            var flags = TableValueToFlags((int)RevisionsTable.Flags, ref read.Reader);
-                            var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref read.Reader);
+                            var flags = TableValueToFlags((int)LegacyRevisionsTable.Flags, ref read.Reader);
+                            var lastModified = TableValueToDateTime((int)LegacyRevisionsTable.LastModified, ref read.Reader);
 
-                            write.Add(read.Reader.Read((int)RevisionsTable.ChangeVector, out int size), size);
-                            write.Add(read.Reader.Read((int)RevisionsTable.LowerId, out size), size);
-                            write.Add(read.Reader.Read((int)RevisionsTable.RecordSeparator, out size), size);
-                            write.Add(read.Reader.Read((int)RevisionsTable.Etag, out size), size);
-                            write.Add(read.Reader.Read((int)RevisionsTable.Id, out size), size);
-                            write.Add(read.Reader.Read((int)RevisionsTable.Document, out size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.ChangeVector, out int size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.LowerId, out size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.RecordSeparator, out size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.Etag, out size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.Id, out size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.Document, out size), size);
                             write.Add((int)flags);
-                            write.Add(read.Reader.Read((int)RevisionsTable.DeletedEtag, out size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.DeletedEtag, out size), size);
                             write.Add(lastModified.Ticks);
-                            write.Add(read.Reader.Read((int)RevisionsTable.TransactionMarker, out size), size);
+                            write.Add(read.Reader.Read((int)LegacyRevisionsTable.TransactionMarker, out size), size);
                             if ((flags & DocumentFlags.Resolved) == DocumentFlags.Resolved)
                             {
                                 write.Add((int)DocumentFlags.Resolved);

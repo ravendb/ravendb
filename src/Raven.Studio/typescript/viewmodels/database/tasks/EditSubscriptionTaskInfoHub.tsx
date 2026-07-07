@@ -35,8 +35,6 @@ export function EditSubscriptionTaskInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     Define a <strong>Subscription Query</strong> in this view to create a subscription-task on the

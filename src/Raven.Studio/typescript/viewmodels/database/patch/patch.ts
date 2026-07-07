@@ -1,4 +1,3 @@
-import app = require("durandal/app");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import document = require("models/database/documents/document");
@@ -12,7 +11,6 @@ import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/provi
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
-import patchSyntax = require("viewmodels/database/patch/patchSyntax");
 import patchTester = require("viewmodels/database/patch/patchTester");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import queryUtil = require("common/queryUtil");
@@ -24,6 +22,8 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
+import PatchAceEditor = require("viewmodels/database/patch/PatchAceEditor");
+import PatchSamplesAboutView = require("viewmodels/database/patch/PatchSamplesAboutView");
 
 class patchList {
 
@@ -155,6 +155,9 @@ class patch extends shardViewModelBase {
 
     inSaveMode = ko.observable<boolean>();
 
+    patchAceEditorView: ReactInKnockout<typeof PatchAceEditor.default>;
+    infoHubView: ReactInKnockout<typeof PatchSamplesAboutView.default>;
+
     spinners = {
         save: ko.observable<boolean>(false),
         countMatchingDocuments: ko.observable<boolean>(false)
@@ -187,6 +190,24 @@ class patch extends shardViewModelBase {
 
         this.bindToCurrentInstance("savePatch");
         this.initObservables();
+
+        this.patchAceEditorView = ko.pureComputed(() => {
+            const query = this.patchDocument().query;
+            const isModified = query.isModified && query.isModified();
+
+            return {
+                component: PatchAceEditor.default,
+                props: {
+                    query,
+                    languageService: this.languageService,
+                    validationErrorMessage: isModified ? query.error() : null,
+                },
+            };
+        });
+
+        this.infoHubView = ko.pureComputed(() => ({
+            component: PatchSamplesAboutView.default,
+        }));
     }
 
     private initValidation() {
@@ -218,7 +239,7 @@ class patch extends shardViewModelBase {
         this.loadLastQuery();
 
         this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));
-        
+
         return $.when<any>(this.fetchIndexNames(this.db), this.savedPatches.loadAll(this.db));
     }
 
@@ -286,12 +307,6 @@ class patch extends shardViewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
-
-        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
-
-        this.patchDocument().query.throttle(500).subscribe(() => {
-            this.languageService.syntaxCheck(queryEditor);
-        });
     }
 
     usePatch(item: storedPatchDto) {
@@ -492,10 +507,6 @@ class patch extends shardViewModelBase {
             });
     }
 
-    syntaxHelp() {
-        const viewModel = new patchSyntax();
-        app.showBootstrapDialog(viewModel);
-    }
 }
 
 export = patch;

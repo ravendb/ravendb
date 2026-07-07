@@ -79,6 +79,50 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task ExternalReplicationShouldNotBeCountedAsSiblingInWaitForReplicationWithMajority()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                // once the document arrived, the external replication connection was established
+                // and the destination Url was resolved to this server's own url
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+
+                // any database record change will cause ReplicationLoader.HandleTopologyChange
+                // to recompute the number of siblings, this time with the resolved external destination url
+                await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = "dummy",
+                    Database = "dummy",
+                    TopologyDiscoveryUrls = store1.Urls
+                }));
+
+                var database = await GetDocumentDatabaseInstanceFor(store1);
+
+                // the database group has a single node, so there are no siblings
+                // and a majority write-assurance requires 0 replicas
+                var minReplicas = WaitForValue(() => database.ReplicationLoader.GetMinNumberOfReplicas(), 0, timeout: 5000);
+                Assert.Equal(0, minReplicas);
+                Assert.Equal(0, database.ReplicationLoader.NumberOfSiblingsInInternalReplication);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), majority: true);
+                    s1.Store(new User(), "foo/bar/2");
+                    s1.SaveChanges();
+                }
+            }
+        }
+
         [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RavenDB_17187_CheckInternalShowsInStats(Options options)

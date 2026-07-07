@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Formats.Asn1;
 using System.Linq;
 using System.Net.Security;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
@@ -896,6 +899,73 @@ namespace Raven.Server.Utils
             copy.ImportEncryptedPkcs8PrivateKey(nameof(GetExportableRsaPrivateKey), exported, out _);
 
             return copy;
+        }
+
+        /// <summary>
+        /// Compares two public-key pinning hashes. These are base64-encoded public-key hashes, not secrets, so a
+        /// plain ordinal comparison is used (no constant-time requirement) - this also avoids allocating byte
+        /// arrays on the SSO auth path, which runs this once per registered server hash.
+        /// Both inputs must be non-null and non-empty - otherwise returns false.
+        /// </summary>
+        internal static bool PinningHashEquals(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
+                return false;
+
+            return string.Equals(a, b, StringComparison.Ordinal);
+        }
+
+        // Upper bound on the length of identity fields (username/domain) parsed from a client-presented SSO
+        // certificate extension. Any real provider identity is far shorter; this guards against a crafted cert.
+        private const int MaxSsoIdentityFieldLength = 1024;
+
+        /// <summary>
+        /// Decodes the SSO user payload from a custom X.509 extension's RawData.
+        /// The value must be a DER-encoded ASN.1 UTF8String containing JSON:
+        ///   {"username":"...", "provider":"Github|Google|Microsoft|Windows", "domain":"..."}
+        /// Returns an empty payload if the input is null, empty, or malformed.
+        /// </summary>
+        public static SsoExtensionPayload DecodeSsoUserIdExtension(byte[] rawData)
+        {
+            if (rawData == null || rawData.Length == 0)
+                return default;
+
+            try
+            {
+                var reader = new AsnReader(rawData, AsnEncodingRules.DER);
+                var json = reader.ReadCharacterString(UniversalTagNumber.UTF8String);
+                reader.ThrowIfNotEmpty();
+
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("username", out var usernameEl) == false ||
+                    root.TryGetProperty("provider", out var providerEl) == false)
+                    return default;
+
+                var username = usernameEl.GetString();
+                if (Enum.TryParse<SsoProvider>(providerEl.GetString(), ignoreCase: true, out var provider) == false)
+                    return default;
+
+                string domain = null;
+                if (root.TryGetProperty("domain", out var domainEl))
+                    domain = domainEl.GetString();
+
+                // The values come straight out of a client-presented certificate extension whose RawData can be tens
+                // of KB. Cap them: a crafted cert could otherwise carry a multi-MB identity that lives on the
+                // connection for its lifetime, is written into every audit line, and is string-compared against every
+                // SsoClient entry on each connection. No real provider identity needs anywhere near this.
+                if (username != null && username.Length > MaxSsoIdentityFieldLength)
+                    return default;
+                if (domain != null && domain.Length > MaxSsoIdentityFieldLength)
+                    return default;
+
+                return new SsoExtensionPayload(username, provider, domain);
+            }
+            catch (Exception e) when (e is AsnContentException or JsonException or DecoderFallbackException or ArgumentException)
+            {
+                return default;
+            }
         }
     }
 }

@@ -19,6 +19,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Raven.Client.Util;
+using Raven.Server.Documents.Schemas;
 using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Documents;
@@ -69,7 +70,7 @@ namespace Raven.Server.Documents
                 _parent = parent;
             }
 
-            public void ValidateAtomicGuard(string id, NonPersistentDocumentFlags nonPersistentDocumentFlags, string changeVector)
+            public void ValidateAtomicGuard(string id, NonPersistentDocumentFlags nonPersistentDocumentFlags, ChangeVector changeVector)
             {
                 if (nonPersistentDocumentFlags != NonPersistentDocumentFlags.None) // replication or engine running an operation, we can skip checking it 
                     return;
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents
                 if (_parent._documentDatabase.ClusterTransactionId == null)
                     return;
 
-                long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector, _parent._documentDatabase.ClusterTransactionId);
+                long indexFromChangeVector = ChangeVectorUtils.GetEtagById(changeVector.Version, _parent._documentDatabase.ClusterTransactionId);
                 if (indexFromChangeVector == 0)
                     return;
 
@@ -122,16 +123,17 @@ namespace Raven.Server.Documents
             var compareClusterTransaction = new CompareClusterTransactionId(this);
             if (oldChangeVectorForClusterTransactionIndexCheck != null)
             {
-                compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, oldChangeVectorForClusterTransactionIndexCheck);
+                compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, context.GetChangeVector(oldChangeVectorForClusterTransactionIndexCheck));
             }
 
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 if (newFlags.HasFlag(DocumentFlags.FromResharding) == false)
                     _documentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put, newFlags);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
+                ValidateIdAndCollection(id, collectionName.Name, newFlags, nonPersistentFlags);
                 _documentsStorage._forTestingPurposes?.OnBeforeOpenTableWhenPutDocumentWithSpecificId?.Invoke(id);
 
                 _documentDatabase.SchemaValidatorCache?.Validate(collectionName.Name, document, nonPersistentFlags, context);
@@ -139,16 +141,16 @@ namespace Raven.Server.Documents
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
+                ChangeVector oldChangeVector = null;
                 if (knownNewId == false)
                 {
                     // delete a tombstone if it exists, if it known that it is a new ID, no need, so we can skip it
-                    DeleteTombstoneIfNeeded(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
+                    oldChangeVector = DeleteTombstoneAndGetPredecessor(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
 
                     table.ReadByKey(lowerId, out oldValue);
                 }
 
                 BlittableJsonReaderObject oldDoc = null;
-                ChangeVector oldChangeVector = null;
                 if (oldValue.Pointer == null)
                 {
                     // expectedChangeVector being null means we don't care, 
@@ -333,6 +335,23 @@ namespace Raven.Server.Documents
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateIdAndCollection(string id, string collection, DocumentFlags newFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            const DocumentFlags internalWriteFlags = DocumentFlags.FromReplication | DocumentFlags.FromClusterTransaction | DocumentFlags.Reverted | DocumentFlags.FromResharding;
+            if (string.IsNullOrWhiteSpace(id)
+                || (newFlags & internalWriteFlags) != DocumentFlags.None
+                || nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                return;
+
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(collection, "Collection");
+            
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
+                return;
+
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(id, "Document ID");
         }
 
         [Conditional("DEBUG")]
@@ -713,15 +732,19 @@ namespace Raven.Server.Documents
             };
         }
 
-        private void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
+        private ChangeVector DeleteTombstoneAndGetPredecessor(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
         {
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             if (tombstoneTable.NumberOfEntries == 0)
-                return;
+                return null;
 
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                DeleteTombstone(tombstoneTable, id);
+                var tombstoneChangeVector = DeleteTombstoneAndGetChangeVector(context, tombstoneTable, id);
+
+                // A local recreate should be causally after the tombstone, so keep the tombstone lineage.
+                // TRXN is only the old cluster transaction's atomic guard marker; a cluster-tx PUT supplies its own explicit CV.
+                return tombstoneChangeVector?.StripTrxnTags(context);
             }
         }
 
@@ -731,22 +754,25 @@ namespace Raven.Server.Documents
             if (tombstoneTable.NumberOfEntries == 0)
                 return;
 
-            DeleteTombstone(tombstoneTable, id);
+            DeleteTombstoneAndGetChangeVector(context, tombstoneTable, id);
         }
 
-        private static void DeleteTombstone(Table tombstoneTable, Slice id)
+        private static ChangeVector DeleteTombstoneAndGetChangeVector(DocumentsOperationContext context, Table tombstoneTable, Slice id)
         {
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
             {
                 if (IsTombstoneOfId(tombstoneKey, id) == false)
-                    return;
+                    return null;
 
                 if (tombstoneTable.IsOwned(tvh.Reader.Id))
                 {
+                    var changeVector = TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, ref tvh.Reader);
                     tombstoneTable.Delete(tvh.Reader.Id);
-                    return;
+                    return changeVector;
                 }
             }
+
+            return null;
         }
 
         [Conditional("DEBUG")]

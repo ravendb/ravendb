@@ -18,6 +18,7 @@ import OngoingTaskOlapEtl = Raven.Client.Documents.Operations.OngoingTasks.Ongoi
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import OngoingTaskCdcSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink;
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
@@ -25,7 +26,7 @@ import OngoingTaskSnowflakeEtl = Raven.Client.Documents.Operations.OngoingTasks.
 import EmbeddingsGeneration = Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration;
 import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -49,6 +50,8 @@ export class TasksStubs {
                 TasksStubs.getAmazonSqsEtl(),
                 TasksStubs.getKafkaSink(),
                 TasksStubs.getRabbitSink(),
+                TasksStubs.getAzureServiceBusSink(),
+                TasksStubs.getCdcSink(),
                 TasksStubs.getReplicationSink(),
                 TasksStubs.getReplicationHub(),
                 TasksStubs.getExternalReplicationListItem(),
@@ -599,6 +602,214 @@ export class TasksStubs {
         };
     }
 
+    static getAzureServiceBusSink(): OngoingTaskQueueSink {
+        return {
+            TaskName: "AzureServiceBusSinkTask",
+            TaskId: 707,
+            TaskType: "QueueSink",
+            ConnectionStringName: "azure-service-bus-name",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            Error: null,
+            TaskConnectionStatus: "Active",
+            MentorNode: null,
+            BrokerType: "AzureServiceBus",
+            Url: "mynamespace.servicebus.windows.net",
+            PinToMentorNode: false,
+            Configuration: null,
+        };
+    }
+
+    static getCdcSink(): OngoingTaskCdcSink {
+        return {
+            TaskName: "CdcSinkTask",
+            TaskId: 583,
+            TaskType: "CdcSink",
+            TaskConnectionStatus: "Active",
+            TaskState: "Enabled",
+            Error: null,
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            MentorNode: null,
+            PinToMentorNode: false,
+            ConnectionStringName: "sql-name",
+            FactoryName: "System.Data.SqlClient",
+            HealthIssue: null,
+            LastCheckpoint: null,
+            Configuration: {
+                TaskId: 583,
+                Name: "CdcSinkTask",
+                Disabled: false,
+                ConnectionStringName: "sql-name",
+                MentorNode: null,
+                PinToMentorNode: false,
+                Postgres: null,
+                SkipInitialLoad: false,
+                Tables: [
+                    {
+                        SourceTableName: "orders",
+                        SourceTableSchema: "dbo",
+                        CollectionName: "Orders",
+                        Disabled: false,
+                        PrimaryKeyColumns: ["Id"],
+                        Columns: [
+                            {
+                                Column: "Id",
+                                Name: "Id",
+                                Type: "Default",
+                            },
+                            {
+                                Column: "Company",
+                                Name: "Company",
+                                Type: "Default",
+                            },
+                        ],
+                        EmbeddedTables: [
+                            {
+                                SourceTableName: "order_lines",
+                                SourceTableSchema: "dbo",
+                                PropertyName: "Lines",
+                                Type: "Array",
+                                PrimaryKeyColumns: ["Id"],
+                                JoinColumns: ["OrderId"],
+                                CaseSensitiveKeys: false,
+                                Columns: [
+                                    {
+                                        Column: "Product",
+                                        Name: "Product",
+                                        Type: "Default",
+                                    },
+                                ],
+                                EmbeddedTables: [],
+                                LinkedTables: [],
+                                OnDelete: {
+                                    IgnoreDeletes: false,
+                                    Patch: null,
+                                },
+                                Patch: null,
+                            },
+                        ],
+                        LinkedTables: [
+                            {
+                                SourceTableName: "companies",
+                                SourceTableSchema: "dbo",
+                                PropertyName: "Company",
+                                LinkedCollectionName: "Companies",
+                                JoinColumns: ["CompanyId"],
+                            },
+                        ],
+                        OnDelete: {
+                            IgnoreDeletes: false,
+                            Patch: null,
+                        },
+                        Patch: null,
+                    },
+                ],
+            },
+        };
+    }
+
+    static testCdcSink(): Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult {
+        return {
+            Errors: [],
+            Warnings: [],
+            Results: [
+                {
+                    DebugOutput: [],
+                    Document: JSON.stringify({
+                        Id: "orders/1",
+                        Company: "companies/1",
+                        Lines: [
+                            {
+                                Product: "products/1",
+                            },
+                        ],
+                    }),
+                    DocumentId: "Orders/1",
+                    Error: null,
+                    IgnoreDeletes: false,
+                    SourceRow: JSON.stringify({
+                        Id: "1",
+                        CompanyId: "companies/1",
+                    }),
+                    WouldDelete: false,
+                },
+            ],
+        };
+    }
+
+    static cdcSinkTaskSchema(): Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema {
+        return {
+            CatalogName: "Northwind",
+            Errors: [],
+            HasPermissionToSetup: true,
+            Success: true,
+            Warnings: [],
+            Tables: [
+                {
+                    SourceTableSchema: "dbo",
+                    SourceTableName: "orders",
+                    IsCdcEnabled: true,
+                    UnsupportedReason: null,
+                    Warnings: [],
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: true,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                        {
+                            Name: "CompanyId",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: false,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                    ],
+                    ForeignKeys: [
+                        {
+                            Columns: ["CompanyId"],
+                            ReferencedSchema: "dbo",
+                            ReferencedTable: "companies",
+                            ReferencedColumns: ["Id"],
+                        },
+                    ],
+                },
+                {
+                    SourceTableSchema: "dbo",
+                    SourceTableName: "companies",
+                    IsCdcEnabled: true,
+                    UnsupportedReason: null,
+                    Warnings: [],
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: true,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                        {
+                            Name: "Name",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: false,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                    ],
+                    ForeignKeys: [],
+                },
+            ],
+        };
+    }
+
     static getReplicationSink(): OngoingTaskPullReplicationAsSink {
         return {
             TaskName: "ReplicationSinkTask",
@@ -620,6 +831,8 @@ export class TasksStubs {
             AccessName: null,
             CertificatePublicKey: null,
             PinToMentorNode: false,
+            HubCursor: "A:123-aaaaaaaaaaaaaaaaaaaaaa",
+            SinkCursor: "B:456-bbbbbbbbbbbbbbbbbbbbbb",
         };
     }
 
@@ -1246,10 +1459,34 @@ namespace Orders
         };
     }
 
-    static etlErrors(): EtlErrors[] {
+    static taskErrors(): TaskErrors[] {
         return [
             {
+                TaskName: "CdcSinkTask",
+                Category: "CdcSink",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "CdcSinkTask",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Configuration",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 0,
+                    },
+                ],
+                ItemErrors: [
+                    {
+                        TaskName: "CdcSinkTask",
+                        DocumentId: "orders/1-A",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Load",
+                        Error: "dummy error",
+                    },
+                ],
+            },
+            {
                 TaskName: "AzureETL/T1",
+                Category: "Etl",
                 EtlType: "Queue",
                 EtlSubType: "AzureQueueStorage",
                 ProcessErrors: [
@@ -1265,6 +1502,7 @@ namespace Orders
             },
             {
                 TaskName: "ElasticETL/T1",
+                Category: "Etl",
                 EtlType: "ElasticSearch",
                 EtlSubType: null,
                 ProcessErrors: [
@@ -1280,6 +1518,7 @@ namespace Orders
             },
             {
                 TaskName: "EmbeddingsETL/embeddings-transform-script",
+                Category: "Ai",
                 EtlType: "EmbeddingsGeneration",
                 EtlSubType: null,
                 ProcessErrors: [
@@ -1295,6 +1534,7 @@ namespace Orders
             },
             {
                 TaskName: "GenAiETL/GenAi-transform-script",
+                Category: "Ai",
                 EtlType: "GenAi",
                 EtlSubType: null,
                 ProcessErrors: [
@@ -1310,6 +1550,7 @@ namespace Orders
             },
             {
                 TaskName: "KafkaETL/T1",
+                Category: "Etl",
                 EtlType: "Queue",
                 EtlSubType: "Kafka",
                 ProcessErrors: [
@@ -1325,6 +1566,7 @@ namespace Orders
             },
             {
                 TaskName: "OlapETL/T1",
+                Category: "Etl",
                 EtlType: "Olap",
                 EtlSubType: null,
                 ProcessErrors: [
@@ -1340,6 +1582,7 @@ namespace Orders
             },
             {
                 TaskName: "RabbitETL/T1",
+                Category: "Etl",
                 EtlType: "Queue",
                 EtlSubType: "RabbitMq",
                 ProcessErrors: [
@@ -1355,6 +1598,7 @@ namespace Orders
             },
             {
                 TaskName: "RavenETL/T1",
+                Category: "Etl",
                 EtlType: "Raven",
                 EtlSubType: null,
                 ProcessErrors: [
@@ -1370,6 +1614,7 @@ namespace Orders
             },
             {
                 TaskName: "SnowflakeETL/T1",
+                Category: "Etl",
                 EtlType: "Snowflake",
                 EtlSubType: null,
                 ProcessErrors: [
@@ -1385,6 +1630,7 @@ namespace Orders
             },
             {
                 TaskName: "SqlETL/T1",
+                Category: "Etl",
                 EtlType: "Sql",
                 EtlSubType: null,
                 ProcessErrors: [
@@ -1400,6 +1646,7 @@ namespace Orders
             },
             {
                 TaskName: "SqsETL/T1",
+                Category: "Etl",
                 EtlType: "Queue",
                 EtlSubType: "AmazonSqs",
                 ProcessErrors: [
@@ -1415,6 +1662,7 @@ namespace Orders
             },
             {
                 TaskName: "EmbeddingsETL/embeddings-transform-script",
+                Category: "Ai",
                 EtlType: "EmbeddingsGeneration",
                 EtlSubType: null,
                 ProcessErrors: [],
@@ -1422,6 +1670,7 @@ namespace Orders
             },
             {
                 TaskName: "GenAiETL/GenAi-transform-script",
+                Category: "Ai",
                 EtlType: "GenAi",
                 EtlSubType: null,
                 ProcessErrors: [],

@@ -188,7 +188,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         Debug.Assert(cmd.SizeInBytes.HasValue == true, "cmd.SizeInBytes.HasValue == true");
                     }
 
-                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes.Value, cmd.RemoteParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes.Value, cmd.RemoteParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, streamAlreadyInRemoteStorage: cmd.FromEtl);
                     LastChangeVector = attachmentPutResult.ChangeVector;
 
                     var apReply = new DynamicJsonValue

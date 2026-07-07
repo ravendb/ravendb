@@ -102,11 +102,18 @@ namespace Voron.Global
                 public const long VectorContainerInternalIndexer = 1;
             }
 
-            internal static class HnswVersion
+            public static class HnswVersion
             {
                 public const ushort InitialVersion = 7_000;
-                
-                public const ushort CurrentVersion = InitialVersion;
+
+                // Singles vectors store a trailing float L2 norm alongside the payload,
+                // mirroring the (sbyte[dims] + float magnitude) layout already used by Int8.
+                // The kernel reads the cached norm instead of recomputing Σ x_i² on every
+                // distance call. Indexes created before this version keep the legacy
+                // float[dims] layout and are served by the norm-recomputing kernel.
+                public const ushort SinglesWithL2Norm = 7_001;
+
+                public const ushort CurrentVersion = SinglesWithL2Norm;
             }
         }
         

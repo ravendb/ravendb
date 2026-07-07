@@ -23,16 +23,27 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
 
         protected override async Task HandleMessage(PgTransaction transaction, MessageBuilder messageBuilder, PipeWriter writer, CancellationToken token)
         {
-            // TODO: Maybe support multiple SELECT statements in one query - requires parsing the SQL
-            using var query = PgQuery.CreateInstance(QueryString, null, transaction.DocumentDatabase, transaction.Session);
+            // Simple Query Protocol: a single message can carry multiple `;`-separated statements,
+            // each producing its own result set (RowDescription + DataRow* + CommandComplete).
+            // Only ONE ReadyForQuery at the end. Single-statement inputs go through the same loop
+            // — the splitter returns a one-element list.
+            var statements = SqlStatementSplitter.Split(QueryString);
+            if (statements.Count == 0)
+                statements.Add(QueryString); // empty / whitespace-only — let CreateInstance handle it.
 
-            var schema = await query.Init(true);
-            if (schema.Count != 0)
+            foreach (var stmt in statements)
             {
-                await writer.WriteAsync(messageBuilder.RowDescription(schema), token);
+                using var query = PgQuery.CreateInstance(stmt, null, transaction.DocumentDatabase, transaction.Session, transaction.Username);
+
+                var schema = await query.Init();
+                if (schema != null && schema.Count != 0)
+                {
+                    await writer.WriteAsync(messageBuilder.RowDescription(schema), token);
+                }
+
+                await query.Execute(messageBuilder, writer, token);
             }
 
-            await query.Execute(messageBuilder, writer, token);
             await writer.WriteAsync(messageBuilder.ReadyForQuery(transaction.State), token);
         }
 

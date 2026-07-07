@@ -27,14 +27,14 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
 type RavenEtlPanelProps = EtlPanelBaseProps<OngoingTaskRavenEtlInfo>;
 
 export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editRavenEtl(data.shared.taskId)();
 
     const {
@@ -51,7 +51,6 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Raven", data.shared.connectionStringName);
     const connectionStringDefined = !!data.shared.destinationDatabase;
 
     return (
@@ -99,7 +98,8 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
                     connectionStringDefined={connectionStringDefined}
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Raven"
+                    databaseName={databaseName}
                 />
                 <RichPanelDetailItem label="Destination Database" title={data.shared.destinationDatabase}>
                     <div className="text-truncate" style={{ maxWidth: "200px" }}>
@@ -116,7 +116,7 @@ export function RavenEtlPanel(props: RavenEtlPanelProps & ICanShowTransformation
                     </div>
                 </RichPanelDetailItem>
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}

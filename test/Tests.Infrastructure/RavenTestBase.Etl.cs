@@ -43,6 +43,8 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
+using Raven.Server.Documents.TasksErrors;
+
 namespace FastTests
 {
     public abstract partial class RavenTestBase
@@ -244,7 +246,7 @@ namespace FastTests
             {
                 var database = await _parent.GetDatabase(databaseName);
 
-                var errors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskTypeExtensions.FromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
+                var errors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskTypeExtensions.GetTaskCategoryFromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
                 return errors.Where(error => error.Step == (int)TaskErrorStep.Load);
             }
@@ -253,7 +255,7 @@ namespace FastTests
             {
                 var database = await _parent.GetDatabase(databaseName);
 
-                var errors = database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskTypeExtensions.FromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
+                var errors = database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskTypeExtensions.GetTaskCategoryFromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
                 return errors.Where(error => error.Step == (int)TaskErrorStep.Load);
             }
@@ -262,7 +264,7 @@ namespace FastTests
             {
                 var database = await _parent.GetDatabase(databaseName);
 
-                var errors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskTypeExtensions.FromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
+                var errors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskTypeExtensions.GetTaskCategoryFromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
                 return errors.Where(error => error.Step == (int)TaskErrorStep.Transformation);
             }

@@ -34,5 +34,12 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers
             using (var processor = new QueueEtlHandlerProcessorForTestAmazonSqsConnection<DatabaseRequestHandler, DocumentsOperationContext>(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenAction("/databases/*/admin/etl/queue/azureservicebus/test-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetTestAzureServiceBusConnectionResult()
+        {
+            using (var processor = new QueueEtlHandlerProcessorForTestAzureServiceBusConnection<DatabaseRequestHandler, DocumentsOperationContext>(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

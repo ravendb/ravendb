@@ -31,6 +31,8 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
+using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -77,7 +79,7 @@ using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.ETL.Test;
+using Raven.Server.Documents.TasksErrors;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.AI.Agents;
@@ -94,6 +96,7 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
+using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
@@ -140,6 +143,8 @@ using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration
 using Operation = Raven.Server.Documents.Operations.Operation;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Size = Sparrow.Size;
+using Raven.Server.Documents.CdcSink.Stats.Performance;
+using Raven.Server.Documents.CdcSink.Handlers;
 
 namespace TypingsGenerator
 {
@@ -195,6 +200,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IEnumerable))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IList))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(ConversationDocument.MessagesList))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TaskCompletionSource<object>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
@@ -428,6 +434,23 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseNotificationsSummaryPayload));
             scripter.AddType(typeof(DatabaseNotificationsSummaryRequestConfig));
 
+            // debug package analyzer (RavenDB-24115) - reuses the dashboard payloads above
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageNodeAnalysisSummary));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.DebugPackageAnalysisIssues));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.DetectedIssue));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.IssueSeverity));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues.IssueCategory));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors.DebugPackageAnalyzeErrors));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors.AnalyzeError));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors.AnalyzeErrorSeverity));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.CpuUsageAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.MemoryAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.ManagedMemoryAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory.UnmanagedMemoryAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.NetworkAnalysisInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.TcpConnections));
+
             // data archival
             scripter.AddType(typeof(DataArchivalConfiguration));
 
@@ -588,6 +611,16 @@ namespace TypingsGenerator
             scripter.AddType(typeof(KafkaConnectionSettings));
             scripter.AddType(typeof(TestQueueSinkScript));
             scripter.AddType(typeof(TestQueueSinkScriptResult));
+
+            // ongoing tasks - CDC Sink
+            scripter.AddType(typeof(OngoingTaskCdcSink));
+            scripter.AddType(typeof(TestCdcSinkMappingRequest));
+            scripter.AddType(typeof(TestCdcSinkMappingResult));
+            scripter.AddType(typeof(CdcSinkSchemaRequest));
+            scripter.AddType(typeof(CdcSinkSourceSchema));
+            scripter.AddType(typeof(CdcSinkPerformanceStats));
+            scripter.AddType(typeof(CdcSinkProcessPerformanceStats));
+            scripter.AddType(typeof(CdcSinkTaskPerformanceStats));
 
             // ongoing tasks - Snowflake ETL
             scripter.AddType(typeof(OngoingTaskSnowflakeEtl));

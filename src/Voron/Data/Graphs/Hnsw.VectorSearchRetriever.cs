@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
-using Sparrow.Server;
 using Sparrow.Server.Collections;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
@@ -20,6 +18,7 @@ public partial class Hnsw
     {
         private int _returnedCandidates;
         private readonly SearchState _searchState;
+        private readonly bool _ownsSearchState;
         private int _currentNode, _currentMatchesIndex;
         private ContextBoundNativeList<long> _postingListResults;
         private FastPForDecoder _pforDecoder;
@@ -29,7 +28,10 @@ public partial class Hnsw
         private bool _foundCandidateInCurrentSmallPostingList;
         private readonly IHnswSearcher _vectorsSearcher;
         private readonly Memory<byte> _vector;
-        private IEnumerator<bool> _resultsEnumerator;
+        // When the searchState-based entry points allocate a normalized copy of the query
+        // vector they hand the scope here so Dispose releases it alongside the retriever's
+        // other per-query state.
+        private Sparrow.Server.ByteStringContext<Sparrow.Server.ByteStringMemoryCache>.InternalScope? _queryVectorScope;
 
         public SimilarityMethod? SimilarityMethod => _searchState?.Options.SimilarityMethod;
         
@@ -43,16 +45,18 @@ public partial class Hnsw
 
         public long CandidatesProcessed => _vectorsSearcher?.CandidatesProcessed ?? 0;
         
-        public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity)
+        public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity,
+            bool ownsSearchState = true, Sparrow.Server.ByteStringContext<Sparrow.Server.ByteStringMemoryCache>.InternalScope? queryVectorScope = null)
         {
             _searchState = searchState;
+            _ownsSearchState = ownsSearchState;
             _vectorsSearcher = vectorsSearcher;
             _vector = vector;
+            _queryVectorScope = queryVectorScope;
             _postingListResults = new(_searchState.Llt.Allocator);
             _pforDecoder = new(searchState.Llt.Allocator);
             _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
-            _resultsEnumerator = _vectorsSearcher.Search().GetEnumerator();
-            _resultsEnumerator.MoveNext(); //read first batch
+            _vectorsSearcher.MoveNextBatch(); // prime the first batch
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -176,13 +180,10 @@ public partial class Hnsw
                     {
                         break;
                     }
-                    
-                    if (_resultsEnumerator.MoveNext() == false)
-                    {
-                        _resultsEnumerator = _vectorsSearcher.Search().GetEnumerator();    
-                        _resultsEnumerator.MoveNext();
-                    }
-                    
+
+                    // Pull the next batch into _vectorsSearcher. An empty batch is valid — TryGetCurrentCandidates below handles it.
+                    _vectorsSearcher.MoveNextBatch();
+
                     // If we fetch more than once, we've no guarantee that the whole set of results are sorted by distances.
                     // We could explore not previously seen nodes that are closer to the query vector than the ones we've already seen.
                     IsSortedByDistance = false;
@@ -309,9 +310,10 @@ public partial class Hnsw
         {
             _postingListResults.Dispose();
             _pforDecoder.Dispose();
-            _resultsEnumerator?.Dispose();
             _vectorsSearcher?.Dispose();
-            _searchState.Dispose();
+            _queryVectorScope?.Dispose();
+            if (_ownsSearchState)
+                _searchState.Dispose();
         }
     }
 }

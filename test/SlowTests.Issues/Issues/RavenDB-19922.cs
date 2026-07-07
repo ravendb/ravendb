@@ -57,11 +57,8 @@ namespace SlowTests.Issues
 
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                string tag1;
-                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                {
-                    tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                }
+                var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                string tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
                 
@@ -72,10 +69,8 @@ namespace SlowTests.Issues
                 string tag2 = "";
                 await WaitForValueAsync(async () =>
                 {
-                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                    {
-                        tag2 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                    }
+                    var dbi = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    tag2 = dbi.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                     return tag1.Equals(tag2);
                 }, false);
 
@@ -117,12 +112,8 @@ namespace SlowTests.Issues
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                string tag1;
-                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                {
-                    tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                }
+                var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                string tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
 
@@ -133,10 +124,8 @@ namespace SlowTests.Issues
                 //Wait for new responsible node
                 await WaitForValueAsync(async () =>
                 {
-                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                    {
-                        tag2 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                    }
+                    var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    tag2 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                     return tag1.Equals(tag2);
                 }, false);
                 Assert.NotEqual(tag1, tag2);
@@ -153,12 +142,12 @@ namespace SlowTests.Issues
                 nodes.Add(server);
 
                 await WaitAndAssertForValueAsync(async () => await GetClusterSize(store), clusterSize);
-                await WaitAndAssertForValueAsync(async () => await GetRehabCount(store), 0);
+                await WaitAndAssertForValueAsync(async () => await GetRehabCount(store), 0, 30000);
                 await WaitAndAssertForValueAsync(async () => await GetMembersCount(store), clusterSize);
 
                 await WaitForValueAsync(async () =>
                 {
-                    database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                    var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                     tag2 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
                     return tag1.Equals(tag2);
                 }, true);

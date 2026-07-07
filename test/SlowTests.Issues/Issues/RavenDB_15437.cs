@@ -77,7 +77,6 @@ namespace SlowTests.Issues
                 dbA.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
                 dbA.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
 
-                await SetupReplicationAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeA, storeB);
 
                 await SetupReplicationAsync(storeB, storeA);

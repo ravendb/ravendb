@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Voron.Util;
 
 namespace Voron.Data.Graphs;
@@ -14,10 +13,7 @@ public partial class Hnsw
             {
             }
 
-            public IEnumerable<bool> Search()
-            {
-                yield break;
-            }
+            public bool MoveNextBatch() => false;
 
             public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates)
             {

@@ -39,6 +39,7 @@ const defaultValues: FormData = {
             amazonS3: {
                 isUseCustomHost: false,
                 isForcePathStyle: false,
+                isDisableChecksumValidation: false,
                 customHost: "",
                 accessKey: "",
                 secretKey: "",
@@ -220,6 +221,7 @@ function getSourceDto(
                     Disabled: false,
                     CustomServerUrl: null,
                     ForcePathStyle: false,
+                    DisableChecksumValidation: false,
                     GetBackupConfigurationScript: null,
                 } satisfies S3Settings,
             };
@@ -240,6 +242,7 @@ function getSourceDto(
                     GetBackupConfigurationScript: null,
                     CustomServerUrl: data.isUseCustomHost ? data.customHost : null,
                     ForcePathStyle: data.isUseCustomHost && data.isForcePathStyle,
+                    DisableChecksumValidation: data.isUseCustomHost && data.isDisableChecksumValidation,
                 } satisfies S3Settings,
             };
         }

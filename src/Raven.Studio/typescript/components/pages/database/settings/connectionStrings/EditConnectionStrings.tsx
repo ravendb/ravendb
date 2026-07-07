@@ -25,9 +25,11 @@ import { components, OptionProps } from "react-select";
 import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
 import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
 import AmazonSqsConnectionString from "components/pages/database/settings/connectionStrings/editForms/AmazonSqsConnectionString";
+import AzureServiceBusConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureServiceBusConnectionString";
 import AiConnectionString from "components/pages/database/settings/connectionStrings/editForms/AiConnectionString";
 import Modal from "components/common/Modal";
 import { FormLabel } from "components/common/Form";
+import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;
@@ -48,19 +50,28 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const EditConnectionStringComponent = getEditConnectionStringComponent(connectionStringType);
 
     const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const asyncSave = useAsyncCallback((dto: any) => tasksService.saveConnectionString(databaseName, dto));
+    const asyncSave = useAsyncCallback((dto) =>
+        isServerWide
+            ? tasksService.saveServerWideConnectionString(dto)
+            : tasksService.saveConnectionString(databaseName, dto)
+    );
 
     const save = async (newConnection: Connection) => {
         return tryHandleSubmit(async () => {
-            await asyncSave.execute(mapConnectionStringToDto(newConnection));
+            const dto = mapConnectionStringToDto(newConnection);
+            if (isServerWide) {
+                (dto as ServerWideConnectionStringDto).ExcludedDatabases = newConnection.excludedDatabases ?? [];
+            }
+            await asyncSave.execute(dto);
 
             if (isForNewConnection) {
                 dispatch(
                     connectionStringsActions.connectionAdded({
                         ...newConnection,
-                        usedByTasks: initialConnection.usedByTasks,
+                        usedBy: initialConnection.usedBy,
                     })
                 );
             } else {
@@ -69,13 +80,14 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                         oldName: initialConnection.name,
                         newConnection: {
                             ...newConnection,
-                            usedByTasks: initialConnection.usedByTasks,
+                            usedBy: initialConnection.usedBy,
                         },
                     })
                 );
             }
 
             dispatch(connectionStringsActions.editConnectionModalClosed());
+
             afterSave?.(newConnection.name);
         });
     };
@@ -96,7 +108,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                 <div className="text-center lead">{isForNewConnection ? "Create a new" : "Edit"} connection string</div>
             </Modal.Header>
             <Modal.Body className="pb-0 vstack gap-3">
-                {viewContext === "connectionStrings" && (
+                {(viewContext === "connectionStrings" || viewContext === "serverWideConnectionStrings") && (
                     <div className="mb-2">
                         <FormLabel>Type</FormLabel>
                         <InputGroup className="gap-1 flex-wrap flex-column">
@@ -169,6 +181,8 @@ function getEditConnectionStringComponent(
             return AzureQueueStorageConnectionString;
         case "AmazonSqs":
             return AmazonSqsConnectionString;
+        case "AzureServiceBus":
+            return AzureServiceBusConnectionString;
         case "Ai":
             return AiConnectionString;
         default:
@@ -250,6 +264,13 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
             value: "AmazonSqs",
             label: "Amazon SQS",
             icon: "amazon-sqs",
+            licenseRequired: "Enterprise",
+            isDisabled: !features.hasQueueEtl,
+        },
+        {
+            value: "AzureServiceBus",
+            label: "Azure Service Bus",
+            icon: "azure-service-bus",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
         },

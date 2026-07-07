@@ -86,6 +86,25 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
+        private static readonly AlertReason[] QueueAlertReasons = [AlertReason.QueueSink_ConsumeError, AlertReason.QueueSink_ScriptError, AlertReason.QueueSink_Error, AlertReason.QueueSink_ConsumerCreationError];
+
+        public IEnumerable<T> GetAlerts<T>(string processTag, string processName) where T : INotificationDetails, new()
+        {
+            var key = $"{processTag}/{processName}";
+
+            foreach (var reason in QueueAlertReasons)
+            {
+                var id = AlertRaised.GetKey(reason, key);
+                using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
+                {
+                    if (ntv == null)
+                        continue;
+
+                    yield return GetDetails<T>(ntv);
+                }
+            }
+        }
+
         private T GetDetails<T>(NotificationTableValue ntv) where T : INotificationDetails, new()
         {
             if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)

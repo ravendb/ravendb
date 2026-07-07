@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
@@ -34,6 +35,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly Func<string, Task> _streamedChunksCallback;
     private readonly List<ICommandData> _attachmentsCommands;
     private readonly bool? _debug;
+    private readonly bool _cancelPendingActionTools;
 
     /// <summary>
     /// Initializes a new conversation step for the specified agent and conversation.
@@ -162,10 +164,12 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         List<ICommandData> attachmentsCommands,
         string streamPropertyPath,
         Func<string, Task> streamedChunksCallback,
-        bool? debug)
+        bool? debug,
+        bool cancelPendingActionTools)
         : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, attachmentsCommands, streamPropertyPath, streamedChunksCallback)
     {
         _debug = debug;
+        _cancelPendingActionTools = cancelPendingActionTools;
     }
 
     [Obsolete("Use the constructor that accepts a List or an Array instead. This is for backward compatibility.", error: false)]
@@ -253,7 +257,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             if (_parent._debug.HasValue)
                 url += $"&debug={_parent._debug.Value}";
 
-            var body = new ConversionRequestBody
+            url += $"&cancelPendingActionTools={_parent._cancelPendingActionTools}";
+
+            var body = new ConversionRequestBody    
             {
                 ActionResponses = _parent._actionResponses,
                 ArtificialActions = _parent._artificialActions,
@@ -315,7 +321,12 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             using var streamReader = new StreamReader(stream);
             while (true)
             {
+#if NETSTANDARD2_0 || NETSTANDARD2_1
                 var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
+                CancellationToken.ThrowIfCancellationRequested();
+#else
+                var line = await streamReader.ReadLineAsync(CancellationToken).ConfigureAwait(false);
+#endif
                 if (line is null)
                     break;
 

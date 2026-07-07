@@ -53,7 +53,7 @@ export const CertificatesStory: StoryObj<CertificatesStoryArgs> = {
         securityClearance: "ClusterAdmin",
         isSecureServer: true,
         hasReadOnlyCertificates: true,
-        certificates: ManageServerStubs.certificates(),
+        certificates: ManageServerStubs.certificatesWithSso(),
         serverCertSetupMode: ManageServerStubs.serverCertificateSetupMode(),
         serverCertRenewalDate: ManageServerStubs.serverCertificateRenewalDate(),
     },

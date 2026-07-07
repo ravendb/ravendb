@@ -14,7 +14,9 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Json;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -23,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
 internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TBatchCommand : class, IBatchCommand
-    where TOperationContext : JsonOperationContext
+    where TOperationContext : JsonOperationContext, IChangeVectorOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
     protected AbstractBatchHandlerProcessorForBulkDocs([NotNull] TRequestHandler requestHandler) : base(requestHandler)
@@ -32,9 +34,9 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
     protected abstract ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, TBatchCommand command, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions);
 
-    protected abstract ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections, CancellationToken token = default);
+    protected abstract ValueTask WaitForIndexesAsync(IndexBatchOptions options, ChangeVector lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections, CancellationToken token = default);
 
-    protected abstract ValueTask WaitForReplicationAsync(TOperationContext context, ReplicationBatchOptions options, string lastChangeVector);
+    protected abstract ValueTask WaitForReplicationAsync(TOperationContext context, ReplicationBatchOptions options, ChangeVector lastChangeVector);
 
     protected abstract char GetIdentityPartsSeparator();
 
@@ -123,14 +125,15 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
                 var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions);
 
-                if (replicationBatchOptions != null)
+                if (replicationBatchOptions != null || indexBatchOptions != null)
                 {
-                    await WaitForReplicationAsync(context, replicationBatchOptions, command.LastChangeVector);
-                }
+                    ChangeVector lastChangeVector = context.GetChangeVector(command.LastChangeVector);
 
-                if (indexBatchOptions != null)
-                {
-                    await WaitForIndexesAsync(indexBatchOptions, command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
+                    if (replicationBatchOptions != null)
+                        await WaitForReplicationAsync(context, replicationBatchOptions, lastChangeVector);
+
+                    if (indexBatchOptions != null)
+                        await WaitForIndexesAsync(indexBatchOptions, lastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

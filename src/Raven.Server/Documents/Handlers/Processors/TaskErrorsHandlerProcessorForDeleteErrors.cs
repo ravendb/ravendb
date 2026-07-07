@@ -6,6 +6,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.Handlers.Processors;
 

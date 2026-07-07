@@ -5,17 +5,19 @@ import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ConnectionStringsInfoHub } from "./ConnectionStringsInfoHub";
 import EditConnectionStrings from "./EditConnectionStrings";
 import { LazyLoad } from "components/common/LazyLoad";
-import { connectionStringSelectors, connectionStringsActions } from "./store/connectionStringsSlice";
+import { connectionStringsActions, connectionStringSelectors } from "./store/connectionStringsSlice";
 import { EmptySet } from "components/common/EmptySet";
 import ConnectionStringsPanels from "./ConnectionStringsPanels";
 import { exhaustiveStringTuple } from "components/utils/common";
 import { LoadError } from "components/common/LoadError";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { StudioConnectionType } from "./connectionStringsTypes";
+import { useAppUrls } from "components/hooks/useAppUrls";
+import { AccessPopover } from "components/common/AccessPopover";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;
@@ -25,6 +27,8 @@ export interface ConnectionStringsUrlParameters {
 export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const { appUrl } = useAppUrls();
 
     const dispatch = useAppDispatch();
 
@@ -64,16 +68,31 @@ export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps
             <Row className="gy-sm">
                 <Col>
                     <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
-                    {hasDatabaseAdminAccess && (
-                        <Button
-                            variant="primary"
-                            onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
-                            title="Add new connection string"
-                        >
-                            <Icon icon="plus" />
-                            Add new
-                        </Button>
-                    )}
+                    <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                        <AccessPopover accessRequired="DatabaseAdmin">
+                            <Button
+                                variant="primary"
+                                onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
+                                title="Add new connection string"
+                                disabled={!hasDatabaseAdminAccess}
+                            >
+                                <Icon icon="plus" />
+                                Add new
+                            </Button>
+                        </AccessPopover>
+                        <AccessPopover accessRequired="Operator">
+                            <Button
+                                size="xs"
+                                variant="link"
+                                href={appUrl.forServerWideConnectionStrings()}
+                                title="Navigate to the Server-Wide Connection Strings View"
+                                disabled={!hasOperatorAccess}
+                            >
+                                <Icon icon="link" />
+                                Go to Server-Wide Connection Strings View
+                            </Button>
+                        </AccessPopover>
+                    </div>
                     <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
                         {isEmpty ? (
                             <EmptySet className="mw-100">No connection strings</EmptySet>
@@ -106,5 +125,6 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "Kafka",
     "RabbitMQ",
     "AzureQueueStorage",
-    "AmazonSqs"
+    "AmazonSqs",
+    "AzureServiceBus"
 );

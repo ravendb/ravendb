@@ -9,6 +9,7 @@ import { Connection, StudioConnectionType } from "./connectionStringsTypes";
 import { connectionStringsActions, connectionStringSelectors } from "./store/connectionStringsSlice";
 import { Icon } from "components/common/Icon";
 import IconName from "../../../../../../typings/server/icons";
+import { AccessPopover } from "components/common/AccessPopover";
 
 interface ConnectionStringsPanelsProps {
     connections: Connection[];
@@ -16,35 +17,13 @@ interface ConnectionStringsPanelsProps {
 }
 
 export default function ConnectionStringsPanels({ connections, connectionsType }: ConnectionStringsPanelsProps) {
-    const dispatch = useDispatch();
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
-
     if (connections.length === 0) {
         return null;
     }
 
     return (
         <div className="mb-4 connection-strings-panels">
-            <HrHeader
-                right={
-                    hasDatabaseAdminAccess &&
-                    viewContext === "connectionStrings" && (
-                        <Button
-                            variant="info"
-                            size="sm"
-                            className="rounded-pill"
-                            title="Add new credentials"
-                            onClick={() =>
-                                dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))
-                            }
-                        >
-                            <Icon icon="plus" />
-                            Add new
-                        </Button>
-                    )
-                }
-            >
+            <HrHeader right={<AddNewButton connectionsType={connectionsType} />}>
                 <Icon icon={getIcon(connectionsType)} />
                 {getTypeLabel(connectionsType)}
             </HrHeader>
@@ -55,7 +34,42 @@ export default function ConnectionStringsPanels({ connections, connectionsType }
     );
 }
 
-function getTypeLabel(type: StudioConnectionType): string {
+interface AddNewButtonProps {
+    connectionsType: Connection["type"];
+}
+
+function AddNewButton({ connectionsType }: AddNewButtonProps) {
+    const dispatch = useDispatch();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+
+    if (viewContext !== "connectionStrings" && viewContext !== "serverWideConnectionStrings") {
+        return null;
+    }
+
+    const isServerWide = viewContext === "serverWideConnectionStrings";
+    const accessRequired: accessLevel = isServerWide ? "Operator" : "DatabaseAdmin";
+    const isDisabled = isServerWide ? !hasOperatorAccess : !hasDatabaseAdminAccess;
+
+    return (
+        <AccessPopover accessRequired={accessRequired}>
+            <Button
+                variant="info"
+                size="sm"
+                className="rounded-pill"
+                title="Add new connection string"
+                disabled={isDisabled}
+                onClick={() => dispatch(connectionStringsActions.newConnectionOfTypeModalOpened(connectionsType))}
+            >
+                <Icon icon="plus" />
+                Add new
+            </Button>
+        </AccessPopover>
+    );
+}
+
+export function getTypeLabel(type: StudioConnectionType): string {
     switch (type) {
         case "Raven":
             return "RavenDB";
@@ -65,6 +79,8 @@ function getTypeLabel(type: StudioConnectionType): string {
             return "Azure Queue Storage";
         case "AmazonSqs":
             return "Amazon SQS";
+        case "AzureServiceBus":
+            return "Azure Service Bus";
         case "Ai":
             return "AI";
         default:
@@ -72,7 +88,7 @@ function getTypeLabel(type: StudioConnectionType): string {
     }
 }
 
-function getIcon(type: StudioConnectionType): IconName {
+export function getIcon(type: StudioConnectionType): IconName {
     switch (type) {
         case "Raven":
             return "raven";
@@ -92,6 +108,8 @@ function getIcon(type: StudioConnectionType): IconName {
             return "azure";
         case "AmazonSqs":
             return "amazon-sqs";
+        case "AzureServiceBus":
+            return "azure-service-bus";
         case "Ai":
             return "sparkles";
         default:

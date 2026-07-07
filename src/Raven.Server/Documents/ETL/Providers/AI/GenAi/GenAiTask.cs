@@ -36,6 +36,7 @@ using Sparrow.Server.Json.Sync;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 #pragma warning disable SKEXP0001
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.GenAi;
 
@@ -233,7 +234,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 handler.SetClient(_chatCompletionClient);
                 try
                 {
-                    task = handler.HandleRequest(batchToken);
+                    task = handler.HandleRequestAsync(batchToken);
                 }
                 catch (Exception e)
                 {

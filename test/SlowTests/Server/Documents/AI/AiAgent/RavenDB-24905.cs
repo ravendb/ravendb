@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -38,16 +37,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await conversation.RunAsync<object>();
 
-            JObject conversationDoc;
-            using (var session = store.OpenAsyncSession())
+            var result = await store.AI.GetConversationMessagesAsync(new GetConversationMessagesOptions
             {
-                conversationDoc = await session.LoadAsync<JObject>(conversation.Id);
-            }
-            Assert.NotNull(conversationDoc);
+                ConversationId = conversation.Id,
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                PageSize = 50
+            });
+            Assert.NotNull(result);
 
-            var toolContent = conversationDoc["Messages"]
-                ?.LastOrDefault(m => m["role"]?.Value<string>() == "tool")
-                ?["content"]?.Value<string>();
+            var toolCallMsg = result.Messages.FindLast(m => m.ToolCalls is { Count: > 0 });
+            Assert.NotNull(toolCallMsg);
+            var toolContent = toolCallMsg.ToolCalls[^1].Result;
 
             Assert.False(string.IsNullOrEmpty(toolContent), "content of tool msg should not be null");
 
@@ -81,16 +81,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await conversation.RunAsync<object>();
 
-            JObject conversationDoc;
-            using (var session = store.OpenAsyncSession())
+            var result = await store.AI.GetConversationMessagesAsync(new GetConversationMessagesOptions
             {
-                conversationDoc = await session.LoadAsync<JObject>(conversation.Id);
-            }
-            Assert.NotNull(conversationDoc);
+                ConversationId = conversation.Id,
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                PageSize = 50
+            });
+            Assert.NotNull(result);
 
-            var toolContent = conversationDoc["Messages"]
-                ?.LastOrDefault(m => m["role"]?.Value<string>() == "tool")
-                ?["content"]?.Value<string>();
+            var toolCallMsg = result.Messages.FindLast(m => m.ToolCalls is { Count: > 0 });
+            Assert.NotNull(toolCallMsg);
+            var toolContent = toolCallMsg.ToolCalls[^1].Result;
 
             Assert.False(string.IsNullOrEmpty(toolContent), "content of tool msg should not be null");
 

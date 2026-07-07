@@ -505,7 +505,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(value.Length);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(value, out _);
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionSize(value);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -513,16 +513,13 @@ namespace Sparrow.Json
             var address = memory.Address;
             var actualSize = Encodings.Utf8.GetBytes(value, new Span<byte>(address, memory.SizeInBytes));
 
-            state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
+            state.FindEscapedPositions(address, actualSize, escapePositionsSize);
 
             state.WriteEscapePositionsTo(address + actualSize);
             LazyStringValue result = longLived == false ? AllocateStringValue(strValue, address, actualSize) : new LazyStringValue(strValue, address, actualSize, this);
             result.AllocatedMemoryData = memory;
 
-            if (state.EscapePositions.Count > 0)
-            {
-                result.EscapePositions = state.EscapePositions.ToArray();
-            }
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
             return result;
         }
 
@@ -534,12 +531,27 @@ namespace Sparrow.Json
             }
         }
 
+        // Byte-faithful copy into context memory. Skips the JSON control-character escape pass that
+        // the regular `GetLazyString(byte*, int)` runs -- use for binary buffers whose bytes (e.g. the
+        // 0x1E RecordSeparator inside revision-tombstone / revision-attachment composite PKs) must
+        // reach consumers unchanged. The Slice-accepting overload (Voron-side extension) calls this.
+        public unsafe LazyStringValue GetLazyStringRaw(byte* ptr, int size, bool longLived = false)
+        {
+            var memory = longLived ? GetLongLivedMemory(size) : GetMemory(size);
+            var address = memory.Address;
+            Memory.Copy(address, ptr, size);
+
+            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
+            result.AllocatedMemoryData = memory;
+            return result;
+        }
+
         public unsafe LazyStringValue GetLazyString(byte* ptr, int size, bool longLived = false)
         {
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(ptr, size, out _);
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionSize(ptr, size);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -548,19 +560,16 @@ namespace Sparrow.Json
 
             Memory.Copy(address, ptr, size);
 
-            state.FindEscapedPositionsAndEscapeControls(address, ref size, escapePositionsSize);
+            state.FindEscapedPositions(address,  size, escapePositionsSize);
 
             state.WriteEscapePositionsTo(address + size);
             LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
             result.AllocatedMemoryData = memory;
 
-            if (state.EscapePositions.Count > 0)
-            {
-                result.EscapePositions = state.EscapePositions.ToArray();
-            }
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
             return result;
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe LazyStringValue GetLazyStringValue(byte* ptr, out bool success)
         {

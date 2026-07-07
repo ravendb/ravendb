@@ -109,6 +109,12 @@ public unsafe struct NativeList<T>
         AddRangeUnsafe(src);
     }
 
+    public void ResetAndCopyFrom(ByteStringContext allocator, ReadOnlySpan<T> src)
+    {
+        ResetAndEnsureCapacity(allocator, src.Length);
+        AddRangeUnsafe(src);
+    }
+
     public void AddRangeUnsafe(ReadOnlySpan<T> range)
     {
         Debug.Assert(Count + range.Length <= Capacity);

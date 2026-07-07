@@ -10,12 +10,17 @@ export default function CertificatesServerList() {
     const serverCertificateForCommunicationThumbprint = useAppSelector(
         certificatesSelectors.serverCertificateForCommunicationThumbprint
     );
+    const hasActiveFilter = useAppSelector(certificatesSelectors.hasActiveFilter);
 
     const filteredCertificates = useAppSelector(certificatesSelectors.filteredCertificates).filter(
         (cert) =>
             cert.Thumbprints.includes(serverCertificateThumbprint) ||
             cert.Thumbprints.includes(serverCertificateForCommunicationThumbprint)
     );
+
+    if (hasActiveFilter && !filteredCertificates.length) {
+        return null;
+    }
 
     return (
         <div>

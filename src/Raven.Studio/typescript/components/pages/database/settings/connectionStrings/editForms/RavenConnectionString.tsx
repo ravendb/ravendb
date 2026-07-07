@@ -11,8 +11,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useAsyncCallback } from "react-async-hook";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import ConnectionTestError from "../../../../../common/connectionTests/ConnectionTestError";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import RichAlert from "components/common/RichAlert";
@@ -33,6 +33,7 @@ export default function RavenConnectionString({
     onSave,
 }: RavenConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Raven"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, formState, watch, trigger } = useForm<FormData>({
         mode: "all",
@@ -48,8 +49,6 @@ export default function RavenConnectionString({
         name: "topologyDiscoveryUrls",
         control,
     });
-
-    const { forCurrentDatabase } = useAppUrls();
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
         onSave({
@@ -77,7 +76,7 @@ export default function RavenConnectionString({
                     control={control}
                     name="database"
                     type="text"
-                    placeholder="Enter database for the connection string"
+                    placeholder="Enter the destination database name"
                     autoComplete="off"
                 />
             </div>
@@ -104,10 +103,14 @@ export default function RavenConnectionString({
                     Add next discovery URL
                 </Button>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editRavenEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
         </Form>
     );
 }
@@ -223,6 +226,7 @@ const schema = yupObjectSchema<FormData>({
         .array()
         .of(yup.object({ url: yup.string().basicUrl().nullable().required() }))
         .min(1),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);
@@ -236,5 +240,5 @@ function getDefaultValues(initialConnection: RavenConnection, isForNewConnection
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

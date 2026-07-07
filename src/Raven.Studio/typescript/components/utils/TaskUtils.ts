@@ -4,6 +4,7 @@ import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import assertUnreachable from "./assertUnreachable";
 import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import IconName from "typings/server/icons";
 
 export default class TaskUtils {
     static ongoingTaskToStudioTaskType(task: OngoingTask): StudioTaskType {
@@ -18,6 +19,8 @@ export default class TaskUtils {
                     return "AzureQueueStorageQueueEtl";
                 case "AmazonSqs":
                     return "AmazonSqsQueueEtl";
+                case "AzureServiceBus":
+                    return "AzureServiceBusQueueSink";
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -35,6 +38,8 @@ export default class TaskUtils {
                 case "AmazonSqs":
                 case "AzureQueueStorage":
                     throw new Error("Not yet supported");
+                case "AzureServiceBus":
+                    return "AzureServiceBusQueueSink";
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -56,6 +61,8 @@ export default class TaskUtils {
             case "AzureQueueStorage":
             case "AmazonSqs":
                 throw new Error("Not yet supported");
+            case "AzureServiceBus":
+                return "AzureServiceBusQueueSink";
             case "None":
                 return null;
             default:
@@ -73,7 +80,7 @@ export default class TaskUtils {
             return "QueueEtl";
         }
 
-        if (type === "KafkaQueueSink" || type === "RabbitQueueSink") {
+        if (type === "KafkaQueueSink" || type === "RabbitQueueSink" || type === "AzureServiceBusQueueSink") {
             return "QueueSink";
         }
 
@@ -117,6 +124,69 @@ export default class TaskUtils {
                 return "GenAi";
             default:
                 throw new Error("Unknown etl type mapping: " + etlType);
+        }
+    }
+
+    static studioEtlTypeToStudioTaskType(etlType: StudioEtlType): StudioTaskType {
+        switch (etlType) {
+            case "Raven":
+                return "RavenEtl";
+            case "Sql":
+                return "SqlEtl";
+            case "Snowflake":
+                return "SnowflakeEtl";
+            case "Olap":
+                return "OlapEtl";
+            case "ElasticSearch":
+                return "ElasticSearchEtl";
+            case "Kafka":
+                return "KafkaQueueEtl";
+            case "RabbitMQ":
+                return "RabbitQueueEtl";
+            case "AzureQueueStorage":
+                return "AzureQueueStorageQueueEtl";
+            case "AmazonSqs":
+                return "AmazonSqsQueueEtl";
+            case "EmbeddingsGeneration":
+                return "EmbeddingsGeneration";
+            case "GenAi":
+                return "GenAi";
+            default:
+                return assertUnreachable(etlType);
+        }
+    }
+
+    // Single source of truth for a task type's icon and display label. Covers the task types that
+    // report errors (ETL, AI, CDC Sink); anything else (including an unresolved type) falls back
+    // to a generic display.
+    static studioTaskTypeToDisplay(type: StudioTaskType | undefined): { icon: IconName; label: string } {
+        switch (type) {
+            case "RavenEtl":
+                return { icon: "ravendb-etl", label: "RavenDB ETL" };
+            case "SqlEtl":
+                return { icon: "sql-etl", label: "SQL ETL" };
+            case "SnowflakeEtl":
+                return { icon: "snowflake-etl", label: "Snowflake ETL" };
+            case "OlapEtl":
+                return { icon: "olap-etl", label: "OLAP ETL" };
+            case "ElasticSearchEtl":
+                return { icon: "elastic-search-etl", label: "ElasticSearch ETL" };
+            case "KafkaQueueEtl":
+                return { icon: "kafka-etl", label: "Kafka ETL" };
+            case "RabbitQueueEtl":
+                return { icon: "rabbitmq-etl", label: "RabbitMQ ETL" };
+            case "AzureQueueStorageQueueEtl":
+                return { icon: "azure-queue-storage-etl", label: "Azure Queue Storage ETL" };
+            case "AmazonSqsQueueEtl":
+                return { icon: "amazon-sqs-etl", label: "Amazon SQS ETL" };
+            case "EmbeddingsGeneration":
+                return { icon: "ai-etl", label: "Embeddings Generation" };
+            case "GenAi":
+                return { icon: "genai", label: "GenAI" };
+            case "CdcSink":
+                return { icon: "sql-etl", label: "CDC Sink" };
+            default:
+                return { icon: "help", label: "Other" };
         }
     }
 

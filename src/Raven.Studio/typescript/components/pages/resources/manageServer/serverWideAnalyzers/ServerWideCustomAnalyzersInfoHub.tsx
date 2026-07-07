@@ -25,13 +25,7 @@ export default function ServerWideCustomAnalyzersInfoHub() {
 
     return (
         <AboutViewAnchored defaultOpen={hasServerWideCustomAnalyzers ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <p>
                     <strong>Analyzers</strong> are used by indexes to split the index-fields into tokens (terms).
                     <br />
@@ -39,16 +33,11 @@ export default function ServerWideCustomAnalyzersInfoHub() {
                     <br />
                     When querying an index, these terms are used to define the search criteria and filter query results.
                 </p>
-                <div>
+                <p>
                     <strong>In this view</strong>, you can add your own analyzers in addition to the existing analyzers
-                    that come with RavenDB.
-                    <ul>
-                        <li>
-                            The custom analyzers added here can be used by indexes in ALL databases in your cluster.
-                        </li>
-                        <li>Note: custom analyzers are not supported by Corax indexes.</li>
-                    </ul>
-                </div>
+                    that come with RavenDB. The custom analyzers added here can be used by indexes in ALL databases in
+                    your cluster.
+                </p>
                 <div>
                     Provide <code>C#</code> code in the editor view, or upload from file.
                     <ul>

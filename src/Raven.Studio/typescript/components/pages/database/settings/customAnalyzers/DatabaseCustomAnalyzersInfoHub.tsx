@@ -43,13 +43,7 @@ export function DatabaseCustomAnalyzersInfoHub({ databaseAnalyzersCount }: Datab
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <p>
                     <strong>Analyzers</strong> are used by indexes to split the index-fields into tokens (terms).
                     <br />
@@ -63,7 +57,6 @@ export function DatabaseCustomAnalyzersInfoHub({ databaseAnalyzersCount }: Datab
                     <ul>
                         <li>The custom analyzers added here can be used only by indexes in this database.</li>
                         <li>The server-wide custom analyzers listed can also be used in this database.</li>
-                        <li>Note: custom analyzers are not supported by Corax indexes.</li>
                     </ul>
                 </div>
                 <div>

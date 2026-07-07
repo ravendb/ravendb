@@ -73,11 +73,12 @@ public static class ThreadNames
         };
     }
 
-    public static ThreadInfo ForIncomingReplication(string threadName, string dbName, string sourceDbName)
+    public static ThreadInfo ForIncomingReplication(string dbName, string sourceDbName, string fromToString)
     {
-        return new ThreadInfo(threadName)
+        var details = new ThreadDetails.IncomingReplication(dbName, sourceDbName, fromToString);
+        return new ThreadInfo(details.GetFullName())
         {
-            Details = new ThreadDetails.IncomingReplication(dbName, sourceDbName)
+            Details = details
         };
     }
 
@@ -192,11 +193,21 @@ public static class ThreadNames
         };
     }
 
-    public static ThreadInfo ForPullReplicationAsSink(string threadName, string destinationDatabase, string destinationUrl)
+    public static ThreadInfo ForPullReplicationAsSink(string databaseName, string url, string pullReplicationDefinitionName)
     {
-        return new ThreadInfo(threadName)
+        var details = new ThreadDetails.PullReplicationAsSink(databaseName, url, pullReplicationDefinitionName);
+        return new ThreadInfo(details.GetFullName())
         {
-            Details = new ThreadDetails.PullReplicationAsSink(destinationDatabase, destinationUrl)
+            Details = details
+        };
+    }
+
+    public static ThreadInfo ForPullReplicationAsHub(string sourceDatabase, string sourceUrl, string pullReplicationDefinitionName)
+    {
+        var details = new ThreadDetails.PullReplicationAsHub(sourceDatabase, sourceUrl, pullReplicationDefinitionName);
+        return new ThreadInfo(details.GetFullName())
+        {
+            Details = details
         };
     }
 
@@ -205,6 +216,14 @@ public static class ThreadNames
         return new ThreadInfo(threadName)
         {
             Details = new ThreadDetails.QueueSinkProcess(tag, name)
+        };
+    }
+
+    public static ThreadInfo ForCdcSinkProcess(string threadName, string tag, string name)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.CdcSinkProcess(tag, name)
         };
     }
 
@@ -269,6 +288,23 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"QuSnk {_tag} {_name}";
+            }
+        }
+
+        public class CdcSinkProcess : IThreadDetails
+        {
+            private readonly string _tag;
+            private readonly string _name;
+
+            public CdcSinkProcess(string tag, string name)
+            {
+                _tag = tag;
+                _name = name;
+            }
+
+            public string GetShortName()
+            {
+                return $"CdcSnk {_tag} {_name}";
             }
         }
 
@@ -348,11 +384,18 @@ public static class ThreadNames
         {
             private readonly string _dbName;
             private readonly string _sourceDbName;
+            private readonly string _fromToString;
 
-            public IncomingReplication(string dbName, string sourceDbName)
+            public IncomingReplication(string dbName, string sourceDbName, string fromToString)
             {
                 _dbName = dbName;
                 _sourceDbName = sourceDbName;
+                _fromToString = fromToString;
+            }
+
+            public string GetFullName()
+            {
+                return $"Incoming replication {_fromToString}";
             }
 
             public string GetShortName()
@@ -589,19 +632,55 @@ public static class ThreadNames
 
         public sealed class PullReplicationAsSink : IThreadDetails
         {
-            private readonly string _destinationDatabase;
-            private readonly string _destinationUrl;
+            private readonly string _databaseName;
+            private readonly string _url;
+            private readonly string _pullReplicationDefinitionName;
 
-            public PullReplicationAsSink(string destinationDatabase, string destinationUrl)
+            public PullReplicationAsSink(string databaseName, string url, string pullReplicationDefinitionName)
             {
-                _destinationDatabase = destinationDatabase;
-                _destinationUrl = destinationUrl;
+                _databaseName = databaseName;
+                _url = url;
+                _pullReplicationDefinitionName = pullReplicationDefinitionName;
+            }
+
+            public string GetFullName()
+            {
+                return $"Pull Replication as Sink from {_databaseName} at {_url}{ThreadDetails.GetPullReplicationDefinitionNameSuffix(_pullReplicationDefinitionName)}";
             }
 
             public string GetShortName()
             {
-                return $"PllRepSnk {_destinationDatabase} at {_destinationUrl}";
+                return $"PllRepSnk {_databaseName} at {_url}";
             }
+        }
+
+        public sealed class PullReplicationAsHub : IThreadDetails
+        {
+            private readonly string _sourceDatabase;
+            private readonly string _sourceUrl;
+            private readonly string _pullReplicationDefinitionName;
+
+            public PullReplicationAsHub(string sourceDatabase, string sourceUrl, string pullReplicationDefinitionName)
+            {
+                _sourceDatabase = sourceDatabase;
+                _sourceUrl = sourceUrl;
+                _pullReplicationDefinitionName = pullReplicationDefinitionName;
+            }
+
+            public string GetFullName()
+            {
+                return $"Pull Replication as Hub from {_sourceDatabase} at {_sourceUrl}{ThreadDetails.GetPullReplicationDefinitionNameSuffix(_pullReplicationDefinitionName)}";
+            }
+
+            public string GetShortName()
+            {
+                return $"PllRepHub {_sourceDatabase} at {_sourceUrl}";
+            }
+        }
+
+        private static string GetPullReplicationDefinitionNameSuffix(string pullReplicationDefinitionName)
+        {
+            return pullReplicationDefinitionName == null ? null : $" (pull definition: {pullReplicationDefinitionName})";
         }
 
         public class ClusterTransaction : IThreadDetails

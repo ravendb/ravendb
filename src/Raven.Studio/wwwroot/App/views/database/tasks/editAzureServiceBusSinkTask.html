@@ -1,0 +1,314 @@
+<div class="content-margin edit-azure-service-bus-sink-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
+    <div class="align-items-center justify-content-between d-flex margin-bottom-md padding-top-xs">
+        <div class="flex-horizontal gap-2">
+            <i class="icon-azure-service-bus"></i>
+            <h2 data-bind="text: $root.isAddingNewAzureServiceBusSinkTask() ? `New Azure Service Bus Sink` : `Edit Azure Service Bus Sink`" class="mb-0"></h2>
+            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasQueueSink">Enterprise</span>
+        </div>
+        <div class="flex-end margin-right-xs" data-bind="react: infoHubView"></div>
+    </div>
+    <div class="row flex-row">
+        <div class="col-xs-12 col-lg-6 flex-vertical">
+            <form class="flex-form" data-bind="submit: saveAzureServiceBusEtl" autocomplete="off">
+                <div class="flex-header">
+                    <span data-placement="right" data-toggle="tooltip" data-html="true" data-animation="true"
+                        data-bind="tooltipText: $root.hasQueueSink ? null : `<div class='padding'>Your current license does not support this feature.<br /><a href='https://ravendb.net/l/FLDLO4' target='_blank'>Upgrade your plan</a> to access.</div>`">
+                        <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                            <i class="icon-save"></i><span>Save</span>
+                        </button>
+                    </span>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !hasQueueSink }">
+                    <div class="panel-body" data-bind="with: editedAzureServiceBusSink">
+                        <div class="form-group margin-top">
+                            <label for="taskName" class="control-label">Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the Azure Service Bus Sink task (optional)" data-bind="textInput: taskName">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Task State</label>
+                            <div class="flex-grow">
+                                <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                                    <span data-bind="text: stateText()"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Enabled')"><span>Enabled</span></a></li>
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Disabled')"><span>Disabled</span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="right" data-toggle="tooltip" data-bind="attr: { title: $root.isSharded() ? 'Not supported in sharded databases' : 'Toggle on to set a responsible node for the task'  }"
+                                 data-animation="true">
+                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.isSharded()">
+                                <label for="responsibleNode">Set responsible node</label>
+                            </div>
+                        </div>
+                        <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
+                        <div data-bind="if: $root.isNewConnectionStringOpen()">
+                            <div data-bind="react: $root.newConnectionStringView"></div>
+                        </div>
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
+                            <label class="control-label">Connection String</label>
+                            <div class="flex-horizontal flex-grow flex-wrap">
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                            data-bind="textInput: connectionStringName, disable: $root.azureServiceBusConnectionStringsDetails().length === 0,
+                                                       attr: { 'title': $root.azureServiceBusConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
+                                        <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
+                                    <ul class="dropdown-menu"
+                                        data-bind="foreach: $root.azureServiceBusConnectionStringsDetails">
+                                        <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
+                                            <a href="#">
+                                                <div class="row">
+                                                    <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-default mb-0 margin-left-xxs" type="button" data-bind="click: $root.toggleIsNewConnectionStringOpen, visible: !$root.isNewConnectionStringOpen()">
+                                    <i class="icon-plus"></i>
+                                    <span>Create new connection string</span>
+                                </button>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div class="flex-grow margin-top">
+
+                            </div>
+                            <div>
+                                <button class="btn btn-default btn-info" title="Test the connection string connection"
+                                        data-bind="click: $root.onTestConnectionAzureServiceBus, disable: !connectionStringName() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test Connection</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="panel-addon" data-bind="with: testConnectionResult">
+                            <div class="padding bg-success small" data-bind="visible: Success">
+                                <div>Successfully connected to Azure Service Bus</div>
+                            </div>
+                            <div data-bind="if: !Success">
+                                <div class="padding bg-danger small">
+                                    <h2>Connection test failed!</h2>
+                                    <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                    <div>
+                                        <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-addon" data-bind="visible: $root.azureServiceBusConnectionStringsDetails().length === 0 && !$root.isNewConnectionStringOpen()">
+                            <div class="padding bg-warning text-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !hasQueueSink }">
+                    <div class="flex-row margin-top">
+                        <h3>Scripts</h3>
+                        <button type="button" id="addNewScript" data-bind="click: addNewScript, disable: editedAzureServiceBusSink().showEditScriptArea" class="btn btn-info pull-right">
+                            <i class="icon-plus"></i><span>Add Script</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="scroll" data-bind="css: { 'pe-none item-disabled': !hasQueueSink }">
+                    <div class="etl-list" id="transformsList" data-bind="with: editedAzureServiceBusSink">
+                        <div data-bind="if: scripts().length === 0 && !editedScriptSandbox()">
+                            <div class="text-center text-muted">
+                                <i class="icon-lg icon-empty-set"></i>
+                                <h3 class="margin-top margin-top-sm"
+                                    data-bind="css: { 'text-danger': !scripts.isValid() && scripts.isModified() }">No scripts have been defined.
+                                </h3>
+                            </div>
+                        </div>
+                        <div data-bind="foreach: scripts">
+                            <div class="panel panel-hover item" data-bind="css: { active: $data === $parent.scriptSelectedForEdit() }">
+                                <div class="padding padding-sm">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow info">
+                                            <div class="transformer-name" title="Script name">
+                                                <span data-bind="text: name"></span>
+                                                <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
+                                            </div>
+                                            <div class="queues">
+                                                Queues:
+                                                <span class="sink-queues" title="Source Queues"
+                                                      data-bind="foreach: queues, visible: queues().length">
+                                                    <span data-bind="text: $data"></span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="actions">
+                                            <button data-bind="click: $parent.editScript.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit script"></i></button>
+                                            <button data-bind="click: $root.removeScript" class="btn btn-danger"><i class="icon-trash" title="Delete script"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-xs-12 col-lg-6 flex-vertical" data-bind="with: editedAzureServiceBusSink()">
+            <div class="flex-grow" data-bind="if: showEditScriptArea">
+                <div id="editTransform" class="panel padding" data-bind="css: { 'pe-none item-disabled': !$root.hasQueueSink }">
+                    <div data-bind="with: editedScriptSandbox">
+                        <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
+                            <label class="control-label"><strong>Name:</strong></label>
+                            <div class="flex-grow margin-left">
+                                <input type="text" class="form-control" placeholder="Enter script name" autocomplete="off"
+                                       data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
+                            </div>
+                        </div>
+                        <label><strong>Script:</strong></label>
+                        <span class="pull-right"><a href="#" class="syntax-help" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
+                        <div data-bind="validationElement: script">
+                            <pre class="form-control editor"
+                                 data-bind="aceEditor: { code: script, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 250px;"></pre>
+                            <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                                <div class="help-block" data-bind="validationMessage: script"></div>
+                            </div>
+                        </div>
+                        <div class="margin-bottom-sm margin-top-sm">
+                            <div class="flex-horizontal">
+                                <div class="flex-grow">
+                                    <div class="btn-block flex-grow">
+                                        <input class="form-control dropdown-toggle" placeholder="Enter Queue Name" data-toggle="dropdown" autocomplete="off"
+                                               data-bind="textInput: inputQueue" />
+
+                                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: queues">
+                                            <div class="help-block" data-bind="validationMessage: queues"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-info" data-bind="click: addQueue, enable: inputQueue() && canAddQueue()"><i class="icon-plus"></i> <span>Add Queue</span></button>
+                                </div>
+                            </div>
+                            <div data-bind="visible: queues().length" class="margin-top-sm">
+                                <label><strong>Source Queue Names:</strong></label>
+                                <ul class="well collection-list" data-bind="foreach: queues">
+                                    <li>
+                                        <div class="name" data-bind="text: $data"></div>
+                                        <a title="Remove queue" href="#" data-bind="click: $parent.removeQueue.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="flex-horizontal margin-top ">
+                            <div data-bind="visible: !$root.enableTestArea()">
+                                <button class="btn btn-success" data-bind="click: $root.saveEditedScript, attr: { title : (isNew() ? 'Add' : 'Update') + ' this script' }">
+                                    <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                </button>
+                                <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedScript"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                            </div>
+                            <div class="flex-separator"></div>
+                            <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area">
+                                <i class="icon-rocket"></i> <span>Test script</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
+                    <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasQueueSink }">
+                        <div class="panel-body flex-form" data-bind="with: $root.test">
+
+                            <label>
+                                <strong>Message: </strong> <br /><small class="text-muted">(JSON format)</small>
+                            </label>
+
+                            <div data-bind="validationElement: messageText" style="height: 200px" class="margin-bottom">
+                                <pre id="docEditor" class="form-control"
+                                     data-bind="aceEditor: { code: messageText, fontSize:'16px', lang: 'ace/mode/json' }, validationElement: messageText, validationOptions: { errorsAsTitle: false },"></pre>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: messageText">
+                                    <div class="help-block" data-bind="validationMessage: messageText"></div>
+                                </div>
+                            </div>
+
+                            <div class="flex-horizontal">
+                                <div class="flex-separator"></div>
+                                <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
+                                    <i class="icon-rocket"></i>
+                                    <span>Test</span>
+                                </button>
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea">
+                                    <i class="icon-cancel"></i> <span>Close Test Area</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test">
+        <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted()">
+            <i class="icon-info icon-xl"></i>
+            Enter <strong>Message</strong> used for test and click <strong>Test</strong> button
+        </div>
+        <div class="tabs" data-bind="css: { 'pe-none item-disabled': !$root.hasQueueSink }">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" data-bind="visible: testAlreadyExecuted" class="active">
+                    <a href="#testResultsModified" role="tab" data-toggle="tab">
+                        <i class="icon-export"></i><span>Put</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.modifiedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResultsLoaded" role="tab" data-toggle="tab">
+                        <i class="icon-import"></i><span>Loaded</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.loadedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResultsDeleted" role="tab" data-toggle="tab">
+                        <i class="icon-trash"></i><span>Deleted</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.deletedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: debugOutput().length">
+                    <a href="#debugOutput" role="tab" data-toggle="tab">
+                        <i class="icon-administrator-js-console"></i><span>Debug output</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': !$root.hasQueueSink }">
+            <div role="tabpanel" class="tab-pane fade margin-bottom in active" id="testResultsModified">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsLoaded">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsDeleted">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsDeletedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="debugOutput">
+                <pre class="absolute-fill" data-bind="text: debugOutput().join('\r\n')"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="backdrop" data-bind="click: $root.toggleTestArea"></div>

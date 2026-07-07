@@ -14,7 +14,7 @@ namespace SlowTests.Client.Attachments
         public RavenDB_20601(ITestOutputHelper output) : base(output)
         {
         }
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Replication | RavenTestCategory.ClusterTransactions)]
         public async Task ConflictOfClusterTxDocumentWithAttachment()
         {
             var co = new ServerCreationOptions
@@ -62,13 +62,13 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                d.Mend();
+                await d.MendAsync();
 
                 await EnsureReplicatingAsync(store1, store2);
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Replication | RavenTestCategory.ClusterTransactions)]
         public async Task ConflictOfTwoClusterTxAndAttachment()
         {
             using (var store1 = GetDocumentStore())
@@ -106,13 +106,13 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                d.Mend();
+                await d.MendAsync();
 
                 await EnsureReplicatingAsync(store1, store2);
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Replication | RavenTestCategory.ClusterTransactions)]
         public async Task ConflictOfClusterTxDocumentWithAttachment2()
         {
             var co = new ServerCreationOptions
@@ -175,7 +175,7 @@ namespace SlowTests.Client.Attachments
                     }
                 }
 
-                d.Mend();
+                await d.MendAsync();
 
                 await EnsureReplicatingAsync(store1, store2);
             }

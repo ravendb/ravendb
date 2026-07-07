@@ -96,6 +96,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             icon: "icon-rabbitmq-sink",
             colorClass: "rabbitmq-sink",
         },
+        "AzureServiceBusQueueSink": {
+            nameForUI: "Azure Service Bus Sink",
+            icon: "icon-azure-service-bus-sink",
+            colorClass: "azure-service-bus-sink",
+        },
         "Backup": {
             nameForUI: "Backup",
             icon: "icon-backups",
@@ -105,6 +110,11 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
             nameForUI: "Subscription",
             icon: "icon-subscription",
             colorClass: "subscription"
+        },
+        "CdcSink": {
+            nameForUI: "CDC Sink",
+            icon: "icon-sql-etl",
+            colorClass: "cdc-sink"
         },
     }
 
@@ -337,6 +347,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "EmbeddingsGeneration";
             case "GenAiCount":
                 return "GenAi";
+            case "CdcSinkCount":
+                return "CdcSink";
             default:
                 throw new Error("Unknown task type count received:" + input);
             }

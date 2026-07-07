@@ -416,7 +416,7 @@ public class AiAgentDebugTracing : RavenTestBase
                 UserPrompt = "What is 2+2?"
             }, changeVector: null, debugOverride: true);
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleRequest(context, CancellationToken.None));
+            await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleRequestAsync(context, CancellationToken.None));
             conversationDocId = handler.ConversationDocId;
         }
 
@@ -475,7 +475,7 @@ public class AiAgentDebugTracing : RavenTestBase
                 UserPrompt = "What is 2+2?"
             }, changeVector: null, debugOverride: true);
 
-            await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleRequest(context, CancellationToken.None));
+            await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleRequestAsync(context, CancellationToken.None));
             conversationDocId = handler.ConversationDocId;
         }
 

@@ -33,13 +33,7 @@ export function IntegrationsInfoHub() {
 
     return (
         <AboutViewAnchored defaultOpen={hasAllFeaturesInLicense ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     In this view, you can define credentials that third-party clients are required to provide when
                     connecting to RavenDB.

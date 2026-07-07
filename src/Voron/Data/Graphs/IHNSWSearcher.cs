@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using Voron.Util;
 
 namespace Voron.Data.Graphs;
 
 public interface IHnswSearcher : IDisposable
 {
-    // Find nodes accepted by the query vector.
-    // Guarantee: always returns previously unseen nodes.
-    // To retrieve the accepted nodes, call TryGetCurrentCandidates.
-    public IEnumerable<bool> Search();
+    // Advances the search until the next batch of candidates is ready, then yields control to the caller so it can drain them via TryGetCurrentCandidates. Batches contain only previously unseen nodes. Returns true while batches remain, false once the search is exhausted.
+    public bool MoveNextBatch();
 
     // Retrieve IDs of nodes from the current search batch.
     // Guarantee: always returns previously unseen nodes.

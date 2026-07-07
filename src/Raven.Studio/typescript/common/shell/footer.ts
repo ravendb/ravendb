@@ -13,12 +13,13 @@ import clientCertificateModel = require("models/auth/clientCertificateModel");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class footerStats {
-    countOfDocuments = ko.observable<number>();
-    countOfIndexes = ko.observable<number>();
-    countOfStaleIndexes = ko.observable<number>();
-    countOfIndexingErrors = ko.observable<number>();
-    countOfEtlTasksErrors = ko.observable<number>();
-    countOfAiTasksErrors = ko.observable<number>();
+    countOfDocuments = ko.observable<number>(0);
+    countOfIndexes = ko.observable<number>(0);
+    countOfStaleIndexes = ko.observable<number>(0);
+    countOfIndexingErrors = ko.observable<number>(0);
+    countOfEtlTasksErrors = ko.observable<number>(0);
+    countOfAiTasksErrors = ko.observable<number>(0);
+    countOfCdcSinkTasksErrors = ko.observable<number>(0);
 }
 
 class footer {
@@ -37,7 +38,16 @@ class footer {
     urlForStaleIndexes = ko.pureComputed(() => appUrl.forIndexes(this.db(), null, true));
     urlForIndexingErrors = ko.pureComputed(() => appUrl.forIndexErrors(this.db()));
     urlForAbout = appUrl.forAbout();
-    
+
+    ssoAppUrl = ko.pureComputed<string | null>(() => {
+        const cert = clientCertificateModel.certificateInfo();
+        if (!cert || cert.Usage !== "SsoClient") {
+            return null;
+        }
+        const ssoHostname = window.location.hostname.replace(/^[^.]+\./, "");
+        return `${window.location.protocol}//${ssoHostname}/clusters`;
+    });
+
     twoFactorSessionExpiration: KnockoutComputed<moment.Moment>;
 
     licenseClass = license.licenseCssClass;
@@ -83,6 +93,7 @@ class footer {
                 newStats.countOfIndexingErrors(stats.CountOfIndexingErrors);
                 newStats.countOfEtlTasksErrors(stats.CountOfEtlTasksErrors);
                 newStats.countOfAiTasksErrors(stats.CountOfAiTasksErrors);
+                newStats.countOfCdcSinkTasksErrors(stats.CountOfCdcSinkTasksErrors);
                 this.stats(newStats);
             })
             .finally(() => this.spinners.loading(false));
@@ -116,6 +127,7 @@ class footer {
                 currentStats.countOfIndexingErrors(stats.CountOfIndexingErrors);
                 currentStats.countOfEtlTasksErrors(stats.CountOfEtlTasksErrors);
                 currentStats.countOfAiTasksErrors(stats.CountOfAiTasksErrors);
+                currentStats.countOfCdcSinkTasksErrors(stats.CountOfCdcSinkTasksErrors);
             });
     }
 
@@ -141,6 +153,7 @@ class footer {
                 CountOfIndexingErrors: acc.CountOfIndexingErrors + stats.CountOfIndexingErrors,
                 CountOfEtlTasksErrors: acc.CountOfEtlTasksErrors + stats.CountOfEtlTasksErrors,
                 CountOfAiTasksErrors: acc.CountOfAiTasksErrors + stats.CountOfAiTasksErrors,
+                CountOfCdcSinkTasksErrors: acc.CountOfCdcSinkTasksErrors + stats.CountOfCdcSinkTasksErrors,
                 StaleIndexes: staleIndexes,
                 CountOfStaleIndexes: staleIndexes.length,
             }),
@@ -150,6 +163,7 @@ class footer {
                 CountOfIndexingErrors: 0,
                 CountOfEtlTasksErrors: 0,
                 CountOfAiTasksErrors: 0,
+                CountOfCdcSinkTasksErrors: 0,
                 StaleIndexes: [],
                 CountOfStaleIndexes: 0,
             }
@@ -161,7 +175,13 @@ class footer {
             return;
         }
 
-        const stats = this.stats();
+        let stats = this.stats();
+
+        if (!stats) {
+            stats = new footerStats();
+            this.stats(stats);
+        }
+        
         stats.countOfDocuments(event.CountOfDocuments);
         stats.countOfIndexes(event.CountOfIndexes);
         stats.countOfStaleIndexes(event.CountOfStaleIndexes);

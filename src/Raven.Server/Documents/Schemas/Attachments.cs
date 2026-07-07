@@ -26,8 +26,8 @@ namespace Raven.Server.Documents.Schemas
                 e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it. */
             LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType = 0,
             Etag = 1,
-            Name = 2, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
-            ContentType = 3, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
+            Name = 2, // format of lazy string key is detailed in DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey
+            ContentType = 3, // format of lazy string key is detailed in DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey
             Hash = 4, // base64 hash
             TransactionMarker = 5,
             ChangeVector = 6,
@@ -35,6 +35,9 @@ namespace Raven.Server.Documents.Schemas
             Flags = 8,
             RemoteAt = 9,
             Identifier = 10,
+
+            // Parent revision's cv.Version; populated only on revision-attachment rows ('r' discriminator). Readers dispatch on tvr.Count >= 12.
+            RevisionVersion = 11,
         }
 
         static Attachments()

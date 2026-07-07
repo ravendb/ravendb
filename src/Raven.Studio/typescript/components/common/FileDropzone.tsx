@@ -11,6 +11,7 @@ interface FileDropzoneProps {
     maxFiles?: number;
     validExtensions?: string[];
     initialFiles?: File[];
+    className?: string;
 }
 
 export default function FileDropzone({
@@ -18,6 +19,7 @@ export default function FileDropzone({
     validExtensions = [],
     maxFiles = Infinity,
     initialFiles = [],
+    className,
 }: FileDropzoneProps & { [key: string]: any }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,7 +67,7 @@ export default function FileDropzone({
     };
 
     return (
-        <div>
+        <div className={className}>
             <div className={classNames("file-dropzone", { isDragging })}>
                 <input
                     data-testid="file-input"
