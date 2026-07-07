@@ -53,6 +53,20 @@ describe("accessManagerSliceSelectors", () => {
             expect(getLevel()).toEqual("DatabaseAdmin");
         });
 
+        it("can get access level for a shard when name casing differs from the certificate", () => {
+            const store = createStoreWithAccess({ databaseAccess });
+            const getLevel = accessManagerSelectors.getEffectiveDatabaseAccessLevel(store.getState());
+
+            expect(getLevel("NORTHWIND$1")).toEqual("DatabaseAdmin");
+        });
+
+        it("can get access level when active database is a shard", () => {
+            const store = createStoreWithAccess({ databaseAccess, activeDatabaseName: "northwind$2" });
+            const getLevel = accessManagerSelectors.getEffectiveDatabaseAccessLevel(store.getState());
+
+            expect(getLevel()).toEqual("DatabaseAdmin");
+        });
+
         it("returns no access level when database is not listed in the certificate", () => {
             const store = createStoreWithAccess({ databaseAccess });
             const getLevel = accessManagerSelectors.getEffectiveDatabaseAccessLevel(store.getState());
