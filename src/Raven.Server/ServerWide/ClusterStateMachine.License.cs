@@ -946,13 +946,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.SinkPullReplications is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasPullReplicationAsSink)
             return;
 
         if (databaseRecord.SinkPullReplications.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.PullReplicationAsSink, "Your license doesn't support adding Sink Replication feature.");
@@ -963,13 +963,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.HubPullReplications is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasPullReplicationAsHub)
             return;
 
         if (databaseRecord.HubPullReplications.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.PullReplicationAsHub, "Your license doesn't support adding Hub Replication feature.");
@@ -1024,13 +1024,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.RavenEtls is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasRavenEtl)
             return;
 
         if (databaseRecord.RavenEtls.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.RavenEtl, "Your license doesn't support adding Raven ETL feature.");
@@ -1041,13 +1041,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.SqlEtls is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasSqlEtl)
             return;
 
         if (databaseRecord.SqlEtls.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.SqlEtl, "Your license doesn't support adding SQL ETL feature.");
@@ -1058,13 +1058,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.OlapEtls is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasOlapEtl)
             return;
 
         if (databaseRecord.OlapEtls.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.OlapEtl, "Your license doesn't support adding Olap ETL feature.");
@@ -1075,13 +1075,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.QueueEtls is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasQueueEtl)
             return;
 
         if (databaseRecord.QueueEtls.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.QueueEtl, "Your license doesn't support adding Queue ETL feature.");
@@ -1092,13 +1092,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.ElasticSearchEtls is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasElasticSearchEtl)
             return;
 
         if (databaseRecord.ElasticSearchEtls.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.ElasticSearchEtl, "Your license doesn't support adding Elastic Search ETL feature.");
@@ -1109,13 +1109,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.SnowflakeEtls is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasSnowflakeEtl)
             return;
 
         if (databaseRecord.SnowflakeEtls.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.SnowflakeEtl, "Your license doesn't support using the Snowflake ETL feature.");
@@ -1126,13 +1126,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.AiConnectionStrings is null or { Count: 0 } || databaseRecord.EmbeddingsGenerations is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasEmbeddingsGeneration)
             return;
 
         if (databaseRecord.EmbeddingsGenerations.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         foreach (var config in databaseRecord.EmbeddingsGenerations)
@@ -1153,13 +1153,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.GenAis is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasGenAi)
             return;
 
         if (databaseRecord.GenAis.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.GenAi, "Your license doesn't support using the AI Generation feature.");
@@ -1170,13 +1170,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.AiAgents is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasAiAgent)
             return;
 
         if (databaseRecord.AiAgents.All(x => x.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
@@ -1187,13 +1187,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.TimeSeries == null || databaseRecord.TimeSeries.Collections == null || databaseRecord.TimeSeries.Collections.Count == 0)
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasTimeSeriesRollupsAndRetention)
             return;
 
         if (databaseRecord.TimeSeries.Collections.All(x => x.Value.Disabled))
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.TimeSeriesRollupsAndRetention, "Your license doesn't support adding Time Series Rollups And Retention feature.");
@@ -1204,15 +1204,15 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.DocumentsCompression == null)
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasDocumentsCompression)
             return;
 
         if (databaseRecord.DocumentsCompression.CompressAllCollections == false &&
             databaseRecord.DocumentsCompression.CompressRevisions == false &&
             databaseRecord.DocumentsCompression.Collections.Length == 0)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");
@@ -1223,13 +1223,13 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.Indexes is null or { Count: 0 })
             return;
 
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
         if (licenseStatus.HasAdditionalAssembliesFromNuGet)
             return;
 
         if (LicenseManager.HasAdditionalAssembliesFromNuGet(databaseRecord.Indexes) == false)
+            return;
+
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
 
         throw new LicenseLimitException(LimitType.AdditionalAssembliesFromNuGet, "Your license doesn't support Additional Assemblies From NuGet feature.");
