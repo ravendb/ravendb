@@ -7,6 +7,7 @@ import {
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { RootState } from "components/store";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 const selectClearanceFilterOptions = createSelector(
     (state: RootState) => state.certificates.certificates,
@@ -85,7 +86,7 @@ const selectFilteredCertificates = createSelector(
             if (
                 databaseFilter &&
                 permissionKeys.length > 0 &&
-                !permissionKeys.some((x) => x.toLowerCase() === databaseFilter.toLowerCase())
+                !permissionKeys.some((x) => DatabaseUtils.namesEqualIgnoreCase(x, databaseFilter))
             ) {
                 return false;
             }
