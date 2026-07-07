@@ -131,7 +131,11 @@ const selectFilteredCertificates = createSelector(
             }
 
             const permissionKeys = Object.keys(cert.Permissions);
-            if (databaseFilter && permissionKeys.length > 0 && !permissionKeys.includes(databaseFilter)) {
+            if (
+                databaseFilter &&
+                permissionKeys.length > 0 &&
+                !permissionKeys.some((x) => x.toLowerCase() === databaseFilter.toLowerCase())
+            ) {
                 return false;
             }
 
