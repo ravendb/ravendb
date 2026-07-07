@@ -1276,7 +1276,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                         // Failed sub-request with no body (e.g. query against a non-existing index -> 404).
                         // Synthesize a schema to surface the real failure instead of dereferencing a null result.
-                        var (requestUrl, request) = TryGetRequestAndUrl(context, reqs, index);
+                        var (requestUrl, request) = GetRequestAndUrl(context, reqs, index);
                         var msg = $"The request to '{requestUrl}' failed with status code {statusCode} and returned an empty response body. Request: {request}";
 
                         var schema = new ExceptionDispatcher.ExceptionSchema
@@ -1294,11 +1294,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private static (string Url, string Request) TryGetRequestAndUrl(JsonOperationContext context, DynamicJsonArray reqs, int index)
+    private static (string Url, string Request) GetRequestAndUrl(JsonOperationContext context, DynamicJsonArray reqs, int index)
     {
-        if (reqs == null || index < 0 || index >= reqs.Items.Count || reqs.Items[index] is not DynamicJsonValue request)
-            return (null, null);
-
+        var request = reqs.Items[index] as DynamicJsonValue;
         var reqBjro = context.ReadObject(request, "ai-agent/failed-request");
         reqBjro.TryGet(nameof(GetRequest.Url), out string url);
         return (url, reqBjro.ToString());
