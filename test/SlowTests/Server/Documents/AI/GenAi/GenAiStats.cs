@@ -17,6 +17,7 @@ using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Server.Documents.AI.GenAi;
 

@@ -2,17 +2,17 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-type TaskCategory = "Etl" | "Ai";
+type TaskCategory = "Etl" | "Ai" | "CdcSink";
 
-interface deleteEtlErrorsDto {
+interface deleteTaskErrorsDto {
     type: TaskCategory;
     name: string[];
     shardNumber?: number
     nodeTag?: string
 }
 
-class deleteEtlErrorsCommand extends commandBase {
-    constructor(private db: database | string, private deleteEtlDto: deleteEtlErrorsDto) {
+class deleteTaskErrorsCommand extends commandBase {
+    constructor(private db: database | string, private deleteEtlDto: deleteTaskErrorsDto) {
         super();
     }
 
@@ -23,4 +23,4 @@ class deleteEtlErrorsCommand extends commandBase {
     }
 }
 
-export = deleteEtlErrorsCommand;
+export = deleteTaskErrorsCommand;

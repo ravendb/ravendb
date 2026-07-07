@@ -12,7 +12,7 @@ using Voron;
 using Voron.Data.Tables;
 using Transaction = Voron.Impl.Transaction;
 
-namespace Raven.Server.Documents.ETL;
+namespace Raven.Server.Documents.TasksErrors;
 
 public unsafe class TaskErrorsStorage
 {
@@ -448,6 +448,30 @@ public unsafe class TaskErrorsStorage
     public void DeleteErrorsOfTask(string taskName, TaskCategory taskCategory)
     {
         DeleteTaskErrorsTablesForTask(taskName, taskCategory);
+    }
+
+    /// <summary>
+    /// Returns the exact-cased task names that currently have any stored errors (process or item) for the
+    /// given category. Used to reconcile persisted errors against the live configuration and drop the ones
+    /// whose task no longer exists.
+    /// </summary>
+    internal HashSet<string> GetStoredTaskNames(TaskCategory taskCategory)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+
+        using (_contextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var tx = context.Transaction.InnerTransaction;
+
+            foreach (var name in EnumerateStoredTaskNames(taskCategory, tx, Schemas.TaskProcessErrors.TaskProcessErrorsTree))
+                names.Add(name);
+
+            foreach (var name in EnumerateStoredTaskNames(taskCategory, tx, Schemas.TaskItemErrors.TaskItemErrorsTree))
+                names.Add(name);
+        }
+
+        return names;
     }
 
     private static IEnumerable<string> EnumerateStoredTaskNames(TaskCategory taskCategory, Transaction tx, string tree)

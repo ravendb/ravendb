@@ -20,9 +20,10 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import {
     EtlHealthStatus,
-    EtlTaskWithErrors,
+    TaskWithErrors,
     FlatError,
     flattenAllTasksErrors,
+    resolveStudioTaskType,
     SHOW_WIDTH_SIZE,
     TasksFiltersState,
 } from "../utils/tasksErrorsUtils";
@@ -31,7 +32,7 @@ import {
     CellDateWithRelativeTimeWrapper,
     CellErrorStepWrapper,
     CellErrorTypeWrapper,
-    CellEtlTypeWrapper,
+    CellTaskTypeWrapper,
     CellNodeValueWrapper,
     CellShardValueWrapper,
     CellTaskHealthWrapper,
@@ -59,7 +60,7 @@ function useGroupByNoneTableColumns(availableWidth: number, hasProcessErrors: bo
             {
                 header: "Task type",
                 accessorKey: "etlType",
-                cell: CellEtlTypeWrapper,
+                cell: CellTaskTypeWrapper,
                 size: getSize(5),
                 enableSorting: false,
                 enableColumnFilter: false,
@@ -148,7 +149,7 @@ function useGroupByNoneTableColumns(availableWidth: number, hasProcessErrors: bo
 }
 
 interface GroupByNoneTableProps {
-    tasksWithErrors: EtlTaskWithErrors[];
+    tasksWithErrors: TaskWithErrors[];
     etlStats: EtlTaskStats[];
     width: number;
     toggleDeleteAllErrorsModal: () => void;
@@ -177,7 +178,8 @@ function GroupByNoneTable({
             const matchesShard = !shardNumbers.length || shardNumbers.includes(String(error.shardNumber));
             const matchesHealth =
                 !healthStatuses.length || healthStatuses.includes(error.healthStatus as EtlHealthStatus);
-            const matchesTaskType = !taskTypes.length || taskTypes.includes(error.etlType);
+            const studioTaskType = resolveStudioTaskType(error.category, error.etlType);
+            const matchesTaskType = !taskTypes.length || (studioTaskType != null && taskTypes.includes(studioTaskType));
 
             return matchesSearch && matchesNode && matchesShard && matchesHealth && matchesTaskType;
         });
@@ -229,7 +231,7 @@ function GroupByNoneTable({
 }
 
 interface GroupByNoneViewProps {
-    tasksWithErrors: EtlTaskWithErrors[];
+    tasksWithErrors: TaskWithErrors[];
     etlStats: EtlTaskStats[];
     filters: TasksFiltersState;
     onRefresh: () => void;

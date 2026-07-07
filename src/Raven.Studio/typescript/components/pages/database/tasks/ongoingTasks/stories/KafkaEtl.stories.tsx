@@ -53,7 +53,7 @@ export const Default: StoryObj<KafkaProps> = {
             tasksService.withGetTasks(mockedValue);
         }
 
-        tasksService.withEtlErrors([]);
+        tasksService.withTaskErrors([]);
         tasksService.withEtlStats([]);
 
         if (args.multipleScripts) {

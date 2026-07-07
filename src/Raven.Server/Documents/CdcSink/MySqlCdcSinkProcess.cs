@@ -424,7 +424,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     ///
     /// THROWS on unrecognised CLR types — this is intentional. If a future MysqlConnector or
     /// MySqlCdc version produces a new CLR shape for Boolean-category columns, we want the CDC
-    /// process to fault into its alert pipeline (CdcSinkProcessStatistics / CdcSinkNotifications)
+    /// process to fault and surface the error in dedicated task-error storage (via CdcSinkProcess)
     /// rather than silently stringify via ConvertMySqlValue's _ => value.ToString() fallback.
     /// The throw is the forcing function that drives the team to add explicit handling.
     ///

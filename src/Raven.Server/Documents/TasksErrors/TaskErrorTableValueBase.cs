@@ -1,6 +1,6 @@
 using System;
 
-namespace Raven.Server.Documents.ETL;
+namespace Raven.Server.Documents.TasksErrors;
 
 public abstract class TaskErrorTableValueBase
 {

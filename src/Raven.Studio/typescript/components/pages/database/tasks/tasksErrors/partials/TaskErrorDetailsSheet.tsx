@@ -9,14 +9,7 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import {
-    Direction,
-    FlatError,
-    getEtlTypeIcon,
-    getEtlTypeLabel,
-    getStepIcon,
-    healthStatusToBadge,
-} from "../utils/tasksErrorsUtils";
+import { Direction, FlatError, getStepIcon, getTaskTypeDisplay, healthStatusToBadge } from "../utils/tasksErrorsUtils";
 import Code from "components/common/Code";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -38,17 +31,17 @@ function SheetDetailRow({ children, className }: SheetDetailRowProps) {
     );
 }
 
-interface EtlErrorDetailsSheetProps {
+interface TaskErrorDetailsSheetProps {
     error: FlatError;
     allErrors?: FlatError[];
     initialIndex?: number;
 }
 
-export default function EtlErrorDetailsSheet({
+export default function TaskErrorDetailsSheet({
     error: initialError,
     allErrors = [],
     initialIndex = 0,
-}: EtlErrorDetailsSheetProps) {
+}: TaskErrorDetailsSheetProps) {
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -65,8 +58,7 @@ export default function EtlErrorDetailsSheet({
 
     const { bg, icon, label } = healthStatusToBadge(error.healthStatus);
     const stepIcon = getStepIcon(error.Step);
-    const etlTypeIcon = error.etlType ? getEtlTypeIcon(error.etlType) : null;
-    const etlTypeLabel = error.etlType ? getEtlTypeLabel(error.etlType) : null;
+    const { icon: taskTypeIcon, label: taskTypeLabel } = getTaskTypeDisplay(error.category, error.etlType);
 
     const slideVariants = {
         enter: (d: number) => ({ x: `${d * 100}%` }),
@@ -79,7 +71,7 @@ export default function EtlErrorDetailsSheet({
             <ViewSheet.Header>
                 <h3 className="mb-0">
                     <Icon icon="warning" color="warning" />
-                    ETL error details
+                    Task error details
                 </h3>
             </ViewSheet.Header>
             <ViewSheet.Body className="m-2">
@@ -99,7 +91,7 @@ export default function EtlErrorDetailsSheet({
                                 <SheetDetailRow>
                                     <div className="small">Task name/Script name</div>
                                     <div className="d-flex align-items-center text-right">
-                                        {etlTypeIcon && <Icon icon={etlTypeIcon} />}
+                                        {taskTypeIcon && <Icon icon={taskTypeIcon} />}
                                         <div>
                                             {error.etlName}/{error.transformationName}
                                         </div>
@@ -110,22 +102,20 @@ export default function EtlErrorDetailsSheet({
                                     <SheetDetailRow>
                                         <div className="small">Task name/Script name</div>
                                         <div className="d-flex align-items-center">
-                                            {etlTypeIcon && <Icon icon={etlTypeIcon} />}
+                                            {taskTypeIcon && <Icon icon={taskTypeIcon} />}
                                             <div>{error.TaskName}</div>
                                         </div>
                                     </SheetDetailRow>
                                 )
                             )}
 
-                            {error.etlType && (
-                                <SheetDetailRow>
-                                    <div className="small">Task type</div>
-                                    <div className="d-flex align-items-center">
-                                        {etlTypeIcon && <Icon icon={etlTypeIcon} />}
-                                        {etlTypeLabel}
-                                    </div>
-                                </SheetDetailRow>
-                            )}
+                            <SheetDetailRow>
+                                <div className="small">Task type</div>
+                                <div className="d-flex align-items-center">
+                                    {taskTypeIcon && <Icon icon={taskTypeIcon} />}
+                                    {taskTypeLabel}
+                                </div>
+                            </SheetDetailRow>
 
                             {error.errorType && (
                                 <SheetDetailRow>

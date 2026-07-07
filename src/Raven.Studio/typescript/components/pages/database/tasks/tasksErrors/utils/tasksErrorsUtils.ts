@@ -4,11 +4,11 @@ import appUrl from "common/appUrl";
 import assertUnreachable from "components/utils/assertUnreachable";
 import TaskUtils from "components/utils/TaskUtils";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import { ThemeColor } from "components/models/common";
 
-export type EtlErrorStep = Raven.Server.Documents.ETL.TaskErrorStep;
-export type EtlHealthStatus = Raven.Server.Documents.ETL.EtlProcessHealthStatus;
+export type TaskErrorStep = Raven.Server.Documents.TasksErrors.TaskErrorStep;
+export type EtlHealthStatus = Raven.Server.Documents.TasksErrors.OngoingTaskHealthStatus;
 
 export type GroupByType = "task" | "none";
 
@@ -47,69 +47,77 @@ export function getEtlEditLink(databaseName: string, taskId: number, etlType: St
     }
 }
 
-export type EtlErrorsWithLocation = EtlErrors & databaseLocationSpecifier;
+export type TaskErrorsWithLocation = TaskErrors & databaseLocationSpecifier;
 
-export interface EtlTransformationWithErrors {
+export interface TransformationWithErrors {
     transformationName: string;
-    processErrors: (EtlErrors["ProcessErrors"][number] & databaseLocationSpecifier)[];
-    itemErrors: (EtlErrors["ItemErrors"][number] & databaseLocationSpecifier)[];
+    processErrors: (TaskErrors["ProcessErrors"][number] & databaseLocationSpecifier)[];
+    itemErrors: (TaskErrors["ItemErrors"][number] & databaseLocationSpecifier)[];
 }
 
-export interface EtlTaskWithErrors {
+export interface TaskWithErrors {
     etlName: string;
     etlType?: StudioEtlType;
-    transformations: EtlTransformationWithErrors[];
+    category: TaskCategory;
+    transformations: TransformationWithErrors[];
 }
 
-export interface EtlError {
+export interface TaskError {
     etlName: string;
     transformationName: string;
     healthStatus: EtlHealthStatus;
     taskId?: number;
     etlType?: StudioEtlType;
+    category: TaskCategory;
 }
 
 export type FlatError = (
-    | (EtlTransformationWithErrors["itemErrors"][number] & { errorType: "Item" })
-    | (EtlTransformationWithErrors["processErrors"][number] & { errorType: "Process" })
+    | (TransformationWithErrors["itemErrors"][number] & { errorType: "Item" })
+    | (TransformationWithErrors["processErrors"][number] & { errorType: "Process" })
 ) &
-    EtlError;
+    TaskError;
 
 export interface TasksFiltersState {
     searchText: string;
     nodeTags: string[];
     shardNumbers: string[];
     healthStatuses: EtlHealthStatus[];
-    taskTypes: StudioEtlType[];
+    taskTypes: StudioTaskType[];
 }
 
-export function parseProcessName(processName: string): [etlName: string, transformationName: string] {
+// ETL and AI errors are stored as "taskName/transformationName". CDC task names carry no
+// transformation and may themselves contain "/", so CDC names are never split.
+export function parseProcessName(
+    processName: string,
+    category: TaskCategory
+): [etlName: string, transformationName: string] {
     const slashIndex = processName.indexOf("/");
-    if (slashIndex === -1) {
+    if (!taskHasTransformations(category) || slashIndex === -1) {
         return [processName, ""];
     }
     return [processName.slice(0, slashIndex), processName.slice(slashIndex + 1)];
 }
 
-export function getTasksWithErrors(processes: EtlErrorsWithLocation[], etlStats: EtlTaskStats[]): EtlTaskWithErrors[] {
+export function getTasksWithErrors(processes: TaskErrorsWithLocation[], etlStats: EtlTaskStats[]): TaskWithErrors[] {
     if (!processes?.length) {
         return [];
     }
 
     return _.chain(processes)
-        .filter((p: EtlErrorsWithLocation) => _.size(p?.ProcessErrors) || _.size(p?.ItemErrors))
-        .groupBy((p: EtlErrorsWithLocation) => parseProcessName(p.TaskName)[0])
+        .filter((p: TaskErrorsWithLocation) => _.size(p?.ProcessErrors) || _.size(p?.ItemErrors))
+        .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName, p.Category)[0])
         .map(
-            (group: EtlErrorsWithLocation[], etlName: string): EtlTaskWithErrors => ({
+            (group: TaskErrorsWithLocation[], etlName: string): TaskWithErrors => ({
                 etlName,
                 etlType: resolveEtlType(etlStats, etlName),
+                category: group[0].Category,
                 transformations: _.chain(group)
-                    .groupBy((p: EtlErrorsWithLocation) => parseProcessName(p.TaskName)[1])
+                    .groupBy((p: TaskErrorsWithLocation) => parseProcessName(p.TaskName, p.Category)[1])
                     .map(
                         (
-                            transformationGroup: EtlErrorsWithLocation[],
+                            transformationGroup: TaskErrorsWithLocation[],
                             transformationName: string
-                        ): EtlTransformationWithErrors => ({
+                        ): TransformationWithErrors => ({
                             transformationName,
                             processErrors: transformationGroup.flatMap((p) =>
                                 p.ProcessErrors.map((e) => ({ ...e, nodeTag: p.nodeTag, shardNumber: p.shardNumber }))
@@ -126,8 +134,8 @@ export function getTasksWithErrors(processes: EtlErrorsWithLocation[], etlStats:
 }
 
 export function flattenTransformationErrors(
-    itemErrors: EtlTransformationWithErrors["itemErrors"],
-    processErrors: EtlTransformationWithErrors["processErrors"]
+    itemErrors: TransformationWithErrors["itemErrors"],
+    processErrors: TransformationWithErrors["processErrors"]
 ) {
     return [
         ...itemErrors.map((e) => ({ ...e, errorType: "Item" as const, AffectedDocumentsCount: 1 })),
@@ -135,11 +143,12 @@ export function flattenTransformationErrors(
     ];
 }
 
-export function flattenAllTasksErrors(tasksWithErrors: EtlTaskWithErrors[], etlStats: EtlTaskStats[]): FlatError[] {
+export function flattenAllTasksErrors(tasksWithErrors: TaskWithErrors[], etlStats: EtlTaskStats[]): FlatError[] {
     return tasksWithErrors.flatMap((task) => {
         const taskStats = etlStats.find((s) => s.TaskName === task.etlName);
         const taskId = taskStats?.TaskId;
         const etlType = task.etlType;
+        const category = task.category;
 
         return task.transformations.flatMap((transformation) => {
             const healthStatus =
@@ -156,6 +165,7 @@ export function flattenAllTasksErrors(tasksWithErrors: EtlTaskWithErrors[], etlS
                     healthStatus,
                     taskId,
                     etlType,
+                    category,
                 })),
                 ...transformation.processErrors.map((e) => ({
                     ...e,
@@ -165,6 +175,7 @@ export function flattenAllTasksErrors(tasksWithErrors: EtlTaskWithErrors[], etlS
                     healthStatus,
                     taskId,
                     etlType,
+                    category,
                 })),
             ];
         });
@@ -219,7 +230,7 @@ export function healthStatusToBadge(status?: EtlHealthStatus): HealthStatusBadge
     }
 }
 
-export function getStepIcon(step: EtlErrorStep): IconName {
+export function getStepIcon(step: TaskErrorStep): IconName {
     switch (step) {
         case "Transformation":
             return "replace";
@@ -240,61 +251,25 @@ export function getStepIcon(step: EtlErrorStep): IconName {
     }
 }
 
-export function getEtlTypeIcon(value: StudioEtlType): IconName {
-    switch (value) {
-        case "Raven":
-            return "ravendb-etl";
-        case "Sql":
-            return "sql-etl";
-        case "Olap":
-            return "olap-etl";
-        case "ElasticSearch":
-            return "elastic-search-etl";
-        case "Kafka":
-            return "kafka-etl";
-        case "AzureQueueStorage":
-            return "azure-queue-storage-etl";
-        case "RabbitMQ":
-            return "rabbitmq-etl";
-        case "EmbeddingsGeneration":
-            return "ai-etl";
-        case "AmazonSqs":
-            return "amazon-sqs-etl";
-        case "Snowflake":
-            return "snowflake-etl";
-        case "GenAi":
-            return "genai";
-        default:
-            return assertUnreachable(value);
-    }
+export function getTaskTypeDisplay(
+    category: TaskCategory,
+    etlType: StudioEtlType | undefined
+): { icon: IconName; label: string } {
+    return TaskUtils.studioTaskTypeToDisplay(resolveStudioTaskType(category, etlType));
 }
 
-export function getEtlTypeLabel(etlType: StudioEtlType): string {
-    switch (etlType) {
-        case "Raven":
-            return "RavenDB ETL";
-        case "Sql":
-            return "SQL ETL";
-        case "Snowflake":
-            return "Snowflake ETL";
-        case "Olap":
-            return "OLAP ETL";
-        case "ElasticSearch":
-            return "ElasticSearch ETL";
-        case "Kafka":
-            return "Kafka ETL";
-        case "RabbitMQ":
-            return "RabbitMQ ETL";
-        case "AzureQueueStorage":
-            return "Azure Queue Storage ETL";
-        case "AmazonSqs":
-            return "Amazon SQS ETL";
-        case "EmbeddingsGeneration":
-            return "Embeddings Generation";
-        case "GenAi":
-            return "GenAI";
+export function resolveStudioTaskType(
+    category: TaskCategory,
+    etlType: StudioEtlType | undefined
+): StudioTaskType | undefined {
+    switch (category) {
+        case "Etl":
+        case "Ai":
+            return etlType ? TaskUtils.studioEtlTypeToStudioTaskType(etlType) : undefined;
+        case "CdcSink":
+            return "CdcSink";
         default:
-            return assertUnreachable(etlType);
+            return assertUnreachable(category);
     }
 }
 
@@ -324,12 +299,15 @@ export function getPopoverMessageForTaskHealth(status: EtlHealthStatus): string 
 
 export const SHOW_WIDTH_SIZE = 70;
 
-export const AI_ONLY_TASK_TYPES: StudioEtlType[] = ["EmbeddingsGeneration", "GenAi"];
+export const AI_ONLY_TASK_TYPES: StudioTaskType[] = ["EmbeddingsGeneration", "GenAi"];
 
-export type TaskCategory = "Etl" | "Ai";
+export type TaskCategory = "Etl" | "Ai" | "CdcSink";
 
-export function getTaskCategory(etlType: StudioEtlType | undefined): TaskCategory {
-    return etlType && AI_ONLY_TASK_TYPES.includes(etlType) ? "Ai" : "Etl";
+// ETL and AI tasks report errors per transformation and are stored as "taskName/transformationName"
+// (AI tasks are ETL processes under the hood). CDC task names carry no transformation and may
+// themselves contain "/", so they're shown by task name only.
+export function taskHasTransformations(category: TaskCategory): boolean {
+    return category === "Etl" || category === "Ai";
 }
 
 function resolveEtlType(etlStats: EtlTaskStats[], etlName: string): StudioEtlType | undefined {

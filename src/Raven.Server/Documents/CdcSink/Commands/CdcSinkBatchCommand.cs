@@ -19,6 +19,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Logging;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink.Commands;
 
@@ -45,6 +46,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private StringBuilder _sb;
 
     public int ProcessedSuccessfully { get; private set; }
+
+    /// <summary>
+    /// True once this execution durably persisted the batch's checkpoint LSN (via <see cref="UpdateState"/>).
+    /// Only a batch that applied every row sets it: any per-document error fails the batch (see ExecuteCmd),
+    /// so it stays false and <c>SubmitBatch</c> neither advances the in-memory checkpoint nor hands the
+    /// position to the provider ack (e.g. a PostgreSQL replication slot) - which would confirm past rows that
+    /// were never durably applied and drop them for good.
+    /// </summary>
+    public bool CheckpointPersisted { get; private set; }
 
     /// <summary>
     /// Reusable helper for grouping ops by document ID without per-batch allocations.
@@ -135,14 +145,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        using var _ = _statistics?.NewBatch();
+        _statistics?.NewBatch();
+        CheckpointPersisted = false;
         int batchErrors = 0;
-        // Per-execution success count. The TxMerger can re-run ExecuteCmd (via
-        // RunEachOperationIndependently) when a merged batch fails, so the cumulative
-        // ProcessedSuccessfully field must NOT gate LSN advancement: otherwise a previous
-        // attempt's successes could advance the checkpoint on a re-run that produced only
-        // errors, skipping past the failed items (silent data gap).
-        int processedThisExecution = 0;
 
         try
         {
@@ -151,7 +156,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 try
                 {
                     ProcessDocumentGroup(context, documentId, ops);
-                    processedThisExecution += ops.Count;
                     ProcessedSuccessfully += ops.Count;
                     _statistics?.ConsumeSuccess(ops.Count);
                     _statsScope?.RecordProcessedMessage();
@@ -165,21 +169,29 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     _statsScope?.RecordScriptProcessingError();
 
-                    // RecordPartialConsumeError tracks cumulative error/success counts and throws
-                    // InvalidOperationException when the error ratio is too high (>=100 errors AND
-                    // errors > successes), preventing LSN advancement for a poisoned stream.
-                    _statistics?.RecordPartialConsumeError(e.ToString(), documentId);
+                    // A patch/script failure is a transformation error; everything else is a load error.
+                    var step = e is CdcSinkScriptExecutionException ? TaskErrorStep.Transformation : TaskErrorStep.Load;
+                    _statistics?.RecordItemError(step, e.ToString(), documentId);
                 }
             }
 
-            if (batchErrors == 0 || processedThisExecution > 0)
+            if (batchErrors > 0)
             {
-                // Advance LSN only when THIS execution made progress: either the entire batch
-                // succeeded, or some items were processed successfully and the error ratio is
-                // still tolerable (if it weren't, RecordPartialConsumeError would have thrown above).
-                UpdateState(context);
+                // A CDC checkpoint is monotonic - advancing it (and, on PostgreSQL, acking the replication
+                // slot) confirms every earlier source position, so skipping a row we could not apply would
+                // drop it permanently with no way to replay. Never advance past a failed row: fail the whole
+                // batch so the transaction rolls back and nothing is checkpointed past the failure. The
+                // per-document errors were recorded above for diagnostics; the process retries from the last
+                // durable checkpoint until the mapping/script is fixed (a permanently-bad row therefore halts
+                // this sink, surfaced as a Failed health status and recorded errors - a visible stall is
+                // preferred over silent data loss).
+                throw new CdcSinkBatchFailedException(
+                    $"{batchErrors} document(s) in the CDC Sink batch could not be applied; withholding the " +
+                    "checkpoint so no source rows are skipped. See the task errors for details.");
             }
 
+            UpdateState(context);
+            CheckpointPersisted = _lastLsn != null;
             return _ops.Count;
         }
         finally
@@ -191,12 +203,11 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     }
 
     /// <summary>
-    /// Distinguishes an expected, deterministic per-document failure (script error, data-mapping
-    /// issue) - which we tolerate, alert on, and skip so the rest of the batch proceeds - from an
-    /// unexpected/systemic one. Unexpected failures (out of memory, disk full, cancellation) must
-    /// NOT be swallowed: swallowing them would let UpdateState advance the LSN past the dropped
-    /// group, silently losing those source rows. Letting them propagate fails the whole batch so
-    /// the TxMerger retries it without advancing the checkpoint.
+    /// Distinguishes an expected, deterministic per-document failure (script error, data-mapping issue)
+    /// from an unexpected/systemic one (out of memory, disk full, cancellation). Both fail the batch and
+    /// withhold the checkpoint so no source row is skipped; the difference is that a tolerable error is
+    /// caught first and recorded per-document (which row, which step) for diagnostics before the batch is
+    /// failed, whereas a systemic error propagates immediately. Neither ever advances past a failed row.
     /// </summary>
     private static bool IsTolerablePerDocumentError(Exception e)
     {
@@ -1479,9 +1490,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     _sb.Append(patches[i].TableName);
                 }
                 _sb.Append("]. Patch count: ").Append(patches.Count);
-                var enriched = new InvalidOperationException(_sb.ToString(), e);
-                _statistics?.RecordScriptExecutionError(enriched);
-                throw enriched;
+                throw new CdcSinkScriptExecutionException(_sb.ToString(), e);
             }
 
 

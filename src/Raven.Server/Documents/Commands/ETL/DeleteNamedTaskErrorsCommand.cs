@@ -6,6 +6,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client.Http;
 using Raven.Server.Documents.ETL;
 using Sparrow.Json;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.Commands.ETL;
 

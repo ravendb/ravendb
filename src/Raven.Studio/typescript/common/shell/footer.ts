@@ -19,6 +19,7 @@ class footerStats {
     countOfIndexingErrors = ko.observable<number>(0);
     countOfEtlTasksErrors = ko.observable<number>(0);
     countOfAiTasksErrors = ko.observable<number>(0);
+    countOfCdcSinkTasksErrors = ko.observable<number>(0);
 }
 
 class footer {
@@ -92,6 +93,7 @@ class footer {
                 newStats.countOfIndexingErrors(stats.CountOfIndexingErrors);
                 newStats.countOfEtlTasksErrors(stats.CountOfEtlTasksErrors);
                 newStats.countOfAiTasksErrors(stats.CountOfAiTasksErrors);
+                newStats.countOfCdcSinkTasksErrors(stats.CountOfCdcSinkTasksErrors);
                 this.stats(newStats);
             })
             .finally(() => this.spinners.loading(false));
@@ -125,6 +127,7 @@ class footer {
                 currentStats.countOfIndexingErrors(stats.CountOfIndexingErrors);
                 currentStats.countOfEtlTasksErrors(stats.CountOfEtlTasksErrors);
                 currentStats.countOfAiTasksErrors(stats.CountOfAiTasksErrors);
+                currentStats.countOfCdcSinkTasksErrors(stats.CountOfCdcSinkTasksErrors);
             });
     }
 
@@ -150,6 +153,7 @@ class footer {
                 CountOfIndexingErrors: acc.CountOfIndexingErrors + stats.CountOfIndexingErrors,
                 CountOfEtlTasksErrors: acc.CountOfEtlTasksErrors + stats.CountOfEtlTasksErrors,
                 CountOfAiTasksErrors: acc.CountOfAiTasksErrors + stats.CountOfAiTasksErrors,
+                CountOfCdcSinkTasksErrors: acc.CountOfCdcSinkTasksErrors + stats.CountOfCdcSinkTasksErrors,
                 StaleIndexes: staleIndexes,
                 CountOfStaleIndexes: staleIndexes.length,
             }),
@@ -159,6 +163,7 @@ class footer {
                 CountOfIndexingErrors: 0,
                 CountOfEtlTasksErrors: 0,
                 CountOfAiTasksErrors: 0,
+                CountOfCdcSinkTasksErrors: 0,
                 StaleIndexes: [],
                 CountOfStaleIndexes: 0,
             }

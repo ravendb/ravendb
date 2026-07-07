@@ -1,4 +1,4 @@
-namespace Raven.Server.Documents.ETL;
+namespace Raven.Server.Documents.TasksErrors;
 
 public enum TaskErrorStep
 {
