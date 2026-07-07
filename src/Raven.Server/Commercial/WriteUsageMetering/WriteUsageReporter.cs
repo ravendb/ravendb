@@ -14,22 +14,22 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 {
     internal sealed class WriteUsageReporter : BackgroundWorkBase
     {
+        private static readonly TimeSpan Interval = TimeSpan.FromMinutes(15);
+
         private readonly ServerStore _serverStore;
         private readonly ClusterObserver _observer;
         private readonly long _term;
-        private readonly TimeSpan _interval;
 
         // Write-usage is only reported under a Quill license. Toggled by the LicenseChanged event so we
         // start/stop sending as the license is activated, changed, or removed.
         private volatile bool _enabled;
 
-        public WriteUsageReporter(ServerStore serverStore, ClusterObserver observer, long term, TimeSpan interval, CancellationToken token)
+        public WriteUsageReporter(ServerStore serverStore, ClusterObserver observer, long term, CancellationToken token)
             : base($"Write-usage reporter for term {term}", RavenLogManager.Instance.GetLoggerForServer<WriteUsageReporter>(), token)
         {
             _serverStore = serverStore;
             _observer = observer;
             _term = term;
-            _interval = interval;
 
             UpdateEnabled();
             _serverStore.LicenseManager.LicenseChanged += OnLicenseChanged;
@@ -40,7 +40,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         protected override async Task DoWork()
         {
             // Wait first: gives the observer time to produce at least one snapshot, and spaces out reports.
-            await WaitOrThrowOperationCanceled(_interval).ConfigureAwait(false);
+            await WaitOrThrowOperationCanceled(Interval).ConfigureAwait(false);
 
             if (_term != _serverStore.Engine.CurrentTerm)
                 return; // no longer the term this reporter was created for; the reporter will be disposed shortly.
