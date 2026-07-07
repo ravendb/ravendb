@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private ChangeVector InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null, bool createIfNoStats = false)
+        private ChangeVector InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null)
         {
             var collection = deletionRangeRequest.Collection;
             var documentId = deletionRangeRequest.DocumentId;
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.TimeSeries
             using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
             using (TimeSeriesStats.ReadStats(context, statsTable, sliceHolder, out var statsCount, out var statsStart, out var statsEnd, out var statsName, out var statsMergedChangeVector))
             {
-                if (remoteChangeVector == null && statsCount == 0 && statsMergedChangeVector == null && createIfNoStats == false)
+                if (remoteChangeVector == null && statsCount == 0 && statsMergedChangeVector == null)
                     return null;
 
                 long etag = _documentsStorage.GenerateNextEtag();
@@ -305,12 +305,12 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null, bool updateMetadata = true, bool createDeletedRangeIfNoStats = false)
+        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null, bool updateMetadata = true)
         {
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
 
-            var deletedRangeChangeVector = InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector, createDeletedRangeIfNoStats);
+            var deletedRangeChangeVector = InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector);
             if (deletedRangeChangeVector == null)
                 return null;
 
