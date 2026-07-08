@@ -206,8 +206,10 @@ public static class WizardEndpoints
     /// asks the internal AI service for a draft <see cref="CdcSinkConfiguration"/>,
     /// re-validates it, and returns it for the editable Review card. <b>Generate-only</b>: it does
     /// not persist; the admin edits and the existing <c>/api/setup/map</c> stays the single writer.
-    /// Non-Success internal statuses (OutOfTokens / InvalidCredentials) are surfaced in the response
-    /// <c>Status</c> with a null configuration rather than as an HTTP error.
+    /// Non-Success internal statuses (OutOfTokens / InvalidCredentials / ConsentRequired) are surfaced
+    /// in the response <c>Status</c> with a null configuration rather than as an HTTP error.
+    /// ConsentRequired only escapes when the client's automatic sign-consent-and-retry did not clear
+    /// the gate (see <c>AiHelperInternalClient.SendWithConsentRetryAsync</c>).
     /// </summary>
     private static async Task<IResult> SuggestCdcAsync(
         SuggestCdcRequest body,

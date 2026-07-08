@@ -44,6 +44,10 @@ public sealed class MockAiApi : IAsyncDisposable
     /// license rejected by give-consent's own license check.
     public (int Status, string Body) GiveConsentResponse { get; set; } = (200, "{\"Status\":\"Success\"}");
 
+    /// When true, a successful give-consent does NOT open the assist gate — simulates upstream
+    /// propagation lag or consent recorded against a different cert thumbprint than assist checks.
+    public bool ConsentGrantHasNoEffect { get; set; }
+
     /// Number of times /assistant/give-consent was called (lets tests assert the retry flow ran).
     public int GiveConsentCallCount { get; private set; }
 
@@ -114,7 +118,7 @@ public sealed class MockAiApi : IAsyncDisposable
         {
             instance.GiveConsentCallCount++;
             var (status, gbody) = instance.GiveConsentResponse;
-            if (status is >= 200 and < 300)
+            if (status is >= 200 and < 300 && instance.ConsentGrantHasNoEffect == false)
                 instance._consentGiven = true;
             return Results.Content(gbody, "application/json", statusCode: status);
         });

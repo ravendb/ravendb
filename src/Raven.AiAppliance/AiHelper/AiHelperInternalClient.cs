@@ -100,7 +100,18 @@ public sealed class AiHelperInternalClient(
         if (consent != AiHelperStatus.Success)
             return (consent, string.Empty);
 
-        return await SendAsync(path, request, ct);
+        var retried = await SendAsync(path, request, ct);
+        if (retried.Transport == AiHelperStatus.ConsentRequired)
+        {
+            // give-consent succeeded yet assist still gates: upstream propagation lag or the consent
+            // was recorded for a different cert thumbprint than assist checks. Surfaced verbatim to
+            // the caller (no masking); this Warning is the triage signal for the anomaly.
+            logger.LogWarning(
+                "AI Helper {Path}: assist still returns ConsentRequired after give-consent succeeded — propagation lag or cert-thumbprint mismatch.",
+                path);
+        }
+
+        return retried;
     }
 
     private async Task<(AiHelperStatus Transport, string Content)> SendAsync(string path, object request, CancellationToken ct)
@@ -125,7 +136,11 @@ public sealed class AiHelperInternalClient(
 
             // The response body is the internal service's status envelope (no secrets), so log it to
             // keep this diagnosable. The request body carries license keys — never log that.
-            logger.LogWarning("AI Helper {Path} failed: upstream {Code}, mapped {Status}. Body: {Body}",
+            // First-use ConsentRequired is expected and self-heals (the caller signs consent and
+            // retries), so it logs as Information; every other failure is a real Warning.
+            logger.Log(
+                status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
+                "AI Helper {Path} failed: upstream {Code}, mapped {Status}. Body: {Body}",
                 path, (int)response.StatusCode, status, text);
             return (status, text);
         }
