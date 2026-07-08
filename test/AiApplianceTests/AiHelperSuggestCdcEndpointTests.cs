@@ -241,6 +241,30 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         Assert.Equal(1, mockAi.GiveConsentCallCount);
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Post_retry_consent_required_is_surfaced_verbatim()
+    {
+        var store = GetDocumentStore();
+        await using var mockAi = await MockAiApi.StartAsync();
+        mockAi.RequireConsentForAssist = true;
+        // give-consent succeeds but the gate stays closed (propagation lag / thumbprint mismatch):
+        // the client retries exactly once and surfaces ConsentRequired honestly — no masking as
+        // InvalidCredentials, no consent loop.
+        mockAi.ConsentGrantHasNoEffect = true;
+
+        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
+        var client = factory.CreateClient();
+        await SeedDiscoveredSchemaAsync(client);
+
+        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("ConsentRequired", (string?)node["status"]);
+        Assert.True(node["configuration"] is null);
+        Assert.Equal(1, mockAi.GiveConsentCallCount);
+    }
+
     private static async Task SeedDiscoveredSchemaAsync(HttpClient client)
     {
         // Discovering with an invalid connection string persists a non-null error schema,
