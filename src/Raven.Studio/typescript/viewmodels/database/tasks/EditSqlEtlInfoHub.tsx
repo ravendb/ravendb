@@ -27,8 +27,6 @@ export function EditSqlEtlInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     A <strong>SQL ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process

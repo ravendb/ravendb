@@ -27,6 +27,20 @@ public class CdcSinkHandler : DatabaseRequestHandler
             await processor.ExecuteAsync();
     }
 
+    [RavenAction("/databases/*/cdc-sink/errors", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+    public async Task GetErrors()
+    {
+        using (var processor = new CdcSinkHandlerProcessorForGetErrors(this))
+            await processor.ExecuteAsync();
+    }
+
+    [RavenAction("/databases/*/cdc-sink/errors", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
+    public async Task DeleteErrors()
+    {
+        using (var processor = new CdcSinkHandlerProcessorForDeleteErrors(this))
+            await processor.ExecuteAsync();
+    }
+
     [RavenAction("/databases/*/cdc-sink/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task Performance()
     {

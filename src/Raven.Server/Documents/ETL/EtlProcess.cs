@@ -55,6 +55,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlType EtlType { get; }
 
-        public TaskCategory TaskCategory => TaskTypeExtensions.FromEtlType(EtlType);
+        public TaskCategory TaskCategory => TaskTypeExtensions.GetTaskCategoryFromEtlType(EtlType);
 
         public virtual string EtlSubType { get; }
 

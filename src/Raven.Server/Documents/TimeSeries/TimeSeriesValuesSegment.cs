@@ -12,6 +12,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.TimeSeries
@@ -685,7 +686,7 @@ namespace Raven.Server.Documents.TimeSeries
                         break;
 
                     case ParsingOrder.Name:
-                        name = context.GetLazyString(ptr + next, i - next);
+                        name = context.GetLazyStringForBackwardCompatibility(ptr + next, i - next);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();

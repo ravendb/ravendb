@@ -23,8 +23,6 @@ export function EditKafkaSinkTaskInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     Define a <strong>Kafka Sink</strong> ongoing-task in order to consume and process incoming messages from Kafka topics.

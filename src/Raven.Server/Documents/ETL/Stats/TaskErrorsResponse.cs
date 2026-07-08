@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Stats;
 

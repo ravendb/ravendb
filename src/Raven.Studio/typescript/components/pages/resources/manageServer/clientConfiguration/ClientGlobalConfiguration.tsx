@@ -337,13 +337,7 @@ export default function ClientGlobalConfiguration() {
                     </Col>
                     <Col sm={12} md={4}>
                         <AboutViewAnchored defaultOpen={hasClientConfiguration ? null : "licensing"}>
-                            <AccordionItemWrapper
-                                icon="about"
-                                color="info"
-                                heading="About this view"
-                                description="Get additional info on this feature"
-                                targetId="1"
-                            >
+                            <AccordionItemWrapper icon="about" color="info" targetId="1">
                                 <ul>
                                     <li className="margin-bottom-xs">
                                         This is the <strong>Server-wide Client-Configuration</strong> view.

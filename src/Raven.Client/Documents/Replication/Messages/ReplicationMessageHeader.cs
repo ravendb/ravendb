@@ -8,6 +8,8 @@
 
         public string DatabaseChangeVector { get; set; }
 
+        public string LastSentChangeVector { get; set; }
+
         public int ItemsCount { get; set; }
 
         public int AttachmentStreamsCount { get; set; }

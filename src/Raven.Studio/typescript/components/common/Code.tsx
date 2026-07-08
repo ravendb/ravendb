@@ -1,5 +1,5 @@
 import "./Code.scss";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import Prism from "prismjs";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
@@ -49,12 +49,25 @@ interface CodeProps {
     // Adds a "Wrap" toggle to the actions bar (on by default) so long lines wrap instead of overflowing horizontally.
     wrappable?: boolean;
     isActionsHidden?: boolean;
+    isRunQueryHidden?: boolean;
+    extraActions?: ReactNode;
     sourceView?: "chatbot";
     isTitleHidden?: boolean;
 }
 
 export default function Code(props: CodeProps) {
-    const { code, className, codeClassName, whiteSpace, wrappable, isActionsHidden, sourceView, isTitleHidden } = props;
+    const {
+        code,
+        className,
+        codeClassName,
+        whiteSpace,
+        wrappable,
+        isActionsHidden,
+        isRunQueryHidden,
+        extraActions,
+        sourceView,
+        isTitleHidden,
+    } = props;
 
     const [wrapped, setWrapped] = useState(true);
     const isWrapped = wrappable === true && wrapped;
@@ -137,6 +150,7 @@ export default function Code(props: CodeProps) {
                                 Wrap
                             </Button>
                         )}
+                        {extraActions}
                         <Button
                             variant="link"
                             className="text-emphasis"
@@ -146,7 +160,7 @@ export default function Code(props: CodeProps) {
                             <Icon icon="copy" />
                             Copy
                         </Button>
-                        {hasDatabase && props.language === "rql" && (
+                        {!isRunQueryHidden && hasDatabase && props.language === "rql" && (
                             <Button variant="link" className="text-emphasis" onClick={handleRunQuery}>
                                 <Icon icon="rocket" />
                                 Run query

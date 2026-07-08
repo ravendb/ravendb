@@ -355,13 +355,7 @@ export default function DocumentRevisions() {
                     </Col>
                     <Col sm={12} lg={4}>
                         <AboutViewAnchored>
-                            <AccordionItemWrapper
-                                targetId="1"
-                                icon="about"
-                                color="info"
-                                description="Get additional info on this feature"
-                                heading="About this view"
-                            >
+                            <AccordionItemWrapper targetId="1" icon="about" color="info">
                                 <p>
                                     Creating <strong>Document Revisions</strong> allows keeping track of changes made to
                                     a document over time.

@@ -217,13 +217,7 @@ export default function DataArchival() {
                     </Col>
                     <Col sm={12} lg={4}>
                         <AboutViewAnchored defaultOpen={hasDataArchival ? null : "licensing"}>
-                            <AccordionItemWrapper
-                                targetId="about"
-                                icon="about"
-                                color="info"
-                                description="Get additional info on this feature"
-                                heading="About this view"
-                            >
+                            <AccordionItemWrapper targetId="about" icon="about" color="info">
                                 <p>
                                     When <strong>Data Archival</strong> is enabled:
                                 </p>

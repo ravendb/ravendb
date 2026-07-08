@@ -24,8 +24,11 @@ import { useForm, UseFormReturn, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import ExpandableListContainer from "components/common/ExpandableListContainer";
 import FormStringValueList from "components/common/formFields/FormStringValueList";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import { mapConnectionStringToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 
 type TestCdcSinkRowSelector = Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkRowSelector;
+type SqlConnectionString = Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
 
 interface EditCdcSinkTaskTestPanelProps {
     editForm: UseFormReturn<EditCdcSinkTaskFormData>;
@@ -34,7 +37,7 @@ interface EditCdcSinkTaskTestPanelProps {
 
 export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSinkTaskTestPanelProps) {
     const taskId = useAppSelector(editCdcSinkTaskSelectors.taskId);
-    const selectedConnectionString = useAppSelector(editCdcSinkTaskSelectors.selectedConnectionString);
+    const sqlConnections = useAppSelector(connectionStringSelectors.connectionsByType("Sql"));
     const table = editForm.watch(path);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -46,8 +49,11 @@ export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSink
 
         config.Name ||= "Test-CDC";
 
+        const connection = sqlConnections.find((x) => x.name === formValues.connectionStringName);
+        const connectionDto = mapConnectionStringToDto(connection) as SqlConnectionString;
+
         return await tasksService.testCdcSink(databaseName, {
-            Connection: selectedConnectionString,
+            Connection: connectionDto,
             Configuration: config,
             Operation: formData.isSimulateOnDelete ? "Delete" : "Upsert",
             MaxRows: formData.rowSelector === "First" ? formData.maxRows : 1,

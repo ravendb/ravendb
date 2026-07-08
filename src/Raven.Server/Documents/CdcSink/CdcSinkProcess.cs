@@ -19,8 +19,6 @@ using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Sparrow.Json;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -32,7 +30,7 @@ using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
-
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -55,6 +53,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     private CdcSinkStatsAggregator _lastStats;
 
+    private int _statsId;
+
     private readonly ConcurrentQueue<CdcSinkStatsAggregator> _lastCdcSinkStats = new();
 
     protected readonly CdcSinkDocumentProcessor DocumentProcessor;
@@ -66,7 +66,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Database = database;
         Configuration = configuration;
         Name = Configuration.Name;
-        Statistics = new CdcSinkProcessStatistics(Tag, Name, Database.NotificationCenter);
+        Statistics = new CdcSinkProcessStatistics(Name, database.Configuration.CdcSink);
         DocumentProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema) { Logger = Logger };
     }
 
@@ -234,6 +234,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 // of falling back and hammering the source forever. Correcting the configuration recreates the
                 // process (CdcSinkLoader.HandleDatabaseRecordChange) for a fresh, un-faulted start.
                 IsFaulted = true;
+                Statistics.SetHealthStatusToFailed();
                 LastProcessException = e;
 
                 // Unlike the transient path below, a faulted process will not retry - so initial-load waiters
@@ -244,15 +245,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 if (Logger.IsErrorEnabled)
                     Logger.Error($"[{Name}] CDC Sink process faulted; it will not retry until the configuration is corrected.", e);
 
-                Database.NotificationCenter.Add(AlertRaised.Create(
-                    Database.Name, Tag,
-                    $"[{Name}] CDC Sink process faulted (configuration error): {e.Message}",
-                    AlertReason.CdcSink_Error,
-                    NotificationSeverity.Error,
-                    key: $"{Tag}/{Name}",
-                    details: new ExceptionDetails(e)));
+                RecordProcessError(TaskErrorStep.Configuration, e.ToString());
 
-                Statistics.RecordConsumeError(e.ToString());
+                Statistics.RecordConsumeError();
                 return;
             }
             catch (OperationCanceledException)
@@ -271,20 +266,36 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                 if (Logger.IsErrorEnabled)
                     Logger.Error($"[{Name}] CDC Sink process failed.", e);
-                var alert = AlertRaised.Create(
-                    Database.Name, Tag,
-                    $"[{Name}] CDC Sink process failed: {e.Message}",
-                    AlertReason.CdcSink_Error,
-                    NotificationSeverity.Error,
-                    key: $"{Tag}/{Name}",
-                    details: new ExceptionDetails(e));
-
-                Database.NotificationCenter.Add(alert);
+                RecordProcessError(TaskErrorStep.Extraction, e.ToString());
 
                 // Read the error time BEFORE recording the new error.
                 EnterFallbackMode();
-                Statistics.RecordConsumeError(e.ToString());
+                Statistics.RecordConsumeError();
             }
+        }
+    }
+
+    protected void RecordProcessError(TaskErrorStep step, string error, long affectedDocumentsCount = 0)
+    {
+        // Called from the retry loop's catch blocks, so it must never throw: StoreProcessError does a
+        // blocking TxMerger enqueue that can fault (merger disposed on unload, a prior catastrophic
+        // merger failure, or a failed write). Letting that escape would skip fallback/retry and unwind
+        // the process thread, silently stopping the sink while it still looks healthy.
+        try
+        {
+            Database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+            {
+                CreatedAt = SystemTime.UtcNow,
+                TaskName = Name,
+                Step = step,
+                Error = error,
+                AffectedDocumentsCount = affectedDocumentsCount
+            });
+        }
+        catch (Exception e)
+        {
+            if (Logger.IsWarnEnabled)
+                Logger.Warn($"[{Name}] Failed to store CDC Sink process error to dedicated storage.", e);
         }
     }
 
@@ -438,25 +449,79 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         // We *intentionally* submit the command here, even if we have no entries
         // to update the checkpoint and table load state in a timely manner
 
-        var command = new Commands.CdcSinkBatchCommand(
-            Database, ops, Configuration.Name, checkpoint,
-            tableLoadUpdates: tableLoadUpdates,
-            patchRequest: DocumentProcessor.CombinedPatchRequest,
-            statsScope: null, statistics: Statistics, logger: Logger,
-            grouper: grouper, defaultSchema: DefaultSchema);
+        // Per-batch stats aggregator: chain the
+        // start time off the previous batch, open a scope the batch command records into,
+        // start the timer and register it as the latest (and in the ring buffer), then
+        // Complete() once the batch finishes. CreateScope() returns an unstarted scope, so
+        // Start() it here to begin timing at batch submission rather than at construction.
+        var statsAggregator = new CdcSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+        var stats = statsAggregator.CreateScope();
 
-        var start = Stopwatch.GetTimestamp();
-        await Database.TxMerger.Enqueue(command);
+        statsAggregator.Start();
+        stats.Start();
+        AddPerformanceStats(statsAggregator);
 
-        LastBatchTime = Database.Time.GetUtcNow();
-        if (checkpoint != null)
-            LastCheckpoint = checkpoint;
+        string persistedCheckpoint = null;
+        try
+        {
+            var command = new Commands.CdcSinkBatchCommand(
+                Database, ops, Configuration.Name, checkpoint,
+                tableLoadUpdates: tableLoadUpdates,
+                patchRequest: DocumentProcessor.CombinedPatchRequest,
+                statsScope: stats, statistics: Statistics, logger: Logger,
+                grouper: grouper, defaultSchema: DefaultSchema);
 
-        if (Logger.IsDebugEnabled)
-            Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={checkpoint ?? "(none)"}");
+            var start = Stopwatch.GetTimestamp();
+            await Database.TxMerger.Enqueue(command);
 
+            // A batch that hit any per-document error throws from ExecuteCmd (see CdcSinkBatchCommand), so
+            // it never reaches here - the process retries from the last durable checkpoint. When we do get
+            // here the batch applied every row, but still gate on CheckpointPersisted: advancing the
+            // in-memory position or acking the provider for a batch that did not persist would, on
+            // PostgreSQL, confirm an LSN that isn't durable and let the server recycle WAL for lost rows.
+            if (command.CheckpointPersisted)
+            {
+                persistedCheckpoint = checkpoint;
+                LastCheckpoint = checkpoint;
+
+                // Only a persisted batch counts as a successful one: LastBatchTime feeds the dashboard
+                // replication lag and the "last successful batch time" metric/SNMP value. A fully-failed
+                // batch must leave it untouched so the lag keeps growing until real progress is made.
+                LastBatchTime = Database.Time.GetUtcNow();
+            }
+
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={persistedCheckpoint ?? "(none)"}");
+
+            Statistics.OnBatchCompletion();
+        }
+        finally
+        {
+            // Flush the batch's buffered item errors from the process thread (safe for the enqueue-sync
+            // API), in finally so a failed batch's errors still persist; drain-on-read so they can't be
+            // re-stored if the next batch never runs. Guarded so a flush failure can't mask the original
+            // batch exception.
+            try
+            {
+                var itemErrors = Statistics.DrainInMemoryItemErrors();
+                if (itemErrors != null)
+                    Database.TaskErrorsStorage.StoreItemErrors(TaskCategory.CdcSink, Name, itemErrors);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"[{Name}] Failed to store CDC Sink item errors to dedicated storage.", e);
+            }
+
+            stats.Dispose();
+            statsAggregator.Complete();
+        }
+
+        // Raise the completion event for every batch that ran - including a fully-failed one - so the
+        // live performance view picks up its stats. Success is tracked separately via LastBatchTime and
+        // the health status; this event is purely for performance reporting.
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
-        return (checkpoint, ops.Count);
+        return (persistedCheckpoint, ops.Count);
     }
 
 
@@ -572,11 +637,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             // Return values from the completed batch back to per-table pools.
             // Done here (after await) rather than inside SubmitBatch so that pool
             // access stays on the caller's flow and never races with RentValues.
-            if (lastBatchOps != null)
-            {
-                DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                lastBatchOps = null;
-            }
+            ReturnBatchValuesAndClear(ref lastBatchOps);
 
             // previousCtx (if any) backed batches that are all guaranteed complete now - we just
             // awaited the most recent one - and it is never the live StreamingJsonContext, so it is
@@ -701,11 +762,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             // Stream ended — flush remaining ops, then wait for the final batch to complete
             await FlushBatch(decodeInFlight: false);
             (string finalCheckpoint, int _) = await lastBatch;
-            if (lastBatchOps != null)
-            {
-                DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                lastBatchOps = null;
-            }
+            ReturnBatchValuesAndClear(ref lastBatchOps);
             if (finalCheckpoint is not null) // force a flush, ensure the last LSN is acknowledged for PostgreSQL and similar providers.
                 await OnBatchFlushed(finalCheckpoint, Database.Configuration.CdcSink.MaxBatchSize + 1);
         }
@@ -797,6 +854,19 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// the batch has been written).
     /// </summary>
     private readonly record struct InitialLoadBatch(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context);
+
+    /// <summary>
+    /// Returns a completed batch's values to their per-table pools and clears the reference, so a
+    /// batch can never be returned twice (a double-return corrupts the pool).
+    /// </summary>
+    private void ReturnBatchValuesAndClear(ref List<CdcSinkDocumentOp> ops)
+    {
+        if (ops == null)
+            return;
+
+        DocumentProcessor.ReturnBatchValues(ops);
+        ops = null;
+    }
 
     private async Task<InitialLoadBatch> ReadOneBatch(
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
@@ -1000,10 +1070,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     currentBatchCtx = null;
 
                     await lastBatch;
-                    if (lastBatchOps != null)
-                    {
-                        DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                    }
+                    ReturnBatchValuesAndClear(ref lastBatchOps);
                     previousBatchCtx?.Dispose();
                     previousBatchCtx = null;
 
@@ -1016,11 +1083,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 }
 
                 await lastBatch;
-                if (lastBatchOps != null)
-                {
-                    DocumentProcessor.ReturnBatchValues(lastBatchOps);
-                    lastBatchOps = null;
-                }
+                ReturnBatchValuesAndClear(ref lastBatchOps);
                 previousBatchCtx?.Dispose();
 
                 var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>

@@ -17,7 +17,7 @@ import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 
 export class DatabasesStubs {
     static nonShardedSingleNodeDatabaseDto() {
@@ -1475,9 +1475,10 @@ return docs[0];`,
         };
     }
 
-    static etlErrors(): EtlErrors[] {
+    static taskErrors(): TaskErrors[] {
         return [
             {
+                Category: "Etl",
                 ProcessErrors: [],
                 EtlSubType: null,
                 ItemErrors: [
@@ -1490,6 +1491,29 @@ return docs[0];`,
                     },
                 ],
                 TaskName: "ETL1/Transformation1",
+            },
+            {
+                Category: "CdcSink",
+                EtlSubType: null,
+                TaskName: "CdcSink1",
+                ProcessErrors: [
+                    {
+                        TaskName: "CdcSink1",
+                        CreatedAt: "2026-03-09T09:52:12.6923003",
+                        Step: "Configuration",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 0,
+                    },
+                ],
+                ItemErrors: [
+                    {
+                        TaskName: "CdcSink1",
+                        CreatedAt: "2026-03-09T09:52:12.6923003",
+                        Step: "Load",
+                        Error: "dummy error",
+                        DocumentId: "orders/1-A",
+                    },
+                ],
             },
         ];
     }

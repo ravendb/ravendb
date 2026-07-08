@@ -145,5 +145,6 @@ namespace Raven.Server.Documents
 
         public override Task WaitForIndexNotificationAsync(long index) => Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
 
+        public override SupportedFeature GetSupportedFeature() => Database.SupportedFeatures;
     }
 }

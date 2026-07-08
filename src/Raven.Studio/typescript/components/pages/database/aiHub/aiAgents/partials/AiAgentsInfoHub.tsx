@@ -2,12 +2,15 @@ import AboutViewFloating, { AccordionItemWrapper } from "components/common/About
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
+import { Icon } from "components/common/Icon";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export default function AiAgentsInfoHub() {
     const hasAiAgent = useAppSelector(licenseSelectors.statusValue("HasAiAgent"));
+    const aiAgentsOverviewDocsLink = useRavenLink({ hash: "XNWAXB" });
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -21,13 +24,7 @@ export default function AiAgentsInfoHub() {
 
     return (
         <AboutViewFloating defaultOpen={hasAiAgent ? null : "licensing"}>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <div>
                     <ul>
                         <li>
@@ -48,6 +45,11 @@ export default function AiAgentsInfoHub() {
                         </li>
                     </ul>
                 </div>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={aiAgentsOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - AI Agents Overview
+                </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper isUnlimited={hasAiAgent} data={featureAvailability} />
         </AboutViewFloating>

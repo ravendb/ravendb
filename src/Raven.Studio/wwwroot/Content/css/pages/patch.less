@@ -204,8 +204,15 @@
     
     .patch-main {
         width: 100%;
+        min-width: 0;
         .help-block {
             margin-bottom:0 !important;
+        }
+
+        .patch-main-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 4px;
         }
     }
 
@@ -215,6 +222,9 @@
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
+        align-self: flex-start;
+        margin-top: 34px;
+        height: 300px;
 
         .flex-separator {
             flex-grow: 100;

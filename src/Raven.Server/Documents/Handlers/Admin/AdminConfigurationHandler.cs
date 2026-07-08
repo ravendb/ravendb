@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 using Raven.Server.Routing;
 
@@ -40,6 +40,13 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task PutClientConfiguration()
         {
             using (var processor = new AdminConfigurationHandlerProcessorForPutClientConfiguration(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/admin/features", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ModifySupportedFeatures()
+        {
+            using (var processor = new AdminConfigurationHandlerProcessorForModifySupportedFeatures(this))
                 await processor.ExecuteAsync();
         }
     }

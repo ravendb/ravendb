@@ -3,7 +3,6 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import database = require("models/resources/database");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
-import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
@@ -116,10 +115,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     activate(args: { taskId?: number, sourceView: EditAiTaskSourceView }) {
         super.activate(args);
         const deferred = $.Deferred<void>();
-
-        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("aiTask"));
         this.sourceView(args.sourceView);
-        
         this.loadPossibleMentors();
 
         if (args.taskId) {
@@ -247,17 +243,20 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         this.isNewConnectionStringOpen(!this.isNewConnectionStringOpen())
     }
 
-    private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.db)
-            .execute()
-            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+    private async getAllConnectionStrings() {
+        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("task"));
+    
+        return storeCompat
+            .globalDispatch(connectionStringsSlice.connectionStringsActions.fetchData(this.db.name))
+            .unwrap()
+            .then(({connectionStringsDto: result}) => {
                 this.aiConnectionStrings(Object.values(result.AiConnectionStrings).filter(x => x.ModelType === "TextEmbeddings"));
 
                 const connectionStringsNames = Object.keys(result.AiConnectionStrings).filter(key =>
                     result.AiConnectionStrings[key].ModelType === "TextEmbeddings",
                 );
                 this.connectionStringsNames(typeUtils.sortBy(connectionStringsNames, x => x.toUpperCase()));
-            });
+        });
     }
 
     private initObservables() {

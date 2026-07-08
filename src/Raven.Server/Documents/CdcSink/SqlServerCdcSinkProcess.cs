@@ -13,7 +13,7 @@ using Raven.Server.Documents.CdcSink.Schema;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.MsSQL;
 using Microsoft.Data.SqlClient;
-using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -47,6 +47,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     private readonly string _connectionString;
     private readonly string _factoryName;
 
+    // Set once the "SQL Server Agent not visible" advisory has been recorded, so it isn't re-stored on
+    // every reconnect; reset when the Agent becomes visible so a later regression re-reports.
+    private bool _agentAdvisoryRecorded;
+
     public SqlServerCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database, "dbo")
     {
@@ -56,8 +60,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
-        // in case of error, we'll re-learn the schema (it may have changed).
+        // In case of error, re-learn the schema (it may have changed).
         _columnTypesCache.Clear();
+        DocumentProcessor.ResetSourceColumnNames();
         await EnsureCdcEnabled(ct);
         await HandleInitialLoad(ct);
         _initialLoadTcs.TrySetResult();
@@ -210,23 +215,26 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
 
         if (agentSessions > 0)
+        {
+            _agentAdvisoryRecorded = false;
             return;
+        }
 
         // The Agent isn't visible. On-prem this usually means it is genuinely stopped, but an
         // under-privileged login may simply not see the session. Warn instead of failing the task so
         // capture can still proceed if the Agent is in fact running; without it the change tables just
         // won't be populated and the counts won't advance, which the alert explains.
-        var alert = AlertRaised.Create(
-            Database.Name, Tag,
-            "SQL Server Agent does not appear to be running (or is not visible to this login). CDC change " +
-            "capture relies on the Agent to process the capture jobs that populate the change tables; if it " +
-            "is genuinely stopped, no CDC events will be delivered. For Docker containers start with " +
-            "-e 'MSSQL_AGENT_ENABLED=true'; for on-premises installations start the SQL Server Agent service.",
-            AlertReason.CdcSink_Error,
-            NotificationSeverity.Warning,
-            key: $"{Tag}/{Name}/sql-agent-not-running");
-
-        Database.NotificationCenter.Add(alert);
+        // Record once per process while the condition holds - VerifyAgentIsRunning re-runs on every
+        // reconnect, and this advisory (not a failure) would otherwise pile up in the error table.
+        if (_agentAdvisoryRecorded == false)
+        {
+            RecordProcessError(TaskErrorStep.Configuration,
+                "SQL Server Agent does not appear to be running (or is not visible to this login). CDC change " +
+                "capture relies on the Agent to process the capture jobs that populate the change tables; if it " +
+                "is genuinely stopped, no CDC events will be delivered. For Docker containers start with " +
+                "-e 'MSSQL_AGENT_ENABLED=true'; for on-premises installations start the SQL Server Agent service.");
+            _agentAdvisoryRecorded = true;
+        }
 
         if (Logger.IsInfoEnabled)
             Logger.Info($"[{Name}] SQL Server Agent not detected; proceeding (capture may not advance if it is truly stopped).");
@@ -394,12 +402,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 "This can happen when the CDC cleanup job runs while the task is stopped, " +
                 "or after a backup restore.");
 
-        Database.NotificationCenter.Add(AlertRaised.Create(
-            Database.Name, Tag,
+        RecordProcessError(TaskErrorStep.Extraction,
             $"[{Name}] CDC changes purged for table {ci.TableInfo.FullName} — " +
-            "gap detected between saved position and earliest available changes.",
-            AlertReason.CdcSink_Error, NotificationSeverity.Warning,
-            key: $"{Tag}/{Name}/stale-lsn/{ci.CaptureInstance}"));
+            "gap detected between saved position and earliest available changes.");
     }
 
     /// <summary>

@@ -175,6 +175,29 @@ public unsafe class HnswIndexCacheTests(ITestOutputHelper output) : StorageTest(
         }
     }
 
+    // RavenDB-26809: under parallel placement a worker dereferences a pointer into the node array while
+    // the LLT thread may grow it. Growth must retain the grown-from buffer instead of freeing it, so the
+    // worker never reads freed memory. Copy-correctness of the moved contents is covered by the
+    // build+query tests above.
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Vector)]
+    public void GrowingNodeArrayRetainsGrownFromBuffer()
+    {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
+        using (var tx = Env.WriteTransaction())
+        {
+            Hnsw.Create(tx.LowLevelTransaction, treeName, VectorSizeInBytes, numberOfEdges: 12,
+                numberOfCandidates: 16, VectorEmbeddingType.Single);
+            tx.Commit();
+        }
+
+        using var rtx = Env.ReadTransaction();
+        using var state = new Hnsw.SearchState(rtx.LowLevelTransaction, treeName);
+
+        Assert.True(state.ForceGrowNodesForTesting(), "node array did not move");
+        Assert.True(state.ForceGrowNodesForTesting(), "node array did not move");
+        Assert.Equal(2, state.RetiredNodeStorageCountForTesting);
+    }
+
     private void BuildGraph(Slice treeName, int vectorCount, int seed)
     {
         var random = new Random(seed);

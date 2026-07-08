@@ -40,5 +40,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
             using (var processor = new ShardedAdminConfigurationHandlerProcessorForPutClientConfiguration(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/features", "POST")]
+        public async Task ModifySupportedFeatures()
+        {
+            using (var processor = new ShardedAdminConfigurationHandlerProcessorForModifySupportedFeatures(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

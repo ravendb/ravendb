@@ -19,7 +19,7 @@ interface AboutViewProps {
 }
 
 interface AboutViewHeadingBaseProps {
-    title: string;
+    title: ReactNode;
     licenseBadgeText?: LicenseBadgeText;
     iconAddon?: IconName;
     marginBottom?: number;
@@ -110,8 +110,8 @@ const AboutViewFloating = (props: AboutViewProps) => {
 interface AccordionItemWrapperProps {
     icon: IconName;
     color: ThemeColor;
-    heading: string;
-    description: string;
+    heading?: string;
+    description?: string;
     children: ReactNode;
     pill?: boolean;
     pillText?: string;
@@ -121,7 +121,17 @@ interface AccordionItemWrapperProps {
 }
 
 const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
-    const { icon, color, heading, description, children, pill, pillText, pillIcon, className } = props;
+    const {
+        icon,
+        color,
+        heading = "About this view",
+        description = "Learn more about this view",
+        children,
+        pill,
+        pillText,
+        pillIcon,
+        className,
+    } = props;
     const targetId = props.targetId ?? uniqueId();
     return (
         <Accordion.Item

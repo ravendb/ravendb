@@ -15,7 +15,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 export type ConnectionStringsViewContext =
     | "connectionStrings"
     | "aiConnectionStrings"
-    | "aiTask"
+    | "task"
     | "serverWideConnectionStrings";
 
 interface ConnectionStringsState {
@@ -189,6 +189,7 @@ export const connectionStringsActions = {
 export const connectionStringSelectors = {
     loadStatus: (store: RootState) => store.connectionStrings.loadStatus,
     connections: (store: RootState) => store.connectionStrings.connections,
+    connectionsByType: (type: StudioConnectionType) => (store: RootState) => store.connectionStrings.connections[type],
     initialEditConnection: (store: RootState) => store.connectionStrings.initialEditConnection,
     isEmpty: (store: RootState) => _.isEqual(store.connectionStrings.connections, initialState.connections),
     viewContext: (store: RootState) => store.connectionStrings.viewContext,

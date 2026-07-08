@@ -309,7 +309,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
             cOut.ReplicateOnce(DocId);
 
-            cOut.Mend();
+            await cOut.MendAsync();
             foreach (var (from, to) in links)
                 EnsureReplicating(from, to);
 

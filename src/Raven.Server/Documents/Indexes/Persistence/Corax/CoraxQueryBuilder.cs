@@ -1162,9 +1162,8 @@ public static partial class CoraxQueryBuilder
             // We need to retrieve the analyzer for the dynamic field since the field metadata is created dynamically.
             if (original.IsDynamic)
                 result = fieldMetadata.ChangeAnalyzer(original.Mode, builderParameters.IndexFieldsMapping.SearchAnalyzer(original.FieldName.ToString()));
-
-
-            if (original.Analyzer is LuceneAnalyzerAdapter laa)
+            
+            if (result.Analyzer is LuceneAnalyzerAdapter laa)
             {
                 //logic from LuceneQueryBuilder
                 var luceneAnalyzer = laa.Analyzer switch
@@ -1181,7 +1180,7 @@ public static partial class CoraxQueryBuilder
                 };
 
                 if (luceneAnalyzer != null)
-                    result = original.ChangeAnalyzer(FieldIndexingMode.Search, luceneAnalyzer);
+                    result = result.ChangeAnalyzer(FieldIndexingMode.Search, luceneAnalyzer);
             }
 
             // Currently, we do not have any custom Corax analyzers, so we don't need to address them.

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -9,12 +10,12 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors.CompareExchange;
 
-public sealed class CompareExchangeHandlerProcessorForPutCompareExchangeValue : IDisposable
+public sealed class CompareExchangeHandlerProcessorForPutCompareExchangeValue<TOperationContext> : IDisposable where TOperationContext : JsonOperationContext
 {
-    private readonly RequestHandler _requestHandler;
+    private readonly AbstractDatabaseRequestHandler<TOperationContext> _requestHandler;
     private readonly string _databaseName;
 
-    public CompareExchangeHandlerProcessorForPutCompareExchangeValue([NotNull] RequestHandler requestHandler, [NotNull] string databaseName)
+    public CompareExchangeHandlerProcessorForPutCompareExchangeValue([NotNull] AbstractDatabaseRequestHandler<TOperationContext> requestHandler, [NotNull] string databaseName)
     {
         _requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
         _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
@@ -33,6 +34,10 @@ public sealed class CompareExchangeHandlerProcessorForPutCompareExchangeValue : 
         using (_requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var updateJson = await context.ReadForMemoryAsync(_requestHandler.RequestBodyStream(), "read-unique-value");
+            
+            if(_requestHandler.GetSupportedFeature().SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                DocumentIdWorker.CheckAndThrowContainsControlCharacters(key, "Compare Exchange Key");
+            
             var command = new AddOrUpdateCompareExchangeCommand(_databaseName, key, updateJson, index, context, raftRequestId);
             await using (var writer = new AsyncBlittableJsonTextWriter(context, _requestHandler.ResponseBodyStream()))
             {

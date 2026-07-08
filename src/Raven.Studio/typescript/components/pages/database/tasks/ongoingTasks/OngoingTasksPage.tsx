@@ -80,7 +80,7 @@ import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.Replic
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import genUtils from "common/generalUtils";
-import { EtlErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
+import { TaskErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
 interface OngoingTasksPageProps {
     isAiOnly?: boolean;
@@ -130,13 +130,13 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
         [db.name]
     );
 
-    const getEtlErrors = useCallback(
-        (location: databaseLocationSpecifier) => tasksService.getEtlErrors(db.name, location),
+    const getTaskErrors = useCallback(
+        (location: databaseLocationSpecifier) => tasksService.getTaskErrors(db.name, location),
         [db.name]
     );
 
     const { result: etlStatsResult } = useDatabaseWideAsync(getEtlStats);
-    const { result: etlErrorsResult } = useDatabaseWideAsync(getEtlErrors);
+    const { result: taskErrorsResult } = useDatabaseWideAsync(getTaskErrors);
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
@@ -286,7 +286,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
     ];
 
     const flatEtlStats: EtlTaskStats[] = etlStatsResult.flatMap((x) => x.data ?? []);
-    const flatEtlErrors: EtlErrorsWithLocation[] = etlErrorsResult.flatMap((x) =>
+    const flatTaskErrors: TaskErrorsWithLocation[] = taskErrorsResult.flatMap((x) =>
         (x.data ?? []).map((e) => ({
             ...e,
             nodeTag: x.location.nodeTag,
@@ -526,7 +526,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                         data={x}
                                         showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
-                                        etlErrors={flatEtlErrors}
+                                        taskErrors={flatTaskErrors}
                                     />
                                 ))}
                                 {embeddingsGenerations.map((x) => (
@@ -536,7 +536,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                         data={x}
                                         showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
-                                        etlErrors={flatEtlErrors}
+                                        taskErrors={flatTaskErrors}
                                     />
                                 ))}
                             </div>
@@ -666,7 +666,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -676,7 +676,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -686,7 +686,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -696,7 +696,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -706,7 +706,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -716,7 +716,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -726,7 +726,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -736,7 +736,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -746,7 +746,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -773,7 +773,12 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                             />
                                         ))}
                                         {cdcSinks.map((x) => (
-                                            <CdcSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                            <CdcSinkPanel
+                                                {...sharedPanelProps}
+                                                key={taskKey(x.shared)}
+                                                data={x}
+                                                taskErrors={flatTaskErrors}
+                                            />
                                         ))}
                                     </div>
                                 )}

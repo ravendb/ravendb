@@ -6,12 +6,17 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 export default function EditGenAiTaskInfoHub() {
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
+
+    const genAiOverviewDocsLink = useRavenLink({ hash: "GEHC2I" });
+    const genAiCreateTaskDocsLink = useRavenLink({ hash: "HTGCZZ" });
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -25,13 +30,7 @@ export default function EditGenAiTaskInfoHub() {
 
     return (
         <AboutViewFloating defaultOpen={hasGenAi ? null : "licensing"}>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <div>
                     <p>
                         You can configure a <strong>GenAI task</strong> to analyze and enrich your documents using{" "}
@@ -94,6 +93,15 @@ export default function EditGenAiTaskInfoHub() {
                     <br /> Once the task is active, any modification to a document in the selected collection
                     <br /> will trigger the task to retrieve content from the model and apply the update script.
                 </p>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={genAiOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - GenAI Task Overview
+                </a>
+                <br />
+                <a href={genAiCreateTaskDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Create GenAI Task
+                </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper isUnlimited={hasGenAi} data={featureAvailability} />
         </AboutViewFloating>

@@ -27,8 +27,6 @@ export function EditRavenEtlInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     A <strong>RavenDB ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process that

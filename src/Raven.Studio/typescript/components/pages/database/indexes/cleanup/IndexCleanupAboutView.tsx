@@ -26,13 +26,7 @@ export default function IndexCleanupAboutView() {
 
     return (
         <AboutViewFloating defaultOpen={hasIndexCleanup ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     Maintaining multiple indexes can lower performance. Every time data is inserted, updated, or
                     deleted, the corresponding indexes need to be updated as well, which can lead to increased write

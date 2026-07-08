@@ -19,6 +19,7 @@ public class CdcSinkDocumentProcessor
 {
     private readonly CdcSinkConfiguration _config;
     private readonly string _defaultSchema;
+    private readonly bool _includeDisabledTables;
     private readonly Dictionary<(string Schema, string Table), CdcSinkTableProcessor> _tableIndex;
 
     internal RavenLogger Logger { get; set; }
@@ -28,14 +29,25 @@ public class CdcSinkDocumentProcessor
     /// </summary>
     public PatchRequest CombinedPatchRequest { get; }
 
-    public CdcSinkDocumentProcessor(CdcSinkConfiguration config, string defaultSchema = "")
+    /// <param name="includeDisabledTables">
+    /// When false (runtime default), tables marked <see cref="CdcSinkTableConfig.Disabled"/> are not registered,
+    /// so their streamed rows resolve to no processor and are discarded. Replay (<see cref="Commands.CdcSinkBatchCommand"/>)
+    /// and the test/preview endpoint pass true because they must resolve every configured table regardless of state.
+    /// </param>
+    public CdcSinkDocumentProcessor(CdcSinkConfiguration config, string defaultSchema = "", bool includeDisabledTables = false)
     {
         _config = config;
         _defaultSchema = defaultSchema;
+        _includeDisabledTables = includeDisabledTables;
         _tableIndex = new Dictionary<(string, string), CdcSinkTableProcessor>(TableKeyComparer.Instance);
 
         foreach (var table in config.Tables)
         {
+            // A disabled table is excluded from the runtime mapping: no processor is registered, so its rows
+            // are discarded during streaming and it is never initial-loaded (see CollectAllTablesFlat).
+            if (table.Disabled && _includeDisabledTables == false)
+                continue;
+
             // IsNullOrEmpty rather than `??` so callers that supply "" (empty) get the same
             // default-schema substitution as null. The test endpoint resolves SourceTableSchema
             // via string.IsNullOrEmpty before looking up tables in _tableIndex; this keeps the
@@ -85,6 +97,10 @@ public class CdcSinkDocumentProcessor
 
         foreach (var table in _config.Tables)
         {
+            // Skip patches for disabled tables that weren't registered above - no op will reference them.
+            if (table.Disabled && _includeDisabledTables == false)
+                continue;
+
             var schema = string.IsNullOrEmpty(table.SourceTableSchema) ? _defaultSchema : table.SourceTableSchema;
 
             if (table.Patch != null)
@@ -303,6 +319,16 @@ public class CdcSinkDocumentProcessor
     {
         foreach (var (_, processor) in _tableIndex)
             processor.ClearPool();
+    }
+
+    /// <summary>
+    /// Drops every table's learned column set so the next read re-learns it. Called on retry so a
+    /// schema change seen mid-initial-load doesn't keep re-failing on stale column metadata.
+    /// </summary>
+    public void ResetSourceColumnNames()
+    {
+        foreach (var (_, processor) in _tableIndex)
+            processor.ResetSourceColumnNames();
     }
 
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)

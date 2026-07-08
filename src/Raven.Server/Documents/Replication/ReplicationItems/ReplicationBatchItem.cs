@@ -94,11 +94,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public unsafe void ReadChangeVectorAndMarker()
         {
-            var changeVectorSize = *(int*)Reader.ReadExactly(sizeof(int));
-
-            if (changeVectorSize != 0)
-                ChangeVector = Encoding.UTF8.GetString(Reader.ReadExactly(changeVectorSize), changeVectorSize);
-
+            ChangeVector = ReadString();
             TransactionMarker = *(short*)Reader.ReadExactly(sizeof(short));
         }
 
@@ -162,6 +158,34 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
             // TODO: this is inefficient, can skip string allocation
             prop = context.GetLazyString(Encoding.UTF8.GetString(Reader.ReadExactly(size), size));
+        }
+
+        protected unsafe string ReadString()
+        {
+            var size = *(int*)Reader.ReadExactly(sizeof(int));
+
+            if (size == 0)
+                return string.Empty;
+
+            return Encoding.UTF8.GetString(Reader.ReadExactly(size), size);
+        }
+
+        public bool IsPreventableSinkToHubDeletion()
+        {
+            switch (Type)
+            {
+                case ReplicationItemType.RevisionTombstone:
+                case ReplicationItemType.AttachmentTombstone:
+                case ReplicationItemType.DocumentTombstone:
+                case ReplicationItemType.DeletedTimeSeriesRange:
+                    return true;
+                case ReplicationItemType.Document:
+                    if (this is DocumentReplicationItem doc && doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                        return true;
+                    break;
+            }
+
+            return false;
         }
 
         public enum ReplicationItemType : byte

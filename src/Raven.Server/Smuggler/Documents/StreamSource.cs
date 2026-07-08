@@ -47,6 +47,7 @@ using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
 using Size = Sparrow.Size;
@@ -1229,6 +1230,7 @@ namespace Raven.Server.Smuggler.Documents
                 var context = actions.GetContextForNewDocument();
                 Debug.Assert(context == values._context);
                 values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counterValues);
+                values.TryGet(CountersStorage.CounterNames, out BlittableJsonReaderObject counterNames);
 
                 counterValues.Modifications = new DynamicJsonValue(counterValues);
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -1251,7 +1253,28 @@ namespace Raven.Server.Smuggler.Documents
                         newEntry->Etag = (long)arr[j + 1];
                     }
 
-                    counterValues.Modifications[prop.Name] = new BlittableJsonReaderObject.RawBlob(newVal.Ptr, newVal.Length);
+                    var blob = new BlittableJsonReaderObject.RawBlob(newVal.Ptr, newVal.Length);
+
+                    // Legacy backups (pre-RavenDB-25738) escaped control chars in @vals/@names keys as literal \uXXXX text.
+                    // Detect the mismatch by comparing the stored key against the lowered display name and rename both @vals and @names if they differ.
+                    if (counterNames != null && counterNames.TryGet(prop.Name, out LazyStringValue displayName) &&
+                        StringUtils.HasControlCharacters(displayName.AsReadOnlySpan()))
+                    {
+                        using var _ = DocumentIdWorker.GetLower(_allocator, displayName, out var loweredDisplayNameSlice);
+                        var loweredDisplayName = context.AllocateStringValue(null, loweredDisplayNameSlice.Content.Ptr, loweredDisplayNameSlice.Size);
+                        if (loweredDisplayName.Equals(prop.Name) == false)
+                        {
+                            counterNames.Modifications ??= new DynamicJsonValue(counterNames);
+                            counterNames.Modifications.Remove(prop.Name);
+                            counterNames.Modifications[loweredDisplayName] = displayName;
+                            
+                            counterValues.Modifications.Remove(prop.Name);
+                            counterValues.Modifications[loweredDisplayName] = blob;
+                            continue;
+                        }
+                    }
+
+                    counterValues.Modifications[prop.Name] = blob;
                 }
 
                 return context.ReadObject(values, null);

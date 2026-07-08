@@ -140,6 +140,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
+            await WaitForCdcInitialLoadAsync(store, "test-schema-add-col");
+
             var doc = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
@@ -149,9 +151,7 @@ namespace SlowTests.Server.Documents.CdcSink
             // Insert with the new column — CDC still captures old column set
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'After', 'new col')");
 
-            // Should still work fine — the capture instance has the old columns
-            var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);
-            Assert.NotNull(doc2);
+            var doc2 = await WaitForSinkDocumentAsync<Item>(store, "test-schema-add-col", "Items/2", timeoutMs: 60_000);
             Assert.Equal("After", doc2.Name);
         }
 
@@ -550,6 +550,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
+            await WaitForCdcInitialLoadAsync(store, "test-full-add-col");
+
             var doc1 = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc1);
             Assert.Equal("Before Schema Change", doc1.Name);
@@ -560,7 +562,7 @@ namespace SlowTests.Server.Documents.CdcSink
             ExecuteMsSql(connectionString, "ALTER TABLE items ADD description NVARCHAR(500)");
             EnableCdcOnTable(connectionString, "dbo", "items", captureInstance: "dbo_items_v2");
 
-            // Step 4: Insert with new schema (before dropping old CI so the capture job has time to process it)
+            // Step 4: Insert with new schema (before dropping old capture instance so the capture job has time to process it)
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'After Schema Change', 'new')");
 
             // Step 5: Drop old capture instance (triggers process restart via HaveCaptureInstancesChanged)
