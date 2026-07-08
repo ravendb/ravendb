@@ -25,7 +25,7 @@ agent turn ──> appliance ──> RavenDB AI ──> OpenAI / Ollama (LLM)
   `admin.client.certificate.*.pfx`, and `A/settings.json` (with a `PublicServerUrl`). Generate it from the
   RavenDB setup wizard / RavenDB Cloud, or `rvn create-setup-package`. *Bootstrap cannot run without it.*
 - An **LLM**: an OpenAI API key **or** a reachable Ollama endpoint. *The agent can't answer without one* —
-  the appliance's "mock" helper only mocks the agent **config**, not the model.
+  the AI Helper only drafts the agent/CDC **config** (via the real RavenDB AI API), not the model replies.
 - A **PostgreSQL** server you can load Northwind into, with **`wal_level = logical`** and a login that has the
   **REPLICATION** attribute (the built-in `postgres` superuser qualifies).
 
@@ -92,12 +92,14 @@ $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH = 'C:\path\to\setup-package.zip'
 ```
 
 - First build is long (publishes RavenDB + the appliance + builds the React frontend); rebuilds are cached.
-- `up.ps1` mounts the setup-package zip (enabling demo-mode activation + the mock AI-config helper),
-  runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes the nginx
-  TLS front on **:443** (HTTPS) and the web app on **:5000** (first-run / pre-activation), and tails logs.
+- `up.ps1` mounts the setup-package zip (enabling demo-mode activation; the license client serves the zip
+  offline), runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes
+  the nginx TLS front on **:443** (HTTPS) and the web app on **:5000** (first-run / pre-activation), and
+  tails logs.
 - Useful flags: `-Rebuild` (no-cache), `-Port <n>` (host :5000 port), `-HttpsPort <n>` (host :443 port),
   `-ApiKey <key>` (operator login key, default `egor`), `-WithStudio` (import the admin client cert so the
-  browser can reach RavenDB Studio at `https://db.egor-ai.ravendb.run/`).
+  browser can reach RavenDB Studio at `https://db.egor-ai.ravendb.run/`),
+  `-RavenApiEnv <env>` (route the AI Helper to `{env}.api.ravendb.net`, e.g. `test`; unset → production).
 
 The appliance **activates itself at startup** — no operator action. Status walks
 `NeedsActivation → Redeeming → Restarting → Ready` (~30–60s after the build). Watch it:
@@ -147,8 +149,9 @@ curl -s http://localhost:5000/api/apps/ -H "X-Api-Key: egor"   # [{ "slug": "...
 
 ## 6. AI connection string + agent + channel
 
-Replace `SLUG` and the key/host below. The mock helper (`/suggest/agent`) returns ready-made Northwind
-agents; `product-catalog` and `sales-insights` work over the iframe (their query inputs are model-filled).
+Replace `SLUG` and the key/host below. `/suggest/agent` asks the real RavenDB AI API to draft agent
+candidate(s); the example below then provisions a hand-written `product-catalog` agent whose query inputs
+are model-filled (so it works over the iframe).
 
 ```bash
 SLUG=northwind-demo
@@ -162,11 +165,11 @@ curl -s -X POST http://localhost:5000/api/apps/$SLUG/ai/connection-strings \
        \"openAiSettings\":{\"apiKey\":\"$OPENAI_API_KEY\",\"endpoint\":\"https://api.openai.com/\",\"model\":\"gpt-4.1-mini\"}}"
 #   — or Ollama: "ollamaSettings":{"uri":"http://host.docker.internal:11434/","model":"llama3.1"}
 
-# (b) pull a mock agent config (demo mode)
+# (b) ask the AI Helper to draft agent config candidate(s) (real RavenDB AI API)
 curl -s -X POST http://localhost:5000/api/apps/$SLUG/suggest/agent \
   -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" -d '{"mode":"from-data"}'
-#   returns candidates: order-support, product-catalog, sales-insights
+#   returns AI-drafted candidate(s); names/shape depend on the model and your CDC mapping
 
 # (c) provision the product-catalog agent (connectionStringName injected)
 curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/agent \

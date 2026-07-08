@@ -45,6 +45,12 @@
   package at startup. Demo default: 'egor'. Ignored in demo/mock mode (the mounted
   setup-package zip answers any token), but set for parity with production.
 
+.PARAMETER RavenApiEnv
+  Selects the AI API environment the bundled RavenDB server dials for the AI Helper
+  (/assistant/assist -> {RAVEN_API_ENV}.api.ravendb.net). Passed through to the container as
+  RAVEN_API_ENV and read by the server's ApiHttpClient. Empty (default) -> production
+  https://api.ravendb.net. Set 'test' to target https://test.api.ravendb.net.
+
 .NOTES
   Demo setup-package zip: this script mounts $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH
   (the same env you use for the AiApplianceTests E2E suite) at the Dockerfile-
@@ -62,7 +68,8 @@ param(
     [switch]$WithStudio,
     [int]$HttpsPort = 443,
     [string]$ApiKey = 'egor',
-    [string]$LicenseKey = 'egor'
+    [string]$LicenseKey = 'egor',
+    [string]$RavenApiEnv = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -113,6 +120,13 @@ $runArgs = @(
     '-e', "QUILL_API_KEY=$ApiKey",
     '-e', "QUILL_LICENSE_KEY=$LicenseKey"
 )
+# Point the bundled RavenDB server's AI Helper at a specific api.ravendb.net environment
+# (e.g. 'test' -> test.api.ravendb.net). Unset -> production. with-contenv in the 01-ravendb
+# s6 run script imports this into the RavenDB process env automatically.
+if ($RavenApiEnv) {
+    Write-Host "Routing AI Helper to ${RavenApiEnv}.api.ravendb.net (RAVEN_API_ENV=$RavenApiEnv)" -ForegroundColor DarkGray
+    $runArgs += @('-e', "RAVEN_API_ENV=$RavenApiEnv")
+}
 # Mount the demo setup-package zip if APPLIANCE_E2E_SETUP_PACKAGE_PATH points
 # at one. The container path is hardcoded in the Dockerfile via
 # RAVEN_AI_SETUP_PACKAGE_ZIP — the appliance reads from there in demo mode.

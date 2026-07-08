@@ -45,10 +45,11 @@ public sealed class ApplianceOptions
     public string? ApiKey { get; set; }
 
     /// <summary>
-    /// Path to a local setup-package zip. <b>Mock-only</b>: when set (file present) the appliance runs
-    /// in mock mode — <see cref="AiHelper.MockLicenseClient"/> serves this zip instead of calling the
-    /// real license API, and the AI Helper uses <see cref="AiHelper.MockAiHelperClient"/>. Bound from
-    /// <c>RAVEN_AI_SETUP_PACKAGE_ZIP</c>; empty / missing file selects the real HTTP clients.
+    /// Path to a local setup-package zip. <b>License-mock only</b>: when set (file present)
+    /// <see cref="AiHelper.MockLicenseClient"/> serves this zip instead of calling the real license
+    /// API, so activation works offline. Bound from <c>RAVEN_AI_SETUP_PACKAGE_ZIP</c>; empty / missing
+    /// file selects the real <see cref="AiHelper.LicenseHttpClient"/>. Does not affect the AI Helper,
+    /// which always calls the real AI API via the bundled RavenDB (<c>/assistant/assist</c>).
     /// </summary>
     public string? SetupPackageZipPath { get; set; }
 

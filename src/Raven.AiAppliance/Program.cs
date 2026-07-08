@@ -105,45 +105,43 @@ if (!isOpenApiDocumentGeneration)
 }
 builder.Services.AddHttpClient();
 
-// AI Helper client. In demo mode, the same local setup-package zip that makes the bootstrap
-// endpoint bypass the real license API (see BootstrapEndpoints) also leaves the internal AI
-// service unreachable, so serve canned Northwind sample data via MockAiHelperClient. Production
-// (no zip) proxies the call through the bundled RavenDB (/assistant/assist), which injects the
-// license + cert from its own ServerStore and forwards to api.ravendb.net.
-builder.Services.AddSingleton<IApplianceLicenseProvider, SetupPackageLicenseProvider>();
+// AI Helper client. Always proxies the call through the bundled RavenDB (/assistant/assist), which
+// injects the license + cert from its own ServerStore and forwards to api.ravendb.net (test vs prod
+// is selected by RAVEN_API_ENV on the bundled server). This holds in demo mode too: the bundled
+// server is licensed from the mounted setup package, so the real AI API is reachable without a live
+// license-API hop.
+builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
+    {
+        // The AI-Helper call is proxied through the bundled RavenDB (/assistant/assist), which injects
+        // the license + cert and forwards to api.ravendb.net — the appliance never reaches it directly.
+        // Default to the store's own node URL (single source of truth for the bundled server); tests
+        // override AiApiUrl to point at an in-process mock.
+        var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+        var store = sp.GetRequiredService<IDocumentStore>();
+        http.BaseAddress = new Uri(string.IsNullOrEmpty(opts.AiApiUrl) ? store.Urls[0] : opts.AiApiUrl);
+    })
+    .ConfigurePrimaryHttpMessageHandler(static sp =>
+    {
+        // mTLS to the bundled RavenDB with the admin client cert (as RavenLiveFeedProxy does). The
+        // server's wildcard LE cert is OS-trusted, so no custom server-cert validation is needed.
+        var store = sp.GetRequiredService<IDocumentStore>();
+        var handler = new HttpClientHandler();
+        if (store.Certificate is not null)
+            handler.ClientCertificates.Add(store.Certificate);
+        return handler;
+    });
 
-// One mock toggle drives both external HTTP deps: when the setup-package zip is mounted the appliance
-// runs in mock mode — the AI Helper returns canned data and the license client serves the mounted zip
-// — so the whole flow works without a live api.ravendb.net. Production (no zip) dials the real APIs.
+// The mounted setup-package zip drives only the license client: when present the appliance serves the
+// zip locally (MockLicenseClient) so activation works without a live license API. Production (no zip)
+// dials the real license API. The AI Helper is unaffected — it always uses the real client above.
 var setupPackageZip = Environment.GetEnvironmentVariable("RAVEN_AI_SETUP_PACKAGE_ZIP");
-var useMockApi = string.IsNullOrEmpty(setupPackageZip) == false && File.Exists(setupPackageZip);
-if (useMockApi)
+var useMockLicenseApi = string.IsNullOrEmpty(setupPackageZip) == false && File.Exists(setupPackageZip);
+if (useMockLicenseApi)
 {
-    builder.Services.AddSingleton<IAiHelperClient, MockAiHelperClient>();
     builder.Services.AddSingleton<ILicenseClient>(new MockLicenseClient(setupPackageZip!));
 }
 else
 {
-    builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
-        {
-            // The AI-Helper call is proxied through the bundled RavenDB (/assistant/assist), which injects
-            // the license + cert and forwards to api.ravendb.net — the appliance never reaches it directly.
-            // Default to the store's own node URL (single source of truth for the bundled server); tests
-            // override AiApiUrl to point at an in-process mock.
-            var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-            var store = sp.GetRequiredService<IDocumentStore>();
-            http.BaseAddress = new Uri(string.IsNullOrEmpty(opts.AiApiUrl) ? store.Urls[0] : opts.AiApiUrl);
-        })
-        .ConfigurePrimaryHttpMessageHandler(static sp =>
-        {
-            // mTLS to the bundled RavenDB with the admin client cert (as RavenLiveFeedProxy does). The
-            // server's wildcard LE cert is OS-trusted, so no custom server-cert validation is needed.
-            var store = sp.GetRequiredService<IDocumentStore>();
-            var handler = new HttpClientHandler();
-            if (store.Certificate is not null)
-                handler.ClientCertificates.Add(store.Certificate);
-            return handler;
-        });
     builder.Services.AddHttpClient<ILicenseClient, LicenseHttpClient>(static (sp, http) =>
     {
         var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
@@ -297,10 +295,10 @@ if (app.Environment.IsDevelopment())
             ApplianceOptions.DefaultLicenseApiUrl);
     }
 
-    if (useMockApi)
+    if (useMockLicenseApi)
     {
         app.Logger.LogInformation(
-            "Mock API mode: activation serves the mounted setup-package zip (MockLicenseClient) and the AI Helper returns canned Northwind sample data (MockAiHelperClient), not live results from api.ravendb.net.");
+            "Mock license-API mode: activation serves the mounted setup-package zip (MockLicenseClient) instead of calling the real license API. The AI Helper still calls the real AI API via the bundled RavenDB (/assistant/assist).");
     }
 }
 

@@ -2,10 +2,9 @@ namespace Raven.AiAppliance.AiHelper;
 
 /// <summary>
 /// Mock-mode <see cref="ILicenseClient"/>: serves a local setup-package zip instead of calling the
-/// real license API. Registered in <c>Program.cs</c> under the same mock toggle as
-/// <see cref="MockAiHelperClient"/> (the setup-package zip path is mounted into the container).
-/// Mirrors what the real <see cref="LicenseHttpClient"/> downloads, so the activation flow is
-/// identical end-to-end. The token is ignored — the mounted zip is the answer for any token.
+/// real license API. Registered in <c>Program.cs</c> when the setup-package zip path is mounted into
+/// the container. Mirrors what the real <see cref="LicenseHttpClient"/> downloads, so the activation
+/// flow is identical end-to-end. The token is ignored — the mounted zip is the answer for any token.
 /// </summary>
 public sealed class MockLicenseClient(string setupPackageZipPath) : ILicenseClient
 {
