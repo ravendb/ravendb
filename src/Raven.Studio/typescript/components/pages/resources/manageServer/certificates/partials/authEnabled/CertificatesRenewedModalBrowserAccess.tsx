@@ -23,27 +23,27 @@ export default function CertificatesRenewedModalBrowserAccess() {
                     <h4 className="mb-2">Install the certificate in your browser</h4>
                     <Tab.Container activeKey={browserTab} onSelect={(key: Browser) => setBrowserTab(key)}>
                         <div className="segmented-tab-container">
-                            <Nav>
+                            <Nav className="flex-nowrap">
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="Chrome">
+                                    <Nav.Link eventKey="Chrome" className="text-center">
                                         <Icon icon="chrome" />
                                         Chrome
                                     </Nav.Link>
                                 </Nav.Item>
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="Firefox">
+                                    <Nav.Link eventKey="Firefox" className="text-center">
                                         <Icon icon="firefox" />
                                         Firefox
                                     </Nav.Link>
                                 </Nav.Item>
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="Safari">
+                                    <Nav.Link eventKey="Safari" className="text-center">
                                         <Icon icon="safari" />
                                         Safari
                                     </Nav.Link>
                                 </Nav.Item>
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="Other">
+                                    <Nav.Link eventKey="Other" className="text-center">
                                         <Icon icon="global" />
                                         Other
                                     </Nav.Link>

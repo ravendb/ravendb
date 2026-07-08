@@ -42,15 +42,21 @@ export default function CertificatesRenewedModal() {
 
                 <Tab.Container activeKey={accessTab} onSelect={(key: AccessTab) => setAccessTab(key)}>
                     <div className="access-tab-container mb-4">
-                        <Nav>
+                        <Nav className="gap-3">
                             <Nav.Item className="flex-grow mb-0">
-                                <Nav.Link eventKey="browser">
+                                <Nav.Link
+                                    eventKey="browser"
+                                    className="d-flex align-items-center justify-content-center w-100 text-center border rounded py-2 px-3"
+                                >
                                     <Icon icon="global" />
                                     Browser Access
                                 </Nav.Link>
                             </Nav.Item>
                             <Nav.Item className="flex-grow mb-0">
-                                <Nav.Link eventKey="api">
+                                <Nav.Link
+                                    eventKey="api"
+                                    className="d-flex align-items-center justify-content-center w-100 text-center border rounded py-2 px-3"
+                                >
                                     <Icon icon="code" />
                                     Application Access (API)
                                 </Nav.Link>

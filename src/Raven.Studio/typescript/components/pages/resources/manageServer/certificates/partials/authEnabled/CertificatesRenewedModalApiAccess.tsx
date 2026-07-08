@@ -45,18 +45,26 @@ export default function CertificatesRenewedModalApiAccess() {
                     </p>
                     <Tab.Container activeKey={clientTab} onSelect={(key: ClientLanguage) => setClientTab(key)}>
                         <div className="segmented-tab-container">
-                            <Nav>
+                            <Nav className="flex-nowrap">
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="csharp">C#</Nav.Link>
+                                    <Nav.Link eventKey="csharp" className="text-center">
+                                        C#
+                                    </Nav.Link>
                                 </Nav.Item>
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="java">Java</Nav.Link>
+                                    <Nav.Link eventKey="java" className="text-center">
+                                        Java
+                                    </Nav.Link>
                                 </Nav.Item>
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="nodejs">Node.js</Nav.Link>
+                                    <Nav.Link eventKey="nodejs" className="text-center">
+                                        Node.js
+                                    </Nav.Link>
                                 </Nav.Item>
                                 <Nav.Item className="flex-grow">
-                                    <Nav.Link eventKey="python">Python</Nav.Link>
+                                    <Nav.Link eventKey="python" className="text-center">
+                                        Python
+                                    </Nav.Link>
                                 </Nav.Item>
                             </Nav>
                             <Tab.Content className="p-2">
