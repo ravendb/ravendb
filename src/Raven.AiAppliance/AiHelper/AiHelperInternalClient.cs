@@ -141,7 +141,7 @@ public sealed class AiHelperInternalClient(
             logger.Log(
                 status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
                 "AI Helper {Path} failed: upstream {Code}, mapped {Status}. Body: {Body}",
-                path, (int)response.StatusCode, status, text);
+                path, (int)response.StatusCode, status, TruncateForLog(text));
             return (status, text);
         }
         catch (Exception e) when (e is HttpRequestException ||
@@ -172,7 +172,7 @@ public sealed class AiHelperInternalClient(
                 ? AiHelperStatus.InvalidCredentials
                 : AiHelperStatus.InternalError;
             logger.LogWarning("AI Helper give-consent failed: upstream {Code}, mapped {Status}. Body: {Body}",
-                (int)response.StatusCode, status, text);
+                (int)response.StatusCode, status, TruncateForLog(text));
             return status;
         }
         catch (Exception e) when (e is HttpRequestException ||
@@ -218,6 +218,13 @@ public sealed class AiHelperInternalClient(
         Enum.TryParse<AiHelperStatus>(status, ignoreCase: true, out var parsed)
             ? parsed
             : AiHelperStatus.InternalError;
+
+    // Failure bodies are normally the tiny status envelope, but the proxy chain can return HTML
+    // error pages or large exception payloads; cap what goes to the log (callers get the full body).
+    private const int MaxLoggedBodyLength = 2000;
+
+    private static string TruncateForLog(string body) =>
+        body.Length <= MaxLoggedBodyLength ? body : body[..MaxLoggedBodyLength] + "…(truncated)";
 
     /// Minimal projection for reading just the Status field from a non-2xx response envelope.
     private sealed class StatusOnly
