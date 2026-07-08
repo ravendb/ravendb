@@ -195,6 +195,52 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         Assert.Equal("InternalError", (string?)node["status"]);
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Consent_required_then_signs_consent_and_retries_successfully()
+    {
+        var store = GetDocumentStore();
+        await using var mockAi = await MockAiApi.StartAsync();
+        // The real service 401s with ConsentRequired until consent is signed; mirror that gate.
+        mockAi.RequireConsentForAssist = true;
+        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+
+        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
+        var client = factory.CreateClient();
+        await SeedDiscoveredSchemaAsync(client);
+
+        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "shopping cart assistant" });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("Success", (string?)node["status"]);
+        Assert.Equal("shop-cdc", (string?)node["configuration"]!["name"]);
+
+        // Consent was signed exactly once, then the assist was retried and succeeded.
+        Assert.Equal(1, mockAi.GiveConsentCallCount);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Give_consent_rejection_surfaces_invalid_credentials()
+    {
+        var store = GetDocumentStore();
+        await using var mockAi = await MockAiApi.StartAsync();
+        mockAi.RequireConsentForAssist = true;
+        // give-consent's own license check rejects the license -> a genuine credential problem,
+        // surfaced as InvalidCredentials rather than looping on consent.
+        mockAi.GiveConsentResponse = (401, "{\"Status\":\"InvalidCredentials\"}");
+
+        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
+        var client = factory.CreateClient();
+        await SeedDiscoveredSchemaAsync(client);
+
+        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("InvalidCredentials", (string?)node["status"]);
+        Assert.Equal(1, mockAi.GiveConsentCallCount);
+    }
+
     private static async Task SeedDiscoveredSchemaAsync(HttpClient client)
     {
         // Discovering with an invalid connection string persists a non-null error schema,

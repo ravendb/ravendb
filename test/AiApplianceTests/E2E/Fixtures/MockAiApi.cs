@@ -14,9 +14,10 @@ namespace AiApplianceTests.E2E.Fixtures;
 /// injects the license + cert and forwards to api.ravendb.net). Hosts the consolidated
 /// /assistant/assist endpoint and dispatches on the request's OperationType ("CdcConfigSetup" /
 /// "CdcBasedAgentConfigSetup"), capturing the last request body per operation so tests can assert the
-/// appliance's request shape, and returns a per-test-configurable (status, body) pair. Mirrors
-/// <see cref="MockLicenseApi"/>. The caller disposes; the bound base URL is exposed for the
-/// appliance via ApplianceOptions.AiApiUrl.
+/// appliance's request shape, and returns a per-test-configurable (status, body) pair. Also hosts
+/// /assistant/give-consent and can gate assist behind consent (<see cref="RequireConsentForAssist"/>)
+/// to exercise the appliance's sign-consent-then-retry flow. Mirrors <see cref="MockLicenseApi"/>.
+/// The caller disposes; the bound base URL is exposed for the appliance via ApplianceOptions.AiApiUrl.
 public sealed class MockAiApi : IAsyncDisposable
 {
     private readonly WebApplication _app;
@@ -34,6 +35,19 @@ public sealed class MockAiApi : IAsyncDisposable
 
     /// Response served for the CdcBasedAgentConfigSetup operation (HTTP status code + JSON body).
     public (int Status, string Body) AgentResponse { get; set; } = (200, "{}");
+
+    /// When true, assist returns 401 ConsentRequired until give-consent is called — mirrors the real
+    /// service gating each assist on a per-(license, cert) consent document.
+    public bool RequireConsentForAssist { get; set; }
+
+    /// Response served for /assistant/give-consent. Default 200 Success; set a 401 to simulate a
+    /// license rejected by give-consent's own license check.
+    public (int Status, string Body) GiveConsentResponse { get; set; } = (200, "{\"Status\":\"Success\"}");
+
+    /// Number of times /assistant/give-consent was called (lets tests assert the retry flow ran).
+    public int GiveConsentCallCount { get; private set; }
+
+    private bool _consentGiven;
 
     private MockAiApi(WebApplication app, string baseAddress)
     {
@@ -79,15 +93,30 @@ public sealed class MockAiApi : IAsyncDisposable
             {
                 case "CdcConfigSetup":
                     instance.LastCdcRequestBody = body;
+                    if (instance.RequireConsentForAssist && instance._consentGiven == false)
+                        return Results.Content("{\"Status\":\"ConsentRequired\"}", "application/json", statusCode: 401);
                     return Results.Content(instance.CdcResponse.Body, "application/json",
                         statusCode: instance.CdcResponse.Status);
                 case "CdcBasedAgentConfigSetup":
                     instance.LastAgentRequestBody = body;
+                    if (instance.RequireConsentForAssist && instance._consentGiven == false)
+                        return Results.Content("{\"Status\":\"ConsentRequired\"}", "application/json", statusCode: 401);
                     return Results.Content(instance.AgentResponse.Body, "application/json",
                         statusCode: instance.AgentResponse.Status);
                 default:
                     return Results.BadRequest($"Unknown OperationType '{operationType}'.");
             }
+        });
+
+        // The appliance posts here (empty body — the real proxy injects license + cert) when assist
+        // returns ConsentRequired, then retries the assist. A 200 flips the consent gate open.
+        app.MapPost("/assistant/give-consent", () =>
+        {
+            instance.GiveConsentCallCount++;
+            var (status, gbody) = instance.GiveConsentResponse;
+            if (status is >= 200 and < 300)
+                instance._consentGiven = true;
+            return Results.Content(gbody, "application/json", statusCode: status);
         });
 
         await app.StartAsync();

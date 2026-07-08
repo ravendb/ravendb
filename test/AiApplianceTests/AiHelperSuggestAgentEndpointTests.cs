@@ -194,6 +194,31 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
         Assert.Single(node["configurations"]!.AsArray());
     }
 
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task From_data_consent_required_then_signs_consent_and_retries_successfully()
+    {
+        var store = GetDocumentStore();
+        await using var mockAi = await MockAiApi.StartAsync();
+        // The real service 401s with ConsentRequired until consent is signed; mirror that gate.
+        mockAi.RequireConsentForAssist = true;
+        mockAi.AgentResponse = (200, AiHelperSamples.AgentEnvelope(AiHelperSamples.BuildAgentConfig()));
+
+        using var appCleanup = await SeedProvisionedAppAsync(store, "shop", withCdc: true);
+
+        using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync("/api/apps/shop/suggest/agent", new { mode = "from-data" });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("Success", (string?)node["status"]);
+        Assert.Single(node["configurations"]!.AsArray());
+
+        // Consent was signed once, then the assist was retried and succeeded.
+        Assert.Equal(1, mockAi.GiveConsentCallCount);
+    }
+
     private async Task<IDisposable> SeedProvisionedAppAsync(IDocumentStore store, string slug, bool withCdc)
     {
         var perAppDb = "app-" + Guid.NewGuid().ToString("N");
