@@ -319,8 +319,7 @@ namespace Raven.Server.Web.Studio
 
                 var modifications = new DynamicJsonValue(requestBody);
                 requestBody.Modifications = modifications;
-                modifications["License"] = license.ToJson();
-                modifications["CertificateThumbprint"] = GetCurrentCertificate()?.Thumbprint;
+                modifications[nameof(License)] = license.ToJson();
 
                 using (var token = CreateHttpRequestBoundOperationToken())
                 using (var content = new StringContent(context.ReadObject(requestBody, "usage-query").ToString(), Encoding.UTF8, "application/json"))

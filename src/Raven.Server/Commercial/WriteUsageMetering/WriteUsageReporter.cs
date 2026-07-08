@@ -84,7 +84,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                     return; // no license to authenticate with; nothing to report
 
                 // Zero-etag entries are legitimate (e.g. brand-new databases) and are reported as-is.
-                var report = new WriteUsageReport(license.ToJson(), DateTime.UtcNow, snapshot.Databases);
+                var report = new WriteUsageReport(license.ToJson(), snapshot.Databases);
                 var body = report.ToJson();
 
                 _serverStore.ForTestingPurposes?.OnWriteUsageReportReady?.Invoke(body);
@@ -106,7 +106,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                         .ConfigureAwait(false);
 
                     if (Logger.IsDebugEnabled)
-                        Logger.Debug($"Reported write-usage for {report.Databases.Count} database(s) to api.ravendb.net, response: {(int)response.StatusCode} {response.StatusCode}.");
+                        Logger.Debug($"Reported write-usage for {report.Applications.Count} application(s) to api.ravendb.net, response: {(int)response.StatusCode} {response.StatusCode}.");
                 }
             }
             catch (Exception e)

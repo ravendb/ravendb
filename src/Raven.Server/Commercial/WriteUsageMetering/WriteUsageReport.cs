@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json.Parsing;
@@ -14,14 +13,14 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
     public sealed class WriteUsageDatabaseSnapshot
     {
-        public WriteUsageDatabaseSnapshot(string databaseName, string topologyId, string changeVector)
+        public WriteUsageDatabaseSnapshot(string topologyId, string applicationName, string changeVector)
         {
-            DatabaseName = databaseName;
+            ApplicationName = applicationName;
             TopologyId = topologyId;
             ChangeVector = changeVector;
         }
 
-        public string DatabaseName { get; }
+        public string ApplicationName { get; }
 
         public string TopologyId { get; }
 
@@ -31,7 +30,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         {
             return new DynamicJsonValue
             {
-                [nameof(DatabaseName)] = DatabaseName,
+                [nameof(ApplicationName)] = ApplicationName,
                 [nameof(TopologyId)] = TopologyId,
                 [nameof(ChangeVector)] = ChangeVector
             };
@@ -51,26 +50,22 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
     public sealed class WriteUsageReport
     {
-        public WriteUsageReport(DynamicJsonValue license, DateTime sentAtUtc, IReadOnlyList<WriteUsageDatabaseSnapshot> databases)
+        public WriteUsageReport(DynamicJsonValue license, IReadOnlyList<WriteUsageDatabaseSnapshot> applications)
         {
             License = license;
-            SentAtUtc = sentAtUtc;
-            Databases = databases;
+            Applications = applications;
         }
 
         public DynamicJsonValue License { get; }
 
-        public DateTime SentAtUtc { get; }
-
-        public IReadOnlyList<WriteUsageDatabaseSnapshot> Databases { get; }
+        public IReadOnlyList<WriteUsageDatabaseSnapshot> Applications { get; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(License)] = License,
-                [nameof(SentAtUtc)] = SentAtUtc,
-                [nameof(Databases)] = new DynamicJsonArray(Databases.Select(d => d.ToJson()))
+                [nameof(Applications)] = new DynamicJsonArray(Applications.Select(d => d.ToJson()))
             };
         }
     }
