@@ -2117,7 +2117,7 @@ more responsive application.
             if (fromRangeIndex != -1 &&
                 localRanges[fromRangeIndex].To >= newRange.From)
             {
-                foreach (var val in localRanges[fromRangeIndex].Entries)
+                foreach (var val in localRanges[fromRangeIndex].CachedEntries)
                 {
                     if (val.Timestamp >= newRange.From)
                         break;
@@ -2125,11 +2125,11 @@ more responsive application.
                 }
             }
 
-            mergedValues.AddRange(newRange.Entries);
+            mergedValues.AddRange(newRange.CachedEntries);
 
             if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= newRange.To)
             {
-                foreach (var val in localRanges[toRangeIndex].Entries)
+                foreach (var val in localRanges[toRangeIndex].CachedEntries)
                 {
                     if (val.Timestamp <= newRange.To)
                         continue;
@@ -2142,24 +2142,25 @@ more responsive application.
 
         private static void UpdateExistingRange(TimeSeriesRangeResult localRange, TimeSeriesRangeResult newRange)
         {
+            var localEntries = localRange.CachedEntries;
             var newValues = new List<TimeSeriesEntry>();
             int index;
-            for (index = 0; index < localRange.Entries.Length; index++)
+            for (index = 0; index < localEntries.Count; index++)
             {
-                if (localRange.Entries[index].Timestamp >= newRange.From)
+                if (localEntries[index].Timestamp >= newRange.From)
                     break;
 
-                newValues.Add(localRange.Entries[index]);
+                newValues.Add(localEntries[index]);
             }
 
-            newValues.AddRange(newRange.Entries);
+            newValues.AddRange(newRange.CachedEntries);
 
-            for (int j = index; j < localRange.Entries.Length; j++)
+            for (int j = index; j < localEntries.Count; j++)
             {
-                if (localRange.Entries[j].Timestamp <= newRange.To)
+                if (localEntries[j].Timestamp <= newRange.To)
                     continue;
 
-                newValues.Add(localRange.Entries[j]);
+                newValues.Add(localEntries[j]);
             }
 
             localRange.Entries = newValues.ToArray();
@@ -2504,13 +2505,6 @@ more responsive application.
             var returnedTransactionIndex = result.TransactionIndex;
             _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
             _sessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
-
-            // The in-session time series mutations are now persisted on the server. Invalidate the cached
-            // ranges of any mutated series so the next read reflects the saved state, then drop the
-            // overlays. Simply clearing the overlays is NOT enough: a sub-range delete is recorded only as
-            // a read-time filter in DeletedTimeSeries (the cached ranges still physically hold the deleted
-            // entries), so clearing without invalidating would resurrect that stale data (RavenDB-25903,
-            // defect #3).
             InvalidateMutatedTimeSeriesCache(_localTimeSeries);
             InvalidateMutatedTimeSeriesCache(_deletedTimeSeries);
             LocalTimeSeries.Clear();
