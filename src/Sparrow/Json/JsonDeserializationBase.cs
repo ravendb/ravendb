@@ -89,10 +89,6 @@ namespace Sparrow.Json
                     SetValue(fieldInfo.FieldType, access, fieldValue);
                 }
 
-                // When a 'new' property shadows a base one of the same name, GetProperties() returns BOTH.
-                // Deserialize only the most-derived (effective) member; setting the hidden base member too
-                // would overwrite the derived value with a less-specific one (e.g. the typed
-                // TimeSeriesRangeResult<T>.Entries getting clobbered by the base TimeSeriesEntry[] Entries).
                 var handledPropertyNames = new HashSet<string>();
                 foreach (var propertyInfo in typeof(T)
                              .GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)

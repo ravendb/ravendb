@@ -121,28 +121,13 @@ namespace Raven.Client.Documents.Session
 
             foreach (var entry in entries)
             {
-                bool deleted = false;
-
-                foreach (var range in ranges)
-                {
-                    if (entry.Timestamp >= range.From && entry.Timestamp <= range.To)
-                    {
-                        deleted = true;
-                        break;
-                    }
-                }
-
-                if (deleted == false)
+                if (IsInDeletedRange(entry.Timestamp, ranges) == false)
                     result.Add(entry);
             }
 
             return result;
         }
 
-        // When ServeFromCache returns null the covering cached range is marked IsDeleted. In that case
-        // we still surface any in-session appends made AFTER the delete (kept in the local overlay), so
-        // they are not silently lost. Returns null when there are genuinely no such local entries, which
-        // preserves the "deleted series, nothing appended -> null" contract for the callers.
         private List<TimeSeriesEntry> GetLocalEntriesForDeletedRange(DateTime? from, DateTime? to, int pageSize)
         {
             var localOnly = GetCachedEntriesInRange<TimeSeriesEntry>(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
@@ -168,12 +153,12 @@ namespace Raven.Client.Documents.Session
             {
                 asList = GetLocalEntriesForDeletedRange(from, to, pageSize);
                 if (asList == null)
-                    return null; // deleted series, nothing appended -> null (unchanged contract)
+                    return null;
             }
             else
             {
                 resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-                asList = RemoveDeletedTimeSeries(resultToUser.ToList());
+                asList = RemoveDeletedTimeSeries(resultToUser.ToList()).Take(pageSize).ToList();
             }
 
             if (asList.Count == 0)
@@ -234,20 +219,32 @@ namespace Raven.Client.Documents.Session
                 return Array.Empty<TTValues>();
             }
 
+            var hasLocalEntries = cachedEntries != null && cachedEntries.Count > 0;
+            var serverStart = hasLocalEntries ? 0 : start;
+            var serverPageSize = hasLocalEntries ? PageSizeToCoverMerge(start, pageSize) : pageSize;
+
             Session.IncrementRequestCount();
 
             var rangeResult = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize, includes), Session._sessionInfo, token: token)
+                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, serverStart, serverPageSize, includes), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (rangeResult == null)
-                return (TTValues[])cachedEntries?.ToArray();
+            {
+                if (cachedEntries == null)
+                    return null;
+
+                return RemoveDeletedTimeSeries(cachedEntries).Skip(start).Take(pageSize).ToArray();
+            }
 
             var serverEntries = rangeResult.Entries ?? Array.Empty<TTValues>();
             var serverList = new List<TTValues>(serverEntries);
 
             var entriesResult = MergeSorted<TTValues>(serverList, cachedEntries);
             entriesResult = RemoveDeletedTimeSeries(entriesResult);
+
+            if (hasLocalEntries)
+                entriesResult = entriesResult.Skip(start).Take(pageSize).ToList();
 
             if (Session.NoTracking == false)
             {
@@ -277,8 +274,14 @@ namespace Raven.Client.Documents.Session
             return entriesResult.ToArray();
         }
 
-        // an incremental time series accumulates values; its in-session overlay stores only the
-        // in-session delta, so the server base must be ADDED to it at read time (see CurrentLocalDeltaAt).
+        private static int PageSizeToCoverMerge(int start, int pageSize)
+        {
+            if (pageSize == int.MaxValue || start > int.MaxValue - pageSize)
+                return int.MaxValue;
+
+            return start + pageSize;
+        }
+
         private bool IsIncremental => Name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase);
 
         private List<TEntry> MergeSorted<TEntry>(List<TEntry> a, List<TEntry> b)
@@ -503,11 +506,11 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private static bool DuplicatesLastMerged(TimeSeriesEntry[] entries, List<TimeSeriesEntry> mergedValues)
+        private static bool DuplicatesLastMerged(List<TimeSeriesEntry> entries, List<TimeSeriesEntry> mergedValues)
         {
             return mergedValues.Count > 0 &&
                    entries != null &&
-                   entries.Length > 0 &&
+                   entries.Count > 0 &&
                    entries[0].Timestamp == mergedValues[mergedValues.Count - 1].Timestamp;
         }
 
@@ -536,15 +539,12 @@ namespace Raven.Client.Documents.Session
                         // so we might need to skip a part of it when we return the
                         // result to the user (i.e. skip [fromRange.From, from])
 
-                        if (ranges[i].Entries != null)
+                        foreach (var v in ranges[i].CachedEntries)
                         {
-                            foreach (var v in ranges[i].Entries)
+                            mergedValues.Add(v);
+                            if (v.Timestamp < from)
                             {
-                                mergedValues.Add(v);
-                                if (v.Timestamp < from)
-                                {
-                                    skip++;
-                                }
+                                skip++;
                             }
                         }
                     }
@@ -559,7 +559,7 @@ namespace Raven.Client.Documents.Session
                     // skip its first item only if it duplicates the last merged entry
                     // (ranges don't always share a boundary entry)
 
-                    var serverEntries = resultFromServer[currentResultIndex++].Entries;
+                    var serverEntries = resultFromServer[currentResultIndex++].CachedEntries;
                     mergedValues.AddRange(serverEntries.Skip(DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0));
                 }
 
@@ -571,9 +571,9 @@ namespace Raven.Client.Documents.Session
                         // so we might need to trim a part of it when we return the
                         // result to the user (i.e. trim [to, toRange.to])
 
-                        var toEntries = ranges[i].Entries;
+                        var toEntries = ranges[i].CachedEntries;
                         var index = DuplicatesLastMerged(toEntries, mergedValues) ? 1 : 0;
-                        for (; index < toEntries.Length; index++)
+                        for (; index < toEntries.Count; index++)
                         {
                             mergedValues.Add(toEntries[index]);
                             if (toEntries[index].Timestamp > to)
@@ -589,7 +589,8 @@ namespace Raven.Client.Documents.Session
                 // add current range from cache to the merged list.
                 // in order to avoid duplication, skip first item in range if needed
 
-                mergedValues.AddRange(ranges[i].Entries.Skip(DuplicatesLastMerged(ranges[i].Entries, mergedValues) ? 1 : 0));
+                var cachedEntries = ranges[i].CachedEntries;
+                mergedValues.AddRange(cachedEntries.Skip(DuplicatesLastMerged(cachedEntries, mergedValues) ? 1 : 0));
             }
 
             if (currentResultIndex < resultFromServer.Count)
@@ -598,7 +599,7 @@ namespace Raven.Client.Documents.Session
                 // so the last missing part is from server
                 // add last missing part to the merged list
 
-                var serverEntries = resultFromServer[currentResultIndex++].Entries;
+                var serverEntries = resultFromServer[currentResultIndex++].CachedEntries;
                 mergedValues.AddRange(serverEntries.Skip(DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0));
             }
 
@@ -612,10 +613,14 @@ namespace Raven.Client.Documents.Session
             return mergedValues.ToArray();
         }
 
-        private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to, int start, int pageSize)
+        private IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to, int start, int pageSize)
         {
-            if (range.Entries == null || range.IsDeleted)
+            if (range.IsDeleted)
                 yield break;
+
+            List<TimeSeriesRangeResult> deletedRanges = null;
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var deletedByName))
+                deletedByName.TryGetValue(Name, out deletedRanges);
 
             foreach (var value in range.CachedEntries)
             {
@@ -623,6 +628,9 @@ namespace Raven.Client.Documents.Session
                     yield break;
 
                 if (value.Timestamp < from)
+                    continue;
+
+                if (deletedRanges != null && IsInDeletedRange(value.Timestamp, deletedRanges))
                     continue;
 
                 if (start-- > 0)
@@ -633,6 +641,17 @@ namespace Raven.Client.Documents.Session
 
                 yield return value;
             }
+        }
+
+        private static bool IsInDeletedRange(DateTime timestamp, List<TimeSeriesRangeResult> deletedRanges)
+        {
+            foreach (var range in deletedRanges)
+            {
+                if (timestamp >= range.From && timestamp <= range.To)
+                    return true;
+            }
+
+            return false;
         }
 
         private Task<TimeSeriesEntry<TValues>[]> GetAsyncInternal(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)

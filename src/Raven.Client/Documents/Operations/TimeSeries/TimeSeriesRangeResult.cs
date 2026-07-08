@@ -17,9 +17,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             get => CachedEntries.ToArray();
             set
             {
-                // replace, don't merge: callers (MergeRanges / UpdateExistingRange) always hand us the
-                // complete, recomputed list. Merging with the previous CachedEntries would re-inject
-                // entries the caller deliberately dropped (RavenDB-25903, defect #2).
                 CachedEntries.Clear();
                 if (value != null)
                     CachedEntries.AddRange(value);
@@ -58,7 +55,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             get => CachedEntries.OfType<TValues>().ToArray();
             set
             {
-                // replace, don't merge (see base class Entries setter, RavenDB-25903 defect #2)
                 CachedEntries.Clear();
                 if (value != null)
                     for (int i = 0; i < value.Length; i++)

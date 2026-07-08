@@ -247,7 +247,8 @@ namespace Raven.Client.Documents.Session
                 Session.Defer(new IncrementalTimeSeriesBatchCommandData(DocId, Name, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
             }
 
-            TrackTimeseriesInCache(timestamp, op.Values, increment: true);
+            if (Session.SessionInfo.NoCaching == false)
+                TrackTimeseriesInCache(timestamp, op.Values, increment: true);
         }
 
         /// <inheritdoc cref="ISessionDocumentIncrementTimeSeriesBase.Increment"/>
@@ -288,8 +289,6 @@ namespace Raven.Client.Documents.Session
             if (increment)
                 valuesArray = AddValues(CurrentLocalDeltaAt(utcTimestamp), valuesArray);
 
-            // use the normalized timestamp: the entry is stored at utcTimestamp and the deleted ranges are
-            // stored UTC/ms-normalized, so the hole must be punched at utcTimestamp too (RavenDB-25903, #4).
             RemoveFromDeletedCacheIfNeeded(utcTimestamp);
 
             var entry = new TimeSeriesEntry
@@ -308,11 +307,6 @@ namespace Raven.Client.Documents.Session
             entries[utcTimestamp] = entry;
         }
 
-        // Returns only the in-session accumulated increment delta at the given timestamp (never the
-        // cached server value). Increments store the pure in-session delta in the local overlay; the
-        // server base is added at read time by the increment-aware merge (see MergeSorted). Reading the
-        // cached server value here would bake the base into the overlay and lose it when the base is
-        // unknown at increment time (e.g. incrementing before any read).
         private double[] CurrentLocalDeltaAt(DateTime utcTimestamp)
         {
             if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) &&
