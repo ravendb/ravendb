@@ -3,10 +3,10 @@ using Raven.Client.Documents.Operations.CdcSink;
 namespace Raven.AiAppliance.AiHelper;
 
 /// <summary>
-/// Abstraction over the AI-Helper config-generation calls. The production implementation
-/// (<see cref="AiHelperInternalClient"/>) forwards to the internal AI service on api.ravendb.net.
-/// <see cref="MockAiHelperClient"/> returns canned Northwind sample data in demo mode
-/// (the setup-package zip is mounted) when the internal service is unavailable.
+/// Abstraction over the AI-Helper config-generation calls. The single implementation
+/// (<see cref="AiHelperInternalClient"/>) proxies through the bundled RavenDB server's
+/// <c>/assistant/assist</c> handler, which injects the license + cert and forwards to the internal
+/// AI service on api.ravendb.net.
 /// </summary>
 public interface IAiHelperClient
 {

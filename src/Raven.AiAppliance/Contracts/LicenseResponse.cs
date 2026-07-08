@@ -4,7 +4,7 @@ namespace Raven.AiAppliance.Contracts;
 /// License surface for the <c>/settings/license</c> page — the prototype's
 /// <c>getLicense()</c>. MOCK-backed for now (see <c>MockLicenseStatsProvider</c>):
 /// the real signed license from the license API (RavenDB-26661/26783) isn't wired
-/// yet, and the appliance's local <c>ApplianceLicense</c> only carries Id/Name/Keys.
+/// yet, and the setup package's <c>license.json</c> only carries Id/Name/Keys.
 /// </summary>
 public sealed record LicenseResponse(
     string State,
