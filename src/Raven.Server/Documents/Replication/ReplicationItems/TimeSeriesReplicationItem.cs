@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Name; // original casing
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
-        public LazyStringValue ParentDocChangeVector;
+        public string ParentDocChangeVector;
         public bool IncludeDocumentChangeVector;
 
         public override long Size => base.Size + // common
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                                      (IncludeDocumentChangeVector 
                                         ? sizeof(int) + // size of doc cv
-                                          (ParentDocChangeVector?.Size ?? 0)  // parent doc cv
+                                          (ParentDocChangeVector == null ? 0 : Encodings.Utf8.GetByteCount(ParentDocChangeVector))  // parent doc cv
                                         : 0);
 
 
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? Constants.Documents.Collections.EmptyCollection;
             djv[nameof(Name)] = Name.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
-            djv[nameof(ParentDocChangeVector)] = ParentDocChangeVector?.ToString(CultureInfo.InvariantCulture);
+            djv[nameof(ParentDocChangeVector)] = ParentDocChangeVector;
 
             return djv;
         }
@@ -176,13 +176,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 if (IncludeDocumentChangeVector)
                 {
-                    *(int*)(pTemp + tempBufferPos) = ParentDocChangeVector?.Size ?? 0;
+                    var parentDocChangeVectorSize = ParentDocChangeVector == null ? 0 : Encodings.Utf8.GetByteCount(ParentDocChangeVector);
+                    *(int*)(pTemp + tempBufferPos) = parentDocChangeVectorSize;
                     tempBufferPos += sizeof(int);
 
-                    if (ParentDocChangeVector != null)
+                    if (parentDocChangeVectorSize != 0)
                     {
-                        Memory.Copy(pTemp + tempBufferPos, ParentDocChangeVector.Buffer, ParentDocChangeVector.Size);
-                        tempBufferPos += ParentDocChangeVector.Size;
+                        tempBufferPos += Encodings.Utf8.GetBytes(ParentDocChangeVector, 0, ParentDocChangeVector.Length, tempBuffer, tempBufferPos);
                     }
                 }
 
@@ -212,8 +212,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 if (IncludeDocumentChangeVector)
                 {
-                    SetLazyStringValueFromString(context, out ParentDocChangeVector);
-                    Debug.Assert(ParentDocChangeVector != null);
+                    ParentDocChangeVector = ReadString();
                 }
 
                 stats.RecordTimeSeriesRead(Size);
@@ -226,7 +225,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             {
                 Collection = Collection.Clone(context),
                 Name = Name.Clone(context),
-                ParentDocChangeVector = ParentDocChangeVector?.Clone(context)
+                ParentDocChangeVector = ParentDocChangeVector
             };
 
             var mem = Segment.Clone(context, out item.Segment);
@@ -245,7 +244,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             Collection?.Dispose();
             Name?.Dispose();
-            ParentDocChangeVector?.Dispose();
         }
     }
 }

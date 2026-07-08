@@ -23,8 +23,6 @@ export function EditAzureServiceBusSinkTaskInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     Define an <strong>Azure Service Bus Sink</strong> ongoing-task in order to consume and process incoming messages from Azure Service Bus queues.

@@ -868,7 +868,7 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
-        public async Task PatchError_AbortsSingleDocument()
+        public async Task PerDocumentError_FailsBatchAndRollsBackAppliedDocuments()
         {
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -905,23 +905,110 @@ namespace SlowTests.Server.Documents.CdcSink
             };
 
             var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
-            await database.TxMerger.Enqueue(command);
+
+            // A per-document error fails the whole batch: we must never advance the checkpoint past a row
+            // we could not apply (on CDC that would drop it for good), so the batch rolls back atomically.
+            var e = await Assert.ThrowsAnyAsync<Exception>(() => database.TxMerger.Enqueue(command));
+            Assert.Contains("could not be applied", e.ToString());
+            Assert.False(command.CheckpointPersisted);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
-                // The good document should have been saved
-                var goodDoc = database.DocumentsStorage.Get(readCtx, "Orders/1");
-                Assert.NotNull(goodDoc);
-                AssertDocumentMatches(readCtx, goodDoc.Data, """
-                    {
-                        "CustomerName": "Alice"
-                    }
-                    """);
+                // The batch rolled back, so neither the good nor the bad document was applied - the failed
+                // row will be replayed from the source once the mapping/script is fixed.
+                Assert.Null(database.DocumentsStorage.Get(readCtx, "Orders/1"));
+                Assert.Null(database.DocumentsStorage.Get(readCtx, "Products/99"));
+            }
+        }
 
-                // The bad document should NOT have been saved
-                var badDoc = database.DocumentsStorage.Get(readCtx, "Products/99");
-                Assert.Null(badDoc);
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task FullyFailedBatch_DoesNotPersistCheckpoint()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Every document in the batch hits a tolerable per-document error (a throwing patch).
+            var badConfig = CreateRootTableConfig("Products", patch: "throw new Error('intentional failure');");
+            var badProcessor = CreateRootProcessor(badConfig, "Products");
+            var badData = new DynamicJsonValue
+            {
+                ["ProductId"] = 99,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Products"
+                }
+            };
+
+            const string checkpoint = "0/16B3748";
+            var ops = new List<CdcSinkDocumentOp> { CreatePutOp("Products/99", badData, processor: badProcessor) };
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", checkpoint, null, null, null, null, null);
+
+            // A failed batch fails the command so it withholds the checkpoint and its rows are retried on
+            // the next read from persisted state (and, on PostgreSQL, the replication slot is not acked
+            // past them).
+            var e = await Assert.ThrowsAnyAsync<Exception>(() => database.TxMerger.Enqueue(command));
+            Assert.Contains("could not be applied", e.ToString());
+            Assert.False(command.CheckpointPersisted);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                Assert.Null(database.DocumentsStorage.Get(readCtx, "Products/99")); // the failing doc was not applied
+                Assert.Null(database.DocumentsStorage.Get(readCtx, CdcSinkTaskState.GetDocumentId("test-config"))); // checkpoint not persisted
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task PartiallyFailedBatch_FailsAndWithholdsCheckpoint()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // One document succeeds, one hits a tolerable per-document error.
+            var goodData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+
+            var badConfig = CreateRootTableConfig("Products", patch: "throw new Error('intentional failure');");
+            var badProcessor = CreateRootProcessor(badConfig, "Products");
+            var badData = new DynamicJsonValue
+            {
+                ["ProductId"] = 99,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Products"
+                }
+            };
+
+            const string checkpoint = "0/16B3748";
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Orders/1", goodData, processor: CreateRootProcessor()),
+                CreatePutOp("Products/99", badData, processor: badProcessor)
+            };
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", checkpoint, null, null, null, null, null);
+
+            // Unlike ETL, CDC must not skip-and-advance past a failed row: the source position is monotonic
+            // (a PostgreSQL slot ack confirms every earlier LSN), so skipping would drop the row for good.
+            // A per-document error therefore fails and rolls back the whole batch and withholds the
+            // checkpoint - the good row is replayed alongside the bad one once the mapping/script is fixed.
+            var e = await Assert.ThrowsAnyAsync<Exception>(() => database.TxMerger.Enqueue(command));
+            Assert.Contains("could not be applied", e.ToString());
+            Assert.False(command.CheckpointPersisted);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                Assert.Null(database.DocumentsStorage.Get(readCtx, "Orders/1")); // rolled back with the batch
+
+                // The checkpoint was not persisted.
+                Assert.Null(database.DocumentsStorage.Get(readCtx, CdcSinkTaskState.GetDocumentId("test-config")));
             }
         }
 
@@ -2602,7 +2689,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// same batch must still be processed and the LSN must still advance.
         /// </summary>
         [RavenFact(RavenTestCategory.Sinks)]
-        public async Task PatchMaxStepsExceeded_FailsDocumentNotBatch()
+        public async Task PatchMaxStepsExceeded_RecordedAsItemErrorAndFailsBatch()
         {
             using var store = GetDocumentStore(new Options
             {
@@ -2657,34 +2744,32 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("GoodOrders/2", goodData, goodRaw, goodProcessor),
             };
 
-            var statistics = new CdcSinkProcessStatistics("test", "test", database.NotificationCenter);
+            var statistics = new CdcSinkProcessStatistics("test", new Raven.Server.Config.Categories.CdcSinkConfiguration());
 
             var command = new CdcSinkBatchCommand(database, ops, "test-maxsteps", "test-lsn",
                 tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
                 statsScope: null, statistics: statistics, logger: null);
-            await database.TxMerger.Enqueue(command);
 
-            // The good document should succeed despite the other document hitting MaxSteps
-            Assert.Equal(1, command.ProcessedSuccessfully);
+            // A MaxSteps runaway is a tolerable per-document error: it is caught and recorded per-document
+            // (not swallowed as a systemic crash), but it still fails the batch so the checkpoint is never
+            // advanced past the row we could not apply.
+            var e = await Assert.ThrowsAnyAsync<Exception>(() => database.TxMerger.Enqueue(command));
+            Assert.Contains("could not be applied", e.ToString());
+            Assert.False(command.CheckpointPersisted);
+
+            // The bad document was recorded as a per-document item error, keyed by its id.
+            var itemErrors = statistics.DrainInMemoryItemErrors();
+            Assert.NotNull(itemErrors);
+            Assert.Equal(1, itemErrors.Count);
+            Assert.Equal("BadOrders/1", itemErrors[0].DocumentId);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
-                var good = database.DocumentsStorage.Get(readCtx, "GoodOrders/2");
-                Assert.NotNull(good);
-                AssertDocumentMatches(readCtx, good.Data, """
-                    {
-                        "CustomerName": "Alice"
-                    }
-                    """);
-
-                // The bad document should NOT have been saved
-                var bad = database.DocumentsStorage.Get(readCtx, "BadOrders/1");
-                Assert.Null(bad);
+                // The batch rolled back atomically, so neither document was applied.
+                Assert.Null(database.DocumentsStorage.Get(readCtx, "GoodOrders/2"));
+                Assert.Null(database.DocumentsStorage.Get(readCtx, "BadOrders/1"));
             }
-
-            // The error should be recorded in statistics
-            Assert.Equal(1, statistics.ConsumeErrors);
         }
 
         /// <summary>

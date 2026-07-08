@@ -4,19 +4,18 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Logging;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
 public class CdcSinkLoader : IDisposable
 {
-    private const string AlertTitle = "CDC Sink loader";
-
     private CdcSinkProcess[] _processes = [];
 
     private readonly HashSet<string> _uniqueConfigurationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -40,6 +39,17 @@ public class CdcSinkLoader : IDisposable
     public event Action<CdcSinkProcess> ProcessRemoved;
 
     public List<CdcSinkConfiguration> Sinks;
+
+    public IEnumerable<string> GetCdcSinkProcessNamesFromRecord()
+    {
+        if (Sinks != null)
+        {
+            foreach (var config in Sinks)
+            {
+                yield return config.Name;
+            }
+        }
+    }
 
     public void Initialize(DatabaseRecord record)
     {
@@ -118,20 +128,15 @@ public class CdcSinkLoader : IDisposable
             // must not poison the remaining sinks on a database-record change. Alert and continue.
             try
             {
-                var connectionStringNotFound = false;
-
-                if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection))
-                    config.Initialize(sqlConnection);
-                else
-                    connectionStringNotFound = true;
-
-                if (connectionStringNotFound)
+                if (_databaseRecord.SqlConnectionStrings.TryGetValue(config.ConnectionStringName, out var sqlConnection) == false)
                 {
                     LogConfigurationError(config,
                         new List<string> { $"Connection string named '{config.ConnectionStringName}' was not found." });
 
                     continue;
                 }
+
+                config.Initialize(sqlConnection);
 
                 if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
@@ -223,9 +228,13 @@ public class CdcSinkLoader : IDisposable
         if (Logger.IsInfoEnabled)
             Logger.Info(errorMessage);
 
-        var alert = AlertRaised.Create(_database.Name, AlertTitle, errorMessage, AlertReason.CdcSink_Error, NotificationSeverity.Error);
-
-        _database.NotificationCenter.Add(alert);
+        _database.TaskErrorsStorage.StoreProcessError(TaskCategory.CdcSink, new TaskProcessError
+        {
+            CreatedAt = SystemTime.UtcNow,
+            TaskName = config.Name,
+            Step = TaskErrorStep.Configuration,
+            Error = errorMessage
+        });
     }
 
     private static string GetStopReason(
@@ -366,6 +375,70 @@ public class CdcSinkLoader : IDisposable
             });
         }
 
+        // Drop the dedicated error storage only when past errors no longer apply: the sink was
+        // deleted, or reconfigured on this node so a fresh replacement starts clean. Preserve it
+        // when the sink merely moved to another node, or only had its enabled/disabled flag toggled
+        // - toggling doesn't invalidate past errors, so an operator disabling a failing sink can
+        // still inspect why it failed.
+        if (toRemoveList.Count > 0)
+        {
+            var configsByName = new Dictionary<string, CdcSinkConfiguration>(StringComparer.OrdinalIgnoreCase);
+            foreach (var config in record.CdcSinks)
+                configsByName[config.Name] = config;
+
+            foreach (var process in toRemoveList)
+            {
+                var name = process.Configuration.Name;
+
+                if (configsByName.TryGetValue(name, out var newConfig) == false)
+                {
+                    // Deleted from the record.
+                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
+                    continue;
+                }
+
+                var onThisNode = responsibleNodes.TryGetValue(name, out var responsibleNode) &&
+                                 responsibleNode == _serverStore.NodeTag;
+                if (onThisNode == false)
+                    continue; // Moved to another node - keep the history.
+
+                var diff = process.Configuration.Compare(newConfig, record.SqlConnectionStrings);
+                if (diff == CdcSinkConfigurationCompareDifferences.ConfigurationDisabled)
+                    continue; // Only the enabled/disabled flag toggled - keep the history.
+
+                _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskCategory.CdcSink);
+            }
+        }
+
         LoadProcesses(record, myCdcSinks, toRemoveList);
+
+        // Drop error storage for sinks that no longer exist in the record. The per-process cleanup above
+        // only visits loaded processes, so a configuration that never produced one - an invalid connection
+        // string, a validation failure, a duplicate name, a CreateProcess throw - but recorded a
+        // configuration error (see LogConfigurationError) would otherwise leak its errors forever once the
+        // task is deleted: shown against a task that no longer exists and counted in the footer badge.
+        // Names still in the record are kept, so a sink that moved to another node, is disabled, or is
+        // still misconfigured keeps its history.
+        DeleteErrorsForRemovedTasks(record);
+    }
+
+    private void DeleteErrorsForRemovedTasks(DatabaseRecord record)
+    {
+        var storedNames = _database.TaskErrorsStorage.GetStoredTaskNames(TaskCategory.CdcSink);
+        if (storedNames.Count == 0)
+            return;
+
+        var configuredNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (record.CdcSinks != null)
+        {
+            foreach (var config in record.CdcSinks)
+                configuredNames.Add(config.Name);
+        }
+
+        foreach (var storedName in storedNames)
+        {
+            if (configuredNames.Contains(storedName) == false)
+                _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(storedName, TaskCategory.CdcSink);
+        }
     }
 }

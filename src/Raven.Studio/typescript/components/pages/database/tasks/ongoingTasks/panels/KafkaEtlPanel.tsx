@@ -26,7 +26,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
 type KafkaEtlPanelProps = EtlPanelBaseProps<OngoingTaskKafkaEtlInfo>;
 
@@ -101,7 +101,7 @@ export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformation
                 />
                 <RichPanelDetailItem label="Bootstrap Servers">{data.shared.url}</RichPanelDetailItem>
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}

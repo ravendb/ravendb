@@ -295,13 +295,13 @@ namespace Raven.Server.Documents
             return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists);
         }
 
-        public string PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta)
+        public string PutCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta, bool validate = true)
         {
-            return PutOrIncrementCounter(context, documentId, collection, name, delta, out _, overrideExisting: true);
+            return PutOrIncrementCounter(context, documentId, collection, name, delta, out _, overrideExisting: true, validate: validate);
         }
 
         public string PutOrIncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta, out bool exists,
-            bool overrideExisting = false)
+            bool overrideExisting = false, bool validate = true)
         {
             if (context.Transaction == null)
             {
@@ -309,10 +309,8 @@ namespace Raven.Server.Documents
                 Debug.Assert(false); // never hit
             }
 
-            if (name.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowCounterNameTooBig(name);
-            }
+            if(validate)
+                ValidateCounterName(name);
 
             try
             {
@@ -330,6 +328,8 @@ namespace Raven.Server.Documents
                     var value = delta;
                     var lowerName = Encodings.Utf8.GetString(counterName.Content.Ptr, counterName.Content.Length);
 
+                    ChangeVector existingChangeVector = null;
+
                     Slice countersGroupKey;
                     if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
                     {
@@ -339,6 +339,7 @@ namespace Raven.Server.Documents
                     else
                     {
                         countersGroupKeyScope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out countersGroupKey);
+                        existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
 
                         using (data = GetCounterValuesData(context, ref existing))
                         {
@@ -377,7 +378,6 @@ namespace Raven.Server.Documents
                                 // and adding it will cause to grow beyond 2KB (the 24bytes is an
                                 // estimate, we don't actually depend on hard 2KB limit).
 
-                                var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
                                 using (data)
                                 {
                                     SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, counters, dbIds, originalNames,
@@ -385,7 +385,7 @@ namespace Raven.Server.Documents
                                 }
 
                                 // now we retry and know that we have enough space
-                                return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists, overrideExisting);
+                                return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists, overrideExisting, false);
                             }
 
                             CreateNewCounterOrOverrideExisting(context, lowerName, dbIdIndex, value, counterEtag, counters);
@@ -407,7 +407,9 @@ namespace Raven.Server.Documents
                     }
 
                     var groupEtag = _documentsStorage.GenerateNextEtag();
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, groupEtag);
+                    var changeVector = existingChangeVector != null
+                        ? ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, existingChangeVector, _documentDatabase, groupEtag)
+                        : _documentsStorage.GetNewChangeVector(context, groupEtag);
 
                     using (countersGroupKeyScope)
                     {
@@ -459,6 +461,15 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void ValidateCounterName(string name)
+        {
+            if (name.Length > DocumentIdWorker.MaxIdSize)
+                ThrowCounterNameTooBig(name);
+
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                DocumentIdWorker.CheckAndThrowContainsControlCharacters(name, "Counter name");
+        }
+        
         [DoesNotReturn]
         internal static void ThrowMissingProperty(Slice counterKeySlice, string property)
         {

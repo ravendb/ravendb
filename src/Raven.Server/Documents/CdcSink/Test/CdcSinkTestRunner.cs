@@ -53,7 +53,9 @@ namespace Raven.Server.Documents.CdcSink.Test
                 return result;
             }
 
-            var docProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema);
+            // includeDisabledTables: the test endpoint is a dry-run mapping preview that is independent of
+            // whether the table is enabled for import, so a disabled table must still be resolvable here.
+            var docProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema, includeDisabledTables: true);
             var tableSchema = string.IsNullOrEmpty(targetTable.SourceTableSchema) ? defaultSchema : targetTable.SourceTableSchema;
             var processor = docProcessor.GetProcessor(tableSchema, targetTable.SourceTableName);
             if (processor == null)

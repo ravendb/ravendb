@@ -26,6 +26,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 
@@ -110,10 +111,10 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             yield return CreateSnowflakeEtlTaskInfo(clusterTopology, databaseRecord, snowflakeEtl);
     }
 
-    private IEnumerable<OngoingTaskPullReplicationAsSink> GetPullReplicationAsSinkTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
+    private IEnumerable<OngoingTaskPullReplicationAsSink> GetPullReplicationAsSinkTasks(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, ClusterOperationContext context)
     {
         foreach (var sinkReplication in databaseRecord.SinkPullReplications)
-            yield return CreatePullReplicationAsSinkTaskInfo(clusterTopology, databaseRecord, sinkReplication);
+            yield return CreatePullReplicationAsSinkTaskInfo(clusterTopology, databaseRecord, sinkReplication, context);
     }
 
     protected abstract IEnumerable<OngoingTaskPullReplicationAsHub> GetPullReplicationAsHubTasks(JsonOperationContext context, ClusterTopology clusterTopology, DatabaseRecord databaseRecord);
@@ -192,7 +193,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         foreach (var task in GetSnowflakeEtlTasks(clusterTopology, databaseRecord))
             yield return task;
 
-        foreach (var task in GetPullReplicationAsSinkTasks(clusterTopology, databaseRecord))
+        foreach (var task in GetPullReplicationAsSinkTasks(clusterTopology, databaseRecord, context))
             yield return task;
 
         foreach (var task in GetPullReplicationAsHubTasks(context, clusterTopology, databaseRecord))
@@ -237,7 +238,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
                 if (sinkReplication == null)
                     return null;
 
-                return CreatePullReplicationAsSinkTaskInfo(clusterTopology, databaseRecord, sinkReplication);
+                return CreatePullReplicationAsSinkTaskInfo(clusterTopology, databaseRecord, sinkReplication, context);
 
             case OngoingTaskType.Backup:
 
@@ -623,7 +624,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         };
     }
 
-    private OngoingTaskPullReplicationAsSink CreatePullReplicationAsSinkTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, PullReplicationAsSink sinkReplication)
+    private OngoingTaskPullReplicationAsSink CreatePullReplicationAsSinkTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, PullReplicationAsSink sinkReplication, ClusterOperationContext context)
     {
         var sinkReplicationStatus = GetReplicationTaskConnectionStatus(GetDatabaseTopology(databaseRecord), clusterTopology, sinkReplication, 
             databaseRecord.RavenConnectionStrings, out _, out var sinkReplicationTag, out var sinkReplicationConnection, out _, out var error);
@@ -650,6 +651,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             AccessName = sinkReplication.AccessName,
             AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
             AllowedSinkToHubPaths = sinkReplication.AllowedSinkToHubPaths,
+            HubCursor = ReplicationUtils.ReadCursorFromClusterFor(context, _server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.HubCursor),
+            SinkCursor = ReplicationUtils.ReadCursorFromClusterFor(context, _server, databaseRecord.DatabaseName, sinkReplication.TaskId, ExternalReplicationState.ReplicationStateType.SinkCursor),
             Error = error
         };
 
@@ -666,7 +669,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
 
         return sinkInfo;
     }
-    
+
     private OngoingTaskQueueSink CreateQueueSinkTaskInfo(ClusterTopology clusterTopology, DatabaseRecord databaseRecord, QueueSinkConfiguration queueSink)
     {
         databaseRecord.QueueConnectionStrings.TryGetValue(queueSink.ConnectionStringName, out var connection);

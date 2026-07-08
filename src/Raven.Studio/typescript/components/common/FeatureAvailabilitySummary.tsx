@@ -308,7 +308,7 @@ export default function FeatureAvailabilitySummaryWrapper({
                             <small className="description">
                                 {isQuill
                                     ? "See what features are included in this license"
-                                    : "See which plans offer this and more exciting features"}
+                                    : "See which plans include this feature and other exciting feature"}
                             </small>
                         </div>
                     </button>
@@ -338,7 +338,7 @@ function FeatureAvailabilitySummaryModal({
                         <>
                             <br />
                             <div>
-                                If you are developing you can test this and many more features using free{" "}
+                                If you are developing, you can test this and many more features with a free{" "}
                                 <a href="https://ravendb.net/license/request/dev" className="text-developer">
                                     Developer license <Icon icon="newtab" margin="m-0" />
                                 </a>

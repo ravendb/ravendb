@@ -17,7 +17,7 @@ import { getPopoverMessageForTaskHealth, getTaskErrorCount } from "../panels/etl
 import { useServices } from "hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { useViewSheet } from "components/common/splitView/ViewSheet";
-import EtlErrorDetailsSheet from "components/pages/database/tasks/tasksErrors/partials/EtlErrorDetailsSheet";
+import TaskErrorDetailsSheet from "components/pages/database/tasks/tasksErrors/partials/TaskErrorDetailsSheet";
 import {
     EtlHealthStatus,
     flattenAllTasksErrors,
@@ -278,12 +278,15 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         []
     );
 
-    const asyncEtlErrors = useAsync(() => tasksService.getEtlErrors(databaseName, nodeInfo.location, processNames), []);
+    const asyncTaskErrors = useAsync(
+        () => tasksService.getTaskErrors(databaseName, nodeInfo.location, processNames),
+        []
+    );
 
     const openErrorSheet = () => {
-        const etlErrorsList = asyncEtlErrors.result ?? [];
+        const taskErrorsList = asyncTaskErrors.result ?? [];
         const tasksWithErrors = getTasksWithErrors(
-            etlErrorsList.map((e) => ({
+            taskErrorsList.map((e) => ({
                 ...e,
                 nodeTag: nodeInfo.location.nodeTag,
                 shardNumber: nodeInfo.location.shardNumber,
@@ -301,7 +304,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
         )[0];
 
         open({
-            component: <EtlErrorDetailsSheet error={mostRecentError} allErrors={allErrors} initialIndex={0} />,
+            component: <TaskErrorDetailsSheet error={mostRecentError} allErrors={allErrors} initialIndex={0} />,
             initialWidth: "40%",
             minWidth: "25%",
             maxWidth: "60%",
@@ -313,7 +316,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     );
     const taskHealth = getTaskHealthStatus(locationEtlStats, task.shared.taskName);
     const { bg, icon: heathIcon, label: healthLabel } = healthStatusToBadge(taskHealth);
-    const errorCount = getTaskErrorCount(asyncEtlErrors.result ?? [], task.shared.taskName);
+    const errorCount = getTaskErrorCount(asyncTaskErrors.result ?? [], task.shared.taskName);
     const goToTaskErrors = appUrl.forTasksErrors(databaseName, { taskName: task.shared.taskName });
 
     const nextBatchRetryTime =

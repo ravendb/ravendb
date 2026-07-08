@@ -449,8 +449,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     }
 
     /// <summary>
-    /// Collects all configured tables (including embedded tables recursively) as a flat list
-    /// of TableInfo instances with schema, name, and primary key columns.
+    /// Collects the active configured tables (including embedded tables recursively) as a flat list
+    /// of TableInfo instances with schema, name, and primary key columns. Disabled root tables - and
+    /// their embedded tables - are excluded, so they are neither initial-loaded nor change-captured.
     /// </summary>
     /// <param name="defaultSchema">Default schema when SourceTableSchema is null (e.g., "public" for PostgreSQL, "dbo" for SQL Server).</param>
     public List<TableInfo> CollectAllTablesFlat(string defaultSchema)
@@ -458,6 +459,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         var tables = new List<TableInfo>();
         foreach (var table in Tables)
         {
+            if (table.Disabled)
+                continue;
+
             tables.Add(new TableInfo
             {
                 Schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema,

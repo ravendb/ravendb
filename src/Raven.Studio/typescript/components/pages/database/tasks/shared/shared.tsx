@@ -275,6 +275,24 @@ export function DestinationUrlItem({
     );
 }
 
+// Mode is a [Flags] enum, so the bidirectional case arrives as a combined string (e.g. "HubToSink, SinkToHub").
+// Use includes() to stay robust to the flag formatting and render a readable label.
+export function formatReplicationMode(mode: Raven.Client.Documents.Operations.Replication.PullReplicationMode): string {
+    const hubToSink = mode?.includes("HubToSink");
+    const sinkToHub = mode?.includes("SinkToHub");
+
+    if (hubToSink && sinkToHub) {
+        return "Hub to Sink & Sink to Hub";
+    }
+    if (hubToSink) {
+        return "Hub to Sink";
+    }
+    if (sinkToHub) {
+        return "Sink to Hub";
+    }
+    return null;
+}
+
 export function EmptyScriptsWarning(props: { task: AnyEtlOngoingTaskInfo }) {
     const emptyScripts = findScriptsWithOutMatchingDocuments(props.task);
 

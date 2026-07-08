@@ -35,8 +35,6 @@ export function EditPeriodicBackupTaskInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     Define an ongoing-task that will automatically create periodic backups for this database at the

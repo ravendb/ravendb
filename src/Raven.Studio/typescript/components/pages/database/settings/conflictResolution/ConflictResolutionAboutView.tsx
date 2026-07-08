@@ -10,13 +10,7 @@ export default function ConflictResolutionAboutView() {
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <p>
                     Since RavenDB accepts writes on any node in the cluster,
                     <br /> a conflict may occur when the same document is updated concurrently on two different nodes.

@@ -25,7 +25,6 @@ export type CdcActiveTable =
       };
 
 interface EditCdcSinkTaskState {
-    selectedConnectionString: SqlConnectionString;
     sourceSchema: CdcSinkSourceSchema;
     activeTable?: CdcActiveTable;
     expandedTables: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>;
@@ -47,7 +46,6 @@ function getStoredBoolean(key: string, defaultValue: boolean): boolean {
 }
 
 const initialState: EditCdcSinkTaskState = {
-    selectedConnectionString: null,
     sourceSchema: null,
     activeTable: null,
     expandedTables: {},
@@ -66,10 +64,6 @@ export const editCdcSinkTaskSlice = createSlice({
     reducers: {
         taskIdSet: (state, action: PayloadAction<number>) => {
             state.taskId = action.payload;
-        },
-        connectionStringSelected: (state, action: PayloadAction<SqlConnectionString>) => {
-            state.selectedConnectionString = action.payload;
-            state.sourceSchema = null;
         },
         sourceSchemaSet: (state, action: PayloadAction<CdcSinkSourceSchema>) => {
             state.sourceSchema = action.payload;
@@ -121,7 +115,6 @@ export const editCdcSinkTaskActions = editCdcSinkTaskSlice.actions;
 
 export const editCdcSinkTaskSelectors = {
     taskId: (state: RootState) => state.editCdcSinkTask.taskId,
-    selectedConnectionString: (state: RootState) => state.editCdcSinkTask.selectedConnectionString,
     sourceSchema: (state: RootState) => state.editCdcSinkTask.sourceSchema,
     activeTable: (state: RootState) => state.editCdcSinkTask.activeTable,
     isActiveTable: (path: CdcActiveTable["path"]) => (state: RootState) =>

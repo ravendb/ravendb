@@ -1,4 +1,5 @@
-﻿using System;
+using Raven.Server.Documents.TasksErrors;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,7 +9,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Monitoring;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -40,7 +40,7 @@ namespace Raven.Server.Web.System
             public static readonly string ArchivedDataProcessingBehavior = FormatEnumHelp<ArchivedDataProcessingBehavior>();
             public static readonly string IndexRunningStatus = FormatEnumHelp<IndexRunningStatus>();
             public static readonly string IndexType = FormatEnumHelp<IndexType>();
-            public static readonly string EtlHealthStatus = FormatEnumHelp<EtlProcessHealthStatus>();
+            public static readonly string EtlHealthStatus = FormatEnumHelp<OngoingTaskHealthStatus>();
             
             private static string FormatEnumHelp<TEnum>() where TEnum : struct, Enum
             {
@@ -62,6 +62,7 @@ namespace Raven.Server.Web.System
             var skipCollections = GetBoolValueQueryString("skipCollectionsMetrics", false) ?? false;
             var skipEtls = GetBoolValueQueryString("skipEtlsMetrics", false) ?? false;
             var skipAiTasks = GetBoolValueQueryString("skipAiTasksMetrics", false) ?? false;
+            var skipCdcSinks = GetBoolValueQueryString("skipCdcSinksMetrics", false) ?? false;
             var includeGc = GetBoolValueQueryString("includeGcMetrics", false) ?? false;
 
             var provider = new MetricsProvider(Server);
@@ -98,6 +99,11 @@ namespace Raven.Server.Web.System
             if (skipAiTasks == false)
             {
                 await WriteAiTaskMetricsAsync(provider, databases, responseStream);
+            }
+
+            if (skipCdcSinks == false)
+            {
+                await WriteCdcSinkMetricsAsync(provider, databases, responseStream);
             }
         }
 
@@ -225,6 +231,13 @@ namespace Raven.Server.Web.System
                     WriteCounterWithHelp(writer, "Number of healthy AI tasks", "server_ai_tasks_healthy_count", serverMetrics.AiTasks.HealthyTasksCount);
                     WriteCounterWithHelp(writer, "Number of impaired AI tasks", "server_ai_tasks_impaired_count", serverMetrics.AiTasks.ImpairedTasksCount);
                     WriteCounterWithHelp(writer, "Number of failed AI tasks", "server_ai_tasks_failed_count", serverMetrics.AiTasks.FailedTasksCount);
+
+                    // CDC CdcSinks
+                    WriteCounterWithHelp(writer, "Number of CDC CdcSinks", "server_cdc_sinks_count", serverMetrics.CdcSinks.Count);
+                    WriteCounterWithHelp(writer, "Number of CDC Sink errors", "server_cdc_sinks_errors_count", serverMetrics.CdcSinks.ErrorsCount);
+                    WriteCounterWithHelp(writer, "Number of healthy CDC CdcSinks", "server_cdc_sinks_healthy_count", serverMetrics.CdcSinks.HealthyCdcSinksCount);
+                    WriteCounterWithHelp(writer, "Number of impaired CDC CdcSinks", "server_cdc_sinks_impaired_count", serverMetrics.CdcSinks.ImpairedCdcSinksCount);
+                    WriteCounterWithHelp(writer, "Number of failed CDC CdcSinks", "server_cdc_sinks_failed_count", serverMetrics.CdcSinks.FailedCdcSinksCount);
                 }
 
                 ms.Position = 0;
@@ -360,6 +373,12 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Number of healthy AI tasks", "database_ai_tasks_healthy_count", metrics, x => x.AiTasks.HealthyTasksCount, cachedTags);
                     WriteGauges(writer, "Number of impaired AI tasks", "database_ai_tasks_impaired_count", metrics, x => x.AiTasks.ImpairedTasksCount, cachedTags);
                     WriteGauges(writer, "Number of failed AI tasks", "database_ai_tasks_failed_count", metrics, x => x.AiTasks.FailedTasksCount, cachedTags);
+
+                    WriteGauges(writer, "Number of CDC CdcSinks", "database_cdc_sinks_count", metrics, x => x.CdcSinks.Count, cachedTags);
+                    WriteGauges(writer, "Number of CDC Sink errors", "database_cdc_sinks_errors_count", metrics, x => x.CdcSinks.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "Number of healthy CDC CdcSinks", "database_cdc_sinks_healthy_count", metrics, x => x.CdcSinks.HealthyCdcSinksCount, cachedTags);
+                    WriteGauges(writer, "Number of impaired CDC CdcSinks", "database_cdc_sinks_impaired_count", metrics, x => x.CdcSinks.ImpairedCdcSinksCount, cachedTags);
+                    WriteGauges(writer, "Number of failed CDC CdcSinks", "database_cdc_sinks_failed_count", metrics, x => x.CdcSinks.FailedCdcSinksCount, cachedTags);
                 }
 
                 ms.Position = 0;
@@ -471,6 +490,39 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "AI task health status, " + EnumHelp.EtlHealthStatus, "ai_task_health_status", metrics, x => (int)x.HealthStatus, cachedTags);
                     WriteGauges(writer, "Time elapsed since Last successful batch (in seconds)", "ai_task_last_successful_batch_time_in_seconds", metrics, x => x.LastSuccessfulBatchTimeInSec, cachedTags);
                     WriteGauges(writer, "Documents processed per second (one minute rate)", "ai_task_documents_processed_per_second", metrics, x => x.DocumentsProcessedPerSec, cachedTags);
+                }
+
+                ms.Position = 0;
+                await ms.CopyToAsync(responseStream);
+            }
+        }
+
+        private async Task WriteCdcSinkMetricsAsync(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
+        {
+            var metrics = new List<CdcSinkMetrics>();
+            var cachedTags = new List<string>();
+
+            foreach (var database in databases)
+            {
+                foreach (var sink in database.CdcSinkLoader.Processes)
+                {
+                    var cdcSinkMetrics = provider.CollectCdcSinkMetrics(sink, database.TaskErrorsStorage);
+                    metrics.Add(cdcSinkMetrics);
+                    cachedTags.Add(SerializeTags(new Dictionary<string, string>
+                    {
+                        { "database_name", database.Name },
+                        { "cdc_sink_name", sink.Name }
+                    }));
+                }
+            }
+
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
+            {
+                await using (var writer = PrometheusWriter(ms))
+                {
+                    WriteGauges(writer, "Number of CDC Sink errors", "cdc_sink_errors_count", metrics, x => x.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "CDC Sink health status, " + EnumHelp.EtlHealthStatus, "cdc_sink_health_status", metrics, x => (int)x.HealthStatus, cachedTags);
+                    WriteGauges(writer, "Time elapsed since Last successful batch (in seconds)", "cdc_sink_last_successful_batch_time_in_seconds", metrics, x => x.LastSuccessfulBatchTimeInSec, cachedTags);
                 }
 
                 ms.Position = 0;

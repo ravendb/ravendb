@@ -127,6 +127,43 @@ const mapToDto = (
     };
 };
 
+export interface GenAiTestDocumentPayload {
+    Document: any;
+    DocumentId: string;
+}
+
+// Decides what to send to the server as the test document for the
+// CreateContextObjects / ApplyUpdateScript stages.
+//
+// When an existing, unedited document is selected, we send only its id so the server
+// loads the full document from storage (including attachment metadata and the
+// HasAttachments flag). Sending the document body in this case is harmful: the playground
+// strips '@attachments' from the metadata (via documentMetadata.filterMetadata) and the
+// server overwrites the real document data with this stripped version, which breaks
+// getAttachments/loadAttachment in the test/debug flow.
+//
+// Only when the content was entered or edited manually (playground edit mode) we send
+// the document body itself, since there is no stored document that represents it.
+const getTestDocumentPayload = (
+    playgroundDocument: string,
+    documentId: string,
+    isPlaygroundEditMode: boolean
+): GenAiTestDocumentPayload => {
+    // playgroundDocument should always exist when the document ID is selected
+    if (!playgroundDocument) {
+        return { Document: null, DocumentId: undefined };
+    }
+
+    if (documentId && !isPlaygroundEditMode) {
+        return { Document: null, DocumentId: documentId };
+    }
+
+    return {
+        Document: JSON.parse(playgroundDocument),
+        DocumentId: documentId || undefined,
+    };
+};
+
 const getSerializedChangeVector = (data: EditGenAiTaskFormData, taskId: number): string => {
     let changeVector = taskId ? "DoNotChange" : "BeginningOfTime";
 
@@ -149,6 +186,7 @@ const getSerializedChangeVector = (data: EditGenAiTaskFormData, taskId: number):
 export const editGenAiTaskUtils = {
     getDefaultValues,
     mapToDto,
+    getTestDocumentPayload,
     getSerializedChangeVector,
     defaultMaxConcurrency: 4,
 };

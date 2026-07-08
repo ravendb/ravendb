@@ -16,6 +16,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.NpgSQL;
 using Sparrow.Json;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -56,6 +57,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private readonly NpgsqlDataSource _dataSource;
     private string _publicationName;
     private string _slotName;
+
     private uint _vectorOid = uint.MaxValue; // pgvector extension OID, resolved at setup time. MaxValue = not installed.
 
     /// <summary>
@@ -314,15 +316,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         if (extra.Count > 0)
         {
-            var alert = AlertRaised.Create(
-                Database.Name, Tag,
+            Database.NotificationCenter.Add(AlertRaised.Create(
+                Database.Name,
+                Tag,
                 $"Publication '{_publicationName}' includes tables not configured in the CDC Sink task: {string.Join(", ", extra)}. " +
                 "Rows from these tables will be discarded. Consider narrowing the publication to only the configured tables.",
-                AlertReason.CdcSink_Error,
+                AlertReason.CdcSink_Warning,
                 NotificationSeverity.Warning,
-                key: $"{Tag}/{Name}/publication-extra-tables");
-
-            Database.NotificationCenter.Add(alert);
+                key: $"{Tag}/{Name}/publication-extra-tables"));
         }
     }
 
@@ -407,6 +408,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         var result = new List<CdcSinkEmbeddedTableConfig>();
         foreach (var root in rootTables)
         {
+            // A disabled root table isn't captured, so don't touch its embedded tables' source-side REPLICA IDENTITY.
+            if (root.Disabled)
+                continue;
+
             CdcSinkConfiguration.ForEachEmbeddedTable(root.EmbeddedTables, e =>
             {
                 if (e.OnDelete?.IgnoreDeletes == true)
@@ -602,9 +607,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         if (Logger.IsErrorEnabled)
             Logger.Error(msg);
 
-        Database.NotificationCenter.Add(AlertRaised.Create(
-            Database.Name, Tag, msg, AlertReason.CdcSink_Error,
-            NotificationSeverity.Warning, key: $"{Tag}/{Name}/stale-lsn"));
+        RecordProcessError(TaskErrorStep.Extraction, msg);
     }
 
     protected override async Task OnBatchFlushed(string checkpoint, int rows)

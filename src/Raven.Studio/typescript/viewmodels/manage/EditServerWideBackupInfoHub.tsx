@@ -35,8 +35,6 @@ export function EditServerWideBackupInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <div>
                     Defining a <strong>Server-Wide backup task</strong> will create an ongoing periodic backup task for

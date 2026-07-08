@@ -3,6 +3,7 @@ import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
     DestinationUrlItem,
+    formatReplicationMode,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -35,9 +36,12 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
+    const mode = formatReplicationMode(data.shared.mode);
+
     return (
         <RichPanelDetails>
             <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
+            {mode && <RichPanelDetailItem label="Mode">{mode}</RichPanelDetailItem>}
             <ConnectionStringItem
                 connectionStringDefined={connectionStringDefined}
                 canEdit={canEdit}
@@ -55,6 +59,13 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
                     {url}
                 </RichPanelDetailItem>
             ))}
+
+            {data.shared.hubCursor && (
+                <RichPanelDetailItem label="Hub Cursor">{data.shared.hubCursor}</RichPanelDetailItem>
+            )}
+            {data.shared.sinkCursor && (
+                <RichPanelDetailItem label="Sink Cursor">{data.shared.sinkCursor}</RichPanelDetailItem>
+            )}
         </RichPanelDetails>
     );
 }

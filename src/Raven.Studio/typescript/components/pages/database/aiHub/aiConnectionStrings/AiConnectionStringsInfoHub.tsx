@@ -16,13 +16,7 @@ export function AiConnectionStringsInfoHub() {
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <div>
                     <ul>
                         <li>This view allows you to define and manage connection strings for AI model services.</li>

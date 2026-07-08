@@ -29,8 +29,6 @@ export function EditIndexInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <p>
                     Create a new index or edit an existing one in this view.

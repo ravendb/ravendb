@@ -18,7 +18,7 @@ public sealed class ShardedCompareExchangeHandler : ShardedDatabaseRequestHandle
     [RavenShardedAction("/databases/*/cmpxchg", "PUT")]
     public async Task PutCompareExchangeValue()
     {
-        using (var processor = new CompareExchangeHandlerProcessorForPutCompareExchangeValue(this, DatabaseContext.DatabaseName))
+        using (var processor = new CompareExchangeHandlerProcessorForPutCompareExchangeValue<TransactionOperationContext>(this, DatabaseContext.DatabaseName))
             await processor.ExecuteAsync();
     }
 

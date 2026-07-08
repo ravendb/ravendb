@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Util;
@@ -7,6 +7,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json.Parsing;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.ETL
             _onDisposeActions = new OnDisposeActions(this);
             _etlConfiguration = etlConfiguration;
             AverageErrorsRatio = new TimeAgnosticEwma();
-            HealthStatus = EtlProcessHealthStatus.Healthy;
+            HealthStatus = OngoingTaskHealthStatus.Healthy;
             _itemErrors = new List<TaskItemError>();
         }
 
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.ETL
         
         private long BatchErrors { get; set; }
         
-        public EtlProcessHealthStatus HealthStatus { get; private set; }
+        public OngoingTaskHealthStatus HealthStatus { get; private set; }
         private bool SetHealthStatusToFailedOnScriptParseError { get; set; }
         public DateTime? NextBatchRetryTime { get; set; }
         public DateTime? LastSuccessfulBatchTime { get; set; }
@@ -105,19 +106,15 @@ namespace Raven.Server.Documents.ETL
             
             if (SetHealthStatusToFailedOnScriptParseError)
             {
-                HealthStatus = EtlProcessHealthStatus.Failed;
+                HealthStatus = OngoingTaskHealthStatus.Failed;
             }
 
             else
             {
-                var errorsEwma = AverageErrorsRatio.GetRate();
-                
-                HealthStatus = errorsEwma switch
-                {
-                    _ when errorsEwma > _etlConfiguration.ProcessHealthStatusFailedThreshold => EtlProcessHealthStatus.Failed,
-                    _ when errorsEwma > _etlConfiguration.ProcessHealthStatusImpairedThreshold => EtlProcessHealthStatus.Impaired,
-                    _ => EtlProcessHealthStatus.Healthy
-                };
+                HealthStatus = OngoingTaskHealthStatusExtensions.FromErrorRatio(
+                    AverageErrorsRatio.GetRate(),
+                    _etlConfiguration.ProcessHealthStatusFailedThreshold,
+                    _etlConfiguration.ProcessHealthStatusImpairedThreshold);
             }
             
             if (HealthStatus != previousStatus)
@@ -249,7 +246,7 @@ namespace Raven.Server.Documents.ETL
             LastChangeVector = null;
             LastSlowSqlWarningsInCurrentBatch.Statements.Clear();
             AverageErrorsRatio.Reset();
-            HealthStatus = EtlProcessHealthStatus.Healthy;
+            HealthStatus = OngoingTaskHealthStatus.Healthy;
             SetHealthStatusToFailedOnScriptParseError = false;
         }
 

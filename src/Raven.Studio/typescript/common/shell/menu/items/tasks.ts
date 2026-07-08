@@ -429,7 +429,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.tasksError,
             requiredAccess: "DatabaseReadWrite",
             badgeData: ko.pureComputed(() => { 
-                return footer.default.stats() ? footer.default.stats().countOfEtlTasksErrors() + footer.default.stats().countOfAiTasksErrors() : null; 
+                return footer.default.stats() ? footer.default.stats().countOfEtlTasksErrors() + footer.default.stats().countOfAiTasksErrors() + footer.default.stats().countOfCdcSinkTasksErrors() : null;
             })
         }),
         new leafMenuItem({

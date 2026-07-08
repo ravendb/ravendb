@@ -238,7 +238,7 @@ namespace InterversionTests
             }), stores);
         }
 
-        protected static async Task<string> CreateDatabase(IDocumentStore store, int replicationFactor = 1, [CallerMemberName] string dbName = null, DatabaseRecord record = null)
+        protected static async Task<string> CreateDatabase(IDocumentStore store, int replicationFactor = 1, [CallerMemberName] string dbName = null, DatabaseRecord record = null, Dictionary<string, string> customSettings = null)
         {
             var doc = record ?? new DatabaseRecord(dbName)
             {
@@ -251,6 +251,14 @@ namespace InterversionTests
                     [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
                 }
             };
+
+            if (customSettings != null)
+            {
+                foreach (var (key, value) in customSettings)
+                {
+                    doc.Settings[key] = value;
+                }
+            }
 
             var databasePutResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, replicationFactor));
             Assert.Equal(replicationFactor, databasePutResult.NodesAddedTo.Count);

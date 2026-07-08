@@ -27,8 +27,6 @@ export function EditReplicationSinkInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <div>
                     Define a <strong>Replication Sink</strong> task for opening a communication channel between this

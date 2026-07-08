@@ -166,13 +166,7 @@ export default function RevertRevisions() {
             </Col>
             <Col sm={12} lg={4}>
                 <AboutViewAnchored defaultOpen="about-view">
-                    <AccordionItemWrapper
-                        targetId="about-view"
-                        icon="about"
-                        color="info"
-                        description="Get additional info on this feature"
-                        heading="About this view"
-                    >
+                    <AccordionItemWrapper targetId="about-view" icon="about" color="info">
                         <div className="margin-bottom-sm">
                             Use this view to revert documents to their revisions as they were at the specified{" "}
                             <strong>Point in Time</strong>.

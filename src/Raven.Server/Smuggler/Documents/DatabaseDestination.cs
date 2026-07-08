@@ -22,6 +22,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -682,15 +683,11 @@ namespace Raven.Server.Smuggler.Documents
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
 
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
-
+                                    HandleAttachmentTombstoneInDump(context, key, tombstone);
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:
-                                    using (RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, tombstone.LowerId, out var changeVectorSlice))
-                                    {
-                                        _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks, changeVectorSlice, fromReplication: false, tombstone.Flags);
-                                    }
+                                    _database.DocumentsStorage.RevisionsStorage.WriteRevisionTombstoneFromSmuggler(context, tombstone);
                                     break;
 
                                 case Tombstone.TombstoneType.Counter:
@@ -742,7 +739,8 @@ namespace Raven.Server.Smuggler.Documents
                         if (document.Flags.Contain(DocumentFlags.DeleteRevision))
                         {
                             _missingDocumentsForRevisions?.TryRemove(id, out _);
-                            _database.DocumentsStorage.RevisionsStorage.Delete(context, id, document.Data, document.Flags,
+                            var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
+                            _database.DocumentsStorage.RevisionsStorage.Delete(context, id, collectionName, document.Flags,
                                 document.NonPersistentFlags, documentChangeVector, document.LastModified.Ticks);
                         }
                         else
@@ -831,6 +829,22 @@ namespace Raven.Server.Smuggler.Documents
                 return Documents.Count;
             }
 
+            private void HandleAttachmentTombstoneInDump(DocumentsOperationContext context, Slice key, Tombstone tombstone)
+            {
+                AttachmentsStorage attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
+                if (AttachmentsStorage.AttachmentKey.GetAttachmentType(key) == AttachmentType.Revision)
+                {
+                    using (AttachmentsStorage.BuildRevisionAttachmentKeyFromWire(context, key, out RevisionAttachmentKey pair))
+                    {
+                        attachmentsStorage.DeleteRevisionAttachmentDirect(context, in pair, expectedChangeVector: null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
+                    }
+                }
+                else
+                {
+                    attachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
+                }
+            }
+
             private void AddTrxnIfNeeded(DocumentsOperationContext context, string id, ref string changeVector)
             {
                 using (var doc = _database.DocumentsStorage.Get(context, id, DocumentFields.ChangeVector))
@@ -852,7 +866,8 @@ namespace Raven.Server.Smuggler.Documents
                     //The ClusterTransactionId can be null if the database was migrated from version smaller then v5.2 
                     if (_database.ClusterTransactionId != null)
                     {
-                        var trxn = ChangeVectorUtils.GetEtagById(oldChangeVector, _database.ClusterTransactionId);
+                        var cv = context.GetChangeVector(oldChangeVector);
+                        var trxn = ChangeVectorUtils.GetEtagById(cv.Version, _database.ClusterTransactionId);
                         if (trxn > 0)
                             changeVector += $",TRXN:{trxn}-{_database.ClusterTransactionId}";
                     }
@@ -868,7 +883,6 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
 
-                var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                 var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -889,19 +903,19 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (remoteParams.IsLocalStorageAttachment() && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
-                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, remoteParams, updateDocument: false, fromSmuggler: true);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, remoteParams, updateDocument: false, source: AttachmentsStorage.AttachmentSource.FromSmuggler);
                         continue;
                     }
 
                     using (DocumentIdWorker.GetLoweredIdSliceFromId(_context, document.Id, out Slice lowerDocumentId))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                    using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
+                    using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
-                    using (Slice.From(_context.Allocator, document.ChangeVector, out Slice cv))
-                    using (AttachmentsStorage.AttachmentKey.GetKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
-                               base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
+                    using (RevisionsStorage.BuildRevisionKey(_context, document.ChangeVector, out RevisionKey revisionKey))
+                    using (AttachmentsStorage.BuildRevisionAttachmentKey(_context, in revisionKey, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                               base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, out RevisionAttachmentKey keyPair))
                     {
-                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, remoteParams, size, isRevision: true);
+                        attachmentsStorage.PutRevisionAttachmentDirect(context, in keyPair, nameSlice, contentTypeSlice, base64Hash, size, remoteParams);
                     }
                 }
             }

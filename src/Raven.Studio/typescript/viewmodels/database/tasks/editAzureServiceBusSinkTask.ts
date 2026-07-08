@@ -3,7 +3,6 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import eventsCollector = require("common/eventsCollector");
-import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import generalUtils = require("common/generalUtils");
 import connectionStringAzureServiceBusModel = require("models/database/settings/connectionStringAzureServiceBusModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
@@ -176,9 +175,6 @@ class editAzureServiceBusSinkTask extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         const deferred = $.Deferred<void>();
-
-        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("aiTask"));
-
         this.loadPossibleMentors();
 
         if (args.taskId) {
@@ -225,14 +221,17 @@ class editAzureServiceBusSinkTask extends viewModelBase {
         $('.edit-azure-service-bus-sink-task [data-toggle="tooltip"]').tooltip();
     }
 
-    private getAllConnectionStrings() {
-        return new getConnectionStringsCommand(this.activeDatabase())
-            .execute()
-            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+    private async getAllConnectionStrings() {
+        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("task"));
+    
+        return storeCompat
+            .globalDispatch(connectionStringsSlice.connectionStringsActions.fetchData(this.activeDatabase()?.name))
+            .unwrap()
+            .then(({connectionStringsDto: result}) => {
                 const queueConnectionStrings = Object.values(result.QueueConnectionStrings);
                 const azureServiceBusStrings = queueConnectionStrings.filter(x => x.BrokerType === "AzureServiceBus");
                 this.azureServiceBusConnectionStringsDetails(typeUtils.sortBy(azureServiceBusStrings, x => x.Name.toUpperCase()));
-            });
+        });
     }
 
     private initObservables() {
