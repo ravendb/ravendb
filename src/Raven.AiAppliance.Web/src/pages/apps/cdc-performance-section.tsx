@@ -46,7 +46,6 @@ function CdcStatusBadge({ performance }: { performance: CdcPerformanceResponse }
 function CdcPerformanceContent({ performance }: { performance: CdcPerformanceResponse }) {
     const cards: DashboardStatCard[] = [
         { label: "Replication lag", value: performance.lagSeconds ?? undefined, isLoading: false, caption: "seconds" },
-        { label: "Recent reads", value: performance.recentReads, isLoading: false },
         { label: "Recent writes", value: performance.recentWrites, isLoading: false },
         { label: "Errors", value: performance.errorCount, isLoading: false },
     ];
@@ -55,7 +54,7 @@ function CdcPerformanceContent({ performance }: { performance: CdcPerformanceRes
         <div className="space-y-4">
             <DashboardStatCards cards={cards} />
             <SectionTable
-                headers={["Started", "Duration", "Read", "Processed", "Errors", "Stop reason"]}
+                headers={["Started", "Duration", "Processed", "Errors", "Stop reason"]}
                 isEmpty={performance.recentBatches.length === 0}
                 emptyMessage="No recent batches."
             >
@@ -65,7 +64,6 @@ function CdcPerformanceContent({ performance }: { performance: CdcPerformanceRes
                             {formatDateTime(batch.started)}
                         </TableCell>
                         <TableCell className="tabular-nums">{Math.round(batch.durationInMs)} ms</TableCell>
-                        <TableCell className="tabular-nums">{formatCompact(batch.read)}</TableCell>
                         <TableCell className="tabular-nums">{formatCompact(batch.processed)}</TableCell>
                         <TableCell className="tabular-nums">{batch.errors}</TableCell>
                         <TableCell className="text-muted-foreground">{batch.stopReason ?? "—"}</TableCell>
