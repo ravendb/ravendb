@@ -302,18 +302,9 @@ public static class AppsEndpoints
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
         var cdc = record?.CdcSinks?.FirstOrDefault();
 
-        // Telemetry must never 500 the CDC page: if the perf feed is unavailable (feature off,
-        // older server, parse hiccup) degrade to an empty snapshot. Cancellation still propagates.
-        CdcSinkPerformanceRaw raw;
-        try
-        {
-            raw = await store.Maintenance.ForDatabase(app.Database)
-                .SendAsync(new GetCdcSinkPerformanceStatisticsOperation(), ct);
-        }
-        catch (Exception e) when (e is not OperationCanceledException)
-        {
-            raw = new CdcSinkPerformanceRaw();
-        }
+        // Telemetry must never 500 the CDC page: an unavailable perf feed degrades to an
+        // empty snapshot (see CdcPerformanceReader). Cancellation still propagates.
+        var raw = await CdcPerformanceReader.ReadAsync(store.Maintenance.ForDatabase(app.Database), ct);
 
         var snapshot = CdcPerformanceShaper.Shape(
             raw, configured: cdc is not null, disabled: cdc?.Disabled ?? false, DateTime.UtcNow);

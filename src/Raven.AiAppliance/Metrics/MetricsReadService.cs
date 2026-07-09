@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Raven.AiAppliance.Cdc;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
@@ -172,9 +173,10 @@ internal static class MetricsReadService
     /// Per-app usage analytics behind <c>getAppUsage({appId,start,end})</c>. Phase-1
     /// subset from <see cref="ConversationMetricsIndex"/>: conversations/tokens/cost
     /// KPI cards (value + delta-vs-previous-window + per-bucket sparkline),
-    /// <c>tokensByCapability</c>, and <c>topCapabilities</c>. cdcWrites/topTables
-    /// (RavenDB-26780), tokensByModel (no model recorded) and conversationsByChannel
-    /// (no channel link) return empty skeletons — see the impl handoff.
+    /// <c>tokensByCapability</c>, and <c>topCapabilities</c>. <c>cdcWrites</c> and the CDC
+    /// KPI card are bucketed from RavenDB's rolling per-batch perf window (recent activity,
+    /// not full history — see the loop below); <c>topTables</c> stands in with collection
+    /// stats (RavenDB-26780).
     /// </summary>
     public static async Task<AppUsageResponse> GetAppUsageAsync(
         IDocumentStore store, string database, DateTime startUtc, DateTime endUtc, CancellationToken ct)
@@ -206,12 +208,20 @@ internal static class MetricsReadService
             tokByBucket[i] += row.Tokens;
         }
 
+        // CDC writes: fold RavenDB's rolling per-batch perf window into the usage buckets
+        // (see BuildCdcWrites). Recent snapshot, not history — buckets before the window stay
+        // zero and the KPI card carries no delta (no reliable previous-window baseline).
+        var cdcRaw = await CdcPerformanceReader.ReadAsync(maintenance, ct);
+        var cdcWrites = BuildCdcWrites(cdcRaw, buckets, granularity);
+
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
             Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
             Cost: new MetricCard(Math.Round(tokNow * CostPerToken, 2), Delta(tokNow, tokPrev),
                 tokByBucket.Select(t => t * CostPerToken).ToArray()),
-            CdcWrites: new MetricCard(0, 0, [])); // CDC blocked on RavenDB-26780.
+            // Delta 0: the rolling window can't reach the previous window for a real baseline.
+            CdcWrites: new MetricCard(cdcWrites.Sum(p => p.Writes), 0,
+                cdcWrites.Select(p => (double)p.Writes).ToArray()));
 
         // Resolve the agents once: connection-string model for tokensByModel, and the
         // display name for human-facing series labels / topCapabilities (review M2).
@@ -261,7 +271,7 @@ internal static class MetricsReadService
             TokensByCapability: tokensByCapability,
             TokensByModel: tokensByModel,
             ConversationsByChannel: conversationsByChannel,
-            CdcWrites: [],                   // RavenDB-26780 (CDC perf stats)
+            CdcWrites: cdcWrites,
             TopTables: topTables,
             TopCapabilities: topCapabilities);
     }
@@ -382,10 +392,32 @@ internal static class MetricsReadService
         return result;
     }
 
+    /// <summary>Folds the CDC sink's rolling per-batch perf window into a per-bucket writes
+    /// series: each batch's <c>NumberOfProcessedMessages</c> (docs written into RavenDB) is
+    /// attributed to the bucket of its completion (or start, if still running). Pure so it can
+    /// be unit-tested without a live CDC source. Batches outside <paramref name="buckets"/>
+    /// (older than the rolling window, or a future clock skew) are ignored, so pre-window
+    /// buckets stay zero — this is recent activity, not a historical series.</summary>
+    internal static CdcWritePoint[] BuildCdcWrites(
+        CdcSinkPerformanceRaw raw, List<DateTime> buckets, UsageGranularity granularity)
+    {
+        var byBucket = new long[buckets.Count];
+        foreach (var batch in CdcPerformanceShaper.Batches(raw))
+        {
+            var i = BucketIndex(buckets, Utc(batch.Completed ?? batch.Started), granularity);
+            if (i < 0) continue;
+            byBucket[i] += batch.NumberOfProcessedMessages;
+        }
+        var points = new CdcWritePoint[buckets.Count];
+        for (var i = 0; i < buckets.Count; i++)
+            points[i] = new CdcWritePoint(BucketLabel(buckets[i], granularity), byBucket[i]);
+        return points;
+    }
+
     private static TimeSpan Step(UsageGranularity granularity) =>
         granularity == UsageGranularity.Hour ? TimeSpan.FromHours(1) : TimeSpan.FromDays(1);
 
-    private static List<DateTime> BuildBuckets(DateTime start, DateTime end, UsageGranularity granularity)
+    internal static List<DateTime> BuildBuckets(DateTime start, DateTime end, UsageGranularity granularity)
     {
         var step = Step(granularity);
         var cur = granularity == UsageGranularity.Hour

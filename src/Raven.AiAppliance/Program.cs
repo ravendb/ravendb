@@ -95,7 +95,7 @@ builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
 // License & Usage pages are mock-backed until the real license API (RavenDB-26661/26783) lands.
-builder.Services.AddSingleton<ILicenseStatsProvider, MockLicenseStatsProvider>();
+builder.Services.AddSingleton<ILicenseStatsProvider, LicenseStatsProvider>();
 if (!isOpenApiDocumentGeneration)
 {
     builder.Services.AddHostedService<RavenReadinessService>();

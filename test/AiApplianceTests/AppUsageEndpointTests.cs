@@ -11,10 +11,10 @@ namespace AiApplianceTests;
 
 /// <summary>
 /// Coverage for <c>GET /api/apps/{slug}/usage</c> — backs the prototype's
-/// <c>api.getAppUsage({appId,start,end})</c>. Phase-1 subset: granularity, the
-/// conversations/tokens/cost KPI values, tokensByCapability keys, and topCapabilities
-/// from the per-app <see cref="ConversationMetricsIndex"/>. CDC/model/channel fields
-/// ship as empty skeletons (no source yet).
+/// <c>api.getAppUsage({appId,start,end})</c>: granularity, the conversations/tokens/cost KPI
+/// values, tokensByCapability/tokensByModel/conversationsByChannel series, and topCapabilities.
+/// cdcWrites bucketing is verified purely in <see cref="AppUsageCdcWritesTests"/>; the populated
+/// end-to-end CDC path needs a live source (the gated Postgres E2E lane).
 /// </summary>
 public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
 {
@@ -67,7 +67,11 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         Assert.Equal(2, capKeys.GetArrayLength());
 
         // Nothing seeded for these in this case:
-        Assert.Equal(0, json.GetProperty("cdcWrites").GetArrayLength());            // CDC blocked (RavenDB-26780)
+        // cdcWrites is one zero-filled point per bucket (no CDC sink in this test → all zero).
+        var cdcWrites = json.GetProperty("cdcWrites");
+        Assert.True(cdcWrites.GetArrayLength() > 0);
+        Assert.All(cdcWrites.EnumerateArray(), p => Assert.Equal(0, p.GetProperty("writes").GetInt64()));
+        Assert.Equal(0, json.GetProperty("metrics").GetProperty("cdcWrites").GetProperty("value").GetDouble());
         Assert.Equal(0, json.GetProperty("topTables").GetArrayLength());           // no business collections
         Assert.Equal(0, json.GetProperty("conversationsByChannel").GetProperty("keys").GetArrayLength()); // no iframe links
         // The conversations' agents don't match any provisioned agent → "unknown" model.
