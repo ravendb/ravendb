@@ -21,9 +21,13 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
 
     public async Task<LicenseResponse> GetLicenseAsync(CancellationToken token)
     {
-        var result = await _ravendb.SendAsync("/license/status", "GET", new { }, token);
-        var response = await _ravendb.DeserializeAsync<ServerLicenseResponse>(result.Content, token);
-        return new LicenseResponse(response, Plans);
+        var licenseResult = await _ravendb.SendAsync("/license/status", "GET", new { }, token);
+        var license = await _ravendb.DeserializeAsync<ServerLicenseResponse>(licenseResult.Content, token);
+
+        var connectivityResult = await _ravendb.SendAsync("/license-server/connectivity", "GET", new { }, token);
+        var connectivity = await _ravendb.DeserializeAsync<ConnectivityStatus>(connectivityResult.Content, token);
+
+        return new LicenseResponse(license, connectivity, Plans);
     }
 
     public async Task<QuillUsageResponse> GetUsageAsync(int? year, int? month, CancellationToken token)

@@ -7,59 +7,70 @@ using Xunit;
 namespace AiApplianceTests;
 
 /// <summary>
-/// Coverage for the settings surfaces — <c>GET /api/settings/license</c> (mock-api
-/// <c>getLicense</c>) and <c>GET /api/settings/usage</c> (<c>getMonthlyWrites</c>).
-/// Both are mock-backed (no real license API yet), so no RavenDB seeding is needed —
-/// just the hosted appliance.
+/// Coverage for the settings surfaces — <c>GET /api/settings/license</c> and
+/// <c>GET /api/settings/usage</c>. Both are RavenDB-backed (see
+/// <c>LicenseStatsProvider</c>): license proxies the server's <c>/license/status</c> +
+/// <c>/license-server/connectivity</c> and appends the static plan catalog; usage
+/// proxies <c>/license/quill/usage</c>. Assertions target the response shape and
+/// environment-stable fields, not license-specific values (which vary with whatever
+/// license the test server runs under).
 /// </summary>
 public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
 {
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task License_returns_trial_by_default_and_expired_on_demo_state()
+    public async Task License_surfaces_server_license_connectivity_and_plans()
     {
         var store = GetDocumentStore();
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var healthy = await client.GetFromJsonAsync<JsonElement>("/api/settings/license");
-        Assert.Equal("healthy", healthy.GetProperty("state").GetString());
-        Assert.Equal("Trial", healthy.GetProperty("tier").GetString());
-        Assert.True(healthy.GetProperty("apiHealthy").GetBoolean());
-        Assert.True(healthy.GetProperty("plans").GetArrayLength() >= 1);
-        Assert.True(healthy.GetProperty("includes").GetArrayLength() >= 1);
-        Assert.Equal(JsonValueKind.Null, healthy.GetProperty("graceHoursLeft").ValueKind);
+        var license = await client.GetFromJsonAsync<JsonElement>("/api/settings/license");
 
-        var expired = await client.GetFromJsonAsync<JsonElement>("/api/settings/license?demoState=expired");
-        Assert.Equal("expired", expired.GetProperty("state").GetString());
-        Assert.Equal("Expired", expired.GetProperty("tier").GetString());
-        Assert.Equal(14, expired.GetProperty("graceHoursLeft").GetInt32());
-        Assert.True(expired.GetProperty("stops").GetArrayLength() >= 1);
-        Assert.True(expired.GetProperty("keeps").GetArrayLength() >= 1);
+        // response: the server's /license/status, projected onto ServerLicenseResponse.
+        var response = license.GetProperty("response");
+        Assert.False(string.IsNullOrEmpty(response.GetProperty("status").GetString()));  // e.g. "Commercial" / "AGPL - Open Source"
+        Assert.False(string.IsNullOrEmpty(response.GetProperty("type").GetString()));     // e.g. "EnterpriseAi" / "None"
+        Assert.True(response.GetProperty("expired").ValueKind is JsonValueKind.True or JsonValueKind.False);
+
+        // connectivity: the server's /license-server/connectivity probe.
+        Assert.False(string.IsNullOrEmpty(license.GetProperty("connectivity").GetProperty("statusCode").GetString()));
+
+        // plans: the static catalog LicenseStatsProvider always appends.
+        var plans = license.GetProperty("plans");
+        Assert.True(plans.GetArrayLength() >= 1);
+        Assert.Equal("enterprise", plans[0].GetProperty("slug").GetString());
+        Assert.True(plans[0].GetProperty("features").GetArrayLength() >= 1);
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task MonthlyWrites_returns_quota_and_daily_breakdown()
+    public async Task Usage_returns_quill_usage_payload()
     {
         var store = GetDocumentStore();
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var usage = await client.GetFromJsonAsync<JsonElement>("/api/settings/usage?year=2026&month=5");
-        Assert.Equal(2_000_000, usage.GetProperty("monthlyQuota").GetInt64());
-        Assert.Equal(31, usage.GetProperty("days").GetArrayLength());  // May has 31 days
-        Assert.True(usage.GetProperty("monthlyUsed").GetInt64() > 0);
-        Assert.Equal("May 2026", usage.GetProperty("monthLabel").GetString());
-        Assert.Equal("2026-05-01", usage.GetProperty("days")[0].GetProperty("date").GetString());
+        var resp = await client.GetAsync("/api/settings/usage?year=2026&month=5");
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+
+        var usage = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        // QuillUsageResponse { perApplication, byPeriod } — both may be null when the
+        // server reports no usage, but the shape must always be present.
+        Assert.True(usage.TryGetProperty("perApplication", out _));
+        Assert.True(usage.TryGetProperty("byPeriod", out _));
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task MonthlyWrites_rejects_invalid_month()
+    public async Task Usage_forwards_month_without_client_side_validation()
     {
         var store = GetDocumentStore();
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
+        // The endpoint forwards year/month straight to RavenDB's /license/quill/usage;
+        // it does not reject out-of-range months itself (contrast the former mock, which
+        // 400'd on month=13). Characterizes current behavior — see note if validation
+        // should move back into the appliance.
         var resp = await client.GetAsync("/api/settings/usage?year=2026&month=13");
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 }

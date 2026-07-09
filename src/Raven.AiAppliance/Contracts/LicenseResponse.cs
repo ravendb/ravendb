@@ -1,12 +1,17 @@
-using System.Text.Json;
+using System.Net;
 
 namespace Raven.AiAppliance.Contracts;
 
 public sealed record LicenseResponse(
     ServerLicenseResponse Response,
+    ConnectivityStatus Connectivity,
     LicensePlan[] Plans
     );
 
+public sealed record ConnectivityStatus(string StatusCode, string Exception)
+{
+    public DateTime Time = DateTime.UtcNow;
+}
 
 public sealed record ServerLicenseResponse(
     string ErrorMessage,
