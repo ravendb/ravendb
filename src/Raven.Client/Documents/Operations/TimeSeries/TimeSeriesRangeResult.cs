@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -12,18 +11,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         public DateTime From, To;
 
-        public TimeSeriesEntry[] Entries
-        {
-            get => CachedEntries.ToArray();
-            set
-            {
-                CachedEntries.Clear();
-                if (value != null)
-                    CachedEntries.AddRange(value);
-            }
-        }
-
-        internal List<TimeSeriesEntry> CachedEntries { get; set; } = new();
+        public TimeSeriesEntry[] Entries;
 
         public long? TotalResults;
         internal string Hash;
@@ -50,17 +38,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public sealed class TimeSeriesRangeResult<TValues> : TimeSeriesRangeResult
         where TValues : TimeSeriesEntry
     {
-        public new TValues[] Entries
-        {
-            get => CachedEntries.OfType<TValues>().ToArray();
-            set
-            {
-                CachedEntries.Clear();
-                if (value != null)
-                    for (int i = 0; i < value.Length; i++)
-                        CachedEntries.Add(value[i]);
-            }
-        }
+        public new TValues[] Entries;
     }
 
 }

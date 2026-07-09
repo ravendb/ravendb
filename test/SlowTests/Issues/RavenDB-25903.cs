@@ -1253,6 +1253,224 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task InSessionAppendToNewSeriesOnLoadedDocShouldBeReturned()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.TimeSeriesFor(bookId1, "Existing").Append(baseline, 1);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.LoadAsync<Book>(bookId1);
+                session.TimeSeriesFor(bookId1, "New").Append(baseline.AddMinutes(30), 42);
+
+                var tse = await session.TimeSeriesFor(bookId1, "New").GetAsync();
+
+                Assert.NotNull(tse);
+                Assert.Equal(1, tse.Length);
+                Assert.Equal(baseline.AddMinutes(30), tse[0].Timestamp);
+                Assert.Equal(42, tse[0].Value);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task DeletedEntriesInFirstPageOnUncachedSeriesShouldNotShrinkPage()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 10; i++)
+                    tsf.Append(baseline.AddHours(i), i);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete(baseline.AddHours(1), baseline.AddHours(2));
+
+                var tse = await session.TimeSeriesFor(bookId1, nameof(Book))
+                    .GetAsync(baseline, baseline.AddHours(11), start: 0, pageSize: 5);
+
+                Assert.Equal(5, tse.Length);
+                Assert.DoesNotContain(tse, e => e.Timestamp == baseline.AddHours(1) || e.Timestamp == baseline.AddHours(2));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task TypedIncrementWithoutPriorReadShouldAccumulateOntoServerValue()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HR";
+            var baseline = DateTime.UtcNow;
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.IncrementalTimeSeriesFor<HeartRateMeasure>(bookId1, tsName)
+                    .Increment(baseline, 50d);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.IncrementalTimeSeriesFor<HeartRateMeasure>(bookId1, tsName)
+                    .Increment(baseline, 60d);
+
+                var tse = await session.IncrementalTimeSeriesFor<HeartRateMeasure>(bookId1, tsName).GetAsync();
+
+                Assert.Equal(1, tse.Length);
+                Assert.Equal(110d, tse[0].Value.HeartRate);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task InSessionDeleteIsFilteredWhenServingFromMultipleCachedRanges()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 10; i++)
+                    tsf.Append(baseline.AddHours(i), i);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(1), baseline.AddHours(3));
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(6), baseline.AddHours(8));
+
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete(baseline.AddHours(2), baseline.AddHours(2));
+
+                var tse = await session.TimeSeriesFor(bookId1, nameof(Book))
+                    .GetAsync(baseline.AddHours(1), baseline.AddHours(10));
+
+                Assert.DoesNotContain(tse, e => e.Timestamp == baseline.AddHours(2));
+                Assert.Equal(9, tse.Length);
+                Assert.Equal(tse.Length, tse.Select(e => e.Timestamp).Distinct().Count());
+                Assert.True(IsOrdered(tse));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task DeletingCachedRangeReleasesEntryPayloadButKeepsMarker()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 10; i++)
+                    tsf.Append(baseline.AddHours(i), i);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(1), baseline.AddHours(10));
+
+                Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue(bookId1, out var cache));
+                var range = cache[nameof(Book)].Single();
+                Assert.False(range.IsDeleted);
+                Assert.Equal(10, range.Entries.Length);
+
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete(baseline, baseline.AddHours(11));
+
+                Assert.True(range.IsDeleted);
+                Assert.Empty(range.Entries);
+
+                var requestsBefore = session.Advanced.NumberOfRequests;
+                var afterDelete = await session.TimeSeriesFor(bookId1, nameof(Book))
+                    .GetAsync(baseline.AddHours(1), baseline.AddHours(10));
+
+                Assert.Null(afterDelete);
+                Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task AppendingAtDeletedRangeStartShouldNotCreateInvertedRange()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 5; i++)
+                    tsf.Append(baseline.AddHours(i), i);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete(baseline.AddHours(1), baseline.AddHours(3));
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline.AddHours(1), 99);
+
+                Assert.True(((InMemoryDocumentSessionOperations)session).DeletedTimeSeries.TryGetValue(bookId1, out var byName));
+                Assert.All(byName[nameof(Book)], r => Assert.True(r.From <= r.To, $"inverted range [{r.From:O}..{r.To:O}]"));
+
+                var tse = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(1), baseline.AddHours(3));
+                Assert.Contains(tse, e => e.Timestamp == baseline.AddHours(1) && e.Value == 99);
+                Assert.DoesNotContain(tse, e => e.Timestamp == baseline.AddHours(2));
+                Assert.DoesNotContain(tse, e => e.Timestamp == baseline.AddHours(3));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task AppendingAtDeletedRangeEndShouldNotCreateInvertedRange()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.AddHours(-24).EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= 5; i++)
+                    tsf.Append(baseline.AddHours(i), i);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.TimeSeriesFor(bookId1, nameof(Book)).Delete(baseline.AddHours(1), baseline.AddHours(3));
+                session.TimeSeriesFor(bookId1, nameof(Book)).Append(baseline.AddHours(3), 99);
+
+                Assert.True(((InMemoryDocumentSessionOperations)session).DeletedTimeSeries.TryGetValue(bookId1, out var byName));
+                Assert.All(byName[nameof(Book)], r => Assert.True(r.From <= r.To, $"inverted range [{r.From:O}..{r.To:O}]"));
+
+                var tse = await session.TimeSeriesFor(bookId1, nameof(Book)).GetAsync(baseline.AddHours(1), baseline.AddHours(3));
+                Assert.Contains(tse, e => e.Timestamp == baseline.AddHours(3) && e.Value == 99);
+                Assert.DoesNotContain(tse, e => e.Timestamp == baseline.AddHours(1));
+                Assert.DoesNotContain(tse, e => e.Timestamp == baseline.AddHours(2));
+            }
+        }
+
         private static void AssertNoDuplicateRanges(List<TimeSeriesRangeResult> ranges)
         {
             for (int i = 0; i < ranges.Count; i++)
