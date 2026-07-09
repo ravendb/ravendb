@@ -1061,6 +1061,10 @@ export interface components {
                 [key: string]: string;
             };
         };
+        ConnectivityStatus: {
+            statusCode: string;
+            exception: string;
+        };
         ConnectRequest: {
             provider: string;
             connectionString: string;
@@ -1226,6 +1230,7 @@ export interface components {
         };
         LicenseResponse: {
             response: components["schemas"]["ServerLicenseResponse"];
+            connectivity: components["schemas"]["ConnectivityStatus"];
             plans: components["schemas"]["LicensePlan"][];
         };
         LoginRequest: {
@@ -3191,6 +3196,7 @@ export type ChannelStatsResponse = components["schemas"]["ChannelStatsResponse"]
 export type ChannelSummaryResponse = components["schemas"]["ChannelSummaryResponse"];
 export type ChannelType = components["schemas"]["ChannelType"];
 export type ChatRequest = components["schemas"]["ChatRequest"];
+export type ConnectivityStatus = components["schemas"]["ConnectivityStatus"];
 export type ConnectRequest = components["schemas"]["ConnectRequest"];
 export type ConnectResult = components["schemas"]["ConnectResult"];
 export type ConversationDto = components["schemas"]["ConversationDto"];
