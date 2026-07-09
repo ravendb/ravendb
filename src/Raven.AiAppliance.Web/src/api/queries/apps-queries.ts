@@ -20,6 +20,23 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 queryKey: [baseKey, "list"],
                 queryFn: () => api.list(),
             }),
+        suggestAgentFromData: (slug: string) =>
+            queryOptions({
+                queryKey: [baseKey, "suggestAgentFromData", slug],
+                queryFn: async () => {
+                    // Suggestions are an optional aid — the wizard works without them — so
+                    // failures degrade to an empty list instead of blocking navigation.
+                    const result = await api
+                        .suggestAgent(slug, { mode: "from-data", intentPrompt: null })
+                        .catch(() => null);
+
+                    return result?.status === "Success" ? result.configurations : [];
+                },
+                // A non-empty suggestion is an expensive AI call: never refetch it behind the
+                // wizard. An empty one (failure or no candidates) stays stale so the next
+                // fetch retries.
+                staleTime: (query) => ((query.state.data?.length ?? 0) > 0 ? Infinity : 0),
+            }),
     };
 }
 
