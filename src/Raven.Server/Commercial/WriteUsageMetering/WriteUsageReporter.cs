@@ -102,7 +102,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                 {
                     // no client-side retry: a failed report is simply retried on the next reporting interval.
                     var response = await ApiHttpClient
-                        .PostAsync(WriteUsageMeteringConstants.WriteUsageEndpointPath, content, shouldRetry: false, token: CancellationToken)
+                        .PutAsync(WriteUsageMeteringConstants.UsageEndpointPath, content, shouldRetry: false, token: CancellationToken)
                         .ConfigureAwait(false);
 
                     if (Logger.IsDebugEnabled)

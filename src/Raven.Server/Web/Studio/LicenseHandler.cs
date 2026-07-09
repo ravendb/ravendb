@@ -323,7 +323,7 @@ namespace Raven.Server.Web.Studio
 
                 using (var token = CreateHttpRequestBoundOperationToken())
                 using (var content = new StringContent(context.ReadObject(requestBody, "usage-query").ToString(), Encoding.UTF8, "application/json"))
-                using (var response = await ApiHttpClient.PostAsync(WriteUsageMeteringConstants.UsageQueryEndpointPath, content, HttpCompletionOption.ResponseHeadersRead, shouldRetry: false, token: token.Token).ConfigureAwait(false))
+                using (var response = await ApiHttpClient.PostAsync(WriteUsageMeteringConstants.UsageEndpointPath, content, HttpCompletionOption.ResponseHeadersRead, shouldRetry: false, token: token.Token).ConfigureAwait(false))
                 {
                     HttpContext.Response.StatusCode = (int)response.StatusCode;
 
