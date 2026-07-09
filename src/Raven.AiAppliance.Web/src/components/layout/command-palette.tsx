@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AppWindow, BookOpen, CircleHelp, Plus, Search, Sparkles, Users } from "lucide-react";
+import { AppWindow, BookOpen, Plus, Search, Sparkles } from "lucide-react";
 import { api } from "@/api/api";
 import { useTheme } from "@/components/shadcn/theme-provider";
 import {
@@ -32,10 +32,10 @@ export function CommandPalette({ slug, appName }: CommandPaletteProps) {
     const navigationCommands: NavigationItem[] = [
         ...navigationItems,
         { label: "AI assistant", to: "/ai", icon: Sparkles },
-        { label: "Community", to: "/community", icon: Users },
-        { label: "Help", to: "/help", icon: CircleHelp },
     ];
-    const appPageCommands = appNavigationSections.flatMap((section) => section.items);
+    const appPageCommands = appNavigationSections.flatMap((section) =>
+        section.items.filter((item) => !item.isComingSoon),
+    );
 
     const [isOpen, setIsOpen] = useState(false);
     const navigate = useNavigate();

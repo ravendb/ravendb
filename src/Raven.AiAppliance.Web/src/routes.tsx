@@ -17,7 +17,6 @@ import { createBrowserRouter, type RouteObject } from "react-router";
 import App from "@/app";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
 import { AppAgents } from "@/pages/apps/app-agents";
-import { AppApiUnavailable } from "@/pages/apps/app-api-unavailable";
 import { AppChannelDetail } from "@/pages/apps/app-channel-detail";
 import { AppChannels } from "@/pages/apps/app-channels";
 import { AppWebWidgetCustomize } from "@/pages/apps/app-web-widget-customize";
@@ -52,6 +51,7 @@ export type NavigationItem = {
     to: string;
     icon: LucideIcon;
     isEnd?: boolean;
+    isComingSoon?: boolean;
 };
 
 type DashboardNavigationDefinition = {
@@ -65,8 +65,17 @@ type AppRouteDefinitionBase = {
     subtitle?: string;
     navigation?: DashboardNavigationDefinition;
     isPageTitleHidden?: boolean;
-    element: ReactNode;
-};
+} & (
+    | {
+          element: ReactNode;
+          isComingSoon?: never;
+      }
+    | {
+          // Coming-soon pages appear in navigation (disabled, with a badge) but get no route.
+          element?: never;
+          isComingSoon: true;
+      }
+);
 
 type AppRouteDefinition =
     | (AppRouteDefinitionBase & {
@@ -163,7 +172,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Sparkles,
             section: "data-prep",
         },
-        element: <AppApiUnavailable feature="GenAI" />,
+        isComingSoon: true,
     },
     {
         path: "embeddings",
@@ -173,7 +182,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Network,
             section: "data-prep",
         },
-        element: <AppApiUnavailable feature="Embeddings" />,
+        isComingSoon: true,
     },
     {
         path: "channels",
@@ -262,6 +271,7 @@ export const appNavigationSections = appNavigationSectionDefinitions.map(({ sect
                       ...page.navigation,
                       to: page.index ? "" : (page.path ?? ""),
                       isEnd: Boolean(page.index),
+                      isComingSoon: page.isComingSoon,
                   },
               ]
             : [],
@@ -270,7 +280,7 @@ export const appNavigationSections = appNavigationSectionDefinitions.map(({ sect
 
 const dashboardRoutes: RouteObject[] = dashboardPages.map((page) => toRouteObject(page));
 
-const appRoutes: RouteObject[] = appPages.map((page) => toRouteObject(page, true));
+const appRoutes: RouteObject[] = appPages.flatMap((page) => (page.isComingSoon ? [] : [toRouteObject(page, true)]));
 
 function toRouteObject(page: AppRouteDefinition, appScoped = false): RouteObject {
     const handle = {
@@ -320,20 +330,6 @@ const utilityRoutes: RouteObject[] = [
         element: <AiPage />,
         handle: {
             title: "AI",
-        } satisfies AppRouteHandle,
-    },
-    {
-        path: "community",
-        element: <SimpleInfoPage title="Community" description="No community API is exposed by this frontend yet." />,
-        handle: {
-            title: "Community",
-        } satisfies AppRouteHandle,
-    },
-    {
-        path: "help",
-        element: <SimpleInfoPage title="Help" description="No help API is exposed by this frontend yet." />,
-        handle: {
-            title: "Help",
         } satisfies AppRouteHandle,
     },
 ];

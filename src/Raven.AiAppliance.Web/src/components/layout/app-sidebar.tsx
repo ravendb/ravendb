@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CircleHelp, PanelLeftClose, PanelLeftOpen, Users } from "lucide-react";
 import { appNavigationSections, dashboardNavigationSections, navigationItems, type NavigationItem } from "@/routes";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { appRoutes } from "@/lib/app-routes";
 import { cn } from "@/lib/utils";
@@ -58,10 +59,13 @@ export function AppSidebar({ slug, hasActiveApp, isCollapsed, isToggleVisible, o
                 </nav>
                 <div className={cn("flex flex-col gap-0.5 py-2", isCollapsed ? "items-center" : "px-2")}>
                     <SidebarNavLink
-                        item={{ label: "Community", to: "/community", icon: Users }}
+                        item={{ label: "Community", to: "/community", icon: Users, isComingSoon: true }}
                         isCollapsed={isCollapsed}
                     />
-                    <SidebarNavLink item={{ label: "Help", to: "/help", icon: CircleHelp }} isCollapsed={isCollapsed} />
+                    <SidebarNavLink
+                        item={{ label: "Help", to: "/help", icon: CircleHelp, isComingSoon: true }}
+                        isCollapsed={isCollapsed}
+                    />
                     <div
                         className={cn(
                             "flex",
@@ -111,6 +115,39 @@ function SidebarNavLink({ item, isCollapsed }: { item: NavigationItem; isCollaps
     const isExactMatch = Boolean(useMatch({ path: item.to, end: true }));
     const isDescendantMatch = Boolean(useMatch({ path: descendantPath, end: true }));
     const isActive = item.isEnd ? isExactMatch : isExactMatch || isDescendantMatch;
+
+    if (item.isComingSoon) {
+        const disabledItem = (
+            <span
+                aria-disabled="true"
+                className={cn(
+                    "flex h-8 cursor-default items-center gap-2 rounded-md text-sm text-sidebar-foreground/50",
+                    isCollapsed ? "size-8 justify-center px-0" : "px-2",
+                )}
+            >
+                <item.icon className="size-4 shrink-0" aria-hidden="true" />
+                {!isCollapsed && (
+                    <>
+                        <span className="truncate">{item.label}</span>
+                        <Badge variant="secondary" className="ml-auto text-muted-foreground">
+                            Coming soon
+                        </Badge>
+                    </>
+                )}
+            </span>
+        );
+
+        if (!isCollapsed) {
+            return disabledItem;
+        }
+
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>{disabledItem}</TooltipTrigger>
+                <TooltipContent side="right">{item.label} (coming soon)</TooltipContent>
+            </Tooltip>
+        );
+    }
 
     const link = (
         <NavLink
