@@ -42,7 +42,7 @@ public sealed class AiHelperInternalClient(
             Prompt = prompt,
         };
 
-        var (transport, content) = await SendWithConsentRetryAsync(AssistPath, request, ct);
+        var (transport, content) = await SendWithConsentRetryAsync(AssistPath, "POST", request, ct);
         if (transport != AiHelperStatus.Success)
             return new SuggestCdcInternalResult(transport, Configuration: null, [], 0, 0);
 
@@ -70,7 +70,7 @@ public sealed class AiHelperInternalClient(
             Prompt = prompt,
         };
 
-        var (transport, content) = await SendWithConsentRetryAsync(AssistPath, request, ct);
+        var (transport, content) = await SendWithConsentRetryAsync(AssistPath, "POST", request, ct);
         if (transport != AiHelperStatus.Success)
             return new SuggestAiAgentInternalResult(transport, [], [], 0, 0);
 
@@ -90,9 +90,9 @@ public sealed class AiHelperInternalClient(
     /// Sends the assist request; on the first ConsentRequired (no consent doc yet for this
     /// license + cert pair) signs consent via the proxy and retries once. give-consent also
     /// verifies the license, so a failure there surfaces the real credential problem instead.
-    private async Task<(AiHelperStatus Transport, string Content)> SendWithConsentRetryAsync(string path, object request, CancellationToken ct)
+    private async Task<(AiHelperStatus Transport, string Content)> SendWithConsentRetryAsync(string path, string method, object request, CancellationToken ct)
     {
-        var result = await SendAsync(path, request, ct);
+        var result = await SendAsync(path, method, request, ct);
         if (result.Transport != AiHelperStatus.ConsentRequired)
             return result;
 
@@ -100,7 +100,7 @@ public sealed class AiHelperInternalClient(
         if (consent != AiHelperStatus.Success)
             return (consent, string.Empty);
 
-        var retried = await SendAsync(path, request, ct);
+        var retried = await SendAsync(path, method, request, ct);
         if (retried.Transport == AiHelperStatus.ConsentRequired)
         {
             // give-consent succeeded yet assist still gates: upstream propagation lag or the consent
@@ -114,12 +114,12 @@ public sealed class AiHelperInternalClient(
         return retried;
     }
 
-    private async Task<(AiHelperStatus Transport, string Content)> SendAsync(string path, object request, CancellationToken ct)
+    public async Task<(AiHelperStatus Transport, string Content)> SendAsync(string path, string method, object request, CancellationToken ct)
     {
         try
         {
             using var content = new StringContent(SerializeRequest(request), Encoding.UTF8, "application/json");
-            using var response = await httpClient.PostAsync(path, content, ct);
+            using var response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(method), path) { Content = content }, ct);
             var text = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
@@ -199,7 +199,7 @@ public sealed class AiHelperInternalClient(
         return store.Conventions.Serialization.DefaultConverter.ToBlittable(request, ctx).ToString();
     }
 
-    private async Task<T?> DeserializeAsync<T>(string json, CancellationToken ct) where T : class
+    public async Task<T> DeserializeAsync<T>(string json, CancellationToken ct) where T : class
     {
         try
         {

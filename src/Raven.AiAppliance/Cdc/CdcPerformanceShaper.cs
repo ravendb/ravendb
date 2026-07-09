@@ -14,11 +14,14 @@ internal static class CdcPerformanceShaper
     // A batch completing within this window counts the sink as actively syncing.
     private static readonly TimeSpan ActiveWindow = TimeSpan.FromSeconds(60);
 
+    internal static IEnumerable<CdcPerfBatchRaw> Batches(CdcSinkPerformanceRaw raw) =>
+        (raw.Results ?? new List<CdcPerfTaskRaw>())
+            .SelectMany(t => t.Stats ?? new List<CdcPerfProcessRaw>())
+            .SelectMany(p => p.Performance ?? new List<CdcPerfBatchRaw>());
+
     public static CdcPerformanceResponse Shape(CdcSinkPerformanceRaw raw, bool configured, bool disabled, DateTime nowUtc)
     {
-        var batches = (raw.Results ?? new List<CdcPerfTaskRaw>())
-            .SelectMany(t => t.Stats ?? new List<CdcPerfProcessRaw>())
-            .SelectMany(p => p.Performance ?? new List<CdcPerfBatchRaw>())
+        var batches = Batches(raw)
             .OrderBy(b => b.Started)
             .ToArray();
 

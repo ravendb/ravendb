@@ -1122,12 +1122,6 @@ export interface components {
             documentsCount: number;
             fields: unknown[];
         };
-        DayWrites: {
-            label: string;
-            date: string;
-            /** Format: int64 */
-            writes: number;
-        };
         DiscoverColumnResponse: {
             name: string;
             nativeType: string;
@@ -1231,28 +1225,8 @@ export interface components {
             features: string[];
         };
         LicenseResponse: {
-            state: string;
-            tier: string;
-            /** Format: int32 */
-            daysLeft: number;
-            /** Format: int32 */
-            daysElapsed: number;
-            /** Format: int32 */
-            trialLengthDays: number;
-            trialStartedLabel: string;
-            trialEndsLabel: string;
-            /** Format: int32 */
-            graceHoursLeft: null | number;
-            graceEndsLabel: null | string;
-            api: string;
-            apiHealthy: boolean;
-            connectivityOK: boolean;
-            tierHealthy: boolean;
-            lastRefreshedLabel: string;
+            response: components["schemas"]["ServerLicenseResponse"];
             plans: components["schemas"]["LicensePlan"][];
-            includes: string[];
-            stops: null | string[];
-            keeps: null | string[];
         };
         LoginRequest: {
             apiKey: string;
@@ -1300,18 +1274,6 @@ export interface components {
             apiKey?: null | string;
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
-        };
-        MonthlyWritesResponse: {
-            days: components["schemas"]["DayWrites"][];
-            /** Format: int64 */
-            monthlyQuota: number;
-            /** Format: int64 */
-            monthlyUsed: number;
-            monthLabel: string;
-            quotaResetsOn: string;
-            /** Format: int32 */
-            trialDaysLeft: number;
-            isCurrent: boolean;
         };
         OllamaSettings: {
             uri?: null | string;
@@ -1370,6 +1332,28 @@ export interface components {
             id: string;
             slug: string;
         };
+        QuillApplicationUsage: {
+            topologyId: string;
+            applicationName: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            /** Format: int64 */
+            usage: number;
+        };
+        QuillPeriodUsage: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            /** Format: int64 */
+            usage: number;
+        };
+        QuillUsageResponse: {
+            perApplication: components["schemas"]["QuillApplicationUsage"][];
+            byPeriod: components["schemas"]["QuillPeriodUsage"][];
+        };
         SeriesData: {
             points: Record<string, unknown>[];
             keys: components["schemas"]["SeriesKey"][];
@@ -1377,6 +1361,18 @@ export interface components {
         SeriesKey: {
             key: string;
             label: string;
+        };
+        ServerLicenseResponse: {
+            errorMessage: string;
+            expiration: string;
+            subscriptionExpiration: string;
+            expired: boolean;
+            firstServerStartDate: string;
+            id: string;
+            licensedTo: string;
+            status: string;
+            type: string;
+            version: string;
         };
         SetupTryParameter: {
             value: null | components["schemas"]["JsonElement"];
@@ -2848,9 +2844,7 @@ export interface operations {
     };
     "settings.license": {
         parameters: {
-            query?: {
-                demoState?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -2886,7 +2880,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MonthlyWritesResponse"];
+                    "application/json": components["schemas"]["QuillUsageResponse"];
                 };
             };
             /** @description Bad Request */
@@ -3206,7 +3200,6 @@ export type ConversationTurn = components["schemas"]["ConversationTurn"];
 export type ConversationWindow = components["schemas"]["ConversationWindow"];
 export type DashboardResponse = components["schemas"]["DashboardResponse"];
 export type DataCollectionDto = components["schemas"]["DataCollectionDto"];
-export type DayWrites = components["schemas"]["DayWrites"];
 export type DiscoverColumnResponse = components["schemas"]["DiscoverColumnResponse"];
 export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignKeyResponse"];
 export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
@@ -3230,7 +3223,6 @@ export type MetricCard = components["schemas"]["MetricCard"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
-export type MonthlyWritesResponse = components["schemas"]["MonthlyWritesResponse"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiReasoningEffort = components["schemas"]["OpenAiReasoningEffort"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
@@ -3240,8 +3232,12 @@ export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelReq
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
 export type ProvisionRequest = components["schemas"]["ProvisionRequest"];
 export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
+export type QuillApplicationUsage = components["schemas"]["QuillApplicationUsage"];
+export type QuillPeriodUsage = components["schemas"]["QuillPeriodUsage"];
+export type QuillUsageResponse = components["schemas"]["QuillUsageResponse"];
 export type SeriesData = components["schemas"]["SeriesData"];
 export type SeriesKey = components["schemas"]["SeriesKey"];
+export type ServerLicenseResponse = components["schemas"]["ServerLicenseResponse"];
 export type SetupTryParameter = components["schemas"]["SetupTryParameter"];
 export type SetupTryRequest = components["schemas"]["SetupTryRequest"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
@@ -3389,8 +3385,8 @@ export function createServerApi(client: ApiClient) {
             updateDefaultCustomization: (slug: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultCustomization(slug), request),
         },
         settings: {
-            license: (searchParams?: { demoState?: string; }) => client.get<LicenseResponse>(API_ENDPOINTS.settings.license, { searchParams }),
-            usage: (searchParams?: { month?: string; year?: string; }) => client.get<MonthlyWritesResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
+            license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
+            usage: (searchParams?: { month?: string; year?: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
         },
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
