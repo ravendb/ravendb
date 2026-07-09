@@ -47,8 +47,7 @@ namespace Raven.Client.Documents.Session
                 return GetLocalEntriesForDeletedRange(from, to, pageSize)?.ToArray();
 
             resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-
-            return RemoveDeletedTimeSeries(resultToUser.Take(pageSize).ToList())?.ToArray();
+            return resultToUser.Take(pageSize).ToArray();
         }
 
         private IEnumerable<TimeSeriesEntry> OverlayLocalEntries(IEnumerable<TimeSeriesEntry> serverEntries, DateTime from, DateTime to)
@@ -57,7 +56,7 @@ namespace Raven.Client.Documents.Session
             if (local == null || local.Count == 0)
                 return serverEntries;
 
-            return MergeSorted(serverEntries as List<TimeSeriesEntry> ?? serverEntries.ToList(), local);
+            return MergeSorted(serverEntries as IReadOnlyList<TimeSeriesEntry> ?? serverEntries.ToList(), local);
         }
 
         private List<TTValues> GetCachedEntriesInRange<TTValues>(DateTime from, DateTime to)
@@ -70,13 +69,11 @@ namespace Raven.Client.Documents.Session
 
             var result = new List<TTValues>();
 
-            foreach (var kv in entries)
+            var keys = entries.Keys;
+            var values = entries.Values;
+            for (int i = FindStartIndex(keys, from); i < entries.Count && keys[i] <= to; i++)
             {
-                var e = kv.Value;
-                if (e.Timestamp < from || e.Timestamp > to)
-                    continue;
-
-                var converted = ConvertCachedEntry<TTValues>(e);
+                var converted = ConvertCachedEntry<TTValues>(values[i]);
                 if (converted != null)
                     result.Add(converted);
             }
@@ -158,7 +155,7 @@ namespace Raven.Client.Documents.Session
             else
             {
                 resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-                asList = RemoveDeletedTimeSeries(resultToUser.ToList()).Take(pageSize).ToList();
+                asList = resultToUser.Take(pageSize).ToList();
             }
 
             if (asList.Count == 0)
@@ -215,13 +212,19 @@ namespace Raven.Client.Documents.Session
                 document.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray metadataTimeSeries) &&
                 metadataTimeSeries.BinarySearch(Name, StringComparison.OrdinalIgnoreCase) < 0)
             {
-                // the document is loaded in the session, but the metadata says that there is no such timeseries
-                return Array.Empty<TTValues>();
+                if (cachedEntries == null || cachedEntries.Count == 0)
+                    return Array.Empty<TTValues>();
+
+                return RemoveDeletedTimeSeries(cachedEntries).Skip(start).Take(pageSize).ToArray();
             }
 
             var hasLocalEntries = cachedEntries != null && cachedEntries.Count > 0;
-            var serverStart = hasLocalEntries ? 0 : start;
-            var serverPageSize = hasLocalEntries ? PageSizeToCoverMerge(start, pageSize) : pageSize;
+            var hasDeletesInRange = HasDeletedRangeIntersecting(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
+            var serveClientSide = hasLocalEntries || hasDeletesInRange;
+            var serverStart = serveClientSide ? 0 : start;
+            var serverPageSize = hasDeletesInRange
+                ? int.MaxValue
+                : hasLocalEntries ? PageSizeToCoverMerge(start, pageSize) : pageSize;
 
             Session.IncrementRequestCount();
 
@@ -238,12 +241,11 @@ namespace Raven.Client.Documents.Session
             }
 
             var serverEntries = rangeResult.Entries ?? Array.Empty<TTValues>();
-            var serverList = new List<TTValues>(serverEntries);
 
-            var entriesResult = MergeSorted<TTValues>(serverList, cachedEntries);
+            var entriesResult = MergeSorted<TTValues>(serverEntries, cachedEntries);
             entriesResult = RemoveDeletedTimeSeries(entriesResult);
 
-            if (hasLocalEntries)
+            if (serveClientSide)
                 entriesResult = entriesResult.Skip(start).Take(pageSize).ToList();
 
             if (Session.NoTracking == false)
@@ -282,13 +284,28 @@ namespace Raven.Client.Documents.Session
             return start + pageSize;
         }
 
+        private bool HasDeletedRangeIntersecting(DateTime from, DateTime to)
+        {
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var byName) &&
+                byName.TryGetValue(Name, out var ranges))
+            {
+                foreach (var range in ranges)
+                {
+                    if (range.From <= to && range.To >= from)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         private bool IsIncremental => Name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase);
 
-        private List<TEntry> MergeSorted<TEntry>(List<TEntry> a, List<TEntry> b)
+        private List<TEntry> MergeSorted<TEntry>(IReadOnlyList<TEntry> a, IReadOnlyList<TEntry> b)
             where TEntry : TimeSeriesEntry
         {
-            a ??= new();
-            b ??= new();
+            a ??= Array.Empty<TEntry>();
+            b ??= Array.Empty<TEntry>();
 
             var result = new List<TEntry>(a.Count + b.Count);
 
@@ -306,18 +323,20 @@ namespace Raven.Client.Documents.Session
                 else
                 {
                     // same timestamp
-                    if (IsIncremental && typeof(TEntry) == typeof(TimeSeriesEntry))
+                    if (IsIncremental)
                     {
                         // incremental series: the local overlay holds the in-session delta only,
                         // so emit (server base + in-session delta). Build a new entry - a[i]/b[j] are
                         // shared with the cache/overlay and must not be mutated in place.
-                        result.Add((TEntry)(object)new TimeSeriesEntry
+                        var summed = new TimeSeriesEntry
                         {
                             Timestamp = eb.Timestamp,
                             Tag = eb.Tag,
                             IsRollup = eb.IsRollup,
                             Values = AddValues(ea.Values, eb.Values)
-                        });
+                        };
+
+                        result.Add(ConvertCachedEntry<TEntry>(summed));
                     }
                     else
                     {
@@ -411,7 +430,7 @@ namespace Raven.Client.Documents.Session
             {
                 if (ranges[toRangeIndex].From <= from)
                 {
-                    if (((ranges[toRangeIndex].To >= to) || (ranges[toRangeIndex].CachedEntries.Count - start >= pageSize)))
+                    if (((ranges[toRangeIndex].To >= to) || (ranges[toRangeIndex].Entries.Length - start >= pageSize)))
                     {
                         if (ranges[toRangeIndex].IsDeleted == false)
                         {
@@ -493,7 +512,7 @@ namespace Raven.Client.Documents.Session
                 InMemoryDocumentSessionOperations.AddToCache(Name, from, to, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
             }
 
-            return resultToUser;
+            return FilterDeletedEntries(resultToUser);
         }
 
         private void RegisterIncludes(TimeSeriesDetails details)
@@ -506,12 +525,18 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private static bool DuplicatesLastMerged(List<TimeSeriesEntry> entries, List<TimeSeriesEntry> mergedValues)
+        private static bool DuplicatesLastMerged(TimeSeriesEntry[] entries, List<TimeSeriesEntry> mergedValues)
         {
             return mergedValues.Count > 0 &&
                    entries != null &&
-                   entries.Count > 0 &&
+                   entries.Length > 0 &&
                    entries[0].Timestamp == mergedValues[mergedValues.Count - 1].Timestamp;
+        }
+
+        private static void AddRangeFrom(List<TimeSeriesEntry> target, TimeSeriesEntry[] source, int startIndex)
+        {
+            for (var i = startIndex; i < source.Length; i++)
+                target.Add(source[i]);
         }
 
         private static TimeSeriesEntry[] MergeRangesWithResults(DateTime from, DateTime to, List<TimeSeriesRangeResult> ranges,
@@ -539,7 +564,7 @@ namespace Raven.Client.Documents.Session
                         // so we might need to skip a part of it when we return the
                         // result to the user (i.e. skip [fromRange.From, from])
 
-                        foreach (var v in ranges[i].CachedEntries)
+                        foreach (var v in ranges[i].Entries)
                         {
                             mergedValues.Add(v);
                             if (v.Timestamp < from)
@@ -559,8 +584,8 @@ namespace Raven.Client.Documents.Session
                     // skip its first item only if it duplicates the last merged entry
                     // (ranges don't always share a boundary entry)
 
-                    var serverEntries = resultFromServer[currentResultIndex++].CachedEntries;
-                    mergedValues.AddRange(serverEntries.Skip(DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0));
+                    var serverEntries = resultFromServer[currentResultIndex++].Entries;
+                    AddRangeFrom(mergedValues, serverEntries, DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0);
                 }
 
                 if (i == toRangeIndex)
@@ -571,9 +596,9 @@ namespace Raven.Client.Documents.Session
                         // so we might need to trim a part of it when we return the
                         // result to the user (i.e. trim [to, toRange.to])
 
-                        var toEntries = ranges[i].CachedEntries;
+                        var toEntries = ranges[i].Entries;
                         var index = DuplicatesLastMerged(toEntries, mergedValues) ? 1 : 0;
-                        for (; index < toEntries.Count; index++)
+                        for (; index < toEntries.Length; index++)
                         {
                             mergedValues.Add(toEntries[index]);
                             if (toEntries[index].Timestamp > to)
@@ -589,8 +614,8 @@ namespace Raven.Client.Documents.Session
                 // add current range from cache to the merged list.
                 // in order to avoid duplication, skip first item in range if needed
 
-                var cachedEntries = ranges[i].CachedEntries;
-                mergedValues.AddRange(cachedEntries.Skip(DuplicatesLastMerged(cachedEntries, mergedValues) ? 1 : 0));
+                var cachedEntries = ranges[i].Entries;
+                AddRangeFrom(mergedValues, cachedEntries, DuplicatesLastMerged(cachedEntries, mergedValues) ? 1 : 0);
             }
 
             if (currentResultIndex < resultFromServer.Count)
@@ -599,8 +624,8 @@ namespace Raven.Client.Documents.Session
                 // so the last missing part is from server
                 // add last missing part to the merged list
 
-                var serverEntries = resultFromServer[currentResultIndex++].CachedEntries;
-                mergedValues.AddRange(serverEntries.Skip(DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0));
+                var serverEntries = resultFromServer[currentResultIndex++].Entries;
+                AddRangeFrom(mergedValues, serverEntries, DuplicatesLastMerged(serverEntries, mergedValues) ? 1 : 0);
             }
 
             Debug.Assert(currentResultIndex == resultFromServer.Count);
@@ -622,7 +647,7 @@ namespace Raven.Client.Documents.Session
             if (Session.DeletedTimeSeries.TryGetValue(DocId, out var deletedByName))
                 deletedByName.TryGetValue(Name, out deletedRanges);
 
-            foreach (var value in range.CachedEntries)
+            foreach (var value in range.Entries)
             {
                 if (value.Timestamp > to)
                     yield break;
@@ -652,6 +677,27 @@ namespace Raven.Client.Documents.Session
             }
 
             return false;
+        }
+
+        private IEnumerable<TimeSeriesEntry> FilterDeletedEntries(IEnumerable<TimeSeriesEntry> entries)
+        {
+            List<TimeSeriesRangeResult> deletedRanges = null;
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var deletedByName))
+                deletedByName.TryGetValue(Name, out deletedRanges);
+
+            if (deletedRanges == null || deletedRanges.Count == 0)
+                return entries;
+
+            return Filter(entries, deletedRanges);
+
+            static IEnumerable<TimeSeriesEntry> Filter(IEnumerable<TimeSeriesEntry> source, List<TimeSeriesRangeResult> ranges)
+            {
+                foreach (var entry in source)
+                {
+                    if (IsInDeletedRange(entry.Timestamp, ranges) == false)
+                        yield return entry;
+                }
+            }
         }
 
         private Task<TimeSeriesEntry<TValues>[]> GetAsyncInternal(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)

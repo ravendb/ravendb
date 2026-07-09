@@ -2117,7 +2117,7 @@ more responsive application.
             if (fromRangeIndex != -1 &&
                 localRanges[fromRangeIndex].To >= newRange.From)
             {
-                foreach (var val in localRanges[fromRangeIndex].CachedEntries)
+                foreach (var val in localRanges[fromRangeIndex].Entries)
                 {
                     if (val.Timestamp >= newRange.From)
                         break;
@@ -2125,11 +2125,11 @@ more responsive application.
                 }
             }
 
-            mergedValues.AddRange(newRange.CachedEntries);
+            mergedValues.AddRange(newRange.Entries);
 
             if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= newRange.To)
             {
-                foreach (var val in localRanges[toRangeIndex].CachedEntries)
+                foreach (var val in localRanges[toRangeIndex].Entries)
                 {
                     if (val.Timestamp <= newRange.To)
                         continue;
@@ -2142,10 +2142,10 @@ more responsive application.
 
         private static void UpdateExistingRange(TimeSeriesRangeResult localRange, TimeSeriesRangeResult newRange)
         {
-            var localEntries = localRange.CachedEntries;
+            var localEntries = localRange.Entries;
             var newValues = new List<TimeSeriesEntry>();
             int index;
-            for (index = 0; index < localEntries.Count; index++)
+            for (index = 0; index < localEntries.Length; index++)
             {
                 if (localEntries[index].Timestamp >= newRange.From)
                     break;
@@ -2153,9 +2153,9 @@ more responsive application.
                 newValues.Add(localEntries[index]);
             }
 
-            newValues.AddRange(newRange.CachedEntries);
+            newValues.AddRange(newRange.Entries);
 
-            for (int j = index; j < localEntries.Count; j++)
+            for (int j = index; j < localEntries.Length; j++)
             {
                 if (localEntries[j].Timestamp <= newRange.To)
                     continue;
@@ -2507,8 +2507,8 @@ more responsive application.
             _sessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
             InvalidateMutatedTimeSeriesCache(_localTimeSeries);
             InvalidateMutatedTimeSeriesCache(_deletedTimeSeries);
-            LocalTimeSeries.Clear();
-            DeletedTimeSeries.Clear();
+            _localTimeSeries?.Clear();
+            _deletedTimeSeries?.Clear();
         }
 
         private void InvalidateMutatedTimeSeriesCache<TOverlay>(Dictionary<string, Dictionary<string, TOverlay>> overlay)

@@ -144,7 +144,10 @@ namespace Raven.Client.Documents.Session
                 if (cache.TryGetValue(Name, out var allRanges))
                 {
                     foreach (var range in allRanges)
+                    {
                         range.IsDeleted = true;
+                        range.Entries = Array.Empty<TimeSeriesEntry>();
+                    }
                 }
                 AddRemovedTimeSeriesRange(from, to);
                 return;
@@ -155,10 +158,13 @@ namespace Raven.Client.Documents.Session
                 from ??= DateTime.MinValue;
                 to ??= DateTime.MaxValue;
 
-                for (int i=0; i< ranges.Count; i++)
+                for (int i = 0; i < ranges.Count; i++)
                 {
                     if (ranges[i].From >= from && ranges[i].To <= to)
+                    {
                         ranges[i].IsDeleted = true;
+                        ranges[i].Entries = Array.Empty<TimeSeriesEntry>();
+                    }
                 }
 
                 AddRemovedTimeSeriesRange(from, to);
@@ -325,24 +331,35 @@ namespace Raven.Client.Documents.Session
                 {
                     for (int i = 0; i < ranges.Count; i++)
                     {
-                        if (timestamp >= ranges[i].From && timestamp <= ranges[i].To)
+                        if (timestamp < ranges[i].From || timestamp > ranges[i].To)
+                            continue;
+
+                        if (ranges[i].From == ranges[i].To)
                         {
-
-                            if (ranges[i].From == ranges[i].To)
+                            // single-point deleted range being re-added: drop it
+                            ranges.RemoveAt(i--);
+                        }
+                        else if (timestamp == ranges[i].From)
+                        {
+                            // re-added the first point of the range: shrink from the left, no leftover fragment
+                            ranges[i].From = timestamp.AddMilliseconds(1);
+                        }
+                        else if (timestamp == ranges[i].To)
+                        {
+                            // re-added the last point of the range: shrink from the right, no leftover fragment
+                            ranges[i].To = timestamp.AddMilliseconds(-1);
+                        }
+                        else
+                        {
+                            // re-added a point in the middle: split the range around it
+                            var newRange = new TimeSeriesRangeResult
                             {
-                                ranges.RemoveAt(i--);
-                            }
-                            else
-                            {
-                                var newRange = new TimeSeriesRangeResult()
-                                {
-                                    To = ranges[i].To,
-                                    From = timestamp.AddMilliseconds(1)
-                                };
+                                From = timestamp.AddMilliseconds(1),
+                                To = ranges[i].To
+                            };
 
-                                ranges[i].To = timestamp.AddMilliseconds(-1);
-                                ranges.Insert(++i, newRange);
-                            }
+                            ranges[i].To = timestamp.AddMilliseconds(-1);
+                            ranges.Insert(++i, newRange);
                         }
                     }
                 }
@@ -363,7 +380,7 @@ namespace Raven.Client.Documents.Session
             return result;
         }
 
-        private static int FindStartIndex(IList<DateTime> keys, DateTime from)
+        protected static int FindStartIndex(IList<DateTime> keys, DateTime from)
         {
             int left = 0;
             int right = keys.Count - 1;
