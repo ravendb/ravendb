@@ -308,7 +308,7 @@ export default function FeatureAvailabilitySummaryWrapper({
                             <small className="description">
                                 {isQuill
                                     ? "See what features are included in this license"
-                                    : "See which plans include this feature and other exciting feature"}
+                                    : "See which plans include this feature and other exciting features"}
                             </small>
                         </div>
                     </button>
