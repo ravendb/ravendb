@@ -61,7 +61,7 @@ namespace SlowTests.Issues
             return db.DbBase64Id;
         }
 
-        private static WriteUsageDatabaseSnapshot SnapshotEntry(RavenServer leader, string topologyId)
+        private static WriteUsageApplicationSnapshot SnapshotEntry(RavenServer leader, string topologyId)
             => leader.ServerStore.Observer.LatestWriteUsageSnapshot?.Databases.SingleOrDefault(d => d.TopologyId == topologyId);
 
         private static string Normalize(string changeVector)

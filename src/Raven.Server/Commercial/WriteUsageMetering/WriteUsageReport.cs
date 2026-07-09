@@ -10,9 +10,9 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         public const string UsageEndpointPath = "/api/v1/quill/usage";
     }
 
-    public sealed class WriteUsageDatabaseSnapshot
+    public sealed class WriteUsageApplicationSnapshot
     {
-        public WriteUsageDatabaseSnapshot(string topologyId, string applicationName, string changeVector)
+        public WriteUsageApplicationSnapshot(string topologyId, string applicationName, string changeVector)
         {
             ApplicationName = applicationName;
             TopologyId = topologyId;
@@ -38,18 +38,18 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
     public sealed class WriteUsageSnapshot
     {
-        public WriteUsageSnapshot(IReadOnlyList<WriteUsageDatabaseSnapshot> databases)
+        public WriteUsageSnapshot(IReadOnlyList<WriteUsageApplicationSnapshot> databases)
         {
             Databases = databases;
         }
 
-        public IReadOnlyList<WriteUsageDatabaseSnapshot> Databases { get; }
+        public IReadOnlyList<WriteUsageApplicationSnapshot> Databases { get; }
     }
 
 
     public sealed class WriteUsageReport
     {
-        public WriteUsageReport(DynamicJsonValue license, IReadOnlyList<WriteUsageDatabaseSnapshot> applications)
+        public WriteUsageReport(DynamicJsonValue license, IReadOnlyList<WriteUsageApplicationSnapshot> applications)
         {
             License = license;
             Applications = applications;
@@ -57,7 +57,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
         public DynamicJsonValue License { get; }
 
-        public IReadOnlyList<WriteUsageDatabaseSnapshot> Applications { get; }
+        public IReadOnlyList<WriteUsageApplicationSnapshot> Applications { get; }
 
         public DynamicJsonValue ToJson()
         {

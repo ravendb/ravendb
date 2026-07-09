@@ -176,7 +176,7 @@ namespace Raven.Server.ServerWide.Maintenance
             List<DestinationMigrationConfirmCommand> confirmCommands = null;
             List<string> databases;
 
-            var writeUsageSnapshots = new List<WriteUsageDatabaseSnapshot>();
+            var writeUsageSnapshots = new List<WriteUsageApplicationSnapshot>();
 
             using (_contextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -259,7 +259,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
 
                             var mergedChangeVector = ChangeVectorUtils.MergeVectors(memberChangeVectors);
-                            writeUsageSnapshots.Add(new WriteUsageDatabaseSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
+                            writeUsageSnapshots.Add(new WriteUsageApplicationSnapshot(state.Name, state.DatabaseTopology.DatabaseTopologyIdBase64, mergedChangeVector));
 
                             try
                             {
