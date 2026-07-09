@@ -488,7 +488,14 @@ function TestMessage({ message, isLoading }: { message: ChatMessage; isLoading: 
                     </div>
                 )}
                 <div className="overflow-hidden rounded-lg border">
-                    <AceEditor mode="json" value={message.json ?? ""} readOnly height="160px" maxHeight={400} />
+                    <AceEditor
+                        mode="json"
+                        value={message.json ?? ""}
+                        readOnly
+                        height="160px"
+                        maxHeight={400}
+                        actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                    />
                 </div>
             </div>
         </div>
@@ -621,7 +628,7 @@ function buildStreamingJson(
     const field = streamField || firstStringKey(answer) || Object.keys(answer)[0] || "reply";
     answer[field] = streamedText;
 
-    return JSON.stringify(answer, null, 4);
+    return JSON.stringify(answer, null, 2);
 }
 
 function firstStringKey(answer: Record<string, unknown>): string | undefined {
@@ -631,7 +638,7 @@ function firstStringKey(answer: Record<string, unknown>): string | undefined {
 // Pretty-prints the structured answer for the JSON editor; null when there is nothing to show.
 function toAnswerJson(answer: unknown): string | null {
     if (answer && typeof answer === "object" && Object.keys(answer).length > 0) {
-        return JSON.stringify(answer, null, 4);
+        return JSON.stringify(answer, null, 2);
     }
 
     return null;
