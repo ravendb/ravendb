@@ -154,20 +154,10 @@ export const appSchema = z.object({
             )
             .min(1, "At least one table is required"),
     }),
-    map: z
-        .object({
-            source: z.union([z.literal("ai-suggested"), z.literal("manual")]),
-            aiPrompt: z.string(),
-        })
-        .superRefine((map, ctx) => {
-            if (map.source === "ai-suggested" && map.aiPrompt.trim().length === 0) {
-                ctx.addIssue({
-                    code: "custom",
-                    path: ["aiPrompt"],
-                    message: "AI prompt is required",
-                });
-            }
-        }),
+    map: z.object({
+        source: z.union([z.literal("ai-suggested"), z.literal("manual")]),
+        aiPrompt: z.string(),
+    }),
     mapTables: z.object({
         tables: tablesSchema,
     }),

@@ -31,7 +31,12 @@ export function MapSchemaStep({ isBusy }: WizardBodyComponentProps) {
                             <FormTextarea
                                 control={control}
                                 name="map.aiPrompt"
-                                label="Intent prompt"
+                                label={
+                                    <>
+                                        Intent prompt
+                                        <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                                    </>
+                                }
                                 placeholder='e.g. "Embed line items in each order, link customers by id, flatten addresses."'
                                 rows={4}
                                 disabled={isDisabled}
