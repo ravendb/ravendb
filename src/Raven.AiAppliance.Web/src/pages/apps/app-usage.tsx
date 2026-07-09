@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { endOfMonth } from "date-fns";
+import { endOfDay, endOfMonth, min } from "date-fns";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
@@ -15,10 +15,12 @@ import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
-// The endpoint accepts ISO start/end query strings and parses them as UTC; send the full inclusive span of the picked month
+// The endpoint accepts ISO start/end query strings and parses them as UTC; send the inclusive span of the
+// picked month, clamped to today so the server never returns empty future buckets
 function toApiRange({ year, month }: MonthSelection) {
     const monthStart = new Date(year, month - 1, 1);
-    return { start: monthStart.toISOString(), end: endOfMonth(monthStart).toISOString() };
+    const rangeEnd = min([endOfMonth(monthStart), endOfDay(new Date())]);
+    return { start: monthStart.toISOString(), end: rangeEnd.toISOString() };
 }
 
 export function AppUsage() {
