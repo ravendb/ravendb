@@ -310,6 +310,28 @@ internal ref partial struct DualEmit(ILGenerator il, StringBuilder cs)
         CsStack.Push($"({a} > {b})");
     }
 
+    /// <summary>Unordered "less than": true when a &lt; b, AND when either operand is NaN. Combined with
+    /// <see cref="LogicalNot"/> this yields the correct "a &gt;= b" for doubles (NaN never satisfies
+    /// &gt;=), unlike the ordered <see cref="Clt"/>+<see cref="LogicalNot"/> idiom which wrongly admits NaN.</summary>
+    public void CltUn()
+    {
+        Il.Emit(OpCodes.Clt_Un);
+        var b = CsStack.Pop();
+        var a = CsStack.Pop();
+        CsStack.Push($"({a} < {b})");
+    }
+
+    /// <summary>Unordered "greater than": true when a &gt; b, AND when either operand is NaN. Combined with
+    /// <see cref="LogicalNot"/> this yields the correct "a &lt;= b" for doubles (NaN never satisfies
+    /// &lt;=), unlike the ordered <see cref="Cgt"/>+<see cref="LogicalNot"/> idiom which wrongly admits NaN.</summary>
+    public void CgtUn()
+    {
+        Il.Emit(OpCodes.Cgt_Un);
+        var b = CsStack.Pop();
+        var a = CsStack.Pop();
+        CsStack.Push($"({a} > {b})");
+    }
+
     public void LogicalNot()
     {
         Il.Emit(OpCodes.Ldc_I4_0);

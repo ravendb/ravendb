@@ -506,7 +506,7 @@ public static class ResidualScanIlEmitter
                 }
                 d.LoadReaderCurrentDouble(readerRefLocal);
                 d.LoadDoubleParam(paramSlot);
-                EmitNumericCompareOp(ref d, pred.CompareOp);
+                EmitNumericCompareOp(ref d, pred.CompareOp, isDouble: true);
                 break;
 
             case ScanValueType.Slice:
@@ -556,7 +556,15 @@ public static class ResidualScanIlEmitter
         }
     }
 
-    private static void EmitNumericCompareOp(ref DualEmit d, ScanCompareOp op)
+    /// <summary>
+    /// <paramref name="isDouble"/> selects unordered comparison opcodes for GreaterThanOrEqual/LessThanOrEqual
+    /// so a NaN operand correctly fails the comparison. Ordered Clt/Cgt (used when false, and always for
+    /// GreaterThan/LessThan/Equals/NotEquals) return false for NaN under ECMA-335 semantics; negating that
+    /// via LogicalNot would otherwise make NaN wrongly satisfy ">="/"<=" — the unordered Clt_Un/Cgt_Un
+    /// (true on NaN) avoid that when negated. Longs and the Slice/SliceLong SequenceCompareTo-vs-0 path
+    /// have no NaN concept, so they keep the ordered opcodes (isDouble: false).
+    /// </summary>
+    private static void EmitNumericCompareOp(ref DualEmit d, ScanCompareOp op, bool isDouble = false)
     {
         switch (op)
         {
@@ -570,7 +578,10 @@ public static class ResidualScanIlEmitter
                 break;
             case ScanCompareOp.GreaterThanOrEqual:
                 // !(a < b)
-                d.Clt();
+                if (isDouble)
+                    d.CltUn();
+                else
+                    d.Clt();
                 d.LogicalNot();
                 break;
             case ScanCompareOp.LessThan:
@@ -578,7 +589,10 @@ public static class ResidualScanIlEmitter
                 break;
             case ScanCompareOp.LessThanOrEqual:
                 // !(a > b)
-                d.Cgt();
+                if (isDouble)
+                    d.CgtUn();
+                else
+                    d.Cgt();
                 d.LogicalNot();
                 break;
             default:
