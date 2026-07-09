@@ -9,7 +9,7 @@ import type { CdcPerformanceResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
-import { formatCompact } from "@/lib/format";
+import { formatCompact, formatDuration } from "@/lib/format";
 import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard } from "@/pages/apps/section-card";
@@ -74,7 +74,12 @@ const batchColumns: ColumnDef<CdcBatch>[] = [
 
 function CdcPerformanceContent({ performance }: { performance: CdcPerformanceResponse }) {
     const cards: DashboardStatCard[] = [
-        { label: "Replication lag", value: performance.lagSeconds ?? undefined, isLoading: false, caption: "seconds" },
+        {
+            label: "Replication lag",
+            value: performance.lagSeconds ?? undefined,
+            valueLabel: performance.lagSeconds == null ? undefined : formatDuration(performance.lagSeconds),
+            isLoading: false,
+        },
         { label: "Recent writes", value: performance.recentWrites, isLoading: false },
         { label: "Errors", value: performance.errorCount, isLoading: false },
     ];

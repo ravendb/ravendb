@@ -16,6 +16,20 @@ export function formatDate(value: string): string {
     return Number.isNaN(date.getTime()) ? value : fullDateFormatter.format(date);
 }
 
+const DURATION_UNITS = [
+    { label: "day", seconds: 86_400 },
+    { label: "hour", seconds: 3_600 },
+    { label: "minute", seconds: 60 },
+    { label: "second", seconds: 1 },
+] as const;
+
+// Duration rounded down to its largest whole unit, e.g. 5 -> "5 seconds", 7_200 -> "2 hours".
+export function formatDuration(totalSeconds: number): string {
+    const unit = DURATION_UNITS.find(({ seconds }) => totalSeconds >= seconds) ?? DURATION_UNITS[DURATION_UNITS.length - 1];
+    const value = Math.floor(totalSeconds / unit.seconds);
+    return `${value} ${unit.label}${value === 1 ? "" : "s"}`;
+}
+
 const currencyFormatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 // Currency display, e.g. 128.4 -> "$128.40".
