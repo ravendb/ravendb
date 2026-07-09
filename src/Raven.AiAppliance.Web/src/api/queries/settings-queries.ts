@@ -5,10 +5,10 @@ const baseKey = "settings";
 
 export function createSettingsQueries(api: ServerApi["settings"]) {
     return {
-        license: (demoState?: string) =>
+        license: () =>
             queryOptions({
-                queryKey: [baseKey, "license", demoState ?? "default"],
-                queryFn: () => api.license(demoState ? { demoState } : undefined),
+                queryKey: [baseKey, "license"],
+                queryFn: () => api.license(),
             }),
         usage: (year?: number, month?: number) =>
             queryOptions({

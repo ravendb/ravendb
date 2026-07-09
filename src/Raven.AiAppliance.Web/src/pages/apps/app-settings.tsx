@@ -2,13 +2,15 @@ import { Link, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/api/api";
-import type { LicenseResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { ConnectivityMetric } from "@/components/data/connectivity-metric";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
+import type { ConnectivityStatus, ServerLicenseResponse } from "@/api/generated/server-api";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
-import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
+import { getLicenseDaysLeft } from "@/lib/license";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
 import { EditAiConnectionString } from "@/components/ai-connection-string/edit-ai-connection-string";
 import { CONNECTOR_TYPE_LABELS, MODEL_TYPE_LABELS } from "@/components/ai-connection-string/ai-connection-string-utils";
@@ -30,64 +32,51 @@ export function AppSettings() {
                     onRetry={() => void licenseQuery.refetch()}
                     loadingLabel="Loading license..."
                 >
-                    {licenseQuery.data && <LicenseSummaryCard license={licenseQuery.data} />}
+                    {licenseQuery.data && (
+                        <LicenseSummaryCard
+                            license={licenseQuery.data.response}
+                            connectivity={licenseQuery.data.connectivity}
+                        />
+                    )}
                 </ApiState>
             </section>
         </div>
     );
 }
 
-function LicenseSummaryCard({ license }: { license: LicenseResponse }) {
-    const isExpired = license.state === "expired";
-    const isTrial = license.tier === "Trial";
-    const tierVariant = isExpired ? "destructive" : isTrial ? "warning" : "success";
+function LicenseSummaryCard({
+    license,
+    connectivity,
+}: {
+    license: ServerLicenseResponse;
+    connectivity: ConnectivityStatus;
+}) {
+    const daysLeft = getLicenseDaysLeft(license);
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Badge variant={tierVariant}>{license.tier}</Badge>
-                    {isTrial && !isExpired && license.daysLeft > 0 && (
+                    <Badge variant={license.expired ? "destructive" : "success"}>{license.type}</Badge>
+                    {daysLeft > 0 && (
                         <span className="text-sm font-normal text-muted-foreground">
-                            {license.daysLeft} {license.daysLeft === 1 ? "day" : "days"} left
+                            {daysLeft} {daysLeft === 1 ? "day" : "days"} left
                         </span>
                     )}
                 </CardTitle>
-                <CardDescription>Refreshed {license.lastRefreshedLabel}</CardDescription>
+                <CardDescription>
+                    {license.expired ? "Expired" : "Expires"} {formatDate(license.expiration)}
+                </CardDescription>
                 <CardAction>
                     <Button asChild variant="outline" size="sm">
                         <Link to="/license">Manage license</Link>
                     </Button>
                 </CardAction>
             </CardHeader>
-            <CardContent className="grid gap-6 sm:grid-cols-3">
-                <HealthMetric label="API" healthy={license.apiHealthy} value={license.api} />
-                <HealthMetric
-                    label="Connectivity"
-                    healthy={license.connectivityOK}
-                    value={license.connectivityOK ? "OK" : "Unavailable"}
-                />
-                <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Trial ends</div>
-                    <div className="text-sm font-medium">{license.trialEndsLabel}</div>
-                </div>
+            <CardContent>
+                <ConnectivityMetric connectivity={connectivity} />
             </CardContent>
         </Card>
-    );
-}
-
-function HealthMetric({ label, healthy, value }: { label: string; healthy: boolean; value: string }) {
-    return (
-        <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">{label}</div>
-            <div className="flex items-center gap-2 text-sm font-medium">
-                <span
-                    className={cn("size-2 rounded-full", healthy ? "bg-emerald-500" : "bg-red-500")}
-                    aria-hidden="true"
-                />
-                {value}
-            </div>
-        </div>
     );
 }
 
