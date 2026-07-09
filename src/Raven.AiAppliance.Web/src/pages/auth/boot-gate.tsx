@@ -30,7 +30,7 @@ function BootStarting({ phase }: { phase?: BootstrapPhase }) {
     return (
         <>
             <Spinner className="mx-auto size-7 text-primary" />
-            <h1 className="mt-4 text-lg font-semibold tracking-tight">Starting the appliance</h1>
+            <h1 className="mt-4 text-lg font-semibold tracking-tight">Starting Quill</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{getStartingMessage(phase)}</p>
         </>
     );
@@ -44,7 +44,7 @@ function BootTimedOut({ onRetry }: { onRetry: () => void }) {
             </div>
             <h1 className="mt-4 text-lg font-semibold tracking-tight">Still starting…</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-                The appliance is taking longer than usual to come online. Keep waiting, or try again.
+                Quill is taking longer than usual to come online. Keep waiting, or try again.
             </p>
             <Button className="mt-5 w-full" onClick={onRetry}>
                 Try again
@@ -60,7 +60,7 @@ function getStartingMessage(phase?: BootstrapPhase) {
         case "Restarting":
             return "Applying configuration and restarting…";
         case "NeedsActivation":
-            return "Preparing the appliance…";
+            return "Preparing Quill…";
         default:
             return "This can take up to a minute on first run.";
     }

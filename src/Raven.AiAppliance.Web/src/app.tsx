@@ -12,6 +12,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { appRoutes } from "@/lib/app-routes";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
+import { RavenLogo } from "@/components/brand/raven-logo";
 
 const compactSidebarMediaQuery = "(max-width: 63.999rem)";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
@@ -68,16 +69,16 @@ function App() {
             <TrialBanner />
 
             <header className="app-shell__header relative px-3 py-2">
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
                     <Link
                         to={appRoutes.dashboard()}
-                        className="flex size-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground"
-                        aria-label="RavenDB home"
+                        className="flex items-center justify-center rounded-full"
+                        aria-label="Quill home"
                     >
-                        R
+                        <RavenLogo className="size-6" />
                     </Link>
                     <Link to={appRoutes.dashboard()} className="text-sm font-semibold text-sidebar-foreground">
-                        ravendb
+                        Quill
                     </Link>
                     {breadcrumbLabel && (
                         <>
