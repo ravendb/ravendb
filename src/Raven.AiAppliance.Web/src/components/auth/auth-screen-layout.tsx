@@ -16,8 +16,8 @@ export function AuthScreenLayout({ children }: { children: ReactNode }) {
                 <div className="mb-8 flex items-center gap-2.5 text-foreground">
                     <RavenLogo className="size-9" />
                     <div className="flex flex-col leading-tight">
-                        <span className="text-sm font-semibold tracking-tight">RavenDB</span>
-                        <span className="text-xs text-muted-foreground">AI Appliance</span>
+                        <span className="text-sm font-semibold tracking-tight">Quill</span>
+                        <span className="text-xs text-muted-foreground">by RavenDB</span>
                     </div>
                 </div>
                 {children}
