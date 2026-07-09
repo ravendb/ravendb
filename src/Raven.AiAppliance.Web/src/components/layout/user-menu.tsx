@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { LogOut, UserRound } from "lucide-react";
+import { Link } from "react-router";
+import { KeyRound, LineChart, LogOut, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-context";
 import { Button } from "@/components/shadcn/ui/button";
@@ -44,6 +45,20 @@ export function UserMenu() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>Operator</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link to="/usage">
+                        <LineChart aria-hidden="true" />
+                        Usage
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link to="/license">
+                        <KeyRound aria-hidden="true" />
+                        License
+                    </Link>
+                </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                     variant="destructive"
