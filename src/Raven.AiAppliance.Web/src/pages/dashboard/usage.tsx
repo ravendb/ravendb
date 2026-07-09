@@ -1,33 +1,25 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "@/api/api";
+import type { QuillApplicationUsage, QuillPeriodUsage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { WritesBarChart } from "@/components/data/charts";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
-import { Progress } from "@/components/shadcn/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
-import { formatRelativeTime } from "@/lib/utils";
 
 export function DashboardUsage() {
     const now = new Date();
     const [{ year, month }, setSelectedMonth] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
 
     const usageQuery = useQuery(api.queries.settings.usage(year, month));
-    const tokensByAppQuery = useQuery(api.queries.stats.tokensByApp());
 
-    // Anchor the "Refreshed …" label to when the server aggregated the data
-    // (refreshedMinutesAgo), not when the browser fetched it.
-    const refreshedAt = tokensByAppQuery.data
-        ? tokensByAppQuery.dataUpdatedAt - tokensByAppQuery.data.refreshedMinutesAgo * 60_000
-        : undefined;
+    const totalUsage = usageQuery.data?.byPeriod?.reduce((sum, period) => sum + period.usage, 0);
 
     const isAtCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
-    const monthLabel =
-        usageQuery.data?.monthLabel ??
-        new Date(year, month - 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+    const monthLabel = new Date(year, month - 1).toLocaleString("en-US", { month: "long", year: "numeric" });
 
     const goToMonth = (offset: number) =>
         setSelectedMonth(({ year: y, month: m }) => {
@@ -59,30 +51,13 @@ export function DashboardUsage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Writes this month</CardTitle>
-                    <CardDescription>
-                        {usageQuery.data
-                            ? `Monthly quota resets on ${usageQuery.data.quotaResetsOn}`
-                            : "Loading monthly writes…"}
-                    </CardDescription>
-                    {usageQuery.data && (
+                    <CardDescription>{monthLabel}</CardDescription>
+                    {totalUsage !== undefined && (
                         <CardAction className="text-right">
                             <div className="text-2xl font-semibold">
-                                {formatCompact(usageQuery.data.monthlyUsed)}
-                                <span className="ml-1 text-sm font-normal text-muted-foreground">
-                                    of {formatCompact(usageQuery.data.monthlyQuota)}
-                                </span>
+                                {formatCompact(totalUsage)}
+                                <span className="ml-1 text-sm font-normal text-muted-foreground">total</span>
                             </div>
-                            <Progress
-                                className="mt-2 ml-auto h-1.5 w-56"
-                                value={
-                                    usageQuery.data.monthlyQuota > 0
-                                        ? Math.min(
-                                              100,
-                                              (usageQuery.data.monthlyUsed / usageQuery.data.monthlyQuota) * 100,
-                                          )
-                                        : 0
-                                }
-                            />
                         </CardAction>
                     )}
                 </CardHeader>
@@ -94,39 +69,27 @@ export function DashboardUsage() {
                         onRetry={() => usageQuery.refetch()}
                         loadingLabel="Loading chart…"
                     >
-                        {usageQuery.data && <WritesBarChart data={usageQuery.data.days} xKey="label" />}
+                        {usageQuery.data && (
+                            <WritesBarChart data={toChartData(usageQuery.data.byPeriod ?? [])} xKey="label" />
+                        )}
                     </ApiState>
                 </CardContent>
             </Card>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Token usage per app</CardTitle>
-                    <CardDescription>
-                        All-time totals.
-                        {refreshedAt !== undefined && ` Refreshed ${formatRelativeTime(refreshedAt)}.`}
-                    </CardDescription>
-                    <CardAction>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => tokensByAppQuery.refetch()}
-                            disabled={tokensByAppQuery.isFetching}
-                        >
-                            <RefreshCw aria-hidden="true" />
-                            Refresh
-                        </Button>
-                    </CardAction>
+                    <CardTitle>Usage per app</CardTitle>
+                    <CardDescription>Totals for {monthLabel}.</CardDescription>
                 </CardHeader>
                 <CardContent className="px-0">
                     <ApiState
-                        isLoading={tokensByAppQuery.isPending}
-                        isError={tokensByAppQuery.isError}
+                        isLoading={usageQuery.isPending}
+                        isError={usageQuery.isError}
                         errorTitle="Could not load per-app usage"
-                        onRetry={() => tokensByAppQuery.refetch()}
+                        onRetry={() => usageQuery.refetch()}
                         loadingLabel="Loading apps…"
                     >
-                        {tokensByAppQuery.data && <PerAppUsageTable apps={tokensByAppQuery.data.apps} />}
+                        {usageQuery.data && <PerAppUsageTable apps={usageQuery.data.perApplication ?? []} />}
                     </ApiState>
                 </CardContent>
             </Card>
@@ -134,15 +97,22 @@ export function DashboardUsage() {
     );
 }
 
-function PerAppUsageTable({ apps }: { apps: { slug: string; tokens: number }[] }) {
-    const maxTokens = Math.max(1, ...apps.map((app) => app.tokens));
+const chartDayFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
+function toChartData(byPeriod: QuillPeriodUsage[]) {
+    return byPeriod.map((period) => ({
+        label: chartDayFormatter.format(new Date(period.from)),
+        writes: period.usage,
+    }));
+}
+
+function PerAppUsageTable({ apps }: { apps: QuillApplicationUsage[] }) {
     return (
         <Table>
             <TableHeader>
                 <TableRow className="hover:bg-transparent">
                     <TableHead className="w-full pl-4 text-xs font-medium text-muted-foreground">Name</TableHead>
-                    <TableHead className="pr-4 text-right text-xs font-medium text-muted-foreground">Tokens</TableHead>
+                    <TableHead className="pr-4 text-right text-xs font-medium text-muted-foreground">Writes</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,15 +124,12 @@ function PerAppUsageTable({ apps }: { apps: { slug: string; tokens: number }[] }
                     </TableRow>
                 ) : (
                     apps.map((app) => (
-                        <TableRow key={app.slug}>
-                            <TableCell className="py-3 pl-4 font-medium">{app.slug}</TableCell>
+                        <TableRow key={`${app.topologyId}/${app.applicationName}`}>
+                            <TableCell className="py-3 pl-4 font-medium">{app.applicationName}</TableCell>
                             <TableCell className="py-3 pr-4">
-                                <div className="ml-auto flex w-64 max-w-full items-center gap-3">
-                                    <Progress className="h-1.5 flex-1" value={(app.tokens / maxTokens) * 100} />
-                                    <span className="w-16 text-right text-muted-foreground tabular-nums">
-                                        {app.tokens.toLocaleString()}
-                                    </span>
-                                </div>
+                                <span className="w-16 text-right text-muted-foreground tabular-nums">
+                                    {app.usage.toLocaleString()}
+                                </span>
                             </TableCell>
                         </TableRow>
                     ))

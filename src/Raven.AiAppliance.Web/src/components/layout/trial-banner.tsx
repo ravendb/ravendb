@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { ArrowRight, X } from "lucide-react";
 import { api } from "@/api/api";
 import { Button } from "@/components/shadcn/ui/button";
+import { getLicenseDaysLeft } from "@/lib/license";
 
 // Remembers the day-count the banner was dismissed at, so dismissing hides it for
 // the day but the reminder returns as the trial winds down.
@@ -11,9 +12,9 @@ const DISMISSED_STORAGE_KEY = "trial-banner-dismissed-days-left";
 
 export function TrialBanner() {
     const licenseQuery = useQuery(api.queries.settings.license());
-    const license = licenseQuery.data;
-    const daysLeft = license?.daysLeft ?? 0;
-    const isTrialActive = license?.tier === "Trial" && daysLeft > 0;
+    const license = licenseQuery.data?.response;
+    const daysLeft = license ? getLicenseDaysLeft(license) : 0;
+    const isTrialActive = daysLeft > 0;
 
     const [dismissedDaysLeft, setDismissedDaysLeft] = useState(() => localStorage.getItem(DISMISSED_STORAGE_KEY));
 

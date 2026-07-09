@@ -1,16 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { Check, CircleCheck, RefreshCw } from "lucide-react";
+import { Check, RefreshCw } from "lucide-react";
 import { api } from "@/api/api";
-import type { LicensePlan, LicenseResponse } from "@/api/generated/server-api";
+import type { ConnectivityStatus, LicensePlan, ServerLicenseResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { ConnectivityMetric } from "@/components/data/connectivity-metric";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
-import { Progress } from "@/components/shadcn/ui/progress";
+import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ContactSheet } from "@/pages/dashboard/contact-sheet";
 
-// Subtle brand wash used to make the trial card and the featured plan stand out.
+// Subtle brand wash used to make the featured plan stand out.
 // Defined as a CSS class (see index.css) so it layers over the card's bg-color.
 const PREMIUM_CARD_GRADIENT = "card-premium-gradient";
 
@@ -21,6 +21,15 @@ export function DashboardLicense() {
         <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight">License</h1>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => licenseQuery.refetch()}
+                    disabled={licenseQuery.isFetching}
+                >
+                    <RefreshCw aria-hidden="true" />
+                    Refresh
+                </Button>
             </div>
 
             <ApiState
@@ -32,13 +41,9 @@ export function DashboardLicense() {
             >
                 {licenseQuery.data && (
                     <div className="space-y-8">
-                        <TrialCard license={licenseQuery.data} />
+                        <LicenseSummaryCard license={licenseQuery.data.response} />
                         <PlansSection plans={licenseQuery.data.plans} />
-                        <HealthSection
-                            license={licenseQuery.data}
-                            isRefreshing={licenseQuery.isFetching}
-                            onRefresh={() => licenseQuery.refetch()}
-                        />
+                        <HealthSection connectivity={licenseQuery.data.connectivity} />
                     </div>
                 )}
             </ApiState>
@@ -46,82 +51,30 @@ export function DashboardLicense() {
     );
 }
 
-function TrialCard({ license }: { license: LicenseResponse }) {
-    const isExpired = license.state === "expired";
-    const progress =
-        license.trialLengthDays > 0 ? Math.min(100, (license.daysElapsed / license.trialLengthDays) * 100) : 0;
-    const expireShortLabel = license.trialEndsLabel.split(",")[0];
-
+function LicenseSummaryCard({ license }: { license: ServerLicenseResponse }) {
     return (
-        <Card className={PREMIUM_CARD_GRADIENT}>
+        <Card>
             <CardHeader>
-                {isExpired ? (
-                    <>
-                        <CardTitle className="text-2xl">Trial expired</CardTitle>
-                        <CardDescription>
-                            {license.graceEndsLabel
-                                ? `Grace period ends ${license.graceEndsLabel}`
-                                : `Trial ended ${license.trialEndsLabel}`}
-                        </CardDescription>
-                    </>
-                ) : (
-                    <CardTitle className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold">{license.daysLeft}</span>
-                        <span className="flex flex-col">
-                            <span className="text-base font-semibold">days remaining</span>
-                            <span className="text-sm font-normal text-muted-foreground">
-                                Free trial enabled · Expires: {license.trialEndsLabel}
-                            </span>
-                        </span>
-                    </CardTitle>
-                )}
-                <CardAction>
-                    <ContactSheet
-                        trigger={
-                            <Button variant="outline" size="sm">
-                                Contact us
-                            </Button>
-                        }
-                    />
+                <CardTitle>Current license</CardTitle>
+                {license.expired && <CardDescription>This license has expired.</CardDescription>}
+                <CardAction className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled>
+                        Contact us
+                    </Button>
+                    <Badge variant="secondary">Coming soon</Badge>
                 </CardAction>
             </CardHeader>
-            <CardContent className="space-y-6">
-                <div>
-                    <Progress value={progress} className="h-2" />
-                    <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-                        <span>Start ({license.trialStartedLabel})</span>
-                        <span>Expire ({expireShortLabel})</span>
-                    </div>
+            <CardContent className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Expiration date</div>
+                    <div className="text-sm font-medium">{formatDate(license.expiration)}</div>
                 </div>
-
-                <div className="space-y-4 border-t pt-5">
-                    <div>
-                        <h2 className="text-base font-semibold">What's included</h2>
-                        <p className="text-sm text-muted-foreground">Full Quill instance, no caps, no card on file.</p>
-                    </div>
-                    <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {license.includes.map((item) => (
-                            <IncludedItem key={item} item={item} />
-                        ))}
-                    </div>
+                <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">License ID</div>
+                    <div className="text-sm font-medium tabular-nums">{license.id}</div>
                 </div>
             </CardContent>
         </Card>
-    );
-}
-
-function IncludedItem({ item }: { item: string }) {
-    const [title, ...rest] = item.split(" — ");
-    const description = rest.join(" — ");
-
-    return (
-        <div className="flex gap-2.5">
-            <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-500" aria-hidden="true" />
-            <div>
-                <div className="text-sm font-medium">{title}</div>
-                {description && <div className="text-sm text-muted-foreground">{description}</div>}
-            </div>
-        </div>
     );
 }
 
@@ -129,14 +82,35 @@ function PlansSection({ plans }: { plans: LicensePlan[] }) {
     return (
         <section className="space-y-4">
             <div>
-                <h2 className="text-lg font-semibold">Available plans</h2>
+                <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">Available plans</h2>
+                    <Badge variant="secondary">Coming soon</Badge>
+                </div>
                 <p className="text-sm text-muted-foreground">Talk to sales to install a license.</p>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div aria-disabled="true" className="pointer-events-none grid gap-4 opacity-60 grayscale md:grid-cols-3">
                 {plans.map((plan) => (
                     <PlanCard key={plan.slug} plan={plan} />
                 ))}
             </div>
+        </section>
+    );
+}
+
+function HealthSection({ connectivity }: { connectivity: ConnectivityStatus }) {
+    return (
+        <section className="space-y-4">
+            <div>
+                <h2 className="text-lg font-semibold">License health</h2>
+                <p className="text-sm text-muted-foreground">
+                    Check the status of your license, and connectivity with the API.
+                </p>
+            </div>
+            <Card>
+                <CardContent>
+                    <ConnectivityMetric connectivity={connectivity} />
+                </CardContent>
+            </Card>
         </section>
     );
 }
@@ -168,61 +142,5 @@ function PlanCard({ plan }: { plan: LicensePlan }) {
                 </ul>
             </CardContent>
         </Card>
-    );
-}
-
-function HealthSection({
-    license,
-    isRefreshing,
-    onRefresh,
-}: {
-    license: LicenseResponse;
-    isRefreshing: boolean;
-    onRefresh: () => void;
-}) {
-    return (
-        <section className="space-y-4">
-            <div className="flex items-end justify-between gap-3">
-                <div>
-                    <h2 className="text-lg font-semibold">License health</h2>
-                    <p className="text-sm text-muted-foreground">
-                        Check the status of your license, and connectivity with the API.
-                    </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={onRefresh} disabled={isRefreshing}>
-                    <RefreshCw aria-hidden="true" />
-                    Refresh
-                </Button>
-            </div>
-            <Card>
-                <CardContent className="grid gap-6 sm:grid-cols-3">
-                    <HealthMetric label="API" healthy={license.apiHealthy} value={license.api} />
-                    <HealthMetric
-                        label="Connectivity"
-                        healthy={license.connectivityOK}
-                        value={license.connectivityOK ? "OK" : "Unavailable"}
-                    />
-                    <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground">Last refreshed</div>
-                        <div className="text-sm font-medium">{license.lastRefreshedLabel}</div>
-                    </div>
-                </CardContent>
-            </Card>
-        </section>
-    );
-}
-
-function HealthMetric({ label, healthy, value }: { label: string; healthy: boolean; value: string }) {
-    return (
-        <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">{label}</div>
-            <div className="flex items-center gap-2 text-sm font-medium">
-                <span
-                    className={cn("size-2 rounded-full", healthy ? "bg-emerald-500" : "bg-red-500")}
-                    aria-hidden="true"
-                />
-                {value}
-            </div>
-        </div>
     );
 }
