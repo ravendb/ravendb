@@ -8,9 +8,6 @@ using Corax;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using FastTests.Voron;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
-using Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
-using Raven.Server.Documents.Queries;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
@@ -281,25 +278,7 @@ namespace FastTests.Corax
         private List<string> ExecuteRQLQuery(string rqlQuery)
         {
             using var searcher = new IndexSearcher(Env, _knownFields);
-            var queryMetadata = new QueryMetadata(rqlQuery, null, 0);
-            var planParams = new PlanParameters
-            {
-                IndexSearcher = searcher,
-                Metadata = queryMetadata,
-                QueryParameters = null,
-                Allocator = Allocator
-            };
-            var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, null, _knownFields), null, false, default);
-
-            var list = new List<string>();
-            Span<long> ids = stackalloc long[256];
-            int count;
-            while ((count = match.Fill(ids)) > 0)
-            {
-                for (int i = 0; i < count; i++)
-                    list.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(ids[i]));
-            }
-            return list;
+            return CoraxRqlTestHelper.ExecuteRQLQueryAsDocumentIds(searcher, Allocator, _knownFields, rqlQuery);
         }
 
         private List<string> FetchFromCorax<TMatch>(ref TMatch match, int batchSize = 256)

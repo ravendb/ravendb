@@ -7,11 +7,8 @@ using Corax;
 using Corax.Analyzers;
 using Corax.Mappings;
 using FastTests.Voron;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
-using Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Documents.Queries;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -165,44 +162,7 @@ public class RankingFunctionTests : StorageTest
     private List<string> ExecuteRQLQueryByScore(string rqlQuery)
     {
         using var searcher = new IndexSearcher(Env, _mapping);
-        var queryMetadata = new QueryMetadata(rqlQuery, null, 0);
-        var planParams = new PlanParameters
-        {
-            IndexSearcher = searcher,
-            Metadata = queryMetadata,
-            HasBoost = true,
-            Allocator = Allocator
-        };
-        var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, null, _mapping, hasBoost: true), null, false, default);
-        match = ApplyScoreOrderingIfRequested(searcher, queryMetadata, match, long.MaxValue);
-        var list = new List<string>();
-        Span<long> ids = stackalloc long[256];
-        int count;
-        while ((count = match.Fill(ids)) > 0)
-            for (int i = 0; i < count; i++)
-                list.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(ids[i]));
-        return list;
-    }
-
-    // Wraps the searcher's score-ordering primitive directly. Production OrderBy(QueryBuilderParameters, ...)
-    // needs the full server-side query pipeline that these direct-IndexSearcher tests bypass.
-    private static global::Corax.Querying.Matches.Meta.IQueryMatch ApplyScoreOrderingIfRequested(IndexSearcher searcher, QueryMetadata queryMetadata, global::Corax.Querying.Matches.Meta.IQueryMatch match, long take)
-    {
-        var orderByFields = queryMetadata.OrderBy;
-        if (orderByFields is null || orderByFields.Length == 0)
-            return match;
-
-        int takeInt = take > int.MaxValue ? global::Corax.Constants.IndexSearcher.TakeAll : (int)take;
-        foreach (var field in orderByFields)
-        {
-            if (field.OrderingType == Raven.Server.Documents.Queries.AST.OrderByFieldType.Score)
-            {
-                var meta = new global::Corax.Utils.OrderMetadata(true, global::Corax.Querying.Matches.SortingMatches.Meta.MatchCompareFieldType.Score, field.Ascending);
-                return searcher.OrderBy(match, meta, global::Corax.Utils.NullsSortMode.NullsLargest, take: takeInt);
-            }
-        }
-
-        return match;
+        return CoraxRqlTestHelper.ExecuteRQLQueryByScore(searcher, Allocator, _mapping, rqlQuery);
     }
 
     private void IndexEntries(IEnumerable<EntryData> entries)

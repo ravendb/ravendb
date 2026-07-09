@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using Corax;
 using Corax.Analyzers;
 using Corax.Querying;
@@ -1834,41 +1833,7 @@ namespace FastTests.Corax
         {
             using var fields = CreateKnownFields(Allocator);
             using var searcher = new IndexSearcher(Env, fields);
-
-            // Parse RQL query string into AST via QueryMetadata
-            var queryMetadata = new QueryMetadata(rqlQuery, null, 0);
-
-            // Build and compile the query plan through QueryPlanBuilder
-            var planParams = new PlanParameters
-            {
-                IndexSearcher = searcher,
-                Metadata = queryMetadata,
-                QueryParameters = null,
-                Allocator = Allocator
-            };
-
-            // BuildAndCompile: RQL → QueryExecution → IL compilation → CompiledQueryMatch
-            var compiledMatch = QueryPlanBuilder.BuildFilterMatch(
-                planParams,
-                new QueryBuilderParameters(searcher, Allocator, queryMetadata, null, fields),
-                highlightingTerms: null,
-                wantTimings: false,
-                CancellationToken.None);
-
-
-
-            // Execute the compiled match to collect entry IDs
-            var results = new List<long>();
-            Span<long> buffer = stackalloc long[256];
-            int count;
-
-            while ((count = compiledMatch.Fill(buffer)) > 0)
-            {
-                for (int i = 0; i < count; i++)
-                    results.Add(buffer[i]);
-            }
-
-            return results;
+            return CoraxRqlTestHelper.ExecuteRQLQuery(searcher, Allocator, fields, rqlQuery);
         }
 
         /// <summary>

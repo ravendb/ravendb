@@ -5,9 +5,6 @@ using Corax;
 using Corax.Indexing;
 using Corax.Mappings;
 using FastTests.Voron;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
-using Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
-using Raven.Server.Documents.Queries;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -133,21 +130,6 @@ public class RavenDB_23631(ITestOutputHelper output) : StorageTest(output)
     private List<string> ExecuteRQLQuery(IndexFieldsMapping mapping, string rqlQuery)
     {
         using var searcher = new IndexSearcher(Env, mapping);
-        var queryMetadata = new QueryMetadata(rqlQuery, null, 0);
-        var planParams = new PlanParameters
-        {
-            IndexSearcher = searcher,
-            Metadata = queryMetadata,
-            QueryParameters = null,
-            Allocator = Allocator
-        };
-        var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, null, mapping), null, false, default);
-        var list = new List<string>();
-        Span<long> ids = stackalloc long[256];
-        int count;
-        while ((count = match.Fill(ids)) > 0)
-            for (int i = 0; i < count; i++)
-                list.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(ids[i]));
-        return list;
+        return CoraxRqlTestHelper.ExecuteRQLQueryAsDocumentIds(searcher, Allocator, mapping, rqlQuery);
     }
 }
