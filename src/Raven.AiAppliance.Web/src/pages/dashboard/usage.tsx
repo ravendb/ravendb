@@ -78,10 +78,13 @@ export function DashboardUsage() {
 const chartDayFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
 function toChartData(byPeriod: QuillPeriodUsage[]) {
-    return byPeriod.map((period) => ({
-        label: chartDayFormatter.format(new Date(period.from)),
-        writes: period.usage,
-    }));
+    const now = new Date();
+    return byPeriod
+        .filter((period) => new Date(period.from) <= now)
+        .map((period) => ({
+            label: chartDayFormatter.format(new Date(period.from)),
+            writes: period.usage,
+        }));
 }
 
 function PerAppUsageTable({ apps }: { apps: QuillApplicationUsage[] }) {
