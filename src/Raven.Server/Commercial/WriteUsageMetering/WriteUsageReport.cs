@@ -6,9 +6,8 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 {
     public static class WriteUsageMeteringConstants
     {
-        public const string WriteUsageEndpointPath = "/api/v1/quill/write-usage";
-
-        public const string UsageQueryEndpointPath = "/api/v1/quill/usage";
+        // Single api.ravendb.net endpoint for Quill usage: PUT to report write-usage, POST to query it.
+        public const string UsageEndpointPath = "/api/v1/quill/usage";
     }
 
     public sealed class WriteUsageDatabaseSnapshot
