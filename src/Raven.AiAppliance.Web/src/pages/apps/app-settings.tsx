@@ -57,7 +57,6 @@ function LicenseSummaryCard({
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Badge variant={license.expired ? "destructive" : "success"}>{license.type}</Badge>
                     {daysLeft > 0 && (
                         <span className="text-sm font-normal text-muted-foreground">
                             {daysLeft} {daysLeft === 1 ? "day" : "days"} left
