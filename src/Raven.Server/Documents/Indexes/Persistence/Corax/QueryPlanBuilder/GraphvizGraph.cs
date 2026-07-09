@@ -107,6 +107,14 @@ internal sealed class GraphvizGraph
         }
     }
 
+    /// <summary>
+    /// Sentinel inserted between facts by <see cref="BuildDataTooltip"/> and turned into a real Graphviz
+    /// line break (the two literal characters <c>\n</c>) by <see cref="EscapeAttr"/> — after
+    /// <see cref="Escape"/> has run — so it survives escaping unchanged and isn't collapsed by the
+    /// raw-newline-to-space substitution used to keep the DOT tooltip attribute on a single line.
+    /// </summary>
+    private const string TooltipLineBreakSentinel = "\uE000";
+
     private static string BuildDataTooltip(Dictionary<string, string> data)
     {
         StringBuilder tip = null;
@@ -116,7 +124,7 @@ internal sealed class GraphvizGraph
                 continue;
             tip ??= new StringBuilder();
             if (tip.Length != 0)
-                tip.Append("\\\n");
+                tip.Append(TooltipLineBreakSentinel);
             tip.Append(kv.Key).Append(": ").Append(kv.Value);
         }
 
@@ -156,5 +164,12 @@ internal sealed class GraphvizGraph
 
     public static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-    private static string EscapeAttr(string s) => Escape(s).Replace("\r", " ").Replace("\n", " ");
+    /// <summary>
+    /// Escapes <paramref name="s"/> for use as a DOT attribute value. Raw newlines/carriage returns are
+    /// collapsed to spaces (attribute values must stay on one line), while <see cref="TooltipLineBreakSentinel"/>
+    /// — inserted by <see cref="BuildDataTooltip"/> and untouched by <see cref="Escape"/> — is turned into the
+    /// two-character <c>\n</c> escape sequence that Graphviz renders as an actual line break inside a tooltip.
+    /// </summary>
+    private static string EscapeAttr(string s) =>
+        Escape(s).Replace("\r", " ").Replace("\n", " ").Replace(TooltipLineBreakSentinel, "\\n");
 }

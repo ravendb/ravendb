@@ -47,10 +47,14 @@ public class QueryPlanGraphTooltipTests : RavenTestBase
             Assert.Contains("tooltip=\"", dot);
 
             // The tooltip uses the original (readable) key names; a node with more than one fact joins them
-            // with the Graphviz line-break separator (an escaped "\\" left after EscapeAttr collapses the
-            // newline to a space) — confirm a representative fact and the join are present.
+            // with a real Graphviz line-break — the two-character "\n" (backslash + 'n') escape sequence,
+            // which Graphviz renders as a line break within the tooltip — confirm a representative fact and
+            // the join are present.
             Assert.Contains("FieldName: Name", dot);
-            Assert.Contains("\\\\ ", dot);
+            Assert.Contains("\\n", dot);
+
+            // The old (buggy) separator — a literal backslash followed by a space — must not appear.
+            Assert.DoesNotContain("\\\\ ", dot);
 
             // One line: a tooltip value must not contain a raw newline (EscapeAttr collapses them to spaces).
             foreach (var line in dot.Split('\n'))
