@@ -1,43 +1,35 @@
 import { useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { endOfDay, startOfDay, startOfToday, subDays } from "date-fns";
-import type { DateRange } from "react-day-picker";
+import { endOfMonth } from "date-fns";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { SeriesBarChart, WritesBarChart } from "@/components/data/charts";
-import { DateRangePicker } from "@/components/data/date-range-picker";
+import { MonthPicker } from "@/components/data/month-picker";
 import { PagePanel } from "@/components/data/page-panel";
+import { getCurrentMonth, type MonthSelection } from "@/lib/month";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
-import { formatCompact, formatCurrency } from "@/lib/format";
+import { formatCompact } from "@/lib/format";
 import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
-const getDefaultRange = (): DateRange => {
-    const today = startOfToday();
-    return { from: subDays(today, 6), to: today };
-};
-
-// The endpoint accepts ISO start/end query strings and parses them as UTC; send the full inclusive span of the picked days
-function toApiRange(range: DateRange | undefined) {
-    if (!range?.from) {
-        return undefined;
-    }
-    const to = range.to ?? range.from;
-    return { start: startOfDay(range.from).toISOString(), end: endOfDay(to).toISOString() };
+// The endpoint accepts ISO start/end query strings and parses them as UTC; send the full inclusive span of the picked month
+function toApiRange({ year, month }: MonthSelection) {
+    const monthStart = new Date(year, month - 1, 1);
+    return { start: monthStart.toISOString(), end: endOfMonth(monthStart).toISOString() };
 }
 
 export function AppUsage() {
     const { slug = "" } = useParams();
-    const [range, setRange] = useState<DateRange | undefined>(getDefaultRange);
-    const appUsageQuery = useQuery(api.queries.stats.appUsage(slug, toApiRange(range)));
+    const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
+    const appUsageQuery = useQuery(api.queries.stats.appUsage(slug, toApiRange(selectedMonth)));
 
     return (
         <PagePanel>
             <div className="mb-6 flex items-center justify-end">
-                <DateRangePicker value={range} onChange={setRange} />
+                <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
             </div>
             <ApiState
                 isLoading={appUsageQuery.isPending}
@@ -69,7 +61,7 @@ export function AppUsage() {
 }
 
 function UsageMetricCards({ usage }: { usage: AppUsageResponse }) {
-    const { conversations, tokens, cost, cdcWrites } = usage.metrics;
+    const { conversations, tokens, cdcWrites } = usage.metrics;
     const cards: DashboardStatCard[] = [
         {
             label: "Conversations",
@@ -79,14 +71,6 @@ function UsageMetricCards({ usage }: { usage: AppUsageResponse }) {
             series: conversations.sparkline,
         },
         { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
-        {
-            label: "Cost",
-            value: cost.value,
-            valueLabel: formatCurrency(cost.value),
-            isLoading: false,
-            delta: cost.delta,
-            series: cost.sparkline,
-        },
         {
             label: "CDC writes",
             value: cdcWrites.value,
@@ -150,7 +134,7 @@ function TopCapabilitiesSection({ capabilities }: { capabilities: AppUsageRespon
     return (
         <SectionCard title="Top capabilities">
             <SectionTable
-                headers={["Capability", "Invocations", "Avg tokens", "Total tokens", "Cost"]}
+                headers={["Capability", "Invocations", "Avg tokens", "Total tokens"]}
                 isEmpty={capabilities.length === 0}
                 emptyMessage="No capability usage yet."
             >
@@ -160,7 +144,6 @@ function TopCapabilitiesSection({ capabilities }: { capabilities: AppUsageRespon
                         <TableCell className="tabular-nums">{formatCompact(capability.invocations)}</TableCell>
                         <TableCell className="tabular-nums">{formatCompact(capability.avgTokens)}</TableCell>
                         <TableCell className="tabular-nums">{formatCompact(capability.totalTokens)}</TableCell>
-                        <TableCell className="tabular-nums">{formatCurrency(capability.cost)}</TableCell>
                     </TableRow>
                 ))}
             </SectionTable>
