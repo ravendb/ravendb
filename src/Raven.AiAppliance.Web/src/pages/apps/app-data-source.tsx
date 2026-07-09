@@ -1,12 +1,14 @@
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import type { AppResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { DetailList } from "@/components/data/detail-list";
 import { PagePanel } from "@/components/data/page-panel";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { CollectionsSection } from "@/pages/apps/collections-section";
 import { formatDateTime } from "@/lib/utils";
+import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
+import { SectionCard } from "@/pages/apps/section-card";
 
 export function AppDataSource() {
     const { slug = "" } = useParams();
@@ -15,28 +17,29 @@ export function AppDataSource() {
     return (
         <PagePanel>
             <div className="space-y-8">
-                <section className="space-y-4">
-                    <h2 className="text-sm font-semibold">Connection</h2>
+                <SectionCard title="Connection">
                     <ApiState
                         isLoading={appQuery.isPending}
                         onRetry={appQuery.refetch}
                         isError={appQuery.isError}
                         errorTitle="Could not load data source"
                     >
-                        {appQuery.data && (
-                            <DetailList
-                                items={[
-                                    { label: "Application", value: appQuery.data.name },
-                                    { label: "Source database", value: appQuery.data.database },
-                                    { label: "Created at", value: formatDateTime(appQuery.data.createdAt) },
-                                ]}
-                            />
-                        )}
+                        {appQuery.data && <ConnectionCards app={appQuery.data} />}
                     </ApiState>
-                </section>
+                </SectionCard>
                 <CdcPerformanceSection slug={slug} />
                 <CollectionsSection slug={slug} />
             </div>
         </PagePanel>
     );
+}
+
+function ConnectionCards({ app }: { app: AppResponse }) {
+    const cards: DashboardStatCard[] = [
+        { label: "Application", value: undefined, valueLabel: app.name, isLoading: false },
+        { label: "Source database", value: undefined, valueLabel: app.database, isLoading: false },
+        { label: "Created at", value: undefined, valueLabel: formatDateTime(app.createdAt), isLoading: false },
+    ];
+
+    return <DashboardStatCards cards={cards} />;
 }
