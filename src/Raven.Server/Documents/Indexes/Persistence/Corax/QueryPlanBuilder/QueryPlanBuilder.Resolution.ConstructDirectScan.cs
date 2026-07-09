@@ -47,11 +47,11 @@ internal static partial class QueryPlanBuilder
         {
             // Filter every clause EXCEPT the sort-driving clause (walked by the tree).
             ScanParamExtractor.Extract(ctx.Exec, indexSearcher, walkerCtx, ctx.Exec.Plan.DirectScanResidualSet);
-            ds = new DirectScanFilteredMatch(indexSearcher, drivingMatch, ctx.Exec, take: take, precompiledDelegate: ctx.Plan.DirectScanResidualSet.Compiled);
+            ds = new DirectScanFilteredMatch(indexSearcher, drivingMatch, ctx.Exec, take: take, precompiledDelegate: ctx.Plan.DirectScanResidualSet.Compiled, token: ctx.Token);
         }
         else
         {   // Nothing to filter, just match.
-            ds = new DirectScanSimpleMatch(indexSearcher, drivingMatch, take: take)
+            ds = new DirectScanSimpleMatch(indexSearcher, drivingMatch, take: take, token: ctx.Token)
             {
                 KnownExactTotal = knownTotal, KnownTotalProbeTicks = probeTicks, KnownTotalProbeTerms = probeTerms
             };

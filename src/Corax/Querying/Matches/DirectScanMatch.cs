@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Planning;
 using Corax.Querying.Primitives;
@@ -28,6 +29,7 @@ public abstract class DirectScanMatchBase : IQueryMatch, IDisposable
     protected readonly LowLevelTransaction Llt;
     protected readonly IQueryMatch DrivingMatch;
     protected readonly int Take;
+    protected readonly CancellationToken Token;
     protected long TotalMatched;
 
     protected RoaringBitmap EmittedBitmap;
@@ -57,12 +59,13 @@ public abstract class DirectScanMatchBase : IQueryMatch, IDisposable
     public long KnownTotalProbeTicks = -1;
     public int KnownTotalProbeTerms;
 
-    protected DirectScanMatchBase(IndexSearcher searcher, IQueryMatch drivingMatch, int take)
+    protected DirectScanMatchBase(IndexSearcher searcher, IQueryMatch drivingMatch, int take, CancellationToken token)
     {
         Searcher = searcher;
         Llt = searcher.Transaction.LowLevelTransaction;
         DrivingMatch = drivingMatch;
         Take = take;
+        Token = token;
         ByteStringContext allocator = searcher.Allocator;
         EmittedBitmap = new RoaringBitmap(allocator);
     }
@@ -112,7 +115,8 @@ public abstract class DirectScanMatchBase : IQueryMatch, IDisposable
 }
 
 /// <summary>DirectScan with no residual predicates — simple dedup + pass-through.</summary>
-public sealed class DirectScanSimpleMatch(IndexSearcher searcher, IQueryMatch drivingMatch, int take) : DirectScanMatchBase(searcher, drivingMatch, take)
+public sealed class DirectScanSimpleMatch(IndexSearcher searcher, IQueryMatch drivingMatch, int take, CancellationToken token = default)
+    : DirectScanMatchBase(searcher, drivingMatch, take, token)
 {
     [SkipLocalsInit]
     public override unsafe int Fill(Span<long> matches)
@@ -126,6 +130,11 @@ public sealed class DirectScanSimpleMatch(IndexSearcher searcher, IQueryMatch dr
 
         while (count < remaining)
         {
+            // The driving tree walk can run over many entries per Fill() call; check per batch
+            // (same ~EntryScanBatchSize granularity as the bitmap pipeline's RunEntryScan) so a
+            // cancelled query doesn't have to scan the whole remaining set before noticing.
+            Token.ThrowIfCancellationRequested();
+
             int batchSize = Math.Min(QueryPrimitives.EntryScanBatchSize, remaining - count);
             if (batchSize == 0)
                 break;
@@ -164,8 +173,9 @@ public sealed class DirectScanFilteredMatch(
     IQueryMatch drivingMatch,
     QueryExecution exec,
     int take,
-    ResidualScanIlEmitter.ResidualScanPredicate precompiledDelegate)
-    : DirectScanMatchBase(searcher, drivingMatch, take)
+    ResidualScanIlEmitter.ResidualScanPredicate precompiledDelegate,
+    CancellationToken token = default)
+    : DirectScanMatchBase(searcher, drivingMatch, take, token)
 {
     /// <summary>Per-execution state — the emitted IL loads analyzer-encoded slices,
     /// field-root pages, and direct long/double values from this object via baked field indices.</summary>
@@ -204,9 +214,15 @@ public sealed class DirectScanFilteredMatch(
         try
         {
             Searcher.InitializeSpecialTermsMarkers();
-            
+
             while (count < remaining)
             {
+                // Checked once per driving-tree batch (~EntryScanBatchSize entries) rather than per term inside
+                // the residual predicate's own per-field loops — those are bounded to one entry's term count and
+                // too fine-grained to be worth an IL-emitted check; this is the coarsest point that still bounds
+                // the uncancellable stretch to a single batch instead of the whole remaining result set.
+                Token.ThrowIfCancellationRequested();
+
                 long t0 = Stopwatch.GetTimestamp();
                 int read = DrivingMatch.Fill(batch[..batchSize]);
                 TreeScanTicks += Stopwatch.GetTimestamp() - t0;

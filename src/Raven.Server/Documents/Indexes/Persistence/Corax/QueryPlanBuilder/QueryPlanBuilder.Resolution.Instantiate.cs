@@ -26,7 +26,7 @@ internal static partial class QueryPlanBuilder
         CancellationToken token)
     {
         var compiledPlan = exec.Plan;
-        var ctx = new InstantiateContext(compiledPlan, exec, orderByFields, planParams, builderParameters, wantTimings);
+        var ctx = new InstantiateContext(compiledPlan, exec, orderByFields, planParams, builderParameters, wantTimings, token);
         if (compiledPlan.Strategy == ExecutionStrategy.NotEvaluated)
             SelectExecutionStrategy(ref ctx);
 

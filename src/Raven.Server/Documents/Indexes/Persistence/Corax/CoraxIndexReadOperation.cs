@@ -841,6 +841,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         {
                             while(true)
                             {
+                                token.ThrowIfCancellationRequested();
+
                                 // Instead of memoizing, we just continue filling the buffer. First, because we don't need to keep the
                                 // value or deduplicate at this stage; just to know how many potential matches we have left. Also memoizing
                                 // is not supported for SortingMatch.
