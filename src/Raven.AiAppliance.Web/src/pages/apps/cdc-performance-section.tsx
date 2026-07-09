@@ -1,14 +1,18 @@
+/* eslint-disable react-hooks/incompatible-library */
+"use no memo";
+
 import type { ComponentProps } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { api } from "@/api/api";
 import type { CdcPerformanceResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
-import { TableCell, TableRow } from "@/components/shadcn/ui/table";
+import { VirtualDataTable } from "@/components/table/virtual-data-table";
 import { formatCompact } from "@/lib/format";
 import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
-import { SectionCard, SectionTable } from "@/pages/apps/section-card";
+import { SectionCard } from "@/pages/apps/section-card";
 
 export function CdcPerformanceSection({ slug }: { slug: string }) {
     const cdcQuery = useQuery(api.queries.apps.cdcPerformance(slug));
@@ -43,6 +47,36 @@ function CdcStatusBadge({ performance }: { performance: CdcPerformanceResponse }
     return <Badge variant={badge.variant}>{badge.label}</Badge>;
 }
 
+type CdcBatch = CdcPerformanceResponse["recentBatches"][number];
+
+const batchColumns: ColumnDef<CdcBatch>[] = [
+    {
+        accessorKey: "started",
+        header: "Started",
+        cell: ({ getValue }) => <span className="text-muted-foreground">{formatDateTime(getValue<string>())}</span>,
+    },
+    {
+        accessorKey: "durationInMs",
+        header: "Duration",
+        cell: ({ getValue }) => <span className="tabular-nums">{Math.round(getValue<number>())} ms</span>,
+    },
+    {
+        accessorKey: "processed",
+        header: "Processed",
+        cell: ({ getValue }) => <span className="tabular-nums">{formatCompact(getValue<number>())}</span>,
+    },
+    {
+        accessorKey: "errors",
+        header: "Errors",
+        cell: ({ getValue }) => <span className="tabular-nums">{getValue<number>()}</span>,
+    },
+    {
+        accessorKey: "stopReason",
+        header: "Stop reason",
+        cell: ({ getValue }) => <span className="text-muted-foreground">{getValue<string | null>() ?? "—"}</span>,
+    },
+];
+
 function CdcPerformanceContent({ performance }: { performance: CdcPerformanceResponse }) {
     const cards: DashboardStatCard[] = [
         { label: "Replication lag", value: performance.lagSeconds ?? undefined, isLoading: false, caption: "seconds" },
@@ -50,26 +84,22 @@ function CdcPerformanceContent({ performance }: { performance: CdcPerformanceRes
         { label: "Errors", value: performance.errorCount, isLoading: false },
     ];
 
+    const table = useReactTable({
+        columns: batchColumns,
+        data: performance.recentBatches,
+        getCoreRowModel: getCoreRowModel(),
+        getRowId: (batch, index) => `${batch.started}-${index}`,
+    });
+
     return (
         <div className="space-y-4">
             <DashboardStatCards cards={cards} />
-            <SectionTable
-                headers={["Started", "Duration", "Processed", "Errors", "Stop reason"]}
-                isEmpty={performance.recentBatches.length === 0}
+            <VirtualDataTable
+                table={table}
+                columnCount={batchColumns.length}
                 emptyMessage="No recent batches."
-            >
-                {performance.recentBatches.map((batch, index) => (
-                    <TableRow key={`${batch.started}-${index}`}>
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                            {formatDateTime(batch.started)}
-                        </TableCell>
-                        <TableCell className="tabular-nums">{Math.round(batch.durationInMs)} ms</TableCell>
-                        <TableCell className="tabular-nums">{formatCompact(batch.processed)}</TableCell>
-                        <TableCell className="tabular-nums">{batch.errors}</TableCell>
-                        <TableCell className="text-muted-foreground">{batch.stopReason ?? "—"}</TableCell>
-                    </TableRow>
-                ))}
-            </SectionTable>
+                className="bg-card"
+            />
         </div>
     );
 }
