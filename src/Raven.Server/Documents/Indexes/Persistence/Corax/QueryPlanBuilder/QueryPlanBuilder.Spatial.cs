@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Corax.Querying.Planning;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
@@ -98,28 +99,48 @@ internal static partial class QueryPlanBuilder
         {
             int sLen = template.SpatialClauses.Count;
             int matchIndex = exec.Cardinalities?.Length ?? 0;
-            exec.SpatialFilters = new SpatialFilterOp[sLen];
+            var spatialFilters = new List<SpatialFilterOp>(sLen);
             for (int si = 0; si < sLen; si++)
             {
                 var clause = template.SpatialClauses[si];
+
+                // WHEN(false) guards a spatial clause exactly like it guards a bitmap-pipeline clause (see
+                // BuildResolver.ApplyFateRecursive): the clause collapses to the identity of its enclosing
+                // AND — a no-op — so it must not be attached as a filter at all. GroupCollapse only lifts
+                // spatial/vector clauses out of the top-level AND chain (never out of an OR group), so every
+                // clause reaching here is implicitly AND-ed with the rest of the query; there is no OR case
+                // to consider.
+                if (clause.WhenCondition is { } predicate && predicate(planParams.QueryParameters) == false)
+                    continue;
+
                 var scExec = new ClauseExecution(clause);
                 PopulateClauseValues(scExec, planParams.SlotBindings, planParams.QueryParameters, writer, builderParameters, Span<ulong>.Empty);
                 execs.Add(scExec);
-                exec.SpatialFilters[si] = new SpatialFilterOp { MatchIndex = matchIndex++, Clause = clause, Exec = scExec };
+                spatialFilters.Add(new SpatialFilterOp { MatchIndex = matchIndex++, Clause = clause, Exec = scExec });
             }
+
+            exec.SpatialFilters = spatialFilters.ToArray();
         }
 
         if (template.VectorClauses != null)
         {
             int vLen = template.VectorClauses.Count;
-            exec.VectorSelects = new ClauseExecution[vLen];
+            var vectorSelects = new List<ClauseExecution>(vLen);
             for (int vi = 0; vi < vLen; vi++)
             {
-                var vcExec = new ClauseExecution(template.VectorClauses[vi]);
+                var clause = template.VectorClauses[vi];
+
+                // Same WHEN(false) no-op collapse as above, mirrored for vector clauses.
+                if (clause.WhenCondition is { } predicate && predicate(planParams.QueryParameters) == false)
+                    continue;
+
+                var vcExec = new ClauseExecution(clause);
                 PopulateClauseValues(vcExec, planParams.SlotBindings, planParams.QueryParameters, writer, builderParameters, Span<ulong>.Empty);
                 execs.Add(vcExec);
-                exec.VectorSelects[vi] = vcExec;
+                vectorSelects.Add(vcExec);
             }
+
+            exec.VectorSelects = vectorSelects.ToArray();
         }
     }
 }

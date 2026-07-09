@@ -85,6 +85,7 @@ internal static partial class QueryPlanBuilder
                 Clauses = [],
                 SpatialClauses = walkerCtx.SpatialClauses,
                 VectorClauses = walkerCtx.VectorClauses,
+                WhenCount = walkerCtx.WhenCount,
                 ValueOrdinalCount = walkerCtx.SlotBindings.ToArray().Length,
             };
         }
