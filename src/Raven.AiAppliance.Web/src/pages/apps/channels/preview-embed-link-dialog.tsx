@@ -33,6 +33,7 @@ export function PreviewEmbedLinkDialog({ slug, link, trigger }: PreviewEmbedLink
                 setIsOpen(open);
                 if (!open) {
                     queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey });
+                    queryClient.invalidateQueries({ queryKey: ["stats", "usage"] });
                 }
             }}
         >

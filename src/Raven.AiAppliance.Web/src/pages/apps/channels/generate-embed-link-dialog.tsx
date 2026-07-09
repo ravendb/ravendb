@@ -137,6 +137,7 @@ export function GenerateEmbedLinkDialog({
             // so refresh the list on close to reflect any chats sent in the preview after minting.
             if (mintMutation.data) {
                 queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey });
+                queryClient.invalidateQueries({ queryKey: ["stats", "usage"] });
             }
             form.reset();
             mintMutation.reset();
