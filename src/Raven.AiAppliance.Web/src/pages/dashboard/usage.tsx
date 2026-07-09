@@ -1,51 +1,29 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "@/api/api";
 import type { QuillApplicationUsage, QuillPeriodUsage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { WritesBarChart } from "@/components/data/charts";
-import { Button } from "@/components/shadcn/ui/button";
+import { MonthPicker } from "@/components/data/month-picker";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
+import { formatMonthLabel, getCurrentMonth, type MonthSelection } from "@/lib/month";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
 
 export function DashboardUsage() {
-    const now = new Date();
-    const [{ year, month }, setSelectedMonth] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
+    const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
 
-    const usageQuery = useQuery(api.queries.settings.usage(year, month));
+    const usageQuery = useQuery(api.queries.settings.usage(selectedMonth.year, selectedMonth.month));
 
     const totalUsage = usageQuery.data?.byPeriod?.reduce((sum, period) => sum + period.usage, 0);
 
-    const isAtCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
-    const monthLabel = new Date(year, month - 1).toLocaleString("en-US", { month: "long", year: "numeric" });
-
-    const goToMonth = (offset: number) =>
-        setSelectedMonth(({ year: y, month: m }) => {
-            const next = new Date(y, m - 1 + offset);
-            return { year: next.getFullYear(), month: next.getMonth() + 1 };
-        });
+    const monthLabel = formatMonthLabel(selectedMonth);
 
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight">Usage</h1>
-                <div className="flex items-center gap-1 rounded-lg border p-1">
-                    <Button variant="ghost" size="icon-sm" aria-label="Previous month" onClick={() => goToMonth(-1)}>
-                        <ChevronLeft aria-hidden="true" />
-                    </Button>
-                    <span className="min-w-28 text-center text-sm font-medium">{monthLabel}</span>
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Next month"
-                        disabled={isAtCurrentMonth}
-                        onClick={() => goToMonth(1)}
-                    >
-                        <ChevronRight aria-hidden="true" />
-                    </Button>
-                </div>
+                <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
             </div>
 
             <Card>
