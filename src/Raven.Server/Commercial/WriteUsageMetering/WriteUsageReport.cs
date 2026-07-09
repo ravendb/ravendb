@@ -12,7 +12,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
     public sealed class WriteUsageApplicationSnapshot
     {
-        public WriteUsageApplicationSnapshot(string topologyId, string applicationName, string changeVector)
+        public WriteUsageApplicationSnapshot(string applicationName, string topologyId, string changeVector)
         {
             ApplicationName = applicationName;
             TopologyId = topologyId;
