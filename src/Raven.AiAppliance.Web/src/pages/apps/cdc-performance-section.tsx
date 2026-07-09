@@ -70,11 +70,6 @@ const batchColumns: ColumnDef<CdcBatch>[] = [
         header: "Errors",
         cell: ({ getValue }) => <span className="tabular-nums">{getValue<number>()}</span>,
     },
-    {
-        accessorKey: "stopReason",
-        header: "Stop reason",
-        cell: ({ getValue }) => <span className="text-muted-foreground">{getValue<string | null>() ?? "—"}</span>,
-    },
 ];
 
 function CdcPerformanceContent({ performance }: { performance: CdcPerformanceResponse }) {

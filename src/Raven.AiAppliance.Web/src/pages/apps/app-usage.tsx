@@ -11,7 +11,6 @@ import { PagePanel } from "@/components/data/page-panel";
 import { getCurrentMonth, type MonthSelection } from "@/lib/month";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
-import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
@@ -113,7 +112,7 @@ function TopTablesSection({ tables }: { tables: AppUsageResponse["topTables"] })
     return (
         <SectionCard title="Top tables">
             <SectionTable
-                headers={["Table", "Writes", "Lag", "Last write"]}
+                headers={["Table", "Writes"]}
                 isEmpty={tables.length === 0}
                 emptyMessage="No table activity yet."
             >
@@ -121,10 +120,6 @@ function TopTablesSection({ tables }: { tables: AppUsageResponse["topTables"] })
                     <TableRow key={table.name}>
                         <TableCell className="font-medium">{table.name}</TableCell>
                         <TableCell className="tabular-nums">{formatCompact(table.writes)}</TableCell>
-                        <TableCell className="text-muted-foreground tabular-nums">{table.lagSeconds}s</TableCell>
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                            {formatDateTime(table.lastWriteAt)}
-                        </TableCell>
                     </TableRow>
                 ))}
             </SectionTable>
