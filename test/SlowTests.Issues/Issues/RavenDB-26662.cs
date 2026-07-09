@@ -62,7 +62,7 @@ namespace SlowTests.Issues
         }
 
         private static WriteUsageApplicationSnapshot SnapshotEntry(RavenServer leader, string topologyId)
-            => leader.ServerStore.Observer.LatestWriteUsageSnapshot?.Databases.SingleOrDefault(d => d.TopologyId == topologyId);
+            => leader.ServerStore.Observer.LatestWriteUsageSnapshot?.Applications.SingleOrDefault(d => d.TopologyId == topologyId);
 
         private static string Normalize(string changeVector)
             => string.IsNullOrEmpty(changeVector) ? string.Empty : ChangeVectorUtils.MergeVectors(changeVector);
@@ -215,7 +215,7 @@ namespace SlowTests.Issues
 
                 foreach (var topologyId in topologyIds)
                 {
-                    var entries = leader.ServerStore.Observer.LatestWriteUsageSnapshot.Databases
+                    var entries = leader.ServerStore.Observer.LatestWriteUsageSnapshot.Applications
                         .Where(d => d.TopologyId == topologyId)
                         .ToList();
 
@@ -265,7 +265,7 @@ namespace SlowTests.Issues
                 // Exactly one entry per shard topology, each with its own merged change vector.
                 foreach (var (shardTopologyId, expected) in expectedCvByShardTopologyId)
                 {
-                    var entries = leader.ServerStore.Observer.LatestWriteUsageSnapshot.Databases
+                    var entries = leader.ServerStore.Observer.LatestWriteUsageSnapshot.Applications
                         .Where(d => d.TopologyId == shardTopologyId)
                         .ToList();
 
@@ -276,7 +276,7 @@ namespace SlowTests.Issues
                 // The orchestrator topology is NOT a data-bearing topology => it must not produce an entry.
                 if (string.IsNullOrEmpty(orchestratorTopologyId) == false)
                 {
-                    Assert.DoesNotContain(leader.ServerStore.Observer.LatestWriteUsageSnapshot.Databases,
+                    Assert.DoesNotContain(leader.ServerStore.Observer.LatestWriteUsageSnapshot.Applications,
                         d => d.TopologyId == orchestratorTopologyId);
                 }
             }

@@ -38,12 +38,12 @@ namespace Raven.Server.Commercial.WriteUsageMetering
 
     public sealed class WriteUsageSnapshot
     {
-        public WriteUsageSnapshot(IReadOnlyList<WriteUsageApplicationSnapshot> databases)
+        public WriteUsageSnapshot(IReadOnlyList<WriteUsageApplicationSnapshot> applications)
         {
-            Databases = databases;
+            Applications = applications;
         }
 
-        public IReadOnlyList<WriteUsageApplicationSnapshot> Databases { get; }
+        public IReadOnlyList<WriteUsageApplicationSnapshot> Applications { get; }
     }
 
 

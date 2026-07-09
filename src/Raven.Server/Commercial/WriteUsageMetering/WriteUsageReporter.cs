@@ -84,7 +84,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                     return; // no license to authenticate with; nothing to report
 
                 // Zero-etag entries are legitimate (e.g. brand-new databases) and are reported as-is.
-                var report = new WriteUsageReport(license.ToJson(), snapshot.Databases);
+                var report = new WriteUsageReport(license.ToJson(), snapshot.Applications);
                 var body = report.ToJson();
 
                 _serverStore.ForTestingPurposes?.OnWriteUsageReportReady?.Invoke(body);
