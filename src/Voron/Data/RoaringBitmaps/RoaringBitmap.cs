@@ -103,7 +103,8 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
 
     public readonly int ContainerCount => _containerCount;
 
-   /// <summary>Total cardinality across ALL containers. Not cached, computed each time, avoid calling in hot loops:repairs any lazy bitmap (Cardinality == -1) along the way.</summary>
+   /// <summary>Total cardinality across ALL containers. Not cached, computed each time, avoid calling in hot loops:repairs any lazy bitmap (Cardinality == -1) along the way, and — same as PrepareForReading — sorts+dedups any ArrayUnsorted container, since its Cardinality is the raw (possibly duplicate-inflated) slot count until then.</summary>
+    [SkipLocalsInit]
     public long ComputeCount()
     {
         AssertNotConsumed();
@@ -111,10 +112,24 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
         ContainerEntry* entries = _entries.RawItems;
         ContainerType* types = _types.RawItems;
         int count = _entries.Count;
+        ulong* scratch = stackalloc ulong[BitmapContainerSizeInUInt64];
         for (int i = 0; i < count; i++)
         {
             if (types[i] == ContainerType.Free)
                 continue;
+
+            if (types[i] == ContainerType.ArrayUnsorted)
+            {
+                ref ContainerEntry entry = ref entries[i];
+                if (entry.Cardinality >= BitmapSortThreshold)
+                {
+                    SortViaBitmapScratch(ref entry, ref types[i], scratch);
+                }
+                else
+                {
+                    SortAndDedupSmallArray(ref entry, out types[i]);
+                }
+            }
 
             int card = entries[i].Cardinality;
 
@@ -1287,7 +1302,7 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
             {
                 ref ContainerEntry myEntry = ref _entries[mySlot];
                 ref ContainerEntry otherEntry = ref other._entries[otherSlot];
-                AndContainerInPlace(ref myEntry, ref _types.RawItems[mySlot], ref otherEntry, other._types.RawItems[otherSlot]);
+                AndContainerInPlace(ref myEntry, ref _types.RawItems[mySlot], ref otherEntry, ref other._types.RawItems[otherSlot]);
                 int card = ResolveCardinality(ref myEntry);
                 if (card == 0)
                     FreeContainer(key, mySlot);
@@ -1325,7 +1340,7 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
             {
                 ref ContainerEntry myEntry = ref _entries[mySlot];
                 ref ContainerEntry otherEntry = ref other._entries[otherSlot];
-                AndContainerInPlace(ref myEntry, ref _types.RawItems[mySlot], ref otherEntry, other._types.RawItems[otherSlot]);
+                AndContainerInPlace(ref myEntry, ref _types.RawItems[mySlot], ref otherEntry, ref other._types.RawItems[otherSlot]);
                 int card = ResolveCardinality(ref myEntry);
                 if (card == 0)
                     FreeContainer(key, mySlot);
@@ -1370,15 +1385,16 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
                 continue; // nothing to subtract
 
             ref ContainerEntry otherEntry = ref other._entries[otherSlot];
-            AndNotContainerInPlace(ref _entries[mySlot], ref _types.RawItems[mySlot], ref otherEntry, other._types.RawItems[otherSlot]);
-            if (_entries[mySlot].Cardinality == 0)
+            AndNotContainerInPlace(ref _entries[mySlot], ref _types.RawItems[mySlot], ref otherEntry, ref other._types.RawItems[otherSlot]);
+            int card = ResolveCardinality(ref _entries[mySlot]);
+            if (card == 0)
                 FreeContainer(key, mySlot);
         }
         MarkConsumed(ref other);
     }
 
     [SkipLocalsInit]
-    private void AndContainerInPlace(ref ContainerEntry left, ref ContainerType leftType, ref ContainerEntry right, ContainerType rightType)
+    private void AndContainerInPlace(ref ContainerEntry left, ref ContainerType leftType, ref ContainerEntry right, ref ContainerType rightType)
     {
         switch (leftType, rightType)
         {
@@ -1401,14 +1417,15 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
             case (ContainerType.Range, _):
             {
                 ConvertRangeToBitmap(ref left, ref leftType);
-                AndContainerInPlace(ref left, ref leftType, ref right, rightType);
+                AndContainerInPlace(ref left, ref leftType, ref right, ref rightType);
                 return;
             }
             case (_, ContainerType.Range):
             {
                 ulong* stackBmp = stackalloc ulong[BitmapContainerSizeInUInt64];
                 ContainerEntry temp = MaterializeRangeIntoBuffer(ref right, stackBmp);
-                AndContainerInPlace(ref left, ref leftType, ref temp, ContainerType.Bitmap);
+                ContainerType tempType = ContainerType.Bitmap;
+                AndContainerInPlace(ref left, ref leftType, ref temp, ref tempType);
                 return;
             }
             case (ContainerType.Bitmap, ContainerType.Bitmap):
@@ -1484,7 +1501,7 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
     }
 
     [SkipLocalsInit]
-    private void AndNotContainerInPlace(ref ContainerEntry left, ref ContainerType leftType, ref ContainerEntry right, ContainerType rightType)
+    private void AndNotContainerInPlace(ref ContainerEntry left, ref ContainerType leftType, ref ContainerEntry right, ref ContainerType rightType)
     {
         switch (leftType, rightType)
         {
@@ -1496,14 +1513,15 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
             case (ContainerType.Range, _):
             {
                 ConvertRangeToBitmap(ref left, ref leftType);
-                AndNotContainerInPlace(ref left, ref leftType, ref right, rightType);
+                AndNotContainerInPlace(ref left, ref leftType, ref right, ref rightType);
                 break;
             }
             case (_, ContainerType.Range):
             {
                 ulong* stackBmp = stackalloc ulong[BitmapContainerSizeInUInt64];
                 ContainerEntry temp = MaterializeRangeIntoBuffer(ref right, stackBmp);
-                AndNotContainerInPlace(ref left, ref leftType, ref temp, ContainerType.Bitmap);
+                ContainerType tempType = ContainerType.Bitmap;
+                AndNotContainerInPlace(ref left, ref leftType, ref temp, ref tempType);
                 break;
             }
             case (ContainerType.Bitmap, ContainerType.Bitmap):
@@ -1600,7 +1618,8 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
         ConvertRangeToBitmap(ref left, ref leftType);
         ulong* stackBmp = stackalloc ulong[BitmapContainerSizeInUInt64];
         ContainerEntry temp = MaterializeRangeIntoBuffer(ref right, stackBmp);
-        AndNotContainerInPlace(ref left, ref leftType, ref temp, ContainerType.Bitmap);
+        ContainerType tempType = ContainerType.Bitmap;
+        AndNotContainerInPlace(ref left, ref leftType, ref temp, ref tempType);
     }
 
     /// <summary>
