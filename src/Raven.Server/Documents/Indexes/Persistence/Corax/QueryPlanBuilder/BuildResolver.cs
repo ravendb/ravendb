@@ -266,8 +266,11 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
         }
 
         // We start with 1, because clause 0 is the baseline for entry scan and always runs
-        // A null here means an unsupported clause or a AlwaysFalse clause, a scan is not meaningful
-        bool scanEligible = hasScanList && perClause.AsSpan()[1..].Contains(null) == false;
+        // A null here means an unsupported clause or a AlwaysFalse clause, a scan is not meaningful.
+        // scanList.Count == 0 means every scan candidate collapsed to AlwaysTrue (e.g. a sentinel-rewritten
+        // BETWEEN *,*) — ResidualScanIlEmitter.EmitDelegate returns null for an empty predicate set, so
+        // emitting the MaybeEntryScan gate here would call a null CompiledEntryPredicate at runtime.
+        bool scanEligible = hasScanList && perClause.AsSpan()[1..].Contains(null) == false && scanList.Count > 0;
 
         return (new ResidualScanSet
         {
@@ -350,6 +353,45 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
                 {
                     FieldName = clause.FieldName,
                     CompareOp = ScanCompareOp.Exists,
+                    IsSingleValued = singleValued
+                };
+
+            // A BETWEEN with one or both bounds set to the client's open-range sentinel ("*"/"NULL") is
+            // rewritten upstream (QueryPlanBuilder.PopulateClauseValues) to SentinelRewriteType Exists /
+            // LessThanOrEqual / GreaterThanOrEqual, but ClauseType stays Between and, for the Exists case,
+            // PackedParamValue stays PackedParam.None (Param1 = Param2 = NoParamValue). The bitmap/IQueryMatch
+            // path already special-cases this via SentinelRewriteType (see ResolveClause / ResolveSentinelRewrittenBetween);
+            // mirror that here instead of falling into the generic tail's ScanCompareOp.Between, which would bake
+            // the sentinel's NoParamValue indices into the residual and crash at scan time (AnalyzedSlices[0x7FFF]).
+            case ClauseType.Between when exec.SentinelRewriteType == ClauseType.Exists:
+                // *,* imposes no restriction on the field at all — same as if the clause were absent.
+                return new ScanPredicateInfo { CompareOp = ScanCompareOp.AlwaysTrue };
+            case ClauseType.Between when exec.SentinelRewriteType == ClauseType.LessThanOrEqual:
+                return new ScanPredicateInfo
+                {
+                    FieldName = clause.FieldName,
+                    ValueType = termType switch
+                    {
+                        ParamValueType.Long => ScanValueType.Long,
+                        ParamValueType.Double => ScanValueType.Double,
+                        _ => ScanValueType.Slice
+                    },
+                    CompareOp = ScanCompareOp.LessThanOrEqual,
+                    ParamIndex = exec.PackedParamValue.Param1,
+                    IsSingleValued = singleValued
+                };
+            case ClauseType.Between when exec.SentinelRewriteType == ClauseType.GreaterThanOrEqual:
+                return new ScanPredicateInfo
+                {
+                    FieldName = clause.FieldName,
+                    ValueType = termType switch
+                    {
+                        ParamValueType.Long => ScanValueType.Long,
+                        ParamValueType.Double => ScanValueType.Double,
+                        _ => ScanValueType.Slice
+                    },
+                    CompareOp = ScanCompareOp.GreaterThanOrEqual,
+                    ParamIndex = exec.PackedParamValue.Param1,
                     IsSingleValued = singleValued
                 };
 
