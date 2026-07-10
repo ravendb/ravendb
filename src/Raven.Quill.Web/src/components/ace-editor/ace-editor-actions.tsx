@@ -1,6 +1,6 @@
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { Dialog } from "radix-ui";
-import { AlignLeft, ChevronsUpDown, CircleHelp, Maximize2, Trash2, Upload, X } from "lucide-react";
+import { AlignLeft, ChevronsUpDown, CircleHelp, Maximize2, Minimize2, Trash2, Upload, X } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
 import { handleAutoResizeHeight, handleFormat } from "@/components/ace-editor/ace-editor-action-utils";
 import { useAceEditorContext } from "@/components/ace-editor/ace-editor-context";
@@ -31,16 +31,36 @@ function AceEditorIconButton({ children, className, onClick, title }: IconButton
 
 export function AceEditorFullScreenAction() {
     const { aceRef, rootRef } = useAceEditorContext();
+    const [isFullScreen, setIsFullScreen] = useState(false);
 
-    function handleFullScreen() {
+    useEffect(() => {
+        function handleFullScreenChange() {
+            const fullScreenElement = rootRef.current ?? aceRef.current?.editor.container;
+
+            setIsFullScreen(Boolean(fullScreenElement) && document.fullscreenElement === fullScreenElement);
+            aceRef.current?.editor.resize();
+        }
+
+        document.addEventListener("fullscreenchange", handleFullScreenChange);
+        return () => document.removeEventListener("fullscreenchange", handleFullScreenChange);
+    }, [aceRef, rootRef]);
+
+    function handleToggleFullScreen() {
+        if (isFullScreen) {
+            void document.exitFullscreen();
+            return;
+        }
+
         const fullScreenElement = rootRef.current ?? aceRef.current?.editor.container;
         void fullScreenElement?.requestFullscreen();
-        window.setTimeout(() => aceRef.current?.editor.resize(), 0);
     }
 
     return (
-        <AceEditorIconButton onClick={handleFullScreen} title="Full screen">
-            <Maximize2 />
+        <AceEditorIconButton
+            onClick={handleToggleFullScreen}
+            title={isFullScreen ? "Exit full screen" : "Full screen"}
+        >
+            {isFullScreen ? <Minimize2 /> : <Maximize2 />}
         </AceEditorIconButton>
     );
 }
