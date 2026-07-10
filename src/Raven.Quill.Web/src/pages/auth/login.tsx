@@ -35,10 +35,10 @@ export function Login() {
         setFormError(null);
 
         try {
-            const status = await login(values.apiKey);
+            const result = await login(values.apiKey);
 
-            if (status.authenticated) {
-                navigate(appRoutes.dashboard(), { replace: true });
+            if (result.authenticated) {
+                navigate(result.hasApps ? appRoutes.dashboard() : appRoutes.addApp(), { replace: true });
                 return;
             }
 

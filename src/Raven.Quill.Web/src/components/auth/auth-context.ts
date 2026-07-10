@@ -1,10 +1,18 @@
 import { createContext, useContext } from "react";
-import type { AuthStatusResponse } from "@/api/generated/server-api";
+
+export type LoginResult =
+    | {
+          authenticated: true;
+          hasApps: boolean;
+      }
+    | {
+          authenticated: false;
+      };
 
 export type AuthContextValue = {
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (apiKey: string) => Promise<AuthStatusResponse>;
+    login: (apiKey: string) => Promise<LoginResult>;
     logout: () => Promise<void>;
 };
 
