@@ -6,8 +6,6 @@ const meta = {
     title: "Dashboard/Home",
     component: DashboardHome,
     parameters: {
-        // DashboardHome renders its own "My apps" header (so the trial pill sits beside
-        // it), so the shell decorator wraps it without a title of its own.
         page: {},
     },
 } satisfies Meta<typeof DashboardHome>;
