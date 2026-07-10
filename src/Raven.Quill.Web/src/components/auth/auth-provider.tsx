@@ -14,8 +14,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function login(apiKey: string) {
         const status = await api.services.auth.login({ apiKey });
+
+        if (!status.authenticated) {
+            queryClient.setQueryData(AUTH_STATUS_QUERY_KEY, status);
+            return { authenticated: false };
+        }
+
+        const apps = await queryClient.fetchQuery(api.queries.apps.list());
         queryClient.setQueryData(AUTH_STATUS_QUERY_KEY, status);
-        return status;
+        return { authenticated: true, hasApps: apps?.length > 0 };
     }
 
     async function logout() {
