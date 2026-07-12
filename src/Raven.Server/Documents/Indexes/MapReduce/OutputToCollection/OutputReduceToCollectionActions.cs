@@ -223,22 +223,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     }
                 }
 
-                foreach (var prefix in prefixesToDelete)
-                {
-                    DeletePrefixOfReduceOutputDocumentsToDelete(prefix, indexContext);
-                }
+                DeletePrefixesOfReduceOutputDocumentsToDelete(prefixesToDelete, indexContext);
             }
 
             return deleted;
         }
 
-        private void DeletePrefixOfReduceOutputDocumentsToDelete(string prefix, TransactionOperationContext indexContext)
+        private void DeletePrefixesOfReduceOutputDocumentsToDelete(List<string> prefixesToDelete, TransactionOperationContext indexContext)
         {
+            if (prefixesToDelete.Count == 0)
+                return;
+
             var reduceOutputsTree = indexContext.Transaction.InnerTransaction.ReadTree(PrefixesOfReduceOutputDocumentsToDeleteTree);
 
-            reduceOutputsTree.Delete(prefix);
-
-            _prefixesOfReduceOutputDocumentsToDelete.Remove(prefix);
+            foreach (var prefix in prefixesToDelete)
+            {
+                reduceOutputsTree.Delete(prefix);
+                _prefixesOfReduceOutputDocumentsToDelete.Remove(prefix);
+            }
 
             indexContext.UpdatePrefixesOfReduceOutputDocumentsToDelete(_prefixesOfReduceOutputDocumentsToDelete.ToImmutable());
         }
