@@ -116,7 +116,14 @@ public class RachisLogIndexNotifications : AbstractRaftIndexNotifications<Recent
         if (_isDisposed.IsRaised())
             throw new ObjectDisposedException(nameof(RachisLogIndexNotifications));
 
-        _tasksDictionary[index] = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // First-writer-wins: several notify helpers may call AddTask for the same index within a single Apply.
+        _tasksDictionary.TryAdd(index, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+    }
+
+    public void CancelTask(long index)
+    {
+        if (_tasksDictionary.TryRemove(index, out var tcs))
+            tcs.TrySetCanceled();
     }
 }
 
