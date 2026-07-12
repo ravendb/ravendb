@@ -71,6 +71,38 @@ public class RavenDB_25281_BetweenOpenOpenScan : RavenTestBase
         return store;
     }
 
+    private const int NullCodeJohns = 3;
+
+    // Variant of GetSeededStore where the first NullCodeJohns of the Name='John' docs carry a *null* Code.
+    // Used to prove that the open-ended `Code between Bound and *` (GreaterThanOrEqual sentinel) returns those
+    // null-Code docs on the residual / entry-scan path too, matching the bitmap path which OR-includes the null
+    // posting list (ResolveSentinelRewrittenBetween, Lucene parity). The remaining Johns span "c03".."c09" so,
+    // with Bound = "c04", exactly one non-null John ("c03") falls below the bound and is excluded.
+    private IDocumentStore GetStoreWithNullableJohnCodes()
+    {
+        IDocumentStore store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+        using (var bulk = store.BulkInsert())
+        {
+            for (int i = 0; i < DocCount; i++)
+            {
+                bool rare = i < RareNameDocs;
+                bulk.Store(new Item
+                {
+                    Name = rare ? RareName : $"common-{i % 50}",
+                    Age = 20 + (i % 60),
+                    Status = rare ? "active" : (i % 2 == 0 ? "active" : "inactive"),
+                    Code = rare
+                        ? (i < NullCodeJohns ? null : $"c{i:D2}")
+                        : (i % 2 == 0 ? $"a{i % 50:D2}" : $"e{i % 50:D2}"),
+                });
+            }
+        }
+
+        Indexes.WaitForIndexing(store);
+        return store;
+    }
+
     // Name = $n fills slot 0 (the bitmap seed/accumulator). The BETWEEN clause under test and
     // `Status = $st` (a genuine residual predicate) are both AND'd behind the entry-scan gate. The
     // Status clause keeps the residual set non-empty (so the gate still exists and
@@ -253,6 +285,62 @@ public class RavenDB_25281_BetweenOpenOpenScan : RavenTestBase
         }
 
         Assert.True(gate >= 0, "expected to find an entry-scan gate for the BETWEEN lo/* residual by sweeping op-indices 0..15");
+    }
+
+    // Regression for the residual/entry-scan path silently DROPPING null-valued docs on an upper-open BETWEEN.
+    // `Code between Bound and *` -> SentinelRewriteType = GreaterThanOrEqual. The bitmap/IQueryMatch path
+    // (ResolveSentinelRewrittenBetween) OR-includes the null posting list for Lucene parity, but the residual
+    // scan emitted a plain `Code >= Bound` comparison that rejects null-Code docs. The result therefore depended
+    // on which plan shape the optimizer picked: null-Code Johns were returned on the bitmap path but dropped once
+    // the entry-scan gate fired. IncludeNull on the residual predicate makes the entry-scan path pass them too.
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    public void UpperOpenBetween_ForcedEntryScan_IncludesNullValuedDocs()
+    {
+        using IDocumentStore store = GetStoreWithNullableJohnCodes();
+
+        // Oracle computed independently of the clause under test: a John is expected iff its Code is null OR >= Bound.
+        List<string> expected = ExpectedIds(store, code => code == null || string.CompareOrdinal(code, Bound) >= 0);
+
+        // Guard against a vacuous test: the oracle must actually contain the null-Code docs whose inclusion is the
+        // whole point, otherwise a residual that drops nulls would still match `expected`.
+        List<string> nullCodeJohnIds = NullCodeJohnIds(store);
+        Assert.Equal(NullCodeJohns, nullCodeJohnIds.Count);
+        Assert.All(nullCodeJohnIds, id => Assert.Contains(id, expected));
+
+        // Bitmap baseline (all gates off) — the correctness reference; already OR-includes nulls.
+        (List<string> Ids, int EntryScanAt) baseline = Run(store, "Code", lo: Bound, hi: "NULL", force: -1);
+        Assert.Equal(-1, baseline.EntryScanAt);
+        AssertSameIds(expected, baseline.Ids, -1);
+
+        // Forcing the entry-scan residual path must produce the SAME set, null-Code docs included.
+        int gate = -1;
+        for (int f = 0; f <= 15; f++)
+        {
+            (List<string> Ids, int EntryScanAt) forced = Run(store, "Code", lo: Bound, hi: "NULL", force: f);
+            AssertSameIds(expected, forced.Ids, forced.EntryScanAt);
+            if (forced.EntryScanAt == f)
+            {
+                gate = f;
+                break;
+            }
+
+            Assert.Equal(-1, forced.EntryScanAt);
+        }
+
+        Assert.True(gate >= 0, "expected to find an entry-scan gate for the null-inclusive BETWEEN lo/* residual by sweeping op-indices 0..15");
+    }
+
+    private static List<string> NullCodeJohnIds(IDocumentStore store)
+    {
+        using IDocumentSession session = store.OpenSession();
+        return session.Advanced.RawQuery<Item>("from Items where Name = $n and Status = $st")
+            .AddParameter("n", RareName)
+            .AddParameter("st", "active")
+            .ToList()
+            .Where(x => x.Code == null)
+            .Select(x => x.Id)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToList();
     }
 
     // Recomputes the expected id set directly from the seeding rule (Name = John, Code = "c00".."c09"

@@ -18,4 +18,5 @@ public struct ScanPredicateInfo
     public bool Negated;
     /// <summary>If we _know_ that the field has a single value, we can avoid a while loop to read mutliple values</summary>
     public bool IsSingleValued;
+    public bool IncludeNull;
 }

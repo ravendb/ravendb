@@ -103,7 +103,7 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
 
     public readonly int ContainerCount => _containerCount;
 
-   /// <summary>Total cardinality across ALL containers. Not cached, computed each time, avoid calling in hot loops:repairs any lazy bitmap (Cardinality == -1) along the way, and — same as PrepareForReading — sorts+dedups any ArrayUnsorted container, since its Cardinality is the raw (possibly duplicate-inflated) slot count until then.</summary>
+   /// <summary>Total cardinality across ALL containers. Not cached, computed each time, avoid calling in hot loops.</summary>
     [SkipLocalsInit]
     public long ComputeCount()
     {
@@ -114,38 +114,45 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
         int count = _entries.Count;
         ulong* scratch = stackalloc ulong[BitmapContainerSizeInUInt64];
         for (int i = 0; i < count; i++)
-        {
-            if (types[i] == ContainerType.Free)
-                continue;
+            total += NormalizeContainer(i, entries, types, scratch);
+        return total;
+    }
 
-            if (types[i] == ContainerType.ArrayUnsorted)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int NormalizeContainer(int i, ContainerEntry* entries, ContainerType* types, ulong* scratch)
+    {
+        switch (types[i])
+        {
+            case ContainerType.Free:
+                return 0;
+            case ContainerType.ArrayUnsorted:
             {
                 ref ContainerEntry entry = ref entries[i];
                 if (entry.Cardinality >= BitmapSortThreshold)
-                {
                     SortViaBitmapScratch(ref entry, ref types[i], scratch);
-                }
                 else
-                {
                     SortAndDedupSmallArray(ref entry, out types[i]);
-                }
+                return entries[i].Cardinality;
             }
-
-            int card = entries[i].Cardinality;
-
-            if (card is LazyCardinality) // LazyCardinality: bitmap container was updated without recomputing the popcount.
+            case ContainerType.Bitmap when entries[i].Cardinality == LazyCardinality:
             {
-                Debug.Assert(types[i] is ContainerType.Bitmap, "only bitmaps can have lazy cardinality");
-                entries[i].Cardinality = card = BitmapContainerCardinality(entries[i].Data);
-                if (card is 0)
+                // LazyCardinality: bitmap container was updated without recomputing the popcount.
+                ref ContainerEntry entry = ref entries[i];
+                int card = entry.Cardinality = BitmapContainerCardinality(entry.Data);
+                if (card == 0)
                 {
-                    FreeContainer(entries[i].Key, i);
-                    continue;
+                    FreeContainer(entry.Key, i);
+                    return 0;
                 }
+                return card;
             }
-            total += card;
+            case ContainerType.Array:
+            case ContainerType.Range:
+            case ContainerType.Bitmap:
+                return entries[i].Cardinality;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(ContainerType), types[i], "Unexpected container type in NormalizeContainer");
         }
-        return total;
     }
 
     public readonly bool IsEmpty => _containerCount == 0;
@@ -1185,36 +1192,7 @@ public unsafe partial struct RoaringBitmap(ByteStringContext ctx) : IDisposable
         ContainerType* types = _types.RawItems;
         int entryCount = _entries.Count;
         for (int i = 0; i < entryCount; i++)
-        {
-            switch (types[i])
-            {
-                case ContainerType.ArrayUnsorted:
-                {
-                    ref ContainerEntry entry = ref entries[i];
-                    if (entry.Cardinality >= BitmapSortThreshold)
-                        SortViaBitmapScratch(ref entry, ref types[i], scratch);
-                    else
-                        SortAndDedupSmallArray(ref entry, out types[i]);
-                    break;
-                }
-
-                case ContainerType.Bitmap when entries[i].Cardinality == LazyCardinality:
-                {
-                    ref ContainerEntry entry = ref entries[i];
-                    entry.Cardinality = BitmapContainerCardinality(entry.Data);
-                    if (entry.Cardinality == 0)
-                        FreeContainer(entry.Key, i);
-                    break;
-                }
-                case ContainerType.Array:
-                case ContainerType.Range:
-                case ContainerType.Bitmap:
-                case ContainerType.Free:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(ContainerType), types[i], "Unexpected container type in PrepareForReading");
-            }
-        }
+            NormalizeContainer(i, entries, types, scratch);
     }
 
     /// <summary>

@@ -27,16 +27,7 @@ public struct BitmapMatch(ByteStringContext allocator) : IBitmapQueryMatch, IDis
     [UnscopedRef]
     public ref RoaringBitmap BitmapState => ref _bitmapState;
 
-    public long Count
-    {
-        get
-        {
-            // Mirrors Fill's guard: resolve ArrayUnsorted/lazy-Bitmap containers before counting,
-            // same as CompiledQueryMatch/LazyOrMatch already do before exposing Count.
-            _bitmapState.PrepareForReading();
-            return _bitmapState.ComputeCount();
-        }
-    }
+    public long Count => _bitmapState.ComputeCount();
 
     public bool IsBoosting => false;
 

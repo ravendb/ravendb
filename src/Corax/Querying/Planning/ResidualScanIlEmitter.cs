@@ -416,16 +416,29 @@ public static class ResidualScanIlEmitter
             {
                 if (pred.IsSingleValued)
                 {
-                    // Single-valued field: at most one term per entry, single read + single compare 
+                    // Single-valued field: at most one term per entry, single read + single compare
                     //   if (!reader.FindNext(rootPage)) goto fail; if (reader.IsNull) goto fail;
                     //   if (!<cmp>) goto fail;   // else fall through → pass
+                    LabelPair singleNullPass = default;
+                    if (pred.IncludeNull)
+                        singleNullPass = d.DefineLabelPair("singleNullPass");
+
                     EmitFindNext(ref d, readerRefLocal, rootIdx);
                     EmitBranchFalse(ref d, failIl, failName);     // no term → fail
 
                     d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
                     d.Il.Emit(OpCodes.Ldfld, IlEmitterShared.ReaderIsNull);
-                    d.Il.Emit(OpCodes.Brtrue, failIl);
-                    d.CsLine(JumpIf("reader.IsNull", failName));  // null term → fail
+                    if (pred.IncludeNull)
+                    {
+                        // IncludeNull (BETWEEN low AND *): a null-valued doc satisfies the clause — null term → pass
+                        d.Il.Emit(OpCodes.Brtrue, singleNullPass.Il);
+                        d.CsLine(JumpIf("reader.IsNull", singleNullPass.Name));
+                    }
+                    else
+                    {
+                        d.Il.Emit(OpCodes.Brtrue, failIl);
+                        d.CsLine(JumpIf("reader.IsNull", failName));  // null term → fail
+                    }
                     d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
                     d.Il.Emit(OpCodes.Ldfld, IlEmitterShared.ReaderIsNonExisting);
                     d.Il.Emit(OpCodes.Brtrue, failIl);
@@ -434,6 +447,11 @@ public static class ResidualScanIlEmitter
                     EmitTypedComparison(ref d, in pred, paramSlot, readerRefLocal);
                     EmitBranchFalse(ref d, failIl, failName);     // comparison false → fail
                     // fall through → pass
+                    if (pred.IncludeNull)
+                    {
+                        d.Il.MarkLabel(singleNullPass.Il);
+                        d.CsLine($"{singleNullPass.Name}:;");
+                    }
                     return;
                 }
 
@@ -448,11 +466,20 @@ public static class ResidualScanIlEmitter
                 d.CsLine($"while ({d.CsStack.Pop()})");
                 d.CsLine("{");
 
-                // if (reader.IsNull) continue;
+                // if (reader.IsNull) ...
                 d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
                 d.Il.Emit(OpCodes.Ldfld, IlEmitterShared.ReaderIsNull);
-                d.Il.Emit(OpCodes.Brtrue, loopHead.Il);
-                d.CsLine("if (reader.IsNull) continue;");
+                if (pred.IncludeNull)
+                {
+                    // IncludeNull (BETWEEN low AND *): a null-valued doc satisfies the clause — null term → pass
+                    d.Il.Emit(OpCodes.Brtrue, pass.Il);
+                    d.CsLine(JumpIf("reader.IsNull", pass.Name));
+                }
+                else
+                {
+                    d.Il.Emit(OpCodes.Brtrue, loopHead.Il);
+                    d.CsLine("if (reader.IsNull) continue;");
+                }
                 d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
                 d.Il.Emit(OpCodes.Ldfld, IlEmitterShared.ReaderIsNonExisting);
                 d.Il.Emit(OpCodes.Brtrue, loopHead.Il);

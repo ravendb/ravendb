@@ -392,7 +392,8 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
                     },
                     CompareOp = ScanCompareOp.GreaterThanOrEqual,
                     ParamIndex = exec.PackedParamValue.Param1,
-                    IsSingleValued = singleValued
+                    IsSingleValued = singleValued,
+                    IncludeNull = true // BETWEEN low AND * must also return null-valued docs 
                 };
 
             case ClauseType.AndGroup:
