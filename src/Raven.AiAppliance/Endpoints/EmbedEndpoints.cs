@@ -1,4 +1,6 @@
+using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -6,6 +8,7 @@ using Raven.AiAppliance.Agents;
 using Raven.AiAppliance.Channels;
 using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Endpoints.Helpers;
+using Raven.AiAppliance.Metrics;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -62,7 +65,7 @@ public static class EmbedEndpoints
         if (resolved is null)
             return;
 
-        var (_, _, channel, customCss) = resolved.Value;
+        var (app, link, channel, customCss) = resolved.Value;
 
         // Contain the page — and, above all, operator-authored __CUSTOM_CSS__ — with a default-deny
         // resource policy, then append frame-ancestors from the configured origins (empty list =
@@ -84,8 +87,13 @@ public static class EmbedEndpoints
         // Keep the bearer token out of cross-origin referer logs.
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
 
+        // Prior turns for this link's conversation, rendered into the page so a returning
+        // visitor sees their history (mirrors the operator Conversations view). Best-effort:
+        // a fresh link (no conversation yet) or a read failure yields an empty feed.
+        var historyJson = await BuildHistoryJsonAsync(store, app.Database, link.ConversationId, ct);
+
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName, customCss), ct);
+        await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName, customCss, historyJson), ct);
     }
 
     private static async Task StreamEmbedChatAsync(
@@ -400,18 +408,43 @@ public static class EmbedEndpoints
         return (app, link, channel, effectiveCss);
     }
 
-    private static string BuildEmbedHtml(string token, string displayName, string? customCss)
+    private static string BuildEmbedHtml(string token, string displayName, string? customCss, string historyJson)
     {
         var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
-        // Substitute the trusted placeholders (token, base styles) first, then the operator-controlled
-        // ones (custom CSS, then title) last — so nothing an operator can set (DisplayName via __TITLE__,
-        // or custom CSS) can reintroduce __TOKEN__ or another placeholder for a later Replace to expand.
-        // In particular the bearer token can never leak into the rendered title/header.
+        // Substitute the trusted placeholders (token, base styles) first, then the operator/visitor-
+        // controlled ones (custom CSS, title, then the conversation history) last — so nothing an
+        // operator or visitor can set can reintroduce __TOKEN__ or another placeholder for a later
+        // Replace to expand. In particular the bearer token can never leak into the title or history.
         return EmbedHtmlTemplate
             .Replace("__TOKEN__", token)
             .Replace("__BASE_CSS__", WidgetBaseCss)
             .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(customCss))
-            .Replace("__TITLE__", title);
+            .Replace("__TITLE__", title)
+            .Replace("__HISTORY__", historyJson);
+    }
+
+    /// <summary>Serializes the conversation's prior turns as a script-safe JSON array
+    /// (<c>[{role,text}]</c>) for the embed page. Best-effort: a fresh link (no conversation yet)
+    /// or a read failure yields <c>[]</c> so the widget still renders. The default System.Text.Json
+    /// encoder escapes &lt;, &gt; and &amp;, so the array is safe to inline inside &lt;script&gt;.</summary>
+    private static async Task<string> BuildHistoryJsonAsync(
+        IDocumentStore store, string database, string? conversationId, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(conversationId))
+            return "[]";
+        try
+        {
+            var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(conversationId, ct);
+            if (result is null)
+                return "[]";
+            var turns = MetricsReadService.MapTranscript(result.Messages)
+                .Select(t => new { role = t.Role, text = t.Text });
+            return JsonSerializer.Serialize(turns);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            return "[]";
+        }
     }
 
     /// <summary>Builds the dashboard's customization preview: the same base styles
@@ -493,6 +526,9 @@ function addRow(cls, text) {
   feed.scrollTop = feed.scrollHeight;
   return div;
 }
+
+// Prior turns for this conversation, server-rendered on load; empty for a fresh link.
+for (const turn of __HISTORY__) addRow(turn.role, turn.text);
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();

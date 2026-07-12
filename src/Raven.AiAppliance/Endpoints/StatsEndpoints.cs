@@ -35,21 +35,21 @@ public static class StatsEndpoints
             .RequireAuthorization()
             .Produces<UsagePoint[]>();
 
-        // Per-app token-usage breakdown (mock-api `getTokensByApp()`).
+        // Per-app token-usage breakdown.
         app.MapGet("/api/usage/by-app", GetTokensByAppAsync)
             .WithTags("stats")
             .WithName("stats.tokensByApp")
             .RequireAuthorization()
             .Produces<TokensByAppResponse>();
 
-        // Enriched apps list for the Dashboard table (mock-api `listApps()`).
+        // Enriched apps list for the Dashboard table.
         app.MapGet("/api/dashboard/apps", GetDashboardAppsAsync)
             .WithTags("stats")
             .WithName("stats.dashboardApps")
             .RequireAuthorization()
             .Produces<ApplianceAppResponse[]>();
 
-        // Single enriched app (mock-api `getApp(id)`).
+        // Single enriched app.
         app.MapGet("/api/dashboard/apps/{slug}", GetDashboardAppAsync)
             .WithTags("stats")
             .WithName("stats.dashboardApp")
@@ -64,19 +64,19 @@ public static class StatsEndpoints
             .Produces<AppOverviewResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // Per-app usage analytics (mock-api `getAppUsage({appId,start,end})`).
+        // Per-app usage analytics.
         group.MapGet("/usage", GetAppUsageAsync)
             .WithName("stats.appUsage")
             .Produces<AppUsageResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // Mirrored data collections with document counts (mock-api `listCollections(appId)`).
+        // Mirrored data collections with document counts.
         group.MapGet("/collections", GetCollectionsAsync)
             .WithName("stats.collections")
             .Produces<DataCollectionDto[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // Conversations list + detail (mock-api `listConversations` / `getConversation`).
+        // Conversations list + detail.
         // The {*conversationId} catch-all carries the "chats/..." id (it contains a slash);
         // the literal "/conversations/stats" route still wins by routing precedence.
         group.MapGet("/conversations", GetConversationsListAsync)
@@ -89,7 +89,7 @@ public static class StatsEndpoints
             .Produces<ConversationDto>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // CDC "Events" tab (mock-api `listActivity`). Deferred — no event log yet, so
+        // CDC "Events" tab. Deferred — no event log yet, so
         // this returns an empty feed (a real audit log is a separate ticket).
         group.MapGet("/activity", GetActivityAsync)
             .WithName("stats.activity")

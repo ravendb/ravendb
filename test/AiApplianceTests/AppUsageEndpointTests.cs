@@ -11,17 +11,15 @@ namespace AiApplianceTests;
 
 /// <summary>
 /// Coverage for <c>GET /api/apps/{slug}/usage</c> — backs the prototype's
-/// <c>api.getAppUsage({appId,start,end})</c>: granularity, the conversations/tokens/cost KPI
+/// <c>api.getAppUsage({appId,start,end})</c>: granularity, the conversations/tokens KPI
 /// values, tokensByCapability/tokensByModel/conversationsByChannel series, and topCapabilities.
 /// cdcWrites bucketing is verified purely in <see cref="AppUsageCdcWritesTests"/>; the populated
 /// end-to-end CDC path needs a live source (the gated Postgres E2E lane).
 /// </summary>
 public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
 {
-    private const double CostPerToken = 0.000015;
-
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task AppUsage_aggregates_conversations_tokens_cost_and_top_capabilities()
+    public async Task AppUsage_aggregates_conversations_tokens_and_top_capabilities()
     {
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
@@ -51,7 +49,6 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         var metrics = json.GetProperty("metrics");
         Assert.Equal(3, metrics.GetProperty("conversations").GetProperty("value").GetDouble());
         Assert.Equal(350_000, metrics.GetProperty("tokens").GetProperty("value").GetDouble());
-        Assert.Equal(350_000 * CostPerToken, metrics.GetProperty("cost").GetProperty("value").GetDouble(), 3);
 
         // topCapabilities: per-agent, sorted by totalTokens descending.
         var top = json.GetProperty("topCapabilities");

@@ -24,9 +24,6 @@ namespace AiApplianceTests.E2E;
 ///     infrastructure can create + drop databases on.
 ///   - *.egor-ai.ravendb.run DNS -> 127.0.0.1 (the wildcard cert from the
 ///     embedded setup-package zip is for that domain).
-///
-/// Optional: set APPLIANCE_E2E_HOLD=1 to park the test after T12 so you can
-/// open the live iFrame in a browser.
 public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrationTestBase(output)
 {
     private const string HardcodedLicenseKey = "egor-ai-test-license";
@@ -299,14 +296,6 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(string.IsNullOrEmpty(error2), $"embed chat turn 2 emitted an error frame: {error2}");
         Assert.True(sawDone2, "embed chat turn 2 did not emit a 'done' frame");
         Assert.False(string.IsNullOrWhiteSpace(reply2), "embed chat turn 2 produced no reply text");
-
-        // ---------- Optional manual park ----------
-        if (Environment.GetEnvironmentVariable("APPLIANCE_E2E_HOLD") == "1")
-        {
-            Console.WriteLine($"Embed URL: {client.BaseAddress}embed/{token}");
-            Console.WriteLine("Test parked. Ctrl+C to exit.");
-            await Task.Delay(Timeout.Infinite);
-        }
     }
 
     /// <summary>

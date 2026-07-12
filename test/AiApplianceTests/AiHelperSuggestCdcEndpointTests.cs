@@ -69,16 +69,26 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Rejects_empty_prompt()
+    public async Task Blank_prompt_falls_back_to_premade_default()
     {
         var store = GetDocumentStore();
         await using var mockAi = await MockAiApi.StartAsync();
+        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
 
         using var factory = NewApplianceFactory(store, mockAi.BaseAddress);
         var client = factory.CreateClient();
+        await SeedDiscoveredSchemaAsync(client);
 
+        // A blank intent prompt is now accepted; the endpoint substitutes a premade default.
         var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "  " });
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("Success", (string?)node["status"]);
+
+        // The AI received a non-empty prompt (the premade default), not the blank input.
+        var sent = JsonNode.Parse(mockAi.LastCdcRequestBody!)!;
+        Assert.False(string.IsNullOrWhiteSpace((string?)sent["Prompt"]));
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]

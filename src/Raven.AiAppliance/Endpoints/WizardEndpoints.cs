@@ -27,6 +27,16 @@ public static class WizardEndpoints
     /// overwritten on each Connect call.
     private const string WizardSourceProbeName = "_wizard-source-probe";
 
+    /// Premade CDC-modeling prompt used when the admin leaves the intent prompt blank
+    /// (RavenDB-26916: the intent prompt is optional). Keeps the AI suggestion sensible
+    /// without forcing the admin to describe their intent.
+    private const string DefaultIntentPrompt =
+        "Propose a sensible RavenDB CDC document model from the discovered relational schema: " +
+        "map each root/aggregate table to its own collection, embed parent-owned child rows " +
+        "(1:N ownership) as nested arrays, and keep many-to-many or shared references as separate " +
+        "collections linked by id. Use idiomatic collection names derived from the table names; " +
+        "prefer a minimal, query-friendly shape over a literal table-per-collection mirror.";
+
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/setup").WithTags("setup").RequireAuthorization();
@@ -218,8 +228,12 @@ public static class WizardEndpoints
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (body is null || string.IsNullOrWhiteSpace(body.IntentPrompt))
-            return Results.BadRequest(new ApiErrorResponse("intentPrompt is required"));
+        if (body is null)
+            return Results.BadRequest(new ApiErrorResponse("request body is required"));
+
+        // The intent prompt is optional (RavenDB-26916): a blank value falls back to a premade
+        // default so the AI still receives a sensible modeling instruction.
+        var intentPrompt = string.IsNullOrWhiteSpace(body.IntentPrompt) ? DefaultIntentPrompt : body.IntentPrompt!;
 
         WizardState? state;
         using (var session = store.OpenAsyncSession())
@@ -230,7 +244,7 @@ public static class WizardEndpoints
 
         // Pass the discovered schema (CdcSinkSourceSchema, internal to Raven.Client) straight to the
         // client as object; the client serializes it via store conventions to the canonical wire shape.
-        var result = await aiClient.SuggestCdcAsync(state.LastDiscoveredSchema, samples: null, body.IntentPrompt, ct);
+        var result = await aiClient.SuggestCdcAsync(state.LastDiscoveredSchema, samples: null, intentPrompt, ct);
 
         if (result.Status != AiHelperStatus.Success)
             return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString()));
