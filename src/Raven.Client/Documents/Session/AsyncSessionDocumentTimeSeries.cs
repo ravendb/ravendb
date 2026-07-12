@@ -39,15 +39,36 @@ namespace Raven.Client.Documents.Session
                     .ConfigureAwait(false);
             }
 
+            var entries = await ServeFromCacheAndOverlay(from, to, start, pageSize, includes, token)
+                .ConfigureAwait(false);
+
+            return entries?.ToArray();
+        }
+
+        private async Task<List<TimeSeriesEntry>> ServeFromCacheAndOverlay(DateTime? from, DateTime? to, int start, int pageSize,
+            Action<ITimeSeriesIncludeBuilder> includes, CancellationToken token)
+        {
+            var rangeFrom = from ?? DateTime.MinValue;
+            var rangeTo = to ?? DateTime.MaxValue;
+            var hasLocalOverlay = HasLocalEntriesInRange(rangeFrom, rangeTo);
+            var serveClientSide = hasLocalOverlay || HasDeletedRangeIntersecting(rangeFrom, rangeTo);
+            var serveStart = serveClientSide ? 0 : start;
+            var servePageSize = serveClientSide ? int.MaxValue : pageSize;
+
             var resultToUser =
-                await ServeFromCache(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, start, pageSize, includes, token)
+                await ServeFromCache(rangeFrom, rangeTo, serveStart, servePageSize, includes, token)
                     .ConfigureAwait(false);
 
             if (resultToUser == null)
-                return GetLocalEntriesForDeletedRange(from, to, pageSize)?.ToArray();
+                return GetLocalEntriesForDeletedRange(from, to, start, pageSize);
 
-            resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-            return resultToUser.Take(pageSize).ToArray();
+            if (serveClientSide == false)
+                return resultToUser.Take(pageSize).ToList();
+
+            if (hasLocalOverlay)
+                resultToUser = OverlayLocalEntries(resultToUser, rangeFrom, rangeTo);
+
+            return resultToUser.Skip(start).Take(pageSize).ToList();
         }
 
         private IEnumerable<TimeSeriesEntry> OverlayLocalEntries(IEnumerable<TimeSeriesEntry> serverEntries, DateTime from, DateTime to)
@@ -59,12 +80,20 @@ namespace Raven.Client.Documents.Session
             return MergeSorted(serverEntries as IReadOnlyList<TimeSeriesEntry> ?? serverEntries.ToList(), local);
         }
 
+        private bool HasLocalEntriesInRange(DateTime from, DateTime to)
+        {
+            if (TryGetLocalEntries(out var entries) == false)
+                return false;
+
+            var keys = entries.Keys;
+            var i = FindStartIndex(keys, from);
+            return i < entries.Count && keys[i] <= to;
+        }
+
         private List<TTValues> GetCachedEntriesInRange<TTValues>(DateTime from, DateTime to)
             where TTValues : TimeSeriesEntry
         {
-            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false ||
-                byName.TryGetValue(Name, out var entries) == false ||
-                entries.Count == 0)
+            if (TryGetLocalEntries(out var entries) == false)
                 return null;
 
             var result = new List<TTValues>();
@@ -104,14 +133,23 @@ namespace Raven.Client.Documents.Session
             return null;
         }
 
+        private bool TryGetDeletedRanges(out List<TimeSeriesRangeResult> ranges)
+        {
+            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var byName) &&
+                byName.TryGetValue(Name, out ranges) &&
+                ranges.Count > 0)
+                return true;
+
+            ranges = null;
+            return false;
+        }
+
         internal List<TEntry> RemoveDeletedTimeSeries<TEntry>(List<TEntry> entries) where TEntry : TimeSeriesEntry
         {
             if (entries == null || entries.Count == 0)
                 return entries;
 
-            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache) == false ||
-                cache.TryGetValue(Name, out var ranges) == false ||
-                ranges.Count == 0)
+            if (TryGetDeletedRanges(out var ranges) == false)
                 return entries;
 
             var result = new List<TEntry>(entries.Count);
@@ -125,13 +163,13 @@ namespace Raven.Client.Documents.Session
             return result;
         }
 
-        private List<TimeSeriesEntry> GetLocalEntriesForDeletedRange(DateTime? from, DateTime? to, int pageSize)
+        private List<TimeSeriesEntry> GetLocalEntriesForDeletedRange(DateTime? from, DateTime? to, int start, int pageSize)
         {
             var localOnly = GetCachedEntriesInRange<TimeSeriesEntry>(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
             if (localOnly == null || localOnly.Count == 0)
                 return null;
 
-            return RemoveDeletedTimeSeries(localOnly.Take(pageSize).ToList());
+            return RemoveDeletedTimeSeries(localOnly).Skip(start).Take(pageSize).ToList();
         }
 
         internal async Task<TimeSeriesEntry<TEntry>[]> GetTypedFromCache<TEntry>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start,
@@ -141,22 +179,11 @@ namespace Raven.Client.Documents.Session
             // Typed TimeSeries results need special handling when served from cache
             // since we cache the results untyped 
 
-            var resultToUser =
-                await ServeFromCache(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, start, pageSize, includes, token)
-                    .ConfigureAwait(false);
+            var asList = await ServeFromCacheAndOverlay(from, to, start, pageSize, includes, token)
+                .ConfigureAwait(false);
 
-            List<TimeSeriesEntry> asList;
-            if (resultToUser == null)
-            {
-                asList = GetLocalEntriesForDeletedRange(from, to, pageSize);
-                if (asList == null)
-                    return null;
-            }
-            else
-            {
-                resultToUser = OverlayLocalEntries(resultToUser, from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-                asList = resultToUser.Take(pageSize).ToList();
-            }
+            if (asList == null)
+                return null;
 
             if (asList.Count == 0)
                 return Array.Empty<TimeSeriesEntry<TEntry>>();
@@ -286,8 +313,7 @@ namespace Raven.Client.Documents.Session
 
         private bool HasDeletedRangeIntersecting(DateTime from, DateTime to)
         {
-            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var byName) &&
-                byName.TryGetValue(Name, out var ranges))
+            if (TryGetDeletedRanges(out var ranges))
             {
                 foreach (var range in ranges)
                 {
@@ -643,9 +669,7 @@ namespace Raven.Client.Documents.Session
             if (range.IsDeleted)
                 yield break;
 
-            List<TimeSeriesRangeResult> deletedRanges = null;
-            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var deletedByName))
-                deletedByName.TryGetValue(Name, out deletedRanges);
+            TryGetDeletedRanges(out var deletedRanges);
 
             foreach (var value in range.Entries)
             {
@@ -681,11 +705,7 @@ namespace Raven.Client.Documents.Session
 
         private IEnumerable<TimeSeriesEntry> FilterDeletedEntries(IEnumerable<TimeSeriesEntry> entries)
         {
-            List<TimeSeriesRangeResult> deletedRanges = null;
-            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var deletedByName))
-                deletedByName.TryGetValue(Name, out deletedRanges);
-
-            if (deletedRanges == null || deletedRanges.Count == 0)
+            if (TryGetDeletedRanges(out var deletedRanges) == false)
                 return entries;
 
             return Filter(entries, deletedRanges);
