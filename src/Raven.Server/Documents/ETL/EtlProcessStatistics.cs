@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.ETL
             BatchErrors++;
         }
 
-        public void RecordItemLoadError(string error, string documentId, int count = 1)
+        public void RecordItemLoadError(string error, string documentId, int count = 1, TaskErrorStep step = TaskErrorStep.Load)
         {
             var now = SystemTime.UtcNow;
 
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.ETL
                 CreatedAt = now,
                 TaskName = _processName,
                 DocumentId = documentId,
-                Step = TaskErrorStep.Load,
+                Step = step,
                 Error = error
             };
             

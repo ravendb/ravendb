@@ -212,19 +212,21 @@ namespace Raven.Server.Web.System
                     WriteGaugeWithHelp(writer, "Server license utilized CPU cores", "license_utilized_cpu_cores", serverMetrics.License.UtilizedCpuCores);
                     WriteGaugeWithHelp(writer, "Server license max CPU cores", "license_max_cores", serverMetrics.License.MaxCores);
                     
-                    // ETLs
-                    WriteCounterWithHelp(writer, "Number of ETLs", "server_etls_count", serverMetrics.Etls.Count);
-                    WriteCounterWithHelp(writer, "Number of ETL errors", "server_etls_errors_count", serverMetrics.Etls.ErrorsCount);
-                    WriteCounterWithHelp(writer, "Number of healthy ETLs", "server_etls_healthy_count", serverMetrics.Etls.HealthyEtlsCount);
-                    WriteCounterWithHelp(writer, "Number of impaired ETLs", "server_etls_impaired_count", serverMetrics.Etls.ImpairedEtlsCount);
-                    WriteCounterWithHelp(writer, "Number of failed ETLs", "server_etls_failed_count", serverMetrics.Etls.FailedEtlsCount);
+                    // ETLs — current-state counts that fall when a database unloads or an ETL/error is removed,
+                    // so they must be gauges: a Prometheus counter that decreases is read as a reset and corrupts
+                    // rate()/increase(). Matches the per-database ETL metrics, which already use gauges.
+                    WriteGaugeWithHelp(writer, "Number of ETLs", "server_etls_count", serverMetrics.Etls.Count);
+                    WriteGaugeWithHelp(writer, "Number of ETL errors", "server_etls_errors_count", serverMetrics.Etls.ErrorsCount);
+                    WriteGaugeWithHelp(writer, "Number of healthy ETLs", "server_etls_healthy_count", serverMetrics.Etls.HealthyEtlsCount);
+                    WriteGaugeWithHelp(writer, "Number of impaired ETLs", "server_etls_impaired_count", serverMetrics.Etls.ImpairedEtlsCount);
+                    WriteGaugeWithHelp(writer, "Number of failed ETLs", "server_etls_failed_count", serverMetrics.Etls.FailedEtlsCount);
 
-                    // AI Tasks
-                    WriteCounterWithHelp(writer, "Number of AI tasks", "server_ai_tasks_count", serverMetrics.AiTasks.Count);
-                    WriteCounterWithHelp(writer, "Number of AI task errors", "server_ai_tasks_errors_count", serverMetrics.AiTasks.ErrorsCount);
-                    WriteCounterWithHelp(writer, "Number of healthy AI tasks", "server_ai_tasks_healthy_count", serverMetrics.AiTasks.HealthyTasksCount);
-                    WriteCounterWithHelp(writer, "Number of impaired AI tasks", "server_ai_tasks_impaired_count", serverMetrics.AiTasks.ImpairedTasksCount);
-                    WriteCounterWithHelp(writer, "Number of failed AI tasks", "server_ai_tasks_failed_count", serverMetrics.AiTasks.FailedTasksCount);
+                    // AI Tasks — same rationale as the ETL counts above (current-state, can decrease → gauges).
+                    WriteGaugeWithHelp(writer, "Number of AI tasks", "server_ai_tasks_count", serverMetrics.AiTasks.Count);
+                    WriteGaugeWithHelp(writer, "Number of AI task errors", "server_ai_tasks_errors_count", serverMetrics.AiTasks.ErrorsCount);
+                    WriteGaugeWithHelp(writer, "Number of healthy AI tasks", "server_ai_tasks_healthy_count", serverMetrics.AiTasks.HealthyTasksCount);
+                    WriteGaugeWithHelp(writer, "Number of impaired AI tasks", "server_ai_tasks_impaired_count", serverMetrics.AiTasks.ImpairedTasksCount);
+                    WriteGaugeWithHelp(writer, "Number of failed AI tasks", "server_ai_tasks_failed_count", serverMetrics.AiTasks.FailedTasksCount);
                 }
 
                 ms.Position = 0;

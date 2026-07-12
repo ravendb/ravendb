@@ -97,7 +97,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                                   $"Error: {e}";
 
                         statsScope.UpdateFailures++;
-                        _statistics.RecordItemLoadError(msg, item.DocumentId);
+                        _statistics.RecordItemLoadError(msg, item.DocumentId, step: TaskErrorStep.Persistence);
                         
                         if (_logger.IsWarnEnabled)
                             _logger.Warn(msg);

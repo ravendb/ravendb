@@ -152,20 +152,30 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (results.Count is 0)
             return 0;
 
-        List<Exception> exceptions;
+        List<Exception> exceptions = null;
 
-        // Prevent database unloading during long-running AI operations
-        using (Database.PreventFromUnloadingByIdleOperations())
-        using (EnterLoadStep(TaskErrorStep.ModelInference))
-        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken))
+        var failedStep = TaskErrorStep.ModelInference;
+        try
         {
-            cts.CancelAfter(Database.Configuration.Ai.GenAiSendToModelTimeout.AsTimeSpan);
-            exceptions = SendToModel(results, context, scope, cts.Token);
+            // Prevent database unloading during long-running AI operations
+            using (Database.PreventFromUnloadingByIdleOperations())
+            using (EnterLoadStep(TaskErrorStep.ModelInference))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken))
+            {
+                cts.CancelAfter(Database.Configuration.Ai.GenAiSendToModelTimeout.AsTimeSpan);
+                exceptions = SendToModel(results, context, scope, cts.Token);
+            }
+
+            failedStep = TaskErrorStep.Persistence;
+            using (EnterLoadStep(TaskErrorStep.Persistence))
+            {
+                ApplyUpdateScript(results, scope);
+            }
         }
-
-        using (EnterLoadStep(TaskErrorStep.Persistence))
+        catch
         {
-            ApplyUpdateScript(results, scope);
+            LoadErrorStep = failedStep;
+            throw;
         }
 
         if (exceptions?.Count > 0)
@@ -361,7 +371,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
                 $"{singleEx}";
 
-            Statistics.RecordItemLoadError(msg, item.DocumentId);
+            Statistics.RecordItemLoadError(msg, item.DocumentId, step: LoadErrorStep);
             if (Logger.IsWarnEnabled)
                 Logger.Warn(msg);
 

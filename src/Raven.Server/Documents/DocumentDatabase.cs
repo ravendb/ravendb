@@ -367,11 +367,10 @@ namespace Raven.Server.Documents
                 if (_localIdentityPartsSeparator != null)
                     return _localIdentityPartsSeparator.Value;
                 if (_serverStore._env.TryGetClientState(out ClusterStateRecord rec))
-                {
                     return rec.DefaultIdentityPartsSeparator;
-                }
 
-                throw new InvalidOperationException("Unable to get cluster state from environment ClientState, should not be possible");
+
+                return Constants.Identities.DefaultSeparator; // shouldn't happen, by a good default
             }
         }
 

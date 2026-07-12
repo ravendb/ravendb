@@ -219,6 +219,12 @@ namespace Raven.Server.Monitoring.Snmp
                     await AddEtlsFromDatabaseAsync(database);
                     await AddAiTasksFromDatabaseAsync(database);
                 }
+                catch (DatabaseDisabledException)
+                {
+                    // ignored - the database was disabled/deleted between the record-change event and this
+                    // fire-and-forget continuation (same tolerance as Attach). Without this catch the fault
+                    // would surface only as an unobserved Task exception.
+                }
                 finally
                 {
                     _locker.Release();
