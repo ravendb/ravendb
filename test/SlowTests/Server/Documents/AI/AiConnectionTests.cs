@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents.AI
         {
         }
 
-        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenRetryTheory(RavenTestCategory.Ai, maxRetries: 3, delayBetweenRetriesMs: 10_000)]
         [ClassData(typeof(IntegrationDataType<GenAi>))]
         public void CanConnectGenAi(RavenAiIntegration integration)
         {
