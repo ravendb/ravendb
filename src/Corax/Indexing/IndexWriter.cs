@@ -1127,7 +1127,11 @@ namespace Corax.Indexing
                     if (indexedField.VectorIndexer.DirtyNodeIds.Count > 0)
                     {
                         _dirtyVectorSets ??= new Dictionary<Slice, HashSet<long>>(SliceComparer.Instance);
-                        _dirtyVectorSets[indexedField.Name] = indexedField.VectorIndexer.DirtyNodeIds;
+                        // FlushBatch may be called multiple times during a single voron tx commit, so we need to merge the dirty node IDs across calls
+                        if (_dirtyVectorSets.TryGetValue(indexedField.Name, out var existing))
+                            existing.UnionWith(indexedField.VectorIndexer.DirtyNodeIds);
+                        else
+                            _dirtyVectorSets[indexedField.Name] = new HashSet<long>(indexedField.VectorIndexer.DirtyNodeIds);
                     }
                 }
 
