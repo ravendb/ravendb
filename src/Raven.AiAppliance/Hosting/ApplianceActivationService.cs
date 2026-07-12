@@ -31,15 +31,13 @@ public sealed class ApplianceActivationService(
     {
         var opts = options.Value;
 
-        // Nothing to activate without a token or a mounted mock package — skip without touching the
-        // bootstrap phase. Keeps unconfigured hosts (and tests that drive bootstrap manually) in their
-        // current phase instead of forcing them through a doomed redemption / network call.
-        var mockZipPresent = string.IsNullOrEmpty(opts.SetupPackageZipPath) == false && File.Exists(opts.SetupPackageZipPath);
-        if (string.IsNullOrWhiteSpace(opts.LicenseToken) && mockZipPresent == false)
+        // Nothing to activate without a token — skip without touching the bootstrap phase. Keeps
+        // unconfigured hosts (and tests that drive bootstrap manually) in their current phase instead
+        // of forcing them through a doomed network call.
+        if (string.IsNullOrWhiteSpace(opts.LicenseToken))
         {
             logger.LogInformation(
-                "No QUILL_LICENSE_KEY and no mock setup package present; skipping startup activation " +
-                "(appliance stays in NeedsActivation).");
+                "No QUILL_LICENSE_KEY; skipping startup activation (appliance stays in NeedsActivation).");
             return;
         }
 

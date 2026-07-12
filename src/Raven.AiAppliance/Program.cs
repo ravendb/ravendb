@@ -76,7 +76,6 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_AI_WEB_LISTEN_URL",       v => options.WebListenUrl = v);
         ReadEnv("RAVEN_AI_CONFIG_DB",            v => options.ConfigDatabase = v);
         ReadEnv("RAVEN_AI_SETUP_PACKAGE_PATH",   v => options.SetupPackagePath = v);
-        ReadEnv("RAVEN_AI_SETUP_PACKAGE_ZIP",    v => options.SetupPackageZipPath = v);
         ReadEnv("RAVEN_AI_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_AI_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
         ReadEnv("RAVEN_AI_API_URL",              v => options.AiApiUrl = v);
@@ -131,23 +130,14 @@ builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (
         return handler;
     });
 
-// The mounted setup-package zip drives only the license client: when present the appliance serves the
-// zip locally (MockLicenseClient) so activation works without a live license API. Production (no zip)
-// dials the real license API. The AI Helper is unaffected — it always uses the real client above.
-var setupPackageZip = Environment.GetEnvironmentVariable("RAVEN_AI_SETUP_PACKAGE_ZIP");
-var useMockLicenseApi = string.IsNullOrEmpty(setupPackageZip) == false && File.Exists(setupPackageZip);
-if (useMockLicenseApi)
+// License client: at startup activation pulls the setup-package zip by token from the real license
+// API (RavenDB-26783, GET /api/v1/quill/licenses/{token}), BaseAddress from LicenseApiUrl. The AI
+// Helper is separate — it always proxies through the bundled RavenDB via the client registered above.
+builder.Services.AddHttpClient<ILicenseClient, LicenseHttpClient>(static (sp, http) =>
 {
-    builder.Services.AddSingleton<ILicenseClient>(new MockLicenseClient(setupPackageZip!));
-}
-else
-{
-    builder.Services.AddHttpClient<ILicenseClient, LicenseHttpClient>(static (sp, http) =>
-    {
-        var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-        http.BaseAddress = new Uri(opts.LicenseApiUrl);
-    });
-}
+    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+    http.BaseAddress = new Uri(opts.LicenseApiUrl);
+});
 
 // Wire-shape: enums travel as their string names (e.g. AiModelType "Chat" not 1,
 // AiConnectorType "Ollama" not 3). Matches RavenDB Studio's payload, lets
@@ -282,9 +272,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
 // Dev-mode safeguard: a forgetful local run with no RAVEN_AI_LICENSE_API_URL
-// override (and no mock zip) will hit the real api.ravendb.net during startup
-// activation and hang (no test license to redeem). Warn loudly at startup; in
-// Production we trust the default.
+// override will hit the real api.ravendb.net during startup activation and hang
+// (no test license to redeem). Warn loudly at startup; in Production we trust the default.
 {
     var opts = app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value;
     if (app.Environment.IsDevelopment() &&
@@ -293,12 +282,6 @@ if (app.Environment.IsDevelopment())
         app.Logger.LogWarning(
             "LicenseApiUrl is set to the production default ({Default}); set RAVEN_AI_LICENSE_API_URL to a mock or staging endpoint for local development.",
             ApplianceOptions.DefaultLicenseApiUrl);
-    }
-
-    if (useMockLicenseApi)
-    {
-        app.Logger.LogInformation(
-            "Mock license-API mode: activation serves the mounted setup-package zip (MockLicenseClient) instead of calling the real license API. The AI Helper still calls the real AI API via the bundled RavenDB (/assistant/assist).");
     }
 }
 
