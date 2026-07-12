@@ -87,19 +87,19 @@ psql "postgresql://postgres:postgres@<host>:5432/northwind" -tAc \
 ## 3. Build + run the appliance
 
 ```powershell
-$env:APPLIANCE_E2E_SETUP_PACKAGE_PATH = 'C:\path\to\setup-package.zip'
-.\scripts\ai-appliance\up.ps1
+.\scripts\ai-appliance\up.ps1 -LicenseKey '<setup-package-token>' -RavenApiEnv test
 ```
 
 - First build is long (publishes RavenDB + the appliance + builds the React frontend); rebuilds are cached.
-- `up.ps1` mounts the setup-package zip (enabling demo-mode activation; the license client serves the zip
-  offline), runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes
+- `up.ps1` runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes
   the nginx TLS front on **:443** (HTTPS) and the web app on **:5000** (first-run / pre-activation), and
-  tails logs.
-- Useful flags: `-Rebuild` (no-cache), `-Port <n>` (host :5000 port), `-HttpsPort <n>` (host :443 port),
+  tails logs. At startup the appliance pulls its setup package from the real license API using
+  `-LicenseKey` (a real emitted token) — there is no local-zip / offline mode.
+- Useful flags: `-LicenseKey <token>` (real setup-package token — **required** to activate),
+  `-Rebuild` (no-cache), `-Port <n>` (host :5000 port), `-HttpsPort <n>` (host :443 port),
   `-ApiKey <key>` (operator login key, default `egor`), `-WithStudio` (import the admin client cert so the
   browser can reach RavenDB Studio at `https://db.egor-ai.ravendb.run/`),
-  `-RavenApiEnv <env>` (route the AI Helper to `{env}.api.ravendb.net`, e.g. `test`; unset → production).
+  `-RavenApiEnv <env>` (route the AI Helper **and the setup-package download** to `{env}.api.ravendb.net`, e.g. `test`; unset → production).
 
 The appliance **activates itself at startup** — no operator action. Status walks
 `NeedsActivation → Redeeming → Restarting → Ready` (~30–60s after the build). Watch it:
@@ -223,7 +223,7 @@ rm docker/ai-appliance/license.json         # the build-context license you supp
 | Symptom | Cause / fix |
 |---|---|
 | Build fails: `COPY docker/ai-appliance/license.json … not found` | You skipped step 1 — extract `license.json` from the setup-package zip into `docker/ai-appliance/`. |
-| Bootstrap stuck at `NeedsActivation` | Startup activation had nothing to redeem. In demo mode, set `APPLIANCE_E2E_SETUP_PACKAGE_PATH` before `up.ps1` (mounts the zip the mock license client serves); in production, set `QUILL_LICENSE_KEY` + a reachable license API. Check `docker logs ai-appliance-demo` for the activation line. |
+| Bootstrap stuck at `NeedsActivation` | Startup activation had no token. Pass a real `-LicenseKey` (`QUILL_LICENSE_KEY`) and ensure the license API is reachable (`-RavenApiEnv test` → test.api.ravendb.net). Check `docker logs ai-appliance-demo` for the activation line. |
 | `401 Unauthorized` on `/api/*` (or bounced to `/login`) | Missing/wrong API key or an expired session. Pass `-H "X-Api-Key: <key>"` (the `QUILL_API_KEY` you ran with, default `egor`) or sign in again. `QUILL_API_KEY` is **required** — auth fails closed when it's unset. |
 | `https://…:443` connection refused | nginx only starts after activation extracts the wildcard cert. Pre-activation use `http://localhost:5000`; once `/api/bootstrap/status` is `Ready`, retry `:443`. If it never comes up, check `docker logs ai-appliance-demo` for the `03-proxy` service. |
 | Wizard **Connect** fails | The connection-string host isn't reachable **from the container**. Use a LAN IP or `host.docker.internal`, not `localhost`. |
@@ -245,4 +245,4 @@ This runbook is the demo posture. For a real deployment:
   is `Secure` on the real `https://dashboard.*` flow regardless (it's only non-Secure on the local
   `:5000` fallback).
 - **Use a high-entropy `QUILL_API_KEY`** (not the demo `egor`). The server logs a startup warning if the
-  key is short and you're not in mock/demo mode; treat it as a hard requirement in production.
+  key is short; treat it as a hard requirement in production.

@@ -41,9 +41,9 @@
   with this; it is required (auth fails closed when unset).
 
 .PARAMETER LicenseKey
-  Activation token (QUILL_LICENSE_KEY) the appliance uses to pull its setup
-  package at startup. Demo default: 'egor'. Ignored in demo/mock mode (the mounted
-  setup-package zip answers any token), but set for parity with production.
+  Activation token (QUILL_LICENSE_KEY) the appliance uses to pull its setup package at startup
+  from the real license API. Must be a real emitted token (the SetupPackageKey from the setup
+  email) — there is no local-zip / offline fallback. The 'egor' default will not activate.
 
 .PARAMETER RavenApiEnv
   Selects the AI API environment the bundled RavenDB server dials for the AI Helper
@@ -52,12 +52,10 @@
   https://api.ravendb.net. Set 'test' to target https://test.api.ravendb.net.
 
 .NOTES
-  Demo setup-package zip: this script mounts $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH
-  (the same env you use for the AiApplianceTests E2E suite) at the Dockerfile-
-  pinned in-container path /var/lib/ai-appliance/setup-source.zip. Startup
-  activation (ApplianceActivationService) serves it via the mock license client in
-  demo mode instead of calling the real license API. Production builds won't set
-  this env and won't ship a zip; the appliance dials the real license API instead.
+  The appliance pulls its setup package at startup from the real license API
+  (GET /api/v1/quill/licenses/{token}). Pass a real emitted -LicenseKey; with
+  -RavenApiEnv test the download targets test.api.ravendb.net (RAVEN_AI_LICENSE_API_URL),
+  otherwise production https://api.ravendb.net. There is no local-zip / offline demo mode.
 #>
 [CmdletBinding()]
 param(
@@ -120,21 +118,14 @@ $runArgs = @(
     '-e', "QUILL_API_KEY=$ApiKey",
     '-e', "QUILL_LICENSE_KEY=$LicenseKey"
 )
-# Point the bundled RavenDB server's AI Helper at a specific api.ravendb.net environment
-# (e.g. 'test' -> test.api.ravendb.net). Unset -> production. with-contenv in the 01-ravendb
-# s6 run script imports this into the RavenDB process env automatically.
+# Point the bundled RavenDB server's AI Helper (RAVEN_API_ENV) AND the appliance's own license
+# download (RAVEN_AI_LICENSE_API_URL) at a specific api.ravendb.net environment (e.g. 'test' ->
+# test.api.ravendb.net). Unset -> production. with-contenv in the 01-ravendb s6 run script imports
+# RAVEN_API_ENV into the RavenDB process env automatically.
 if ($RavenApiEnv) {
-    Write-Host "Routing AI Helper to ${RavenApiEnv}.api.ravendb.net (RAVEN_API_ENV=$RavenApiEnv)" -ForegroundColor DarkGray
+    Write-Host "Routing AI Helper + license download to ${RavenApiEnv}.api.ravendb.net" -ForegroundColor DarkGray
     $runArgs += @('-e', "RAVEN_API_ENV=$RavenApiEnv")
-}
-# Mount the demo setup-package zip if APPLIANCE_E2E_SETUP_PACKAGE_PATH points
-# at one. The container path is hardcoded in the Dockerfile via
-# RAVEN_AI_SETUP_PACKAGE_ZIP — the appliance reads from there in demo mode.
-$demoZip = $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH
-if ($demoZip -and (Test-Path $demoZip)) {
-    $resolvedZip = (Resolve-Path $demoZip).Path
-    Write-Host "Mounting demo setup-package zip: $resolvedZip" -ForegroundColor DarkGray
-    $runArgs += @('-v', "${resolvedZip}:/var/lib/ai-appliance/setup-source.zip:ro")
+    $runArgs += @('-e', "RAVEN_AI_LICENSE_API_URL=https://${RavenApiEnv}.api.ravendb.net")
 }
 if ($WithStudio) {
     Write-Host "-WithStudio: importing the admin client cert so the browser can reach RavenDB Studio at https://db.egor-ai.ravendb.run/." -ForegroundColor Yellow

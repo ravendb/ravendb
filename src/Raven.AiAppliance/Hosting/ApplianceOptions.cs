@@ -31,8 +31,7 @@ public sealed class ApplianceOptions
     /// Activation token, bound from <c>QUILL_LICENSE_KEY</c>. At startup
     /// <see cref="ApplianceActivationService"/> pulls the setup-package zip for this token from
     /// <see cref="LicenseApiUrl"/> (RavenDB-26783, <c>GET /api/v{version}/quill/licenses/{token}</c>).
-    /// Required in production; ignored in mock mode (the mounted zip answers any token). The value is
-    /// never logged.
+    /// Required to activate; when unset the appliance stays in NeedsActivation. The value is never logged.
     /// </summary>
     public string? LicenseToken { get; set; }
 
@@ -43,15 +42,6 @@ public sealed class ApplianceOptions
     /// DB. Fail-closed when unset. The value is never logged.
     /// </summary>
     public string? ApiKey { get; set; }
-
-    /// <summary>
-    /// Path to a local setup-package zip. <b>License-mock only</b>: when set (file present)
-    /// <see cref="AiHelper.MockLicenseClient"/> serves this zip instead of calling the real license
-    /// API, so activation works offline. Bound from <c>RAVEN_AI_SETUP_PACKAGE_ZIP</c>; empty / missing
-    /// file selects the real <see cref="AiHelper.LicenseHttpClient"/>. Does not affect the AI Helper,
-    /// which always calls the real AI API via the bundled RavenDB (<c>/assistant/assist</c>).
-    /// </summary>
-    public string? SetupPackageZipPath { get; set; }
 
     /// <summary>
     /// s6-rc service path to restart after the setup package is extracted (e.g.
@@ -74,9 +64,9 @@ public sealed class ApplianceOptions
     public const string DefaultLicenseApiUrl = "https://api.ravendb.net";
 
     /// <summary>
-    /// Upstream license-redemption endpoint. POST /api/bootstrap/redeem-license
-    /// proxies <c>GET {LicenseApiUrl}/licenses/{key}</c> to fetch the signed
-    /// setup-package zip on first run. Tests point this at an in-process mock.
+    /// Base address of the public license API. Startup activation fetches the setup-package zip via
+    /// <c>GET {LicenseApiUrl}/api/v1/quill/licenses/{token}</c> (RavenDB-26783). Bound from
+    /// <c>RAVEN_AI_LICENSE_API_URL</c>. Tests point this at an in-process mock (<c>MockLicenseApi</c>).
     /// </summary>
     public string LicenseApiUrl { get; set; } = DefaultLicenseApiUrl;
 

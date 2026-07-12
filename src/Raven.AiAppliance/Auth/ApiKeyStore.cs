@@ -73,11 +73,8 @@ public sealed class ApiKeyStore(
             }
             else
             {
-                // Nudge (don't block) a low-entropy operator key in real deployments. Stays silent in
-                // mock/demo mode, where a short placeholder like 'egor' is expected.
-                var mockMode = string.IsNullOrEmpty(options.Value.SetupPackageZipPath) == false
-                               && File.Exists(options.Value.SetupPackageZipPath);
-                if (mockMode == false && envKey.Length < MinRecommendedApiKeyLength)
+                // Nudge (don't block) a low-entropy operator key.
+                if (envKey.Length < MinRecommendedApiKeyLength)
                     logger.LogWarning(
                         "QUILL_API_KEY is shorter than {Min} characters; use a high-entropy key in production.",
                         MinRecommendedApiKeyLength);

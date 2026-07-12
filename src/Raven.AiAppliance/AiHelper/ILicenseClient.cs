@@ -5,9 +5,8 @@ namespace Raven.AiAppliance.AiHelper;
 /// The production implementation (<see cref="LicenseHttpClient"/>) calls the public
 /// license API on api.ravendb.net (RavenDB-26783: <c>GET /api/v{version}/quill/licenses/{token}</c>,
 /// which returns the full setup-package zip — server cert + admin client cert + per-node
-/// <c>settings.json</c> + <c>license.json</c> + <c>setup.json</c>). <see cref="MockLicenseClient"/>
-/// serves a local zip in mock mode (the same toggle the AI Helper uses), so the appliance can
-/// activate without the real API being available.
+/// <c>settings.json</c> + <c>license.json</c> + <c>setup.json</c>). Tests exercise this same client
+/// against an in-process HTTP mock (<c>MockLicenseApi</c>) via a <c>LicenseApiUrl</c> override.
 /// </summary>
 public interface ILicenseClient
 {
