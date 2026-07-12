@@ -1975,6 +1975,7 @@ more responsive application.
 
                 ranges[toRangeIndex].From = from;
                 ranges[toRangeIndex].Entries = values;
+                ranges[toRangeIndex].IsDeleted = false;
                 ranges.RemoveRange(0, toRangeIndex);
 
                 return;
@@ -2020,6 +2021,7 @@ more responsive application.
 
                 ranges[fromRangeIndex].To = to;
                 ranges[fromRangeIndex].Entries = values;
+                ranges[fromRangeIndex].IsDeleted = false;
                 ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
 
                 return;
@@ -2068,6 +2070,7 @@ more responsive application.
                 ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
                 ranges[toRangeIndex].From = from;
                 ranges[toRangeIndex].Entries = values;
+                ranges[toRangeIndex].IsDeleted = false;
 
                 return;
             }
@@ -2088,6 +2091,7 @@ more responsive application.
 
                 ranges[fromRangeIndex].To = to;
                 ranges[fromRangeIndex].Entries = values;
+                ranges[fromRangeIndex].IsDeleted = false;
                 ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
 
                 return;
@@ -2106,6 +2110,7 @@ more responsive application.
 
             ranges[fromRangeIndex].To = ranges[toRangeIndex].To;
             ranges[fromRangeIndex].Entries = values;
+            ranges[fromRangeIndex].IsDeleted = false;
 
             ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
         }

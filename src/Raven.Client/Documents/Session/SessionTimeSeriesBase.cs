@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Session
 
             if (Session.SessionInfo.NoCaching == false)
             {
-                TrackTimeseriesInCache(timestamp, values, tag);
+                TrackTimeseriesInCache(timestamp, op.Values, tag);
             }
         }
 
@@ -166,9 +166,9 @@ namespace Raven.Client.Documents.Session
                         ranges[i].Entries = Array.Empty<TimeSeriesEntry>();
                     }
                 }
-
-                AddRemovedTimeSeriesRange(from, to);
-            }
+            } 
+            
+            AddRemovedTimeSeriesRange(from, to);
         }
 
         private void AddRemovedTimeSeriesRange(DateTime? from = null, DateTime? to = null)
@@ -192,11 +192,20 @@ namespace Raven.Client.Documents.Session
             ranges.Add(range);
         }
 
+        protected bool TryGetLocalEntries(out SortedList<DateTime, TimeSeriesEntry> entries)
+        {
+            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) &&
+                byName.TryGetValue(Name, out entries) &&
+                entries.Count > 0)
+                return true;
+
+            entries = null;
+            return false;
+        }
+
         private void RemoveLocalEntries(DateTime? from, DateTime? to)
         {
-            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false ||
-                byName.TryGetValue(Name, out var entries) == false ||
-                entries.Count == 0)
+            if (TryGetLocalEntries(out var entries) == false)
                 return;
 
             var f = (from ?? DateTime.MinValue).EnsureUtc();
@@ -287,13 +296,12 @@ namespace Raven.Client.Documents.Session
                                         "Use documentId instead or track the entity in the session.");
         }
 
-        private void TrackTimeseriesInCache(DateTime timestamp, IEnumerable<double> values, string tag = null, bool increment = false)
+        private void TrackTimeseriesInCache(DateTime timestamp, double[] values, string tag = null, bool increment = false)
         {
             var utcTimestamp = timestamp.EnsureUtc().EnsureMilliseconds();
-            var valuesArray = values.ToArray();
 
             if (increment)
-                valuesArray = AddValues(CurrentLocalDeltaAt(utcTimestamp), valuesArray);
+                values = AddValues(CurrentLocalDeltaAt(utcTimestamp), values);
 
             RemoveFromDeletedCacheIfNeeded(utcTimestamp);
 
@@ -301,7 +309,7 @@ namespace Raven.Client.Documents.Session
             {
                 Timestamp = utcTimestamp,
                 Tag = tag,
-                Values = valuesArray
+                Values = values
             };
 
             if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false)
@@ -315,8 +323,7 @@ namespace Raven.Client.Documents.Session
 
         private double[] CurrentLocalDeltaAt(DateTime utcTimestamp)
         {
-            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) &&
-                byName.TryGetValue(Name, out var localEntries) &&
+            if (TryGetLocalEntries(out var localEntries) &&
                 localEntries.TryGetValue(utcTimestamp, out var local))
                 return local.Values;
 
