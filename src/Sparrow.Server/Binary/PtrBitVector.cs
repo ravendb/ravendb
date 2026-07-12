@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Numerics;
@@ -108,21 +109,34 @@ namespace Sparrow.Binary
 
         public int FirstSetBit()
         {
+            int lengthInBytes = (Count + 7) / 8; // Iterate in byte units
+
             int i = 0;
-            for (; i < Count / 8; i+=8)
+            for (; i + sizeof(ulong) <= lengthInBytes; i += sizeof(ulong))
             {
-                var l = *(ulong*)(Bits + i);
-                if (l!= 0)
-                    return BitOperations.LeadingZeroCount(l) + i * 8;
+                ulong l = *(ulong*)(Bits + i);
+                if (l != 0)
+                    return ResolveIndex(i, l, Count);
             }
 
-            for (; i < Count; i++)
+            int remaining = lengthInBytes - i;
+            if (remaining > 0)
             {
-                if(Bits[i] != 0)
-                    return i + BitOperations.LeadingZeroCount(Bits[i]);
+                ulong word = 0;
+                Unsafe.CopyBlockUnaligned(&word, Bits + i, (uint)remaining);
+                if (word != 0)
+                    return ResolveIndex(i, word, Count);
             }
 
             return -1;
+
+            static int ResolveIndex(int byteOffset, ulong value, int count)
+            {
+                int idx = byteOffset * 8 + BitOperations.LeadingZeroCount(
+                    // this is needed because we set on byte boundaries, but read using ulong
+                    BinaryPrimitives.ReverseEndianness(value));
+                return idx < count ? idx : -1; // avoid returning an index that is greater than the count (e.g. if the last byte is partially used)
+            }
         }
     }
 }

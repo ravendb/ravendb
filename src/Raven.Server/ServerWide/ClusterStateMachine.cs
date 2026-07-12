@@ -1412,7 +1412,10 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx.Committed == false)
+                {
+                    _rachisLogIndexNotifications.CancelTask(index);
                     return;
+                }
 
                 var count = tasks.Count;
                 if (count == 0)
@@ -2654,7 +2657,10 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx.Committed == false)
+                {
+                    _rachisLogIndexNotifications.CancelTask(index);
                     return;
+                }
                 ExecuteAsyncTask(index, () => Changes.OnValueChanges(index, type));
             };
         }
@@ -2666,7 +2672,10 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx.Committed == false)
+                {
+                    _rachisLogIndexNotifications.CancelTask(index);
                     return;
+                }
                 ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change, changeState));
             };
         }
@@ -3247,8 +3256,11 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx.Committed == false)
+                {
+                    _rachisLogIndexNotifications.CancelTask(index);
                     return;
-                
+                }
+
                 NotifyAndSetCompleted(index);
             };
         }

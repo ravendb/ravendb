@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -60,7 +61,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
                     using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                     {
                         var cmd = new GetStudioFooterStatisticsOperation.GetStudioFooterStatisticsCommand();
-                        await executor.ExecuteAsync(cmd, ctx, token: token);
+                        try
+                        {
+                            await executor.ExecuteAsync(cmd, ctx, token: token);
+                        }
+                        catch (Exception) when (token.IsCancellationRequested == false)
+                        {
+                            // A single unreachable/faulting replica must not fail the whole endpoint
+                            continue;
+                        }
 
                         if (cmd.Result == null)
                             continue;
