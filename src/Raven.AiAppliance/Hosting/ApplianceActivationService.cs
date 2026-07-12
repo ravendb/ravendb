@@ -10,8 +10,9 @@ namespace Raven.AiAppliance.Hosting;
 /// First-run activation, driven at startup by the <c>QUILL_LICENSE_KEY</c> token (bound to
 /// <see cref="ApplianceOptions.LicenseToken"/>) — replaces the old operator-triggered
 /// <c>POST /api/bootstrap/redeem-license</c>. Retrieves the setup-package zip via
-/// <see cref="ILicenseClient"/> (real license API in production, mounted zip in mock mode), unpacks
-/// it into <see cref="ApplianceOptions.SetupPackagePath"/>, writes the admin-thumbprint marker, then
+/// <see cref="ILicenseClient"/> (the license API on api.ravendb.net; tests point it at an in-process
+/// mock), unpacks it into <see cref="ApplianceOptions.SetupPackagePath"/>, writes the
+/// admin-thumbprint marker, then
 /// either signals s6 to restart RavenDB into secure mode and exits the .NET host (container) or flips
 /// bootstrap to <see cref="BootstrapPhase.Ready"/> inline (unsupervised hosts / tests).
 /// </summary>
