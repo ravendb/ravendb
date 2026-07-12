@@ -21,12 +21,11 @@ public sealed record AppUsageResponse(
     TopTable[] TopTables,
     TopCapability[] TopCapabilities);
 
-/// <summary>The four KPI cards; each carries a current value, a percent delta vs the
+/// <summary>The three KPI cards; each carries a current value, a percent delta vs the
 /// previous equal-length window, and a per-bucket sparkline.</summary>
 public sealed record AppUsageMetrics(
     MetricCard Conversations,
     MetricCard Tokens,
-    MetricCard Cost,
     MetricCard CdcWrites);
 
 public sealed record MetricCard(double Value, double Delta, double[] Sparkline);
@@ -39,6 +38,7 @@ public sealed record SeriesKey(string Key, string Label);
 
 public sealed record CdcWritePoint(string T, long Writes);
 
+// TODO RavenDB-26992: LagSeconds/LastWriteAt are placeholders (0 / "") pending real per-table CDC metrics.
 public sealed record TopTable(string Name, long Writes, int LagSeconds, string LastWriteAt);
 
-public sealed record TopCapability(string Name, long Invocations, long AvgTokens, long TotalTokens, double Cost);
+public sealed record TopCapability(string Name, long Invocations, long AvgTokens, long TotalTokens);

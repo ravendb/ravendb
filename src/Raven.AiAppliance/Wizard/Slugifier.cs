@@ -5,7 +5,7 @@ namespace Raven.AiAppliance.Wizard;
 /// <summary>
 /// Derives an URL-safe, RavenDB-DB-name-safe slug from a user-typed appName.
 ///
-/// Mirrors the prototype's `slug` field (`AddAppWizard.tsx` -> `mock-api.ts`):
+/// Matches the Studio's client-side slug derivation:
 /// lowercase, whitespace + any non-alphanumeric character collapsed to a single
 /// dash, leading/trailing dashes stripped. Examples:
 ///

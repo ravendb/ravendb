@@ -49,7 +49,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        // List — newest first, metadata only (no transcript/last-exchange; that's detail-only),
+        // List — newest first, with a last-exchange preview (full transcript stays detail-only),
         // derived state/initials, channel attribution.
         var list = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations");
         Assert.Equal(2, list.GetArrayLength());
@@ -60,7 +60,12 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         Assert.Equal("order-support", first.GetProperty("agentName").GetString());
         Assert.Equal("OS", first.GetProperty("agentInitials").GetString());
         Assert.Equal("active", first.GetProperty("state").GetString());          // 10 min ago
-        Assert.Empty(first.GetProperty("lastExchange").EnumerateArray());        // list carries no preview
+        var firstExchange = first.GetProperty("lastExchange");                   // last-exchange preview, newest first
+        Assert.Equal(2, firstExchange.GetArrayLength());
+        Assert.Equal("agent", firstExchange[0].GetProperty("role").GetString());
+        Assert.Equal("hi there", firstExchange[0].GetProperty("text").GetString());
+        Assert.Equal("user", firstExchange[1].GetProperty("role").GetString());
+        Assert.Equal("hello", firstExchange[1].GetProperty("text").GetString());
         Assert.Equal(JsonValueKind.Null, first.GetProperty("transcript").ValueKind);
         Assert.Equal("wgt1", first.GetProperty("channelName").GetString());      // attributed via EmbedLink
 
@@ -77,6 +82,37 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         // I1: outbound timestamps are UTC, ISO-8601 with a trailing Z (so the browser parses as UTC).
         Assert.EndsWith("Z\"", detail.GetProperty("lastActivityAt").GetRawText());
         Assert.EndsWith("Z\"", detail.GetProperty("startedAt").GetRawText());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Conversations_list_preview_returns_the_newest_two_turns_of_a_long_conversation()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        // More turns than the list preview's page size (LastExchangePageSize = 10), so the read must
+        // fetch the most-recent tail — not the oldest page — otherwise TakeLast(2) surfaces the wrong
+        // turns. m1..m14 alternate user/assistant; the newest exchange is m13 (user) + m14 (assistant).
+        var turns = new (string Role, string Text)[14];
+        for (var i = 0; i < turns.Length; i++)
+            turns[i] = (i % 2 == 0 ? "user" : "assistant", $"m{i + 1}");
+        await SeedConversationAsync(store, perAppDb, "chats/long", "agent-x", DateTime.UtcNow.AddMinutes(-5), turns: turns);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var list = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations");
+        Assert.Equal(1, list.GetArrayLength());
+
+        // Newest two turns, newest-first — proves the bounded page returned the tail, not the head.
+        var exchange = list[0].GetProperty("lastExchange");
+        Assert.Equal(2, exchange.GetArrayLength());
+        Assert.Equal("agent", exchange[0].GetProperty("role").GetString());
+        Assert.Equal("m14", exchange[0].GetProperty("text").GetString());
+        Assert.Equal("user", exchange[1].GetProperty("role").GetString());
+        Assert.Equal("m13", exchange[1].GetProperty("text").GetString());
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]

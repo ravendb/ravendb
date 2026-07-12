@@ -40,14 +40,17 @@ internal static class MetricsReadService
     private const string ConversationIdPrefix = "chats/";
     private const int ConversationPageSize = 1024;
 
+    // The conversations-list preview needs only the last exchange, so read a small most-recent tail
+    // per row instead of the whole history. Backward paging returns the newest N (oldest-first), and
+    // DetailLevel.Simple already excludes system/tool turns, so 10 comfortably covers the 2 the preview
+    // keeps even after MapTranscript drops any blank/attachment-only turn.
+    private const int LastExchangePageSize = 10;
+
     // Embed links (iframe channel attribution) are id-prefixed; read by prefix.
     private const int EmbedLinkPageSize = 1024;
 
     // Per-app fan-out (dashboard/usage) runs bounded-parallel and isolates failures.
     private const int MaxFanoutConcurrency = 8;
-
-    // Same per-token cost factor the prototype uses for the cost tile.
-    private const double CostPerToken = 0.000015;
 
     // Series key for tokens whose agent has no resolvable connection-string model.
     private const string UnknownModel = "unknown";
@@ -171,7 +174,7 @@ internal static class MetricsReadService
 
     /// <summary>
     /// Per-app usage analytics behind <c>getAppUsage({appId,start,end})</c>. Phase-1
-    /// subset from <see cref="ConversationMetricsIndex"/>: conversations/tokens/cost
+    /// subset from <see cref="ConversationMetricsIndex"/>: conversations/tokens
     /// KPI cards (value + delta-vs-previous-window + per-bucket sparkline),
     /// <c>tokensByCapability</c>, and <c>topCapabilities</c>. <c>cdcWrites</c> and the CDC
     /// KPI card are bucketed from RavenDB's rolling per-batch perf window (recent activity,
@@ -217,8 +220,6 @@ internal static class MetricsReadService
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
             Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
-            Cost: new MetricCard(Math.Round(tokNow * CostPerToken, 2), Delta(tokNow, tokPrev),
-                tokByBucket.Select(t => t * CostPerToken).ToArray()),
             // Delta 0: the rolling window can't reach the previous window for a real baseline.
             CdcWrites: new MetricCard(cdcWrites.Sum(p => p.Writes), 0,
                 cdcWrites.Select(p => (double)p.Writes).ToArray()));
@@ -256,7 +257,7 @@ internal static class MetricsReadService
                 var invocations = g.Sum(r => r.Conversations);
                 var total = g.Sum(r => r.Tokens);
                 return new TopCapability(NameOf(g.Key), invocations, invocations == 0 ? 0 : total / invocations,
-                    total, Math.Round(total * CostPerToken, 2));
+                    total);
             })
             .OrderByDescending(c => c.TotalTokens)
             .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
@@ -363,20 +364,20 @@ internal static class MetricsReadService
     }
 
     /// <summary>"Top tables" = the app's business collections by document count
-    /// (egor: collection stats stand in for CDC source-table stats until
-    /// RavenDB-26780). <c>lagSeconds</c>/<c>lastWriteAt</c> are CDC-perf data, left
-    /// empty for now.</summary>
+    /// (collection stats stand in for CDC source-table stats until RavenDB-26780).
+    /// TODO RavenDB-26992: <c>lagSeconds</c>/<c>lastWriteAt</c> ship as placeholders
+    /// (0 / "") until real replication-lag / last-write per table is implemented.</summary>
     private static async Task<TopTable[]> BuildTopTablesAsync(
         MaintenanceOperationExecutor maintenance, CancellationToken ct)
     {
         var stats = await maintenance.SendAsync(new GetCollectionStatisticsOperation(), ct);
-        // name + doc count is what the prototype's "Top source tables" renders;
-        // lagSeconds/lastWriteAt are CDC-perf data (RavenDB-26780) — left empty.
+        // name + doc count is what the "Top source tables" view renders.
         return stats.Collections
             .Where(c => c.Key.StartsWith('@') == false)
             .OrderByDescending(c => c.Value)
             .ThenBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
             .Take(TopTablesLimit)
+            // TODO RavenDB-26992: LagSeconds/LastWriteAt are placeholders pending real per-table CDC metrics.
             .Select(c => new TopTable(c.Key, c.Value, LagSeconds: 0, LastWriteAt: ""))
             .ToArray();
     }
@@ -650,23 +651,60 @@ internal static class MetricsReadService
         }
     }
 
-    /// <summary>Conversations for the Conversations list — metadata only (agent,
-    /// channel, state, timestamps, params), newest activity first. The transcript /
-    /// last-exchange preview is fetched on detail; the list page doesn't render it,
-    /// and reading messages per row would be an N+1 against the AI messages endpoint.</summary>
+    /// <summary>Conversations for the Conversations list (agent, channel, state, timestamps,
+    /// params, and a last-exchange preview), newest activity first. The last exchange is read
+    /// per row through the AI messages endpoint (bounded fan-out); the full transcript stays
+    /// detail-only.</summary>
     public static async Task<List<ConversationDto>> GetConversationsAsync(
         IDocumentStore store, string slug, string database, DateTime nowUtc, CancellationToken ct)
     {
-        using var session = store.OpenAsyncSession(database);
-        var channelByConversation = await BuildConversationChannelMapAsync(session, ct);
-        // Loads every conversation doc (paged) and sorts by last activity in memory — no
-        // truncation. Index-backed *server-side* pagination is a deferred perf follow-up
-        // for very large apps (review SF5).
-        var docs = await LoadAllByPrefixAsync<ConversationDoc>(session, ConversationIdPrefix, ConversationPageSize, ct);
-        return docs
-            .Select(d => ShapeListItem(d, slug, nowUtc, channelByConversation))
-            .OrderByDescending(c => c.LastActivityAt)
-            .ToList();
+        Dictionary<string, string> channelByConversation;
+        List<ConversationDoc> docs;
+        using (var session = store.OpenAsyncSession(database))
+        {
+            channelByConversation = await BuildConversationChannelMapAsync(session, ct);
+            // Loads every conversation doc (paged) and sorts by last activity in memory — no
+            // truncation. Index-backed *server-side* pagination is a deferred perf follow-up
+            // for very large apps (review SF5).
+            docs = await LoadAllByPrefixAsync<ConversationDoc>(session, ConversationIdPrefix, ConversationPageSize, ct);
+        }
+
+        // Each row carries its last exchange (newest two turns), read through the AI runtime —
+        // one read per conversation, bounded-parallel. Server-side pagination would cap this
+        // fan-out; until then it mirrors the whole (already in-memory) conversation set.
+        using var gate = new SemaphoreSlim(MaxFanoutConcurrency);
+        var items = await Task.WhenAll(docs.Select(async doc =>
+        {
+            var lastExchange = doc.Id is { } id
+                ? await LoadLastExchangeAsync(store, database, id, gate, ct)
+                : [];
+            return ShapeListItem(doc, slug, nowUtc, channelByConversation, lastExchange);
+        }));
+
+        return items.OrderByDescending(c => c.LastActivityAt).ToList();
+    }
+
+    /// <summary>Reads the newest two turns of a conversation through the AI runtime, bounded by
+    /// <paramref name="gate"/>. A single unreadable conversation degrades to an empty exchange
+    /// rather than failing the whole list.</summary>
+    private static async Task<ConversationTurn[]> LoadLastExchangeAsync(
+        IDocumentStore store, string database, string conversationId, SemaphoreSlim gate, CancellationToken ct)
+    {
+        await gate.WaitAsync(ct);
+        try
+        {
+            var options = new GetConversationMessagesOptions { ConversationId = conversationId, PageSize = LastExchangePageSize };
+            var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(options, ct);
+            return result is null ? [] : MapTranscript(result.Messages).TakeLast(2).Reverse().ToArray();
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            return [];
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <summary>One conversation with its full chronological transcript, or null. The AI
@@ -687,13 +725,9 @@ internal static class MetricsReadService
         if (result is null)
             return null;  // 404 — no such conversation
 
-        // Messages arrive oldest-first; DetailLevel.Simple already excludes system/tool and
-        // assistant-without-content, so we only drop attachment-only/blank turns, normalize the
-        // role, and extract the reply text — no re-ordering.
-        var transcript = result.Messages
-            .Where(m => string.IsNullOrWhiteSpace(m.Content) == false)
-            .Select(m => new ConversationTurn(RoleLabel(m.Role), ReplyText(m.Content), Utc(m.Timestamp)))
-            .ToArray();
+        // Messages arrive oldest-first; MapTranscript drops blank/attachment-only turns and
+        // normalizes role + reply text without re-ordering.
+        var transcript = MapTranscript(result.Messages);
 
         using var session = store.OpenAsyncSession(database);
         var channelName = (await BuildConversationChannelMapAsync(session, ct))
@@ -739,7 +773,8 @@ internal static class MetricsReadService
     }
 
     private static ConversationDto ShapeListItem(
-        ConversationDoc doc, string slug, DateTime nowUtc, Dictionary<string, string> channelByConversation)
+        ConversationDoc doc, string slug, DateTime nowUtc, Dictionary<string, string> channelByConversation,
+        ConversationTurn[] lastExchange)
     {
         var agentName = doc.Agent ?? "";
         var channelName = doc.Id is { } id && channelByConversation.TryGetValue(id, out var cn) ? cn : "";
@@ -747,10 +782,10 @@ internal static class MetricsReadService
             .Select(kv => new ConversationParam(kv.Key, kv.Value?.ToString() ?? ""))
             .ToArray();
 
-        // List rows are metadata only — Transcript/LastExchange are detail-only.
+        // The full transcript stays detail-only; the list carries just the last-exchange preview.
         return new ConversationDto(
             doc.Id ?? "", slug, channelName, agentName, AgentInitials(agentName),
-            prms, LastExchange: [], Transcript: null,
+            prms, lastExchange, Transcript: null,
             State(nowUtc - doc.LastMessageAt), Utc(doc.LastMessageAt), Utc(doc.CreatedAt), MaxDuration: null);
     }
 
@@ -760,6 +795,16 @@ internal static class MetricsReadService
     // The UI labels the assistant "agent"; these are the FE wire-contract values, not the enum
     // names (nameof would yield "Assistant"/"User" and break the contract + the FE).
     private static string RoleLabel(AiMessageRole role) => role == AiMessageRole.Assistant ? "agent" : "user";
+
+    // Shared transcript projection: drop attachment-only/blank turns, normalize the role, and
+    // extract the reply text; DetailLevel.Simple already excludes system/tool + assistant-without-
+    // content, so chronological order is preserved. Shared by the conversation detail, the list's
+    // last-exchange preview, and the embed page's history.
+    internal static ConversationTurn[] MapTranscript(IEnumerable<AiConversationMessage> messages) =>
+        messages
+            .Where(m => string.IsNullOrWhiteSpace(m.Content) == false)
+            .Select(m => new ConversationTurn(RoleLabel(m.Role), ReplyText(m.Content), Utc(m.Timestamp)))
+            .ToArray();
 
     // AiConversationMessage.Content is already a string: plain text for user / plain-assistant
     // turns, or the JSON of a structured reply ({"reply":…}) for schema-output agents. For the
