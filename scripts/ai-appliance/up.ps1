@@ -43,7 +43,9 @@
 .PARAMETER LicenseKey
   Activation token (QUILL_LICENSE_KEY) the appliance uses to pull its setup package at startup
   from the real license API. Must be a real emitted token (the SetupPackageKey from the setup
-  email) — there is no local-zip / offline fallback. The 'egor' default will not activate.
+  email) — there is no local-zip / offline fallback. Default is empty: with no -LicenseKey the
+  appliance skips startup activation and stays in NeedsActivation (it does not attempt a doomed
+  redemption).
 
 .PARAMETER RavenApiEnv
   Selects the AI API environment the bundled RavenDB server dials for the AI Helper
@@ -66,7 +68,7 @@ param(
     [switch]$WithStudio,
     [int]$HttpsPort = 443,
     [string]$ApiKey = 'egor',
-    [string]$LicenseKey = 'egor',
+    [string]$LicenseKey = '',
     [string]$RavenApiEnv = ''
 )
 
@@ -114,7 +116,7 @@ $runArgs = @(
     '-v', "${Volume}:/var/lib/ai-appliance",
     # Operator auth: QUILL_API_KEY gates the dashboard login + the api.* surface
     # (required; auth fails closed without it). QUILL_LICENSE_KEY is the activation
-    # token (ignored in demo/mock mode, where the mounted zip answers any token).
+    # token; when empty the appliance skips startup activation (stays in NeedsActivation).
     '-e', "QUILL_API_KEY=$ApiKey",
     '-e', "QUILL_LICENSE_KEY=$LicenseKey"
 )

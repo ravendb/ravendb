@@ -106,9 +106,8 @@ builder.Services.AddHttpClient();
 
 // AI Helper client. Always proxies the call through the bundled RavenDB (/assistant/assist), which
 // injects the license + cert from its own ServerStore and forwards to api.ravendb.net (test vs prod
-// is selected by RAVEN_API_ENV on the bundled server). This holds in demo mode too: the bundled
-// server is licensed from the mounted setup package, so the real AI API is reachable without a live
-// license-API hop.
+// is selected by RAVEN_API_ENV on the bundled server). The bundled server is licensed from the
+// activated setup package, so the real AI API is reachable without a separate license-API hop here.
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
     {
         // The AI-Helper call is proxied through the bundled RavenDB (/assistant/assist), which injects
@@ -271,9 +270,9 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
-// Dev-mode safeguard: a forgetful local run with no RAVEN_AI_LICENSE_API_URL
-// override will hit the real api.ravendb.net during startup activation and hang
-// (no test license to redeem). Warn loudly at startup; in Production we trust the default.
+// Dev-mode safeguard: with a QUILL_LICENSE_KEY set but no RAVEN_AI_LICENSE_API_URL override, a local
+// run hits the real api.ravendb.net during startup activation and hangs (no test license to redeem);
+// with no token, activation is skipped and nothing is hit. Warn loudly at startup; in Production we trust the default.
 {
     var opts = app.Services.GetRequiredService<IOptions<ApplianceOptions>>().Value;
     if (app.Environment.IsDevelopment() &&
