@@ -127,18 +127,16 @@ namespace Sparrow.Collections
             return true;
         }
 
-        /// <summary>
-        /// Checks if the ring buffer is empty.
-        /// </summary>
         public int Count
         {
             get
             {
+                // managed refs into the array so Volatile.Read reads directly from there
                 long currentEnqueuePos = Volatile.Read(ref _positions.Enqueue);
-                Cell enqueueCell = _buffer[currentEnqueuePos & _bufferMask];
+                ref Cell enqueueCell = ref _buffer[currentEnqueuePos & _bufferMask];
 
                 long currentDequeuePos = Volatile.Read(ref _positions.Dequeue);
-                Cell dequeueCell = _buffer[currentDequeuePos & _bufferMask];
+                ref Cell dequeueCell = ref _buffer[currentDequeuePos & _bufferMask];
 
                 return (int) (Volatile.Read(ref enqueueCell.Sequence) - Volatile.Read(ref dequeueCell.Sequence));
             }
@@ -152,7 +150,7 @@ namespace Sparrow.Collections
             get
             {
                 long currentDequeuePos = Volatile.Read(ref _positions.Dequeue);
-                Cell cell = _buffer[currentDequeuePos & _bufferMask];
+                ref Cell cell = ref _buffer[currentDequeuePos & _bufferMask];
                 return (Volatile.Read(ref cell.Sequence) - (currentDequeuePos + 1)) < 0;
             }
         }
@@ -165,7 +163,7 @@ namespace Sparrow.Collections
             get
             {
                 long currentEnqueuePos = Volatile.Read(ref _positions.Enqueue);
-                Cell cell = _buffer[currentEnqueuePos & _bufferMask];
+                ref Cell cell = ref _buffer[currentEnqueuePos & _bufferMask];
                 return (Volatile.Read(ref cell.Sequence) - currentEnqueuePos) < 0;
             }
         }
