@@ -22,7 +22,7 @@ rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *d
     for (i = 0; i < count; i++)
     {
         struct RVN_RANGE_LIST record = range_list[i];
-        if(!madvise(record.virtual_address, record.number_of_bytes, MADV_WILLNEED))
+        if(madvise(record.virtual_address, record.number_of_bytes, MADV_WILLNEED) != 0)
         {
             *detailed_error_code = errno;
             return FAIL;
