@@ -138,41 +138,51 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
         var taskId = new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier);
 
-        // Prevent database unloading during long-running AI operations
-        using (Database.PreventFromUnloadingByIdleOperations())
-        using (EnterLoadStep(TaskErrorStep.ModelInference))
+        var failedStep = TaskErrorStep.ModelInference;
+        try
         {
-            var batch = Database.EmbeddingsGeneratorEtl.BatchFor(taskId);
-            using (var storageScope = scope.For(EmbeddingsGenerationOperations.GenerateInAiService))
+            // Prevent database unloading during long-running AI operations
+            using (Database.PreventFromUnloadingByIdleOperations())
+            using (EnterLoadStep(TaskErrorStep.ModelInference))
             {
-                foreach (var embeddingItem in embeddingsScriptRun.Additions)
+                var batch = Database.EmbeddingsGeneratorEtl.BatchFor(taskId);
+                using (var storageScope = scope.For(EmbeddingsGenerationOperations.GenerateInAiService))
                 {
-                    batch.StartGenerateEmbeddingFor(context, embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
-                        embeddingItem.Fields);
+                    foreach (var embeddingItem in embeddingsScriptRun.Additions)
+                    {
+                        batch.StartGenerateEmbeddingFor(context, embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
+                            embeddingItem.Fields);
+                    }
+
+                    // Wait for embeddings generation and storage of embeddings cache documents
+                    batch.WaitForGenerationAsync().GetAwaiter().GetResult();
+                    storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
+                    storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;
                 }
 
-                // Wait for embeddings generation and storage of embeddings cache documents
-                batch.WaitForGenerationAsync().GetAwaiter().GetResult();
-                storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
-                storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;
-            }
+                foreach (var embeddingItem in embeddingsScriptRun.Removals)
+                {
+                    batch.Delete(embeddingItem.DocumentId);
+                }
 
-            foreach (var embeddingItem in embeddingsScriptRun.Removals)
-            {
-                batch.Delete(embeddingItem.DocumentId);
-            }
+                failedStep = TaskErrorStep.Persistence;
+                using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
+                using (EnterLoadStep(TaskErrorStep.Persistence))
+                {
+                    // Start storing embedding documents and wait for them to be stored
+                    batch.StoreDocumentEmbeddingsAsync().GetAwaiter().GetResult();
 
-            using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
-            using (EnterLoadStep(TaskErrorStep.Persistence))
-            {
-                // Start storing embedding documents and wait for them to be stored
-                batch.StoreDocumentEmbeddingsAsync().GetAwaiter().GetResult();
-
-                storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
-                storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
+                    storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
+                    storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
+                }
             }
         }
-        
+        catch
+        {
+            LoadErrorStep = failedStep;
+            throw;
+        }
+
         _fallbackCounter = 0;
         return embeddingsScriptRun.Additions.Count + embeddingsScriptRun.Removals.Count;
     }
