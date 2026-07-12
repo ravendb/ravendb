@@ -195,10 +195,12 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetSegmentState(long segment)
         {
-            if (segment < 0 || segment > _prefetchTable.Length)
+            var index = segment / 2;
+            
+            if (index < 0 || index >= _prefetchTable.Length)
                 return AlreadyPrefetch;
 
-            byte value = _prefetchTable[segment / 2];
+            byte value = _prefetchTable[index];
             if (segment % 2 == 0)
             {
                 // The actual value is in the high byte.
@@ -215,7 +217,8 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetSegmentState(long segment, int state)
         {
-            byte value = this._prefetchTable[segment / 2];
+            var index = segment / 2;
+            byte value = _prefetchTable[index];
             if (segment % 2 == 0)
             {
                 // The actual value is in the high byte.
@@ -226,7 +229,7 @@ namespace Voron.Impl
                 value = (byte)((value & EvenPrefetchCountMask) | state);
             }
 
-            this._prefetchTable[segment / 2] = value;
+            _prefetchTable[index] = value;
         }
 
         public bool ShouldPrefetchSegment(long pageNumber, out void* virtualAddress, out long sizeInBytes)

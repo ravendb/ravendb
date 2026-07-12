@@ -177,9 +177,20 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             throw new InvalidOperationException("The whole attempted GenAI batch failed without a captured exception.");
         }
 
-        using (EnterLoadStep(TaskErrorStep.Persistence))
+        try
         {
-            ApplyUpdateScript(results, scope);
+            using (EnterLoadStep(TaskErrorStep.Persistence))
+            {
+                ApplyUpdateScript(results, scope);
+            }
+        }
+        catch
+        {
+            // EnterLoadStep restores LoadErrorStep to the previous step on dispose during the exception unwind,
+            // so re-assert the failing step here (after the scope has unwound) to attribute persistence failures
+            // correctly instead of losing them to the restored step.
+            LoadErrorStep = TaskErrorStep.Persistence;
+            throw;
         }
 
         if (exceptions?.OfType<RateLimitException>().Any() == true)
@@ -410,7 +421,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
                 $"{singleEx}";
 
-            Statistics.RecordItemLoadError(msg, item.DocumentId);
+            Statistics.RecordItemLoadError(msg, item.DocumentId, step: LoadErrorStep);
             if (Logger.IsWarnEnabled)
                 Logger.Warn(msg);
 
