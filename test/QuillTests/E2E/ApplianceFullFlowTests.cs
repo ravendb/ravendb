@@ -13,7 +13,7 @@ using Xunit;
 
 namespace QuillTests.E2E;
 
-/// End-to-end happy path for the AI Appliance. Drives the full feature flow:
+/// End-to-end happy path for the Quill. Drives the full feature flow:
 /// license redemption -> CDC wizard (Connect / Discover / Map / Test / Provision)
 /// -> initial load -> AI agent + iFrame channel. Written upfront with all 13 step
 /// assertions present; goes RED at the first unimplemented step. Each slice in

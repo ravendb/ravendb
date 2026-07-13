@@ -176,7 +176,7 @@ VOLUME /var/lib/ai-appliance
 
 ENV RAVEN_AI_RAVEN_URL=http://127.0.0.1:8080 \
     RAVEN_AI_WEB_LISTEN_URL=http://0.0.0.0:5000 \
-    RAVEN_AI_CONFIG_DB=ai-appliance-config \
+    RAVEN_AI_CONFIG_DB=quill-config \
     RAVEN_AI_SETUP_PACKAGE_PATH=/var/lib/ai-appliance/setup \
     RAVEN_AI_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
     RAVEN_AI_RAVENDB_INTERNAL_PORT=8443 \

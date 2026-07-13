@@ -5,7 +5,7 @@ namespace Raven.Quill.Wizard;
 
 /// <summary>
 /// Single-tenant wizard state, persisted at the fixed id <see cref="DocumentId"/>
-/// in <c>ai-appliance-config</c>. Each wizard step overwrites its slice; no
+/// in <c>quill-config</c>. Each wizard step overwrites its slice; no
 /// sessionId, no TTL, no GC (per Ayende RavenDB-26629).
 /// </summary>
 internal sealed class WizardState

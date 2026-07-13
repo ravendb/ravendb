@@ -63,8 +63,8 @@ psql "<conn>" -tAc "SELECT rolreplication FROM pg_roles WHERE rolname=current_us
 **Load Northwind** (the canonical 830-orders dump ships in the repo as zipped SQL):
 
 ```bash
-unzip -p test/SlowTests/Data/AiAppliance/npgsql.northwind-full.create.zip > /tmp/nw-create.sql
-unzip -p test/SlowTests/Data/AiAppliance/npgsql.northwind-full.insert.zip > /tmp/nw-insert.sql
+unzip -p test/SlowTests/Data/Quill/npgsql.northwind-full.create.zip > /tmp/nw-create.sql
+unzip -p test/SlowTests/Data/Quill/npgsql.northwind-full.insert.zip > /tmp/nw-insert.sql
 
 psql "postgresql://postgres:postgres@<host>:5432/postgres" -c "CREATE DATABASE northwind;"
 psql "postgresql://postgres:postgres@<host>:5432/northwind" -v ON_ERROR_STOP=1 -f /tmp/nw-create.sql

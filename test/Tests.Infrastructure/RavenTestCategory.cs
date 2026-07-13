@@ -500,11 +500,11 @@ public enum RavenTestCategory : long
     Debug = 1L << 53,
 
     /// <summary>
-    /// Tests for the RavenDB AI Appliance bridge — bootstrap activation,
+    /// Tests for the RavenDB Quill — bootstrap activation,
     /// wizard endpoints, agent/channel provisioning, secure-mode state
     /// machine, /healthz wiring, and end-to-end appliance flows.
-    /// USAGE: Tests living in test/AiApplianceTests that exercise the
-    /// Raven.AiAppliance host (any subsystem).
+    /// USAGE: Tests living in test/QuillTests that exercise the
+    /// Raven.Quill host (any subsystem).
     /// COMBINE WITH: Sinks (for CDC wizard steps), Monitoring (for /healthz)
     /// EXAMPLES: bootstrap activation, wizard W1-W8, agent/channel
     /// provisioning, end-to-end appliance flow tests

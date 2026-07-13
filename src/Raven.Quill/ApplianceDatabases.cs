@@ -16,5 +16,5 @@ public static class ApplianceDatabases
     /// magic-link nonces, and aggregated write counters. Per-app data lives
     /// inside each app's own database, not here. See design doc §1.1 / §1.2.
     /// </summary>
-    public const string Config = "ai-appliance-config";
+    public const string Config = "quill-config";
 }
