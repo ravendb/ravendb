@@ -11,11 +11,11 @@ const repoRoot = path.resolve(webDirectory, "..", "..");
 const backendProject = path.resolve(repoRoot, "src", "Raven.Quill", "Raven.Quill.csproj");
 const specPath = process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH
     ? path.resolve(webDirectory, process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH)
-    : path.resolve(repoRoot, "src", "Raven.Quill", "obj", "openapi", "ai-appliance.json");
+    : path.resolve(repoRoot, "src", "Raven.Quill", "obj", "openapi", "quill.json");
 const outputPath = path.resolve(webDirectory, "src", "api", "generated", "server-api.ts");
 const openApiTypescriptCliPath = path.resolve(webDirectory, "node_modules", "openapi-typescript", "bin", "cli.js");
-const tempSpecPath = path.join(os.tmpdir(), `raven-ai-appliance-openapi-${process.pid}.json`);
-const tempTypesPath = path.join(os.tmpdir(), `raven-ai-appliance-openapi-${process.pid}.ts`);
+const tempSpecPath = path.join(os.tmpdir(), `raven-quill-openapi-${process.pid}.json`);
+const tempTypesPath = path.join(os.tmpdir(), `raven-quill-openapi-${process.pid}.ts`);
 
 try {
     if (process.env.RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD !== "1") {
