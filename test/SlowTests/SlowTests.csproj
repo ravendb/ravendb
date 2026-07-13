@@ -85,10 +85,10 @@
     <EmbeddedResource Include="Data\npgsql.basic.insert.sql" />
     <EmbeddedResource Include="Data\npgsql.northwind.create.sql" />
     <EmbeddedResource Include="Data\npgsql.northwind.insert.sql" />
-    <EmbeddedResource Include="Data\AiAppliance\npgsql.northwind-full.create.zip">
+    <EmbeddedResource Include="Data\Quill\npgsql.northwind-full.create.zip">
       <LogicalName>SlowTests.Data.npgsql.northwind-full.create.zip</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="Data\AiAppliance\npgsql.northwind-full.insert.zip">
+    <EmbeddedResource Include="Data\Quill\npgsql.northwind-full.insert.zip">
       <LogicalName>SlowTests.Data.npgsql.northwind-full.insert.zip</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="Data\oraclesql.basic.create.sql" />

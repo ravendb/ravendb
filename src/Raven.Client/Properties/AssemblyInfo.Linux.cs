@@ -3,5 +3,5 @@
 [assembly: InternalsVisibleTo("Raven.Server")]
 [assembly: InternalsVisibleTo("Raven.Traffic")]
 [assembly: InternalsVisibleTo("Raven.Debug")]
-[assembly: InternalsVisibleTo("Raven.AiAppliance")]
-[assembly: InternalsVisibleTo("AiApplianceTests")]
+[assembly: InternalsVisibleTo("Raven.Quill")]
+[assembly: InternalsVisibleTo("QuillTests")]

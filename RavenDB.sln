@@ -103,9 +103,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlowTests.Issues", "test\Sl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RequestHandler.Benchmark", "bench\RequestHandler.Benchmark\RequestHandler.Benchmark.csproj", "{4E976E13-4BEC-4826-86CD-89E64C04DC69}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.AiAppliance", "src\Raven.AiAppliance\Raven.AiAppliance.csproj", "{711E245F-FB88-4F7B-A572-82DD7B9B3DC0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Quill", "src\Raven.Quill\Raven.Quill.csproj", "{711E245F-FB88-4F7B-A572-82DD7B9B3DC0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AiApplianceTests", "test\AiApplianceTests\AiApplianceTests.csproj", "{732AE6E9-7CA7-44E1-93D3-6A4C7D930C4E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuillTests", "test\QuillTests\QuillTests.csproj", "{732AE6E9-7CA7-44E1-93D3-6A4C7D930C4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
