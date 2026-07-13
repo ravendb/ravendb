@@ -153,6 +153,7 @@ function filterConversations(
             conversation.channelName,
             conversation.agentName,
             ...conversation.params.flatMap((param) => [param.key, param.value]),
+            ...conversation.lastExchange.map((turn) => turn.text),
         ]
             .join(" ")
             .toLowerCase();

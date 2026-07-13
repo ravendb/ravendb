@@ -33,6 +33,12 @@ export function createConversationColumns(slug: string): ColumnDef<ConversationD
             ),
         },
         {
+            id: "lastExchange",
+            header: "Last exchange",
+            size: 480,
+            cell: ({ row }) => <LastExchangeCell conversation={row.original} />,
+        },
+        {
             accessorKey: "lastActivityAt",
             header: "Last activity",
             size: 140,
@@ -83,6 +89,47 @@ function AgentCell({ conversation }: { conversation: ConversationDto }) {
                 {conversation.agentInitials}
             </span>
             <span className="truncate">{conversation.agentName}</span>
+        </span>
+    );
+}
+
+function LastExchangeCell({ conversation }: { conversation: ConversationDto }) {
+    const turns = [...conversation.lastExchange].sort((left, right) => {
+        if (left.at === right.at) {
+            return 0;
+        }
+        if (left.at === null) {
+            return -1;
+        }
+        if (right.at === null) {
+            return 1;
+        }
+        return left.at.localeCompare(right.at);
+    });
+
+    if (turns.length === 0) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    return (
+        <span className="flex max-w-full min-w-0 flex-col gap-1">
+            {turns.map((turn, index) => {
+                const isAgent = turn.role.toLowerCase() === "agent";
+
+                return (
+                    <span key={`${turn.at ?? "undated"}-${index}`} className="flex min-w-0 items-center gap-2">
+                        <span
+                            className="h-3 w-0.5 shrink-0 rounded-full bg-muted-foreground"
+                            style={isAgent ? { backgroundColor: agentAvatarColor(conversation.agentName) } : undefined}
+                            aria-hidden="true"
+                        />
+                        <span className="min-w-0 truncate font-medium" title={turn.text}>
+                            <span className="sr-only">{turn.role}: </span>
+                            {turn.text}
+                        </span>
+                    </span>
+                );
+            })}
         </span>
     );
 }
