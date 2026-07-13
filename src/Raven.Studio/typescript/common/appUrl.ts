@@ -248,7 +248,11 @@ class appUrl {
     static forServerWideTasks(): string {
         return "#admin/settings/serverWideTasks";
     }
-    
+
+    static forAddServerWideTask(): string {
+        return "#admin/settings/serverWideTasks/add";
+    }
+
     static forEditServerWideBackup(serverWideBackupTaskName? : string): string {
         const backupNamePart = serverWideBackupTaskName ? "?&taskName=" + encodeURIComponent(serverWideBackupTaskName) : "";
         return "#admin/settings/editServerWideBackup" + backupNamePart;
