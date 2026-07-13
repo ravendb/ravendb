@@ -1,6 +1,6 @@
 # Raven.Quill.Web
 
-Frontend for Raven AI Appliance. It is a Vite + React + TypeScript app and is finally built by Docker through the `Raven.Quill` project.
+Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally built by Docker through the `Raven.Quill` project.
 
 ## Coding Mindset
 

@@ -4,7 +4,7 @@
   Stop and remove the running RavenDB AI Appliance demo container.
 
 .PARAMETER PurgeData
-  Also delete the named Docker volume (drops @ai-appliance-config and all
+  Also delete the named Docker volume (drops @quill-config and all
   per-app databases). Without this switch the volume is left in place so the
   next `up.ps1` restores state.
 
