@@ -36,6 +36,18 @@ describe("ServerWideTasks", () => {
         expect(screen.queryByText(selectors.addButton)).toBeInTheDocument();
     });
 
+    it("can select a task and open the bulk delete confirmation", async () => {
+        const { screen, waitForLoad, fireClick } = rtlRender(<ServerWideTasksStory />);
+        await waitForLoad();
+
+        const backupPanel = screen.getByText(selectors.backupTaskName).closest(".rich-panel-item");
+        await fireClick(backupPanel.querySelector<HTMLInputElement>("input[type=checkbox]"));
+
+        await fireClick(screen.getByText("Delete"));
+
+        expect(screen.queryByText(/You're about to/)).toBeInTheDocument();
+    });
+
     it("can filter tasks by name", async () => {
         const { screen, waitForLoad, fillInput } = rtlRender(<ServerWideTasksStory />);
         await waitForLoad();

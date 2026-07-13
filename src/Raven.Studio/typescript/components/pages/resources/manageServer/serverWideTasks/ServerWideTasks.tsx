@@ -92,6 +92,8 @@ export default function ServerWideTasks() {
                 />
             )}
 
+            {/* With the custom setLoading in useServerWideTasks, "loading" only occurs on the initial fetch —
+                during reload the status stays "success" and the list below remains mounted */}
             {fetchStatus === "loading" && <LoadingView />}
 
             {fetchStatus === "error" && <LoadError error="Unable to load server-wide tasks" refresh={reload} />}
@@ -131,7 +133,12 @@ export default function ServerWideTasks() {
                                 />
                                 {nameFilter && (
                                     <div className="clear-button">
-                                        <Button variant="secondary" size="sm" onClick={() => setNameFilter("")}>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            title="Clear filter"
+                                            onClick={() => setNameFilter("")}
+                                        >
                                             <Icon icon="clear" margin="m-0" />
                                         </Button>
                                     </div>
@@ -160,20 +167,16 @@ export default function ServerWideTasks() {
                     {filteredTasks.length === 0 && <EmptySet>No tasks match your filter criteria</EmptySet>}
 
                     <TaskSection title="External replication" icon="external-replication" tasks={replicationTasks}>
-                        {(task) => <ServerWideTaskPanel key={taskKey(task)} task={task} {...panelProps} />}
+                        {(task) => <ServerWideTaskPanel key={task.taskId} task={task} {...panelProps} />}
                     </TaskSection>
 
                     <TaskSection title="Backup" icon="backup" tasks={backupTasks}>
-                        {(task) => <ServerWideTaskPanel key={taskKey(task)} task={task} {...panelProps} />}
+                        {(task) => <ServerWideTaskPanel key={task.taskId} task={task} {...panelProps} />}
                     </TaskSection>
                 </>
             )}
         </div>
     );
-}
-
-function taskKey(task: ServerWideTaskInfo) {
-    return task.taskType + "-" + task.taskName;
 }
 
 interface TaskSectionProps {
