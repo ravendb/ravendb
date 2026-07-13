@@ -16,7 +16,7 @@ export function AppWebWidgetDefaultCustomize() {
     const previewQuery = useQuery(api.queries.webWidget.preview(slug));
 
     const saveMutation = useWebWidgetStyleSave({
-        save: (css) => api.services.iframe.updateDefaultCustomization(slug, { css }),
+        save: (update) => api.services.iframe.updateDefaultCustomization(slug, update),
         invalidateKeys: [
             api.queries.webWidget.defaultCustomization(slug).queryKey,
             // Each channel's customization embeds this default as its fallback (defaultCss), so the
@@ -50,17 +50,20 @@ export function AppWebWidgetDefaultCustomize() {
                 loadingLabel="Loading default styles..."
             >
                 <p className="text-sm text-muted-foreground">
-                    These styles apply to every web widget that has no styles of its own. The editor below starts
-                    pre-filled with the widget&rsquo;s base styles as a starting point.
+                    This style applies to every web widget that doesn&rsquo;t choose a style of its own. Pick one of the
+                    built-in styles, or write custom CSS over the widget&rsquo;s base styles.
                 </p>
 
                 {defaultQuery.data && styleGuideQuery.data && (
                     <WebWidgetStyleEditor
+                        initialStyle={defaultQuery.data.style ?? "Light"}
                         initialCss={defaultQuery.data.css ?? ""}
                         baseCss={styleGuideQuery.data.baseCss}
+                        lightThemeCss={styleGuideQuery.data.lightThemeCss}
+                        darkThemeCss={styleGuideQuery.data.darkThemeCss}
                         previewHtml={previewQuery.data?.html ?? ""}
                         isSaving={saveMutation.isPending}
-                        onSave={(css) => saveMutation.mutate(css)}
+                        onSave={(update) => saveMutation.mutate(update)}
                     />
                 )}
 

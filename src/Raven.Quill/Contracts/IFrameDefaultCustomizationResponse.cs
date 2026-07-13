@@ -1,7 +1,11 @@
+using Raven.Quill.Channels;
+
 namespace Raven.Quill.Contracts;
 
 /// <summary>
-/// The app-level default embed CSS applied to web-widget (iFrame) channels that define no CSS
-/// of their own. <c>null</c> means no default is set.
+/// The resolved app-level default embed style applied to web-widget (iFrame) channels that
+/// make no choice of their own: <see cref="IFrameStyle.Light"/> when nothing was ever saved.
 /// </summary>
-public sealed record IFrameDefaultCustomizationResponse(string? Css);
+/// <param name="Css">The default's CSS, set when <paramref name="Style"/> is
+/// <see cref="IFrameStyle.Custom"/>.</param>
+public sealed record IFrameDefaultCustomizationResponse(IFrameStyle Style, string? Css);
