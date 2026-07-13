@@ -14,6 +14,7 @@ import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxTogg
 import OngoingTaskOperationConfirm from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
 import OngoingTaskSelectActions from "components/pages/database/tasks/ongoingTasks/partials/OngoingTaskSelectActions";
 import ServerWideTaskPanel from "./partials/ServerWideTaskPanel";
+import { PerDatabaseOngoingTasksLink } from "./partials/PerDatabaseOngoingTasksLink";
 import { ServerWideTasksInfoHub } from "./partials/ServerWideTasksInfoHub";
 import { useServerWideTasks } from "./useServerWideTasks";
 import { useServerWideTasksOperations, toOperationConfirmInfo } from "./useServerWideTasksOperations";
@@ -78,9 +79,12 @@ export default function ServerWideTasks() {
 
     return (
         <div className="content-margin">
-            <div className="d-flex justify-content-between">
-                <AboutViewHeading title="Server-Wide Tasks" icon="server-wide-tasks" marginBottom={4} />
-                <ServerWideTasksInfoHub />
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <AboutViewHeading title="Server-Wide Tasks" icon="server-wide-tasks" marginBottom={0} />
+                <div className="d-flex align-items-center gap-3">
+                    <PerDatabaseOngoingTasksLink />
+                    <ServerWideTasksInfoHub />
+                </div>
             </div>
 
             {operationConfirm && (

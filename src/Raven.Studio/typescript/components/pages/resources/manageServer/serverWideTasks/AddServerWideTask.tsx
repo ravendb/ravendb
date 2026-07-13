@@ -6,6 +6,7 @@ import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { AddTaskCardList, TaskCardCategory } from "components/pages/database/tasks/shared/AddTaskCardList";
+import { PerDatabaseOngoingTasksLink } from "./partials/PerDatabaseOngoingTasksLink";
 import { ServerWideTasksInfoHub } from "./partials/ServerWideTasksInfoHub";
 
 export default function AddServerWideTask() {
@@ -53,14 +54,17 @@ export default function AddServerWideTask() {
 
     return (
         <div className="content-margin">
-            <div className="d-flex justify-content-between">
+            <div className="d-flex justify-content-between align-items-center mb-4">
                 <AboutViewHeading
                     title="Add a Server-Wide Task"
                     icon="server-wide-tasks"
                     iconAddon="plus"
-                    marginBottom={4}
+                    marginBottom={0}
                 />
-                <ServerWideTasksInfoHub />
+                <div className="d-flex align-items-center gap-3">
+                    <PerDatabaseOngoingTasksLink />
+                    <ServerWideTasksInfoHub />
+                </div>
             </div>
             <Button href={appUrl.forServerWideTasks()} className="rounded-pill mb-3" variant="secondary">
                 <Icon icon="arrow-left" />
