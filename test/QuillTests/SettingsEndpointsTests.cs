@@ -1,6 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Raven.AiAppliance.AiHelper;
+using Raven.AiAppliance.Contracts;
+using Raven.AiAppliance.Feedback;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.CdcSink;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -72,5 +81,186 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         // should move back into the appliance.
         var resp = await client.GetAsync("/api/settings/usage?year=2026&month=13");
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Feedback_accepts_only_user_fields_and_normalizes_them()
+    {
+        var sender = new RecordingFeedbackSender();
+        using var factory = NewFeedbackFactory(sender);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Quill-Test/1.0");
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/settings/feedback", new
+        {
+            Name = "  Jane Doe ",
+            Email = "  user@example.com ",
+            Impression = " POSITIVE ",
+            Message = "  Please contact me. ",
+            StudioView = " /dashboard/license ",
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.NotNull(sender.Request);
+        Assert.Equal("Jane Doe", sender.Request.Name);
+        Assert.Equal("user@example.com", sender.Request.Email);
+        Assert.Equal("positive", sender.Request.Impression);
+        Assert.Equal("Please contact me.", sender.Request.Message);
+        Assert.Equal("/dashboard/license", sender.Request.StudioView);
+        Assert.Contains("Quill-Test/1.0", sender.UserAgent);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Feedback_treats_impression_and_studio_view_as_optional()
+    {
+        var sender = new RecordingFeedbackSender();
+        using var factory = NewFeedbackFactory(sender);
+        var client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/settings/feedback", new
+        {
+            Name = "Jane Doe",
+            Email = "user@example.com",
+            Impression = " ",
+            Message = "Just a question.",
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.NotNull(sender.Request);
+        Assert.Null(sender.Request.Impression);
+        Assert.Null(sender.Request.StudioView);
+    }
+
+    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData(" ", "user@example.com", "positive", "Message.")]
+    [InlineData("Jane Doe", "not-an-email", "positive", "Message.")]
+    [InlineData("Jane Doe", "user@example.com", "meh", "Message.")]
+    [InlineData("Jane Doe", "user@example.com", "positive", " ")]
+    public async Task Feedback_rejects_invalid_input(string name, string email, string impression, string message)
+    {
+        var sender = new RecordingFeedbackSender();
+        using var factory = NewFeedbackFactory(sender);
+        var client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/settings/feedback", new
+        {
+            Name = name,
+            Email = email,
+            Impression = impression,
+            Message = message,
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(sender.Request);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Feedback_returns_bad_gateway_when_sending_fails()
+    {
+        var sender = new RecordingFeedbackSender(sendResult: false);
+        using var factory = NewFeedbackFactory(sender);
+        var client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/settings/feedback", new
+        {
+            Name = "Jane Doe",
+            Email = "user@example.com",
+            Impression = "negative",
+            Message = "Something went wrong.",
+        });
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Feedback_sender_builds_the_ravendb_feedback_contract()
+    {
+        var client = new RecordingAiHelperClient();
+        var sender = new FeedbackSender(client);
+
+        bool wasSent = await sender.SendAsync(
+            new SendFeedbackRequest("Jane Doe", "user@example.com", "negative", "Something went wrong.", "/dashboard/license"),
+            "Quill-Test/1.0",
+            CancellationToken.None);
+
+        Assert.True(wasSent);
+        Assert.Equal("/studio/feedback", client.Path);
+        Assert.Equal("POST", client.Method);
+
+        JsonElement payload = JsonSerializer.SerializeToElement(client.Request);
+        Assert.Equal("Something went wrong.", payload.GetProperty("Message").GetString());
+
+        JsonElement product = payload.GetProperty("Product");
+        Assert.Equal("RavenDB", product.GetProperty("Name").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(product.GetProperty("Version").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(product.GetProperty("StudioVersion").GetString()));
+        Assert.Equal("/dashboard/license", product.GetProperty("StudioView").GetString());
+        Assert.Equal("Quill", product.GetProperty("FeatureName").GetString());
+        Assert.Equal("negative", product.GetProperty("FeatureImpression").GetString());
+
+        JsonElement user = payload.GetProperty("User");
+        Assert.Equal("Jane Doe", user.GetProperty("Name").GetString());
+        Assert.Equal("user@example.com", user.GetProperty("Email").GetString());
+        Assert.Equal("Quill-Test/1.0", user.GetProperty("UserAgent").GetString());
+    }
+
+    private WebApplicationFactory<Program> NewFeedbackFactory(IFeedbackSender sender)
+    {
+        var store = GetDocumentStore();
+        var baseFactory = NewApplianceFactory(store);
+        return baseFactory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IFeedbackSender>();
+                services.AddSingleton(sender);
+            }));
+    }
+
+    private sealed class RecordingFeedbackSender(bool sendResult = true) : IFeedbackSender
+    {
+        public SendFeedbackRequest? Request { get; private set; }
+        public string? UserAgent { get; private set; }
+
+        public Task<bool> SendAsync(SendFeedbackRequest request, string userAgent, CancellationToken token)
+        {
+            Request = request;
+            UserAgent = userAgent;
+            return Task.FromResult(sendResult);
+        }
+    }
+
+    private sealed class RecordingAiHelperClient : IAiHelperClient
+    {
+        public string? Path { get; private set; }
+        public string? Method { get; private set; }
+        public object? Request { get; private set; }
+
+        public Task<(AiHelperStatus Transport, string Content)> SendAsync(
+            string path,
+            string method,
+            object request,
+            CancellationToken ct)
+        {
+            Path = path;
+            Method = method;
+            Request = request;
+            return Task.FromResult((AiHelperStatus.Success, string.Empty));
+        }
+
+        public Task<SuggestCdcInternalResult> SuggestCdcAsync(
+            object? schema,
+            object? samples,
+            string prompt,
+            CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(
+            CdcSinkConfiguration cdcConfig,
+            object? collectionsSample,
+            string mode,
+            string? prompt,
+            CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<T> DeserializeAsync<T>(string json, CancellationToken ct) where T : class =>
+            throw new NotSupportedException();
     }
 }

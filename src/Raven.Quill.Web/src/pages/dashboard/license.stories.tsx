@@ -25,6 +25,7 @@ export const Expired: Story = {
             // usage endpoint and only swap the license for an expired one.
             handlers: {
                 settings: [
+                    settingsMocks.feedback(),
                     settingsMocks.license({
                         ...sampleLicense,
                         response: {
@@ -45,6 +46,7 @@ export const ConnectivityIssue: Story = {
         msw: {
             handlers: {
                 settings: [
+                    settingsMocks.feedback(),
                     settingsMocks.license({
                         ...sampleLicense,
                         connectivity: {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { KeyRound, LineChart, LogOut, UserRound } from "lucide-react";
+import { KeyRound, LineChart, LogOut, MessageCircle, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-context";
 import { Button } from "@/components/shadcn/ui/button";
@@ -13,10 +13,12 @@ import {
     DropdownMenuTrigger,
 } from "@/components/shadcn/ui/dropdown-menu";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { ContactSheet } from "@/pages/dashboard/contact-sheet";
 
 export function UserMenu() {
     const { logout } = useAuth();
     const [isSigningOut, setIsSigningOut] = useState(false);
+    const [isContactOpen, setIsContactOpen] = useState(false);
 
     async function handleSignOut() {
         setIsSigningOut(true);
@@ -32,46 +34,55 @@ export function UserMenu() {
     }
 
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Account"
-                    className="text-muted-foreground hover:text-foreground"
-                >
-                    <UserRound className="size-4" aria-hidden="true" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Operator</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                    <Link to="/usage">
-                        <LineChart aria-hidden="true" />
-                        Usage
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link to="/license">
-                        <KeyRound aria-hidden="true" />
-                        License
-                    </Link>
-                </DropdownMenuItem>
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Account"
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        <UserRound className="size-4" aria-hidden="true" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Operator</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                        <Link to="/usage">
+                            <LineChart aria-hidden="true" />
+                            Usage
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link to="/license">
+                            <KeyRound aria-hidden="true" />
+                            License
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setIsContactOpen(true)}>
+                        <MessageCircle aria-hidden="true" />
+                        Contact us
+                    </DropdownMenuItem>
 
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                    variant="destructive"
-                    disabled={isSigningOut}
-                    onSelect={(event) => {
-                        event.preventDefault();
-                        void handleSignOut();
-                    }}
-                >
-                    {isSigningOut ? <Spinner /> : <LogOut aria-hidden="true" />}
-                    Sign out
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        variant="destructive"
+                        disabled={isSigningOut}
+                        onSelect={(event) => {
+                            event.preventDefault();
+                            void handleSignOut();
+                        }}
+                    >
+                        {isSigningOut ? <Spinner /> : <LogOut aria-hidden="true" />}
+                        Sign out
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* trigger-wrapper form can't work from inside a dropdown menu */}
+            <ContactSheet open={isContactOpen} onOpenChange={setIsContactOpen} />
+        </>
     );
 }

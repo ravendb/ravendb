@@ -17,6 +17,7 @@ using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Auth;
 using Raven.Quill.Endpoints;
+using Raven.Quill.Feedback;
 using Raven.Quill.Hosting;
 using Raven.Quill.Infrastructure;
 using Raven.Quill.Licensing;
@@ -93,6 +94,7 @@ builder.Services.AddSingleton<IServerReady, ServerReadyFlag>();
 builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
+builder.Services.AddSingleton<IFeedbackSender, FeedbackSender>();
 // License & Usage pages are mock-backed until the real license API (RavenDB-26661/26783) lands.
 builder.Services.AddSingleton<ILicenseStatsProvider, LicenseStatsProvider>();
 if (!isOpenApiDocumentGeneration)

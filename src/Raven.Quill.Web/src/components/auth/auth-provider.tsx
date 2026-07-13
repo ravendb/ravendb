@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
-import { AuthContext } from "@/components/auth/auth-context";
+import { AuthContext, type LoginResult } from "@/components/auth/auth-context";
 import { AUTH_STATUS_QUERY_KEY, UNAUTHENTICATED_STATUS } from "@/lib/auth-query";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -12,7 +12,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const isAuthenticated = statusQuery.data?.authenticated === true;
 
-    async function login(apiKey: string) {
+    async function login(apiKey: string): Promise<LoginResult> {
         const status = await api.services.auth.login({ apiKey });
 
         if (!status.authenticated) {

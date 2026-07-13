@@ -9,6 +9,7 @@ import { Button } from "@/components/shadcn/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ContactSheet } from "./contact-sheet";
 
 // Subtle brand wash used to make the featured plan stand out.
 // Defined as a CSS class (see index.css) so it layers over the card's bg-color.
@@ -57,11 +58,14 @@ function LicenseSummaryCard({ license }: { license: ServerLicenseResponse }) {
             <CardHeader>
                 <CardTitle>Current license</CardTitle>
                 {license.expired && <CardDescription>This license has expired.</CardDescription>}
-                <CardAction className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" disabled>
-                        Contact us
-                    </Button>
-                    <Badge variant="secondary">Coming soon</Badge>
+                <CardAction>
+                    <ContactSheet
+                        trigger={
+                            <Button variant="outline" size="sm">
+                                Contact us
+                            </Button>
+                        }
+                    />
                 </CardAction>
             </CardHeader>
             <CardContent className="grid gap-6 sm:grid-cols-2">
