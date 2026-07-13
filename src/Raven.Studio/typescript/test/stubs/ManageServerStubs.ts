@@ -811,4 +811,42 @@ export class ManageServerStubs {
             Secret: "RNHRX6WXCLZVQPJSW5NSWV64JU65E5WA",
         };
     }
+
+    static serverWideTasks(): Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult {
+        const replicationTask: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideExternalReplicationTask =
+            {
+                TaskId: 101,
+                TaskName: "ExternalReplicationTask",
+                TaskType: "Replication",
+                TaskState: "Enabled",
+                TaskConnectionStatus: "Active",
+                Error: null,
+                MentorNode: null,
+                PinToMentorNode: false,
+                ResponsibleNode: { NodeTag: "A", NodeUrl: "http://127.0.0.1:8080", ResponsibleNode: "A" },
+                ExcludedDatabases: ["ExcludedDb"],
+                DelayReplicationFor: "00:05:00",
+                TopologyDiscoveryUrls: ["http://target-cluster:8080"],
+            };
+
+        const backupTask: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask =
+            {
+                TaskId: 102,
+                TaskName: "BackupTask",
+                TaskType: "Backup",
+                TaskState: "Enabled",
+                TaskConnectionStatus: "Active",
+                Error: null,
+                MentorNode: null,
+                PinToMentorNode: false,
+                ResponsibleNode: { NodeTag: "A", NodeUrl: "http://127.0.0.1:8080", ResponsibleNode: "A" },
+                ExcludedDatabases: [],
+                BackupDestinations: ["Local"],
+                BackupType: "Backup",
+                IsEncrypted: false,
+                RetentionPolicy: { Disabled: true, MinimumBackupAgeToKeep: null },
+            };
+
+        return { Tasks: [replicationTask, backupTask] };
+    }
 }
