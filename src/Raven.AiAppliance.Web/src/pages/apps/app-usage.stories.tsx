@@ -27,7 +27,6 @@ const emptyAppUsage: AppUsageResponse = {
     metrics: {
         conversations: zeroMetric,
         tokens: zeroMetric,
-        cost: zeroMetric,
         cdcWrites: zeroMetric,
     },
     tokensByCapability: emptySeries,
