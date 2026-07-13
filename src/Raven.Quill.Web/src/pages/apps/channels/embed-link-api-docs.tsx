@@ -15,16 +15,25 @@ import {
 import { InlineCode } from "@/components/data/inline-code";
 
 const OPEN_STORAGE_KEY = "quill-embed-api-docs-open";
-const SHELL_STORAGE_KEY = "quill-embed-api-docs-shell";
+const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
 
-type Shell = "bash" | "powershell";
+const LANGUAGES = [
+    { value: "bash", label: "cURL" },
+    { value: "powershell", label: "PowerShell" },
+    { value: "csharp", label: "C#" },
+    { value: "python", label: "Python" },
+    { value: "node", label: "Node.js" },
+] as const;
+
+type Language = (typeof LANGUAGES)[number]["value"];
 
 function readIsOpen() {
     return localStorage.getItem(OPEN_STORAGE_KEY) !== "false";
 }
 
-function readShell(): Shell {
-    return localStorage.getItem(SHELL_STORAGE_KEY) === "powershell" ? "powershell" : "bash";
+function readLanguage(): Language {
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return LANGUAGES.some((language) => language.value === stored) ? (stored as Language) : "bash";
 }
 
 type EmbedLinkApiDocsProps = {
@@ -38,17 +47,17 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
     const requests = buildRequestSnippets(slug, agentId, parameterNames);
 
     const [isOpen, setIsOpen] = useState(readIsOpen);
-    const [shell, setShell] = useState<Shell>(readShell);
+    const [language, setLanguage] = useState<Language>(readLanguage);
 
     const onOpenChange = (open: boolean) => {
         localStorage.setItem(OPEN_STORAGE_KEY, String(open));
         setIsOpen(open);
     };
 
-    const onShellChange = (value: string) => {
-        const next = value as Shell;
-        localStorage.setItem(SHELL_STORAGE_KEY, next);
-        setShell(next);
+    const onLanguageChange = (value: string) => {
+        const next = value as Language;
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
+        setLanguage(next);
     };
 
     const fields = [
@@ -91,17 +100,19 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
                     {hasParameters ? " and the parameter values" : ""}.
                 </p>
 
-                <Tabs value={shell} onValueChange={onShellChange} className="gap-3">
+                <Tabs value={language} onValueChange={onLanguageChange} className="gap-3">
                     <TabsList>
-                        <TabsTrigger value="bash">macOS / Linux</TabsTrigger>
-                        <TabsTrigger value="powershell">Windows (PowerShell)</TabsTrigger>
+                        {LANGUAGES.map(({ value, label }) => (
+                            <TabsTrigger key={value} value={value}>
+                                {label}
+                            </TabsTrigger>
+                        ))}
                     </TabsList>
-                    <TabsContent value="bash">
-                        <CopyableCode code={requests.bash} copyLabel="Copy API request" />
-                    </TabsContent>
-                    <TabsContent value="powershell">
-                        <CopyableCode code={requests.powershell} copyLabel="Copy API request" />
-                    </TabsContent>
+                    {LANGUAGES.map(({ value }) => (
+                        <TabsContent key={value} value={value}>
+                            <CopyableCode code={requests[value]} copyLabel="Copy API request" />
+                        </TabsContent>
+                    ))}
                 </Tabs>
 
                 <dl className="grid gap-2 text-sm">
@@ -122,7 +133,24 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
     );
 }
 
-function buildRequestSnippets(slug: string, agentId: string, parameterNames: string[]) {
+const API_KEY_PLACEHOLDER = "<your QUILL_API_KEY>";
+
+function buildRequestSnippets(slug: string, agentId: string, parameterNames: string[]): Record<Language, string> {
+    const url = buildMintEmbedLinkUrl(slug);
+    const hasParameters = parameterNames.length > 0;
+
+    return {
+        bash: buildCurlSnippet(url, agentId, parameterNames, "curl", "\\"),
+        powershell: buildCurlSnippet(url, agentId, parameterNames, "curl.exe", "`"),
+        csharp: buildCSharpSnippet(url, agentId, parameterNames, hasParameters),
+        python: buildPythonSnippet(url, agentId, parameterNames, hasParameters),
+        node: buildNodeSnippet(url, agentId, parameterNames, hasParameters),
+    };
+}
+
+// bash continues lines with "\", PowerShell with a backtick; PowerShell also needs curl.exe so
+// it doesn't resolve to the Invoke-WebRequest alias on Windows PowerShell 5.1.
+function buildCurlSnippet(url: string, agentId: string, parameterNames: string[], curl: string, continuation: string) {
     const body: Record<string, unknown> = {
         agentId,
         ttlSeconds: DEFAULT_TTL_SECONDS,
@@ -137,21 +165,82 @@ function buildRequestSnippets(slug: string, agentId: string, parameterNames: str
         .map((line, index) => (index === 0 ? line : `  ${line}`))
         .join("\n");
 
-    const url = buildMintEmbedLinkUrl(slug);
+    return [
+        `${curl} -X POST ${continuation}`,
+        `  "${url}" ${continuation}`,
+        `  -H "X-Api-Key: ${API_KEY_PLACEHOLDER}" ${continuation}`,
+        `  -H "Content-Type: application/json" ${continuation}`,
+        `  -d '${indentedBody}'`,
+    ].join("\n");
+}
 
-    // bash continues lines with "\", PowerShell with a backtick; PowerShell also needs curl.exe so
-    // it doesn't resolve to the Invoke-WebRequest alias on Windows PowerShell 5.1.
-    const snippet = (curl: string, continuation: string) =>
-        [
-            `${curl} -X POST ${continuation}`,
-            `  "${url}" ${continuation}`,
-            `  -H "X-Api-Key: <your QUILL_API_KEY>" ${continuation}`,
-            `  -H "Content-Type: application/json" ${continuation}`,
-            `  -d '${indentedBody}'`,
-        ].join("\n");
+function buildCSharpSnippet(url: string, agentId: string, parameterNames: string[], hasParameters: boolean) {
+    const parameterEntries = parameterNames.map((name) => `[${JSON.stringify(name)}] = "<value>"`).join(", ");
 
-    return {
-        bash: snippet("curl", "\\"),
-        powershell: snippet("curl.exe", "`"),
-    };
+    return [
+        "using System.Net.Http.Json;",
+        "using System.Text.Json;",
+        "",
+        "using var client = new HttpClient();",
+        `client.DefaultRequestHeaders.Add("X-Api-Key", "${API_KEY_PLACEHOLDER}");`,
+        "",
+        "var response = await client.PostAsJsonAsync(",
+        `    "${url}",`,
+        "    new",
+        "    {",
+        `        agentId = "${agentId}",`,
+        `        ttlSeconds = ${DEFAULT_TTL_SECONDS},`,
+        `        maxInvocations = ${DEFAULT_MAX_INVOCATIONS},`,
+        ...(hasParameters ? [`        parameters = new Dictionary<string, string> { ${parameterEntries} },`] : []),
+        "    });",
+        "response.EnsureSuccessStatusCode();",
+        "",
+        "var mint = await response.Content.ReadFromJsonAsync<JsonElement>();",
+        'var url = mint.GetProperty("url").GetString();',
+    ].join("\n");
+}
+
+function buildPythonSnippet(url: string, agentId: string, parameterNames: string[], hasParameters: boolean) {
+    const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
+
+    return [
+        "import requests",
+        "",
+        "response = requests.post(",
+        `    "${url}",`,
+        `    headers={"X-Api-Key": "${API_KEY_PLACEHOLDER}"},`,
+        "    json={",
+        `        "agentId": "${agentId}",`,
+        `        "ttlSeconds": ${DEFAULT_TTL_SECONDS},`,
+        `        "maxInvocations": ${DEFAULT_MAX_INVOCATIONS},`,
+        ...(hasParameters ? [`        "parameters": {${parameterEntries}},`] : []),
+        "    },",
+        ")",
+        "response.raise_for_status()",
+        'url = response.json()["url"]',
+    ].join("\n");
+}
+
+function buildNodeSnippet(url: string, agentId: string, parameterNames: string[], hasParameters: boolean) {
+    const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
+
+    return [
+        `const response = await fetch("${url}", {`,
+        '    method: "POST",',
+        "    headers: {",
+        `        "X-Api-Key": "${API_KEY_PLACEHOLDER}",`,
+        '        "Content-Type": "application/json",',
+        "    },",
+        "    body: JSON.stringify({",
+        `        agentId: "${agentId}",`,
+        `        ttlSeconds: ${DEFAULT_TTL_SECONDS},`,
+        `        maxInvocations: ${DEFAULT_MAX_INVOCATIONS},`,
+        ...(hasParameters ? [`        parameters: { ${parameterEntries} },`] : []),
+        "    }),",
+        "});",
+        "if (!response.ok) {",
+        "    throw new Error(`Minting the embed link failed: ${response.status}`);",
+        "}",
+        "const { url } = await response.json();",
+    ].join("\n");
 }
