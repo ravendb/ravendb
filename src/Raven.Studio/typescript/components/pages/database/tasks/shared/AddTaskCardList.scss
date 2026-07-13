@@ -6,7 +6,7 @@
 $translate-before-hover-x: 0;
 $translate-hover-x: 100%;
 
-%ongoing-task-card {
+%add-task-card {
     cursor: pointer;
     position: relative;
     overflow: hidden;
@@ -104,7 +104,7 @@ $variants: (
 @each $name, $props in $variants {
     $selector: unquote(".add-task-card.variant-#{$name}");
     #{$selector} {
-        @extend %ongoing-task-card;
+        @extend %add-task-card;
 
         .task-icon {
             color: map-get($props, icon-color);
