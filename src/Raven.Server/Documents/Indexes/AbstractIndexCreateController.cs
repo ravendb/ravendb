@@ -300,9 +300,9 @@ public abstract class AbstractIndexCreateController
         IndexFieldOptions options = null;
         definition.Fields?.TryGetValue(fieldName, out options);
 
-        return (options?.Indexing ?? allFieldsOptions?.Indexing) switch
+        return IndexField.ResolveIndexing(options, allFieldsOptions) switch
         {
-            FieldIndexing.Search => $"is configured with '{nameof(FieldIndexing)}.{FieldIndexing.Search}' which uses a tokenizing analyzer that is not compatible with compound fields",
+            FieldIndexing.Search => $"resolves to a tokenizing analyzer (either '{nameof(FieldIndexing)}.{FieldIndexing.Search}' or a custom analyzer specified without an explicit '{nameof(FieldIndexing)}') that is not compatible with compound fields",
             FieldIndexing.No => $"is configured with '{nameof(FieldIndexing)}.{FieldIndexing.No}' so its value is not indexed and cannot participate in a compound field",
             _ => null
         };
