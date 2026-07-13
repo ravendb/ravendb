@@ -34,7 +34,7 @@ namespace StressTests.Issues
             public string Source;
         }
 
-        [RavenFact(RavenTestCategory.Core)]
+        [RavenFact(RavenTestCategory.Core | RavenTestCategory.Replication)]
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -141,14 +141,14 @@ namespace StressTests.Issues
             using (ctx.OpenReadTransaction())
             {
                 var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
-                Assert.Equal(2, sink1GlobalCv.ToChangeVector().Length);
+                Assert.Equal(1, sink1GlobalCv.ToChangeVector().Length);
             }
 
             using (sink2Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
-                Assert.Equal(2, sink2GlobalCv.ToChangeVector().Length);
+                Assert.Equal(1, sink2GlobalCv.ToChangeVector().Length);
             }
 
             await EnsureNoReplicationLoop(Server, hubStore.Database);
@@ -175,7 +175,7 @@ namespace StressTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Core)]
+        [RavenFact(RavenTestCategory.Core | RavenTestCategory.Replication)]
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts2()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -300,14 +300,14 @@ namespace StressTests.Issues
             using (ctx.OpenReadTransaction())
             {
                 var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
-                Assert.Equal(2, sink1GlobalCv.ToChangeVector().Length);
+                Assert.Equal(1, sink1GlobalCv.ToChangeVector().Length);
             }
 
             using (sink2Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx).AsString();
-                Assert.Equal(2, sink2GlobalCv.ToChangeVector().Length);
+                Assert.Equal(1, sink2GlobalCv.ToChangeVector().Length);
             }
 
             await EnsureNoReplicationLoop(Server, hubStore.Database);
