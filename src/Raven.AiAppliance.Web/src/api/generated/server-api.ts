@@ -904,7 +904,6 @@ export interface components {
         AppUsageMetrics: {
             conversations: components["schemas"]["MetricCard"];
             tokens: components["schemas"]["MetricCard"];
-            cost: components["schemas"]["MetricCard"];
             cdcWrites: components["schemas"]["MetricCard"];
         };
         AppUsageResponse: {
@@ -1401,7 +1400,7 @@ export interface components {
             status: string;
         };
         SuggestCdcRequest: {
-            intentPrompt: string;
+            intentPrompt: null | string;
         };
         SuggestCdcResponse: {
             configuration: null | components["schemas"]["CdcSinkConfiguration"];
@@ -1441,8 +1440,6 @@ export interface components {
             avgTokens: number;
             /** Format: int64 */
             totalTokens: number;
-            /** Format: double */
-            cost: number;
         };
         TopTable: {
             name: string;

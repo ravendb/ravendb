@@ -542,7 +542,6 @@ export const sampleAppUsage: AppUsageResponse = {
     metrics: {
         conversations: { value: 7400, delta: 12.5, sparkline: usageSparkline(520) },
         tokens: { value: 6100000, delta: 15, sparkline: usageSparkline(430000) },
-        cost: { value: 128.4, delta: -3, sparkline: usageSparkline(9) },
         cdcWrites: { value: 18400000, delta: 3, sparkline: usageSparkline(1300000) },
     },
     tokensByCapability: buildSeries(
@@ -577,8 +576,8 @@ export const sampleAppUsage: AppUsageResponse = {
         { name: "Inventory", writes: 1800000, lagSeconds: 9, lastWriteAt: "2026-06-25T08:40:00Z" },
     ],
     topCapabilities: [
-        { name: "Sales assistant", invocations: 8100, avgTokens: 540, totalTokens: 4374000, cost: 92.1 },
-        { name: "FAQ bot", invocations: 2400, avgTokens: 320, totalTokens: 768000, cost: 18.6 },
-        { name: "Order tracker", invocations: 1200, avgTokens: 410, totalTokens: 492000, cost: 17.7 },
+        { name: "Sales assistant", invocations: 8100, avgTokens: 540, totalTokens: 4374000 },
+        { name: "FAQ bot", invocations: 2400, avgTokens: 320, totalTokens: 768000 },
+        { name: "Order tracker", invocations: 1200, avgTokens: 410, totalTokens: 492000 },
     ],
 };
