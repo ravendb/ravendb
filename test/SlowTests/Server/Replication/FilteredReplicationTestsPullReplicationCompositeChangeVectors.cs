@@ -20,6 +20,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -1264,8 +1265,10 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         public string Name { get; set; }
     }
 
-    private sealed class ModifyDatabaseSupportedFeaturesTestCommand(DocumentConventions conventions, string[] add, string[] remove) : RavenCommand
+    private sealed class ModifyDatabaseSupportedFeaturesTestCommand(DocumentConventions conventions, string[] add, string[] remove) : RavenCommand, IRaftCommand
     {
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/admin/features";
