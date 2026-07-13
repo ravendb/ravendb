@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes
         // RavenDB-26831: order-preserving XOR mask for raw signed-long compound-field members. long.MinValue
         // flips the sign bit so signed longs sort in unsigned byte order (negatives below positives); 0 keeps
         // the legacy (non-order-preserving) encoding for indexes built before the fix. 
-        public long CompoundFieldNumericXorMask => _compoundFieldNumericXorMask ??= Version >= IndexVersion.OrderPreservingCompoundNumericEncoding ? long.MinValue : 0L;
+        public long CompoundFieldNumericXorMask => _compoundFieldNumericXorMask ??= Version >= IndexVersion.CoraxOrderPreservingCompoundNumericEncoding ? long.MinValue : 0L;
 
         public HashSet<string> Collections { get; protected set; }
 
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Indexes
             // version or higher encode them order-preserving (sign-bit flipped), so compound sorts/ranges over a
             // numeric field with negative values are correct. Older indexes keep the legacy encoding (and behavior);
             // resetting/rebuilding an index upgrades it to the fixed encoding.
-            public const long OrderPreservingCompoundNumericEncoding = 72_001; // RavenDB-26831
+            public const long CoraxOrderPreservingCompoundNumericEncoding = 72_001; // RavenDB-26831
 
             // RavenDB-25281: Corax rejects a compound field whose first source field is tokenized/non-keyword
             // (it cannot produce the order-preserving prefix a compound field needs). Gated by version so indexes

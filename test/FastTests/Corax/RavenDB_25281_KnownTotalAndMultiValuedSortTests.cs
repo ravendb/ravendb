@@ -731,7 +731,7 @@ public class RavenDB_25281_KnownTotalAndMultiValuedSortTests : RavenTestBase
     }
 
     // RavenDB-26831: a compound numeric member must sort negatives correctly. New indexes (built at
-    // OrderPreservingCompoundNumericEncoding or higher) encode signed longs order-preserving, so the
+    // CoraxOrderPreservingCompoundNumericEncoding or higher) encode signed longs order-preserving, so the
     // CompoundSortedScan walk/range over a field with negative values is correct. Cross-engine pins it to Lucene.
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
