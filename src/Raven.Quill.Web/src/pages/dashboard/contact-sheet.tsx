@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useLocation } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { z } from "zod";
@@ -66,7 +65,6 @@ const contactSchema = z.object({
 type ContactFormData = z.infer<typeof contactSchema>;
 
 function ContactForm({ onSent }: { onSent: () => void }) {
-    const { pathname } = useLocation();
     const form = useForm<ContactFormData>({
         mode: "onChange",
         resolver: zodResolver(contactSchema),
@@ -79,7 +77,7 @@ function ContactForm({ onSent }: { onSent: () => void }) {
     });
 
     const submitMutation = useMutation({
-        mutationFn: (values: ContactFormData) => api.services.settings.feedback({ ...values, studioView: pathname }),
+        mutationFn: (values: ContactFormData) => api.services.settings.feedback({ ...values, studioView: "Quill" }),
         onSuccess: () => {
             toast.success("Feedback sent. Thank you.");
             form.reset();
