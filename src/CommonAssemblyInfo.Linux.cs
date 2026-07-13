@@ -19,4 +19,4 @@
 [assembly: InternalsVisibleTo("SlowTests.Tools")]
 [assembly: InternalsVisibleTo("SlowTests.Issues")]
 [assembly: InternalsVisibleTo("RequestHandler.Benchmark")]
-[assembly: InternalsVisibleTo("AiApplianceTests")]
+[assembly: InternalsVisibleTo("QuillTests")]

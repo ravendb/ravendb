@@ -161,5 +161,5 @@ src/.cache/
 src/Raven.Server/embeddings/
 
 # E2E setup-package zips carry real licenses + admin certs — never commit.
-test/AiApplianceTests/*.zip
-test/AiApplianceTests/egor-ai.Cluster.Settings.zip
+test/QuillTests/*.zip
+test/QuillTests/egor-ai.Cluster.Settings.zip
