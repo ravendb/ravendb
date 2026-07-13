@@ -160,9 +160,14 @@ void *do_ring_work(void *arg)
     while (true)
     {
         {
-            // wait for any writes on the eventfd / completion on the ring (associated with the eventfd)
+            // wait for any writes on the eventfd / completion on the ring (associated with the eventfd).
             eventfd_t v;
-            if (eventfd_read(g_worker.eventfd, &v))
+            int read_rc;
+            do
+            {
+                read_rc = eventfd_read(g_worker.eventfd, &v);
+            } while (read_rc == -1 && errno == EINTR);
+            if (read_rc)
             {
                 rc = errno;
                 goto error;
@@ -390,7 +395,12 @@ wait_for_work_completion(struct handle *handle_ptr, struct submittion *submittio
         return FAIL_IO_RING_WRITE;
     }
     eventfd_t v;
-    eventfd_read(submittion->notifyfd, &v);
+    int read_rc;
+    do
+    {
+        read_rc = eventfd_read(submittion->notifyfd, &v);
+    } while (read_rc == -1 && errno == EINTR);
+
     if (submittion->error)
     {
         *detailed_error_code = submittion->result;
