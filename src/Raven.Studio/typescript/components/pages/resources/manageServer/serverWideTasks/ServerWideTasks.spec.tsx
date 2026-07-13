@@ -1,4 +1,4 @@
-import { rtlRender } from "test/rtlTestUtils";
+import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as Stories from "./ServerWideTasks.stories";
 import { composeStories } from "@storybook/react-webpack5";
 import React from "react";
@@ -18,8 +18,7 @@ const selectors = {
 
 describe("ServerWideTasks", () => {
     it("can render empty state", async () => {
-        const { screen, waitForLoad } = rtlRender(<ServerWideTasksStory isEmpty />);
-        await waitForLoad();
+        const { screen } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory isEmpty />);
 
         expect(screen.queryByText(selectors.emptyState)).toBeInTheDocument();
         expect(screen.queryByText(selectors.createButton)).toBeInTheDocument();
@@ -27,8 +26,7 @@ describe("ServerWideTasks", () => {
     });
 
     it("can render tasks grouped by type", async () => {
-        const { screen, waitForLoad } = rtlRender(<ServerWideTasksStory />);
-        await waitForLoad();
+        const { screen} = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
 
         expect(screen.queryByText(selectors.backupTaskName)).toBeInTheDocument();
         expect(screen.queryByText(selectors.replicationTaskName)).toBeInTheDocument();
@@ -37,8 +35,7 @@ describe("ServerWideTasks", () => {
     });
 
     it("can select a task and open the bulk delete confirmation", async () => {
-        const { screen, waitForLoad, fireClick } = rtlRender(<ServerWideTasksStory />);
-        await waitForLoad();
+        const { screen, fireClick } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
 
         const backupPanel = screen.getByText(selectors.backupTaskName).closest(".rich-panel-item");
         await fireClick(backupPanel.querySelector<HTMLInputElement>("input[type=checkbox]"));
@@ -49,8 +46,7 @@ describe("ServerWideTasks", () => {
     });
 
     it("can filter tasks by name", async () => {
-        const { screen, waitForLoad, fillInput } = rtlRender(<ServerWideTasksStory />);
-        await waitForLoad();
+        const { screen, fillInput } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
 
         await fillInput(screen.getByPlaceholderText(selectors.nameFilterPlaceholder), "nothing-matches");
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
-import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
+import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import ServerWideTasks from "./ServerWideTasks";
 import { mockServices } from "test/mocks/services/MockServices";
 
@@ -22,7 +22,9 @@ interface ServerWideTasksStoryArgs {
 export const ServerWideTasksStory: StoryObj<ServerWideTasksStoryArgs> = {
     name: "Server-Wide Tasks",
     render: (props: ServerWideTasksStoryArgs) => {
-        mockServices.manageServerService.withServerWideTasks(props.isEmpty ? { Tasks: [] } : undefined);
+        const { manageServerService } = mockServices;
+        
+        manageServerService.withServerWideTasks(props.isEmpty ? { Tasks: [] } : undefined);
 
         return <ServerWideTasks />;
     },
