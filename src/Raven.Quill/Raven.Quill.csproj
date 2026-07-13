@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeFrameworkVersion>10.0.8</RuntimeFrameworkVersion>
@@ -9,10 +9,10 @@
     <AssemblyName>Raven.Quill</AssemblyName>
     <PackageId>Raven.Quill</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
-    <UserSecretsId>raven-ai-appliance-26627</UserSecretsId>
+    <UserSecretsId>raven-quill-26627</UserSecretsId>
     <OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
     <OpenApiDocumentsDirectory>obj\openapi</OpenApiDocumentsDirectory>
-    <OpenApiGenerateDocumentsOptions>--file-name ai-appliance</OpenApiGenerateDocumentsOptions>
+    <OpenApiGenerateDocumentsOptions>--file-name quill</OpenApiGenerateDocumentsOptions>
     <AssemblyTitle>Raven.Quill</AssemblyTitle>
     <RootNamespace>Raven.Quill</RootNamespace>
   </PropertyGroup>

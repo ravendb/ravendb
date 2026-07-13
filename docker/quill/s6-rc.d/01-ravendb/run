@@ -1,12 +1,12 @@
 #!/command/with-contenv sh
 set -e
 
-mkdir -p /var/lib/ai-appliance/ravendb
+mkdir -p /var/lib/quill/ravendb
 
 # When activation has produced a setup package, overlay its secure settings on
 # top of the baked-in unsecured config. Pre-activation the file is absent and
 # RavenDB starts unsecured on loopback (Setup.Mode=Unsecured from
-# docker/ai-appliance/ravendb-settings.json).
+# docker/quill/ravendb-settings.json).
 #
 # The hostname in PublicServerUrl (e.g. https://a.egor-ai.ravendb.run) already
 # resolves to 127.0.0.1 via public DNS — *.ravendb.run has wildcard A records
@@ -17,7 +17,7 @@ mkdir -p /var/lib/ai-appliance/ravendb
 # next to the unpacked package as the file `admin-thumbprint`. Reading it here
 # rather than extracting from the PFX with openssl avoids PKCS#12 bag-ordering
 # quirks and one less binary dependency in the runtime image.
-SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/ai-appliance/setup}"
+SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
 SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
 if [ -f "$SETUP_SETTINGS" ]; then
     cp "$SETUP_SETTINGS" /app/ravendb/settings.json

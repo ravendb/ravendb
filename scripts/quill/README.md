@@ -33,14 +33,14 @@ agent turn ──> appliance ──> RavenDB AI ──> OpenAI / Ollama (LLM)
 
 ## 1. One-time: supply the license file the image needs
 
-The Dockerfile copies `docker/ai-appliance/license.json` into the bundled RavenDB. It is **gitignored**
+The Dockerfile copies `docker/quill/license.json` into the bundled RavenDB. It is **gitignored**
 (never committed) — you must provide it. Extract it from your setup-package zip:
 
 ```bash
-unzip -p /path/to/setup-package.zip license.json > docker/ai-appliance/license.json
+unzip -p /path/to/setup-package.zip license.json > docker/quill/license.json
 ```
 
-> Skipping this fails the build at `COPY docker/ai-appliance/license.json … not found`.
+> Skipping this fails the build at `COPY docker/quill/license.json … not found`.
 
 ---
 
@@ -87,7 +87,7 @@ psql "postgresql://postgres:postgres@<host>:5432/northwind" -tAc \
 ## 3. Build + run the appliance
 
 ```powershell
-.\scripts\ai-appliance\up.ps1 -LicenseKey '<setup-package-token>' -RavenApiEnv test
+.\scripts\quill\up.ps1 -LicenseKey '<setup-package-token>' -RavenApiEnv test
 ```
 
 - First build is long (publishes RavenDB + the appliance + builds the React frontend); rebuilds are cached.
@@ -208,12 +208,12 @@ curl -s -N -X POST http://localhost:5000/embed/<widgetId>/chat \
 ## Teardown
 
 ```powershell
-.\scripts\ai-appliance\down.ps1            # stop + remove the container (-PurgeData also drops the volume)
+.\scripts\quill\down.ps1            # stop + remove the container (-PurgeData also drops the volume)
 ```
 ```bash
 docker rm -f nw-postgres                    # if you used the throwaway Postgres
 # or, for an existing server: DROP DATABASE northwind;
-rm docker/ai-appliance/license.json         # the build-context license you supplied (gitignored)
+rm docker/quill/license.json         # the build-context license you supplied (gitignored)
 ```
 
 ---
@@ -222,13 +222,13 @@ rm docker/ai-appliance/license.json         # the build-context license you supp
 
 | Symptom | Cause / fix |
 |---|---|
-| Build fails: `COPY docker/ai-appliance/license.json … not found` | You skipped step 1 — extract `license.json` from the setup-package zip into `docker/ai-appliance/`. |
-| Bootstrap stuck at `NeedsActivation` | Startup activation had no token. Pass a real `-LicenseKey` (`QUILL_LICENSE_KEY`) and ensure the license API is reachable (`-RavenApiEnv test` → test.api.ravendb.net). Check `docker logs ai-appliance-demo` for the activation line. |
+| Build fails: `COPY docker/quill/license.json … not found` | You skipped step 1 — extract `license.json` from the setup-package zip into `docker/quill/`. |
+| Bootstrap stuck at `NeedsActivation` | Startup activation had no token. Pass a real `-LicenseKey` (`QUILL_LICENSE_KEY`) and ensure the license API is reachable (`-RavenApiEnv test` → test.api.ravendb.net). Check `docker logs quill-demo` for the activation line. |
 | `401 Unauthorized` on `/api/*` (or bounced to `/login`) | Missing/wrong API key or an expired session. Pass `-H "X-Api-Key: <key>"` (the `QUILL_API_KEY` you ran with, default `egor`) or sign in again. `QUILL_API_KEY` is **required** — auth fails closed when it's unset. |
-| `https://…:443` connection refused | nginx only starts after activation extracts the wildcard cert. Pre-activation use `http://localhost:5000`; once `/api/bootstrap/status` is `Ready`, retry `:443`. If it never comes up, check `docker logs ai-appliance-demo` for the `03-proxy` service. |
+| `https://…:443` connection refused | nginx only starts after activation extracts the wildcard cert. Pre-activation use `http://localhost:5000`; once `/api/bootstrap/status` is `Ready`, retry `:443`. If it never comes up, check `docker logs quill-demo` for the `03-proxy` service. |
 | Wizard **Connect** fails | The connection-string host isn't reachable **from the container**. Use a LAN IP or `host.docker.internal`, not `localhost`. |
 | Discover: `wal_level is 'replica'…` / no permission to set up | Set `wal_level = logical` and restart Postgres; grant the login `REPLICATION`. |
-| Chat returns an `error` frame | `docker logs ai-appliance-demo` for the real exception. Common ones below. |
+| Chat returns an `error` frame | `docker logs quill-demo` for the real exception. Common ones below. |
 | `UnsuccessfulAiRequestException: 401 invalid_api_key` | The LLM key is wrong/expired. Re-POST `ai/connection-strings` with a valid key (test it: `curl -H "Authorization: Bearer $KEY" https://api.openai.com/v1/models`). |
 | `MissingAiAgentParameterException: Parameter 'customerId' is missing` | The agent declares a **caller-supplied** agent-level parameter the iframe can't provide (e.g. `order-support`). Use `product-catalog` / `sales-insights`, whose inputs are model-filled query params. |
 | Agent runs but finds no rows | Check the query matches the mirrored field **types**, not just names — e.g. Northwind's `Discontinued` mirrors as integer `0/1`, so `Discontinued = false` matches nothing; filter on `= 0` or drop it. Confirm the CDC initial load finished (collection counts via Studio or `collections/stats`). |
