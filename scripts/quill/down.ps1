@@ -9,22 +9,22 @@
   next `up.ps1` restores state.
 
 .PARAMETER Volume
-  Docker named volume that backs /var/lib/ai-appliance. Default: ai-appliance-data.
+  Docker named volume that backs /var/lib/quill. Default: quill-data.
 #>
 [CmdletBinding()]
 param(
     [switch]$PurgeData,
-    [string]$Volume = 'ai-appliance-data'
+    [string]$Volume = 'quill-data'
 )
 
 $ErrorActionPreference = 'Stop'
 
-$existing = docker ps -aq --filter "name=^ai-appliance-demo$"
+$existing = docker ps -aq --filter "name=^quill-demo$"
 if ($existing) {
-    Write-Host 'Stopping ai-appliance-demo...' -ForegroundColor Cyan
-    docker rm -f ai-appliance-demo | Out-Null
+    Write-Host 'Stopping quill-demo...' -ForegroundColor Cyan
+    docker rm -f quill-demo | Out-Null
 } else {
-    Write-Host 'No ai-appliance-demo container running.' -ForegroundColor DarkGray
+    Write-Host 'No quill-demo container running.' -ForegroundColor DarkGray
 }
 
 if ($PurgeData) {

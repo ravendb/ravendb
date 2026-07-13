@@ -5,8 +5,8 @@ set -e
 # wildcard cert, which only exists post-activation. Wait for it; pre-activation the operator reaches
 # the dashboard on the published :5000 (first-run). db.*/a.* are TLS-passthrough to RavenDB.
 
-SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/ai-appliance/setup}"
-PROXY_DIR=/var/lib/ai-appliance/proxy
+SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/quill/setup}"
+PROXY_DIR=/var/lib/quill/proxy
 mkdir -p "$PROXY_DIR"
 
 i=0

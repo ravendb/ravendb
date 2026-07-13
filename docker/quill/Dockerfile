@@ -2,13 +2,13 @@
 #
 # RavenDB Quill — single-image build for the 8-week internal demo.
 #
-# Build context is the RavenDB repo root. Invoke via scripts/ai-appliance/up.ps1
+# Build context is the RavenDB repo root. Invoke via scripts/quill/up.ps1
 # or directly:
 #
 #   cd <ravendb repo root>
 #   docker build \
-#     -f docker/ai-appliance/Dockerfile \
-#     -t ravendb/ai-appliance:demo \
+#     -f docker/quill/Dockerfile \
+#     -t ravendb/quill:demo \
 #     .
 #
 # Five stages:
@@ -82,7 +82,7 @@ WORKDIR /workspace/src/Raven.Quill.Web
 RUN pnpm install --frozen-lockfile
 
 WORKDIR /workspace
-COPY --from=appliance-openapi-build /src/src/Raven.Quill/obj/openapi/ai-appliance.json ./src/Raven.Quill/obj/openapi/ai-appliance.json
+COPY --from=appliance-openapi-build /src/src/Raven.Quill/obj/openapi/quill.json ./src/Raven.Quill/obj/openapi/quill.json
 COPY src/Raven.Quill.Web/ ./src/Raven.Quill.Web/
 
 WORKDIR /workspace/src/Raven.Quill.Web
@@ -142,14 +142,14 @@ COPY --from=web-build     /publish/web   /app/web
 # The default file hard-codes ServerUrl=127.0.0.1:8080 (and overrides the
 # RAVEN_ServerUrl env var, because settings.json wins in RavenDB's config
 # precedence). Ours binds 0.0.0.0 so Docker port-publish can forward.
-COPY docker/ai-appliance/ravendb-settings.json /app/ravendb/settings.json
+COPY docker/quill/ravendb-settings.json /app/ravendb/settings.json
 
 # Apply the license. RavenDB's License.Path defaults to "license.json" resolved
 # against its working dir (/app/ravendb/, where the 01-ravendb run script cd's
 # before launch), so dropping the file here activates the server with no
 # settings change. The file is customer-secret and gitignored (see
-# docker/.gitignore); supply your own at docker/ai-appliance/license.json.
-COPY docker/ai-appliance/license.json /app/ravendb/license.json
+# docker/.gitignore); supply your own at docker/quill/license.json.
+COPY docker/quill/license.json /app/ravendb/license.json
 
 # Studio bundle. `dotnet publish src/Raven.Server` doesn't include Studio.zip
 # (the official image's CI does a separate zip step). Pulling it from the
@@ -158,10 +158,10 @@ COPY --from=ravendb/ravendb:latest /usr/lib/ravendb/server/Raven.Studio.zip /app
 
 # nginx :443 SNI front (Phase 1): db.*/a.* TLS-passthrough to RavenDB (mTLS preserved); the web
 # subdomains terminate with the package's wildcard cert and forward to the web app on :5000.
-COPY docker/ai-appliance/nginx.conf /etc/nginx/nginx.conf
+COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
-# s6-rc.d service definitions ship under docker/ai-appliance/s6-rc.d/.
-COPY docker/ai-appliance/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
+# s6-rc.d service definitions ship under docker/quill/s6-rc.d/.
+COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
 RUN find /etc/s6-overlay/s6-rc.d -type f -exec sed -i 's/\r$//' {} + \
     && chmod +x /etc/s6-overlay/s6-rc.d/01-ravendb/run \
              /etc/s6-overlay/s6-rc.d/02-web/run \
@@ -172,14 +172,14 @@ RUN find /etc/s6-overlay/s6-rc.d -type f -exec sed -i 's/\r$//' {} + \
 # is reached through the proxy (db.* passthrough), not published directly.
 EXPOSE 5000 443
 
-VOLUME /var/lib/ai-appliance
+VOLUME /var/lib/quill
 
 ENV RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
     RAVEN_QUILL_WEB_LISTEN_URL=http://0.0.0.0:5000 \
     RAVEN_QUILL_CONFIG_DB=quill-config \
-    RAVEN_QUILL_SETUP_PACKAGE_PATH=/var/lib/ai-appliance/setup \
+    RAVEN_QUILL_SETUP_PACKAGE_PATH=/var/lib/quill/setup \
     RAVEN_QUILL_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
     RAVEN_QUILL_RAVENDB_INTERNAL_PORT=8443 \
-    RAVEN_DataDir=/var/lib/ai-appliance/ravendb
+    RAVEN_DataDir=/var/lib/quill/ravendb
 
 ENTRYPOINT ["/init"]

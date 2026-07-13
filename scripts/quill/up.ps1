@@ -11,14 +11,14 @@
   Force `docker build --no-cache`. Otherwise normal layer caching applies.
 
 .PARAMETER Tag
-  Image tag. Default: ravendb/ai-appliance:demo.
+  Image tag. Default: ravendb/quill:demo.
 
 .PARAMETER Port
   Host port to publish for the web app. Default: 5000.
 
 .PARAMETER Volume
-  Docker named volume that backs /var/lib/ai-appliance. Default:
-  ai-appliance-data. A named volume (vs a host bind-mount) sidesteps the 9p
+  Docker named volume that backs /var/lib/quill. Default:
+  quill-data. A named volume (vs a host bind-mount) sidesteps the 9p
   filesystem on Docker Desktop / Windows, which doesn't expose the file-lock
   semantics RavenDB needs.
 
@@ -62,9 +62,9 @@
 [CmdletBinding()]
 param(
     [switch]$Rebuild,
-    [string]$Tag = 'ravendb/ai-appliance:demo',
+    [string]$Tag = 'ravendb/quill:demo',
     [int]$Port = 5000,
-    [string]$Volume = 'ai-appliance-data',
+    [string]$Volume = 'quill-data',
     [switch]$WithStudio,
     [int]$HttpsPort = 443,
     [string]$ApiKey = 'egor',
@@ -74,7 +74,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# scripts/ai-appliance/ → ../../ → ravendb repo root.
+# scripts/quill/ → ../../ → ravendb repo root.
 $repoRoot = (Resolve-Path "$PSScriptRoot\..\..").Path
 
 Write-Host "Building $Tag from $repoRoot..." -ForegroundColor Cyan
@@ -83,7 +83,7 @@ Push-Location $repoRoot
 try {
     $buildArgs = @(
         'build',
-        '-f', 'docker/ai-appliance/Dockerfile',
+        '-f', 'docker/quill/Dockerfile',
         '-t', $Tag
     )
     if ($Rebuild) { $buildArgs += '--no-cache' }
@@ -96,15 +96,15 @@ finally {
     Pop-Location
 }
 
-$existing = docker ps -aq --filter "name=^ai-appliance-demo$"
+$existing = docker ps -aq --filter "name=^quill-demo$"
 if ($existing) {
-    Write-Host 'Removing previous ai-appliance-demo container...' -ForegroundColor DarkGray
-    docker rm -f ai-appliance-demo | Out-Null
+    Write-Host 'Removing previous quill-demo container...' -ForegroundColor DarkGray
+    docker rm -f quill-demo | Out-Null
 }
 
 $runArgs = @(
     'run', '-d',
-    '--name', 'ai-appliance-demo',
+    '--name', 'quill-demo',
     # Activation triggers a graceful StopApplication() from inside the .NET
     # host; --restart=unless-stopped makes Docker bring the container back so
     # the next start sees the freshly-extracted setup package and connects
@@ -113,7 +113,7 @@ $runArgs = @(
     '-p', "${Port}:5000",
     # nginx fronts the container's :443 (the SNI router); :5000 stays for first-run / pre-activation.
     '-p', "${HttpsPort}:443",
-    '-v', "${Volume}:/var/lib/ai-appliance",
+    '-v', "${Volume}:/var/lib/quill",
     # Operator auth: QUILL_API_KEY gates the dashboard login + the api.* surface
     # (required; auth fails closed without it). QUILL_LICENSE_KEY is the activation
     # token; when empty the appliance skips startup activation (stays in NeedsActivation).
@@ -190,4 +190,4 @@ Write-Host "Activation is automatic at startup; :443 comes up once /api/bootstra
 
 Write-Host ''
 Write-Host 'Tailing logs (Ctrl+C to detach; container keeps running):' -ForegroundColor Cyan
-docker logs -f ai-appliance-demo
+docker logs -f quill-demo
