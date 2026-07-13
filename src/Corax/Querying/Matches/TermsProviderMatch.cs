@@ -20,6 +20,7 @@ public sealed class TermsProviderMatch(ITermsProvider provider, LowLevelTransact
     private RoaringBitmap _bitmap = new(allocator);
     private RoaringBitmapIterator _iterator;
     private bool _initialized;
+    private long _count;
 
     public bool IsBoosting => false;
 
@@ -28,7 +29,7 @@ public sealed class TermsProviderMatch(ITermsProvider provider, LowLevelTransact
         get
         {
             Initialize();
-            return _bitmap.ComputeCount();
+            return _count;
         }
     }
 
@@ -99,6 +100,7 @@ public sealed class TermsProviderMatch(ITermsProvider provider, LowLevelTransact
         _bitmap.Clear();
         QueryPrimitives.FillBitmapFromTreeScan(provider, llt, ref _bitmap, token);
         _bitmap.PrepareForReading();
+        _count = _bitmap.ComputeCount(); // keep the count as a field, because we may consume the bitmap by time we call Inspect()
         _iterator = _bitmap.GetIterator();
         _initialized = true;
     }

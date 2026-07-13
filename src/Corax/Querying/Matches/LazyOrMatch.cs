@@ -13,6 +13,7 @@ public sealed class LazyOrMatch(ByteStringContext allocator, IQueryMatch left, I
     private RoaringBitmap _bitmap = new(allocator);
     private RoaringBitmapIterator _iterator;
     private bool _initialized;
+    private long _count;
 
     public bool IsBoosting => false;
 
@@ -21,7 +22,7 @@ public sealed class LazyOrMatch(ByteStringContext allocator, IQueryMatch left, I
         get
         {
             Initialize();
-            return _bitmap.ComputeCount();
+            return _count;
         }
     }
 
@@ -87,7 +88,7 @@ public sealed class LazyOrMatch(ByteStringContext allocator, IQueryMatch left, I
             parameters: new Dictionary<string, string>
             {
                 { Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString() },
-                { Constants.QueryInspectionNode.Count, _initialized ? Count.ToString() : "lazy" },
+                { Constants.QueryInspectionNode.Count, _initialized ? _count.ToString() : "lazy" },
             });
     }
 
@@ -99,6 +100,7 @@ public sealed class LazyOrMatch(ByteStringContext allocator, IQueryMatch left, I
         QueryPrimitives.OrWithMatch(left, ref _bitmap, token: token);
         QueryPrimitives.OrWithMatch(right, ref _bitmap, token: token);
         _bitmap.PrepareForReading();
+        _count = _bitmap.ComputeCount(); // keep the count as a field, because we may consume the bitmap by time we call Inspect()
         _iterator = _bitmap.GetIterator();
         _initialized = true;
     }
