@@ -5,7 +5,6 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import React, { ReactNode, useEffect, useState } from "react";
-import studioSettings = require("common/settings/studioSettings");
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
@@ -14,13 +13,12 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { useNewOngoingTasks } from "components/pages/database/tasks/shared/shared";
 import { EmptySet } from "components/common/EmptySet";
-import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
-import { RadioToggleWithIcon } from "components/common/toggles/RadioToggle";
-import { Checkbox } from "components/common/Checkbox";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { AccessPopover } from "components/common/AccessPopover";
+import { Checkbox } from "components/common/Checkbox";
+import studioSettings = require("common/settings/studioSettings");
 
 interface AddNewOngoingTaskQueryParams {
     isAiOnly: boolean;
@@ -71,9 +69,9 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
     };
 
     return (
-        <div className="add-new-ongoing-task d-flex flex-column">
+        <div className="content-margin add-new-ongoing-task d-flex flex-column">
             <div className="d-flex justify-content-between align-items-start">
-                {showBackUrl ? (
+                 {showBackUrl ? (
                     <AboutViewHeading
                         title={isAiOnly ? "Add AI task" : "Add a database task"}
                         icon="tasks"
@@ -82,29 +80,8 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                         marginBottom={4}
                     />
                 ) : (
-                    <AboutViewHeading title="Add a database task" icon="tasks" iconAddon="plus" marginBottom={4} />
+                    <AboutViewHeading title={isAiOnly ? "Add AI task" : "Add a database task"} icon="tasks" iconAddon="plus" marginBottom={4} />
                 )}
-                <div className="d-flex align-items-center gap-3">
-                    <RadioToggleWithIcon
-                        name="task-display-mode"
-                        leftItem={{ label: "", value: "expanded", iconName: "list" }}
-                        rightItem={{ label: "", value: "compact", iconName: "grid-3x2" }}
-                        selectedValue={displayMode}
-                        setSelectedValue={(val) => setDisplayMode(val)}
-                    />
-                    {!isAiOnly && <AddNewOngoingTaskAboutView />}
-                </div>
-            </div>
-            <div className="add-new-ongoing-task-horizontal-nav gap-1">
-                <TaskSearchInput searchText={searchText} setSearchText={setSearchText} className="mb-2" />
-                <TaskCategoryFilter
-                    variant="chips"
-                    categories={allCategories}
-                    availableCategories={searchFilteredTasks}
-                    selectedCategories={selectedCategories}
-                    onToggle={toggleCategory}
-                    onReset={resetCategories}
-                />
             </div>
             <div className="add-new-ongoing-task-layout d-flex gap-4 mt-2">
                 <div className="add-new-ongoing-task-sidebar flex-shrink-0 p-3">

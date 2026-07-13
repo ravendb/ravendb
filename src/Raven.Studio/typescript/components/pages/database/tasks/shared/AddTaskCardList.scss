@@ -100,6 +100,34 @@ $variants: (
     ),
 );
 
+
+@each $name, $props in $variants {
+    $selector: unquote(".add-task-card.variant-#{$name}");
+    #{$selector} {
+        @extend %ongoing-task-card;
+
+        .task-icon {
+            color: map-get($props, icon-color);
+        }
+
+        &::before {
+            width: 100%;
+            background: map-get($props, before-gradient);
+            left: -100%;
+            filter: blur(2px);
+            transition: bs5variables.$transition-base;
+            transform: map-get($props, before-transform);
+        }
+
+        &:hover {
+            border-color: map-get($props, border-color);
+
+            &::before {
+                transform: map-get($props, before-hover-transform);
+            }
+        }
+    }
+}
 .add-new-ongoing-task .radio-toggle .toggle-knob i {
     align-items: center;
 }
@@ -133,6 +161,29 @@ $variants: (
                     transform: map-get($props, before-hover-transform);
                 }
             }
+        }
+    }
+}
+
+.add-task-card-grid {
+    grid-template-columns: 1fr;
+
+    @media (min-width: sizes.$screen-sm) {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    @media (min-width: sizes.$screen-lg) {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+.variant-AI {
+    i {
+        &::before {
+            background: colors.$ai-gradient;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
     }
 }
