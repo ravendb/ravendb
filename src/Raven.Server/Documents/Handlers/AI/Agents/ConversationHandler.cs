@@ -1073,7 +1073,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         List<Task<SubConversationResult>> tasks = [];
         foreach (var (conversationId, conversationReqs) in reqs)
         {
-            _document.SubConversationIds.Add(conversationId);
+            if (conversationId != QueryVirtualSubConversationId)
+                _document.SubConversationIds.Add(conversationId);
             tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs, token));
         }
 
