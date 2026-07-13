@@ -85,7 +85,7 @@ export function TaskCard({
         <ConditionalPopover className="w-100 h-100" conditions={conditions}>
             <a
                 href={isDisabled ? undefined : link}
-                onClick={() => reportEvent(target, "new")}
+                onClick={() => !isDisabled && reportEvent(target, "new")}
                 className={classNames("card no-decor w-100 h-100 add-task-card", `variant-${variant}`, {
                     "item-disabled": isDisabled,
                 })}
