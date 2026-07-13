@@ -10,7 +10,12 @@ export function useServerWideTasks() {
     const [nameFilter, setNameFilter] = useState("");
     const [selectedTypes, setSelectedTypes] = useState<ServerWideTaskType[]>([]);
 
-    const asyncGetTasks = useAsync(() => manageServerService.getAllServerWideTasks(), []);
+    const asyncGetTasks = useAsync(() => manageServerService.getAllServerWideTasks(), [], {
+        // Preserve the previous result (and "success" status) while re-fetching,
+        // so the list stays mounted during reload after enable/disable/delete.
+        // The default setLoading resets the state to { status: "loading", result: undefined }.
+        setLoading: (state) => ({ ...state, loading: true }),
+    });
 
     const tasks: ServerWideTaskInfo[] = useMemo(
         () =>

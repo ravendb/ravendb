@@ -69,6 +69,7 @@ export default function ServerWideTaskPanel(props: ServerWideTaskPanelProps) {
                     <Dropdown>
                         <Dropdown.Toggle
                             disabled={togglingState}
+                            title="Set task state"
                             variant={task.taskState === "Disabled" ? "warning" : "secondary"}
                         >
                             {togglingState && <Spinner size="sm" />} {task.taskState}
@@ -123,7 +124,9 @@ export default function ServerWideTaskPanel(props: ServerWideTaskPanelProps) {
                     ) : (
                         <>
                             <RichPanelDetailItem label="Topology discovery URLs">
-                                {task.topologyDiscoveryUrls.join(", ")}
+                                {task.topologyDiscoveryUrls.length > 0
+                                    ? task.topologyDiscoveryUrls.join(", ")
+                                    : "No URLs defined"}
                             </RichPanelDetailItem>
                             {task.delayReplicationFor && task.delayReplicationFor !== "00:00:00" && (
                                 <RichPanelDetailItem label="Replication delay">
