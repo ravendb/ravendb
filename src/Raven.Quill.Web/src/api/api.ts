@@ -10,6 +10,7 @@ import { createEmbedLinksQueries } from "@/api/queries/embed-links-queries";
 import { createBootstrapQueries } from "@/api/queries/bootstrap-queries";
 import { createSetupQueries } from "@/api/queries/setup-queries";
 import { createAiConnectionStringsQueries } from "@/api/queries/ai-connection-strings-queries";
+import { createAiModelsQueries } from "@/api/queries/ai-models-queries";
 import { createStatsQueries } from "@/api/queries/stats-queries";
 import { createSettingsQueries } from "@/api/queries/settings-queries";
 
@@ -27,6 +28,7 @@ export type ApiQueries = {
     embedLinks: ReturnType<typeof createEmbedLinksQueries>;
     setup: ReturnType<typeof createSetupQueries>;
     aiConnectionStrings: ReturnType<typeof createAiConnectionStringsQueries>;
+    aiModels: ReturnType<typeof createAiModelsQueries>;
     stats: ReturnType<typeof createStatsQueries>;
     settings: ReturnType<typeof createSettingsQueries>;
 };
@@ -58,6 +60,7 @@ export function createApi(options?: ApiClientOptions): Api {
             embedLinks: createEmbedLinksQueries(services.embedLinks),
             setup: createSetupQueries(services.setup),
             aiConnectionStrings: createAiConnectionStringsQueries(services.aiConnectionStrings),
+            aiModels: createAiModelsQueries(services.aiModels),
             stats: createStatsQueries(services.stats),
             settings: createSettingsQueries(services.settings),
         },

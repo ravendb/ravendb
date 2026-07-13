@@ -307,6 +307,7 @@ ChannelsEndpoints.Map(app);
 IFrameCustomizationEndpoints.Map(app);
 EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
+AiModelsEndpoints.Map(app);
 AgentsEndpoints.Map(app);
 StatsEndpoints.Map(app);
 SettingsEndpoints.Map(app);

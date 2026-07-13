@@ -4,6 +4,22 @@
 import type { ApiClient } from "@/api/http-client";
 
 export interface paths {
+    "/api/ai/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["aiModels.list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dashboard": {
         parameters: {
             query?: never;
@@ -854,6 +870,16 @@ export interface components {
         };
         /** @enum {unknown} */
         AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
+        AiModelsRequest: {
+            connectorType?: components["schemas"]["AiConnectorType"];
+            openAiSettings?: null | components["schemas"]["OpenAiSettings"];
+            azureOpenAiSettings?: null | components["schemas"]["AzureOpenAiSettings"];
+            ollamaSettings?: null | components["schemas"]["OllamaSettings"];
+            googleSettings?: null | components["schemas"]["GoogleSettings"];
+        };
+        AiModelsResponse: {
+            models: string[];
+        };
         /** @enum {unknown} */
         AiModelType: "TextEmbeddings" | "Chat";
         ApiErrorResponse: {
@@ -1514,6 +1540,48 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "aiModels.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiModelsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiModelsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "stats.dashboard": {
         parameters: {
             query?: never;
@@ -3227,6 +3295,8 @@ export type AiConnectionStringDeleteConflictResponse = components["schemas"]["Ai
 export type AiConnectionStringListItemResponse = components["schemas"]["AiConnectionStringListItemResponse"];
 export type AiConnectionStringListResponse = components["schemas"]["AiConnectionStringListResponse"];
 export type AiConnectorType = components["schemas"]["AiConnectorType"];
+export type AiModelsRequest = components["schemas"]["AiModelsRequest"];
+export type AiModelsResponse = components["schemas"]["AiModelsResponse"];
 export type AiModelType = components["schemas"]["AiModelType"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
 export type ApplianceAppResponse = components["schemas"]["ApplianceAppResponse"];
@@ -3335,6 +3405,9 @@ export const API_ENDPOINTS = {
         detail: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings`,
     },
+    aiModels: {
+        list: "/ai/models",
+    },
     apps: {
         cdcPerformance: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/performance`,
         detail: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
@@ -3413,6 +3486,9 @@ export function createServerApi(client: ApiClient) {
             delete: (slug: string, name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(slug, name)),
             detail: (slug: string, name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(slug, name)),
             list: (slug: string) => client.get<AiConnectionStringListResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list(slug)),
+        },
+        aiModels: {
+            list: (request: AiModelsRequest) => client.post<AiModelsResponse, ApiErrorResponse>(API_ENDPOINTS.aiModels.list, request),
         },
         apps: {
             cdcPerformance: (slug: string) => client.get<CdcPerformanceResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcPerformance(slug)),
