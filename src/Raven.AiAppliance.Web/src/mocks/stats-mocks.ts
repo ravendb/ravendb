@@ -36,7 +36,10 @@ export const statsMocks = {
     conversations: (conversations: ConversationDto[] = sampleConversations) =>
         apiHttp.get("/api/apps/{slug}/conversations", ({ response }) =>
             response(200).json(
-                conversations.map((conversation) => ({ ...conversation, lastExchange: [], transcript: null })),
+                conversations.map((conversation) => ({
+                    ...conversation,
+                    transcript: null,
+                })),
             ),
         ),
     conversation: (conversations: ConversationDto[] = sampleConversations) =>
@@ -223,7 +226,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Not yet. What about audit logs and data residency?", at: minutesAgo(20) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "At 60 seats you'd cross the Gold cap. Enterprise removes it — want me to draft a quote?",
                 at: minutesAgo(19),
             },
@@ -248,7 +251,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Thanks, that worked!", at: minutesAgo(21) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "Glad to hear it. I'll mark this resolved — reach out anytime.",
                 at: minutesAgo(20),
             },
@@ -272,7 +275,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Wann läuft mein Trial ab?", at: minutesAgo(23) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "Your trial ends on June 14, 2026 — 16 days from now. I can send a reminder.",
                 at: minutesAgo(22),
             },
@@ -297,7 +300,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Hi, just checking in — has there been any update?", at: minutesAgo(24) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "Got it. I'll look into your order status and get back shortly.",
                 at: minutesAgo(23),
             },
@@ -322,7 +325,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Can I get a copy of my last invoice?", at: minutesAgo(42) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "Invoice #INV-2026-0489 for $348 (May 1) is attached. Want me to email it too?",
                 at: minutesAgo(41),
             },
@@ -347,7 +350,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Oui, merci. Et pour les remboursements ?", at: minutesAgo(55) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "Le remboursement sera traité sous 3–5 jours ouvrés sur votre carte.",
                 at: minutesAgo(54),
             },
@@ -372,7 +375,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Do you have a student discount?", at: minutesAgo(57) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "We offer 40% off on the Starter plan for verified students. I can send the link.",
                 at: minutesAgo(56),
             },
@@ -401,7 +404,7 @@ export const sampleConversations: ConversationDto[] = [
                 at: minutesAgo(61),
             },
             {
-                role: "assistant",
+                role: "agent",
                 text: "Wir akzeptieren SEPA-Lastschrift, Kreditkarte und Rechnungskauf.",
                 at: minutesAgo(60),
             },
@@ -442,7 +445,7 @@ export const sampleConversations: ConversationDto[] = [
         ],
         lastExchange: [
             {
-                role: "assistant",
+                role: "agent",
                 text: "Your refund of $84.00 has been processed and should appear on…",
                 at: minutesAgo(131),
             },
@@ -468,7 +471,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "Can you compare Pro vs Enterprise?", at: minutesAgo(181) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "Enterprise adds SSO, audit logs, and unlimited seats. Here's a quick breakdown.",
                 at: minutesAgo(180),
             },
@@ -493,7 +496,7 @@ export const sampleConversations: ConversationDto[] = [
         lastExchange: [
             { role: "user", text: "My card was charged twice.", at: minutesAgo(301) },
             {
-                role: "assistant",
+                role: "agent",
                 text: "I see two charges on June 27 — I've refunded the duplicate. Sorry about that!",
                 at: minutesAgo(300),
             },
@@ -509,14 +512,14 @@ export const sampleConversations: ConversationDto[] = [
 // Returned by the conversation-detail mock so the transcript sheet has a full thread.
 const sampleTranscript: ConversationDto["lastExchange"] = [
     { role: "user", text: "Hi, do you have the wireless mouse in stock?", at: "2026-06-25T08:59:30Z" },
-    { role: "assistant", text: "Let me check that for you.", at: "2026-06-25T08:59:34Z" },
+    { role: "agent", text: "Let me check that for you.", at: "2026-06-25T08:59:34Z" },
     {
-        role: "assistant",
+        role: "agent",
         text: "Yes, the Wireless Mouse is in stock for $24.99. Want me to add it to your cart?",
         at: "2026-06-25T09:00:01Z",
     },
     { role: "user", text: "Yes please.", at: "2026-06-25T09:00:03Z" },
-    { role: "assistant", text: "Done — it's in your cart. Anything else?", at: "2026-06-25T09:00:04Z" },
+    { role: "agent", text: "Done — it's in your cart. Anything else?", at: "2026-06-25T09:00:04Z" },
 ];
 
 const usageSparkline = (base: number) =>
