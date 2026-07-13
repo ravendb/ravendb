@@ -79,7 +79,7 @@ export default function ServerWideTasks() {
     return (
         <div className="content-margin">
             <div className="d-flex justify-content-between">
-                <AboutViewHeading title="Server-Wide Tasks" icon="server-wide-tasks" />
+                <AboutViewHeading title="Server-Wide Tasks" icon="server-wide-tasks" marginBottom={4} />
                 <ServerWideTasksInfoHub />
             </div>
 
