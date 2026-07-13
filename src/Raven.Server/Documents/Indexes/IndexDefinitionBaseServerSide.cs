@@ -206,12 +206,12 @@ namespace Raven.Server.Documents.Indexes
             // version or higher encode them order-preserving (sign-bit flipped), so compound sorts/ranges over a
             // numeric field with negative values are correct. Older indexes keep the legacy encoding (and behavior);
             // resetting/rebuilding an index upgrades it to the fixed encoding.
-            public const long OrderPreservingCompoundNumericEncoding = 72_001; // RavenDB-26831
+            public const long CoraxOrderPreservingCompoundNumericEncoding = 72_001; // RavenDB-26831
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = OrderPreservingCompoundNumericEncoding;
+            public const long CurrentVersion = CoraxOrderPreservingCompoundNumericEncoding;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {

@@ -110,7 +110,7 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
     // what the indexer wrote. Legacy indexes get mask 0 (byte-identical to the old encoding) so reads stay correct.
     private static long GetCompoundFieldNumericXorMask(Index index)
     {
-        return index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.OrderPreservingCompoundNumericEncoding
+        return index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxOrderPreservingCompoundNumericEncoding
             ? long.MinValue
             : 0L;
     }

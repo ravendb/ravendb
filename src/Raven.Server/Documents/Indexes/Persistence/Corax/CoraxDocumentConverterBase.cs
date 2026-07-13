@@ -90,7 +90,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
         _legacyHandlingOfComplexFields = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior;
-        _compoundFieldNumericXorMask = _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.OrderPreservingCompoundNumericEncoding
+        _compoundFieldNumericXorMask = _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxOrderPreservingCompoundNumericEncoding
             ? long.MinValue
             : 0L;
 
