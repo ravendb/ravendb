@@ -299,6 +299,7 @@ rvn_init_pager(const char *filename,
     }
 
     rc = _open_pager_file(fd, global_state, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
+    fd = -1;  // _open_pager_file takes ownership of fd in all cases:
 
     if (rc == SUCCESS)
         return SUCCESS;
@@ -341,6 +342,7 @@ rvn_increase_pager_size(void *handle,
         goto error;
     }
     rc = _open_pager_file(new_fd, handle_ptr->global_state, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
+    new_fd = -1; // _open_pager_file now owns new_fd 
     if (rc == SUCCESS)
     {
         handle_ptr->global_state->ref_count++;
@@ -355,7 +357,8 @@ rvn_increase_pager_size(void *handle,
 error:
     if (rc != SUCCESS)
     {
-        close(new_fd);
+        if(new_fd != -1)
+            close(new_fd);
     }
     return rc;
 }
