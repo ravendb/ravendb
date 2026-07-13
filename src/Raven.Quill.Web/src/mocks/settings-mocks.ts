@@ -2,6 +2,7 @@ import type { LicenseResponse, QuillUsageResponse } from "@/api/generated/server
 import { apiHttp } from "./api-http";
 
 export const settingsMocks = {
+    feedback: () => apiHttp.post("/api/settings/feedback", ({ response }) => response(204).empty()),
     license: (response: LicenseResponse = sampleLicense) =>
         apiHttp.get("/api/settings/license", ({ response: res }) => res(200).json(response)),
     usage: (response: QuillUsageResponse = sampleQuillUsage) =>

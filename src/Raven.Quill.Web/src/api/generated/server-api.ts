@@ -606,6 +606,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["settings.feedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/connect": {
         parameters: {
             query?: never;
@@ -1357,6 +1373,13 @@ export interface components {
         QuillUsageResponse: {
             perApplication: components["schemas"]["QuillApplicationUsage"][];
             byPeriod: components["schemas"]["QuillPeriodUsage"][];
+        };
+        SendFeedbackRequest: {
+            name: string;
+            email: string;
+            impression: null | string;
+            message: string;
+            studioView: null | string;
         };
         SeriesData: {
             points: Record<string, unknown>[];
@@ -2896,6 +2919,46 @@ export interface operations {
             };
         };
     };
+    "settings.feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendFeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.connect": {
         parameters: {
             query?: never;
@@ -3238,6 +3301,7 @@ export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
 export type QuillApplicationUsage = components["schemas"]["QuillApplicationUsage"];
 export type QuillPeriodUsage = components["schemas"]["QuillPeriodUsage"];
 export type QuillUsageResponse = components["schemas"]["QuillUsageResponse"];
+export type SendFeedbackRequest = components["schemas"]["SendFeedbackRequest"];
 export type SeriesData = components["schemas"]["SeriesData"];
 export type SeriesKey = components["schemas"]["SeriesKey"];
 export type ServerLicenseResponse = components["schemas"]["ServerLicenseResponse"];
@@ -3310,6 +3374,7 @@ export const API_ENDPOINTS = {
         updateDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
     },
     settings: {
+        feedback: "/settings/feedback",
         license: "/settings/license",
         usage: "/settings/usage",
     },
@@ -3388,6 +3453,7 @@ export function createServerApi(client: ApiClient) {
             updateDefaultCustomization: (slug: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultCustomization(slug), request),
         },
         settings: {
+            feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
             usage: (searchParams?: { month?: string; year?: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
         },
