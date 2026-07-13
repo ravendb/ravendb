@@ -1,6 +1,7 @@
 import type { RequestHandler } from "msw";
 import { agentsMocks } from "./agents-mocks";
 import { aiConnectionStringsMocks } from "./ai-connection-strings-mocks";
+import { aiModelsMocks } from "./ai-models-mocks";
 import { appsMocks } from "./apps-mocks";
 import { authMocks } from "./auth-mocks";
 import { bootstrapMocks } from "./bootstrap-mocks";
@@ -31,6 +32,7 @@ export const defaultApiMocks = {
         aiConnectionStringsMocks.create(),
         aiConnectionStringsMocks.delete(),
     ],
+    aiModels: [aiModelsMocks.list()],
     apps: [
         appsMocks.list(),
         appsMocks.detail(),

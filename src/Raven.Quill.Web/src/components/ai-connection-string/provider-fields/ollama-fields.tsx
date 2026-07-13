@@ -1,4 +1,4 @@
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import type { AiModelType } from "@/api/generated/server-api";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
@@ -8,9 +8,7 @@ import {
     EmbeddingsMaxConcurrentBatchesField,
     TemperatureField,
 } from "@/components/ai-connection-string/provider-fields/shared-fields";
-
-const CHAT_MODELS = ["llama3.1", "llama3.2", "qwen2.5", "mistral", "phi3", "gemma2"];
-const EMBEDDINGS_MODELS = ["nomic-embed-text", "mxbai-embed-large", "all-minilm"];
+import { useAiModelOptions } from "@/components/ai-connection-string/use-ai-model-options";
 
 const THINK_OPTIONS: FormSelectOption<ConnectionStringFormData["ollamaSettings"]["think"]>[] = [
     { value: "default", label: "Default" },
@@ -22,6 +20,17 @@ export function OllamaFields({ modelType }: { modelType: AiModelType }) {
     const { control } = useFormContext<ConnectionStringFormData>();
     const isChat = modelType === "Chat";
 
+    const uri = useWatch({ control, name: "ollamaSettings.uri" });
+    const trimmedUri = uri.trim();
+    const models = useAiModelOptions(
+        trimmedUri
+            ? {
+                  connectorType: "Ollama",
+                  ollamaSettings: { uri: trimmedUri },
+              }
+            : null,
+    );
+
     return (
         <>
             <FormInput control={control} name="ollamaSettings.uri" label="URI" placeholder="http://localhost:11434/" />
@@ -29,8 +38,9 @@ export function OllamaFields({ modelType }: { modelType: AiModelType }) {
                 control={control}
                 name="ollamaSettings.model"
                 label="Model"
-                placeholder="llama3.1, mistral, …"
-                options={isChat ? CHAT_MODELS : EMBEDDINGS_MODELS}
+                placeholder="Select a model or enter a new one"
+                options={models}
+                emptyMessage={trimmedUri ? "No models found." : "Provide a URI to load available models."}
             />
             {isChat ? (
                 <>

@@ -1,4 +1,4 @@
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import type { AiModelType } from "@/api/generated/server-api";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
@@ -9,15 +9,37 @@ import {
     PromptCacheField,
     TemperatureField,
 } from "@/components/ai-connection-string/provider-fields/shared-fields";
+import { useAiModelOptions } from "@/components/ai-connection-string/use-ai-model-options";
 
-// TODO get models from EP (not implemented yet)
-const CHAT_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "o3", "o4-mini"];
-const EMBEDDINGS_MODELS = ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"];
 const ENDPOINTS = ["https://api.openai.com/v1/"];
 
 export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
     const { control } = useFormContext<ConnectionStringFormData>();
     const isChat = modelType === "Chat";
+
+    const [apiKey, endpoint, organizationId, projectId] = useWatch({
+        control,
+        name: [
+            "openAiSettings.apiKey",
+            "openAiSettings.endpoint",
+            "openAiSettings.organizationId",
+            "openAiSettings.projectId",
+        ],
+    });
+    const trimmedApiKey = apiKey.trim();
+    const models = useAiModelOptions(
+        trimmedApiKey
+            ? {
+                  connectorType: "OpenAi",
+                  openAiSettings: {
+                      apiKey: trimmedApiKey,
+                      endpoint: endpoint.trim(),
+                      organizationId: organizationId.trim(),
+                      projectId: projectId.trim(),
+                  },
+              }
+            : null,
+    );
 
     return (
         <>
@@ -32,8 +54,9 @@ export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
                 control={control}
                 name="openAiSettings.model"
                 label="Model"
-                placeholder="gpt-4o, gpt-4-turbo, …"
-                options={isChat ? CHAT_MODELS : EMBEDDINGS_MODELS}
+                placeholder="Select a model or enter a new one"
+                options={models}
+                emptyMessage={trimmedApiKey ? "No models found." : "Provide an API key to load available models."}
             />
             <FormAutocomplete
                 control={control}
