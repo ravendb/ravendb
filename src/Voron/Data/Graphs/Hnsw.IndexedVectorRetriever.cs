@@ -25,5 +25,10 @@ public partial class Hnsw
         }
 
         public ConvertTo Type => ConvertTo.Base64;
+
+        public void Dispose()
+        {
+            _searchState.Dispose();
+        }
     }
 }

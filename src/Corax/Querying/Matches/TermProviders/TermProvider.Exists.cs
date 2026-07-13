@@ -32,6 +32,8 @@ namespace Corax.Querying.Matches.TermProviders
         
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
+        private CompactKey _termsRetrieverKey;
+
         public ExistsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field)
         {
             _tree = tree;
@@ -90,8 +92,10 @@ namespace Corax.Querying.Matches.TermProviders
                 term = _searcher.TermQuery(_field, containerId: _postingListId, 1D);
                 return true;
             }
-            
-            while (_iterator.MoveNext(out var key, out _, out _))
+          
+            using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
+            var key = scope.Key;
+            while (_iterator.MoveNext(key, out _, out _))
             {
                 term = _searcher.TermQuery(_field, key, _tree);
                 return true;
@@ -110,9 +114,11 @@ namespace Corax.Querying.Matches.TermProviders
                 return true;
             }
             
-            while (_iterator.MoveNext(out var compactKey, out long _, out _))
+            // Reuse a single key across the whole scan, term's span is valid to next GetNextTerm() call 
+            _termsRetrieverKey ??= _searcher._transaction.LowLevelTransaction.AcquireCompactKey();
+            while (_iterator.MoveNext(_termsRetrieverKey, out long _, out _))
             {
-                var key = compactKey.Decoded();
+                var key = _termsRetrieverKey.Decoded();
                 int termSize = key.Length;
                 if (key.Length > 1)
                 {
@@ -126,6 +132,12 @@ namespace Corax.Querying.Matches.TermProviders
 
             term = Span<byte>.Empty;
             return false;
+        }
+
+        public void Dispose()
+        {
+            if (_termsRetrieverKey != null)
+                _searcher._transaction.LowLevelTransaction.ReleaseCompactKey(ref _termsRetrieverKey);
         }
 
         public ConvertTo Type => ConvertTo.String;
