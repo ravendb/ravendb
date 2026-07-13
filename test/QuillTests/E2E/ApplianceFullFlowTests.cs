@@ -56,7 +56,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         var openAiKey = RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey;
         if (string.IsNullOrWhiteSpace(openAiKey))
         {
-            Assert.Skip("Set RAVEN_AI_INTEGRATION_OPENAI_API_KEY to a real OpenAI key — T11a provisions an OpenAI " +
+            Assert.Skip("Set RAVEN_QUILL_INTEGRATION_OPENAI_API_KEY to a real OpenAI key — T11a provisions an OpenAI " +
                 "connection string and T14 asserts a real streamed reply through it.");
         }
 

@@ -9,8 +9,8 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const webDirectory = path.resolve(scriptDirectory, "..");
 const repoRoot = path.resolve(webDirectory, "..", "..");
 const backendProject = path.resolve(repoRoot, "src", "Raven.Quill", "Raven.Quill.csproj");
-const specPath = process.env.RAVEN_AI_OPENAPI_SPEC_PATH
-    ? path.resolve(webDirectory, process.env.RAVEN_AI_OPENAPI_SPEC_PATH)
+const specPath = process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH
+    ? path.resolve(webDirectory, process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH)
     : path.resolve(repoRoot, "src", "Raven.Quill", "obj", "openapi", "ai-appliance.json");
 const outputPath = path.resolve(webDirectory, "src", "api", "generated", "server-api.ts");
 const openApiTypescriptCliPath = path.resolve(webDirectory, "node_modules", "openapi-typescript", "bin", "cli.js");
@@ -18,7 +18,7 @@ const tempSpecPath = path.join(os.tmpdir(), `raven-ai-appliance-openapi-${proces
 const tempTypesPath = path.join(os.tmpdir(), `raven-ai-appliance-openapi-${process.pid}.ts`);
 
 try {
-    if (process.env.RAVEN_AI_OPENAPI_SKIP_SPEC_BUILD !== "1") {
+    if (process.env.RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD !== "1") {
         run("dotnet", ["build", backendProject, "--nologo", "--tl:off"], repoRoot);
     }
 

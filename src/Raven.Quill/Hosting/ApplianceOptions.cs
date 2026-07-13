@@ -14,7 +14,7 @@ public sealed class ApplianceOptions
     /// Loopback HTTPS port RavenDB binds inside the container once the nginx <c>:443</c> SNI front owns
     /// 443 (Phase 1). The secure store connects to RavenDB on this port; the s6 <c>01-ravendb</c> run
     /// script rewrites the setup package's <c>ServerUrl</c> to match. Bound from
-    /// <c>RAVEN_AI_RAVENDB_INTERNAL_PORT</c>. Keep in sync with that script.
+    /// <c>RAVEN_QUILL_RAVENDB_INTERNAL_PORT</c>. Keep in sync with that script.
     /// </summary>
     public int RavenInternalPort { get; set; } = 8443;
 
@@ -51,13 +51,13 @@ public sealed class ApplianceOptions
     /// When empty (WAF tests, local <c>dotnet run</c>, any unsupervised host)
     /// the endpoint stays in-process and flips bootstrap to Ready inline —
     /// there's no supervisor to restart us cleanly. Bound from
-    /// <c>RAVEN_AI_RAVENDB_S6_SERVICE</c>.
+    /// <c>RAVEN_QUILL_RAVENDB_S6_SERVICE</c>.
     /// </summary>
     public string? RavenDbS6Service { get; set; }
 
     /// <summary>
     /// Default upstream license-redemption endpoint. Production uses this as-is;
-    /// tests and local dev override via <c>RAVEN_AI_LICENSE_API_URL</c>. Exposed
+    /// tests and local dev override via <c>RAVEN_QUILL_LICENSE_API_URL</c>. Exposed
     /// as a constant so the dev-mode startup warning in <c>Program.cs</c> can
     /// compare against the same string without drifting.
     /// </summary>
@@ -66,12 +66,12 @@ public sealed class ApplianceOptions
     /// <summary>
     /// Base address of the public license API. Startup activation fetches the setup-package zip via
     /// <c>GET {LicenseApiUrl}/api/v1/quill/licenses/{token}</c> (RavenDB-26783). Bound from
-    /// <c>RAVEN_AI_LICENSE_API_URL</c>. Tests point this at an in-process mock (<c>MockLicenseApi</c>).
+    /// <c>RAVEN_QUILL_LICENSE_API_URL</c>. Tests point this at an in-process mock (<c>MockLicenseApi</c>).
     /// </summary>
     public string LicenseApiUrl { get; set; } = DefaultLicenseApiUrl;
 
     /// <summary>
-    /// AI-Helper endpoint override. Bound from <c>RAVEN_AI_API_URL</c>. Left unset in production:
+    /// AI-Helper endpoint override. Bound from <c>RAVEN_QUILL_API_URL</c>. Left unset in production:
     /// the AI Helper proxies through the bundled RavenDB (<c>/assistant/assist</c>), so the base
     /// address is derived from the store's own node URL. Tests set this to an in-process mock that
     /// stands in for that proxy hop. <see cref="UrlAttribute"/> + the options pipeline's

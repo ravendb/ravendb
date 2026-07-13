@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# RavenDB AI Appliance — single-image build for the 8-week internal demo.
+# RavenDB Quill — single-image build for the 8-week internal demo.
 #
 # Build context is the RavenDB repo root. Invoke via scripts/ai-appliance/up.ps1
 # or directly:
@@ -86,7 +86,7 @@ COPY --from=appliance-openapi-build /src/src/Raven.AiAppliance/obj/openapi/ai-ap
 COPY src/Raven.AiAppliance.Web/ ./src/Raven.AiAppliance.Web/
 
 WORKDIR /workspace/src/Raven.AiAppliance.Web
-ENV RAVEN_AI_OPENAPI_SKIP_SPEC_BUILD=1
+ENV RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD=1
 RUN pnpm build
 
 # -----------------------------------------------------------------------------
@@ -174,12 +174,12 @@ EXPOSE 5000 443
 
 VOLUME /var/lib/ai-appliance
 
-ENV RAVEN_AI_RAVEN_URL=http://127.0.0.1:8080 \
-    RAVEN_AI_WEB_LISTEN_URL=http://0.0.0.0:5000 \
-    RAVEN_AI_CONFIG_DB=quill-config \
-    RAVEN_AI_SETUP_PACKAGE_PATH=/var/lib/ai-appliance/setup \
-    RAVEN_AI_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
-    RAVEN_AI_RAVENDB_INTERNAL_PORT=8443 \
+ENV RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
+    RAVEN_QUILL_WEB_LISTEN_URL=http://0.0.0.0:5000 \
+    RAVEN_QUILL_CONFIG_DB=quill-config \
+    RAVEN_QUILL_SETUP_PACKAGE_PATH=/var/lib/ai-appliance/setup \
+    RAVEN_QUILL_RAVENDB_S6_SERVICE=/run/service/01-ravendb \
+    RAVEN_QUILL_RAVENDB_INTERNAL_PORT=8443 \
     RAVEN_DataDir=/var/lib/ai-appliance/ravendb
 
 ENTRYPOINT ["/init"]

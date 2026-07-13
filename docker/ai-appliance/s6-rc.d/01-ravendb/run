@@ -17,7 +17,7 @@ mkdir -p /var/lib/ai-appliance/ravendb
 # next to the unpacked package as the file `admin-thumbprint`. Reading it here
 # rather than extracting from the PFX with openssl avoids PKCS#12 bag-ordering
 # quirks and one less binary dependency in the runtime image.
-SETUP_DIR="${RAVEN_AI_SETUP_PACKAGE_PATH:-/var/lib/ai-appliance/setup}"
+SETUP_DIR="${RAVEN_QUILL_SETUP_PACKAGE_PATH:-/var/lib/ai-appliance/setup}"
 SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
 if [ -f "$SETUP_SETTINGS" ]; then
     cp "$SETUP_SETTINGS" /app/ravendb/settings.json
@@ -26,7 +26,7 @@ if [ -f "$SETUP_SETTINGS" ]; then
     # wins over env in RavenDB's config precedence, so rewrite the copied file (keep https — the
     # scheme-match validator requires ServerUrl/PublicServerUrl schemes to agree). The appliance connects
     # to RavenDB on this port (RavenStoreFactory.RavenInternalPort); nginx passes db.*/a.* through to it.
-    RAVENDB_PORT="${RAVEN_AI_RAVENDB_INTERNAL_PORT:-8443}"
+    RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
     sed -i -E "s#(\"ServerUrl\"[[:space:]]*:[[:space:]]*\")https://[^\"]*(\")#\1https://127.0.0.1:${RAVENDB_PORT}\2#" /app/ravendb/settings.json
 
     # A/settings.json references Security.Certificate.Path as a bare filename

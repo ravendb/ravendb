@@ -27,7 +27,7 @@ var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name ==
 
 // Kestrel listen URL is needed before IOptions<ApplianceOptions> is resolved;
 // read the env directly. The full options object owns the remaining knobs.
-var listenUrl = Environment.GetEnvironmentVariable("RAVEN_AI_WEB_LISTEN_URL") ?? "http://0.0.0.0:5000";
+var listenUrl = Environment.GetEnvironmentVariable("RAVEN_QUILL_WEB_LISTEN_URL") ?? "http://0.0.0.0:5000";
 builder.WebHost.UseUrls(listenUrl);
 
 builder.Services.ConfigureHttpJsonOptions(static options =>
@@ -72,16 +72,16 @@ builder.Logging.AddFilter("Polly", LogLevel.None);
 builder.Services.AddOptions<ApplianceOptions>()
     .Configure(options =>
     {
-        ReadEnv("RAVEN_AI_RAVEN_URL",            v => options.RavenUrl = v);
-        ReadEnv("RAVEN_AI_WEB_LISTEN_URL",       v => options.WebListenUrl = v);
-        ReadEnv("RAVEN_AI_CONFIG_DB",            v => options.ConfigDatabase = v);
-        ReadEnv("RAVEN_AI_SETUP_PACKAGE_PATH",   v => options.SetupPackagePath = v);
-        ReadEnv("RAVEN_AI_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
-        ReadEnv("RAVEN_AI_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
-        ReadEnv("RAVEN_AI_API_URL",              v => options.AiApiUrl = v);
+        ReadEnv("RAVEN_QUILL_RAVEN_URL",            v => options.RavenUrl = v);
+        ReadEnv("RAVEN_QUILL_WEB_LISTEN_URL",       v => options.WebListenUrl = v);
+        ReadEnv("RAVEN_QUILL_CONFIG_DB",            v => options.ConfigDatabase = v);
+        ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH",   v => options.SetupPackagePath = v);
+        ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
+        ReadEnv("RAVEN_QUILL_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
+        ReadEnv("RAVEN_QUILL_API_URL",              v => options.AiApiUrl = v);
         ReadEnv("QUILL_LICENSE_KEY",             v => options.LicenseToken = v);
         ReadEnv("QUILL_API_KEY",                 v => options.ApiKey = v);
-        ReadEnv("RAVEN_AI_RAVENDB_INTERNAL_PORT", v => { if (int.TryParse(v, out var p)) options.RavenInternalPort = p; });
+        ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v => { if (int.TryParse(v, out var p)) options.RavenInternalPort = p; });
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -270,7 +270,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
-// Dev-mode safeguard: with a QUILL_LICENSE_KEY set but no RAVEN_AI_LICENSE_API_URL override, a local
+// Dev-mode safeguard: with a QUILL_LICENSE_KEY set but no RAVEN_QUILL_LICENSE_API_URL override, a local
 // run hits the real api.ravendb.net during startup activation and hangs (no test license to redeem);
 // with no token, activation is skipped and nothing is hit. Warn loudly at startup; in Production we trust the default.
 {
@@ -279,7 +279,7 @@ if (app.Environment.IsDevelopment())
         string.Equals(opts.LicenseApiUrl, ApplianceOptions.DefaultLicenseApiUrl, StringComparison.OrdinalIgnoreCase))
     {
         app.Logger.LogWarning(
-            "LicenseApiUrl is set to the production default ({Default}); set RAVEN_AI_LICENSE_API_URL to a mock or staging endpoint for local development.",
+            "LicenseApiUrl is set to the production default ({Default}); set RAVEN_QUILL_LICENSE_API_URL to a mock or staging endpoint for local development.",
             ApplianceOptions.DefaultLicenseApiUrl);
     }
 }
