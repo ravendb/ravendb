@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop and remove the running RavenDB AI Appliance demo container.
+  Stop and remove the running RavenDB Quill demo container.
 
 .PARAMETER PurgeData
   Also delete the named Docker volume (drops @quill-config and all

@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-  Build and run the RavenDB AI Appliance demo image.
+  Build and run the RavenDB Quill demo image.
 
 .DESCRIPTION
   Builds the single-image appliance from the RavenDB repo root and runs the
@@ -56,7 +56,7 @@
 .NOTES
   The appliance pulls its setup package at startup from the real license API
   (GET /api/v1/quill/licenses/{token}). Pass a real emitted -LicenseKey; with
-  -RavenApiEnv test the download targets test.api.ravendb.net (RAVEN_AI_LICENSE_API_URL),
+  -RavenApiEnv test the download targets test.api.ravendb.net (RAVEN_QUILL_LICENSE_API_URL),
   otherwise production https://api.ravendb.net. There is no local-zip / offline demo mode.
 #>
 [CmdletBinding()]
@@ -121,13 +121,13 @@ $runArgs = @(
     '-e', "QUILL_LICENSE_KEY=$LicenseKey"
 )
 # Point the bundled RavenDB server's AI Helper (RAVEN_API_ENV) AND the appliance's own license
-# download (RAVEN_AI_LICENSE_API_URL) at a specific api.ravendb.net environment (e.g. 'test' ->
+# download (RAVEN_QUILL_LICENSE_API_URL) at a specific api.ravendb.net environment (e.g. 'test' ->
 # test.api.ravendb.net). Unset -> production. with-contenv in the 01-ravendb s6 run script imports
 # RAVEN_API_ENV into the RavenDB process env automatically.
 if ($RavenApiEnv) {
     Write-Host "Routing AI Helper + license download to ${RavenApiEnv}.api.ravendb.net" -ForegroundColor DarkGray
     $runArgs += @('-e', "RAVEN_API_ENV=$RavenApiEnv")
-    $runArgs += @('-e', "RAVEN_AI_LICENSE_API_URL=https://${RavenApiEnv}.api.ravendb.net")
+    $runArgs += @('-e', "RAVEN_QUILL_LICENSE_API_URL=https://${RavenApiEnv}.api.ravendb.net")
 }
 if ($WithStudio) {
     Write-Host "-WithStudio: importing the admin client cert so the browser can reach RavenDB Studio at https://db.egor-ai.ravendb.run/." -ForegroundColor Yellow

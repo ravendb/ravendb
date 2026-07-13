@@ -1,4 +1,4 @@
-# RavenDB AI Appliance — demo runbook (from scratch)
+# RavenDB Quill — demo runbook (from scratch)
 
 End-to-end: stand up the appliance in Docker, point it at a Northwind PostgreSQL source it mirrors via CDC,
 provision an AI agent, and chat with it through an embeddable iframe.
