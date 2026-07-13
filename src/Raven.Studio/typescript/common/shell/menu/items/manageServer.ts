@@ -14,6 +14,8 @@ import ServerSettings = require("components/pages/resources/manageServer/serverS
 import AdminLogs = require("components/pages/resources/manageServer/adminLogs/AdminLogs");
 import Certificates = require("components/pages/resources/manageServer/certificates/Certificates");
 import ServerWideConnectionStrings = require("components/pages/resources/manageServer/serverWideConnectionStrings/ServerWideConnectionStrings");
+import ServerWideTasks = require("components/pages/resources/manageServer/serverWideTasks/ServerWideTasks");
+import AddServerWideTask = require("components/pages/resources/manageServer/serverWideTasks/AddServerWideTask");
 
 export = getManageServerMenuItem;
 
@@ -115,7 +117,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideTasks',
-            moduleId: require("viewmodels/manage/serverWideTasks"),
+            moduleId: reactUtils.bridgeToReact(ServerWideTasks.default, "nonShardedView"),
             title: "Server-Wide Tasks",
             nav: true,
             css: 'icon-server-wide-tasks',
@@ -127,6 +129,20 @@ function getManageServerMenuItem() {
                     { name: "Server-Wide Periodic Backup" },
                 ],
             },
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/serverWideTasks/add',
+            moduleId: reactUtils.bridgeToReact(AddServerWideTask.default, "nonShardedView"),
+            title: "Add a Server-Wide Task",
+            nav: false,
+            css: "icon-plus",
+            dynamicHash: appUrl.forAddServerWideTask,
+            itemRouteToHighlight: 'admin/settings/serverWideTasks',
+            requiredAccess: "ClusterAdmin",
+            search: {
+                overrideTitle: "Add New Server-Wide Task",
+                alternativeTitles: ["Create Server-Wide Task"],
+            }
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideBackup',

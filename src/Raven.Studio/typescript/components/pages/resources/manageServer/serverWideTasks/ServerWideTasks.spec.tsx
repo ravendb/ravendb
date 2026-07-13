@@ -45,7 +45,7 @@ describe("ServerWideTasks", () => {
 
         await fireClick(screen.getByText("Delete"));
 
-        expect(screen.queryByText(/You're about to/)).toBeInTheDocument();
+        expect(await screen.findByText(/You're about to/)).toBeInTheDocument();
     });
 
     it("can filter tasks by name", async () => {
