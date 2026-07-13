@@ -1,0 +1,43 @@
+/* Token colors shared by the interactive AceEditor and static highlighted code blocks
+   (.ace-static-code, produced by static-highlight.ts). */
+
+:is(.ace-editor, .ace-static-code) .ace_keyword,
+:is(.ace-editor, .ace-static-code) .ace_meta,
+:is(.ace-editor, .ace-static-code) .ace_storage,
+:is(.ace-editor, .ace-static-code) .ace_support.ace_function {
+    color: oklch(0.5 0.18 260);
+}
+
+:is(.ace-editor, .ace-static-code) .ace_constant,
+:is(.ace-editor, .ace-static-code) .ace_constant.ace_numeric {
+    color: oklch(0.52 0.15 35);
+}
+
+:is(.ace-editor, .ace-static-code) .ace_string {
+    color: oklch(0.45 0.12 150);
+}
+
+:is(.ace-editor, .ace-static-code) .ace_comment {
+    color: var(--color-muted-foreground);
+}
+
+:is(.ace-editor, .ace-static-code) .ace_invalid {
+    background: color-mix(in oklch, var(--color-destructive) 22%, transparent);
+    color: var(--color-destructive);
+}
+
+.dark :is(.ace-editor, .ace-static-code) .ace_keyword,
+.dark :is(.ace-editor, .ace-static-code) .ace_meta,
+.dark :is(.ace-editor, .ace-static-code) .ace_storage,
+.dark :is(.ace-editor, .ace-static-code) .ace_support.ace_function {
+    color: oklch(0.75 0.13 265);
+}
+
+.dark :is(.ace-editor, .ace-static-code) .ace_constant,
+.dark :is(.ace-editor, .ace-static-code) .ace_constant.ace_numeric {
+    color: oklch(0.76 0.13 65);
+}
+
+.dark :is(.ace-editor, .ace-static-code) .ace_string {
+    color: oklch(0.72 0.12 155);
+}

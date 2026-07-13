@@ -1,8 +1,16 @@
 import { Copy } from "lucide-react";
+import { highlightCode, type HighlightLanguage } from "@/components/ace-editor/static-highlight";
 import { Button } from "@/components/shadcn/ui/button";
 import { cn, copyToClipboard } from "@/lib/utils";
 
-export function CopyableCode({ code, copyLabel, className }: { code: string; copyLabel: string; className?: string }) {
+type CopyableCodeProps = {
+    code: string;
+    copyLabel: string;
+    language?: HighlightLanguage;
+    className?: string;
+};
+
+export function CopyableCode({ code, copyLabel, language, className }: CopyableCodeProps) {
     return (
         <div className="relative min-w-0">
             <pre
@@ -11,7 +19,11 @@ export function CopyableCode({ code, copyLabel, className }: { code: string; cop
                     className,
                 )}
             >
-                <code>{code}</code>
+                {language ? (
+                    <code dangerouslySetInnerHTML={{ __html: highlightCode(code, language) }} />
+                ) : (
+                    <code>{code}</code>
+                )}
             </pre>
             <Button
                 type="button"
