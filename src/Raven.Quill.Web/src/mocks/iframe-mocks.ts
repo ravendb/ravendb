@@ -6,21 +6,40 @@ import type {
 } from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
 
-// The widget's base stylesheet as the server ships it (see EmbedEndpoints.WidgetBaseCss): the
-// generated :root variables followed by the layout rules, rule bodies on single lines. The editor
-// formats this on load, so keeping it unformatted here mirrors the real payload.
-export const SAMPLE_WIDGET_BASE_CSS = `:root {
+// The built-in presets' :root variable blocks as the server ships them (see
+// IFrameStyleVariables.BuildRootBlock), injected into the preview to render a preset live.
+export const SAMPLE_LIGHT_THEME_CSS = `:root {
   --ai-bg: #ffffff;
   --ai-fg: #0f172a;
   --ai-border-color: #e2e8f0;
   --ai-bubble-agent-bg: #f1f5f9;
-  --ai-user-bg: #2563eb;
+  --ai-user-bg: #388ee9;
   --ai-user-fg: #ffffff;
+  --ai-input-bg: #ffffff;
   --ai-input-border-color: #cbd5e1;
   --ai-radius-bubble: 12px;
   --ai-radius-control: 8px;
   --ai-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
+}`;
+
+export const SAMPLE_DARK_THEME_CSS = `:root {
+  --ai-bg: #0f1425;
+  --ai-fg: #e5e9f5;
+  --ai-border-color: #252d4a;
+  --ai-bubble-agent-bg: #1b2340;
+  --ai-user-bg: #388ee9;
+  --ai-user-fg: #ffffff;
+  --ai-input-bg: #161d36;
+  --ai-input-border-color: #303a5e;
+  --ai-radius-bubble: 12px;
+  --ai-radius-control: 8px;
+  --ai-font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}`;
+
+// The widget's base stylesheet as the server ships it (see EmbedEndpoints.WidgetBaseCss): the
+// Light preset's :root variables followed by the layout rules, rule bodies on single lines. The
+// editor formats this on load, so keeping it unformatted here mirrors the real payload.
+export const SAMPLE_WIDGET_BASE_CSS = `${SAMPLE_LIGHT_THEME_CSS}
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; background: var(--ai-bg); color: var(--ai-fg); font-family: var(--ai-font-family); }
   #ai-chat { display: flex; flex-direction: column; height: 100%; }
@@ -30,7 +49,7 @@ export const SAMPLE_WIDGET_BASE_CSS = `:root {
   .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
   .row.agent { background: var(--ai-bubble-agent-bg); }
   #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ai-border-color); }
-  #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); font-size: 14px; }
+  #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); background: var(--ai-input-bg); color: var(--ai-fg); font-size: 14px; }
   #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: var(--ai-radius-control); background: var(--ai-user-bg); color: var(--ai-user-fg); cursor: pointer; }`;
 
 // A saved channel customization, formatted the way an operator leaves it after editing.
@@ -43,7 +62,7 @@ export const SAMPLE_CUSTOM_CSS = `:root {
     color: #ffffff;
 }`;
 
-// The app-level default a channel inherits when it has no CSS of its own.
+// The app-level default custom CSS a channel inherits when it makes no choice of its own.
 export const SAMPLE_DEFAULT_CSS = `:root {
     --ai-user-bg: #7c3aed;
     --ai-font-family: Georgia, "Times New Roman", serif;
@@ -79,29 +98,46 @@ ${SAMPLE_WIDGET_BASE_CSS}
 
 export const iframeMocks = {
     getCustomization: (
-        customization: IFrameCustomizationResponse = { css: SAMPLE_CUSTOM_CSS, defaultCss: SAMPLE_DEFAULT_CSS },
+        customization: IFrameCustomizationResponse = {
+            style: "Custom",
+            css: SAMPLE_CUSTOM_CSS,
+            defaultStyle: "Custom",
+            defaultCss: SAMPLE_DEFAULT_CSS,
+        },
     ) =>
         apiHttp.get("/api/apps/{slug}/iframe/{widgetId}/customization", ({ response }) =>
             response(200).json(customization),
         ),
-    updateCustomization: (defaultCss: string | null = SAMPLE_DEFAULT_CSS) =>
+    updateCustomization: (
+        appDefault: Pick<IFrameCustomizationResponse, "defaultStyle" | "defaultCss"> = {
+            defaultStyle: "Custom",
+            defaultCss: SAMPLE_DEFAULT_CSS,
+        },
+    ) =>
         apiHttp.put("/api/apps/{slug}/iframe/{widgetId}/customization", async ({ request, response }) => {
             const body = await request.json();
-            return response(200).json({ css: body.css, defaultCss });
+            return response(200).json({ style: body.style, css: body.css, ...appDefault });
         }),
-    getDefaultCustomization: (defaultCustomization: IFrameDefaultCustomizationResponse = { css: null }) =>
+    getDefaultCustomization: (
+        defaultCustomization: IFrameDefaultCustomizationResponse = { style: "Light", css: null },
+    ) =>
         apiHttp.get("/api/apps/{slug}/iframe/default-customization", ({ response }) =>
             response(200).json(defaultCustomization),
         ),
     updateDefaultCustomization: () =>
         apiHttp.put("/api/apps/{slug}/iframe/default-customization", async ({ request, response }) => {
             const body = await request.json();
-            return response(200).json({ css: body.css });
+            return response(200).json({ style: body.style ?? "Light", css: body.css });
         }),
     preview: (preview: IFramePreviewResponse = { html: SAMPLE_PREVIEW_HTML }) =>
         apiHttp.get("/api/apps/{slug}/iframe/preview", ({ response }) => response(200).json(preview)),
-    styleGuide: (styleGuide: IFrameStyleGuideResponse = { baseCss: SAMPLE_WIDGET_BASE_CSS }) =>
-        apiHttp.get("/api/apps/{slug}/iframe/style-guide", ({ response }) => response(200).json(styleGuide)),
+    styleGuide: (
+        styleGuide: IFrameStyleGuideResponse = {
+            baseCss: SAMPLE_WIDGET_BASE_CSS,
+            lightThemeCss: SAMPLE_LIGHT_THEME_CSS,
+            darkThemeCss: SAMPLE_DARK_THEME_CSS,
+        },
+    ) => apiHttp.get("/api/apps/{slug}/iframe/style-guide", ({ response }) => response(200).json(styleGuide)),
 };
 
 // Happy-path handlers for every iframe endpoint (the story default). Because a story override

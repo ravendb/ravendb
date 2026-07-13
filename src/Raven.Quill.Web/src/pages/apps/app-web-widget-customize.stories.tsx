@@ -19,17 +19,41 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The widget has its own saved CSS layered over the app default; "Reset to default" restores the default.
+// The widget has its own saved custom CSS: the "Custom CSS" card is selected and the editor shows it.
 export const Default: Story = {};
 
-// The widget inherits the app default (no CSS of its own): the editor pre-fills with the
-// formatted app default, which "Reset to default" restores.
-export const InheritsAppDefault: Story = {
+// The widget follows the app default (no choice of its own): the "App default" card is selected
+// and describes what the app default currently resolves to.
+export const FollowsAppDefault: Story = {
     parameters: {
         msw: {
             handlers: {
                 iframe: [
-                    iframeMocks.getCustomization({ css: null, defaultCss: SAMPLE_DEFAULT_CSS }),
+                    iframeMocks.getCustomization({
+                        style: null,
+                        css: null,
+                        defaultStyle: "Custom",
+                        defaultCss: SAMPLE_DEFAULT_CSS,
+                    }),
+                    ...iframeHandlers(),
+                ],
+            },
+        },
+    },
+};
+
+// The widget uses a built-in preset: the preview renders the Dark theme with no CSS editor.
+export const DarkPreset: Story = {
+    parameters: {
+        msw: {
+            handlers: {
+                iframe: [
+                    iframeMocks.getCustomization({
+                        style: "Dark",
+                        css: null,
+                        defaultStyle: "Light",
+                        defaultCss: null,
+                    }),
                     ...iframeHandlers(),
                 ],
             },

@@ -61,11 +61,11 @@ public static class EmbedEndpoints
     {
         var ct = ctx.RequestAborted;
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveCss: true, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveStyle: true, ct);
         if (resolved is null)
             return;
 
-        var (app, link, channel, customCss) = resolved.Value;
+        var (app, link, channel, style) = resolved.Value;
 
         // Contain the page — and, above all, operator-authored __CUSTOM_CSS__ — with a default-deny
         // resource policy, then append frame-ancestors from the configured origins (empty list =
@@ -93,7 +93,7 @@ public static class EmbedEndpoints
         var historyJson = await BuildHistoryJsonAsync(store, app.Database, link.ConversationId, ct);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName, customCss, historyJson), ct);
+        await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName, style, historyJson), ct);
     }
 
     private static async Task StreamEmbedChatAsync(
@@ -113,7 +113,7 @@ public static class EmbedEndpoints
             return;
         }
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveCss: false, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveStyle: false, ct);
         if (resolved is null)
             return;
 
@@ -327,8 +327,8 @@ public static class EmbedEndpoints
     /// (unresolved / malformed) or 410 (disabled channel / revoked / expired) and
     /// returning null in those cases; otherwise the live (App, EmbedLink, Channel).
     /// The invocation cap is enforced separately at chat time (429).</summary>
-    private static async Task<(App app, EmbedLink link, Channel channel, string? effectiveCss)?> TryResolveLiveLinkAsync(
-        HttpContext ctx, IDocumentStore store, string token, bool resolveCss, CancellationToken ct)
+    private static async Task<(App app, EmbedLink link, Channel channel, ResolvedIFrameStyle style)?> TryResolveLiveLinkAsync(
+        HttpContext ctx, IDocumentStore store, string token, bool resolveStyle, CancellationToken ct)
     {
         if (EmbedLink.IsWellFormedToken(token) == false)
         {
@@ -336,7 +336,7 @@ public static class EmbedEndpoints
             return null;
         }
 
-        var resolved = await ResolveAsync(store, token, resolveCss, ct);
+        var resolved = await ResolveAsync(store, token, resolveStyle, ct);
         if (resolved is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -359,12 +359,12 @@ public static class EmbedEndpoints
     /// <summary>Resolves a token by hopping config DB → app DB:
     /// <c>link-index/{token}</c> → <c>apps/{slug}</c> → (<c>embed-links/{token}</c>,
     /// <c>channels/{widgetId}</c>). Null on any miss (callers surface as 404). When
-    /// <paramref name="resolveCss"/> is set (the page render path) the effective embed CSS is
-    /// resolved on the same app-DB session — the channel's own <see cref="Channel.CustomCss"/> if
-    /// present, else the app-level <see cref="IFrameStyleDefaults"/> — so rendering needs no second
+    /// <paramref name="resolveStyle"/> is set (the page render path) the effective embed style is
+    /// resolved on the same app-DB session — the channel's own <see cref="Channel.Style"/> if
+    /// chosen, else the app-level <see cref="IFrameStyleDefaults"/> — so rendering needs no second
     /// session. The chat path passes <c>false</c> and skips that load.</summary>
-    private static async Task<(App app, EmbedLink link, Channel channel, string? effectiveCss)?> ResolveAsync(
-        IDocumentStore store, string token, bool resolveCss, CancellationToken ct)
+    private static async Task<(App app, EmbedLink link, Channel channel, ResolvedIFrameStyle style)?> ResolveAsync(
+        IDocumentStore store, string token, bool resolveStyle, CancellationToken ct)
     {
         App? app;
         using (var cfg = store.OpenAsyncSession())
@@ -381,7 +381,7 @@ public static class EmbedEndpoints
 
         EmbedLink? link;
         Channel? channel;
-        string? effectiveCss = null;
+        ResolvedIFrameStyle style = default;
         using (var session = store.OpenAsyncSession(app.Database))
         {
             link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token, ct);
@@ -390,14 +390,15 @@ public static class EmbedEndpoints
 
             channel = await session.LoadAsync<Channel>(Channel.IdPrefix + link.WidgetId, ct);
 
-            // Resolve the embed CSS while the app-DB session is open (render path only): the channel's
-            // own CSS wins, otherwise fall back to the app-level default, loaded only when needed. This
+            // Resolve the embed style while the app-DB session is open (render path only): the channel's
+            // own choice wins, otherwise fall back to the app-level default, loaded only when needed. This
             // keeps the page render to a single app-DB session instead of opening a second one.
-            if (resolveCss && channel is { Type: ChannelType.IFrame })
+            if (resolveStyle && channel is { Type: ChannelType.IFrame })
             {
-                effectiveCss = string.IsNullOrWhiteSpace(channel.CustomCss) == false
-                    ? channel.CustomCss
-                    : (await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct))?.Css;
+                var defaults = IFrameStyleResolution.OwnStyle(channel) is null
+                    ? await session.LoadAsync<IFrameStyleDefaults>(IFrameStyleDefaults.DocumentId, ct)
+                    : null;
+                style = IFrameStyleResolution.ForChannel(channel, defaults);
             }
         }
 
@@ -405,10 +406,10 @@ public static class EmbedEndpoints
         if (channel is null || channel.Type != ChannelType.IFrame)
             return null;
 
-        return (app, link, channel, effectiveCss);
+        return (app, link, channel, style);
     }
 
-    private static string BuildEmbedHtml(string token, string displayName, string? customCss, string historyJson)
+    private static string BuildEmbedHtml(string token, string displayName, ResolvedIFrameStyle style, string historyJson)
     {
         var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
         // Substitute the trusted placeholders (token, base styles) first, then the operator/visitor-
@@ -417,8 +418,8 @@ public static class EmbedEndpoints
         // Replace to expand. In particular the bearer token can never leak into the title or history.
         return EmbedHtmlTemplate
             .Replace("__TOKEN__", token)
-            .Replace("__BASE_CSS__", WidgetBaseCss)
-            .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(customCss))
+            .Replace("__BASE_CSS__", BuildWidgetBaseCss(style.Style))
+            .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(style.CustomCss))
             .Replace("__TITLE__", title)
             .Replace("__HISTORY__", historyJson);
     }
@@ -467,9 +468,14 @@ public static class EmbedEndpoints
     // skeleton, and the styling editor's starter template, so none of the three can drift.
     // Injected into a <style> element via __BASE_CSS__ (kept out of the raw-string templates
     // so the CSS braces need no escaping). Operator CSS follows in a second <style> block so
-    // it overrides these. The :root block is generated from IFrameStyleVariables, the single
-    // source for the shipped variable defaults.
-    internal static readonly string WidgetBaseCss = IFrameStyleVariables.BuildRootBlock() + "\n" + WidgetBaseCssRules;
+    // it overrides these. The :root block is generated from IFrameStyleVariables per built-in
+    // preset (Custom layers over the Light block), the single source for the shipped values.
+    internal static string BuildWidgetBaseCss(IFrameStyle style) =>
+        IFrameStyleVariables.BuildRootBlock(style) + "\n" + WidgetBaseCssRules;
+
+    // The Light-preset base stylesheet: what the dashboard preview skeleton ships and the
+    // custom-CSS editor pre-fills as its starter template.
+    internal static readonly string WidgetBaseCss = BuildWidgetBaseCss(IFrameStyle.Light);
 
     private const string WidgetBaseCssRules = """
   * { box-sizing: border-box; }
@@ -481,7 +487,7 @@ public static class EmbedEndpoints
   .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
   .row.agent { background: var(--ai-bubble-agent-bg); }
   #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ai-border-color); }
-  #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); font-size: 14px; }
+  #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); background: var(--ai-input-bg); color: var(--ai-fg); font-size: 14px; }
   #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: var(--ai-radius-control); background: var(--ai-user-bg); color: var(--ai-user-fg); cursor: pointer; }
 """;
 

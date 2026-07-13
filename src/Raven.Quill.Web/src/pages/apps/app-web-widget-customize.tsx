@@ -30,7 +30,7 @@ export function AppWebWidgetCustomize() {
     });
 
     const saveMutation = useWebWidgetStyleSave({
-        save: (css) => api.services.iframe.updateCustomization(slug, widgetId, { css }),
+        save: (update) => api.services.iframe.updateCustomization(slug, widgetId, update),
         invalidateKeys: [api.queries.webWidget.customization(slug, widgetId).queryKey],
         successMessage: "Customization saved",
     });
@@ -75,20 +75,25 @@ export function AppWebWidgetCustomize() {
                         <div className="grid gap-1">
                             <h2 className="text-lg font-semibold">{channel.displayName}</h2>
                             <p className="text-sm text-muted-foreground">
-                                Custom styles apply to this web widget&rsquo;s embed page. The editor below starts
-                                pre-filled with the effective styles — edit and save to override them, or clear it to
-                                fall back to the app default.
+                                Choose how this web widget&rsquo;s embed page looks: follow the app default, pick one of
+                                the built-in styles, or write custom CSS over the widget&rsquo;s base styles.
                             </p>
                         </div>
 
                         {customizationQuery.data && styleGuideQuery.data && (
                             <WebWidgetStyleEditor
+                                initialStyle={customizationQuery.data.style ?? null}
                                 initialCss={customizationQuery.data.css ?? ""}
-                                defaultCss={customizationQuery.data.defaultCss ?? ""}
+                                appDefault={{
+                                    style: customizationQuery.data.defaultStyle ?? "Light",
+                                    css: customizationQuery.data.defaultCss ?? "",
+                                }}
                                 baseCss={styleGuideQuery.data.baseCss}
+                                lightThemeCss={styleGuideQuery.data.lightThemeCss}
+                                darkThemeCss={styleGuideQuery.data.darkThemeCss}
                                 previewHtml={previewQuery.data?.html ?? ""}
                                 isSaving={saveMutation.isPending}
-                                onSave={(css) => saveMutation.mutate(css)}
+                                onSave={(update) => saveMutation.mutate(update)}
                             />
                         )}
 

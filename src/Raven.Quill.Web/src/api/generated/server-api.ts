@@ -316,9 +316,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns a web-widget channel's own embed CSS plus the app default, for the styling editor. */
+        /** @description Returns a web-widget channel's own embed style plus the resolved app default, for the styling editor. */
         get: operations["iframe.getCustomization"];
-        /** @description Saves a web-widget channel's embed CSS. An empty body clears it so the channel falls back to the app default. */
+        /** @description Saves a web-widget channel's embed style: a built-in preset, custom CSS, or (with a null style) follow the app default. */
         put: operations["iframe.updateCustomization"];
         post?: never;
         delete?: never;
@@ -334,9 +334,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns the app-level default web-widget embed CSS applied to channels with no CSS of their own. */
+        /** @description Returns the resolved app-level default web-widget embed style applied to channels that make no choice of their own. */
         get: operations["iframe.getDefaultCustomization"];
-        /** @description Saves the app-level default web-widget embed CSS. An empty body clears it. */
+        /** @description Saves the app-level default web-widget embed style: a built-in preset or custom CSS. A null style resets to the Light preset. */
         put: operations["iframe.updateDefaultCustomization"];
         post?: never;
         delete?: never;
@@ -1247,17 +1247,24 @@ export interface components {
             embeddingsMaxConcurrentBatches?: null | number;
         };
         IFrameCustomizationResponse: {
+            style: null | components["schemas"]["IFrameStyle"];
             css: null | string;
+            defaultStyle: components["schemas"]["IFrameStyle"];
             defaultCss: null | string;
         };
         IFrameDefaultCustomizationResponse: {
+            style: components["schemas"]["IFrameStyle"];
             css: null | string;
         };
         IFramePreviewResponse: {
             html: string;
         };
+        /** @enum {unknown} */
+        IFrameStyle: "Light" | "Dark" | "Custom" | null;
         IFrameStyleGuideResponse: {
             baseCss: string;
+            lightThemeCss: string;
+            darkThemeCss: string;
         };
         JsonElement: unknown;
         LicensePlan: {
@@ -1504,6 +1511,7 @@ export interface components {
             enabled: null | boolean;
         };
         UpdateIFrameCustomizationRequest: {
+            style: null | components["schemas"]["IFrameStyle"];
             css: null | string;
         };
         UsageGranularity: unknown;
@@ -3349,6 +3357,7 @@ export type HuggingFaceSettings = components["schemas"]["HuggingFaceSettings"];
 export type IFrameCustomizationResponse = components["schemas"]["IFrameCustomizationResponse"];
 export type IFrameDefaultCustomizationResponse = components["schemas"]["IFrameDefaultCustomizationResponse"];
 export type IFramePreviewResponse = components["schemas"]["IFramePreviewResponse"];
+export type IFrameStyle = components["schemas"]["IFrameStyle"];
 export type IFrameStyleGuideResponse = components["schemas"]["IFrameStyleGuideResponse"];
 export type JsonElement = components["schemas"]["JsonElement"];
 export type LicensePlan = components["schemas"]["LicensePlan"];

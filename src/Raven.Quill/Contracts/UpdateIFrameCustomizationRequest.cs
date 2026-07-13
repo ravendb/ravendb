@@ -1,8 +1,12 @@
+using Raven.Quill.Channels;
+
 namespace Raven.Quill.Contracts;
 
 /// <summary>
-/// Saves web-widget (iFrame) embed CSS — shared by the per-channel and the app-default PUTs.
-/// A <c>null</c> or empty <paramref name="Css"/> clears the stored CSS: a channel then falls
-/// back to the app default, and the app default falls back to the widget's base styles.
+/// Saves a web-widget (iFrame) embed style — shared by the per-channel and the app-default
+/// PUTs. <paramref name="Css"/> applies only when <paramref name="Style"/> is
+/// <see cref="IFrameStyle.Custom"/> (then it is required). A null <paramref name="Style"/>
+/// clears a channel's choice so it follows the app default; on the app-default PUT it resets
+/// to <see cref="IFrameStyle.Light"/>.
 /// </summary>
-public sealed record UpdateIFrameCustomizationRequest(string? Css);
+public sealed record UpdateIFrameCustomizationRequest(IFrameStyle? Style, string? Css);
