@@ -4,6 +4,7 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
 import appUrl from "common/appUrl";
+import genUtils from "common/generalUtils";
 import useBoolean from "hooks/useBoolean";
 import { Checkbox } from "components/common/Checkbox";
 import { Icon } from "components/common/Icon";
@@ -120,6 +121,11 @@ export default function ServerWideTaskPanel(props: ServerWideTaskPanelProps) {
                             <RichPanelDetailItem label="Encrypted">
                                 {task.isEncrypted ? "Yes" : "No"}
                             </RichPanelDetailItem>
+                            {task.retentionPolicy && !task.retentionPolicy.Disabled && (
+                                <RichPanelDetailItem label="Retention">
+                                    {genUtils.formatTimeSpan(task.retentionPolicy.MinimumBackupAgeToKeep, true)}
+                                </RichPanelDetailItem>
+                            )}
                         </>
                     ) : (
                         <>

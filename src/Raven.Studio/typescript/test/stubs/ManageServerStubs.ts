@@ -844,7 +844,7 @@ export class ManageServerStubs {
                 BackupDestinations: ["Local"],
                 BackupType: "Backup",
                 IsEncrypted: false,
-                RetentionPolicy: { Disabled: true, MinimumBackupAgeToKeep: null },
+                RetentionPolicy: { Disabled: false, MinimumBackupAgeToKeep: "30.00:00:00" },
             };
 
         return { Tasks: [replicationTask, backupTask] };
