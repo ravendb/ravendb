@@ -24,7 +24,7 @@ internal sealed class WizardState
     public DateTime? LastVerifyAt { get; set; }
 
     // CdcSinkSourceSchema is internal in Raven.Client — accessible here via
-    // InternalsVisibleTo("Raven.AiAppliance"). Persisting it couples the
+    // InternalsVisibleTo("Raven.Quill"). Persisting it couples the
     // wizard-state doc shape to the internal schema-discovery shape; accepted
     // trade-off for in-tree code (forces the enclosing type to be internal too).
     public CdcSinkSourceSchema? LastDiscoveredSchema { get; set; }

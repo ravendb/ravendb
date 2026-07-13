@@ -509,5 +509,5 @@ public enum RavenTestCategory : long
     /// EXAMPLES: bootstrap activation, wizard W1-W8, agent/channel
     /// provisioning, end-to-end appliance flow tests
     /// </summary>
-    AiAppliance = 1L << 54,
+    Quill = 1L << 54,
 }
