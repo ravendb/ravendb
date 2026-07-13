@@ -1,3 +1,5 @@
+@import "./ace-syntax-colors.css";
+
 .ace-editor {
     position: relative;
     border: 1px solid var(--color-border);
@@ -130,45 +132,4 @@
 
 .ace-editor .ace_cursor {
     color: var(--color-foreground);
-}
-
-.ace-editor .ace_keyword,
-.ace-editor .ace_meta,
-.ace-editor .ace_storage,
-.ace-editor .ace_support.ace_function {
-    color: oklch(0.5 0.18 260);
-}
-
-.ace-editor .ace_constant,
-.ace-editor .ace_constant.ace_numeric {
-    color: oklch(0.52 0.15 35);
-}
-
-.ace-editor .ace_string {
-    color: oklch(0.45 0.12 150);
-}
-
-.ace-editor .ace_comment {
-    color: var(--color-muted-foreground);
-}
-
-.ace-editor .ace_invalid {
-    background: color-mix(in oklch, var(--color-destructive) 22%, transparent);
-    color: var(--color-destructive);
-}
-
-.dark .ace-editor .ace_keyword,
-.dark .ace-editor .ace_meta,
-.dark .ace-editor .ace_storage,
-.dark .ace-editor .ace_support.ace_function {
-    color: oklch(0.75 0.13 265);
-}
-
-.dark .ace-editor .ace_constant,
-.dark .ace-editor .ace_constant.ace_numeric {
-    color: oklch(0.76 0.13 65);
-}
-
-.dark .ace-editor .ace_string {
-    color: oklch(0.72 0.12 155);
 }

@@ -13,19 +13,26 @@ import {
     MIN_TTL_SECONDS,
 } from "@/pages/apps/channels/embed-link-utils";
 import { InlineCode } from "@/components/data/inline-code";
+import type { HighlightLanguage } from "@/components/ace-editor/static-highlight";
 
 const OPEN_STORAGE_KEY = "quill-embed-api-docs-open";
 const LANGUAGE_STORAGE_KEY = "quill-embed-api-docs-language";
 
-const LANGUAGES = [
-    { value: "bash", label: "cURL" },
-    { value: "powershell", label: "PowerShell" },
-    { value: "csharp", label: "C#" },
-    { value: "python", label: "Python" },
-    { value: "node", label: "Node.js" },
-] as const;
+type Language = "bash" | "powershell" | "csharp" | "python" | "node";
 
-type Language = (typeof LANGUAGES)[number]["value"];
+type LanguageOption = {
+    value: Language;
+    label: string;
+    mode: HighlightLanguage;
+};
+
+const LANGUAGE_OPTIONS: LanguageOption[] = [
+    { value: "bash", label: "cURL", mode: "sh" },
+    { value: "powershell", label: "PowerShell", mode: "powershell" },
+    { value: "csharp", label: "C#", mode: "csharp" },
+    { value: "python", label: "Python", mode: "python" },
+    { value: "node", label: "Node.js", mode: "javascript" },
+];
 
 function readIsOpen() {
     return localStorage.getItem(OPEN_STORAGE_KEY) !== "false";
@@ -33,7 +40,7 @@ function readIsOpen() {
 
 function readLanguage(): Language {
     const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return LANGUAGES.some((language) => language.value === stored) ? (stored as Language) : "bash";
+    return LANGUAGE_OPTIONS.some((language) => language.value === stored) ? (stored as Language) : "bash";
 }
 
 type EmbedLinkApiDocsProps = {
@@ -102,15 +109,15 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
 
                 <Tabs value={language} onValueChange={onLanguageChange} className="gap-3">
                     <TabsList>
-                        {LANGUAGES.map(({ value, label }) => (
+                        {LANGUAGE_OPTIONS.map(({ value, label }) => (
                             <TabsTrigger key={value} value={value}>
                                 {label}
                             </TabsTrigger>
                         ))}
                     </TabsList>
-                    {LANGUAGES.map(({ value }) => (
+                    {LANGUAGE_OPTIONS.map(({ value, mode }) => (
                         <TabsContent key={value} value={value}>
-                            <CopyableCode code={requests[value]} copyLabel="Copy API request" />
+                            <CopyableCode code={requests[value]} language={mode} copyLabel="Copy API request" />
                         </TabsContent>
                     ))}
                 </Tabs>
