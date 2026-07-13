@@ -13,9 +13,9 @@
 #
 # Five stages:
 #   1. ravendb-build          — dotnet publish of Raven.Server.
-#   2. appliance-openapi-build — dotnet build of Raven.AiAppliance to emit openapi.json.
-#   3. appliance-frontend-build — pnpm build of Raven.AiAppliance.Web.
-#   4. web-build              — dotnet publish of Raven.AiAppliance.
+#   2. appliance-openapi-build — dotnet build of Raven.Quill to emit openapi.json.
+#   3. appliance-frontend-build — pnpm build of Raven.Quill.Web.
+#   4. web-build              — dotnet publish of Raven.Quill.
 #   5. runtime                — aspnet base image, s6-overlay v3, both artifacts copied in.
 #
 # Security posture: the nginx :443 TLS/SNI front and operator API-key auth are built in (Phase 1).
@@ -27,7 +27,7 @@
 # Pin base images to specific patch versions matching the repo's pinned
 # toolchain: global.json declares SDK 10.0.301. The runtime image hosts both
 # apps, so it must satisfy the highest RuntimeFrameworkVersion among them:
-# Raven.Server.csproj pins 10.0.9 and Raven.AiAppliance.csproj pins 10.0.8, so
+# Raven.Server.csproj pins 10.0.9 and Raven.Quill.csproj pins 10.0.8, so
 # the ASP.NET runtime must be >= 10.0.9 (the appliance app rolls forward
 # 10.0.8 -> 10.0.9). Floating `:10.0` tags would let CI and local rebuilds pick
 # up patch-level changes that diverge from those pins. Bump these together with
@@ -51,19 +51,19 @@ RUN dotnet publish src/Raven.Server/Raven.Server.csproj \
         --nologo
 
 # -----------------------------------------------------------------------------
-# Stage 2: build-time OpenAPI document for Raven.AiAppliance.
+# Stage 2: build-time OpenAPI document for Raven.Quill.
 # -----------------------------------------------------------------------------
 FROM ${SDK_IMAGE} AS appliance-openapi-build
 WORKDIR /src
 COPY . .
 
-RUN dotnet build src/Raven.AiAppliance/Raven.AiAppliance.csproj \
+RUN dotnet build src/Raven.Quill/Raven.Quill.csproj \
        -c Release \
        --nologo \
        --tl:off
 
 # -----------------------------------------------------------------------------
-# Stage 3: build Raven.AiAppliance.Web.
+# Stage 3: build Raven.Quill.Web.
 # -----------------------------------------------------------------------------
 FROM ${NODE_IMAGE} AS appliance-frontend-build
 ARG PNPM_VERSION
@@ -72,38 +72,38 @@ WORKDIR /workspace
 RUN corepack enable \
     && corepack prepare pnpm@${PNPM_VERSION} --activate
 
-COPY src/Raven.AiAppliance.Web/package.json \
-     src/Raven.AiAppliance.Web/pnpm-lock.yaml \
-     src/Raven.AiAppliance.Web/pnpm-workspace.yaml \
-    ./src/Raven.AiAppliance.Web/
+COPY src/Raven.Quill.Web/package.json \
+     src/Raven.Quill.Web/pnpm-lock.yaml \
+     src/Raven.Quill.Web/pnpm-workspace.yaml \
+    ./src/Raven.Quill.Web/
 
-WORKDIR /workspace/src/Raven.AiAppliance.Web
+WORKDIR /workspace/src/Raven.Quill.Web
 
 RUN pnpm install --frozen-lockfile
 
 WORKDIR /workspace
-COPY --from=appliance-openapi-build /src/src/Raven.AiAppliance/obj/openapi/ai-appliance.json ./src/Raven.AiAppliance/obj/openapi/ai-appliance.json
-COPY src/Raven.AiAppliance.Web/ ./src/Raven.AiAppliance.Web/
+COPY --from=appliance-openapi-build /src/src/Raven.Quill/obj/openapi/ai-appliance.json ./src/Raven.Quill/obj/openapi/ai-appliance.json
+COPY src/Raven.Quill.Web/ ./src/Raven.Quill.Web/
 
-WORKDIR /workspace/src/Raven.AiAppliance.Web
+WORKDIR /workspace/src/Raven.Quill.Web
 ENV RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD=1
 RUN pnpm build
 
 # -----------------------------------------------------------------------------
-# Stage 4: build Raven.AiAppliance.
+# Stage 4: build Raven.Quill.
 # -----------------------------------------------------------------------------
 FROM ${SDK_IMAGE} AS web-build
 WORKDIR /src
 COPY . .
 
-RUN dotnet publish src/Raven.AiAppliance/Raven.AiAppliance.csproj \
+RUN dotnet publish src/Raven.Quill/Raven.Quill.csproj \
         -c Release \
         -o /publish/web \
         --nologo
 
 # Replace the server's checked-in placeholder wwwroot with the Vite build.
 RUN rm -rf /publish/web/wwwroot
-COPY --from=appliance-frontend-build /workspace/src/Raven.AiAppliance.Web/dist /publish/web/wwwroot
+COPY --from=appliance-frontend-build /workspace/src/Raven.Quill.Web/dist /publish/web/wwwroot
 
 # -----------------------------------------------------------------------------
 # Stage 5: runtime. ASP.NET base + s6-overlay supervising RavenDB and the web app.
