@@ -53,7 +53,7 @@
   <!--
     SqlAwareTestBase.WithNpgSqlDatabase hard-codes the "SlowTests.Data.npgsql.*"
     resource prefix and reads from GetType().Assembly. Since our test lives in
-    QuillTestsTests, we embed the same fixtures here under the same logical
+    QuillTests, we embed the same fixtures here under the same logical
     name so the helper finds them. Source files stay single-sourced in SlowTests.
   -->
   <ItemGroup>
