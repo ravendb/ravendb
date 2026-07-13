@@ -1107,23 +1107,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             where TRetriever : IIndexedTermsRetriever
             where TResult : ICollection<string>
         {
-            if (string.IsNullOrEmpty(fromValue) == false)
+            try
             {
-                Span<byte> fromValueBytes = StringToValue(fromValue);
-                while (retriever.GetNextTerm(out var currentTerm) && currentTerm.SequenceEqual(fromValueBytes) == false)
+                if (string.IsNullOrEmpty(fromValue) == false)
+                {
+                    Span<byte> fromValueBytes = StringToValue(fromValue);
+                    while (retriever.GetNextTerm(out var currentTerm) && currentTerm.SequenceEqual(fromValueBytes) == false)
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
+                }
+
+                while (pageSize > 0 && retriever.GetNextTerm(out var currentTerm))
                 {
                     token.ThrowIfCancellationRequested();
+                    results.Add(ValueToString(currentTerm));
+                    pageSize--;
                 }
-            }
 
-            while (pageSize > 0 && retriever.GetNextTerm(out var currentTerm))
+                return results;
+            }
+            finally
             {
-                token.ThrowIfCancellationRequested();
-                results.Add(ValueToString(currentTerm));
-                pageSize--;
+                // using snapshots a struct *before* key is acquired, must use finally
+                retriever.Dispose();
             }
-
-            return results;
 
             string ValueToString(ReadOnlySpan<byte> bytes)
             {

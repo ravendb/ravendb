@@ -29,6 +29,8 @@ namespace Corax.Querying.Matches.TermsProviders
         
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
+        private CompactKey _termsRetrieverKey;
+
         public ExistsTermsProvider(IndexSearcher searcher, CompactTree tree, in FieldMetadata field, bool skipNulls = false)
         {
             _field = field;
@@ -75,9 +77,11 @@ namespace Corax.Querying.Matches.TermsProviders
                 return true;
             }
             
-            while (_iterator.MoveNext(out var compactKey, out long _, out _))
+            // Reuse a single key across the whole scan, term's span is valid to next GetNextTerm() call
+            _termsRetrieverKey ??= _searcher._transaction.LowLevelTransaction.AcquireCompactKey();
+            while (_iterator.MoveNext(_termsRetrieverKey, out long _))
             {
-                var key = compactKey.Decoded();
+                var key = _termsRetrieverKey.Decoded();
                 int termSize = key.Length;
                 if (key.Length > 1)
                 {
@@ -91,6 +95,12 @@ namespace Corax.Querying.Matches.TermsProviders
 
             term = Span<byte>.Empty;
             return false;
+        }
+
+        public void Dispose()
+        {
+            if (_termsRetrieverKey != null)
+                _searcher._transaction.LowLevelTransaction.ReleaseCompactKey(ref _termsRetrieverKey);
         }
 
         public ConvertTo Type => ConvertTo.String;
@@ -207,7 +217,9 @@ namespace Corax.Querying.Matches.TermsProviders
             try
             {
                 buckets[(int)(TermIdMask.PostingList)].Add(allocator, _nullPostingListId);
-                while (_iterator.MoveNext(out _, out long termId, out _))
+                using var keyScope = new CompactKeyCacheScope(llt);
+                var key = keyScope.Key;
+                while (_iterator.MoveNext(key, out long termId))
                 {
                     buckets[(int)(termId & (long)TermIdMask.EnsureIsSingleMask)].Add(allocator, termId);
                     stats.Terms++;

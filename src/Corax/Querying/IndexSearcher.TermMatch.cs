@@ -84,23 +84,13 @@ public partial class IndexSearcher
             _ => EncodeAndApplyAnalyzer(field, term)
         };
 
-        CompactKey termKey;
-        if (termSlice.Size != 0)
-        {
-            termKey = _fieldsTree.Llt.AcquireCompactKey();
-            termKey.Set(termSlice.AsReadOnlySpan());
-        }
-        else
-        {
-            termKey = null;
-        }
-
-        if (termKey is null)
+        if (termSlice.Size == 0)
             return TermMatch.CreateEmpty();
 
-        var match = TermQuery(field, termKey, terms);
-        _fieldsTree.Llt.ReleaseCompactKey(ref termKey);
-        return match;
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
+        termKey.Set(termSlice.AsReadOnlySpan());
+        return TermQuery(field, termKey, terms);
     }
 
     //Should be already analyzed...
@@ -120,11 +110,10 @@ public partial class IndexSearcher
             return TermMatch.CreateEmpty();
         }
 
-        CompactKey termKey = _fieldsTree.Llt.AcquireCompactKey();
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
         termKey.Set(term.AsReadOnlySpan());
-        var match = TermQuery(field, termKey, terms);
-        _fieldsTree.Llt.ReleaseCompactKey(ref termKey);
-        return match;
+        return TermQuery(field, termKey, terms);
     }
 
     public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
@@ -214,12 +203,10 @@ public partial class IndexSearcher
         if (termSlice.Size == 0)
             return -1;
 
-        var termKey = _fieldsTree.Llt.AcquireCompactKey();
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
         termKey.Set(termSlice.AsReadOnlySpan());
-
-        var result = terms.TryGetValue(termKey, out var value) ? value : -1;
-        _fieldsTree.Llt.ReleaseCompactKey(ref termKey);
-        return result;
+        return terms.TryGetValue(termKey, out var value) ? value : -1;
     }
 
     /// <summary>
@@ -245,12 +232,10 @@ public partial class IndexSearcher
         if (term.Size == 0)
             return -1;
 
-        var termKey = _fieldsTree.Llt.AcquireCompactKey();
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
         termKey.Set(term.AsReadOnlySpan());
-
-        var result = terms.TryGetValue(termKey, out var value) ? value : -1;
-        _fieldsTree.Llt.ReleaseCompactKey(ref termKey);
-        return result;
+        return terms.TryGetValue(termKey, out var value) ? value : -1;
     }
 
     public long NumberOfDocumentsUnderSpecificTerm<TData>(in FieldMetadata binding, TData term)
