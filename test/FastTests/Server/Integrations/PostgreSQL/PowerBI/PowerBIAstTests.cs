@@ -118,6 +118,54 @@ namespace FastTests.Server.Integrations.PostgreSQL.PowerBI
         }
 
         [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
+        public void Wrapped_select_star_over_inner_explicit_projection_routes_to_PgSqlTranslatedRqlQuery()
+        {
+            const string sql = """
+                select * from
+                (
+                    SELECT "Name", "Phone"
+                    FROM "public"."Companies"
+                    LIMIT 10
+                ) "_"
+                """;
+
+            Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
+            Assert.IsType<PgSqlTranslatedRqlQuery>(pgQuery);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
+        public void Wrapped_select_star_over_inner_grouped_aggregate_routes_to_PgSqlTranslatedRqlQuery()
+        {
+            const string sql = """
+                select * from
+                (
+                    SELECT "ShipVia", COUNT(*)
+                    FROM "public"."Orders"
+                    GROUP BY "ShipVia"
+                ) "_"
+                """;
+
+            Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
+            Assert.IsType<PgSqlTranslatedRqlQuery>(pgQuery);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
+        public void Wrapped_select_star_over_inner_select_star_routes_to_PowerBIRqlQuery()
+        {
+            const string sql = """
+                select * from
+                (
+                    SELECT *
+                    FROM "public"."Companies"
+                    LIMIT 10
+                ) "_"
+                """;
+
+            Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
+            Assert.IsType<PowerBIRqlQuery>(pgQuery);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
         public void TryParse_should_match_wrapped_rql_fetch_shape_and_apply_outer_limit()
         {
             const string sql = """select * from (from Employees) "$Table" limit 1000""";
