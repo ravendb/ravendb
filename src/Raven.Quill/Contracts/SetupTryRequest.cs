@@ -17,7 +17,7 @@ namespace Raven.Quill.Contracts;
 /// for the run (name -> value); optional.</param>
 /// <param name="StreamField">Which output property streams token-by-token (the wizard's
 /// "Streamed field" select). Optional — when unset, the conventional first-declared output
-/// field is used (see <see cref="Raven.AiAppliance.Agents.AgentOutputShape.ResolveReplyField"/>).</param>
+/// field is used (see <see cref="Raven.Quill.Agents.AgentOutputShape.ResolveReplyField"/>).</param>
 public sealed record SetupTryRequest(
     string Prompt,
     AiAgentConfiguration Configuration,

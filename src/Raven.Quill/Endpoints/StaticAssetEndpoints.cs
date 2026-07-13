@@ -6,7 +6,7 @@ namespace Raven.Quill.Endpoints;
 public static class StaticAssetEndpoints
 {
     /// Serves the Vite-built React UI from wwwroot/. The Docker image replaces
-    /// the checked-in placeholder wwwroot with Raven.AiAppliance.Web/dist.
+    /// the checked-in placeholder wwwroot with Raven.Quill.Web/dist.
     public static void Map(WebApplication app)
     {
         app.UseDefaultFiles(new DefaultFilesOptions
