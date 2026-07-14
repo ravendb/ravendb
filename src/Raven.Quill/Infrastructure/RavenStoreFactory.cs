@@ -81,6 +81,7 @@ public static class RavenStoreFactory
                     $"Setup package at '{settingsFile}' is malformed: PublicServerUrl is missing or not a string. " +
                     "Re-run activation with a valid setup package.");
             }
+
             publicUrl = pub.GetString();
         }
 

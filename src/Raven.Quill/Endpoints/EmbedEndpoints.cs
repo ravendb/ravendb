@@ -82,6 +82,7 @@ public static class EmbedEndpoints
             var head = Array.IndexOf(channel.AllowedOrigins, dashboardOrigin) >= 0 ? "'self'" : $"'self' {dashboardOrigin}";
             csp += $"; frame-ancestors {head} {string.Join(' ', channel.AllowedOrigins)}";
         }
+
         ctx.Response.Headers["Content-Security-Policy"] = csp;
 
         // Keep the bearer token out of cross-origin referer logs.
@@ -478,142 +479,142 @@ public static class EmbedEndpoints
     internal static readonly string WidgetBaseCss = BuildWidgetBaseCss(IFrameStyle.Light);
 
     private const string WidgetBaseCssRules = """
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; background: var(--ai-bg); color: var(--ai-fg); font-family: var(--ai-font-family); }
-  #ai-chat { display: flex; flex-direction: column; height: 100%; }
-  #ai-chat-header { padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--ai-border-color); }
-  #ai-chat-feed { flex: 1; overflow-y: auto; padding: 12px 16px; }
-  .row { margin: 6px 0; padding: 8px 12px; border-radius: var(--ai-radius-bubble); max-width: 80%; white-space: pre-wrap; }
-  .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
-  .row.agent { background: var(--ai-bubble-agent-bg); }
-  #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ai-border-color); }
-  #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); background: var(--ai-input-bg); color: var(--ai-fg); font-size: 14px; }
-  #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: var(--ai-radius-control); background: var(--ai-user-bg); color: var(--ai-user-fg); cursor: pointer; }
-""";
+                                                * { box-sizing: border-box; }
+                                                html, body { height: 100%; margin: 0; background: var(--ai-bg); color: var(--ai-fg); font-family: var(--ai-font-family); }
+                                                #ai-chat { display: flex; flex-direction: column; height: 100%; }
+                                                #ai-chat-header { padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--ai-border-color); }
+                                                #ai-chat-feed { flex: 1; overflow-y: auto; padding: 12px 16px; }
+                                                .row { margin: 6px 0; padding: 8px 12px; border-radius: var(--ai-radius-bubble); max-width: 80%; white-space: pre-wrap; }
+                                                .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
+                                                .row.agent { background: var(--ai-bubble-agent-bg); }
+                                                #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ai-border-color); }
+                                                #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); background: var(--ai-input-bg); color: var(--ai-fg); font-size: 14px; }
+                                                #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: var(--ai-radius-control); background: var(--ai-user-bg); color: var(--ai-user-fg); cursor: pointer; }
+                                              """;
 
     // Self-contained vanilla page. Placeholders are string-replaced (title is
     // HTML-encoded; token is hex-only) so JS/CSS braces need no escaping.
     private const string EmbedHtmlTemplate = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<title>__TITLE__</title>
-<style>
-__BASE_CSS__
-</style>
-<style id="raven-custom">__CUSTOM_CSS__</style>
-</head>
-<body>
-<div id="ai-chat">
-  <div id="ai-chat-header">__TITLE__</div>
-  <div id="ai-chat-feed"></div>
-  <form id="ai-chat-form">
-    <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
-    <button type="submit">Send</button>
-  </form>
-</div>
-<script>
-// The token is the bearer credential and owns the conversation + the bound agent
-// parameters server-side. This page sends only the prompt; the customer's
-// minted link decided who the user is and how long it lives.
-const token = "__TOKEN__";
-const feed = document.getElementById("ai-chat-feed");
-const form = document.getElementById("ai-chat-form");
-const input = document.getElementById("ai-chat-input");
+                                             <!DOCTYPE html>
+                                             <html lang="en">
+                                             <head>
+                                             <meta charset="utf-8">
+                                             <meta name="viewport" content="width=device-width, initial-scale=1">
+                                             <meta name="referrer" content="no-referrer">
+                                             <title>__TITLE__</title>
+                                             <style>
+                                             __BASE_CSS__
+                                             </style>
+                                             <style id="raven-custom">__CUSTOM_CSS__</style>
+                                             </head>
+                                             <body>
+                                             <div id="ai-chat">
+                                               <div id="ai-chat-header">__TITLE__</div>
+                                               <div id="ai-chat-feed"></div>
+                                               <form id="ai-chat-form">
+                                                 <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
+                                                 <button type="submit">Send</button>
+                                               </form>
+                                             </div>
+                                             <script>
+                                             // The token is the bearer credential and owns the conversation + the bound agent
+                                             // parameters server-side. This page sends only the prompt; the customer's
+                                             // minted link decided who the user is and how long it lives.
+                                             const token = "__TOKEN__";
+                                             const feed = document.getElementById("ai-chat-feed");
+                                             const form = document.getElementById("ai-chat-form");
+                                             const input = document.getElementById("ai-chat-input");
 
-function addRow(cls, text) {
-  const div = document.createElement("div");
-  div.className = "row " + cls;
-  div.textContent = text;
-  feed.appendChild(div);
-  feed.scrollTop = feed.scrollHeight;
-  return div;
-}
+                                             function addRow(cls, text) {
+                                               const div = document.createElement("div");
+                                               div.className = "row " + cls;
+                                               div.textContent = text;
+                                               feed.appendChild(div);
+                                               feed.scrollTop = feed.scrollHeight;
+                                               return div;
+                                             }
 
-// Prior turns for this conversation, server-rendered on load; empty for a fresh link.
-for (const turn of __HISTORY__) addRow(turn.role, turn.text);
+                                             // Prior turns for this conversation, server-rendered on load; empty for a fresh link.
+                                             for (const turn of __HISTORY__) addRow(turn.role, turn.text);
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const prompt = input.value.trim();
-  if (!prompt) return;
-  input.value = "";
-  addRow("user", prompt);
-  const agentRow = addRow("agent", "");
-  try {
-    const resp = await fetch(`/embed/${token}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt })
-    });
-    // 410 = expired/revoked; 404 = link already swept/unknown. Same UX either way.
-    if (resp.status === 410 || resp.status === 404) { agentRow.textContent = "[this link is no longer active]"; return; }
-    if (resp.status === 429) { agentRow.textContent = "[this link has reached its usage limit]"; return; }
-    if (!resp.ok || !resp.body) { agentRow.textContent = "[error] HTTP " + resp.status; return; }
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      let nl;
-      while ((nl = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if (!line) continue;
-        const msg = JSON.parse(line);
-        if (msg.type === "chunk") agentRow.textContent += msg.text;
-        else if (msg.type === "done") {
-          // If nothing streamed incrementally, fall back to the final answer
-          // so the reply is always shown (some models return it in one shot).
-          if (!agentRow.textContent && msg.answer && msg.answer.reply) agentRow.textContent = msg.answer.reply;
-        }
-        else if (msg.type === "error") agentRow.textContent = "[error] " + msg.message;
-      }
-    }
-  } catch (err) {
-    agentRow.textContent = "[error] " + err;
-  }
-});
-</script>
-</body>
-</html>
-""";
+                                             form.addEventListener("submit", async (e) => {
+                                               e.preventDefault();
+                                               const prompt = input.value.trim();
+                                               if (!prompt) return;
+                                               input.value = "";
+                                               addRow("user", prompt);
+                                               const agentRow = addRow("agent", "");
+                                               try {
+                                                 const resp = await fetch(`/embed/${token}/chat`, {
+                                                   method: "POST",
+                                                   headers: { "Content-Type": "application/json" },
+                                                   body: JSON.stringify({ prompt })
+                                                 });
+                                                 // 410 = expired/revoked; 404 = link already swept/unknown. Same UX either way.
+                                                 if (resp.status === 410 || resp.status === 404) { agentRow.textContent = "[this link is no longer active]"; return; }
+                                                 if (resp.status === 429) { agentRow.textContent = "[this link has reached its usage limit]"; return; }
+                                                 if (!resp.ok || !resp.body) { agentRow.textContent = "[error] HTTP " + resp.status; return; }
+                                                 const reader = resp.body.getReader();
+                                                 const decoder = new TextDecoder();
+                                                 let buf = "";
+                                                 while (true) {
+                                                   const { value, done } = await reader.read();
+                                                   if (done) break;
+                                                   buf += decoder.decode(value, { stream: true });
+                                                   let nl;
+                                                   while ((nl = buf.indexOf("\n")) >= 0) {
+                                                     const line = buf.slice(0, nl).trim();
+                                                     buf = buf.slice(nl + 1);
+                                                     if (!line) continue;
+                                                     const msg = JSON.parse(line);
+                                                     if (msg.type === "chunk") agentRow.textContent += msg.text;
+                                                     else if (msg.type === "done") {
+                                                       // If nothing streamed incrementally, fall back to the final answer
+                                                       // so the reply is always shown (some models return it in one shot).
+                                                       if (!agentRow.textContent && msg.answer && msg.answer.reply) agentRow.textContent = msg.answer.reply;
+                                                     }
+                                                     else if (msg.type === "error") agentRow.textContent = "[error] " + msg.message;
+                                                   }
+                                                 }
+                                               } catch (err) {
+                                                 agentRow.textContent = "[error] " + err;
+                                               }
+                                             });
+                                             </script>
+                                             </body>
+                                             </html>
+                                             """;
 
     // Inert mirror of the live page for the dashboard customization preview: same
     // head + base styles, sample bubbles, an empty <style id="raven-custom"> slot the
     // dashboard fills as the operator types, and no token/chat script (the preview
     // never talks to the server). __BASE_CSS__ is the only substitution besides the title.
     private const string PreviewHtmlTemplate = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>__TITLE__</title>
-<style>
-__BASE_CSS__
-</style>
-<style id="raven-custom"></style>
-</head>
-<body>
-<div id="ai-chat">
-  <div id="ai-chat-header">__TITLE__</div>
-  <div id="ai-chat-feed">
-    <div class="row agent">Hi! I'm your AI assistant. How can I help you today?</div>
-    <div class="row user">What can you do?</div>
-    <div class="row agent">I can answer questions about your data and help you get things done — just ask.</div>
-  </div>
-  <form id="ai-chat-form" onsubmit="return false">
-    <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
-    <button type="submit">Send</button>
-  </form>
-</div>
-</body>
-</html>
-""";
+                                               <!DOCTYPE html>
+                                               <html lang="en">
+                                               <head>
+                                               <meta charset="utf-8">
+                                               <meta name="viewport" content="width=device-width, initial-scale=1">
+                                               <title>__TITLE__</title>
+                                               <style>
+                                               __BASE_CSS__
+                                               </style>
+                                               <style id="raven-custom"></style>
+                                               </head>
+                                               <body>
+                                               <div id="ai-chat">
+                                                 <div id="ai-chat-header">__TITLE__</div>
+                                                 <div id="ai-chat-feed">
+                                                   <div class="row agent">Hi! I'm your AI assistant. How can I help you today?</div>
+                                                   <div class="row user">What can you do?</div>
+                                                   <div class="row agent">I can answer questions about your data and help you get things done — just ask.</div>
+                                                 </div>
+                                                 <form id="ai-chat-form" onsubmit="return false">
+                                                   <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">
+                                                   <button type="submit">Send</button>
+                                                 </form>
+                                               </div>
+                                               </body>
+                                               </html>
+                                               """;
 }

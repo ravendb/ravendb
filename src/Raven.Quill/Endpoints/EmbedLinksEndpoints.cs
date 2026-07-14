@@ -78,7 +78,7 @@ public static class EmbedLinksEndpoints
         const int pageSize = 1024;
         var now = DateTime.UtcNow;
         var links = new List<EmbedLink>();
-        for (var start = 0; ; start += pageSize)
+        for (var start = 0;; start += pageSize)
         {
             var page = (await session.Advanced.LoadStartingWithAsync<EmbedLink>(
                 EmbedLink.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();

@@ -239,7 +239,7 @@ public static class ChannelsEndpoints
         // set is never silently truncated. Order by CreatedAt in memory.
         const int pageSize = 1024;
         var channels = new List<Channel>();
-        for (var start = 0; ; start += pageSize)
+        for (var start = 0;; start += pageSize)
         {
             var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
                 Channel.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
@@ -371,10 +371,10 @@ public static class ChannelsEndpoints
         // "rvn-atomic/{bindingId}", so the same (slug, type, agentId) tuple can
         // be re-provisioned afterwards.
         using (var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
-        {
-            Database = app.Database,
-            TransactionMode = TransactionMode.ClusterWide,
-        }))
+               {
+                   Database = app.Database,
+                   TransactionMode = TransactionMode.ClusterWide,
+               }))
         {
             var channel = await session.LoadAsync<Channel>(channelDocId, ct);
             if (channel is not null)

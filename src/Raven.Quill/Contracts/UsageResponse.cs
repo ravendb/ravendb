@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 namespace Raven.Quill.Contracts;
+
 public record QuillUsageResponse(
     List<QuillApplicationUsage> PerApplication,
     List<QuillPeriodUsage> ByPeriod);

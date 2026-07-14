@@ -94,8 +94,8 @@ public static class ChatEndpoints
 
             await NdjsonStream.WriteLineAsync(ctx, new
             {
-                type           = "done",
-                answer         = result.Answer,
+                type = "done",
+                answer = result.Answer,
                 conversationId = result.ConversationId,
             });
         }
