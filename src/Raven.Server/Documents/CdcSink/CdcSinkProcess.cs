@@ -812,6 +812,84 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// the load completes.
     /// </summary>
     protected abstract Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct);
+    
+    /// <summary>
+    /// Resolves the columns to paginate a table's initial load by, from the source catalog.
+    /// The source table's PRIMARY KEY is preferred; when it has none, a unique key whose columns
+    /// are all NOT NULL is used instead. Returns null/empty when neither exists, which makes the
+    /// configuration invalid for that table (see <see cref="ProcessTableInitialLoad"/>). The chosen key is
+    /// globally unique and always physically present in SELECT *, so keyset pagination can never silently
+    /// skip rows. Implementations cache the result across tables.
+    /// </summary>
+    protected abstract Task<List<string>> ResolveInitialLoadKeyColumnsAsync(DbConnection conn, string schema, string table, CancellationToken ct);
+
+    /// <summary>
+    /// Appends a discovered primary-key column to the per-table bucket keyed by "schema.table"
+    /// (case-insensitive). Rows must be fed in key order so each table's columns preserve that order.
+    /// </summary>
+    internal static void AddDiscoveredPrimaryKeyColumn(Dictionary<string, List<string>> map, string schema, string table, string column)
+    {
+        var key = $"{schema}.{table}";
+        if (map.TryGetValue(key, out var columns) == false)
+            map[key] = columns = new List<string>();
+        columns.Add(column);
+    }
+
+    /// <summary>
+    /// Accumulates one column of a candidate unique key (keyed by "schema.table" then key/index name),
+    /// tracking whether every column seen for that key is NOT NULL. Columns must be fed in key order.
+    /// </summary>
+    internal static void AddDiscoveredUniqueKeyColumn(
+        Dictionary<string, Dictionary<string, UniqueKeyAccumulator>> map,
+        string schema, string table, string keyName, string column, bool columnNotNull)
+    {
+        var tableKey = $"{schema}.{table}";
+        if (map.TryGetValue(tableKey, out var byKeyName) == false)
+            map[tableKey] = byKeyName = new Dictionary<string, UniqueKeyAccumulator>(StringComparer.OrdinalIgnoreCase);
+        if (byKeyName.TryGetValue(keyName, out var acc) == false)
+            byKeyName[keyName] = acc = new UniqueKeyAccumulator();
+        acc.Columns.Add(column);
+        if (columnNotNull == false)
+            acc.AllColumnsNotNull = false;
+    }
+
+    internal sealed class UniqueKeyAccumulator
+    {
+        public readonly List<string> Columns = new();
+        public bool AllColumnsNotNull = true;
+    }
+
+    /// <summary>
+    /// Chooses the initial-load pagination key for a table: its primary key when present, otherwise the
+    /// NOT-NULL unique key with the fewest columns (ties broken by column names for a stable choice).
+    /// Returns null when neither a primary key nor a fully-NOT-NULL unique key exists.
+    /// </summary>
+    internal static List<string> ChooseInitialLoadKey(List<string> primaryKey, Dictionary<string, UniqueKeyAccumulator> uniqueKeys)
+    {
+        if (primaryKey is { Count: > 0 })
+            return primaryKey;
+
+        if (uniqueKeys == null)
+            return null;
+
+        return uniqueKeys.Values
+            .Where(k => k.AllColumnsNotNull && k.Columns.Count > 0)
+            .OrderBy(k => k.Columns.Count)
+            .ThenBy(k => string.Join(",", k.Columns), StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault()?.Columns;
+    }
+
+    internal static bool ResumeKeyColumnsMatch(List<string> persisted, List<string> current)
+    {
+        if (persisted == null || current == null || persisted.Count != current.Count)
+            return false;
+        for (int i = 0; i < current.Count; i++)
+        {
+            if (string.Equals(persisted[i], current[i], StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+        }
+        return true;
+    }
 
 
     /// <summary>
@@ -820,16 +898,16 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// SQL Server overrides this because it does not support row-value comparison.
     /// </summary>
     protected virtual string BuildBatchQuery(
-        CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
         string[] lastKeys, int maxBatchSize)
     {
         var table = $"{CommandBuilder.QuoteIdentifier(tableInfo.Schema)}.{CommandBuilder.QuoteIdentifier(tableInfo.TableName)}";
-        var pkCols = string.Join(", ", pkColumns.Select(c => CommandBuilder.QuoteIdentifier(c)));
+        var keyCols = string.Join(", ", keyColumns.Select(c => CommandBuilder.QuoteIdentifier(c)));
         var where = lastKeys != null
-            ? $" WHERE ({pkCols}) > ({string.Join(", ", pkColumns.Select((_, i) => $"@k{i}"))})"
+            ? $" WHERE ({keyCols}) > ({string.Join(", ", keyColumns.Select((_, i) => $"@k{i}"))})"
             : "";
 
-        return $"SELECT * FROM {table} {where} ORDER BY {pkCols} LIMIT {maxBatchSize}";
+        return $"SELECT * FROM {table} {where} ORDER BY {keyCols} LIMIT {maxBatchSize}";
     }
 
     /// <summary>
@@ -837,7 +915,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// convert string keys to typed values; MySQL passes raw strings.
     /// Only called when <paramref name="lastKeys"/> is not null.
     /// </summary>
-    protected abstract Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct);
+    protected abstract Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns, string[] lastKeys, CancellationToken ct);
 
     /// <summary>
     /// Converts a single column value from the initial load DbDataReader to a
@@ -869,16 +947,16 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
     private async Task<InitialLoadBatch> ReadOneBatch(
-        DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
         string[] lastKeys, int maxBatchSize, CancellationToken ct)
     {
-        var query = BuildBatchQuery(tableInfo, pkColumns, lastKeys, maxBatchSize);
+        var query = BuildBatchQuery(tableInfo, keyColumns, lastKeys, maxBatchSize);
 
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = query;
 
         if (lastKeys != null)
-            await BindKeysetParameters(cmd, tableInfo, pkColumns, lastKeys, ct);
+            await BindKeysetParameters(cmd, tableInfo, keyColumns, lastKeys, ct);
 
         await using var reader = await cmd.ExecuteReaderAsync(ct);
 
@@ -947,10 +1025,10 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     continue;
                 var lastValues = ops[j].RawValues;
                 var sourceColumns = ops[j].Processor.SourceColumnNames;
-                newLastKeys = new string[pkColumns.Count];
-                for (int i = 0; i < pkColumns.Count; i++)
+                newLastKeys = new string[keyColumns.Count];
+                for (int i = 0; i < keyColumns.Count; i++)
                 {
-                    var idx = CdcSinkTableProcessor.FindColumnIndex(sourceColumns, pkColumns[i]);
+                    var idx = CdcSinkTableProcessor.FindColumnIndex(sourceColumns, keyColumns[i]);
                     newLastKeys[i] = lastValues[idx]?.ToString() ?? "";
                 }
                 break;
@@ -1018,8 +1096,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             return;
         }
 
-        WarnAboutDeeplyNestedEmbeddedTables(GetDefaultSchema());
-
         // Single connection for the entire initial load — reused across all tables
         await using var conn = await OpenInitialLoadConnection(ct);
 
@@ -1044,11 +1120,32 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, string tableKey,
         CdcSinkTableLoadState resumeState, CancellationToken ct)
     {
-        var pkColumns = tableInfo.InitialLoadKeyColumns ?? tableInfo.PrimaryKeyColumns;
+        // Paginate the initial load by the source table's actual unique key, resolved from the source
+        // catalog - not the configured PrimaryKeyColumns (which for an embedded table is the array-match
+        // key and need only be unique within a parent's array, not across the table). The primary key is
+        // preferred; a NOT-NULL unique key is used when there is no primary key. Either is globally unique
+        // and always present in SELECT *.
+        var keyColumns = await ResolveInitialLoadKeyColumnsAsync(conn, tableInfo.Schema, tableInfo.TableName, ct);
+        if (keyColumns == null || keyColumns.Count == 0)
+        {
+            throw new CdcSinkFaultedException(
+                $"Initial load cannot start for table '{tableInfo.FullName}': the source table has neither a primary key nor a NOT-NULL unique key. " +
+                "CDC Sink paginates the initial load by such a key to guarantee that no rows are skipped. " +
+                "Add a primary key or a NOT-NULL unique key to the source table, or remove the table from the CDC Sink configuration; the task will restart once the configuration is valid.");
+        }
+
+        if (Logger.IsInfoEnabled)
+            Logger.Info($"[{Name}] Initial load for {tableInfo.FullName} paginating by ({string.Join(", ", keyColumns)}).");
+
         var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
 
         string[] lastKeys = null;
-        if (resumeState?.LastKeyValues != null && resumeState.LastKeyValues.Count == pkColumns.Count)
+        // Reuse a persisted resume point only when it was captured against the SAME pagination
+        // columns. Legacy state (no KeyColumns) or a key that has since changed -> clean restart of
+        // this (unfinished) table; re-scanning is safe because upserts are idempotent.
+        if (resumeState?.LastKeyValues != null
+            && resumeState.LastKeyValues.Count == keyColumns.Count
+            && ResumeKeyColumnsMatch(resumeState.KeyColumns, keyColumns))
         {
             lastKeys = new string[resumeState.LastKeyValues.Count];
             for (int i = 0; i < resumeState.LastKeyValues.Count; i++)
@@ -1066,7 +1163,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             {
                 ct.ThrowIfCancellationRequested();
 
-                var (ops, newLastKeys, batchCtx) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, ct);
+                var (ops, newLastKeys, batchCtx) = await ReadOneBatch(conn, tableInfo, keyColumns, lastKeys, maxBatchSize, ct);
                 currentBatchCtx = batchCtx;
 
                 if (ops.Count == 0)
@@ -1093,7 +1190,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                 var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
                 {
-                    [tableKey] = new CdcSinkTableLoadState { LastKeyValues = new List<string>(newLastKeys) }
+                    [tableKey] = new CdcSinkTableLoadState { LastKeyValues = new List<string>(newLastKeys), KeyColumns = new List<string>(keyColumns) }
                 };
 
                 lastBatchOps = ops;
@@ -1112,47 +1209,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             await DrainSafely(lastBatch);
             previousBatchCtx?.Dispose();
             currentBatchCtx?.Dispose();
-        }
-    }
-
-    private void WarnAboutDeeplyNestedEmbeddedTables(string defaultSchema)
-    {
-        if (Logger.IsWarnEnabled == false)
-            return;
-
-        var deeplyNested = new List<string>();
-        foreach (var table in Configuration.Tables)
-        {
-            if (table.Disabled)
-                continue;
-            CollectDeeplyNestedEmbeddedTables(table.EmbeddedTables, depth: 1, defaultSchema, deeplyNested);
-        }
-
-        if (deeplyNested.Count == 0)
-            return;
-
-        Logger.Warn(
-            $"[{Name}] The following embedded table(s) are nested 3 or more levels deep: {string.Join(", ", deeplyNested)}. " +
-            "Their initial load is paginated by the root and immediate-parent foreign keys plus the configured PrimaryKeyColumns. " +
-            "If an intermediate ancestor's key is unique only within its own parent (not across the whole source table) and is not " +
-            "denormalized into the child row, some rows may be silently skipped during initial load. Verify that these columns " +
-            "uniquely identify a source row, or denormalize the missing ancestor key column(s) into the child table.");
-    }
-
-    private static void CollectDeeplyNestedEmbeddedTables(List<CdcSinkEmbeddedTableConfig> embeddedTables, int depth, string defaultSchema, List<string> deeplyNested)
-    {
-        if (embeddedTables == null)
-            return;
-
-        foreach (var embedded in embeddedTables)
-        {
-            if (depth >= 3)
-            {
-                var schema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema;
-                deeplyNested.Add($"{schema}.{embedded.SourceTableName}");
-            }
-
-            CollectDeeplyNestedEmbeddedTables(embedded.EmbeddedTables, depth + 1, defaultSchema, deeplyNested);
         }
     }
 

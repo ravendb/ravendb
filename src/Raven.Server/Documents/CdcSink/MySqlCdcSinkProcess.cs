@@ -154,6 +154,9 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
         _resolvedTables.Clear();
+        _sourcePrimaryKeysCache.Clear();
+        _sourceUniqueKeysCache.Clear();
+        _sourcePrimaryKeysFetchedSchemas.Clear();
         await EnsureBinlogConfiguration(ct);
         await ResolveColumnNames(ct);
         await HandleInitialLoad(ct);
@@ -377,11 +380,62 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
     protected override DbCommandBuilder CommandBuilder { get; } = new MySqlCommandBuilder();
 
-    protected override Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct)
+    protected override Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns, string[] lastKeys, CancellationToken ct)
     {
         for (int i = 0; i < lastKeys.Length; i++)
             AddParameter(cmd, $"@k{i}", lastKeys[i]);
         return Task.CompletedTask;
+    }
+    
+    // Unique (non-PRIMARY) indexes with each column's nullability, joined to COLUMNS for IS_NULLABLE.
+    // Columns: schema, table, index name, column, IS_NULLABLE ('YES'/'NO').
+    private const string SelectNotNullUniqueKeysQuery = """
+                                                        SELECT s.TABLE_SCHEMA, s.TABLE_NAME, s.INDEX_NAME, s.COLUMN_NAME, c.IS_NULLABLE
+                                                        FROM INFORMATION_SCHEMA.STATISTICS s
+                                                        JOIN INFORMATION_SCHEMA.COLUMNS c
+                                                          ON c.TABLE_SCHEMA = s.TABLE_SCHEMA AND c.TABLE_NAME = s.TABLE_NAME AND c.COLUMN_NAME = s.COLUMN_NAME
+                                                        WHERE s.TABLE_SCHEMA = @schema AND s.NON_UNIQUE = 0 AND s.INDEX_NAME <> 'PRIMARY'
+                                                        ORDER BY s.TABLE_NAME, s.INDEX_NAME, s.SEQ_IN_INDEX
+                                                        """;
+
+    private readonly Dictionary<string, List<string>> _sourcePrimaryKeysCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, UniqueKeyAccumulator>> _sourceUniqueKeysCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _sourcePrimaryKeysFetchedSchemas = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task<List<string>> ResolveInitialLoadKeyColumnsAsync(DbConnection conn, string schema, string table, CancellationToken ct)
+    {
+        if (_sourcePrimaryKeysFetchedSchemas.Add(schema))
+        {
+            try
+            {
+                await using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = new MySqlSchemaQueries().SelectPrimaryKeysQuery;
+                    AddParameter(cmd, "@schema", schema);
+                    await using var reader = await cmd.ExecuteReaderAsync(ct);
+                    while (await reader.ReadAsync(ct))
+                        AddDiscoveredPrimaryKeyColumn(_sourcePrimaryKeysCache, reader.GetString(2), reader.GetString(0), reader.GetString(1));
+                }
+
+                await using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = SelectNotNullUniqueKeysQuery;
+                    AddParameter(cmd, "@schema", schema);
+                    await using var reader = await cmd.ExecuteReaderAsync(ct);
+                    while (await reader.ReadAsync(ct))
+                        AddDiscoveredUniqueKeyColumn(_sourceUniqueKeysCache, reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
+                            columnNotNull: string.Equals(reader.GetString(4), "NO", StringComparison.OrdinalIgnoreCase));
+                }
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"[{Name}] Failed to read keys from the source catalog; tables without a resolvable primary or NOT-NULL unique key will fault the initial load.", e);
+            }
+        }
+
+        var key = $"{schema}.{table}";
+        return ChooseInitialLoadKey(_sourcePrimaryKeysCache.GetValueOrDefault(key), _sourceUniqueKeysCache.GetValueOrDefault(key));
     }
 
     protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo)
