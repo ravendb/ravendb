@@ -303,6 +303,23 @@
         opacity: 1;
     }
 
+    /* The native color swatch is a sharp-cornered, bordered rectangle. We render color inputs
+       as small circular swatch buttons, so drop the wrapper's built-in padding and let the
+       swatch fill the input as a circle. */
+    input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+        border: none;
+        border-radius: 100vh;
+    }
+
+    input[type="color"]::-moz-color-swatch {
+        border: none;
+        border-radius: 100vh;
+    }
+
     ::-webkit-scrollbar {
         width: 10px;
         height: 10px;
