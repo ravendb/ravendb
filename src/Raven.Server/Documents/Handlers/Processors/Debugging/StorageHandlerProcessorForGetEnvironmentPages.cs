@@ -44,10 +44,13 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         Dictionary<long, string> owners;
         long totalPages;
 
+        var gaps = new List<(long Start, long End)>();
+
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (var tx = env.Environment.ReadTransaction()) 
+        using (var tx = env.Environment.ReadTransaction())
         {
-            totalPages = tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages;
+            var llt = tx.LowLevelTransaction;
+            totalPages = llt.DataPagerState.NumberOfAllocatedPages;
             owners = env.Environment.GetPageOwners(tx, postingList =>
             {
                 if (postingList.Name.ToString() != "LargePostingListsSet")
@@ -62,9 +65,9 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
                     {
                         for (int i = 0; i < read; i++)
                         {
-                            Container.Get(tx.LowLevelTransaction, new ContainerEntryId(buffer[i]), out var item);
+                            Container.Get(llt, new ContainerEntryId(buffer[i]), out var item);
                             var state = (PostingListState*)item.Address;
-                            var pl = new PostingList(tx.LowLevelTransaction, Constants.IndexWriter.LargePostingListsSetSlice, *state);
+                            var pl = new PostingList(llt, Constants.IndexWriter.LargePostingListsSetSlice, *state);
                             list.AddRange(pl.AllPages());
                         }
                     }
@@ -72,25 +75,33 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
                 return list;
             });
-        }
 
-        var gaps = new List<(long Start, long End)>();
-
-        long i = 0;
-        while (i < totalPages)
-        {
-            if (owners.ContainsKey(i))
+            // Walk every page under this single read transaction, classifying each unowned page as
+            // either legitimate-but-untraced table data (RawData/Overflow, which we claim) or a true gap.
+            long i = 0;
+            while (i < totalPages)
             {
-                i++;
-                continue;
-            }
+                if (owners.ContainsKey(i))
+                {
+                    i++;
+                    continue;
+                }
 
-            using (var tx = env.Environment.ReadTransaction())
-            {
-                var claimed = false;
+                // Unowned page: read it once to decide whether it's claimable table data or a gap.
+                Page page = default;
+                var readable = true;
                 try
                 {
-                    var page = tx.LowLevelTransaction.GetPage(i);
+                    page = llt.GetPage(i);
+                }
+                catch
+                {
+                    // Can't read it -> treat it as the start of a true gap.
+                    readable = false;
+                }
+
+                if (readable)
+                {
                     var isOverflow = page.Flags.HasFlag(PageFlags.Overflow);
                     var isRawData = page.Flags.HasFlag(PageFlags.RawData);
 
@@ -98,11 +109,9 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
                     // Claim it so it isn't reported as a gap.
                     if (isOverflow || isRawData)
                     {
-                        string pageType = isOverflow ? "Overflow (Large Data)" : "RawData (Table Data)";
-                        owners[i] = $"Unmapped {pageType}";
+                        owners[i] = $"Unmapped {(isOverflow ? "Overflow (Large Data)" : "RawData (Table Data)")}";
 
-                        // If it's an overflow page, it likely spans multiple pages.
-                        // Claim the subsequent pages dictated by the overflow size.
+                        // An overflow page spans multiple pages; claim the continuation pages too.
                         if (isOverflow)
                         {
                             var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
@@ -115,83 +124,36 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
                         }
 
                         i++; // advance past the claimed region
-                        claimed = true;
+                        continue; // It's owned now, so it's not a gap!
                     }
                 }
-                catch
-                {
-                    // If we can't read the page for some reason, let it fall through to become a gap
-                }
 
-                if (claimed)
-                    continue; // It's owned now, so it's not a gap!
-
-                // If we get here, it's a TRUE gap (not RawData, not Overflow, and unowned).
-                // Extend until an owned page OR an unmapped RawData/Overflow page.
+                // True gap starting at i (either unreadable, or readable and not RawData/Overflow).
+                // page i is already classified, so scan the pages that follow.
                 var start = i;
+                i++;
                 while (i < totalPages && owners.ContainsKey(i) == false)
                 {
-                    // Stop at valid unmapped RawData/Overflow so we don't group it into a true gap block.
+                    // Stop at a valid unmapped RawData/Overflow page so we don't group it into a true gap
+                    // block; leave i on it so the outer loop re-examines and claims it.
+                    var boundary = false;
                     try
                     {
-                        var page = tx.LowLevelTransaction.GetPage(i);
-                        if (page.Flags.HasFlag(PageFlags.Overflow) || page.Flags.HasFlag(PageFlags.RawData))
-                            break; // do NOT advance past it; the outer loop re-examines and claims it
+                        var next = llt.GetPage(i);
+                        boundary = next.Flags.HasFlag(PageFlags.Overflow) || next.Flags.HasFlag(PageFlags.RawData);
                     }
-                    catch { }
+                    catch
+                    {
+                        // Unreadable page is still part of the gap.
+                    }
+
+                    if (boundary)
+                        break;
 
                     i++;
                 }
                 gaps.Add((start, i));
-                // No i++ here: the outer while re-examines the terminating page.
             }
-        }
-
-        using (var tx = env.Environment.ReadTransaction())
-        {
-            // --- GAP ANALYSIS SNIPPET ---
-
-            var gapAnalysis = new Dictionary<string, int>();
-            var gapPageDetails = new Dictionary<long, string>(); // Optional: If you want to pass this to your renderer
-
-            foreach (var gap in gaps)
-            {
-                for (long pageNumber = gap.Start; pageNumber < gap.End; pageNumber++)
-                {
-                    try
-                    {
-                        // Grab the raw page from the low-level pager
-                        var page = tx.LowLevelTransaction.GetPage(pageNumber);
-
-                        // The Flags enum will tell you exactly what Voron thinks this page is
-                        var flags = page.Flags;
-
-                        string gapType = flags.ToString();
-
-                        // Track how many of each type we are missing
-                        if (gapAnalysis.ContainsKey(gapType))
-                            gapAnalysis[gapType]++;
-                        else
-                            gapAnalysis[gapType] = 1;
-
-                        // Keep track of the specific page details for your UI
-                        gapPageDetails[pageNumber] = $"Gap - {gapType}";
-                    }
-                    catch (Exception ex)
-                    {
-                        // Just in case we hit an unmapped or strictly locked region
-                        gapPageDetails[pageNumber] = $"Gap - Unreadable ({ex.Message})";
-                    }
-                }
-            }
-
-            // Quick debug output to your console/logger so you can see it immediately
-            foreach (var kvp in gapAnalysis)
-            {
-                Console.WriteLine($"VORON DEBUG: Found {kvp.Value} gap pages with flags: {kvp.Key}");
-            }
-
-            // --- END GAP ANALYSIS SNIPPET ---
         }
 
         var output = RequestHandler.GetEnumQueryString<OutputType>("output", required: false);
@@ -412,6 +374,8 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
             return ("⏱️", "TimeSeries");
         if (owner.Contains("Metadata") || owner.Contains("(VST)"))
             return ("🔧", owner);
+        if (owner.Contains("Overflow"))
+            return ("🟧", "Overflow (Large Data)");
         return ("🟦", owner);
     }
 
