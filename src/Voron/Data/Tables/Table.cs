@@ -1062,6 +1062,48 @@ namespace Voron.Data.Tables
             }
         }
 
+        // Large values live on standalone overflow pages that belong to no section or page-set, so there is no
+        // enumerator; we find them by walking every entry (via one local index) and taking the page-aligned ids.
+        internal IEnumerable<long> GetAllLargeValuePageNumbers()
+        {
+            foreach (var id in EnumerateAllEntryIds())
+            {
+                // A page-aligned id means the value is stored on its own overflow page(s).
+                if (id % Constants.Storage.PageSize == 0)
+                    yield return id / Constants.Storage.PageSize;
+            }
+
+            IEnumerable<long> EnumerateAllEntryIds()
+            {
+                if (_schema.Key is { IsGlobal: false })
+                {
+                    foreach (var holder in SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                        yield return holder.Reader.Id;
+
+                    yield break;
+                }
+
+                var variableSizeIndex = _schema.Indexes.Values.FirstOrDefault(x => x.IsGlobal == false);
+                if (variableSizeIndex != null)
+                {
+                    foreach (var seek in SeekForwardFrom(variableSizeIndex, Slices.BeforeAllKeys, 0))
+                        yield return seek.Result.Reader.Id;
+
+                    yield break;
+                }
+
+                var fixedSizeIndex = _schema.FixedSizeIndexes.Values.FirstOrDefault(x => x.IsGlobal == false);
+                if (fixedSizeIndex != null)
+                {
+                    foreach (var holder in SeekForwardFrom(fixedSizeIndex, long.MinValue, 0))
+                        yield return holder.Reader.Id;
+                }
+
+                // A table with only global indexes cannot be enumerated locally (StorageCompaction throws in
+                // that case); we simply skip it here
+            }
+        }
+
         internal long Insert(ref TableValueReader reader)
         {
             AssertWritableTable();
