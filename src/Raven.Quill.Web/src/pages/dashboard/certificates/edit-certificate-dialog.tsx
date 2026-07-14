@@ -1,0 +1,195 @@
+import { useState, type ReactNode } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useFieldArray, useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { api } from "@/api/api";
+import type { CertificateItem } from "@/api/custom-services/certificates-service";
+import type { AppResponse } from "@/api/generated/server-api";
+import { FormInput } from "@/components/form/form-input";
+import { FormSelect } from "@/components/form/form-select";
+import { FormSwitch } from "@/components/form/form-switch";
+import { Alert } from "@/components/shadcn/ui/alert";
+import { Button } from "@/components/shadcn/ui/button";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/shadcn/ui/dialog";
+import { Spinner } from "@/components/shadcn/ui/spinner";
+import { DATABASE_ACCESS_OPTIONS, toDatabaseOption } from "@/pages/dashboard/certificates/certificate-labels";
+
+const editCertificateSchema = z.object({
+    name: z.string().trim().min(1, "Required"),
+    isEnabled: z.boolean(),
+    permissions: z
+        .array(
+            z.object({
+                database: z.string().min(1, "Required"),
+                access: z.enum(["Admin", "ReadWrite", "Read"]),
+            }),
+        )
+        .superRefine((rows, ctx) => {
+            rows.forEach((row, index) => {
+                const isDuplicate =
+                    row.database !== "" && rows.findIndex((other) => other.database === row.database) !== index;
+                if (isDuplicate) {
+                    ctx.addIssue({ code: "custom", path: [index, "database"], message: "Already listed" });
+                }
+            });
+        }),
+});
+
+type EditCertificateFormData = z.infer<typeof editCertificateSchema>;
+
+export function EditCertificateDialog({
+    certificate,
+    apps,
+    trigger,
+}: {
+    certificate: CertificateItem;
+    apps: AppResponse[];
+    trigger: ReactNode;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const queryClient = useQueryClient();
+
+    const form = useForm<EditCertificateFormData>({
+        resolver: zodResolver(editCertificateSchema),
+        defaultValues: toFormData(certificate),
+    });
+    const permissionRows = useFieldArray({ control: form.control, name: "permissions" });
+
+    const editMutation = useMutation({
+        mutationFn: (values: EditCertificateFormData) =>
+            api.services.certificates.edit(
+                Object.fromEntries(values.permissions.map((row) => [row.database, row.access])),
+                { thumbprint: certificate.thumbprint, name: values.name, disable: !values.isEnabled },
+            ),
+        onSuccess: async (_, values) => {
+            toast.success(`Certificate “${values.name}” updated.`);
+            await queryClient.invalidateQueries({ queryKey: api.queries.certificates.list().queryKey });
+            handleOpenChange(false);
+        },
+    });
+
+    const submit = form.handleSubmit((values) => editMutation.mutate(values));
+
+    const handleOpenChange = (open: boolean) => {
+        setIsOpen(open);
+        if (open) {
+            form.reset(toFormData(certificate));
+        } else {
+            editMutation.reset();
+        }
+    };
+
+    // Databases the certificate already references stay selectable even when they
+    // don't match a current app (e.g. the app was removed).
+    const knownDatabases = [
+        ...new Set([...apps.map((app) => app.database), ...Object.keys(certificate.permissions ?? {})]),
+    ];
+    const databaseOptions = knownDatabases.map((database) => toDatabaseOption(database, apps));
+
+    return (
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Edit certificate</DialogTitle>
+                    <DialogDescription>
+                        Rename the certificate, enable or disable it, and manage which apps it can access.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form className="grid gap-4" onSubmit={submit}>
+                    <FormInput control={form.control} name="name" label="Certificate name" />
+                    <FormSwitch control={form.control} name="isEnabled" label="Enabled" />
+
+                    <div className="grid gap-3">
+                        <div className="text-sm font-medium">App access</div>
+                        {permissionRows.fields.length === 0 && (
+                            <p className="text-sm text-muted-foreground">
+                                No access granted — this certificate cannot reach any app.
+                            </p>
+                        )}
+                        {permissionRows.fields.map((row, index) => (
+                            <div key={row.id} className="flex items-start gap-2">
+                                <FormSelect
+                                    control={form.control}
+                                    name={`permissions.${index}.database`}
+                                    placeholder="Select an app"
+                                    options={databaseOptions}
+                                    className="flex-1"
+                                />
+                                <FormSelect
+                                    control={form.control}
+                                    name={`permissions.${index}.access`}
+                                    options={DATABASE_ACCESS_OPTIONS}
+                                    className="w-32 shrink-0"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Remove access"
+                                    onClick={() => permissionRows.remove(index)}
+                                >
+                                    <Trash2 className="size-4" aria-hidden="true" />
+                                </Button>
+                            </div>
+                        ))}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-fit"
+                            onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                        >
+                            <Plus className="size-3.5" aria-hidden="true" />
+                            Add access
+                        </Button>
+                    </div>
+
+                    {editMutation.isError && (
+                        <Alert variant="destructive">
+                            {editMutation.error instanceof Error
+                                ? editMutation.error.message
+                                : "Could not update the certificate."}
+                        </Alert>
+                    )}
+
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">
+                                Cancel
+                            </Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={editMutation.isPending}>
+                            {editMutation.isPending && <Spinner />}
+                            Save changes
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function toFormData(certificate: CertificateItem): EditCertificateFormData {
+    return {
+        name: certificate.name ?? "",
+        isEnabled: !certificate.disabled,
+        permissions: Object.entries(certificate.permissions ?? {}).map(([database, access]) => ({
+            database,
+            access,
+        })),
+    };
+}
