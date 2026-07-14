@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Raven.AiAppliance.AiHelper;
-using Raven.AiAppliance.Contracts;
-using Raven.AiAppliance.Feedback;
+using Raven.Quill.AiHelper;
+using Raven.Quill.Contracts;
+using Raven.Quill.Feedback;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Tests.Infrastructure;
@@ -83,7 +83,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 
-    [RavenFact(RavenTestCategory.AiAppliance)]
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Feedback_accepts_only_user_fields_and_normalizes_them()
     {
         var sender = new RecordingFeedbackSender();
@@ -110,7 +110,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         Assert.Contains("Quill-Test/1.0", sender.UserAgent);
     }
 
-    [RavenFact(RavenTestCategory.AiAppliance)]
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Feedback_treats_impression_and_studio_view_as_optional()
     {
         var sender = new RecordingFeedbackSender();
@@ -131,7 +131,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         Assert.Null(sender.Request.StudioView);
     }
 
-    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [RavenTheory(RavenTestCategory.Quill)]
     [InlineData(" ", "user@example.com", "positive", "Message.")]
     [InlineData("Jane Doe", "not-an-email", "positive", "Message.")]
     [InlineData("Jane Doe", "user@example.com", "meh", "Message.")]
@@ -154,7 +154,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         Assert.Null(sender.Request);
     }
 
-    [RavenFact(RavenTestCategory.AiAppliance)]
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Feedback_returns_bad_gateway_when_sending_fails()
     {
         var sender = new RecordingFeedbackSender(sendResult: false);
@@ -172,7 +172,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
     }
 
-    [RavenFact(RavenTestCategory.AiAppliance)]
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Feedback_sender_builds_the_ravendb_feedback_contract()
     {
         var client = new RecordingAiHelperClient();
