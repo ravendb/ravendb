@@ -1156,6 +1156,17 @@ namespace Voron
                                 RegisterSectionPages(activeDataSmallSection, name + "/" + TableSchema.ActiveSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
+
+                                // Large values (> RawDataSection.MaxItemSize) live on standalone overflow pages
+                                // that belong to no section and no page-set, so we register them explicitly here,
+                                var largeValueName = name + "/LargeValue";
+                                foreach (var largeValuePageNumber in table.GetAllLargeValuePageNumbers())
+                                {
+                                    var largeValuePage = tx.LowLevelTransaction.GetPage(largeValuePageNumber);
+                                    var numberOfLargeValuePages = Paging.GetNumberOfOverflowPages(largeValuePage.OverflowSize);
+                                    for (int p = 0; p < numberOfLargeValuePages; p++)
+                                        r.Add(largeValuePageNumber + p, largeValueName);
+                                }
                                 break;
                             case RootObjectType.Container:
                                 var container = tx.OpenContainer(currentKey);

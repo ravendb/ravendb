@@ -14,7 +14,6 @@ using Raven.Server.Web.Http;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
-using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging;
 
@@ -43,8 +42,6 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
         Dictionary<long, string> owners;
         long totalPages;
-
-        var gaps = new List<(long Start, long End)>();
 
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (var tx = env.Environment.ReadTransaction())
@@ -75,81 +72,19 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
                 return list;
             });
+        }
 
-            // Walk every page under this single read transaction, classifying each unowned page as
-            // either legitimate-but-untraced table data (RawData/Overflow, which we claim) or a true gap.
-            long i = 0;
-            while (i < totalPages)
+        var gaps = new List<(long Start, long End)>();
+
+        for (long i = 0; i < totalPages; i++)
+        {
+            if (owners.ContainsKey(i) == false)
             {
-                if (owners.ContainsKey(i))
-                {
-                    i++;
-                    continue;
-                }
-
-                // Unowned page: read it once to decide whether it's claimable table data or a gap.
-                Page page = default;
-                var readable = true;
-                try
-                {
-                    page = llt.GetPage(i);
-                }
-                catch
-                {
-                    // Can't read it -> treat it as the start of a true gap.
-                    readable = false;
-                }
-
-                if (readable)
-                {
-                    var isOverflow = page.Flags.HasFlag(PageFlags.Overflow);
-                    var isRawData = page.Flags.HasFlag(PageFlags.RawData);
-
-                    // If it's RawData or Overflow, it's legitimate table data we just didn't trace.
-                    // Claim it so it isn't reported as a gap.
-                    if (isOverflow || isRawData)
-                    {
-                        owners[i] = $"Unmapped {(isOverflow ? "Overflow (Large Data)" : "RawData (Table Data)")}";
-
-                        // An overflow page spans multiple pages; claim the continuation pages too.
-                        if (isOverflow)
-                        {
-                            var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
-                            // Never claim past the last allocated page.
-                            for (int overflowPage = 1; overflowPage < numberOfOverflowPages && i + 1 < totalPages; ++overflowPage)
-                            {
-                                i++;
-                                owners[i] = "Overflow (Continuation)";
-                            }
-                        }
-
-                        i++; // advance past the claimed region
-                        continue; // It's owned now, so it's not a gap!
-                    }
-                }
-
-                // True gap starting at i (either unreadable, or readable and not RawData/Overflow).
-                // page i is already classified, so scan the pages that follow.
                 var start = i;
-                i++;
-                while (i < totalPages && owners.ContainsKey(i) == false)
+                while (i < totalPages)
                 {
-                    // Stop at a valid unmapped RawData/Overflow page so we don't group it into a true gap
-                    // block; leave i on it so the outer loop re-examines and claims it.
-                    var boundary = false;
-                    try
-                    {
-                        var next = llt.GetPage(i);
-                        boundary = next.Flags.HasFlag(PageFlags.Overflow) || next.Flags.HasFlag(PageFlags.RawData);
-                    }
-                    catch
-                    {
-                        // Unreadable page is still part of the gap.
-                    }
-
-                    if (boundary)
+                    if (owners.ContainsKey(i))
                         break;
-
                     i++;
                 }
                 gaps.Add((start, i));
