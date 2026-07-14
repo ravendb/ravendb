@@ -106,6 +106,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex);
             UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate);
+            // This code misses the schemaBase.SerializeSchemaIntoTableTree call.
+            // It works for runtime operations, but not for features that use offline database files,
+            // which use the serialized schema from disk to perform their operations.
+            // The schema was repaired in From72001.cs
 
             return true;
         }
