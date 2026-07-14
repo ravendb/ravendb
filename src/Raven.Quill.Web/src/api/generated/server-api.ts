@@ -670,6 +670,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/certificates/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["settings.certificates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/certificates/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["settings.certificatesGenerate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/certificates/edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["settings.certificatesEdit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/connect": {
         parameters: {
             query?: never;
@@ -3135,6 +3183,91 @@ export interface operations {
             };
         };
     };
+    "settings.certificates": {
+        parameters: {
+            query: {
+                start: number;
+                pageSize: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificateDefinition"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "settings.certificatesGenerate": {
+        parameters: {
+            query: {
+                appName: string;
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "settings.certificatesEdit": {
+        parameters: {
+            query: {
+                thumbprint: string;
+                name: string;
+                disable: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: components["schemas"]["DatabaseAccess"];
+                };
+            };
+        };
+        responses: {
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.connect": {
         parameters: {
             query?: never;
@@ -3514,6 +3647,7 @@ export const API_ENDPOINTS = {
         delete: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
         detail: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings`,
+        models: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/models`,
     },
     aiModels: {
         list: "/ai/models",
@@ -3558,6 +3692,9 @@ export const API_ENDPOINTS = {
         updateDefaultCustomization: (slug: string) => `/apps/${encodeURIComponent(slug)}/iframe/default-customization`,
     },
     settings: {
+        certificates: "/settings/certificates/get",
+        certificatesEdit: "/settings/certificates/edit",
+        certificatesGenerate: "/settings/certificates/generate",
         feedback: "/settings/feedback",
         license: "/settings/license",
         usage: "/settings/usage",
@@ -3597,6 +3734,7 @@ export function createServerApi(client: ApiClient) {
             delete: (slug: string, name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(slug, name)),
             detail: (slug: string, name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(slug, name)),
             list: (slug: string) => client.get<AiConnectionStringListResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list(slug)),
+            models: (slug: string, request: AiConnectionString) => client.post<void>(API_ENDPOINTS.aiConnectionStrings.models(slug), request),
         },
         aiModels: {
             list: (request: AiModelsRequest) => client.post<AiModelsResponse, ApiErrorResponse>(API_ENDPOINTS.aiModels.list, request),
@@ -3641,6 +3779,9 @@ export function createServerApi(client: ApiClient) {
             updateDefaultCustomization: (slug: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultCustomization(slug), request),
         },
         settings: {
+            certificates: (searchParams: { pageSize: string; start: string; }) => client.get<CertificateDefinition[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
+            certificatesEdit: (request: string, searchParams: { disable: boolean; name: string; thumbprint: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, request, { searchParams }),
+            certificatesGenerate: (searchParams: { appName: string; name: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, { searchParams }),
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
             usage: (searchParams: { day?: string; month?: string; year: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
