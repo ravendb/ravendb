@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -147,6 +148,9 @@ namespace Raven.Server.Documents.ETL
 
         public void RecordItemLoadError(string error, string documentId, int count = 1, TaskErrorStep step = TaskErrorStep.Load)
         {
+            Debug.Assert(step is TaskErrorStep.Load or TaskErrorStep.ModelInference or TaskErrorStep.Persistence,
+                $"RecordItemLoadError expects a load-phase step (Load/ModelInference/Persistence), but got '{step}'.");
+
             var now = SystemTime.UtcNow;
 
             var itemError = new TaskItemError()
