@@ -20,13 +20,31 @@ namespace SlowTests.Server.Documents.CdcSink
         {
         }
 
+        private const int SqlDeadlockErrorNumber = 1205;
+
+        private static bool IsDeadlock(SqlException e) =>
+            e.Number == SqlDeadlockErrorNumber ||
+            e.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
+
         private void ExecuteMsSql(string connectionString, string sql)
         {
-            using var connection = new SqlConnection(connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.CommandTimeout = 120;
-            cmd.ExecuteNonQuery();
+            const int maxAttempts = 5;
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
+                {
+                    using var connection = new SqlConnection(connectionString);
+                    connection.Open();
+                    using var cmd = new SqlCommand(sql, connection);
+                    cmd.CommandTimeout = 120;
+                    cmd.ExecuteNonQuery();
+                    return;
+                }
+                catch (SqlException e) when (IsDeadlock(e) && attempt < maxAttempts)
+                {
+                    System.Threading.Thread.Sleep(500 * attempt);
+                }
+            }
         }
 
         private void EnableCdc(string connectionString)
