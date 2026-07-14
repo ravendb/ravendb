@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Quill (RavenDB AI Appliance) docker image.
+# Build the Quill docker image.
 # Used both locally and by CI.
 
 set -euo pipefail
@@ -30,11 +30,18 @@ PUSH="false"
 NO_CACHE="false"
 DRY_RUN="false"
 
+require_value() {
+  if [ "$2" -lt 2 ]; then
+    echo "error: $1 requires a value" >&2
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --tag)       TAGS+=("$2"); shift 2 ;;
+    --tag)       require_value --tag "$#";       TAGS+=("$2"); shift 2 ;;
     --push)      PUSH="true"; shift ;;
-    --platforms) PLATFORMS="$2"; shift 2 ;;
+    --platforms) require_value --platforms "$#"; PLATFORMS="$2"; shift 2 ;;
     --no-cache)  NO_CACHE="true"; shift ;;
     --dry-run)   DRY_RUN="true"; shift ;;
     -h|--help)   show_help; exit 0 ;;
@@ -49,6 +56,16 @@ fi
 
 if [ "$DRY_RUN" = "true" ]; then
   PUSH="false"
+fi
+
+if [ "$PUSH" != "true" ]; then
+  case "$PLATFORMS" in
+    *,*)
+      echo "error: multi-platform build (--platforms $PLATFORMS) requires --push." >&2
+      echo "       buildx --load only supports a single platform." >&2
+      exit 1
+      ;;
+  esac
 fi
 
 cd "$(git rev-parse --show-toplevel)"
