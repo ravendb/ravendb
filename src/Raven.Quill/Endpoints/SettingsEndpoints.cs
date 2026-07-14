@@ -1,7 +1,11 @@
 using System.Net.Mail;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Quill.Contracts;
 using Raven.Quill.Feedback;
 using Raven.Quill.Licensing;
+using Raven.Quill.Metrics;
 
 namespace Raven.Quill.Endpoints;
 
@@ -22,8 +26,8 @@ public static class SettingsEndpoints
             .WithName("settings.license")
             .Produces<LicenseResponse>();
 
-        group.MapGet("/usage", async (int? year, int? month, ILicenseStatsProvider provider, CancellationToken token) => 
-                Results.Ok(await provider.GetUsageAsync(year, month, token)))
+        group.MapGet("/usage", async (ILicenseStatsProvider provider, int year, int? month, int? day, CancellationToken token) =>
+                Results.Ok(await provider.GetUsageAsync(year, month, day, token)))
             .WithName("settings.usage")
             .Produces<QuillUsageResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
@@ -33,6 +37,41 @@ public static class SettingsEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
+
+        group.MapGet("/certificates/get", async (IDocumentStore store, int start, int pageSize, CancellationToken token) =>
+            {
+                var op = new GetCertificatesOperation(start, pageSize);
+                var result = await store.Maintenance.Server.SendAsync(op, token);
+                return Results.Ok(result);
+            })
+            .Produces<CertificateDefinition[]>()
+            .WithName("settings.certificates")
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/certificates/generate", async (IDocumentStore store, string appName, string name, CancellationToken token) =>
+            {
+                var op = new CreateClientCertificateOperation(name, new Dictionary<string, DatabaseAccess> { [appName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
+                var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
+                return Results.File(fileBytes.RawData, "application/octet-stream", $"{appName}_{name}_certificates.zip");
+            })
+            .WithName("settings.certificatesGenerate")
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/certificates/edit", async (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, bool disable, CancellationToken token) =>
+            {
+                var op = new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
+                {
+                    Thumbprint = thumbprint,
+                    Permissions = permissions,
+                    Disabled = disable,
+                    Name = name,
+                    Clearance = SecurityClearance.ValidUser
+                });
+                await store.Maintenance.Server.SendAsync(op, token);
+                return Results.Ok();
+            })
+            .WithName("settings.certificatesEdit")
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
     }
 
     private static async Task<IResult> SendFeedbackAsync(

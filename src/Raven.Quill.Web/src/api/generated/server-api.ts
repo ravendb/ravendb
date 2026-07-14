@@ -228,6 +228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/cdc/errors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["apps.cdcErrors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/setup/try": {
         parameters: {
             query?: never;
@@ -424,6 +440,22 @@ export interface paths {
         get: operations["aiConnectionStrings.list"];
         put?: never;
         post: operations["aiConnectionStrings.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/ai/connection-strings/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["aiConnectionStrings.models"];
         delete?: never;
         options?: never;
         head?: never;
@@ -949,7 +981,6 @@ export interface components {
             cdcWrites: components["schemas"]["MetricCard"];
         };
         AppUsageResponse: {
-            granularity: components["schemas"]["UsageGranularity"];
             metrics: components["schemas"]["AppUsageMetrics"];
             tokensByCapability: components["schemas"]["SeriesData"];
             tokensByModel: components["schemas"]["SeriesData"];
@@ -1002,6 +1033,16 @@ export interface components {
         };
         /** @enum {unknown} */
         CdcColumnType: "Default" | "Json" | "Attachment";
+        CdcError: {
+            taskName: string;
+            /** Format: date-time */
+            createdAt: string;
+            step: string;
+            error: string;
+            documentId: null | string;
+            /** Format: int64 */
+            affectedDocumentsCount: null | number;
+        };
         CdcPerformanceResponse: {
             enabled: boolean;
             status: string;
@@ -1077,6 +1118,7 @@ export interface components {
             /** Format: int64 */
             writes: number;
         };
+        CertificateDefinition: Record<string, unknown>;
         ChannelStatsResponse: {
             /** Format: int32 */
             total: number;
@@ -1160,6 +1202,8 @@ export interface components {
             last7d: components["schemas"]["ConversationWindow"];
             last30d: components["schemas"]["ConversationWindow"];
         };
+        /** @enum {unknown} */
+        DatabaseAccess: "ReadWrite" | "Admin" | "Read";
         DataCollectionDto: {
             appId: string;
             name: string;
@@ -1514,7 +1558,6 @@ export interface components {
             style: null | components["schemas"]["IFrameStyle"];
             css: null | string;
         };
-        UsageGranularity: unknown;
         UsagePoint: {
             /** Format: date-time */
             timestamp: string;
@@ -1527,8 +1570,6 @@ export interface components {
             /** Format: int64 */
             writes: number;
         };
-        /** @enum {unknown} */
-        UsageWindow: "Last24h" | "Last7d" | "Last30d";
         /** @enum {unknown} */
         VertexAIVersion: "V1" | "V1_Beta" | null;
         VertexSettings: {
@@ -1612,8 +1653,10 @@ export interface operations {
     };
     "stats.usage": {
         parameters: {
-            query?: {
-                time?: components["schemas"]["UsageWindow"];
+            query: {
+                year: number;
+                month?: number;
+                day?: number;
                 app?: string;
             };
             header?: never;
@@ -1908,6 +1951,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CdcPerformanceResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "apps.cdcErrors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CdcError"][];
                 };
             };
             /** @description Not Found */
@@ -2589,6 +2663,30 @@ export interface operations {
             };
         };
     };
+    "aiConnectionStrings.models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiConnectionString"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     "aiConnectionStrings.detail": {
         parameters: {
             query?: never;
@@ -2724,9 +2822,10 @@ export interface operations {
     };
     "stats.appUsage": {
         parameters: {
-            query?: {
-                start?: string;
-                end?: string;
+            query: {
+                year: number;
+                month?: number;
+                day?: number;
             };
             header?: never;
             path: {
@@ -2965,9 +3064,10 @@ export interface operations {
     };
     "settings.usage": {
         parameters: {
-            query?: {
-                year?: number;
+            query: {
+                year: number;
                 month?: number;
+                day?: number;
             };
             header?: never;
             path?: never;
@@ -3321,6 +3421,7 @@ export type BootstrapStatusResponse = components["schemas"]["BootstrapStatusResp
 export type CdcBatchPoint = components["schemas"]["CdcBatchPoint"];
 export type CdcColumnMapping = components["schemas"]["CdcColumnMapping"];
 export type CdcColumnType = components["schemas"]["CdcColumnType"];
+export type CdcError = components["schemas"]["CdcError"];
 export type CdcPerformanceResponse = components["schemas"]["CdcPerformanceResponse"];
 export type CdcSinkConfiguration = components["schemas"]["CdcSinkConfiguration"];
 export type CdcSinkEmbeddedTableConfig = components["schemas"]["CdcSinkEmbeddedTableConfig"];
@@ -3330,6 +3431,7 @@ export type CdcSinkPostgresSettings = components["schemas"]["CdcSinkPostgresSett
 export type CdcSinkRelationType = components["schemas"]["CdcSinkRelationType"];
 export type CdcSinkTableConfig = components["schemas"]["CdcSinkTableConfig"];
 export type CdcWritePoint = components["schemas"]["CdcWritePoint"];
+export type CertificateDefinition = components["schemas"]["CertificateDefinition"];
 export type ChannelStatsResponse = components["schemas"]["ChannelStatsResponse"];
 export type ChannelSummaryResponse = components["schemas"]["ChannelSummaryResponse"];
 export type ChannelType = components["schemas"]["ChannelType"];
@@ -3343,6 +3445,7 @@ export type ConversationStatsResponse = components["schemas"]["ConversationStats
 export type ConversationTurn = components["schemas"]["ConversationTurn"];
 export type ConversationWindow = components["schemas"]["ConversationWindow"];
 export type DashboardResponse = components["schemas"]["DashboardResponse"];
+export type DatabaseAccess = components["schemas"]["DatabaseAccess"];
 export type DataCollectionDto = components["schemas"]["DataCollectionDto"];
 export type DiscoverColumnResponse = components["schemas"]["DiscoverColumnResponse"];
 export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignKeyResponse"];
@@ -3398,9 +3501,7 @@ export type TopCapability = components["schemas"]["TopCapability"];
 export type TopTable = components["schemas"]["TopTable"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
 export type UpdateIFrameCustomizationRequest = components["schemas"]["UpdateIFrameCustomizationRequest"];
-export type UsageGranularity = components["schemas"]["UsageGranularity"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
-export type UsageWindow = components["schemas"]["UsageWindow"];
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
 
@@ -3418,6 +3519,7 @@ export const API_ENDPOINTS = {
         list: "/ai/models",
     },
     apps: {
+        cdcErrors: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/errors`,
         cdcPerformance: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/performance`,
         detail: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
         list: "/apps",
@@ -3500,6 +3602,7 @@ export function createServerApi(client: ApiClient) {
             list: (request: AiModelsRequest) => client.post<AiModelsResponse, ApiErrorResponse>(API_ENDPOINTS.aiModels.list, request),
         },
         apps: {
+            cdcErrors: (slug: string) => client.get<CdcError[], ApiErrorResponse>(API_ENDPOINTS.apps.cdcErrors(slug)),
             cdcPerformance: (slug: string) => client.get<CdcPerformanceResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcPerformance(slug)),
             detail: (slug: string) => client.get<AppResponse, ApiErrorResponse>(API_ENDPOINTS.apps.detail(slug)),
             list: () => client.get<AppResponse[]>(API_ENDPOINTS.apps.list),
@@ -3540,7 +3643,7 @@ export function createServerApi(client: ApiClient) {
         settings: {
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
-            usage: (searchParams?: { month?: string; year?: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
+            usage: (searchParams: { day?: string; month?: string; year: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
         },
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
@@ -3552,7 +3655,7 @@ export function createServerApi(client: ApiClient) {
         },
         stats: {
             activity: (slug: string) => client.get<ActivityEventDto[], ApiErrorResponse>(API_ENDPOINTS.stats.activity(slug)),
-            appUsage: (slug: string, searchParams?: { end?: string; start?: string; }) => client.get<AppUsageResponse, ApiErrorResponse>(API_ENDPOINTS.stats.appUsage(slug), { searchParams }),
+            appUsage: (slug: string, searchParams: { day?: string; month?: string; year: string; }) => client.get<AppUsageResponse, ApiErrorResponse>(API_ENDPOINTS.stats.appUsage(slug), { searchParams }),
             channels: (slug: string) => client.get<ChannelStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.channels(slug)),
             collections: (slug: string) => client.get<DataCollectionDto[], ApiErrorResponse>(API_ENDPOINTS.stats.collections(slug)),
             conversation: (slug: string, conversationId: string) => client.get<ConversationDto, ApiErrorResponse>(API_ENDPOINTS.stats.conversation(slug, conversationId)),
@@ -3563,7 +3666,7 @@ export function createServerApi(client: ApiClient) {
             dashboardApps: () => client.get<ApplianceAppResponse[]>(API_ENDPOINTS.stats.dashboardApps),
             overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),
             tokensByApp: () => client.get<TokensByAppResponse>(API_ENDPOINTS.stats.tokensByApp),
-            usage: (searchParams?: { app?: string; time?: UsageWindow; }) => client.get<UsagePoint[]>(API_ENDPOINTS.stats.usage, { searchParams }),
+            usage: (searchParams: { app?: string; day?: string; month?: string; year: string; }) => client.get<UsagePoint[]>(API_ENDPOINTS.stats.usage, { searchParams }),
         },
     };
 }

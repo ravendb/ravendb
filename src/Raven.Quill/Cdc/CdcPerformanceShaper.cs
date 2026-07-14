@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Quill.Cdc;
 using Raven.Quill.Contracts;
 
 namespace Raven.Quill.Cdc;
@@ -19,7 +20,7 @@ internal static class CdcPerformanceShaper
             .SelectMany(t => t.Stats ?? new List<CdcPerfProcessRaw>())
             .SelectMany(p => p.Performance ?? new List<CdcPerfBatchRaw>());
 
-    public static CdcPerformanceResponse Shape(CdcSinkPerformanceRaw raw, bool configured, bool disabled, DateTime nowUtc)
+    public static CdcPerformanceResponse Shape(CdcSinkPerformanceRaw raw, bool disabled, DateTime nowUtc, DateTime? lastActivityAt)
     {
         var batches = Batches(raw)
             .OrderBy(b => b.Started)
@@ -56,18 +57,46 @@ internal static class CdcPerformanceShaper
             }
         }
 
-        int? lagSeconds = lastSyncAt is { } last ? Math.Max(0, (int)(nowUtc - last).TotalSeconds) : null;
+        // Durable last-activity from the persisted state doc keeps lag/status meaningful after a restart
+        // empties the in-memory batch window (lastSyncAt). Use whichever timestamp is most recent.
+        var lastActivityUtc = lastActivityAt is { } la ? Utc(la) : (DateTime?)null;
+        DateTime? effectiveActivity = lastSyncAt;
+        if (lastActivityUtc is { } lau && (effectiveActivity is null || lau > effectiveActivity))
+            effectiveActivity = lau;
 
-        var enabled = configured && disabled == false;
+        int? lagSeconds = effectiveActivity is { } last ? Math.Max(0, (int)(nowUtc - last).TotalSeconds) : null;
+
+        var enabled = disabled == false;
         var status =
-            configured == false ? "not-configured" :
             disabled ? "disabled" :
             errorCount > 0 ? "error" :
-            inProgress || (lastSyncAt is { } l && nowUtc - l <= ActiveWindow) ? "active" :
+            inProgress || (effectiveActivity is { } l && nowUtc - l <= ActiveWindow) ? "active" :
             "idle";
 
         return new CdcPerformanceResponse(enabled, status, lastSyncAt, lagSeconds, recentReads, recentWrites, errorCount, points);
     }
+
+    // Default cap on returned error details — mirrors the rolling perf window (~25 entries).
+    private const int MaxErrors = 25;
+
+    /// <summary>Flattens the persistent per-task error store into a flat, newest-first list of
+    /// <see cref="CdcError"/> (process + item errors together), capped at <see cref="MaxErrors"/>.
+    /// Backs the dedicated <c>GET /api/apps/{slug}/cdc/errors</c> endpoint. Pure — no I/O — so it
+    /// unit-tests without a live sink.</summary>
+    public static CdcError[] ShapeErrors(CdcSinkErrorsRaw raw) =>
+        (raw.Results ?? new List<CdcTaskErrorsRaw>())
+            .SelectMany(t => (t.ProcessErrors ?? new List<CdcTaskErrorRaw>())
+                .Concat(t.ItemErrors ?? new List<CdcTaskErrorRaw>()))
+            .Select(e => new CdcError(
+                e.TaskName,
+                Utc(e.CreatedAt),
+                e.Step,
+                e.Error,
+                e.DocumentId,
+                e.AffectedDocumentsCount))
+            .OrderByDescending(e => e.CreatedAt)
+            .Take(MaxErrors)
+            .ToArray();
 
     // Mark an outbound timestamp UTC so it serializes with the Z designator (the perf feed's
     // DateTimes may arrive Unspecified). Mirrors MetricsReadService.Utc.

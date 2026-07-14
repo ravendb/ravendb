@@ -1,6 +1,8 @@
 using System.Text.Json;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
+using Raven.Quill.Metrics;
 
 namespace Raven.Quill.Licensing;
 
@@ -30,7 +32,7 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
         return new LicenseResponse(license, connectivity, Plans);
     }
 
-    public async Task<QuillUsageResponse> GetUsageAsync(int? year, int? month, CancellationToken token)
+    public async Task<QuillUsageResponse> GetUsageAsync(int year, int? month, int? day, CancellationToken token)
     {
         var usage = await _ravendb.SendAsync("/license/quill/usage", "POST", new
         {
