@@ -64,6 +64,9 @@ const contactSchema = z.object({
 
 type ContactFormData = z.infer<typeof contactSchema>;
 
+// Don't include pathname because it can contain sensitive information
+const STUDIO_VIEW = "Quill";
+
 function ContactForm({ onSent }: { onSent: () => void }) {
     const form = useForm<ContactFormData>({
         mode: "onChange",
@@ -77,7 +80,7 @@ function ContactForm({ onSent }: { onSent: () => void }) {
     });
 
     const submitMutation = useMutation({
-        mutationFn: (values: ContactFormData) => api.services.settings.feedback({ ...values, studioView: "Quill" }),
+        mutationFn: (values: ContactFormData) => api.services.settings.feedback({ ...values, studioView: STUDIO_VIEW }),
         onSuccess: () => {
             toast.success("Feedback sent. Thank you.");
             form.reset();

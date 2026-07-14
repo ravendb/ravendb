@@ -31,11 +31,13 @@ export function OpenAiFields({ modelType }: { modelType: AiModelType }) {
         trimmedApiKey
             ? {
                   connectorType: "OpenAi",
+                  // Blank optional fields are omitted: an empty organization/project id is not
+                  // the same as none to the upstream provider.
                   openAiSettings: {
                       apiKey: trimmedApiKey,
-                      endpoint: endpoint.trim(),
-                      organizationId: organizationId.trim(),
-                      projectId: projectId.trim(),
+                      endpoint: endpoint.trim() || undefined,
+                      organizationId: organizationId.trim() || undefined,
+                      projectId: projectId.trim() || undefined,
                   },
               }
             : null,

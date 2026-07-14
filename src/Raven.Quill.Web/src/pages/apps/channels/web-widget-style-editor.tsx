@@ -84,6 +84,14 @@ export function WebWidgetStyleEditor({
     // Pending per-preset variable edits, kept per style so comparing presets doesn't lose tweaks.
     const [overridesByStyle, setOverridesByStyle] = useState<Partial<Record<PresetStyle, ThemeVariableValues>>>({});
 
+    // A save re-syncs the initial values; the pending tweaks are then saved (as custom CSS) or
+    // obsolete, so drop them lest re-selecting a preset resurrects them.
+    const [prevInitial, setPrevInitial] = useState({ initialStyle, initialCss });
+    if (prevInitial.initialStyle !== initialStyle || prevInitial.initialCss !== initialCss) {
+        setPrevInitial({ initialStyle, initialCss });
+        setOverridesByStyle({});
+    }
+
     const presetCss = (preset: WebWidgetStyle, customCss: string) =>
         preset === "Custom" ? customCss : preset === "Dark" ? darkThemeCss : lightThemeCss;
     const baseThemeCss =

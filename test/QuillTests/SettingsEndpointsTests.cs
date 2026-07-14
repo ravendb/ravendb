@@ -154,6 +154,50 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         Assert.Null(sender.Request);
     }
 
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData(257, 254, 8_192, 512)]   // name over its cap
+    [InlineData(256, 255, 8_192, 512)]   // email over its cap
+    [InlineData(256, 254, 8_193, 512)]   // message over its cap
+    [InlineData(256, 254, 8_192, 513)]   // studio view over its cap
+    public async Task Feedback_rejects_over_long_fields(int nameLength, int emailLength, int messageLength, int studioViewLength)
+    {
+        var sender = new RecordingFeedbackSender();
+        using var factory = NewFeedbackFactory(sender);
+        var client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/settings/feedback", new
+        {
+            Name = new string('n', nameLength),
+            Email = "u@" + new string('d', emailLength - 6) + ".com",
+            Impression = "positive",
+            Message = new string('m', messageLength),
+            StudioView = new string('v', studioViewLength),
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(sender.Request);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Feedback_accepts_fields_at_their_length_caps()
+    {
+        var sender = new RecordingFeedbackSender();
+        using var factory = NewFeedbackFactory(sender);
+        var client = factory.CreateClient();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/settings/feedback", new
+        {
+            Name = new string('n', 256),
+            Email = "u@" + new string('d', 254 - 6) + ".com",
+            Impression = "positive",
+            Message = new string('m', 8_192),
+            StudioView = new string('v', 512),
+        });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.NotNull(sender.Request);
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Feedback_returns_bad_gateway_when_sending_fails()
     {

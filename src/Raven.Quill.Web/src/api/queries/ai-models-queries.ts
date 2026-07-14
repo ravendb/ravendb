@@ -11,6 +11,10 @@ export function createAiModelsQueries(api: ServerApi["aiModels"]) {
                 queryFn: () => api.list(request),
                 // A wrong API key would fail again on retry; the form just shows no suggestions.
                 retry: false,
+                // The key embeds the provider credentials, so drop entries (one per settled
+                // keystroke) as soon as they go unused instead of retaining them for the
+                // default gc window.
+                gcTime: 0,
             }),
     };
 }
