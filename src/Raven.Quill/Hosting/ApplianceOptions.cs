@@ -4,8 +4,6 @@ namespace Raven.Quill.Hosting;
 
 public sealed class ApplianceOptions
 {
-    public const string SectionName = "Appliance";
-
     [Required] public string RavenUrl { get; set; } = "http://127.0.0.1:8080";
     [Required] public string WebListenUrl { get; set; } = "http://0.0.0.0:5000";
     [Required] public string ConfigDatabase { get; set; } = ApplianceDatabases.Config;

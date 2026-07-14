@@ -95,7 +95,8 @@ builder.Services.AddSingleton<IBootstrapState, BootstrapStateFlag>();
 builder.Services.AddSingleton<IAgentRouter, AgentRouter>();
 builder.Services.AddSingleton<IApiKeyStore, ApiKeyStore>();
 builder.Services.AddSingleton<IFeedbackSender, FeedbackSender>();
-// License & Usage pages are mock-backed until the real license API (RavenDB-26661/26783) lands.
+// License & Usage stats are served live via the AiHelper proxy: LicenseStatsProvider hits the real
+// /license/status, /license-server/connectivity, and /license/quill/usage endpoints on the bundled server.
 builder.Services.AddSingleton<ILicenseStatsProvider, LicenseStatsProvider>();
 if (!isOpenApiDocumentGeneration)
 {

@@ -20,11 +20,12 @@ public static class RavenStoreFactory
         ArgumentException.ThrowIfNullOrWhiteSpace(options.ConfigDatabase, nameof(ApplianceOptions.ConfigDatabase));
 
         // Post-activation: A/settings.json carries the LE-bound PublicServerUrl
-        // (e.g. https://a.egor-ai.ravendb.run) and the matching admin client cert
-        // sits at the package root. We connect via the public hostname (so the
-        // wildcard server cert validates) — *.ravendb.run resolves to 127.0.0.1 via
-        // public DNS, no /etc/hosts hack needed — but on the loopback HTTPS port
-        // RavenDB now binds, since nginx owns :443 (see the port rewrite below).
+        // (e.g. https://a.<slug>.myquill.ai — the real domain comes from the setup
+        // package at runtime) and the matching admin client cert sits at the package
+        // root. We connect via the public hostname (so the wildcard server cert
+        // validates) — *.<slug>.myquill.ai resolves to 127.0.0.1 via public DNS, no
+        // /etc/hosts hack needed — but on the loopback HTTPS port RavenDB now binds,
+        // since nginx owns :443 (see the port rewrite below).
         if (TryCreateSecureStore(options, out var secureStore))
             return secureStore;
 
