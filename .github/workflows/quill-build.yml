@@ -55,6 +55,7 @@ jobs:
           docker run -d --name quill-pr-check -p 5000:5000 \
             -e QUILL_API_KEY=test \
             -e QUILL_LICENSE_KEY=test \
+            -e RAVEN_QUILL_LICENSE_API_URL=https://test.api.ravendb.net \
             "ravendb/quill:pr-check-${{ matrix.arch }}"
 
       - name: Probe /healthz

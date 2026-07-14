@@ -11,12 +11,12 @@
 ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.301
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.9
 ARG NODE_IMAGE=node:24-bookworm-slim
-ARG RAVENDB_STUDIO_IMAGE=ravendb/ravendb:7.2-ubuntu-latest
+ARG RAVENDB_STUDIO_IMAGE=ravendb/ravendb:7.2.4
 ARG PNPM_VERSION=11.2.2
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
 # Stage 0: alias the external RavenDB image so we can COPY --from it by name.
-FROM ${RAVENDB_STUDIO_IMAGE} AS ravendb-studio
+FROM --platform=$BUILDPLATFORM ${RAVENDB_STUDIO_IMAGE} AS ravendb-studio
 
 # Stage 1: build Raven.Server from source.
 FROM ${SDK_IMAGE} AS ravendb-build
@@ -141,7 +141,7 @@ EXPOSE 443
 VOLUME /var/lib/quill
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=180s \
-    CMD curl -fsk https://127.0.0.1/healthz || curl -fs http://127.0.0.1:5000/healthz || exit 1
+    CMD curl -fsk https://127.0.0.1/healthz && curl -fs http://127.0.0.1:5000/healthz
 
 ENV RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
     RAVEN_QUILL_WEB_LISTEN_URL=http://0.0.0.0:5000 \
