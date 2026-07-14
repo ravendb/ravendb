@@ -76,64 +76,74 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
         var gaps = new List<(long Start, long End)>();
 
-        for (long i = 0; i < totalPages; i++)
+        long i = 0;
+        while (i < totalPages)
         {
-            if (owners.ContainsKey(i) == false)
+            if (owners.ContainsKey(i))
             {
-                using (var tx = env.Environment.ReadTransaction())
+                i++;
+                continue;
+            }
+
+            using (var tx = env.Environment.ReadTransaction())
+            {
+                var claimed = false;
+                try
                 {
+                    var page = tx.LowLevelTransaction.GetPage(i);
+                    var isOverflow = page.Flags.HasFlag(PageFlags.Overflow);
+                    var isRawData = page.Flags.HasFlag(PageFlags.RawData);
+
+                    // If it's RawData or Overflow, it's legitimate table data we just didn't trace.
+                    // Claim it so it isn't reported as a gap.
+                    if (isOverflow || isRawData)
+                    {
+                        string pageType = isOverflow ? "Overflow (Large Data)" : "RawData (Table Data)";
+                        owners[i] = $"Unmapped {pageType}";
+
+                        // If it's an overflow page, it likely spans multiple pages.
+                        // Claim the subsequent pages dictated by the overflow size.
+                        if (isOverflow)
+                        {
+                            var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                            // Never claim past the last allocated page.
+                            for (int overflowPage = 1; overflowPage < numberOfOverflowPages && i + 1 < totalPages; ++overflowPage)
+                            {
+                                i++;
+                                owners[i] = "Overflow (Continuation)";
+                            }
+                        }
+
+                        i++; // advance past the claimed region
+                        claimed = true;
+                    }
+                }
+                catch
+                {
+                    // If we can't read the page for some reason, let it fall through to become a gap
+                }
+
+                if (claimed)
+                    continue; // It's owned now, so it's not a gap!
+
+                // If we get here, it's a TRUE gap (not RawData, not Overflow, and unowned).
+                // Extend until an owned page OR an unmapped RawData/Overflow page.
+                var start = i;
+                while (i < totalPages && owners.ContainsKey(i) == false)
+                {
+                    // Stop at valid unmapped RawData/Overflow so we don't group it into a true gap block.
                     try
                     {
                         var page = tx.LowLevelTransaction.GetPage(i);
-
-                        // If it's RawData or Overflow, it's legitimate table data we just didn't trace.
-                        // Let's claim it!
                         if (page.Flags.HasFlag(PageFlags.Overflow) || page.Flags.HasFlag(PageFlags.RawData))
-                        {
-                            string pageType = page.Flags.HasFlag(PageFlags.Overflow) ? "Overflow (Large Data)" : "RawData (Table Data)";
-                            owners[i] = $"Unmapped {pageType}";
-
-                            // If it's an overflow page, it likely spans multiple pages.
-                            // We should claim the subsequent pages dictated by the overflow size.
-                            if (page.Flags.HasFlag(PageFlags.Overflow))
-                            {
-                                var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
-                                for (int overflowPage = 1; overflowPage < numberOfOverflowPages; ++overflowPage)
-                                {
-                                    // Advance our main loop index and claim the contiguous pages
-                                    i++;
-                                    owners[i] = "Overflow (Continuation)";
-                                }
-                            }
-                            continue; // It's owned now, so it's not a gap!
-                        }
+                            break; // do NOT advance past it; the outer loop re-examines and claims it
                     }
-                    catch
-                    {
-                        // If we can't read the page for some reason, let it fall through to become a gap
-                    }
+                    catch { }
 
-                    // If we get here, it's a TRUE gap (not RawData, not Overflow, and unowned)
-                    var start = i;
-                    while (i < totalPages)
-                    {
-                        if (owners.ContainsKey(i))
-                            break;
-
-                        // We should also check inside the while loop so we don't group 
-                        // valid unmapped RawData into a true gap block.
-                        try
-                        {
-                            var page = tx.LowLevelTransaction.GetPage(i);
-                            if (page.Flags.HasFlag(PageFlags.Overflow) || page.Flags.HasFlag(PageFlags.RawData))
-                                break;
-                        }
-                        catch { }
-
-                        i++;
-                    }
-                    gaps.Add((start, i));
+                    i++;
                 }
+                gaps.Add((start, i));
+                // No i++ here: the outer while re-examines the terminating page.
             }
         }
 
