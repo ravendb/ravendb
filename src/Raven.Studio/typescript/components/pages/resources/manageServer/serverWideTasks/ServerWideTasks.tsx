@@ -105,9 +105,7 @@ export default function ServerWideTasks() {
             {fetchStatus === "success" && tasks.length === 0 && (
                 <div className="text-center mt-5">
                     <EmptySet>No server-wide tasks configured yet</EmptySet>
-                    <div className="text-muted mb-3">
-                        Automate backups and replication across your entire cluster
-                    </div>
+                    <div className="text-muted mb-3">Automate backups and replication across your entire cluster</div>
                     <Button variant="primary" className="rounded-pill" href={appUrl.forAddServerWideTask()}>
                         <Icon icon="plus" />
                         Create Server-Wide Task
