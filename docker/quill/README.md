@@ -1,10 +1,11 @@
-# RavenDB Quill — demo runbook (from scratch)
+# Quill — running locally
 
 End-to-end: stand up the appliance in Docker, point it at a Northwind PostgreSQL source it mirrors via CDC,
 provision an AI agent, and chat with it through an embeddable iframe.
 
 The appliance is a single Docker image bundling an **nginx** TLS/SNI front (`:443`) + **RavenDB** (secure) +
-the **appliance web app** (`:5000`), supervised by s6. `up.ps1` builds and runs it; `down.ps1` tears it down.
+the **appliance web app** (`:5000`), supervised by s6. The canonical way to run it locally is
+`docker/quill/compose/docker-compose.yml`.
 
 ```
 browser ─HTTPS :443─> nginx (routes by SNI, one wildcard cert)
@@ -19,11 +20,9 @@ agent turn ──> appliance ──> RavenDB AI ──> OpenAI / Ollama (LLM)
 
 ## Prerequisites
 
-- **Docker** (Desktop on Windows/macOS, or engine on Linux).
-- **PowerShell** (to run `up.ps1` / `down.ps1`).
-- A **RavenDB setup-package zip** — a secured-setup zip containing `license.json`,
-  `admin.client.certificate.*.pfx`, and `A/settings.json` (with a `PublicServerUrl`). Generate it from the
-  RavenDB setup wizard / RavenDB Cloud, or `rvn create-setup-package`. *Bootstrap cannot run without it.*
+- **Docker** (Desktop on Windows/macOS, or engine on Linux) with **Docker Compose**.
+- A real **`QUILL_LICENSE_KEY`** issued via the Quill sign-up flow. The appliance activates against
+  `api.ravendb.net` on first boot (no offline / demo-zip fallback anymore — see RavenDB-26985).
 - An **LLM**: an OpenAI API key **or** a reachable Ollama endpoint. *The agent can't answer without one* —
   the AI Helper only drafts the agent/CDC **config** (via the real RavenDB AI API), not the model replies.
 - A **PostgreSQL** server you can load Northwind into, with **`wal_level = logical`** and a login that has the
@@ -31,20 +30,7 @@ agent turn ──> appliance ──> RavenDB AI ──> OpenAI / Ollama (LLM)
 
 ---
 
-## 1. One-time: supply the license file the image needs
-
-The Dockerfile copies `docker/quill/license.json` into the bundled RavenDB. It is **gitignored**
-(never committed) — you must provide it. Extract it from your setup-package zip:
-
-```bash
-unzip -p /path/to/setup-package.zip license.json > docker/quill/license.json
-```
-
-> Skipping this fails the build at `COPY docker/quill/license.json … not found`.
-
----
-
-## 2. PostgreSQL + Northwind
+## 1. PostgreSQL + Northwind
 
 **Option A — throwaway container** (CDC-ready out of the box):
 
@@ -84,51 +70,81 @@ psql "postgresql://postgres:postgres@<host>:5432/northwind" -tAc \
 
 ---
 
-## 3. Build + run the appliance
+## 2. Configure and start Quill
 
-```powershell
-.\scripts\quill\up.ps1 -LicenseKey '<setup-package-token>' -RavenApiEnv test
-```
+### Get the image
 
-- First build is long (publishes RavenDB + the appliance + builds the React frontend); rebuilds are cached.
-- `up.ps1` runs the container with the operator API key (`QUILL_API_KEY`, default **`egor`**), publishes
-  the nginx TLS front on **:443** (HTTPS) and the web app on **:5000** (first-run / pre-activation), and
-  tails logs. At startup the appliance pulls its setup package from the real license API using
-  `-LicenseKey` (a real emitted token) — there is no local-zip / offline mode.
-- Useful flags: `-LicenseKey <token>` (real setup-package token — **required** to activate),
-  `-Rebuild` (no-cache), `-Port <n>` (host :5000 port), `-HttpsPort <n>` (host :443 port),
-  `-ApiKey <key>` (operator login key, default `egor`), `-WithStudio` (import the admin client cert so the
-  browser can reach RavenDB Studio at `https://db.egor-ai.ravendb.run/`),
-  `-RavenApiEnv <env>` (route the AI Helper **and the setup-package download** to `{env}.api.ravendb.net`, e.g. `test`; unset → production).
+The compose file references `ravendb/quill:${TAG:-latest}`. Either build it locally or pull it from
+Docker Hub, depending on where you are in the release cycle:
 
-The appliance **activates itself at startup** — no operator action. Status walks
-`NeedsActivation → Redeeming → Restarting → Ready` (~30–60s after the build). Watch it:
+**Pre-release / local dev** — no image has been published yet (or you're testing an unmerged change).
+Build from source:
 
 ```bash
-curl -s http://localhost:5000/api/bootstrap/status      # wait for {"state":"Ready"}
+./docker/quill/scripts/build.sh --tag ravendb/quill:latest
 ```
+
+Rebuild any time the Dockerfile or `src/Raven.Quill*` changes.
+
+**Post-release** — a published image exists on Docker Hub. Compose pulls it automatically on
+`docker compose up`, or you can prefetch:
+
+```bash
+docker pull ravendb/quill:latest             # or a pinned tag: ravendb/quill:0.1.0
+```
+
+### Configure `.env`
+
+```bash
+cd docker/quill/compose
+cp .env.example .env
+# Fill in QUILL_API_KEY (operator login) and QUILL_LICENSE_KEY (activation token).
+```
+
+The image **activates itself at startup** using `QUILL_LICENSE_KEY` — no operator action. Status walks
+`NeedsActivation → Redeeming → Restarting → Ready` (~30–60s after boot).
+
+### Start — production posture
+
+```bash
+docker compose up
+```
+
+- Publishes `:443` — the nginx TLS front is the only external surface.
+- Named volume `quill-data` backs `/var/lib/quill` (settings, activation setup package, RavenDB store).
+- Watch activation status:
+  ```bash
+  docker compose logs -f quill                                          # live activation output
+  # or from a second terminal:
+  docker exec quill curl -s http://127.0.0.1:5000/api/bootstrap/status  # {"state":"Ready"} when done
+  ```
 
 ---
 
-## 4. Sign in to the dashboard
+## 3. Sign in to the dashboard
 
-Activation is automatic (step 3) — there is no activation screen. Once status is `Ready`, open
-**https://dashboard.egor-ai.ravendb.run/** (nginx terminates TLS with the package's wildcard cert;
-`*.ravendb.run` resolves to 127.0.0.1). You land on **/login** — enter the **API key** you ran with
-(`QUILL_API_KEY`, default `egor`) and continue; the server issues a `Secure` session cookie and drops you
-on the dashboard. (Pre-activation, before `:443` is up, the SPA is also on `http://localhost:5000`.)
+Once status is `Ready`, open **`https://dashboard.<your-slug>.myquill.ai/`** — the domain baked into the
+wildcard cert your setup package carries. `<your-slug>` is whatever your Quill sign-up flow gave you
+(check with `docker exec quill cat /var/lib/quill/setup/A/settings.json | grep PublicServerUrl`).
+Example: slug `bagheera` → `https://dashboard.bagheera.myquill.ai/`. `*.<slug>.myquill.ai` A records
+resolve to 127.0.0.1, so no hosts-file edit is needed. You land on **/login** — enter the **API key**
+from `.env` (`QUILL_API_KEY`) and continue; the server issues a `Secure` session cookie and drops you
+on the dashboard.
+
+If `:443` isn't up yet, the container is still in pre-activation — the wildcard cert only lands after
+the setup package downloads. Wait for `bootstrap/status` to report `Ready`, then retry the URL.
 
 Programmatic / `api.*` callers skip the login screen and pass the key on every request as an
 `X-Api-Key` header instead; the CLI steps below use that. The same login from the CLI:
 
 ```bash
-curl -i -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" -d '{"apiKey":"egor"}'   # 200 + Set-Cookie: quill.session=...
+curl -ki -X POST https://dashboard.<your-slug>.myquill.ai/api/auth/login \
+  -H "Content-Type: application/json" -d '{"apiKey":"<your-QUILL_API_KEY>"}'   # 200 + Set-Cookie: quill.session=...
 ```
 
 ---
 
-## 5. Create the app (CDC wizard)
+## 4. Create the app (CDC wizard)
 
 In the appliance UI, run the wizard with your Northwind connection string (provider **`Npgsql`**):
 
@@ -142,12 +158,12 @@ Note the **slug** (the app's database name). Verify the app exists (admin `/api/
 either the `X-Api-Key` header, as below, or the session cookie from the dashboard login):
 
 ```bash
-curl -s http://localhost:5000/api/apps/ -H "X-Api-Key: egor"   # [{ "slug": "...", "database": "...", ... }]
+curl -sk https://dashboard.<your-slug>.myquill.ai/api/apps/ -H "X-Api-Key: <your-QUILL_API_KEY>"   # [{ "slug": "...", "database": "...", ... }]
 ```
 
 ---
 
-## 6. AI connection string + agent + channel
+## 5. AI connection string + agent + channel
 
 Replace `SLUG` and the key/host below. `/suggest/agent` asks the real RavenDB AI API to draft agent
 candidate(s); the example below then provisions a hand-written `product-catalog` agent whose query inputs
@@ -155,10 +171,10 @@ are model-filled (so it works over the iframe).
 
 ```bash
 SLUG=northwind-demo
-API_KEY=egor   # operator key (QUILL_API_KEY); admin /api/* needs it on every call
+API_KEY=<your-QUILL_API_KEY>   # admin /api/* needs it on every call
 
 # (a) AI connection string  — OpenAI
-curl -s -X POST http://localhost:5000/api/apps/$SLUG/ai/connection-strings \
+curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/ai/connection-strings \
   -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"name\":\"demo-llm\",\"identifier\":\"demo-llm\",\"modelType\":\"Chat\",
@@ -166,13 +182,13 @@ curl -s -X POST http://localhost:5000/api/apps/$SLUG/ai/connection-strings \
 #   — or Ollama: "ollamaSettings":{"uri":"http://host.docker.internal:11434/","model":"llama3.1"}
 
 # (b) ask the AI Helper to draft agent config candidate(s) (real RavenDB AI API)
-curl -s -X POST http://localhost:5000/api/apps/$SLUG/suggest/agent \
+curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/suggest/agent \
   -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" -d '{"mode":"from-data"}'
 #   returns AI-drafted candidate(s); names/shape depend on the model and your CDC mapping
 
 # (c) provision the product-catalog agent (connectionStringName injected)
-curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/agent \
+curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/setup/agent \
   -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"identifier":"product-catalog","name":"Product Catalog Assistant","connectionStringName":"demo-llm",
@@ -181,7 +197,7 @@ curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/agent \
        "queries":[{"name":"searchProducts","description":"Searches products by name; returns price, stock, and the Discontinued flag.","query":"from Products where search(ProductName, $term)","parametersSampleObject":"{ \"term\": \"tea*\" }"}]}'
 
 # (d) bind an iframe channel
-curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/channel \
+curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/setup/channel \
   -H "X-Api-Key: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"type":"iframe","agentId":"product-catalog","allowedOrigins":[]}'
@@ -192,13 +208,14 @@ curl -s -X POST http://localhost:5000/api/apps/$SLUG/setup/channel \
 
 ---
 
-## 7. Chat
+## 6. Chat
 
-Open **http://localhost:5000/embed/<widgetId>** and chat — e.g. *"Do you have Chai? Price, stock,
-discontinued?"* or *"Search for products with 'lager' in the name."* Smoke-test from the CLI:
+Open **https://public.<your-slug>.myquill.ai/embed/<widgetId>** and chat — e.g. *"Do you have Chai?
+Price, stock, discontinued?"* or *"Search for products with 'lager' in the name."* Smoke-test from
+the CLI:
 
 ```bash
-curl -s -N -X POST http://localhost:5000/embed/<widgetId>/chat \
+curl -sk -N -X POST https://public.<your-slug>.myquill.ai/embed/<widgetId>/chat \
   -H "Content-Type: application/json" -d '{"prompt":"Do you have Chai? Give its price and stock."}'
 # NDJSON: {"type":"chunk","text":"…"} … {"type":"done","answer":{"reply":"…"},"conversationId":"chats/…"}
 ```
@@ -207,13 +224,14 @@ curl -s -N -X POST http://localhost:5000/embed/<widgetId>/chat \
 
 ## Teardown
 
-```powershell
-.\scripts\quill\down.ps1            # stop + remove the container (-PurgeData also drops the volume)
+```bash
+cd docker/quill/compose
+docker compose down                 # stop + remove the container; keep the volume
+docker compose down -v              # also drop quill-data (wipes @quill-config + per-app DBs)
 ```
 ```bash
-docker rm -f nw-postgres                    # if you used the throwaway Postgres
+docker rm -f nw-postgres            # if you used the throwaway Postgres
 # or, for an existing server: DROP DATABASE northwind;
-rm docker/quill/license.json         # the build-context license you supplied (gitignored)
 ```
 
 ---
@@ -222,27 +240,21 @@ rm docker/quill/license.json         # the build-context license you supplied (g
 
 | Symptom | Cause / fix |
 |---|---|
-| Build fails: `COPY docker/quill/license.json … not found` | You skipped step 1 — extract `license.json` from the setup-package zip into `docker/quill/`. |
-| Bootstrap stuck at `NeedsActivation` | Startup activation had no token. Pass a real `-LicenseKey` (`QUILL_LICENSE_KEY`) and ensure the license API is reachable (`-RavenApiEnv test` → test.api.ravendb.net). Check `docker logs quill-demo` for the activation line. |
-| `401 Unauthorized` on `/api/*` (or bounced to `/login`) | Missing/wrong API key or an expired session. Pass `-H "X-Api-Key: <key>"` (the `QUILL_API_KEY` you ran with, default `egor`) or sign in again. `QUILL_API_KEY` is **required** — auth fails closed when it's unset. |
-| `https://…:443` connection refused | nginx only starts after activation extracts the wildcard cert. Pre-activation use `http://localhost:5000`; once `/api/bootstrap/status` is `Ready`, retry `:443`. If it never comes up, check `docker logs quill-demo` for the `03-proxy` service. |
+| Bootstrap stuck at `NeedsActivation` | Startup activation had nothing to redeem. Set `QUILL_LICENSE_KEY` in `.env` to a real token issued by the Quill sign-up flow and confirm the appliance can reach `api.ravendb.net`. Check `docker compose logs` for the activation line. |
+| `401 Unauthorized` on `/api/*` (or bounced to `/login`) | Missing/wrong API key or an expired session. Pass `-H "X-Api-Key: <key>"` (the `QUILL_API_KEY` from `.env`) or sign in again. `QUILL_API_KEY` is **required** — auth fails closed when it's unset. |
+| `https://…:443` connection refused | nginx only starts after activation extracts the wildcard cert. During pre-activation, check status via `docker exec quill curl -s http://127.0.0.1:5000/api/bootstrap/status` or watch `docker compose logs quill`. If `:443` never comes up after activation reports `Ready`, check the `03-proxy` service in the logs. |
 | Wizard **Connect** fails | The connection-string host isn't reachable **from the container**. Use a LAN IP or `host.docker.internal`, not `localhost`. |
 | Discover: `wal_level is 'replica'…` / no permission to set up | Set `wal_level = logical` and restart Postgres; grant the login `REPLICATION`. |
-| Chat returns an `error` frame | `docker logs quill-demo` for the real exception. Common ones below. |
+| Chat returns an `error` frame | `docker compose logs` for the real exception. Common ones below. |
 | `UnsuccessfulAiRequestException: 401 invalid_api_key` | The LLM key is wrong/expired. Re-POST `ai/connection-strings` with a valid key (test it: `curl -H "Authorization: Bearer $KEY" https://api.openai.com/v1/models`). |
 | `MissingAiAgentParameterException: Parameter 'customerId' is missing` | The agent declares a **caller-supplied** agent-level parameter the iframe can't provide (e.g. `order-support`). Use `product-catalog` / `sales-insights`, whose inputs are model-filled query params. |
 | Agent runs but finds no rows | Check the query matches the mirrored field **types**, not just names — e.g. Northwind's `Discontinued` mirrors as integer `0/1`, so `Discontinued = false` matches nothing; filter on `= 0` or drop it. Confirm the CDC initial load finished (collection counts via Studio or `collections/stats`). |
-| Want to inspect mirrored data | Run `up.ps1 -WithStudio` (imports the admin client cert), then open `https://db.egor-ai.ravendb.run/` — nginx passes `db.*` through to RavenDB Studio and the browser prompts for the client cert. |
 
 ---
 
-## Production hardening (beyond this demo)
+## Production hardening (beyond this runbook)
 
-This runbook is the demo posture. For a real deployment:
+This is the local-run posture. For a real deployment:
 
-- **Publish only `:443`** (the nginx SNI front), not `:5000`. The plain-HTTP `:5000` surface is a
-  first-run/dev convenience; exposing it publicly would let a session ride over HTTP. The session cookie
-  is `Secure` on the real `https://dashboard.*` flow regardless (it's only non-Secure on the local
-  `:5000` fallback).
-- **Use a high-entropy `QUILL_API_KEY`** (not the demo `egor`). The server logs a startup warning if the
+- **Use a high-entropy `QUILL_API_KEY`** (not a weak demo value). The server logs a startup warning if the
   key is short; treat it as a hard requirement in production.

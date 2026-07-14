@@ -1,0 +1,78 @@
+name: quill/build
+
+on:
+  push:
+    paths:
+      - 'docker/quill/**'
+      - 'src/Raven.Quill/**'
+      - 'src/Raven.Quill.Web/**'
+      - '.github/workflows/quill-build.yml'
+  pull_request:
+    paths:
+      - 'docker/quill/**'
+      - 'src/Raven.Quill/**'
+      - 'src/Raven.Quill.Web/**'
+      - '.github/workflows/quill-build.yml'
+
+jobs:
+  build:
+    name: Build & smoke (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runs-on: ubuntu-latest
+          - arch: arm64v8
+            platform: linux/arm64
+            runs-on: ubuntu-24.04-arm
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (two tags — verifies build.sh multi-tag accumulation)
+        run: |
+          ./docker/quill/scripts/build.sh \
+            --tag "ravendb/quill:pr-check-${{ matrix.arch }}" \
+            --tag "ravendb/quill:multi-tag-check-${{ matrix.arch }}" \
+            --platforms "${{ matrix.platform }}"
+
+      - name: Verify both tags attached (regression guard for RavenDB-26659 --tag fix)
+        run: |
+          docker image inspect "ravendb/quill:pr-check-${{ matrix.arch }}"        > /dev/null
+          docker image inspect "ravendb/quill:multi-tag-check-${{ matrix.arch }}" > /dev/null
+
+      - name: Report image size
+        run: docker images "ravendb/quill:pr-check-${{ matrix.arch }}" --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
+
+      - name: Start container
+        run: |
+          docker run -d --name quill-pr-check -p 5000:5000 \
+            -e QUILL_API_KEY=test \
+            -e QUILL_LICENSE_KEY=test \
+            "ravendb/quill:pr-check-${{ matrix.arch }}"
+
+      - name: Probe /healthz
+        # We expect 503: no real QUILL_LICENSE_KEY means RavenHealthCheck reports unhealthy (activation didn't run).
+        # Accept 200 too if/when a real license/setup-package is wired into repo secrets.
+        run: |
+          for i in $(seq 1 60); do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:5000/healthz 2>/dev/null || true)
+            case "$CODE" in
+              200|503) echo "healthz responded HTTP $CODE - OK"; exit 0 ;;
+              000|"")  echo "attempt $i: not yet"; sleep 2 ;;
+              *)       echo "healthz responded with unexpected HTTP $CODE"; docker logs quill-pr-check; exit 1 ;;
+            esac
+          done
+          echo "healthz never responded"
+          docker logs quill-pr-check
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f quill-pr-check || true

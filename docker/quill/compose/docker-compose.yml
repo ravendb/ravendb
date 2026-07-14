@@ -1,0 +1,15 @@
+services:
+  quill:
+    image: ravendb/quill:${TAG:-latest}
+    container_name: quill
+    restart: unless-stopped
+    ports:
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - quill-data:/var/lib/quill
+    environment:
+      QUILL_API_KEY: ${QUILL_API_KEY:?QUILL_API_KEY is required (operator login key)}
+      QUILL_LICENSE_KEY: ${QUILL_LICENSE_KEY:?QUILL_LICENSE_KEY is required (activation token)}
+
+volumes:
+  quill-data:
