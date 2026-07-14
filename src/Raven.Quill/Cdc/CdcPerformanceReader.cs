@@ -25,4 +25,19 @@ internal static class CdcPerformanceReader
             return new CdcSinkPerformanceRaw();
         }
     }
+
+    /// <summary>Reads the persistent per-task error store. Only worth calling when the perf
+    /// snapshot reports an error; degrades to an empty result on any unavailability.</summary>
+    public static async Task<CdcSinkErrorsRaw> ReadErrorsAsync(
+        MaintenanceOperationExecutor maintenance, CancellationToken ct)
+    {
+        try
+        {
+            return await maintenance.SendAsync(new GetCdcSinkErrorsOperation(), ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            return new CdcSinkErrorsRaw();
+        }
+    }
 }

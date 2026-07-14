@@ -15,14 +15,16 @@ using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Licensing;
 using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Metrics;
 
 /// <summary>
 /// Read-side aggregation for the dashboard stats endpoints. Queries the
-/// per-app metric indexes and folds the hour buckets into the rolling windows
-/// the views ask for (24h / 7d / 30d). Reads accept eventual consistency — no
+/// per-app metric indexes and folds the hour buckets into the calendar windows
+/// the views ask for (today by hour / this month by day / this year by month).
+/// Reads accept eventual consistency — no
 /// <c>WaitForNonStaleResults</c> — so a dashboard refresh never blocks on
 /// indexing; tests wait for indexing explicitly.
 /// </summary>
@@ -60,15 +62,17 @@ internal static class MetricsReadService
 
     /// <summary>
     /// Usage series behind <c>GET /api/usage?time=&amp;app=</c>: one <see cref="UsagePoint"/>
-    /// per bucket over the window (24h → 24 hourly, 7d → 7 daily, 30d → 30 daily),
-    /// contiguous + zero-filled, carrying conversations / messages / tokens. With
+    /// per bucket over the window (ByHour → 24 hours of today, ByDay → every day of this
+    /// month, ByMonth → 12 months of this year), contiguous + zero-filled, carrying
+    /// conversations / messages / tokens. With
     /// <paramref name="appSlug"/> it scopes to that app; otherwise it sums across all apps.
     /// </summary>
     public static async Task<List<UsagePoint>> GetUsageAsync(
-        IDocumentStore store, UsageWindow window, string? appSlug, DateTime nowUtc, ILogger? log, CancellationToken ct)
+        ILicenseStatsProvider provider,
+        IDocumentStore store, int year, int? month, int? day, string? appSlug, ILogger? log, CancellationToken ct)
     {
-        var (granularity, start, end) = WindowRange(window, nowUtc);
-        var buckets = BuildBuckets(start, end, granularity);
+        var period = new UsagePeriod(year, month, day);
+        var buckets = period.Buckets();
         var conversations = new long[buckets.Count];
         var messages = new long[buckets.Count];
         var tokens = new long[buckets.Count];
@@ -78,43 +82,33 @@ internal static class MetricsReadService
         var perApp = await ForEachAppAsync(apps, log, async app =>
         {
             using var session = store.OpenAsyncSession(app.Database);
-            return await QueryMetricRowsAsync(session, start, ct);
+            return await QueryMetricRowsAsync(session, period.Start, ct);
         }, ct);
 
         foreach (var rows in perApp)
             foreach (var row in rows)
             {
-                var i = BucketIndex(buckets, row.Bucket, granularity);
+                var i = period.IndexOf(row.Bucket);
                 if (i < 0) continue;
                 conversations[i] += row.Conversations;
                 messages[i] += row.Messages;
                 tokens[i] += row.Tokens;
             }
 
-        // Writes have no real per-DB counter yet (RavenDB-26780): fill the series with a
-        // deterministic per-app mock so the dashboards render plausible writes. Each app
-        // contributes independently, so a global series equals the sum of its apps. Swap
-        // this loop for the real counter when it lands.
-        foreach (var app in apps)
-            for (var i = 0; i < buckets.Count; i++)
-                writes[i] += MockWritesForBucket(app, buckets[i], granularity);
+        // License write usage: fold each period into its bucket by timestamp — the feed's
+        // period granularity needn't match the bucket layout.
+        var stats = await provider.GetUsageAsync(year, month, day, ct);
+        foreach (var p in stats?.ByPeriod ?? [])
+        {
+            var i = period.IndexOf(Utc(p.From));
+            if (i < 0) continue;
+            writes[i] += p.Usage;
+        }
 
         var points = new List<UsagePoint>(buckets.Count);
         for (var i = 0; i < buckets.Count; i++)
             points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i], writes[i]));
         return points;
-    }
-
-    private static (UsageGranularity Granularity, DateTime Start, DateTime End) WindowRange(UsageWindow window, DateTime nowUtc)
-    {
-        var hour = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, nowUtc.Hour, 0, 0, DateTimeKind.Utc);
-        var day = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
-        return window switch
-        {
-            UsageWindow.Last7d => (UsageGranularity.Day, day.AddDays(-6), day),
-            UsageWindow.Last30d => (UsageGranularity.Day, day.AddDays(-29), day),
-            _ => (UsageGranularity.Hour, hour.AddHours(-23), hour),
-        };
     }
 
     private static async Task<List<App>> AppsToQueryAsync(IDocumentStore store, string? appSlug, CancellationToken ct)
@@ -123,30 +117,6 @@ internal static class MetricsReadService
             return await LoadAllAppsAsync(store, ct);
         var app = await AppLookup.LoadAppAsync(store, appSlug, ct);
         return app is null ? [] : [app];
-    }
-
-    /// <summary>
-    /// Deterministic stand-in for a per-app, per-bucket write count until a real per-DB
-    /// write counter lands (RavenDB-26780). Pure in (app, bucket, granularity) so a global
-    /// series equals the sum of its apps and values stay stable across requests — hence
-    /// FNV-1a over the database name, not the per-process-randomized string hash.
-    /// </summary>
-    private static long MockWritesForBucket(App app, DateTime bucket, UsageGranularity granularity)
-    {
-        var perHour = 400 + StableHash(app.Database) % 800;            // ~[400, 1200) writes/hour, stable per app
-        var phase = granularity == UsageGranularity.Hour ? bucket.Hour : bucket.Day;
-        var wave = 0.55 + 0.45 * Math.Sin(phase / 24.0 * 2 * Math.PI); // shape so the sparkline isn't flat
-        var hoursInBucket = granularity == UsageGranularity.Hour ? 1 : 24;
-        return (long)Math.Round(perHour * hoursInBucket * wave);
-    }
-
-    private static uint StableHash(string value)
-    {
-        // FNV-1a — deterministic across processes (string.GetHashCode is randomized).
-        var hash = 2166136261u;
-        foreach (var c in value)
-            hash = (hash ^ c) * 16777619u;
-        return hash;
     }
 
     /// <summary>
@@ -173,7 +143,7 @@ internal static class MetricsReadService
     }
 
     /// <summary>
-    /// Per-app usage analytics behind <c>getAppUsage({appId,start,end})</c>. Phase-1
+    /// Per-app usage analytics behind <c>getAppUsage({appId,from,window})</c>. Phase-1
     /// subset from <see cref="ConversationMetricsIndex"/>: conversations/tokens
     /// KPI cards (value + delta-vs-previous-window + per-bucket sparkline),
     /// <c>tokensByCapability</c>, and <c>topCapabilities</c>. <c>cdcWrites</c> and the CDC
@@ -182,30 +152,32 @@ internal static class MetricsReadService
     /// stats (RavenDB-26780).
     /// </summary>
     public static async Task<AppUsageResponse> GetAppUsageAsync(
-        IDocumentStore store, string database, DateTime startUtc, DateTime endUtc, CancellationToken ct)
+        IDocumentStore store, string database, int year, int? month, int? day, CancellationToken ct)
     {
-        var granularity = (endUtc - startUtc).TotalDays <= 2 ? UsageGranularity.Hour : UsageGranularity.Day;
         var maintenance = store.Maintenance.ForDatabase(database);
 
-        using var session = store.OpenAsyncSession(database);
-        var rows = await QueryMetricRowsInRangeAsync(session, startUtc, endUtc, ct);
+        // Calendar period selected by year/month/day: [Start, End) is what the buckets cover
+        // (a day by hour / a month by day / a year by month); the preceding equal period
+        // [PreviousStart, Start) is the baseline for each card's delta.
+        var period = new UsagePeriod(year, month, day);
 
-        // Previous equal-length window drives the percent delta on each card. Its upper
-        // bound is exclusive so a row whose bucket == startUtc isn't counted in both
-        // windows (review M4).
-        var windowLength = endUtc - startUtc;
-        var prevRows = await QueryMetricRowsInRangeAsync(
-            session, startUtc - windowLength, startUtc, ct, endInclusive: false);
+        using var session = store.OpenAsyncSession(database);
+        var rows = await QueryMetricRowsInRangeAsync(session, period.Start, period.End, ct, endInclusive: false);
+
+        // Previous equal-length window drives the percent delta on each card. Both ranges are
+        // half-open [start, end) so a row whose bucket == Start counts in the current window
+        // only, never in both (review M4).
+        var prevRows = await QueryMetricRowsInRangeAsync(session, period.PreviousStart, period.Start, ct, endInclusive: false);
 
         long convNow = rows.Sum(r => r.Conversations), tokNow = rows.Sum(r => r.Tokens);
         long convPrev = prevRows.Sum(r => r.Conversations), tokPrev = prevRows.Sum(r => r.Tokens);
 
-        var buckets = BuildBuckets(startUtc, endUtc, granularity);
+        var buckets = period.Buckets();
         var convByBucket = new long[buckets.Count];
         var tokByBucket = new long[buckets.Count];
         foreach (var row in rows)
         {
-            var i = BucketIndex(buckets, row.Bucket, granularity);
+            var i = period.IndexOf(row.Bucket);
             if (i < 0) continue;
             convByBucket[i] += row.Conversations;
             tokByBucket[i] += row.Tokens;
@@ -215,7 +187,7 @@ internal static class MetricsReadService
         // (see BuildCdcWrites). Recent snapshot, not history — buckets before the window stay
         // zero and the KPI card carries no delta (no reliable previous-window baseline).
         var cdcRaw = await CdcPerformanceReader.ReadAsync(maintenance, ct);
-        var cdcWrites = BuildCdcWrites(cdcRaw, buckets, granularity);
+        var cdcWrites = BuildCdcWrites(cdcRaw, buckets, period);
 
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
@@ -246,8 +218,8 @@ internal static class MetricsReadService
 
         // Per-bucket token series: by capability (agent) and by model. Same shape,
         // different key; the capability series labels with the agent display name.
-        var tokensByCapability = BuildTokenSeries(rows, buckets, granularity, agent => agent, NameOf);
-        var tokensByModel = BuildTokenSeries(rows, buckets, granularity,
+        var tokensByCapability = BuildTokenSeries(rows, buckets, period, agent => agent, NameOf);
+        var tokensByModel = BuildTokenSeries(rows, buckets, period,
             agent => modelByAgent.GetValueOrDefault(agent, UnknownModel));
 
         var topCapabilities = rows
@@ -264,11 +236,11 @@ internal static class MetricsReadService
             .ToArray();
 
         var conversationsByChannel = await BuildConversationsByChannelAsync(
-            session, buckets, startUtc, endUtc, granularity, ct);
+            session, buckets, period, ct);
         var topTables = await BuildTopTablesAsync(maintenance, ct);
 
         return new AppUsageResponse(
-            granularity, metrics,
+            metrics,
             TokensByCapability: tokensByCapability,
             TokensByModel: tokensByModel,
             ConversationsByChannel: conversationsByChannel,
@@ -298,7 +270,7 @@ internal static class MetricsReadService
     /// agent's resolved model).</summary>
     private static SeriesData BuildTokenSeries(
         IReadOnlyList<ConversationMetricsIndex.Result> rows, List<DateTime> buckets,
-        UsageGranularity granularity, Func<string, string> keyOf, Func<string, string>? labelOf = null)
+        UsagePeriod period, Func<string, string> keyOf, Func<string, string>? labelOf = null)
     {
         // The series key is the stable data key (used in each bucket's points dict); the
         // label is the human-facing name. Default the label to the key (review M2).
@@ -310,10 +282,10 @@ internal static class MetricsReadService
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
-            points[b] = NewBucketPoint(keys, BucketLabel(buckets[b], granularity));
+            points[b] = NewBucketPoint(keys, period.Label(buckets[b]));
         foreach (var row in rows)
         {
-            var i = BucketIndex(buckets, row.Bucket, granularity);
+            var i = period.IndexOf(row.Bucket);
             if (i < 0) continue;
             var key = keyOf(row.Agent ?? "");
             if (key == TimeAxisKey) continue;   // dropped from keys above
@@ -327,8 +299,7 @@ internal static class MetricsReadService
     /// <c>CreatedAt</c> and attributed to its channel via <c>WidgetId</c>.
     /// Telegram/WhatsApp aren't implemented, so they don't appear.</summary>
     private static async Task<SeriesData> BuildConversationsByChannelAsync(
-        IAsyncDocumentSession session, List<DateTime> buckets, DateTime startUtc, DateTime endUtc,
-        UsageGranularity granularity, CancellationToken ct)
+        IAsyncDocumentSession session, List<DateTime> buckets, UsagePeriod period, CancellationToken ct)
     {
         var channels = await LoadAllByPrefixAsync<Channel>(session, Channel.IdPrefix, ChannelPageSize, ct);
         var nameByWidget = channels
@@ -348,15 +319,15 @@ internal static class MetricsReadService
 
         var points = new Dictionary<string, object>[buckets.Count];
         for (var b = 0; b < buckets.Count; b++)
-            points[b] = NewBucketPoint(keys, BucketLabel(buckets[b], granularity));
+            points[b] = NewBucketPoint(keys, period.Label(buckets[b]));
 
         var links = await LoadAllByPrefixAsync<EmbedLink>(session, EmbedLink.IdPrefix, EmbedLinkPageSize, ct);
         foreach (var link in links)
         {
-            if (link.CreatedAt < startUtc || link.CreatedAt > endUtc) continue;
+            if (link.CreatedAt < period.Start || link.CreatedAt >= period.End) continue;
             if (link.WidgetId is null || nameByWidget.ContainsKey(link.WidgetId) == false) continue;
             if (link.WidgetId == TimeAxisKey) continue;   // dropped from keys above
-            var i = BucketIndex(buckets, link.CreatedAt, granularity);
+            var i = period.IndexOf(link.CreatedAt);
             if (i < 0) continue;
             points[i][link.WidgetId] = (long)points[i][link.WidgetId] + 1L;
         }
@@ -400,44 +371,20 @@ internal static class MetricsReadService
     /// (older than the rolling window, or a future clock skew) are ignored, so pre-window
     /// buckets stay zero — this is recent activity, not a historical series.</summary>
     internal static CdcWritePoint[] BuildCdcWrites(
-        CdcSinkPerformanceRaw raw, List<DateTime> buckets, UsageGranularity granularity)
+        CdcSinkPerformanceRaw raw, List<DateTime> buckets, UsagePeriod period)
     {
         var byBucket = new long[buckets.Count];
         foreach (var batch in CdcPerformanceShaper.Batches(raw))
         {
-            var i = BucketIndex(buckets, Utc(batch.Completed ?? batch.Started), granularity);
+            var i = period.IndexOf(Utc(batch.Completed ?? batch.Started));
             if (i < 0) continue;
             byBucket[i] += batch.NumberOfProcessedMessages;
         }
         var points = new CdcWritePoint[buckets.Count];
         for (var i = 0; i < buckets.Count; i++)
-            points[i] = new CdcWritePoint(BucketLabel(buckets[i], granularity), byBucket[i]);
+            points[i] = new CdcWritePoint(period.Label(buckets[i]), byBucket[i]);
         return points;
     }
-
-    private static TimeSpan Step(UsageGranularity granularity) =>
-        granularity == UsageGranularity.Hour ? TimeSpan.FromHours(1) : TimeSpan.FromDays(1);
-
-    internal static List<DateTime> BuildBuckets(DateTime start, DateTime end, UsageGranularity granularity)
-    {
-        var step = Step(granularity);
-        var cur = granularity == UsageGranularity.Hour
-            ? new DateTime(start.Year, start.Month, start.Day, start.Hour, 0, 0, DateTimeKind.Utc)
-            : new DateTime(start.Year, start.Month, start.Day, 0, 0, 0, DateTimeKind.Utc);
-        var buckets = new List<DateTime>();
-        while (cur <= end) { buckets.Add(cur); cur = cur.Add(step); }
-        if (buckets.Count == 0) buckets.Add(cur);
-        return buckets;
-    }
-
-    private static int BucketIndex(List<DateTime> buckets, DateTime bucketUtc, UsageGranularity granularity)
-    {
-        var idx = (int)Math.Floor((bucketUtc - buckets[0]) / Step(granularity));
-        return idx >= 0 && idx < buckets.Count ? idx : -1;
-    }
-
-    private static string BucketLabel(DateTime bucketUtc, UsageGranularity granularity) =>
-        granularity == UsageGranularity.Hour ? bucketUtc.ToString("yyyy-MM-ddTHH:00") : bucketUtc.ToString("yyyy-MM-dd");
 
     /// <summary>
     /// Enriched apps list behind the prototype's <c>listApps()</c> (Dashboard table):
@@ -1035,9 +982,6 @@ internal static class MetricsReadService
         public readonly ConversationWindow ToWindow() => new(_conversations, _messages, _tokens);
     }
 }
-
-/// <summary>The usage-series time window — maps to bucket granularity + count.</summary>
-public enum UsageWindow { Last24h, Last7d, Last30d }
 
 /// <summary>Per-agent rollup from the conversation index for the merged Agents table.</summary>
 internal sealed record AgentActivity(long Conversations, long Messages, long Tokens, DateTime? LastInvokedAt);

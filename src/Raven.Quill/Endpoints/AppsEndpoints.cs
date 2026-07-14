@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -42,6 +43,10 @@ public static class AppsEndpoints
         group.MapGet("/{slug}/cdc/performance", CdcPerformanceAsync)
             .WithName("apps.cdcPerformance")
             .Produces<CdcPerformanceResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapGet("/{slug}/cdc/errors", CdcErrorsAsync)
+            .WithName("apps.cdcErrors")
+            .Produces<CdcError[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
@@ -189,13 +194,18 @@ public static class AppsEndpoints
         if (body.SubAgents is { Count: > 0 })
             return Results.BadRequest(new ApiErrorResponse("subAgents are not supported in demo"));
 
+        foreach (var query in body.Queries ?? [])
+        {
+            query.Query = EnforceLimit(query.Query);
+        }
+
         // Look up the operator's AI connection string on the per-app DB. The
         // CS was POSTed via /api/apps/{slug}/ai/connection-strings (the
         // dashboard's "pick existing OR add new" step). Defence in depth:
         // re-gate ModelType + provider here, since a CS that landed via direct
         // RavenDB Studio would bypass the POST-time gate.
         var cs = await store.Maintenance.ForDatabase(app.Database)
-            .SendAsync(new GetConnectionStringsOperation(body.ConnectionStringName, ConnectionStringType.Ai), ct);
+        .SendAsync(new GetConnectionStringsOperation(body.ConnectionStringName, ConnectionStringType.Ai), ct);
 
         if (cs.AiConnectionStrings is null ||
             cs.AiConnectionStrings.TryGetValue(body.ConnectionStringName, out var aiCs) == false)
@@ -245,6 +255,24 @@ public static class AppsEndpoints
         }
     }
 
+    private static readonly Regex AgentQueryLimit = new(@"\blimit\s+(\S+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private const int MaxLimit = 32;
+    private static string EnforceLimit(string rql)
+    {
+        var m = AgentQueryLimit.Match(rql);
+        if (m.Success == false)
+            return rql.TrimEnd() + " limit " + MaxLimit;
+
+        if (int.TryParse(m.Groups[1].Value, out var limit) == false)
+            return rql;
+
+        if (limit <= MaxLimit)
+            return rql;
+
+        var n = m.Groups[1];
+        return rql[..n.Index] + MaxLimit + rql[(n.Index + n.Length)..];
+    }
+
     /// <summary>
     /// Live CDC initial-load progress over a WebSocket. Wizard read-side
     /// (design §1.3 Stage C.1 step 7 / RavenDB-26629 carryover). The bridge
@@ -287,7 +315,8 @@ public static class AppsEndpoints
     /// shapes a recent-activity view (last-sync, recent reads/writes, lag, status). The
     /// batch-derived fields stay empty until the server collects CDC stats (RavenDB-26780 /
     /// ravendb#23046) and a batch has run; the live-updating counterpart is the
-    /// <c>/cdc/progress</c> WebSocket feed. Degrades to an empty snapshot (200) when CDC is
+    /// <c>/cdc/progress</c> WebSocket feed. Per-error detail lives on the dedicated
+    /// <see cref="CdcErrorsAsync"/> endpoint. Degrades to an empty snapshot (200) when CDC is
     /// not configured or the feed is unavailable.
     /// </summary>
     private static async Task<IResult> CdcPerformanceAsync(
@@ -301,14 +330,28 @@ public static class AppsEndpoints
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
         var cdc = record?.CdcSinks?.FirstOrDefault();
+        if (cdc is null)
+            return Results.NotFound(new ApiErrorResponse("cdc task not found"));
 
-        // Telemetry must never 500 the CDC page: an unavailable perf feed degrades to an
-        // empty snapshot (see CdcPerformanceReader). Cancellation still propagates.
         var raw = await CdcPerformanceReader.ReadAsync(store.Maintenance.ForDatabase(app.Database), ct);
+        var (state, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, cdc.Name, ct);
 
         var snapshot = CdcPerformanceShaper.Shape(
-            raw, configured: cdc is not null, disabled: cdc?.Disabled ?? false, DateTime.UtcNow);
+            raw, disabled: cdc.Disabled, DateTime.UtcNow, lastActivityAt: lastModified);
         return Results.Ok(snapshot);
+    }
+
+    private static async Task<IResult> CdcErrorsAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var raw = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct);
+        return Results.Ok(CdcPerformanceShaper.ShapeErrors(raw));
     }
 
     /// <summary>

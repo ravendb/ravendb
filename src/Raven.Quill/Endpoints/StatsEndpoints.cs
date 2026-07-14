@@ -1,10 +1,8 @@
 using System.Globalization;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Licensing;
 using Raven.Quill.Metrics;
 
 namespace Raven.Quill.Endpoints;
@@ -26,9 +24,10 @@ public static class StatsEndpoints
             .RequireAuthorization()
             .Produces<DashboardResponse>();
 
-        // Usage series (conversations / messages / tokens) over a window — global or per-app.
-        // `GET /api/usage?time={Last24h|Last7d|Last30d}&app={slug}` (app omitted → summed across
-        // all apps). `time` binds the UsageWindow enum directly — an unknown value 400s in binding.
+        // Usage series (conversations / messages / tokens) over a calendar period — global or per-app.
+        // `GET /api/usage?year={y}[&month={m}][&day={d}][&app={slug}]` (app omitted → summed across all
+        // apps). The granularity follows which fields are set: year → 12 months, +month → the month's
+        // days, +month+day → the day's 24 hours. Out-of-range values are clamped, not rejected.
         app.MapGet("/api/usage", GetUsageAsync)
             .WithTags("stats")
             .WithName("stats.usage")
@@ -118,14 +117,17 @@ public static class StatsEndpoints
     }
 
     private static async Task<IResult> GetUsageAsync(
+        ILicenseStatsProvider provider,
         IDocumentStore store,
         ILoggerFactory loggerFactory,
-        CancellationToken ct,
-        UsageWindow time = UsageWindow.Last24h,
-        string? app = null)
+        int year,
+        int? month,
+        int? day,
+        string? app,
+        CancellationToken ct)
     {
-        var usage = await MetricsReadService.GetUsageAsync(
-            store, time, app, DateTime.UtcNow, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
+        var usage = await MetricsReadService.GetUsageAsync(provider,
+            store, year, month, day, app, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(usage);
     }
 
@@ -162,35 +164,19 @@ public static class StatsEndpoints
 
     private static async Task<IResult> GetAppUsageAsync(
         string slug,
-        string? start,
-        string? end,
         IDocumentStore store,
+        int year,
+        int? month,
+        int? day,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // Parse query dates as UTC: a bare (no-offset) value is assumed UTC, an offset
-        // value is converted to UTC — so naive dates aren't read as server-local and
-        // shifted (the buckets are UTC). (review N4)
-        var endUtc = ParseUtc(end) ?? DateTime.UtcNow;
-        var startUtc = ParseUtc(start) ?? endUtc.AddDays(-7);
-
-        // Reject an inverted/empty window so we don't build negative-length buckets and
-        // compute deltas off a backwards range (review C3).
-        if (startUtc >= endUtc)
-            return Results.BadRequest(new ApiErrorResponse("start must be before end"));
-
-        var usage = await MetricsReadService.GetAppUsageAsync(store, app.Database, startUtc, endUtc, ct);
+        var usage = await MetricsReadService.GetAppUsageAsync(store, app.Database, year, month, day, ct);
         return Results.Ok(usage);
     }
-
-    private static DateTime? ParseUtc(string? value) =>
-        DateTime.TryParse(value, CultureInfo.InvariantCulture,
-            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var dt)
-            ? dt
-            : null;
 
     private static async Task<IResult> GetCollectionsAsync(
         string slug,

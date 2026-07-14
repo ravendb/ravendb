@@ -58,6 +58,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
+        // ?year=&month=[&day=] — forwarded to RavenDB's /license/quill/usage as year+month.
         var resp = await client.GetAsync("/api/settings/usage?year=2026&month=5");
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
@@ -69,17 +70,14 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Usage_forwards_month_without_client_side_validation()
+    public async Task Usage_supports_the_year_view()
     {
         var store = GetDocumentStore();
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        // The endpoint forwards year/month straight to RavenDB's /license/quill/usage;
-        // it does not reject out-of-range months itself (contrast the former mock, which
-        // 400'd on month=13). Characterizes current behavior — see note if validation
-        // should move back into the appliance.
-        var resp = await client.GetAsync("/api/settings/usage?year=2026&month=13");
+        // year only → the whole-year view; like the month view it proxies straight to /license/quill/usage.
+        var resp = await client.GetAsync("/api/settings/usage?year=2026");
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 

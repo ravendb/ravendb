@@ -1,18 +1,15 @@
 using System.Text.Json.Serialization;
-
 namespace Raven.Quill.Contracts;
 
 /// <summary>
-/// Per-app usage analytics — the prototype's <c>getAppUsage({appId,start,end})</c>.
+/// Per-app usage analytics — the prototype's <c>getAppUsage({appId,year,month,day})</c>.
 /// Phase 1 populates the conversation/token-derived fields; <c>cdcWrites</c>,
 /// <c>topTables</c> (CDC, RavenDB-26780), <c>tokensByModel</c> (no model recorded)
 /// and <c>conversationsByChannel</c> (no channel link) ship as empty skeletons —
-/// see the impl handoff. <c>granularity</c> is "hour" for ranges ≤ 2 days, else "day".
+/// see the impl handoff. Bucketing follows the calendar period the caller selects:
+/// year+month+day → hourly, year+month → daily, year → monthly.
 /// </summary>
 public sealed record AppUsageResponse(
-    // Property-level converter: it outranks the global JsonStringEnumConverter in
-    // Program.cs's options (which would otherwise emit PascalCase "Day").
-    [property: JsonConverter(typeof(UsageGranularityConverter))] UsageGranularity Granularity,
     AppUsageMetrics Metrics,
     SeriesData TokensByCapability,
     SeriesData TokensByModel,
