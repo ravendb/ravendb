@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { ServerApi, UsageWindow } from "@/api/generated/server-api";
+import type { ServerApi } from "@/api/generated/server-api";
+import { datePeriodToSearchParams, type DatePeriod } from "@/lib/date-period";
 
 const baseKey = "stats";
 
@@ -20,10 +21,10 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "dashboardApp", slug],
                 queryFn: () => api.dashboardApp(slug),
             }),
-        usage: (time: UsageWindow, app?: string) =>
+        usage: (period: DatePeriod, app?: string) =>
             queryOptions({
-                queryKey: [baseKey, "usage", time, app ?? null],
-                queryFn: () => api.usage({ time, app }),
+                queryKey: [baseKey, "usage", period.year, period.month, period.day, app ?? null],
+                queryFn: () => api.usage({ ...datePeriodToSearchParams(period), app }),
             }),
         tokensByApp: () =>
             queryOptions({
@@ -35,10 +36,10 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "overview", slug],
                 queryFn: () => api.overview(slug),
             }),
-        appUsage: (slug: string, range?: { start?: string; end?: string }) =>
+        appUsage: (slug: string, period: DatePeriod) =>
             queryOptions({
-                queryKey: [baseKey, "appUsage", slug, range?.start ?? null, range?.end ?? null],
-                queryFn: () => api.appUsage(slug, range),
+                queryKey: [baseKey, "appUsage", slug, period.year, period.month, period.day],
+                queryFn: () => api.appUsage(slug, datePeriodToSearchParams(period)),
             }),
         collections: (slug: string) =>
             queryOptions({

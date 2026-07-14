@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { ServerApi } from "@/api/generated/server-api";
+import { datePeriodToSearchParams, type DatePeriod } from "@/lib/date-period";
 
 const baseKey = "settings";
 
@@ -10,10 +11,10 @@ export function createSettingsQueries(api: ServerApi["settings"]) {
                 queryKey: [baseKey, "license"],
                 queryFn: () => api.license(),
             }),
-        usage: (year?: number, month?: number) =>
+        usage: (period: DatePeriod) =>
             queryOptions({
-                queryKey: [baseKey, "usage", year ?? null, month ?? null],
-                queryFn: () => api.usage(year && month ? { year: String(year), month: String(month) } : undefined),
+                queryKey: [baseKey, "usage", period.year, period.month, period.day],
+                queryFn: () => api.usage(datePeriodToSearchParams(period)),
             }),
     };
 }

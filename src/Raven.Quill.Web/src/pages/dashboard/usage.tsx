@@ -1,35 +1,36 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { api } from "@/api/api";
 import type { QuillApplicationUsage, QuillPeriodUsage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { WritesBarChart } from "@/components/data/charts";
-import { MonthPicker } from "@/components/data/month-picker";
+import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
-import { formatMonthLabel, getCurrentMonth, type MonthSelection } from "@/lib/month";
+import { formatPeriodLabel, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
 
 export function DashboardUsage() {
-    const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
+    const [period, setPeriod] = useState(getDefaultDatePeriod);
 
-    const usageQuery = useQuery(api.queries.settings.usage(selectedMonth.year, selectedMonth.month));
+    const usageQuery = useQuery(api.queries.settings.usage(period));
 
-    const totalUsage = usageQuery.data?.byPeriod?.reduce((sum, period) => sum + period.usage, 0);
+    const totalUsage = usageQuery.data?.byPeriod?.reduce((sum, bucket) => sum + bucket.usage, 0);
 
-    const monthLabel = formatMonthLabel(selectedMonth);
+    const periodLabel = formatPeriodLabel(period);
 
     return (
         <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight">Usage</h1>
-                <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
+                <DatePeriodPicker value={period} onChange={setPeriod} />
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Writes this month</CardTitle>
-                    <CardDescription>{monthLabel}</CardDescription>
+                    <CardTitle>Writes</CardTitle>
+                    <CardDescription>{periodLabel}</CardDescription>
                     {totalUsage !== undefined && (
                         <CardAction className="text-right">
                             <div className="text-2xl font-semibold">
@@ -48,7 +49,7 @@ export function DashboardUsage() {
                         loadingLabel="Loading chart…"
                     >
                         {usageQuery.data && (
-                            <WritesBarChart data={toChartData(usageQuery.data.byPeriod ?? [])} xKey="label" />
+                            <WritesBarChart data={toChartData(usageQuery.data.byPeriod ?? [], period)} xKey="label" />
                         )}
                     </ApiState>
                 </CardContent>
@@ -57,7 +58,7 @@ export function DashboardUsage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Usage per app</CardTitle>
-                    <CardDescription>Totals for {monthLabel}.</CardDescription>
+                    <CardDescription>Totals for {periodLabel}.</CardDescription>
                 </CardHeader>
                 <CardContent className="px-0">
                     <ApiState
@@ -75,15 +76,22 @@ export function DashboardUsage() {
     );
 }
 
-const chartDayFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+// Bucket labels match the selected granularity: months of a year, days of a
+// month, or hours of a day.
+function bucketLabelFormat(period: DatePeriod): string {
+    if (period.month === null) return "MMM";
+    if (period.day === null) return "MMM d";
+    return "h a";
+}
 
-function toChartData(byPeriod: QuillPeriodUsage[]) {
+function toChartData(byPeriod: QuillPeriodUsage[], period: DatePeriod) {
     const now = new Date();
+    const labelFormat = bucketLabelFormat(period);
     return byPeriod
-        .filter((period) => new Date(period.from) <= now)
-        .map((period) => ({
-            label: chartDayFormatter.format(new Date(period.from)),
-            writes: period.usage,
+        .filter((bucket) => new Date(bucket.from) <= now)
+        .map((bucket) => ({
+            label: format(new Date(bucket.from), labelFormat),
+            writes: bucket.usage,
         }));
 }
 

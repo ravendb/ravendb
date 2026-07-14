@@ -23,7 +23,6 @@ const zeroMetric = { value: 0, delta: 0, sparkline: [] };
 
 // Fresh app with no traffic yet: zeroed stat cards, empty charts, and empty tables.
 const emptyAppUsage: AppUsageResponse = {
-    granularity: "Day",
     metrics: {
         conversations: zeroMetric,
         tokens: zeroMetric,
