@@ -214,6 +214,7 @@ internal static class MetricsReadService
                 modelByAgent[agent.Identifier] = model!;
             }
         }
+
         string NameOf(string agentId) => nameByAgent.GetValueOrDefault(agentId, agentId);
 
         // Per-bucket token series: by capability (agent) and by model. Same shape,
@@ -291,6 +292,7 @@ internal static class MetricsReadService
             if (key == TimeAxisKey) continue;   // dropped from keys above
             points[i][key] = (long)points[i][key] + row.Tokens;
         }
+
         return new SeriesData(points, seriesKeys);
     }
 
@@ -331,6 +333,7 @@ internal static class MetricsReadService
             if (i < 0) continue;
             points[i][link.WidgetId] = (long)points[i][link.WidgetId] + 1L;
         }
+
         return new SeriesData(points, seriesKeys);
     }
 
@@ -380,6 +383,7 @@ internal static class MetricsReadService
             if (i < 0) continue;
             byBucket[i] += batch.NumberOfProcessedMessages;
         }
+
         var points = new CdcWritePoint[buckets.Count];
         for (var i = 0; i < buckets.Count; i++)
             points[i] = new CdcWritePoint(period.Label(buckets[i]), byBucket[i]);
@@ -537,6 +541,7 @@ internal static class MetricsReadService
                 total++;
                 if (channel.Enabled) active++;
             }
+
             // partial page = no more results
             if (page.Count < ChannelPageSize) break;
             offset += ChannelPageSize;
@@ -775,7 +780,11 @@ internal static class MetricsReadService
                 return string.IsNullOrEmpty(text) ? content : text;
             }
         }
-        catch (JsonException) { /* not JSON — plain text */ }
+        catch (JsonException)
+        {
+            /* not JSON — plain text */
+        }
+
         return content;
     }
 
@@ -846,6 +855,7 @@ internal static class MetricsReadService
             if (page.Count < pageSize) break;
             offset += pageSize;
         }
+
         return all;
     }
 

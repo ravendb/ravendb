@@ -27,9 +27,9 @@ public sealed record MintEmbedLinkRequest(
 /// are the primary abuse control (RavenDB-26775), so they are always bounded.</summary>
 public static class EmbedLinkLimits
 {
-    public const int MinTtlSeconds = 60;                  // 1 minute
-    public const int MaxTtlSeconds = 30 * 24 * 60 * 60;   // 30 days
-    public const int DefaultTtlSeconds = 60 * 60;         // 1 hour
+    public const int MinTtlSeconds = 60; // 1 minute
+    public const int MaxTtlSeconds = 30 * 24 * 60 * 60; // 30 days
+    public const int DefaultTtlSeconds = 60 * 60; // 1 hour
 
     public const int MaxMaxInvocations = 1_000_000;
     public const int DefaultMaxInvocations = 100;

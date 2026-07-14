@@ -57,8 +57,14 @@ internal static class RavenLiveFeedProxy
                 {
                     await browser.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, "upstream feed unavailable", ct);
                 }
-                catch (WebSocketException) { /* browser already gone — best effort */ }
-                catch (OperationCanceledException) { /* request aborted mid-close — best effort */ }
+                catch (WebSocketException)
+                {
+                    /* browser already gone — best effort */
+                }
+                catch (OperationCanceledException)
+                {
+                    /* request aborted mid-close — best effort */
+                }
             }
 
             return;

@@ -85,8 +85,8 @@ public static class WizardEndpoints
 
         var sqlConnectionString = new SqlConnectionString
         {
-            Name             = WizardSourceProbeName,
-            FactoryName      = factoryName,
+            Name = WizardSourceProbeName,
+            FactoryName = factoryName,
             ConnectionString = body!.ConnectionString,
         };
         await store.Maintenance.ForDatabase(store.Database).SendAsync(
@@ -110,9 +110,9 @@ public static class WizardEndpoints
             // Don't persist the raw ConnectionString — credentials are kept
             // only on the registered _wizard-source-probe SqlConnectionString
             // (one source of truth) to minimise exposure.
-            state.Provider         = factoryName;
+            state.Provider = factoryName;
             state.LastVerifyResult = result;
-            state.LastVerifyAt     = DateTime.UtcNow;
+            state.LastVerifyAt = DateTime.UtcNow;
         }, ct);
 
         return Results.Ok(result);
@@ -129,8 +129,8 @@ public static class WizardEndpoints
 
         var sqlConnectionString = new SqlConnectionString
         {
-            Name             = WizardSourceProbeName,
-            FactoryName      = factoryName,
+            Name = WizardSourceProbeName,
+            FactoryName = factoryName,
             ConnectionString = body!.ConnectionString,
         };
 
@@ -158,9 +158,9 @@ public static class WizardEndpoints
         await PersistAsync(store, state =>
         {
             // ConnectionString deliberately not persisted — see Connect handler note.
-            state.Provider             = factoryName;
+            state.Provider = factoryName;
             state.LastDiscoveredSchema = schema;
-            state.LastDiscoverAt       = DateTime.UtcNow;
+            state.LastDiscoverAt = DateTime.UtcNow;
         }, ct);
 
         return Results.Ok(DiscoverResponse.From(schema));
@@ -205,7 +205,7 @@ public static class WizardEndpoints
         await PersistAsync(store, state =>
         {
             state.LastMapConfiguration = cdcConfig;
-            state.LastMapAt            = DateTime.UtcNow;
+            state.LastMapAt = DateTime.UtcNow;
         }, ct);
 
         return Results.Ok(cdcConfig);
@@ -287,12 +287,12 @@ public static class WizardEndpoints
 
         var request = new TestCdcSinkMappingRequest
         {
-            Configuration     = state.LastMapConfiguration,
+            Configuration = state.LastMapConfiguration,
             SourceTableSchema = body.SourceTableSchema,
-            SourceTableName   = body.SourceTableName,
-            RowSelector       = TestCdcSinkRowSelector.First,
-            Operation         = TestCdcSinkOperation.Upsert,
-            MaxRows           = body.MaxRows ?? 50,
+            SourceTableName = body.SourceTableName,
+            RowSelector = TestCdcSinkRowSelector.First,
+            Operation = TestCdcSinkOperation.Upsert,
+            MaxRows = body.MaxRows ?? 50,
         };
 
         TestCdcSinkMappingResult result;
@@ -364,6 +364,7 @@ public static class WizardEndpoints
         {
             return Results.Conflict(new ApiErrorResponse($"database '{slug}' already exists"));
         }
+
         if (!created)
             return Results.Conflict(new ApiErrorResponse($"database '{slug}' already exists"));
 
@@ -384,8 +385,8 @@ public static class WizardEndpoints
 
         var transplantedCs = new SqlConnectionString
         {
-            Name             = cdcConfig.ConnectionStringName,
-            FactoryName      = probeCs.FactoryName,
+            Name = cdcConfig.ConnectionStringName,
+            FactoryName = probeCs.FactoryName,
             ConnectionString = probeCs.ConnectionString,
         };
         await store.Maintenance.ForDatabase(slug).SendAsync(
@@ -407,11 +408,11 @@ public static class WizardEndpoints
         // PersistAsync.
         var app = new App
         {
-            Slug        = slug,
-            AppName     = body.AppName,
-            Database    = slug,
+            Slug = slug,
+            AppName = body.AppName,
+            Database = slug,
             CdcTaskName = cdcConfig.Name,
-            CreatedAt   = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
         };
 
         using (var session = store.OpenAsyncSession())
@@ -465,7 +466,7 @@ public static class WizardEndpoints
         CancellationToken ct)
     {
         const int MaxAttempts = 2;
-        for (var attempt = 1; ; attempt++)
+        for (var attempt = 1;; attempt++)
         {
             using var session = store.OpenAsyncSession();
             session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;

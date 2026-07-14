@@ -73,16 +73,19 @@ builder.Logging.AddFilter("Polly", LogLevel.None);
 builder.Services.AddOptions<ApplianceOptions>()
     .Configure(options =>
     {
-        ReadEnv("RAVEN_QUILL_RAVEN_URL",            v => options.RavenUrl = v);
-        ReadEnv("RAVEN_QUILL_WEB_LISTEN_URL",       v => options.WebListenUrl = v);
-        ReadEnv("RAVEN_QUILL_CONFIG_DB",            v => options.ConfigDatabase = v);
-        ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH",   v => options.SetupPackagePath = v);
-        ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
-        ReadEnv("RAVEN_QUILL_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
-        ReadEnv("RAVEN_QUILL_API_URL",              v => options.AiApiUrl = v);
-        ReadEnv("QUILL_LICENSE_KEY",             v => options.LicenseToken = v);
-        ReadEnv("QUILL_API_KEY",                 v => options.ApiKey = v);
-        ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v => { if (int.TryParse(v, out var p)) options.RavenInternalPort = p; });
+        ReadEnv("RAVEN_QUILL_RAVEN_URL", v => options.RavenUrl = v);
+        ReadEnv("RAVEN_QUILL_WEB_LISTEN_URL", v => options.WebListenUrl = v);
+        ReadEnv("RAVEN_QUILL_CONFIG_DB", v => options.ConfigDatabase = v);
+        ReadEnv("RAVEN_QUILL_SETUP_PACKAGE_PATH", v => options.SetupPackagePath = v);
+        ReadEnv("RAVEN_QUILL_RAVENDB_S6_SERVICE", v => options.RavenDbS6Service = v);
+        ReadEnv("RAVEN_QUILL_LICENSE_API_URL", v => options.LicenseApiUrl = v);
+        ReadEnv("RAVEN_QUILL_API_URL", v => options.AiApiUrl = v);
+        ReadEnv("QUILL_LICENSE_KEY", v => options.LicenseToken = v);
+        ReadEnv("QUILL_API_KEY", v => options.ApiKey = v);
+        ReadEnv("RAVEN_QUILL_RAVENDB_INTERNAL_PORT", v =>
+        {
+            if (int.TryParse(v, out var p)) options.RavenInternalPort = p;
+        });
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -105,6 +108,7 @@ if (!isOpenApiDocumentGeneration)
     // setup package for QUILL_LICENSE_KEY, then restarts into secure mode (or marks Ready inline).
     builder.Services.AddHostedService<ApplianceActivationService>();
 }
+
 builder.Services.AddHttpClient();
 
 // AI Helper client. Always proxies the call through the bundled RavenDB (/assistant/assist), which

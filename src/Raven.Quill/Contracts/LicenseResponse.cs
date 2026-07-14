@@ -6,7 +6,7 @@ public sealed record LicenseResponse(
     ServerLicenseResponse Response,
     ConnectivityStatus Connectivity,
     LicensePlan[] Plans
-    );
+);
 
 public sealed record ConnectivityStatus(string StatusCode, string Exception)
 {
@@ -24,7 +24,7 @@ public sealed record ServerLicenseResponse(
     string Status,
     string Type,
     string Version
-    );
+);
 
 public sealed record LicensePlan(
     string Slug,

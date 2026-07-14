@@ -84,9 +84,9 @@ public static class BootstrapPhaseExtensions
     public static string ToWire(this BootstrapPhase phase) => phase switch
     {
         BootstrapPhase.NeedsActivation => "needs-activation",
-        BootstrapPhase.Redeeming       => "redeeming",
-        BootstrapPhase.Restarting      => "restarting",
-        BootstrapPhase.Ready           => "ready",
+        BootstrapPhase.Redeeming => "redeeming",
+        BootstrapPhase.Restarting => "restarting",
+        BootstrapPhase.Ready => "ready",
         _ => phase.ToString().ToLowerInvariant(),
     };
 }

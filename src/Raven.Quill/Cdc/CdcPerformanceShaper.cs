@@ -17,8 +17,8 @@ internal static class CdcPerformanceShaper
 
     internal static IEnumerable<CdcPerfBatchRaw> Batches(CdcSinkPerformanceRaw raw) =>
         (raw.Results ?? new List<CdcPerfTaskRaw>())
-            .SelectMany(t => t.Stats ?? new List<CdcPerfProcessRaw>())
-            .SelectMany(p => p.Performance ?? new List<CdcPerfBatchRaw>());
+        .SelectMany(t => t.Stats ?? new List<CdcPerfProcessRaw>())
+        .SelectMany(p => p.Performance ?? new List<CdcPerfBatchRaw>());
 
     public static CdcPerformanceResponse Shape(CdcSinkPerformanceRaw raw, bool disabled, DateTime nowUtc, DateTime? lastActivityAt)
     {

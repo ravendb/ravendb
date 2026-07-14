@@ -19,7 +19,7 @@ internal static class IFrameStyleResolution
     internal static ResolvedIFrameStyle ForDefaults(IFrameStyleDefaults? defaults)
     {
         var style = defaults?.Style
-            ?? (string.IsNullOrWhiteSpace(defaults?.Css) ? IFrameStyle.Light : IFrameStyle.Custom);
+                    ?? (string.IsNullOrWhiteSpace(defaults?.Css) ? IFrameStyle.Light : IFrameStyle.Custom);
         return new(style, style == IFrameStyle.Custom ? defaults?.Css : null);
     }
 
