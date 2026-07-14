@@ -3,48 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RavenDB Quill — demo</title>
-    <link rel="stylesheet" href="/chat.css">
+    <title>Quill by RavenDB</title>
+    <style>
+        body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 4rem auto; max-width: 40rem; padding: 0 1.5rem; line-height: 1.6; color: #1a1a1a; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+        .sub { color: #666; margin-top: 0; }
+        code { background: #f2f2f2; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+        @media (prefers-color-scheme: dark) {
+            body { color: #e6e6e6; background: #1a1a1a; }
+            .sub { color: #9a9a9a; }
+            code { background: #2a2a2a; }
+        }
+    </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="brand">
-            <span class="brand-mark">RavenDB</span>
-            <span class="brand-sep">/</span>
-            <span class="brand-sub">Quill — demo</span>
-        </div>
-        <div class="health">
-            <span id="health-dot" class="dot dot-unknown" title="appliance health"></span>
-            <span id="health-label">checking...</span>
-        </div>
-    </header>
-
-    <section class="toolbar">
-        <label for="agent-id" class="lbl">Agent ID</label>
-        <input id="agent-id" type="text" placeholder="demo-agent" value="demo-agent" autocomplete="off" spellcheck="false">
-        <button id="connect-btn" class="btn btn-primary" type="button">Connect</button>
-        <button id="newchat-btn" class="btn" type="button" disabled>New chat</button>
-        <span class="spacer"></span>
-        <span id="conv-id" class="conv-id" title="current conversation document id"></span>
-    </section>
-
-    <main id="feed" class="feed" aria-live="polite">
-        <div class="hint">
-            <p><strong>Demo skeleton.</strong></p>
-            <ol>
-                <li>The appliance bootstraps RavenDB and the web app in a single container.</li>
-                <li>To run a real chat, an admin must first provision an agent through the setup wizard (T-3, post-skeleton).</li>
-                <li>For the 8-week demo, calling <em>Connect</em> on the default <code>demo-agent</code> will return a structured error until the wizard lands.</li>
-            </ol>
-            <p>Static assets confirm the web app is reachable; <code>GET /healthz</code> confirms RavenDB is ready behind it.</p>
-        </div>
-    </main>
-
-    <footer class="composer">
-        <textarea id="prompt" aria-label="Prompt for the demo agent" placeholder="Ask the demo agent..." rows="2" disabled></textarea>
-        <button id="send-btn" class="btn btn-primary" type="button" disabled>Send</button>
-    </footer>
-
-    <script src="/chat.js"></script>
+    <h1>Quill by RavenDB</h1>
+    <p class="sub">The backend is running.</p>
+    <p>
+        This placeholder is served only in local development when the web UI has not
+        been built into <code>wwwroot</code>. In the container image the built React
+        app (<code>Raven.Quill.Web/dist</code>) replaces this page.
+    </p>
+    <p>
+        The API is available under <code>/api</code>; <code>GET /healthz</code>
+        reports readiness.
+    </p>
 </body>
 </html>
