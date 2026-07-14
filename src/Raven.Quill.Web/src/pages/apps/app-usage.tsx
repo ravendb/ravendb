@@ -1,36 +1,27 @@
 import { useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { endOfDay, endOfMonth, min } from "date-fns";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { SeriesBarChart, WritesBarChart } from "@/components/data/charts";
-import { MonthPicker } from "@/components/data/month-picker";
+import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { PagePanel } from "@/components/data/page-panel";
-import { getCurrentMonth, type MonthSelection } from "@/lib/month";
+import { getDefaultDatePeriod } from "@/lib/date-period";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
-// The endpoint accepts ISO start/end query strings and parses them as UTC; send the inclusive span of the
-// picked month, clamped to today so the server never returns empty future buckets
-function toApiRange({ year, month }: MonthSelection) {
-    const monthStart = new Date(year, month - 1, 1);
-    const rangeEnd = min([endOfMonth(monthStart), endOfDay(new Date())]);
-    return { start: monthStart.toISOString(), end: rangeEnd.toISOString() };
-}
-
 export function AppUsage() {
     const { slug = "" } = useParams();
-    const [selectedMonth, setSelectedMonth] = useState<MonthSelection>(getCurrentMonth);
-    const appUsageQuery = useQuery(api.queries.stats.appUsage(slug, toApiRange(selectedMonth)));
+    const [period, setPeriod] = useState(getDefaultDatePeriod);
+    const appUsageQuery = useQuery(api.queries.stats.appUsage(slug, period));
 
     return (
         <PagePanel>
             <div className="mb-6 flex items-center justify-end">
-                <MonthPicker value={selectedMonth} onChange={setSelectedMonth} />
+                <DatePeriodPicker value={period} onChange={setPeriod} />
             </div>
             <ApiState
                 isLoading={appUsageQuery.isPending}

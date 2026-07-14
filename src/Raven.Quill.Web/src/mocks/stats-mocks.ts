@@ -541,7 +541,6 @@ const buildSeries = (keys: SeriesKey[], bases: number[]): SeriesData => {
 };
 
 export const sampleAppUsage: AppUsageResponse = {
-    granularity: "Day",
     metrics: {
         conversations: { value: 7400, delta: 12.5, sparkline: usageSparkline(520) },
         tokens: { value: 6100000, delta: 15, sparkline: usageSparkline(430000) },

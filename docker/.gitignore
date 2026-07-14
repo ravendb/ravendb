@@ -4,3 +4,4 @@ secrets.env
 license.env
 license.json
 settings.json
+docker-compose.override.yml
