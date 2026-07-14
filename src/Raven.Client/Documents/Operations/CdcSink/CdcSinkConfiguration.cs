@@ -467,19 +467,18 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 Schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema,
                 TableName = table.SourceTableName,
                 PrimaryKeyColumns = table.PrimaryKeyColumns,
-                InitialLoadKeyColumns = table.PrimaryKeyColumns,
             });
 
             if (table.EmbeddedTables != null)
             {
                 foreach (var embedded in table.EmbeddedTables)
-                    CollectEmbeddedTablesFlat(embedded, embedded.JoinColumns, defaultSchema, tables);
+                    CollectEmbeddedTablesFlat(embedded, defaultSchema, tables);
             }
         }
         return tables;
     }
 
-    private static void CollectEmbeddedTablesFlat(CdcSinkEmbeddedTableConfig embedded, List<string> rootJoinColumns, string defaultSchema, List<TableInfo> tables)
+    private static void CollectEmbeddedTablesFlat(CdcSinkEmbeddedTableConfig embedded, string defaultSchema, List<TableInfo> tables)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
@@ -488,36 +487,12 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             Schema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema,
             TableName = embedded.SourceTableName,
             PrimaryKeyColumns = embedded.PrimaryKeyColumns,
-            InitialLoadKeyColumns = BuildEmbeddedInitialLoadKeyColumns(rootJoinColumns, embedded.JoinColumns, embedded.PrimaryKeyColumns),
         });
 
         if (embedded.EmbeddedTables != null)
         {
             foreach (var child in embedded.EmbeddedTables)
-                CollectEmbeddedTablesFlat(child, rootJoinColumns, defaultSchema, tables);
-        }
-    }
-
-    public static List<string> BuildEmbeddedInitialLoadKeyColumns(List<string> rootJoinColumns, List<string> joinColumns, List<string> primaryKeyColumns)
-    {
-        var result = new List<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        AddDistinct(rootJoinColumns);
-        AddDistinct(joinColumns);
-        AddDistinct(primaryKeyColumns);
-
-        return result;
-
-        void AddDistinct(List<string> columns)
-        {
-            if (columns == null)
-                return;
-            foreach (var column in columns)
-            {
-                if (string.IsNullOrEmpty(column) == false && seen.Add(column))
-                    result.Add(column);
-            }
+                CollectEmbeddedTablesFlat(child, defaultSchema, tables);
         }
     }
 
@@ -545,8 +520,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         public string Schema { get; set; }
         public string TableName { get; set; }
         public List<string> PrimaryKeyColumns { get; set; }
-
-        public List<string> InitialLoadKeyColumns { get; set; }
 
         public string FullName => $"{Schema}.{TableName}";
 

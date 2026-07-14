@@ -62,6 +62,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     {
         // In case of error, re-learn the schema (it may have changed).
         _columnTypesCache.Clear();
+        _sourcePrimaryKeysCache = null;
+        _sourceUniqueKeysCache = null;
         DocumentProcessor.ResetSourceColumnNames();
         await EnsureCdcEnabled(ct);
         await HandleInitialLoad(ct);
@@ -628,12 +630,12 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     /// equivalent lexicographic-OR form, which yields the same logical result on every provider.
     /// </summary>
     protected override string BuildBatchQuery(
-        CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
         string[] lastKeys, int maxBatchSize)
     {
         var table = $"{CommandBuilder.QuoteIdentifier(tableInfo.Schema)}.{CommandBuilder.QuoteIdentifier(tableInfo.TableName)}";
-        var quotedCols = pkColumns.Select(c => CommandBuilder.QuoteIdentifier(c)).ToArray();
-        var pkColsList = string.Join(", ", quotedCols);
+        var quotedCols = keyColumns.Select(c => CommandBuilder.QuoteIdentifier(c)).ToArray();
+        var keyColsList = string.Join(", ", quotedCols);
 
         var where = string.Empty;
         if (lastKeys != null)
@@ -656,12 +658,67 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             where = " WHERE " + string.Join(" OR ", disjuncts);
         }
 
-        return $"SELECT TOP ({maxBatchSize}) * FROM {table}{where} ORDER BY {pkColsList}";
+        return $"SELECT TOP ({maxBatchSize}) * FROM {table}{where} ORDER BY {keyColsList}";
     }
 
     private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
+    
+    // Unique (non-PK) indexes with each column's nullability, from sys catalog (covers unique
+    // constraints and unique indexes). Included (non-key) columns are excluded. Columns: schema, table,
+    // index name, column, is_nullable (bit; 1 = nullable).
+    private const string SelectNotNullUniqueKeysQuery = """
+                                                        SELECT s.name, t.name, i.name, c.name, c.is_nullable
+                                                        FROM sys.indexes i
+                                                        JOIN sys.tables t ON t.object_id = i.object_id
+                                                        JOIN sys.schemas s ON s.schema_id = t.schema_id
+                                                        JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+                                                        JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+                                                        WHERE i.is_unique = 1 AND i.is_primary_key = 0 AND ic.is_included_column = 0
+                                                        ORDER BY s.name, t.name, i.name, ic.key_ordinal
+                                                        """;
 
-    protected override async Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct)
+    private Dictionary<string, List<string>> _sourcePrimaryKeysCache;
+    private Dictionary<string, Dictionary<string, UniqueKeyAccumulator>> _sourceUniqueKeysCache;
+
+    protected override async Task<List<string>> ResolveInitialLoadKeyColumnsAsync(DbConnection conn, string schema, string table, CancellationToken ct)
+    {
+        if (_sourcePrimaryKeysCache == null)
+        {
+            var pks = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var uniques = new Dictionary<string, Dictionary<string, UniqueKeyAccumulator>>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                await using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = new MsSqlSchemaQueries().SelectPrimaryKeysQuery;
+                    await using var reader = await cmd.ExecuteReaderAsync(ct);
+                    while (await reader.ReadAsync(ct))
+                        AddDiscoveredPrimaryKeyColumn(pks, reader.GetString(0), reader.GetString(1), reader.GetString(2));
+                }
+
+                await using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = SelectNotNullUniqueKeysQuery;
+                    await using var reader = await cmd.ExecuteReaderAsync(ct);
+                    while (await reader.ReadAsync(ct))
+                        AddDiscoveredUniqueKeyColumn(uniques, reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), columnNotNull: reader.GetBoolean(4) == false);
+                }
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"[{Name}] Failed to read keys from the source catalog; tables without a resolvable primary or NOT-NULL unique key will fault the initial load.", e);
+            }
+
+            _sourcePrimaryKeysCache = pks;
+            _sourceUniqueKeysCache = uniques;
+        }
+
+        var key = $"{schema}.{table}";
+        return ChooseInitialLoadKey(_sourcePrimaryKeysCache.GetValueOrDefault(key), _sourceUniqueKeysCache.GetValueOrDefault(key));
+    }
+
+    protected override async Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns, string[] lastKeys, CancellationToken ct)
     {
         if (_columnTypesCache.TryGetValue(tableInfo.FullName, out var columnTypes) == false)
         {
@@ -672,9 +729,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             _columnTypesCache[tableInfo.FullName] = columnTypes;
         }
 
-        for (int i = 0; i < pkColumns.Count; i++)
+        for (int i = 0; i < keyColumns.Count; i++)
         {
-            var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "nvarchar"));
+            var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(keyColumns[i], "nvarchar"));
             AddParameter(cmd, $"@k{i}", value);
         }
     }
