@@ -2,7 +2,13 @@ import { useMemo, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import { InputItem } from "components/models/common";
-import { mapServerWideTaskFromDto, ServerWideTaskInfo, ServerWideTaskType } from "./serverWideTaskModels";
+import {
+    mapServerWideTaskFromDto,
+    ServerWideBackupTaskInfo,
+    ServerWideExternalReplicationTaskInfo,
+    ServerWideTaskInfo,
+    ServerWideTaskType,
+} from "./serverWideTaskModels";
 
 export function useServerWideTasks() {
     const { manageServerService } = useServices();
@@ -34,8 +40,10 @@ export function useServerWideTasks() {
         );
     }, [tasks, nameFilter, selectedTypes]);
 
-    const replicationTasks = filteredTasks.filter((x) => x.taskType === "Replication");
-    const backupTasks = filteredTasks.filter((x) => x.taskType === "Backup");
+    const replicationTasks = filteredTasks.filter(
+        (x): x is ServerWideExternalReplicationTaskInfo => x.taskType === "Replication"
+    );
+    const backupTasks = filteredTasks.filter((x): x is ServerWideBackupTaskInfo => x.taskType === "Backup");
 
     const typeFilterItems: InputItem<ServerWideTaskType>[] = [
         {

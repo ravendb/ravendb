@@ -13,7 +13,8 @@ import { LoadingView } from "components/common/LoadingView";
 import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
 import OngoingTaskOperationConfirm from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
 import OngoingTaskSelectActions from "components/pages/database/tasks/ongoingTasks/partials/OngoingTaskSelectActions";
-import ServerWideTaskPanel from "./partials/ServerWideTaskPanel";
+import { ServerWideBackupPanel } from "./partials/ServerWideBackupPanel";
+import { ServerWideExternalReplicationPanel } from "./partials/ServerWideExternalReplicationPanel";
 import { PerDatabaseOngoingTasksLink } from "./partials/PerDatabaseOngoingTasksLink";
 import { ServerWideTasksInfoHub } from "./partials/ServerWideTasksInfoHub";
 import { useServerWideTasks } from "./useServerWideTasks";
@@ -169,11 +170,11 @@ export default function ServerWideTasks() {
                     {filteredTasks.length === 0 && <EmptySet>No tasks match your filter criteria</EmptySet>}
 
                     <TaskSection title="External replication" icon="external-replication" tasks={replicationTasks}>
-                        {(task) => <ServerWideTaskPanel key={task.taskId} task={task} {...panelProps} />}
+                        {(task) => <ServerWideExternalReplicationPanel key={task.taskId} task={task} {...panelProps} />}
                     </TaskSection>
 
                     <TaskSection title="Backup" icon="backup" tasks={backupTasks}>
-                        {(task) => <ServerWideTaskPanel key={task.taskId} task={task} {...panelProps} />}
+                        {(task) => <ServerWideBackupPanel key={task.taskId} task={task} {...panelProps} />}
                     </TaskSection>
                 </>
             )}
@@ -181,14 +182,14 @@ export default function ServerWideTasks() {
     );
 }
 
-interface TaskSectionProps {
+interface TaskSectionProps<T extends ServerWideTaskInfo> {
     title: string;
     icon: IconName;
-    tasks: ServerWideTaskInfo[];
-    children: (task: ServerWideTaskInfo) => ReactNode;
+    tasks: T[];
+    children: (task: T) => ReactNode;
 }
 
-function TaskSection(props: TaskSectionProps) {
+function TaskSection<T extends ServerWideTaskInfo>(props: TaskSectionProps<T>) {
     const { title, icon, tasks, children } = props;
 
     if (tasks.length === 0) {
