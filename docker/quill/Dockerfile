@@ -1,28 +1,4 @@
 # syntax=docker/dockerfile:1.7
-#
-# RavenDB Quill — single-image build for the 8-week internal demo.
-#
-# Build context is the RavenDB repo root. Invoke via scripts/quill/up.ps1
-# or directly:
-#
-#   cd <ravendb repo root>
-#   docker build \
-#     -f docker/quill/Dockerfile \
-#     -t ravendb/quill:demo \
-#     .
-#
-# Five stages:
-#   1. ravendb-build          — dotnet publish of Raven.Server.
-#   2. appliance-openapi-build — dotnet build of Raven.Quill to emit openapi.json.
-#   3. appliance-frontend-build — pnpm build of Raven.Quill.Web.
-#   4. web-build              — dotnet publish of Raven.Quill.
-#   5. runtime                — aspnet base image, s6-overlay v3, both artifacts copied in.
-#
-# Security posture: the nginx :443 TLS/SNI front and operator API-key auth are built in (Phase 1).
-# On first run, before activation, RavenDB starts unsecured on loopback and the web app is reachable
-# over plain HTTP; once the setup package is applied the appliance restarts into secure mode (mTLS
-# passthrough for db.*; terminated dashboard./api./public.*). External exposure is governed by which
-# host ports are published, not by the servers' bind addresses.
 
 # Pin base images to specific patch versions matching the repo's pinned
 # toolchain: global.json declares SDK 10.0.301. The runtime image hosts both
@@ -35,42 +11,47 @@
 ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.301
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.9
 ARG NODE_IMAGE=node:24-bookworm-slim
+ARG RAVENDB_STUDIO_IMAGE=ravendb/ravendb:7.2-ubuntu-latest
 ARG PNPM_VERSION=11.2.2
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
-# -----------------------------------------------------------------------------
-# Stage 1: build Raven.Server.
-# -----------------------------------------------------------------------------
+# Stage 0: alias the external RavenDB image so we can COPY --from it by name.
+FROM ${RAVENDB_STUDIO_IMAGE} AS ravendb-studio
+
+# Stage 1: build Raven.Server from source.
 FROM ${SDK_IMAGE} AS ravendb-build
+ARG TARGETARCH
 WORKDIR /src
 COPY . .
 
-RUN dotnet publish src/Raven.Server/Raven.Server.csproj \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    . docker/quill/scripts/dotnet-rid.sh \
+    && dotnet publish src/Raven.Server/Raven.Server.csproj \
         -c Release \
+        -r "$DOTNET_RID" \
+        --self-contained false \
         -o /publish/raven \
         --nologo
 
-# -----------------------------------------------------------------------------
-# Stage 2: build-time OpenAPI document for Raven.Quill.
-# -----------------------------------------------------------------------------
-FROM ${SDK_IMAGE} AS appliance-openapi-build
+
+# Stage 2: build the backend just enough to emit the OpenAPI doc (consumed by Stage 3).
+FROM ${SDK_IMAGE} AS quill-openapi-build
 WORKDIR /src
 COPY . .
 
-RUN dotnet build src/Raven.Quill/Raven.Quill.csproj \
-       -c Release \
-       --nologo \
-       --tl:off
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    dotnet build src/Raven.Quill/Raven.Quill.csproj \
+        -c Release \
+        --nologo \
+        --tl:off
 
-# -----------------------------------------------------------------------------
-# Stage 3: build Raven.Quill.Web.
-# -----------------------------------------------------------------------------
-FROM ${NODE_IMAGE} AS appliance-frontend-build
+
+# Stage 3: build the React/Vite frontend (consumes the OpenAPI doc from Stage 2).
+FROM ${NODE_IMAGE} AS quill-frontend-build
 ARG PNPM_VERSION
 WORKDIR /workspace
 
-RUN corepack enable \
-    && corepack prepare pnpm@${PNPM_VERSION} --activate
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 COPY src/Raven.Quill.Web/package.json \
      src/Raven.Quill.Web/pnpm-lock.yaml \
@@ -79,100 +60,88 @@ COPY src/Raven.Quill.Web/package.json \
 
 WORKDIR /workspace/src/Raven.Quill.Web
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile
 
 WORKDIR /workspace
-COPY --from=appliance-openapi-build /src/src/Raven.Quill/obj/openapi/quill.json ./src/Raven.Quill/obj/openapi/quill.json
+
+COPY --from=quill-openapi-build /src/src/Raven.Quill/obj/openapi/quill.json ./src/Raven.Quill/obj/openapi/quill.json
 COPY src/Raven.Quill.Web/ ./src/Raven.Quill.Web/
 
 WORKDIR /workspace/src/Raven.Quill.Web
 ENV RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD=1
 RUN pnpm build
 
-# -----------------------------------------------------------------------------
-# Stage 4: build Raven.Quill.
-# -----------------------------------------------------------------------------
+
+# Stage 4: publish the backend and overlay the Vite output into wwwroot.
 FROM ${SDK_IMAGE} AS web-build
+ARG TARGETARCH
 WORKDIR /src
 COPY . .
 
-RUN dotnet publish src/Raven.Quill/Raven.Quill.csproj \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    . docker/quill/scripts/dotnet-rid.sh \
+    && dotnet publish src/Raven.Quill/Raven.Quill.csproj \
         -c Release \
+        -r "$DOTNET_RID" \
+        --self-contained false \
         -o /publish/web \
-        --nologo
+        --nologo \
+    && rm -rf /publish/web/wwwroot
 
-# Replace the server's checked-in placeholder wwwroot with the Vite build.
-RUN rm -rf /publish/web/wwwroot
-COPY --from=appliance-frontend-build /workspace/src/Raven.Quill.Web/dist /publish/web/wwwroot
+COPY --from=quill-frontend-build /workspace/src/Raven.Quill.Web/dist /publish/web/wwwroot
 
-# -----------------------------------------------------------------------------
-# Stage 5: runtime. ASP.NET base + s6-overlay supervising RavenDB and the web app.
-# -----------------------------------------------------------------------------
+
+# Stage 5: runtime - aspnet base + s6-overlay supervising RavenDB, the web app, and nginx.
 FROM ${RUNTIME_IMAGE} AS runtime
 ARG S6_OVERLAY_VERSION
-ENV S6_OVERLAY_VERSION=${S6_OVERLAY_VERSION}
+ARG TARGETARCH
 
-# s6-overlay needs xz + curl to bootstrap; nginx is the :443 SNI front (Phase 1) and openssl
-# converts the package's wildcard PFX to the PEM nginx serves.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends xz-utils curl ca-certificates nginx-full openssl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install s6-overlay v3 (noarch + x86_64). Two-tarball layout per
-# https://github.com/just-containers/s6-overlay#usage.
-#
-# Download both tarballs alongside their upstream-published .sha256 files
-# (keeping the original filenames via `curl -O` so `sha256sum -c` matches the
-# entries in the checksum files), verify, then extract. Catches corrupted
-# downloads and any MITM that doesn't also own the GitHub release's TLS chain.
-RUN cd /tmp \
-    && curl -fsSLO "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" \
-    && curl -fsSLO "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz.sha256" \
-    && curl -fsSLO "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz" \
-    && curl -fsSLO "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz.sha256" \
-    && sha256sum -c s6-overlay-noarch.tar.xz.sha256 s6-overlay-x86_64.tar.xz.sha256 \
-    && tar -C / -Jxpf s6-overlay-noarch.tar.xz \
-    && tar -C / -Jxpf s6-overlay-x86_64.tar.xz \
-    && rm s6-overlay-noarch.tar.xz s6-overlay-noarch.tar.xz.sha256 s6-overlay-x86_64.tar.xz s6-overlay-x86_64.tar.xz.sha256
+RUN <<EOF
+set -eu
+cd /tmp
+
+case "$TARGETARCH" in
+  amd64) S6_ARCH=x86_64 ;;
+  arm64) S6_ARCH=aarch64 ;;
+  arm)   S6_ARCH=arm ;;
+  *) echo "Unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;;
+esac
+
+S6_URL="https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}"
+
+for part in noarch "$S6_ARCH"; do
+  curl -fsSLO "${S6_URL}/s6-overlay-${part}.tar.xz"
+  curl -fsSLO "${S6_URL}/s6-overlay-${part}.tar.xz.sha256"
+done
+
+sha256sum -c s6-overlay-*.sha256
+tar -C / -Jxpf s6-overlay-noarch.tar.xz
+tar -C / -Jxpf "s6-overlay-${S6_ARCH}.tar.xz"
+rm s6-overlay-*
+EOF
 
 COPY --from=ravendb-build /publish/raven /app/ravendb
 COPY --from=web-build     /publish/web   /app/web
-
-# Override the settings.json baked into `dotnet publish src/Raven.Server`.
-# The default file hard-codes ServerUrl=127.0.0.1:8080 (and overrides the
-# RAVEN_ServerUrl env var, because settings.json wins in RavenDB's config
-# precedence). Ours binds 0.0.0.0 so Docker port-publish can forward.
 COPY docker/quill/ravendb-settings.json /app/ravendb/settings.json
-
-# Apply the license. RavenDB's License.Path defaults to "license.json" resolved
-# against its working dir (/app/ravendb/, where the 01-ravendb run script cd's
-# before launch), so dropping the file here activates the server with no
-# settings change. The file is customer-secret and gitignored (see
-# docker/.gitignore); supply your own at docker/quill/license.json.
-COPY docker/quill/license.json /app/ravendb/license.json
-
-# Studio bundle. `dotnet publish src/Raven.Server` doesn't include Studio.zip
-# (the official image's CI does a separate zip step). Pulling it from the
-# published `ravendb/ravendb:latest` image keeps our build self-contained.
-COPY --from=ravendb/ravendb:latest /usr/lib/ravendb/server/Raven.Studio.zip /app/ravendb/
-
-# nginx :443 SNI front (Phase 1): db.*/a.* TLS-passthrough to RavenDB (mTLS preserved); the web
-# subdomains terminate with the package's wildcard cert and forward to the web app on :5000.
+COPY --from=ravendb-studio /usr/lib/ravendb/server/Raven.Studio.zip /app/ravendb/
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
-# s6-rc.d service definitions ship under docker/quill/s6-rc.d/.
 COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
-RUN find /etc/s6-overlay/s6-rc.d -type f -exec sed -i 's/\r$//' {} + \
-    && chmod +x /etc/s6-overlay/s6-rc.d/01-ravendb/run \
+RUN chmod +x /etc/s6-overlay/s6-rc.d/01-ravendb/run \
              /etc/s6-overlay/s6-rc.d/02-web/run \
              /etc/s6-overlay/s6-rc.d/03-proxy/run
 
-# Ports: nginx fronts :443 (the SNI router). :5000 stays exposed for first-run /
-# pre-activation (before the wildcard cert exists, nginx isn't up yet). RavenDB
-# is reached through the proxy (db.* passthrough), not published directly.
-EXPOSE 5000 443
+EXPOSE 443
 
 VOLUME /var/lib/quill
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=180s \
+    CMD curl -fsk https://127.0.0.1/healthz || curl -fs http://127.0.0.1:5000/healthz || exit 1
 
 ENV RAVEN_QUILL_RAVEN_URL=http://127.0.0.1:8080 \
     RAVEN_QUILL_WEB_LISTEN_URL=http://0.0.0.0:5000 \
