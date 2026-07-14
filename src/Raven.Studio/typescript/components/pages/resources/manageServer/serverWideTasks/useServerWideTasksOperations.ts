@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { pick } from "lodash";
 import messagePublisher from "common/messagePublisher";
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { useServices } from "components/hooks/useServices";
 import { OngoingTaskSharedInfo } from "components/models/tasks";
 import { OngoingTaskOperationConfirmType } from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
@@ -14,12 +16,7 @@ interface OperationConfirm {
 
 // OngoingTaskOperationConfirm renders only taskId, taskName, taskState and taskType
 export function toOperationConfirmInfo(task: ServerWideTaskSharedInfo): OngoingTaskSharedInfo {
-    return {
-        taskId: task.taskId,
-        taskName: task.taskName,
-        taskState: task.taskState,
-        taskType: task.taskType,
-    } as OngoingTaskSharedInfo;
+    return pick(task, ["taskId", "taskName", "taskState", "taskType"]) as OngoingTaskSharedInfo;
 }
 
 export function useServerWideTasksOperations(reload: () => void) {
@@ -52,7 +49,9 @@ export function useServerWideTasksOperations(reload: () => void) {
 
             await Promise.all(requests);
             messagePublisher.reportSuccess(
-                `${requests.length === 1 ? "Task" : "Tasks"} ${enable ? "enabled" : "disabled"} successfully.`
+                `${pluralizeHelpers.pluralize(requests.length, "Task", "Tasks", true)} ${
+                    enable ? "enabled" : "disabled"
+                } successfully.`
             );
             reload();
         } finally {
@@ -69,7 +68,9 @@ export function useServerWideTasksOperations(reload: () => void) {
                 tasks.map((task) => manageServerService.deleteServerWideTask(task.taskType, task.taskName))
             );
 
-            messagePublisher.reportSuccess(`${tasks.length === 1 ? "Task" : "Tasks"} deleted successfully.`);
+            messagePublisher.reportSuccess(
+                `${pluralizeHelpers.pluralize(tasks.length, "Task", "Tasks", true)} deleted successfully.`
+            );
             reload();
         } finally {
             setDeletingTaskNames((prev) => prev.filter((x) => !names.includes(x)));

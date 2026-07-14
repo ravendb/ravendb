@@ -97,8 +97,6 @@ export default function ServerWideTasks() {
                 />
             )}
 
-            {/* With the custom setLoading in useServerWideTasks, "loading" only occurs on the initial fetch —
-                during reload the status stays "success" and the list below remains mounted */}
             {fetchStatus === "loading" && <LoadingView />}
 
             {fetchStatus === "error" && <LoadError error="Unable to load server-wide tasks" refresh={reload} />}
