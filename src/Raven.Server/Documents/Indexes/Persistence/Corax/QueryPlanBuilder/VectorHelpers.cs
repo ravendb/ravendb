@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
@@ -181,6 +182,20 @@ internal static class VectorHelpers
         var embeddingsTaskId = new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationTaskIdentifier);
 
         var embeddingsGenerator = database.EmbeddingsGeneratorQueries;
+
+        if (embeddingsGenerator.EmbeddingTaskExists(embeddingsTaskId) == false)
+        {
+            var taskConfiguration = database.EtlLoader.EmbeddingsGenerationDestinations
+                .SingleOrDefault(x => x.Identifier == embeddingsGenerationTaskIdentifier);
+
+            if (taskConfiguration is null)
+                throw new InvalidQueryException(
+                    $"Couldn't find Embeddings Generation task with '{embeddingsGenerationTaskIdentifier}' identifier");
+
+            if (taskConfiguration.Disabled)
+                throw new InvalidQueryException(
+                    $"Embeddings Generation task with '{embeddingsGenerationTaskIdentifier}' identifier is disabled, and cannot be used for querying");
+        }
 
         var sourceEmbeddingType = embeddingsGenerator.GetQuantizationOf(embeddingsTaskId);
 
