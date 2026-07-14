@@ -47,7 +47,14 @@ export const defaultApiMocks = {
     chat: [chatMocks.stream()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
     iframe: iframeHandlers(),
-    settings: [settingsMocks.feedback(), settingsMocks.license(), settingsMocks.usage()],
+    settings: [
+        settingsMocks.feedback(),
+        settingsMocks.license(),
+        settingsMocks.usage(),
+        settingsMocks.certificates(),
+        settingsMocks.certificatesGenerate(),
+        settingsMocks.certificatesEdit(),
+    ],
     stats: [
         statsMocks.dashboard(),
         statsMocks.dashboardApps(),

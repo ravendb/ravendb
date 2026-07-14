@@ -2,6 +2,8 @@ import { createApiClient, type ApiClient, type ApiClientOptions } from "@/api/ht
 import { createServerApi, type ServerApi } from "@/api/generated/server-api";
 import { createChatService } from "@/api/custom-services/chat-service";
 import { createAgentTestService } from "@/api/custom-services/agent-test-service";
+import { createCertificatesService } from "@/api/custom-services/certificates-service";
+import { createCertificatesQueries } from "@/api/queries/certificates-queries";
 import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createAgentsQueries } from "@/api/queries/agents-queries";
 import { createChannelsQueries } from "@/api/queries/channels-queries";
@@ -17,6 +19,7 @@ import { createSettingsQueries } from "@/api/queries/settings-queries";
 export type ApiServices = Omit<ServerApi, "chat"> & {
     chat: ReturnType<typeof createChatService>;
     agentTest: ReturnType<typeof createAgentTestService>;
+    certificates: ReturnType<typeof createCertificatesService>;
 };
 
 export type ApiQueries = {
@@ -31,6 +34,7 @@ export type ApiQueries = {
     aiModels: ReturnType<typeof createAiModelsQueries>;
     stats: ReturnType<typeof createStatsQueries>;
     settings: ReturnType<typeof createSettingsQueries>;
+    certificates: ReturnType<typeof createCertificatesQueries>;
 };
 
 export type Api = {
@@ -46,6 +50,7 @@ export function createApi(options?: ApiClientOptions): Api {
         ...generatedServices,
         chat: createChatService(client),
         agentTest: createAgentTestService(client),
+        certificates: createCertificatesService(client),
     };
 
     return {
@@ -63,6 +68,7 @@ export function createApi(options?: ApiClientOptions): Api {
             aiModels: createAiModelsQueries(services.aiModels),
             stats: createStatsQueries(services.stats),
             settings: createSettingsQueries(services.settings),
+            certificates: createCertificatesQueries(services.certificates),
         },
     };
 }

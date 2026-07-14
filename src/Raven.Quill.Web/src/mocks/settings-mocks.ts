@@ -1,4 +1,6 @@
+import { http, HttpResponse } from "msw";
 import type { LicenseResponse, QuillUsageResponse } from "@/api/generated/server-api";
+import type { CertificateItem } from "@/api/custom-services/certificates-service";
 import { apiHttp } from "./api-http";
 
 export const settingsMocks = {
@@ -7,6 +9,20 @@ export const settingsMocks = {
         apiHttp.get("/api/settings/license", ({ response: res }) => res(200).json(response)),
     usage: (response: QuillUsageResponse = sampleQuillUsage) =>
         apiHttp.get("/api/settings/usage", ({ response: res }) => res(200).json(response)),
+    certificates: (response: CertificateItem[] = sampleCertificates) =>
+        apiHttp.get("/api/settings/certificates/get", ({ response: res }) => res(200).json(response)),
+    // The OpenAPI contract only documents the 400 responses for generate (real
+    // success is a zip download) and edit (empty 200), so these use plain msw.
+    certificatesGenerate: () =>
+        http.post(
+            "/api/settings/certificates/generate",
+            () => new HttpResponse("mock certificate zip", { headers: { "Content-Type": "application/octet-stream" } }),
+        ),
+    certificatesGenerateError: (message = "A certificate with this name already exists.") =>
+        http.post("/api/settings/certificates/generate", () =>
+            HttpResponse.json({ error: message }, { status: 400 }),
+        ),
+    certificatesEdit: () => http.post("/api/settings/certificates/edit", () => new HttpResponse(null, { status: 200 })),
 };
 
 export const sampleLicense: LicenseResponse = {
@@ -38,6 +54,47 @@ export const sampleLicense: LicenseResponse = {
         },
     ],
 };
+
+// Databases match sampleApps (demo-shop, support-desk) so the certificates view
+// resolves app names for permission entries.
+export const sampleCertificates: CertificateItem[] = [
+    {
+        name: "Server Certificate",
+        thumbprint: "1E45C9F8A3B27D604B1347D2E859A0C4F6B8D2E1",
+        securityClearance: "ClusterNode",
+        notBefore: "2025-11-02T00:00:00Z",
+        notAfter: "2027-11-02T00:00:00Z",
+        permissions: {},
+        disabled: false,
+    },
+    {
+        name: "quill-backend",
+        thumbprint: "7A2F0B7C4E91D8356F20A1B9C83D45E6F7180C2D",
+        securityClearance: "ValidUser",
+        notBefore: "2026-01-10T00:00:00Z",
+        notAfter: "2031-01-10T00:00:00Z",
+        permissions: { "demo-shop": "Admin", "support-desk": "Admin" },
+        disabled: false,
+    },
+    {
+        name: "reporting",
+        thumbprint: "C90D1E2F3A4B5C6D7E8F9012A3B4C5D6E7F80913",
+        securityClearance: "ValidUser",
+        notBefore: "2025-06-20T00:00:00Z",
+        notAfter: "2026-06-20T00:00:00Z",
+        permissions: { "demo-shop": "Read" },
+        disabled: false,
+    },
+    {
+        name: "legacy-sync",
+        thumbprint: "5B6C7D8E9F0A1B2C3D4E5F60718293A4B5C6D7E8",
+        securityClearance: "ValidUser",
+        notBefore: "2026-02-01T00:00:00Z",
+        notAfter: "2028-02-01T00:00:00Z",
+        permissions: { "support-desk": "ReadWrite" },
+        disabled: true,
+    },
+];
 
 // ~30 daily points with a gentle wave so the writes chart has shape.
 export const sampleQuillUsage: QuillUsageResponse = {

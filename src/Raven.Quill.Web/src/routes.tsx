@@ -9,6 +9,7 @@ import {
     MessagesSquare,
     Network,
     Settings,
+    ShieldCheck,
     Sparkles,
     type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import { AppOverview } from "@/pages/apps/app-overview";
 import { AppSettings } from "@/pages/apps/app-settings";
 import { AppUsage } from "@/pages/apps/app-usage";
 import { Login } from "@/pages/auth/login";
+import { DashboardCertificates } from "@/pages/dashboard/certificates";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
 import { DashboardLicense } from "@/pages/dashboard/license";
 import { DashboardUsage } from "@/pages/dashboard/usage";
@@ -119,6 +121,17 @@ const dashboardPages: AppRouteDefinition[] = [
         },
         isPageTitleHidden: true,
         element: <DashboardLicense />,
+    },
+    {
+        path: "certificates",
+        title: "Certificates",
+        navigation: {
+            label: "Certificates",
+            icon: ShieldCheck,
+            section: "settings",
+        },
+        isPageTitleHidden: true,
+        element: <DashboardCertificates />,
     },
 ];
 
@@ -246,7 +259,10 @@ export const navigationItems = dashboardPages.flatMap((page) =>
     page.navigation && !page.navigation.section ? [toDashboardNavigationItem(page)] : [],
 ) satisfies NavigationItem[];
 
-const dashboardNavigationSectionDefinitions = [{ section: "license-billing", label: "License & Billing" }] as const;
+const dashboardNavigationSectionDefinitions = [
+    { section: "license-billing", label: "License & Billing" },
+    { section: "settings", label: "Settings" },
+] as const;
 
 export const dashboardNavigationSections = dashboardNavigationSectionDefinitions.map(({ section, label }) => ({
     label,
