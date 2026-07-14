@@ -161,5 +161,4 @@ src/.cache/
 src/Raven.Server/embeddings/
 
 # E2E setup-package zips carry real licenses + admin certs — never commit.
-test/QuillTests/*.zip
-test/QuillTests/egor-ai.Cluster.Settings.zip
+/docker/quill/compose/.env
