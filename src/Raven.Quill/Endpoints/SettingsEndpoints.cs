@@ -7,6 +7,12 @@ namespace Raven.Quill.Endpoints;
 
 public static class SettingsEndpoints
 {
+    // Generous for genuine feedback yet keeps oversized payloads from being forwarded upstream.
+    private const int MaxNameLength = 256;
+    private const int MaxEmailLength = 254; // RFC 5321 address limit
+    private const int MaxMessageLength = 8_192;
+    private const int MaxStudioViewLength = 512;
+
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/settings").WithTags("settings").RequireAuthorization();
@@ -38,9 +44,12 @@ public static class SettingsEndpoints
         string name = body.Name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
             return Results.BadRequest(new ApiErrorResponse("name is required"));
+        if (name.Length > MaxNameLength)
+            return Results.BadRequest(new ApiErrorResponse($"name must be {MaxNameLength} characters or fewer"));
 
         string email = body.Email?.Trim() ?? string.Empty;
-        if (MailAddress.TryCreate(email, out MailAddress? parsedEmail) == false ||
+        if (email.Length > MaxEmailLength ||
+            MailAddress.TryCreate(email, out MailAddress? parsedEmail) == false ||
             string.Equals(parsedEmail.Address, email, StringComparison.OrdinalIgnoreCase) == false)
         {
             return Results.BadRequest(new ApiErrorResponse("email must be a valid email address"));
@@ -53,8 +62,14 @@ public static class SettingsEndpoints
         string message = body.Message?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(message))
             return Results.BadRequest(new ApiErrorResponse("message is required"));
+        if (message.Length > MaxMessageLength)
+            return Results.BadRequest(new ApiErrorResponse($"message must be {MaxMessageLength} characters or fewer"));
 
-        SendFeedbackRequest request = new(name, email, impression, message, NormalizeOptional(body.StudioView));
+        string? studioView = NormalizeOptional(body.StudioView);
+        if (studioView?.Length > MaxStudioViewLength)
+            return Results.BadRequest(new ApiErrorResponse($"studioView must be {MaxStudioViewLength} characters or fewer"));
+
+        SendFeedbackRequest request = new(name, email, impression, message, studioView);
         string userAgent = context.Request.Headers.UserAgent.ToString();
         bool wasSent = await sender.SendAsync(request, userAgent, token);
 
