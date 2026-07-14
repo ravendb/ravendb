@@ -23,7 +23,7 @@ export const ServerWideTasksStory: StoryObj<ServerWideTasksStoryArgs> = {
     name: "Server-Wide Tasks",
     render: (props: ServerWideTasksStoryArgs) => {
         const { manageServerService } = mockServices;
-        
+
         manageServerService.withServerWideTasks(props.isEmpty ? { Tasks: [] } : undefined);
 
         return <ServerWideTasks />;

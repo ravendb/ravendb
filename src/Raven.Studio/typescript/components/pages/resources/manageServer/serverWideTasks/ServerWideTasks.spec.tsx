@@ -26,7 +26,7 @@ describe("ServerWideTasks", () => {
     });
 
     it("can render tasks grouped by type", async () => {
-        const { screen} = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
+        const { screen } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
 
         expect(screen.queryByText(selectors.backupTaskName)).toBeInTheDocument();
         expect(screen.queryByText(selectors.replicationTaskName)).toBeInTheDocument();
