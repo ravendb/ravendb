@@ -286,6 +286,7 @@ public static class WizardEndpoints
         bool created;
         try
         {
+            // cluster-wide-atomic: this call IS the slug-uniqueness gate
             created = await RavenStoreFactory.EnsureDatabaseAsync(store, slug, ct);
         }
         catch (ConcurrencyException)
@@ -332,6 +333,7 @@ public static class WizardEndpoints
         using (var session = store.OpenAsyncSession())
         {
             session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
+            // slug-keyed id (not HiLo): avoids the W6->W7 index-staleness race (C1/C2)
             await session.StoreAsync(app, id: $"apps/{slug}", ct);
             await session.SaveChangesAsync(ct);
         }
@@ -362,6 +364,7 @@ public static class WizardEndpoints
         return false;
     }
 
+    // one retry on OCC clash: absorbs a wizard-step double-click without livelocking
     private static async Task PersistAsync(
         IDocumentStore store,
         Action<WizardState> mutate,

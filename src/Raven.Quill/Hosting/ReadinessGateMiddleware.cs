@@ -9,6 +9,7 @@ public static class ReadinessGateMiddleware
         app.Use(async (context, next) =>
         {
             var path = context.Request.Path;
+            // gate all /api/* except /bootstrap (SPA poll) and /auth (login)
             var gated = path.StartsWithSegments("/api") &&
                         !path.StartsWithSegments("/api/bootstrap") &&
                         !path.StartsWithSegments("/api/auth");
@@ -20,6 +21,7 @@ public static class ReadinessGateMiddleware
                 {
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                     context.Response.Headers.RetryAfter = "5";
+                    // static body only: ready.LastError could leak internals to an unauth probe
                     await context.Response.WriteAsJsonAsync(new
                     {
                         error = "appliance is not ready yet; poll /api/bootstrap/status",

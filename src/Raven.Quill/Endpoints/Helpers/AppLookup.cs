@@ -9,6 +9,7 @@ internal static class AppLookup
     internal static async Task<App?> LoadAppAsync(IDocumentStore store, string slug, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession();
+        // LoadAsync by slug-keyed id: no index, no staleness race
         return await session.LoadAsync<App>($"apps/{slug}", ct);
     }
 

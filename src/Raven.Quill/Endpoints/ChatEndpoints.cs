@@ -13,6 +13,7 @@ public static class ChatEndpoints
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/chat").WithTags("chat").RequireAuthorization();
+        // NDJSON not SSE: EventSource is GET-only and we POST a JSON body
         group.MapPost("/stream", HandleStreamAsync)
             .WithName("chat.stream")
             .Accepts<ChatRequest>("application/json")
@@ -31,6 +32,7 @@ public static class ChatEndpoints
         {
             body = await ctx.Request.ReadFromJsonAsync<ChatRequest>(ctx.RequestAborted);
         }
+        // don't write on an aborted response: a second exception floods logs
         catch (OperationCanceledException) when (ctx.RequestAborted.IsCancellationRequested)
         {
             return;

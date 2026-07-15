@@ -158,6 +158,7 @@ public sealed class AiHelperInternalClient(
             : AiHelperStatus.InvalidCredentials;
     }
 
+    // never log the serialized request: it carries license keys
     private string SerializeRequest(object request)
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();

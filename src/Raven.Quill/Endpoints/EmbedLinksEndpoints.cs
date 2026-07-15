@@ -9,6 +9,7 @@ using Raven.Quill.Endpoints.Helpers;
 
 namespace Raven.Quill.Endpoints;
 
+// NOTE: no in-process auth on /api/*; guarded at the fronting proxy (mint drives LLM spend)
 public static class EmbedLinksEndpoints
 {
     public static void Map(WebApplication app)
@@ -114,6 +115,7 @@ public static class EmbedLinksEndpoints
             return Results.BadRequest(new ApiErrorResponse(
                 $"the iframe channel for agent '{config.Identifier}' is disabled", Code: "channel_disabled"));
 
+        // bind params at mint: removes the old ?customerId= impersonation
         if (AgentParameters.TryResolve(config, body.Parameters, out var parameters, out var missing) == false)
             return Results.BadRequest(new ApiErrorResponse(
                 $"missing agent parameter(s): {string.Join(", ", missing)}", Code: "missing_parameters"));
@@ -158,6 +160,7 @@ public static class EmbedLinksEndpoints
             await cfg.SaveChangesAsync(ct);
         }
 
+        // embed is served on public.*; swap the leading DNS label regardless of caller host
         var publicHost = ApplianceHost.WithSubdomain(ctx.Request.Host, "public");
         var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/embed/{token}";
         logger.LogInformation(
@@ -187,6 +190,7 @@ public static class EmbedLinksEndpoints
             if (link is null)
                 return Results.NoContent();
 
+            // flip Revoked, don't delete: the public path then resolves it to 410
             if (link.Revoked == false)
             {
                 link.Revoked = true;

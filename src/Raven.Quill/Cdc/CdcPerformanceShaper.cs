@@ -74,10 +74,6 @@ internal static class CdcPerformanceShaper
     // Default cap on returned error details — mirrors the rolling perf window (~25 entries).
     private const int MaxErrors = 25;
 
-    /// <summary>Flattens the persistent per-task error store into a flat, newest-first list of
-    /// <see cref="CdcError"/> (process + item errors together), capped at <see cref="MaxErrors"/>.
-    /// Backs the dedicated <c>GET /api/apps/{slug}/cdc/errors</c> endpoint. Pure — no I/O — so it
-    /// unit-tests without a live sink.</summary>
     public static CdcError[] ShapeErrors(CdcSinkErrorsRaw raw) =>
         (raw.Results ?? new List<CdcTaskErrorsRaw>())
             .SelectMany(t => (t.ProcessErrors ?? new List<CdcTaskErrorRaw>())

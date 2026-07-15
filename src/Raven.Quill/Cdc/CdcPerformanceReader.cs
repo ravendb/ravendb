@@ -14,6 +14,7 @@ internal static class CdcPerformanceReader
         {
             return await maintenance.SendAsync(new GetCdcSinkPerformanceStatisticsOperation(), ct);
         }
+        // telemetry must never 500: degrade to an empty snapshot
         catch (Exception e) when (e is not OperationCanceledException)
         {
             return new CdcSinkPerformanceRaw();

@@ -48,6 +48,7 @@ public static class RavenStoreFactory
         if (!File.Exists(settingsFile))
             return false;
 
+        // fail loud past this point: a false return would silently break the secured store
         string? publicUrl;
         using (var stream = File.OpenRead(settingsFile))
         using (var doc = JsonDocument.Parse(stream))
@@ -97,6 +98,7 @@ public static class RavenStoreFactory
                 ex);
         }
 
+        // nginx owns :443: keep the wildcard host, swap the port, pin topology
         var connectUrl = new UriBuilder(publicUrl) { Port = options.RavenInternalPort }.Uri.ToString().TrimEnd('/');
 
         var secured = new DocumentStore

@@ -68,6 +68,7 @@ public static class ChannelsEndpoints
         if (body is null || string.IsNullOrWhiteSpace(body.AgentId))
             return Results.BadRequest(new ApiErrorResponse("agentId is required"));
 
+        // load App first: unknown slug => 404, don't leak which agentIds exist
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -93,6 +94,7 @@ public static class ChannelsEndpoints
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
+        // open embed must be explicit (allowedOrigins: []); an omitted list => 400
         if (body.AllowedOrigins is null)
             return Results.BadRequest(new ApiErrorResponse(
                 "allowedOrigins is required; pass an empty array to make the embed page embeddable from anywhere"));
@@ -121,6 +123,7 @@ public static class ChannelsEndpoints
         var widgetId = "wgt_" + Guid.NewGuid().ToString("N");
         var channelDocId = Channel.IdPrefix + widgetId;
 
+        // (slug,type,agentId) uniqueness via a cluster-wide atomic guard
         try
         {
             using var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
@@ -156,6 +159,7 @@ public static class ChannelsEndpoints
 
             return Results.Ok(new ProvisionChannelResponse(widgetId));
         }
+        // race loser: read the winner's binding armed with its index, no polling
         catch (ClusterTransactionConcurrencyException e)
         {
             var winnerIndex = e.ConcurrencyViolations is { Length: > 0 }
@@ -197,6 +201,7 @@ public static class ChannelsEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
+        // LoadStartingWith: immediately consistent, no post-create index wait; page fully
         const int pageSize = 1024;
         var channels = new List<Channel>();
         for (var start = 0;; start += pageSize)
@@ -333,6 +338,7 @@ public static class ChannelsEndpoints
             if (channel is not null)
                 session.Delete(channel);
 
+            // delete the binding too: clears the guard so the tuple can be re-provisioned
             if (channel is not null && string.IsNullOrEmpty(channel.BindingId) == false)
             {
                 var binding = await session.LoadAsync<ChannelBinding>(channel.BindingId, ct);
@@ -399,6 +405,7 @@ public static class ChannelsEndpoints
         return true;
     }
 
+    // cap length + forbid control chars: operator-on-operator stored-XSS guard
     private static bool TryValidateDisplayName(string? displayName, out string? error)
     {
         error = null;

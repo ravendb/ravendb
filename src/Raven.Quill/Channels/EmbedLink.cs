@@ -2,8 +2,10 @@ namespace Raven.Quill.Channels;
 
 internal sealed class EmbedLink
 {
+    // token = Guid "N" (32 hex); 122 random bits, stored raw (app DB encrypted at rest)
     internal const string IdPrefix = "embed-links/";
 
+    // validate shape first so a crafted token can't probe other docs
     internal static bool IsWellFormedToken(string? token)
     {
         if (token is not { Length: 32 })
@@ -18,6 +20,7 @@ internal sealed class EmbedLink
         return true;
     }
 
+    // log first 8 chars only; the token is a bearer secret
     internal static string RedactToken(string? token) =>
         token is { Length: > 8 } ? token[..8] : (token ?? "");
 
@@ -33,6 +36,7 @@ internal sealed class EmbedLink
 
     public int MaxInvocations { get; set; }
 
+    // OCC-incremented before each turn so the cap holds under concurrent turns
     public int InvocationCount { get; set; }
 
     public string? ConversationId { get; set; }

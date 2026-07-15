@@ -78,6 +78,7 @@ internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
             return true;
         }
 
+        // pin to the chats/ prefix so a caller can't overwrite another document
         if (trimmed.StartsWith("chats/", StringComparison.Ordinal) == false)
         {
             normalized = "";

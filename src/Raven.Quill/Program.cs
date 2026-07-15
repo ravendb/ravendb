@@ -29,6 +29,7 @@ var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name ==
 var listenUrl = Environment.GetEnvironmentVariable("RAVEN_QUILL_WEB_LISTEN_URL") ?? "http://0.0.0.0:5000";
 builder.WebHost.UseUrls(listenUrl);
 
+// enums as string names so operators can paste Studio JSON
 builder.Services.ConfigureHttpJsonOptions(static options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -149,6 +150,7 @@ builder.Services.AddHealthChecks()
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // coarse per-IP backstop; the link's invocation cap + TTL is the primary control
     options.AddPolicy(EmbedEndpoints.ChatRateLimitPolicy, httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Connection.Id,
@@ -205,6 +207,7 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
+// trust only the nginx loopback proxy so forwarded scheme/host/IP are honored
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
@@ -255,6 +258,7 @@ StatsEndpoints.Map(app);
 SettingsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
+// map before MapSpaFallback or /embed/* is swallowed as index.html
 EmbedEndpoints.Map(app);
 StaticAssetEndpoints.MapSpaFallback(app);
 

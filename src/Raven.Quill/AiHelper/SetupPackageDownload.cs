@@ -2,6 +2,7 @@ namespace Raven.Quill.AiHelper;
 
 internal static class SetupPackageDownload
 {
+    // hard size cap: a huge upstream zip can't OOM us or fill the disk
     public const long MaxSetupPackageBytes = 32L * 1024 * 1024;
 
     public static async Task CopyCappedAsync(Stream source, Stream destination, CancellationToken ct)
