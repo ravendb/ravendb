@@ -12,6 +12,7 @@ import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefi
 import DataArchival = Raven.Client.Documents.Operations.DataArchival.DataArchivalConfiguration;
 import document from "models/database/documents/document";
 import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
+import CompareExchangeListItem = Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem;
 
 interface WithGetDatabasesStateOptions {
     loadError?: string[];
@@ -188,11 +189,7 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getIdentities, dto, DatabasesStubs.getIdentities(5));
     }
 
-    withGetCompareExchangeItems(
-        dto?: MockedValue<
-            pagedResult<Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>
-        >
-    ) {
+    withGetCompareExchangeItems(dto?: MockedValue<pagedResult<CompareExchangeListItem>>) {
         return this.mockResolvedValue(this.mocks.getCompareExchangeItems, dto, DatabasesStubs.compareExchangeItems(30));
     }
 
@@ -202,9 +199,7 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
      * so that partial (filtered) pages correctly signal "no more data" via items.length < take.
      */
     withPagedGetCompareExchangeItems(itemsCount: number) {
-        const makeItem = (
-            i: number
-        ): Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem => ({
+        const makeItem = (i: number): CompareExchangeListItem => ({
             Key: `products/${i + 1}-a`,
             Value: {
                 Object: i + 1,
@@ -214,8 +209,7 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         });
 
         this.mocks.getCompareExchangeItems.mockImplementation(async (_database, prefix, start, take) => {
-            const items: Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem[] =
-                [];
+            const items: CompareExchangeListItem[] = [];
 
             if (!prefix) {
                 for (let i = start; i < Math.min(start + take, itemsCount) && items.length < take; i++) {
