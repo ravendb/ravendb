@@ -71,8 +71,9 @@ export function formatPeriodLabel(period: DatePeriod): string {
     return format(toDate(period), period.day === null ? "MMMM yyyy" : "MMMM d, yyyy");
 }
 
-// Query-string shape shared by the usage endpoints (stats.usage, stats.appUsage,
-// settings.usage), which all take the period as year/month/day parameters.
+// Query-string shape shared by the period endpoints (stats.usage, stats.appUsage,
+// settings.usage, stats.dashboard, stats.conversationStats), which all take the
+// period as year/month/day parameters.
 export function datePeriodToSearchParams(period: DatePeriod): { year: string; month?: string; day?: string } {
     return {
         year: String(period.year),

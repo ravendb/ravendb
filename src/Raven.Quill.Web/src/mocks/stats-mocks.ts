@@ -57,9 +57,9 @@ export const statsMocks = {
 
 export const sampleDashboard: DashboardResponse = {
     apps: 4,
-    last24h: { conversations: 1100, messages: 3200, tokens: 890000 },
-    last7d: { conversations: 7400, messages: 21800, tokens: 6100000 },
-    last30d: { conversations: 28900, messages: 86400, tokens: 24300000 },
+    conversations: 28900,
+    messages: 86400,
+    tokens: 24300000,
 };
 
 // 24 hourly points (the Last24h window) with a gentle wave so the series have shape.
@@ -160,9 +160,9 @@ export const sampleTokensByApp: TokensByAppResponse = {
 };
 
 export const sampleConversationStats: ConversationStatsResponse = {
-    last24h: { conversations: 1100, messages: 3200, tokens: 890000 },
-    last7d: { conversations: 7400, messages: 21800, tokens: 6100000 },
-    last30d: { conversations: 28900, messages: 86400, tokens: 24300000 },
+    conversations: 7400,
+    messages: 21800,
+    tokens: 6100000,
 };
 
 export const sampleActivity: ActivityEventDto[] = [

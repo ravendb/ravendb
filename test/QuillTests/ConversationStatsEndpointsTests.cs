@@ -8,14 +8,15 @@ namespace QuillTests;
 
 /// <summary>
 /// Coverage for the dashboard read-side <c>GET /api/apps/{slug}/conversations/stats</c>
-/// endpoint: it aggregates the per-app <c>@conversations</c> collection into
-/// rolling windows (last 24h / 7d / 30d) via the <see cref="ConversationMetricsIndex"/>
-/// map-reduce index. No live LLM is needed — conversations are seeded directly.
+/// endpoint: it aggregates the per-app <c>@conversations</c> collection into totals for the
+/// calendar period selected by <c>year</c>/<c>month</c>/<c>day</c> (mirroring the usage
+/// endpoints), via the <see cref="ConversationMetricsIndex"/> map-reduce index. No live LLM
+/// is needed — conversations are seeded directly.
 /// </summary>
 public class ConversationStatsEndpointsTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Conversation_stats_counts_conversations_per_window()
+    public async Task Conversation_stats_counts_conversations_in_selected_period()
     {
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
@@ -24,25 +25,26 @@ public class ConversationStatsEndpointsTests(ITestOutputHelper output) : Applian
         await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
 
         var now = DateTime.UtcNow;
-        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", now.AddHours(-1));
-        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", now.AddDays(-3));
-        await SeedConversationAsync(store, perAppDb, "chats/c", "demo", now.AddDays(-20));
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        // Three inside the queried month, one in the previous month (excluded).
+        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", monthStart.AddHours(1));
+        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", monthStart.AddDays(1));
+        await SeedConversationAsync(store, perAppDb, "chats/c", "demo", monthStart.AddDays(2));
+        await SeedConversationAsync(store, perAppDb, "chats/prev", "demo", monthStart.AddDays(-3));
         await Indexes.WaitForIndexingAsync(store, perAppDb);
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.GetAsync("/api/apps/my-app/conversations/stats");
+        var resp = await client.GetAsync($"/api/apps/my-app/conversations/stats?year={now.Year}&month={now.Month}");
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(1, json.GetProperty("last24h").GetProperty("conversations").GetInt64());
-        Assert.Equal(2, json.GetProperty("last7d").GetProperty("conversations").GetInt64());
-        Assert.Equal(3, json.GetProperty("last30d").GetProperty("conversations").GetInt64());
+        Assert.Equal(3, json.GetProperty("conversations").GetInt64());
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Conversation_stats_sums_messages_and_tokens_per_window()
+    public async Task Conversation_stats_sums_messages_and_tokens_in_selected_period()
     {
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
@@ -51,21 +53,22 @@ public class ConversationStatsEndpointsTests(ITestOutputHelper output) : Applian
         await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
 
         var now = DateTime.UtcNow;
-        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", now.AddHours(-1), messages: 3, tokens: 100);
-        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", now.AddHours(-2), messages: 5, tokens: 250);
-        await SeedConversationAsync(store, perAppDb, "chats/old", "demo", now.AddDays(-20), messages: 9, tokens: 999);
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", monthStart.AddHours(1), messages: 3, tokens: 100);
+        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", monthStart.AddHours(2), messages: 5, tokens: 250);
+        // Previous month — excluded from the queried period.
+        await SeedConversationAsync(store, perAppDb, "chats/prev", "demo", monthStart.AddDays(-3), messages: 9, tokens: 999);
         await Indexes.WaitForIndexingAsync(store, perAppDb);
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.GetAsync("/api/apps/my-app/conversations/stats");
+        var resp = await client.GetAsync($"/api/apps/my-app/conversations/stats?year={now.Year}&month={now.Month}");
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        var last24h = json.GetProperty("last24h");
-        Assert.Equal(2, last24h.GetProperty("conversations").GetInt64());
-        Assert.Equal(8, last24h.GetProperty("messages").GetInt64());
-        Assert.Equal(350, last24h.GetProperty("tokens").GetInt64());
+        Assert.Equal(2, json.GetProperty("conversations").GetInt64());
+        Assert.Equal(8, json.GetProperty("messages").GetInt64());
+        Assert.Equal(350, json.GetProperty("tokens").GetInt64());
     }
 }

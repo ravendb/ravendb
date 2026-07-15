@@ -6,10 +6,10 @@ const baseKey = "stats";
 
 export function createStatsQueries(api: ServerApi["stats"]) {
     return {
-        dashboard: () =>
+        dashboard: (period: DatePeriod) =>
             queryOptions({
-                queryKey: [baseKey, "dashboard"],
-                queryFn: () => api.dashboard(),
+                queryKey: [baseKey, "dashboard", period.year, period.month, period.day],
+                queryFn: () => api.dashboard(datePeriodToSearchParams(period)),
             }),
         dashboardApps: () =>
             queryOptions({
@@ -61,10 +61,10 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "activity", slug],
                 queryFn: () => api.activity(slug),
             }),
-        conversationStats: (slug: string) =>
+        conversationStats: (slug: string, period: DatePeriod) =>
             queryOptions({
-                queryKey: [baseKey, "conversationStats", slug],
-                queryFn: () => api.conversationStats(slug),
+                queryKey: [baseKey, "conversationStats", slug, period.year, period.month, period.day],
+                queryFn: () => api.conversationStats(slug, datePeriodToSearchParams(period)),
             }),
         channels: (slug: string) =>
             queryOptions({
