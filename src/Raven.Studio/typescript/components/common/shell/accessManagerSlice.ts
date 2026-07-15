@@ -14,8 +14,10 @@ interface AccessManagerState {
     clientCertificateThumbprint: string;
 }
 
+// The certificate may define permissions with different letter casing than the actual database name,
+// so entities are keyed by the lowercased name and must be looked up with a lowercased id
 const databaseAccessAdapter = createEntityAdapter<DatabaseAccessInfo, string>({
-    selectId: (x) => x.databaseName,
+    selectId: (x) => x.databaseName.toLowerCase(),
 });
 
 export const databaseAccessSelectors = databaseAccessAdapter.getSelectors();

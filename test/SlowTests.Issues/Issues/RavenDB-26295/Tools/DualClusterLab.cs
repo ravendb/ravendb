@@ -290,6 +290,9 @@ public sealed class DualClusterLab : IAsyncDisposable
     public TimeSeriesSegmentSnapshot GetFilteredRoundTripTimeSeriesSegment(LabNode node, string timeSeriesName) =>
         GetTimeSeriesSegment(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId, timeSeriesName);
 
+    public int GetFilteredRoundTripTimeSeriesValueCount(LabNode node, string timeSeriesName, DateTime from, DateTime to) =>
+        GetTimeSeriesValueCount(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId, timeSeriesName, from, to);
+
     public TimeSeriesDeletedRangeSnapshot GetFilteredRoundTripTimeSeriesDeletedRange(LabNode node, string timeSeriesName) =>
         GetTimeSeriesDeletedRange(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId, timeSeriesName);
 
@@ -675,7 +678,7 @@ public sealed class DualClusterLab : IAsyncDisposable
                 .Count();
 
             TimeSeriesSegmentSnapshot latest = null;
-            foreach (var segment in database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(context, etag: 0))
+            foreach (var segment in database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(context, etag: 0, includeDocumentChangeVector: false))
             {
                 using (segment)
                 {
@@ -705,6 +708,19 @@ public sealed class DualClusterLab : IAsyncDisposable
                 Exists = false,
                 ValueCount = valueCount
             };
+        }
+    }
+
+    private int GetTimeSeriesValueCount(ClusterSide side, LabNode node, string documentId, string timeSeriesName, DateTime from, DateTime to)
+    {
+        var database = Database(side, node);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            return database.DocumentsStorage.TimeSeriesStorage
+                .GetReader(context, documentId, timeSeriesName, from, to)
+                .AllValues()
+                .Count();
         }
     }
 
@@ -771,6 +787,15 @@ public sealed class DualClusterLab : IAsyncDisposable
         await StoreUserAsync(RequiredFilteredPassReceiveSide, node, RequiredFilteredOutUserDocumentId, "filtered-out-gap-" + RequiredFilteredRoundTripItemName);
         _allowedTicketThenFilteredOutUserStored = true;
     }
+
+    public Task StoreFilteredOutInternalReplicationMarkerAsync(LabNode node, string markerName) =>
+        StoreUserAsync(RequiredFilteredPassReceiveSide, node, FilteredOutInternalReplicationMarkerId(markerName), markerName);
+
+    public Task WaitForFilteredOutInternalReplicationMarkerAsync(LabNode node, string markerName, TimeSpan? timeout = null) =>
+        WaitForDocumentNameByIdAsync(RequiredFilteredPassReceiveSide, node, FilteredOutInternalReplicationMarkerId(markerName), markerName, timeout);
+
+    private string FilteredOutInternalReplicationMarkerId(string markerName) =>
+        $"{RequiredFilteredOutUserDocumentId}/internal-replication-marker/{markerName}";
 
     public async Task StoreTicketAsync(ClusterSide side, LabNode node, string documentId, string name)
     {
@@ -1364,6 +1389,21 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     public Task<LogicalInternalReplicationBlocker> BlockInternalReplicationAsync(LabNode from, LabNode to) =>
         BlockInternalReplicationAsync(RequiredFilteredPassReceiveSide, from, to);
+
+    public FilteredRoundTripReplicationGate BlockInternalReplicationBeforeScan(LabNode from, LabNode to)
+    {
+        var fromNodeTag = NodeTag(RequiredFilteredPassReceiveSide, from);
+        var toNodeTag = NodeTag(RequiredFilteredPassReceiveSide, to);
+        var gate = new FilteredRoundTripReplicationGate(
+            Database(RequiredFilteredPassReceiveSide, from),
+            matches: handler => handler.Destination is InternalReplication internalReplication &&
+                                string.Equals(internalReplication.NodeTag, toNodeTag, StringComparison.OrdinalIgnoreCase),
+            description: $"{fromNodeTag}->{toNodeTag} internal replication before scan");
+
+        gate.Attach();
+        _testingHookScopes.Add(gate);
+        return gate;
+    }
 
     private async Task BlockInternalReplicationUntilBlockedAsync(ClusterSide side, LabNode from, params LabNode[] to)
     {

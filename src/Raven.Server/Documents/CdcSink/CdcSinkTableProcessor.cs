@@ -334,9 +334,9 @@ public class CdcSinkTableProcessor
             null or DBNull => null,
             byte[] bytes => Convert.ToBase64String(bytes),
             Guid guid => guid.ToString(),
-            // Primitive types that ObjectJsonParser handles natively
+            // Primitive types that ObjectJsonParser handles natively.
             bool or int or long or float or double or decimal
-                or DateTime or DateOnly or DateTimeOffset => value,
+                or DateTime or DateOnly or DateTimeOffset or TimeOnly => value,
             // JSON columns: parse the string into a blittable object/array using the parent context
             string s when isJsonColumn && context != null => ParseJsonColumnValue(s, context),
             string s => s,

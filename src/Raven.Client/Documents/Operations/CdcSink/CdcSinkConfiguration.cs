@@ -468,15 +468,32 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 TableName = table.SourceTableName,
                 PrimaryKeyColumns = table.PrimaryKeyColumns,
             });
-            ForEachEmbeddedTable(table.EmbeddedTables, e =>
-                tables.Add(new TableInfo
-                {
-                    Schema = string.IsNullOrEmpty(e.SourceTableSchema) ? defaultSchema : e.SourceTableSchema,
-                    TableName = e.SourceTableName,
-                    PrimaryKeyColumns = e.PrimaryKeyColumns,
-                }));
+
+            if (table.EmbeddedTables != null)
+            {
+                foreach (var embedded in table.EmbeddedTables)
+                    CollectEmbeddedTablesFlat(embedded, defaultSchema, tables);
+            }
         }
         return tables;
+    }
+
+    private static void CollectEmbeddedTablesFlat(CdcSinkEmbeddedTableConfig embedded, string defaultSchema, List<TableInfo> tables)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+
+        tables.Add(new TableInfo
+        {
+            Schema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema,
+            TableName = embedded.SourceTableName,
+            PrimaryKeyColumns = embedded.PrimaryKeyColumns,
+        });
+
+        if (embedded.EmbeddedTables != null)
+        {
+            foreach (var child in embedded.EmbeddedTables)
+                CollectEmbeddedTablesFlat(child, defaultSchema, tables);
+        }
     }
 
     /// <summary>
@@ -503,6 +520,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         public string Schema { get; set; }
         public string TableName { get; set; }
         public List<string> PrimaryKeyColumns { get; set; }
+
         public string FullName => $"{Schema}.{TableName}";
 
         public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FullName);

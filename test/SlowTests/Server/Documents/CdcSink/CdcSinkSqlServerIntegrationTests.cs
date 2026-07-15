@@ -312,6 +312,95 @@ namespace SlowTests.Server.Documents.CdcSink
         // ─────────────────────────────────────────────────────────────────────
 
         [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task InitialLoad_NoPrimaryKeyOrUniqueKey_Faults()
+        {
+            // A heap table (no primary key, no unique key) has nothing safe to keyset-paginate by,
+            // so initial load must fault loudly rather than risk silently skipping rows.
+            using var store = GetDocumentStore();
+            var schema = CreateTestSchema();
+
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].items (
+                    id INT NOT NULL,
+                    name NVARCHAR(200) NOT NULL
+                )");
+            ExecuteMsSql($"INSERT INTO [{schema}].items (id, name) VALUES (1, 'Alpha'), (2, 'Beta');");
+
+            EnableCdcOnTables((schema, "items"));
+            var sqlCs = SetupSqlConnectionString(store);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mssql-no-key-faults",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableSchema = schema,
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+
+            var fault = await WaitForProcessFaultAsync(store, config.Name);
+            Assert.IsType<Raven.Server.Documents.CdcSink.CdcSinkFaultedException>(fault);
+            Assert.Contains("neither a primary key nor a NOT-NULL unique key", fault.Message);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task InitialLoad_NoPrimaryKey_UsesNotNullUniqueKey()
+        {
+            // No primary key, but a NOT-NULL unique key. Initial load must paginate by that key and
+            // load every row (the document id still comes from the configured PrimaryKeyColumns).
+            using var store = GetDocumentStore();
+            var schema = CreateTestSchema();
+
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].items (
+                    id INT NOT NULL UNIQUE,
+                    name NVARCHAR(200) NOT NULL
+                )");
+            ExecuteMsSql($"INSERT INTO [{schema}].items (id, name) VALUES (1, 'Alpha'), (2, 'Beta'), (3, 'Gamma');");
+
+            EnableCdcOnTables((schema, "items"));
+            var sqlCs = SetupSqlConnectionString(store);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mssql-unique-key-fallback",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableSchema = schema,
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+
+            Assert.Equal("Alpha", (await WaitForSinkDocumentAsync<Item>(store, config.Name, "Items/1")).Name);
+            Assert.Equal("Gamma", (await WaitForSinkDocumentAsync<Item>(store, config.Name, "Items/3")).Name);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task InitialLoad_RootTable()
         {
             using var store = GetDocumentStore();

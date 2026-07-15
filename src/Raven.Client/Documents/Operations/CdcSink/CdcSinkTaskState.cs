@@ -76,6 +76,8 @@ public class CdcSinkTableLoadState : IDynamicJson
     /// Format: list of string representations of the PK column values (in PK column order).
     /// </summary>
     public List<string> LastKeyValues { get; set; }
+    
+    public List<string> KeyColumns { get; set; }
 
     public DynamicJsonValue ToJson()
     {
@@ -83,6 +85,7 @@ public class CdcSinkTableLoadState : IDynamicJson
         {
             [nameof(InitialLoadCompleted)] = InitialLoadCompleted,
             [nameof(LastKeyValues)] = LastKeyValues != null ? new DynamicJsonArray(LastKeyValues) : null,
+            [nameof(KeyColumns)] = KeyColumns != null ? new DynamicJsonArray(KeyColumns) : null,
         };
     }
 }

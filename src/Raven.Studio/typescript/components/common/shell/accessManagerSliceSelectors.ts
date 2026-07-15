@@ -2,6 +2,7 @@ import { RootState } from "components/store";
 import SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 import { createSelector, EntityState } from "@reduxjs/toolkit";
 import { DatabaseAccessInfo, databaseAccessSelectors } from "components/common/shell/accessManagerSlice";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 // If database name is not provided, it will use the active one
 interface GetAccessLevelArgs {
@@ -17,7 +18,9 @@ interface GetEffectiveAccessLevelArgs extends GetAccessLevelArgs {
 // Getters
 
 function getDatabaseAccessLevel(args: GetAccessLevelArgs) {
-    return databaseAccessSelectors.selectById(args.databaseAccess, args.databaseName ?? args.activeDatabaseName)?.level;
+    const databaseName = args.databaseName ?? args.activeDatabaseName;
+    const groupKey = DatabaseUtils.shardGroupKey(databaseName);
+    return databaseAccessSelectors.selectById(args.databaseAccess, groupKey?.toLowerCase())?.level;
 }
 
 function getIsOperatorOrAbove(securityClearance: SecurityClearance) {

@@ -2174,7 +2174,7 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        public long DeleteBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long value, long numberOfEntriesToDelete)
+        public long DeleteBackwardFrom(FixedSizeKeyIndexDef index, long value, long numberOfEntriesToDelete, Action<TableValueHolder> beforeDelete = null)
         {
             AssertWritableTable();
 
@@ -2183,6 +2183,7 @@ namespace Voron.Data.Tables
 
             long deleted = 0;
             var fst = GetFixedSizeTree(index);
+            TableValueHolder tableValueHolder = null;
             // deleting from a table can shift things around, so we delete 
             // them one at a time
             while (deleted < numberOfEntriesToDelete)
@@ -2195,7 +2196,21 @@ namespace Voron.Data.Tables
                     if (it.CurrentKey > value)
                         return deleted;
 
-                    Delete(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                    var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+                    if (beforeDelete != null)
+                    {
+                        var ptr = DirectRead(id, out int size, out bool compressed);
+                        tableValueHolder ??= new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                        beforeDelete(tableValueHolder);
+                        Delete(id, ptr, size, compressed);
+                    }
+                    else
+                    {
+                        Delete(id);
+                    }
+
                     deleted++;
                 }
             }
