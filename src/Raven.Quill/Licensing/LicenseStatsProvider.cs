@@ -38,6 +38,7 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
         {
             Month = month,
             Year = year,
+            Day = day
         }, token);
 
         return await _ravendb.DeserializeAsync<QuillUsageResponse>(usage.Content, token);

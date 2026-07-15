@@ -162,12 +162,12 @@ internal static class MetricsReadService
         var period = new UsagePeriod(year, month, day);
 
         using var session = store.OpenAsyncSession(database);
-        var rows = await QueryMetricRowsInRangeAsync(session, period.Start, period.End, ct, endInclusive: false);
+        var rows = await QueryMetricRowsInRangeAsync(session, period.Start, period.End, ct);
 
         // Previous equal-length window drives the percent delta on each card. Both ranges are
         // half-open [start, end) so a row whose bucket == Start counts in the current window
         // only, never in both (review M4).
-        var prevRows = await QueryMetricRowsInRangeAsync(session, period.PreviousStart, period.Start, ct, endInclusive: false);
+        var prevRows = await QueryMetricRowsInRangeAsync(session, period.PreviousStart, period.Start, ct);
 
         long convNow = rows.Sum(r => r.Conversations), tokNow = rows.Sum(r => r.Tokens);
         long convPrev = prevRows.Sum(r => r.Conversations), tokPrev = prevRows.Sum(r => r.Tokens);
@@ -481,25 +481,27 @@ internal static class MetricsReadService
     }
 
     public static async Task<DashboardResponse> GetDashboardStatsAsync(
-        IDocumentStore store, DateTime nowUtc, ILogger? log, CancellationToken ct)
+        IDocumentStore store, int year, int? month, int? day, ILogger? log, CancellationToken ct)
     {
         var apps = await LoadAllAppsAsync(store, ct);
 
-        // Read-time fan-out: each app contributes its rows; fold them after. A single
+        // Calendar period selected by year/month/day, matching the usage endpoints.
+        var period = new UsagePeriod(year, month, day);
+
+        // Read-time fan-out: each app contributes its rows for the period. A single
         // bad tenant DB is skipped, not fatal for the whole dashboard (review I2).
         var perApp = await ForEachAppAsync(apps, log, async app =>
         {
             using var session = store.OpenAsyncSession(app.Database);
-            return await QueryMetricRowsAsync(session, nowUtc.AddDays(-30), ct);
+            return await QueryMetricRowsInRangeAsync(session, period.Start, period.End, ct);
         }, ct);
 
-        var last24h = new WindowAccumulator();
-        var last7d = new WindowAccumulator();
-        var last30d = new WindowAccumulator();
-        foreach (var rows in perApp)
-            FoldInto(rows, nowUtc, ref last24h, ref last7d, ref last30d);
-
-        return new DashboardResponse(apps.Count, last24h.ToWindow(), last7d.ToWindow(), last30d.ToWindow());
+        var rows = perApp.SelectMany(appRows => appRows).ToList();
+        return new DashboardResponse(
+            apps.Count,
+            rows.Sum(r => r.Conversations),
+            rows.Sum(r => r.Messages),
+            rows.Sum(r => r.Tokens));
     }
 
     public static async Task<AppOverviewResponse> GetAppOverviewAsync(
@@ -544,13 +546,19 @@ internal static class MetricsReadService
     }
 
     public static async Task<ConversationStatsResponse> GetConversationStatsAsync(
-        IDocumentStore store, string database, DateTime nowUtc, CancellationToken ct)
+        IDocumentStore store, string database, int year, int? month, int? day, CancellationToken ct)
     {
-        using var session = store.OpenAsyncSession(database);
-        var rows = await QueryMetricRowsAsync(session, nowUtc.AddDays(-30), ct);
+        // Calendar period selected by year/month/day (a year / a month / a day); [Start, End)
+        // is the span the totals cover, mirroring the usage endpoints.
+        var period = new UsagePeriod(year, month, day);
 
-        var (last24h, last7d, last30d) = FoldWindows(rows, nowUtc);
-        return new ConversationStatsResponse(last24h, last7d, last30d);
+        using var session = store.OpenAsyncSession(database);
+        var rows = await QueryMetricRowsInRangeAsync(session, period.Start, period.End, ct);
+
+        return new ConversationStatsResponse(
+            rows.Sum(r => r.Conversations),
+            rows.Sum(r => r.Messages),
+            rows.Sum(r => r.Tokens));
     }
 
     /// <summary>
@@ -914,73 +922,22 @@ internal static class MetricsReadService
         catch (IndexDoesNotExistException) { return []; }
     }
 
-    /// <summary>Fetches hour-bucket rows whose bucket falls within the window:
-    /// [start, end] when <paramref name="endInclusive"/> (default), else [start, end).</summary>
+    /// <summary>Fetches hour-bucket rows whose bucket falls within the half-open window [start, end).</summary>
     private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
-        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct, bool endInclusive = true)
+        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
     {
         try
         {
-            var query = session.Advanced
+            return await session.Advanced
                 .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
                 .WhereGreaterThanOrEqual(r => r.Bucket, start)
-                .AndAlso();
-            query = endInclusive
-                ? query.WhereLessThanOrEqual(r => r.Bucket, end)
-                : query.WhereLessThan(r => r.Bucket, end);
-            return await query.ToListAsync(ct);
+                .AndAlso()
+                .WhereLessThan(r => r.Bucket, end)
+                .ToListAsync(ct);
         }
         catch (IndexDoesNotExistException) { return []; }
     }
 
-    private static (ConversationWindow Last24h, ConversationWindow Last7d, ConversationWindow Last30d) FoldWindows(
-        IReadOnlyList<ConversationMetricsIndex.Result> rows, DateTime nowUtc)
-    {
-        var last24h = new WindowAccumulator();
-        var last7d = new WindowAccumulator();
-        var last30d = new WindowAccumulator();
-
-        FoldInto(rows, nowUtc, ref last24h, ref last7d, ref last30d);
-
-        return (last24h.ToWindow(), last7d.ToWindow(), last30d.ToWindow());
-    }
-
-    /// <summary>Fans each hour row into the nested windows it belongs to in a
-    /// single pass (24h ⊂ 7d ⊂ 30d; rows are already within 30d). The
-    /// accumulators are shared so the dashboard fan-out can fold many apps into
-    /// one set of totals.</summary>
-    private static void FoldInto(
-        IReadOnlyList<ConversationMetricsIndex.Result> rows, DateTime nowUtc,
-        ref WindowAccumulator last24h, ref WindowAccumulator last7d, ref WindowAccumulator last30d)
-    {
-        var since7 = nowUtc.AddDays(-7);
-        var since24h = nowUtc.AddHours(-24);
-
-        foreach (var row in rows)
-        {
-            last30d.Add(row);
-            if (row.Bucket >= since7)
-                last7d.Add(row);
-            if (row.Bucket >= since24h)
-                last24h.Add(row);
-        }
-    }
-
-    private struct WindowAccumulator
-    {
-        private long _conversations;
-        private long _messages;
-        private long _tokens;
-
-        public void Add(ConversationMetricsIndex.Result row)
-        {
-            _conversations += row.Conversations;
-            _messages += row.Messages;
-            _tokens += row.Tokens;
-        }
-
-        public readonly ConversationWindow ToWindow() => new(_conversations, _messages, _tokens);
-    }
 }
 
 /// <summary>Per-agent rollup from the conversation index for the merged Agents table.</summary>

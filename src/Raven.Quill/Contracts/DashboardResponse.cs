@@ -1,16 +1,13 @@
 namespace Raven.Quill.Contracts;
 
 /// <summary>
-/// Global dashboard roll-up: app count plus windowed conversation aggregates
-/// summed across every app database (read-time fan-out). Ingestion/write totals
-/// are added later (they need the metrics recorder / CDC perf stats).
+/// Global dashboard roll-up: app count plus conversation aggregates for the calendar period
+/// selected by year / year+month / year+month+day, summed across every app database (read-time
+/// fan-out). Mirrors the usage endpoints' period model. Ingestion/write totals are added later
+/// (they need the metrics recorder / CDC perf stats).
 /// </summary>
 /// <param name="Apps">Number of provisioned apps.</param>
-/// <param name="Last24h">Conversation aggregates across all apps for the last 24 hours.</param>
-/// <param name="Last7d">Across all apps for the last 7 days.</param>
-/// <param name="Last30d">Across all apps for the last 30 days.</param>
-public sealed record DashboardResponse(
-    int Apps,
-    ConversationWindow Last24h,
-    ConversationWindow Last7d,
-    ConversationWindow Last30d);
+/// <param name="Conversations">Conversations across all apps in the period.</param>
+/// <param name="Messages">Total messages across all apps in the period.</param>
+/// <param name="Tokens">Total token usage across all apps in the period.</param>
+public sealed record DashboardResponse(int Apps, long Conversations, long Messages, long Tokens);

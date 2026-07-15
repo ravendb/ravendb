@@ -109,10 +109,13 @@ public static class StatsEndpoints
     private static async Task<IResult> GetDashboardAsync(
         IDocumentStore store,
         ILoggerFactory loggerFactory,
+        int year,
+        int? month,
+        int? day,
         CancellationToken ct)
     {
         var dashboard = await MetricsReadService.GetDashboardStatsAsync(
-            store, DateTime.UtcNow, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
+            store, year, month, day, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(dashboard);
     }
 
@@ -254,13 +257,16 @@ public static class StatsEndpoints
     private static async Task<IResult> GetConversationStatsAsync(
         string slug,
         IDocumentStore store,
+        int year,
+        int? month,
+        int? day,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var stats = await MetricsReadService.GetConversationStatsAsync(store, app.Database, DateTime.UtcNow, ct);
+        var stats = await MetricsReadService.GetConversationStatsAsync(store, app.Database, year, month, day, ct);
         return Results.Ok(stats);
     }
 
