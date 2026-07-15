@@ -57,8 +57,8 @@ internal static partial class QueryPlanBuilder
         if (bp.Index is not { HasBoostedFields: false }  || bp.Metadata.HasBoost || bp.IndexSearcher.DocumentsAreBoosted)
             return false; // we have to sort for boosting
 
-        // anything except `order by score()` - we have to sort explicitly
-        return orderByFields is [{ FieldType: MatchCompareFieldType.Score }];
+        // anything except `order by score()` or `order by score() asc` - we have to sort explicitly
+        return orderByFields is [{ FieldType: MatchCompareFieldType.Score, Ascending: true }];
     }
 
     private static SortMetadataTemplate BuildSortMetadataTemplate(PlanParameters p, PlanTemplate planTemplate)
