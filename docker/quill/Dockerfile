@@ -1,40 +1,17 @@
 # syntax=docker/dockerfile:1.7
 
-# Pin base images to specific patch versions matching the repo's pinned
-# toolchain: global.json declares SDK 10.0.301. The runtime image hosts both
-# apps, so it must satisfy the highest RuntimeFrameworkVersion among them:
-# Raven.Server.csproj pins 10.0.9 and Raven.Quill.csproj pins 10.0.8, so
-# the ASP.NET runtime must be >= 10.0.9 (the appliance app rolls forward
-# 10.0.8 -> 10.0.9). Floating `:10.0` tags would let CI and local rebuilds pick
-# up patch-level changes that diverge from those pins. Bump these together with
-# the corresponding global.json / RuntimeFrameworkVersion changes.
 ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:10.0.301
-ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.9
+ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.9-noble
 ARG NODE_IMAGE=node:24-bookworm-slim
-ARG RAVENDB_STUDIO_IMAGE=ravendb/ravendb:7.2.4
+ARG RAVENDB_IMAGE=ravendb/ravendb-nightly:7.2-latest
 ARG PNPM_VERSION=11.2.2
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
-# Stage 0: alias the external RavenDB image so we can COPY --from it by name.
-FROM --platform=$BUILDPLATFORM ${RAVENDB_STUDIO_IMAGE} AS ravendb-studio
-
-# Stage 1: build Raven.Server from source.
-FROM ${SDK_IMAGE} AS ravendb-build
-ARG TARGETARCH
-WORKDIR /src
-COPY . .
-
-RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
-    . docker/quill/scripts/dotnet-rid.sh \
-    && dotnet publish src/Raven.Server/Raven.Server.csproj \
-        -c Release \
-        -r "$DOTNET_RID" \
-        --self-contained false \
-        -o /publish/raven \
-        --nologo
+# Stage 0: alias the published RavenDB image
+FROM ${RAVENDB_IMAGE} AS ravendb
 
 
-# Stage 2: build the backend just enough to emit the OpenAPI doc (consumed by Stage 3).
+# Stage 1: build the backend just enough to emit the OpenAPI doc (consumed by Stage 2).
 FROM ${SDK_IMAGE} AS quill-openapi-build
 WORKDIR /src
 COPY . .
@@ -46,7 +23,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
         --tl:off
 
 
-# Stage 3: build the React/Vite frontend (consumes the OpenAPI doc from Stage 2).
+# Stage 2: build the React/Vite frontend (consumes the OpenAPI doc from Stage 1).
 FROM ${NODE_IMAGE} AS quill-frontend-build
 ARG PNPM_VERSION
 WORKDIR /workspace
@@ -73,7 +50,7 @@ ENV RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD=1
 RUN pnpm build
 
 
-# Stage 4: publish the backend and overlay the Vite output into wwwroot.
+# Stage 3: publish the backend and overlay the Vite output into wwwroot.
 FROM ${SDK_IMAGE} AS web-build
 ARG TARGETARCH
 WORKDIR /src
@@ -92,7 +69,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 COPY --from=quill-frontend-build /workspace/src/Raven.Quill.Web/dist /publish/web/wwwroot
 
 
-# Stage 5: runtime - aspnet base + s6-overlay supervising RavenDB, the web app, and nginx.
+# Stage 4: runtime - aspnet base + s6-overlay supervising RavenDB, the web app, and nginx.
 FROM ${RUNTIME_IMAGE} AS runtime
 ARG S6_OVERLAY_VERSION
 ARG TARGETARCH
@@ -125,10 +102,9 @@ tar -C / -Jxpf "s6-overlay-${S6_ARCH}.tar.xz"
 rm s6-overlay-*
 EOF
 
-COPY --from=ravendb-build /publish/raven /app/ravendb
-COPY --from=web-build     /publish/web   /app/web
+COPY --from=ravendb   /usr/lib/ravendb/server /app/ravendb
+COPY --from=web-build /publish/web            /app/web
 COPY docker/quill/ravendb-settings.json /app/ravendb/settings.json
-COPY --from=ravendb-studio /usr/lib/ravendb/server/Raven.Studio.zip /app/ravendb/
 COPY docker/quill/nginx.conf /etc/nginx/nginx.conf
 
 COPY docker/quill/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
