@@ -82,6 +82,7 @@ import saveSchemaValidationCommand from "commands/database/settings/saveSchemaVa
 import validateSchemaCommand from "commands/database/settings/validateSchemaCommand";
 import getRemoteAttachmentsDestinationsCommand from "commands/database/settings/getRemoteAttachmentsDestinationsCommand";
 import getCompareExchangeItemsCommand from "commands/database/cmpXchg/getCompareExchangeItemsCommand";
+import deleteCompareExchangeItemCommand from "commands/database/cmpXchg/deleteCompareExchangeItemCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -396,5 +397,9 @@ export default class DatabasesService {
 
     async getCompareExchangeItems(...args: ConstructorParameters<typeof getCompareExchangeItemsCommand>) {
         return new getCompareExchangeItemsCommand(...args).execute();
+    }
+
+    async deleteCompareExchangeItem(...args: ConstructorParameters<typeof deleteCompareExchangeItemCommand>) {
+        return new deleteCompareExchangeItemCommand(...args).execute();
     }
 }
