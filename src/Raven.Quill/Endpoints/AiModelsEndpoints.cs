@@ -5,12 +5,6 @@ using Raven.Client.Documents.Operations.AI;
 
 namespace Raven.Quill.Endpoints;
 
-/// <summary>
-/// Proxies RavenDB's <c>/studio-tasks/ai/models</c> endpoint so the connection-string
-/// form can suggest available models for the entered provider credentials, mirroring
-/// what RavenDB Studio does. The bundled server calls the provider's model-list API
-/// and forwards its response verbatim.
-/// </summary>
 public static class AiModelsEndpoints
 {
     private const string ModelsPath = "/studio-tasks/ai/models";
@@ -63,9 +57,6 @@ public static class AiModelsEndpoints
             : Results.Ok(new AiModelsResponse(models));
     }
 
-    /// The bundled server forwards the provider's OpenAI-style list response:
-    /// <c>{ "data": [ { "id": "gpt-4o" }, … ] }</c>. Anything else means the
-    /// provider answered with something we don't understand.
     private static string[]? ParseModelIds(string content)
     {
         try

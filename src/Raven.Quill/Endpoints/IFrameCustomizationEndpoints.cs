@@ -9,15 +9,6 @@ using Raven.Quill.Endpoints.Helpers;
 
 namespace Raven.Quill.Endpoints;
 
-/// <summary>
-/// Operator-facing customization of the web-widget (iFrame) embed surface: a channel's own
-/// style (a built-in Light/Dark preset or custom CSS), the app-level default applied to
-/// channels that make no choice, and the inert preview document the dashboard live-styles.
-/// Embed styling is iFrame-only — Telegram/WhatsApp render in their own apps — so these live
-/// in their own <c>iframe</c> group rather than the type-agnostic
-/// <see cref="ChannelsEndpoints"/>. The public embed page that consumes the stored style is
-/// <see cref="EmbedEndpoints"/>.
-/// </summary>
 public static class IFrameCustomizationEndpoints
 {
     public static void Map(WebApplication app)
@@ -106,8 +97,6 @@ public static class IFrameCustomizationEndpoints
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{widgetId}' in app '{slug}'"));
 
-        // A null style clears the channel's choice so it follows the app default; CSS is kept
-        // only for Custom so "preset" and "custom" can't both linger on the doc.
         channel.Style = body.Style;
         channel.CustomCss = body.Style == IFrameStyle.Custom ? body.Css : null;
         await session.SaveChangesAsync(ct);
@@ -150,7 +139,6 @@ public static class IFrameCustomizationEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // The app default always resolves to something — a null style means the factory Light preset.
         var style = body.Style ?? IFrameStyle.Light;
 
         using var session = store.OpenAsyncSession(app.Database);
@@ -198,8 +186,6 @@ public static class IFrameCustomizationEndpoints
             IFrameStyleVariables.BuildRootBlock(IFrameStyle.Dark)));
     }
 
-    /// <summary>Validates the shared update body: CSS is required and validated only for the
-    /// Custom style — presets carry their own styling, so any CSS sent with them is ignored.</summary>
     private static bool TryValidateStyle(UpdateIFrameCustomizationRequest body, out string? error)
     {
         if (body.Style != IFrameStyle.Custom)
@@ -217,8 +203,6 @@ public static class IFrameCustomizationEndpoints
         return IFrameCss.TryValidate(body.Css, out error);
     }
 
-    /// <summary>Builds the per-channel editor payload: the channel's own choice (with the
-    /// legacy CSS-only fallback applied) plus the resolved app default it would inherit.</summary>
     private static IFrameCustomizationResponse BuildCustomizationResponse(Channel channel, IFrameStyleDefaults? defaults)
     {
         var resolvedDefault = IFrameStyleResolution.ForDefaults(defaults);
@@ -229,8 +213,6 @@ public static class IFrameCustomizationEndpoints
             resolvedDefault.CustomCss);
     }
 
-    /// <summary>Loads a channel by widgetId, returning null unless it exists and is an iFrame
-    /// channel — customization is iFrame-only, so a non-iFrame id collapses to 404.</summary>
     private static async Task<Channel?> LoadIFrameChannelAsync(
         IAsyncDocumentSession session, string widgetId, CancellationToken ct)
     {
@@ -238,6 +220,5 @@ public static class IFrameCustomizationEndpoints
         return channel is { Type: ChannelType.IFrame } ? channel : null;
     }
 
-    /// Logger category marker — keeps the ILogger generic-arg out of the public surface.
     internal sealed class IFrameCustomizationLogger;
 }

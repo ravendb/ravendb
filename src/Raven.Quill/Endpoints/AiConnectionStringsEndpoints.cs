@@ -123,11 +123,6 @@ public static class AiConnectionStringsEndpoints
         if (existing.AiConnectionStrings is null || existing.AiConnectionStrings.ContainsKey(name) == false)
             return Results.NotFound(new ApiErrorResponse($"connection string '{name}' not found"));
 
-        // Reference check: refuse to delete if an agent on this DB still
-        // references the CS. Without this, deletion would orphan the agent —
-        // it would still exist but route requests to a no-longer-resolvable
-        // connection string. Surface the offending agent identifier(s) so the
-        // dashboard can render "remove agent(s) first" with a clickable list.
         var agents = await store.Maintenance.ForDatabase(app.Database)
             .SendAsync(new GetAiAgentsOperation(), ct);
 
@@ -212,24 +207,13 @@ public static class AiConnectionStringsEndpoints
 
         var connectionString = body;
 
-        // ConnectionString.Validate() runs AiConnectionString.ValidateImpl —
-        // the "exactly one provider" rule plus each provider's ValidateFields
-        // (empty ApiKey, empty Model, empty Ollama URI, etc). Surface those at
-        // intake as 400 instead of bubbling up RavenDB's 500 from the PUT.
         var errors = new List<string>();
         if (connectionString.Validate(errors) == false)
             return Results.BadRequest(new ApiErrorResponse(string.Join("; ", errors)));
 
-        // Agent provisioning needs a Chat model. Embeddings/TextEmbeddings will
-        // arrive with its own future endpoint; gate so an operator doesn't
-        // wire a chat-only agent to an embeddings-only connection string.
         if (connectionString.ModelType != AiModelType.Chat)
             return Results.BadRequest(new ApiErrorResponse($"AI agent connection strings require ModelType=Chat; got '{connectionString.ModelType}'"));
 
-        // Demo gate: only OpenAi + Ollama are smoke-tested end-to-end in the
-        // 8-week scope. The other RavenDB providers (Azure, Google, HuggingFace,
-        // Mistral, Vertex, Embedded) work upstream but we haven't verified the
-        // appliance plumbing for them. One-line lift once each is smoked.
         var provider = connectionString.GetActiveProvider();
         if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
             return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));

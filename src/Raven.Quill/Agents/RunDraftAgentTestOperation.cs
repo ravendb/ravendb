@@ -16,19 +16,6 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Quill.Agents;
 
-/// <summary>
-/// Runs a single, non-persisted conversation turn against a <em>draft</em>
-/// <see cref="AiAgentConfiguration"/> via RavenDB's <c>POST /databases/{db}/ai/agent/test</c>
-/// endpoint — the same endpoint Studio's agent test panel uses — and streams the reply.
-/// This lets the wizard smoke-test the configuration an operator is still editing in the
-/// Review step, before it is provisioned (so there is no persisted agent to bind to via
-/// <see cref="AgentRouter"/>). The endpoint streams the reply property (resolved via
-/// <see cref="AgentOutputShape.ResolveReplyField"/>) as <c>text/event-stream</c>: each line is
-/// a JSON-encoded chunk, then a trailing JSON object with the full result. We relay chunks to
-/// <paramref name="onChunk"/> as they arrive (mirroring <c>RunConversationOperation</c>) and
-/// read the reply / conversation id from the final object. The endpoint does not persist the
-/// conversation, so the turn is stateless.
-/// </summary>
 internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraftAgentTestOperation.Result>
 {
     private readonly AiAgentConfiguration _configuration;
@@ -59,17 +46,10 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
 
     public sealed class Result
     {
-        // The streamed field's text — used as the chat fallback when nothing streamed.
         public string Reply { get; set; } = "";
 
-        // The full model output object (every declared field), so the caller can surface the
-        // whole structured answer rather than only the streamed reply. Null when the turn
-        // produced no structured response object.
         public JsonElement? Answer { get; set; }
 
-        // The query tools the agent invoked during the turn (with their RQL, the parameters the
-        // model filled in, and the returned content), so the wizard can show the transcript.
-        // Empty when the turn called no query tool.
         public IReadOnlyList<AgentQueryToolCall> ToolCalls { get; set; } = [];
 
         public string ConversationId { get; set; } = "";
@@ -102,13 +82,9 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             _conventions = conventions;
             _token = token;
 
-            // The server streams the reply property as text/event-stream; read it raw so we can
-            // relay chunks as they arrive instead of buffering the whole turn.
             ResponseType = RavenCommandResponseType.Raw;
         }
 
-        // The test endpoint runs the model but writes no cluster state — it is registered as a
-        // read endpoint server-side, so route it like one.
         public override bool IsReadRequest => true;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -122,8 +98,6 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
                 var values = new DynamicJsonValue();
                 foreach (var (key, parameter) in _parameters)
                 {
-                    // Mirror AiConversationParameter so the server binds the already-typed JSON
-                    // value exactly like RavenDB Studio's agent test panel.
                     values[key] = new DynamicJsonValue
                     {
                         ["Value"] = AgentTestParameterValue.Convert(parameter?.Value),
@@ -134,9 +108,6 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
                 creationOptions["Parameters"] = values;
             }
 
-            // Serialize the configuration through the same converter AddOrUpdateAiAgentOperation
-            // uses, so the draft binds to AiAgentConfiguration server-side exactly as a
-            // provisioned one would.
             var body = new DynamicJsonValue
             {
                 ["Configuration"] = _conventions.Serialization.DefaultConverter.ToBlittable(_configuration, ctx),
@@ -153,11 +124,6 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             };
         }
 
-        // Raw streamed response (mirrors RunConversationOperation): each non-"{" line is a
-        // JSON-encoded chunk of the reply property; the trailing "{" line is the final result
-        // object. We relay chunks to the caller and read the reply / conversation id from the
-        // final object (a fallback used when nothing streamed). Parsed with System.Text.Json —
-        // RavenDB's blittable sync reader (context.Sync) is internal to the client assembly.
         public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
             Result = new Result();
@@ -165,8 +131,6 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             using var reader = new StreamReader(stream);
             while (true)
             {
-                // Pass the request token so a client disconnect is observed promptly mid-read,
-                // rather than only when the next chunk write to the browser fails.
                 var line = await reader.ReadLineAsync(_token).ConfigureAwait(false);
                 if (line is null)
                     break;
@@ -186,7 +150,6 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             }
         }
 
-        // Not used on the streaming (Raw) path, but RavenCommand requires it.
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             Result ??= new Result();
@@ -204,19 +167,13 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
 
             if (root.TryGetProperty("Response", out var answer) && answer.ValueKind == JsonValueKind.Object)
             {
-                // Clone so the element outlives this method's JsonDocument (disposed on return).
                 Result.Answer = answer.Clone();
                 Result.Reply = ExtractReply(answer);
             }
 
-            // Reconstruct the query tool calls from the returned conversation transcript so the
-            // wizard can show what the agent did. The extracted strings are copied out of the
-            // JsonDocument here, so they outlive its disposal.
             Result.ToolCalls = AgentTestTranscript.ExtractQueryToolCalls(root, _configuration);
         }
 
-        // The model answer wraps the reply under the configured reply field; fall back to the
-        // first non-empty string property so a custom output shape still surfaces something.
         private string ExtractReply(JsonElement answer)
         {
             if (answer.TryGetProperty(_replyField, out var preferred) &&

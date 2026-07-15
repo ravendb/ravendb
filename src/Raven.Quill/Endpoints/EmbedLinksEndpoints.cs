@@ -9,23 +9,6 @@ using Raven.Quill.Endpoints.Helpers;
 
 namespace Raven.Quill.Endpoints;
 
-/// <summary>
-/// Mint + revoke API-generated embed links (RavenDB-26775). The customer's
-/// backend calls <c>POST /api/apps/{slug}/embed-links</c> with the agent + the
-/// end-user's parameters (e.g. <c>Customer=users/1</c>) + a TTL + an invocation
-/// cap, and gets back a short-lived per-user iframe URL. The token replaces the
-/// old static <c>widgetId</c> as the bearer credential; the public consume-side
-/// lives in <see cref="EmbedEndpoints"/>.
-///
-/// These map onto the shared <c>/api/apps/{slug}</c> surface. NOTE: like the rest
-/// of <c>/api/*</c> in the appliance, they carry <b>no in-process authentication</b>
-/// — auth is expected at the fronting layer (the <c>Quill.Web</c>/edge proxy);
-/// the instance-wide dashboard API-key gate is deferred (design §3.3). Mint can
-/// drive LLM spend, so the fronting layer must guard it. The per-agent
-/// <see cref="Channel"/> remains the durable config anchor (origins, theme,
-/// enabled); a link is an ephemeral grant minted against it, resolved via the
-/// existing <see cref="ChannelBinding"/> for <c>(slug, IFrame, agentId)</c>.
-/// </summary>
 public static class EmbedLinksEndpoints
 {
     public static void Map(WebApplication app)
@@ -71,10 +54,6 @@ public static class EmbedLinksEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
-        // LoadStartingWith on the shared "embed-links/" id prefix (same rationale
-        // as ListChannelsAsync): immediately consistent and the natural fit since
-        // every link doc shares the prefix. Page until a short page returns so a
-        // large link set is never silently truncated.
         const int pageSize = 1024;
         var now = DateTime.UtcNow;
         var links = new List<EmbedLink>();
@@ -87,9 +66,6 @@ public static class EmbedLinksEndpoints
                 break;
         }
 
-        // Only the live links the operator can still act on. The @expires sweep is
-        // eventual, so a spent link may still be present briefly — filter it out
-        // here; the runtime check at the embed surface stays authoritative.
         var items = links
             .Where(l => l.Revoked == false && l.ExpiresAt > now)
             .OrderByDescending(l => l.CreatedAt)
@@ -110,7 +86,6 @@ public static class EmbedLinksEndpoints
         if (body is null || string.IsNullOrWhiteSpace(body.AgentId))
             return Results.BadRequest(new ApiErrorResponse("agentId is required"));
 
-        // Load App first so an unknown slug is always 404 (don't leak agent ids).
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -119,8 +94,6 @@ public static class EmbedLinksEndpoints
         if (config is null)
             return Results.NotFound(new ApiErrorResponse($"no agent '{body.AgentId}' in app '{slug}'"));
 
-        // Resolve the agent's iFrame channel via the existing binding — the
-        // channel is the durable config anchor (origins / enabled / theme).
         var bindingId = $"channel-bindings/{app.Slug}/{ChannelType.IFrame}/{config.Identifier}";
         Channel? channel;
         using (var session = store.OpenAsyncSession(app.Database))
@@ -141,8 +114,6 @@ public static class EmbedLinksEndpoints
             return Results.BadRequest(new ApiErrorResponse(
                 $"the iframe channel for agent '{config.Identifier}' is disabled", Code: "channel_disabled"));
 
-        // Parameters are validated + bound at mint time — this is what removes the
-        // old client-supplied ?customerId= impersonation.
         if (AgentParameters.TryResolve(config, body.Parameters, out var parameters, out var missing) == false)
             return Results.BadRequest(new ApiErrorResponse(
                 $"missing agent parameter(s): {string.Join(", ", missing)}", Code: "missing_parameters"));
@@ -157,7 +128,6 @@ public static class EmbedLinksEndpoints
             return Results.BadRequest(new ApiErrorResponse(
                 $"maxInvocations must be between 1 and {EmbedLinkLimits.MaxMaxInvocations}"));
 
-        // Token generated exactly like a chats/{guid} id; it IS the doc-id suffix.
         var token = Guid.NewGuid().ToString("N");
         var expiresAt = DateTime.UtcNow.AddSeconds(ttlSeconds);
 
@@ -176,13 +146,10 @@ public static class EmbedLinksEndpoints
                 CreatedAt = DateTime.UtcNow,
             };
             await session.StoreAsync(link, ct);
-            // Mirror the TTL into @expires so RavenDB's Expiration feature can sweep
-            // spent links; the runtime ExpiresAt check is authoritative regardless.
             session.Advanced.GetMetadataFor(link)[global::Raven.Client.Constants.Documents.Metadata.Expires] = expiresAt;
             await session.SaveChangesAsync(ct);
         }
 
-        // Config-DB pointer so the public /embed/{token} URL can route to this app.
         using (var cfg = store.OpenAsyncSession())
         {
             var index = new LinkIndex { Id = LinkIndex.IdPrefix + token, Slug = app.Slug };
@@ -191,10 +158,6 @@ public static class EmbedLinksEndpoints
             await cfg.SaveChangesAsync(ct);
         }
 
-        // The embed surface is served on the public.* subdomain only, so mint the link there regardless
-        // of which operator host (dashboard.* / api.*) issued the request — the leading DNS label is
-        // swapped to public.*. PathBase keeps the URL correct under sub-path hosting; Scheme/Host come
-        // from UseForwardedHeaders behind the nginx :443 front (Program.cs).
         var publicHost = ApplianceHost.WithSubdomain(ctx.Request.Host, "public");
         var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/embed/{token}";
         logger.LogInformation(
@@ -218,10 +181,6 @@ public static class EmbedLinksEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // Flip Revoked rather than delete: the public path then resolves the link
-        // and returns 410 Gone (a deleted link + missing index would be 404). The
-        // link-index pointer is left in place so that 410 is reachable; both docs
-        // self-expire via @expires. Idempotent on an unknown/already-revoked link.
         using (var session = store.OpenAsyncSession(app.Database))
         {
             var link = await session.LoadAsync<EmbedLink>(EmbedLink.IdPrefix + token, ct);
@@ -239,6 +198,5 @@ public static class EmbedLinksEndpoints
         return Results.NoContent();
     }
 
-    /// Logger category marker — keeps the ILogger generic-arg out of the public surface.
     internal sealed class EmbedLinksLogger;
 }

@@ -12,16 +12,10 @@ public sealed class DiscoverResponse
 
     public required string[] Errors { get; set; } = [];
 
-    /// <summary>Connection-level go/no-go — true when there are no <see cref="Errors"/>.</summary>
     public required bool Success { get; set; }
 
-    /// <summary>
-    /// Whether the connecting user can provision CDC infrastructure if it isn't already set up.
-    /// Connection-level capability, distinct from per-table <see cref="DiscoverTableResponse.IsCdcEnabled"/>.
-    /// </summary>
     public required bool HasPermissionToSetup { get; set; }
 
-    /// <summary>Connection-level advisory findings (non-blocking).</summary>
     public required string[] Warnings { get; set; } = [];
 
     internal static DiscoverResponse From(CdcSinkSourceSchema schema) => new()
@@ -51,7 +45,6 @@ public sealed class DiscoverTableResponse
 
     public string? UnsupportedReason { get; set; }
 
-    /// <summary>Per-table advisory findings (non-blocking), e.g. PostgreSQL REPLICA IDENTITY.</summary>
     public required string[] Warnings { get; set; } = [];
 
     internal static DiscoverTableResponse From(CdcSinkSourceTable table) => new()

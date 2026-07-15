@@ -6,13 +6,8 @@ using Raven.Quill.Contracts;
 
 namespace Raven.Quill.Cdc;
 
-/// <summary>
-/// Folds the rolling per-batch CDC perf stats into the <see cref="CdcPerformanceResponse"/>
-/// snapshot. Pure (no I/O) so it can be unit-tested without a live CDC source.
-/// </summary>
 internal static class CdcPerformanceShaper
 {
-    // A batch completing within this window counts the sink as actively syncing.
     private static readonly TimeSpan ActiveWindow = TimeSpan.FromSeconds(60);
 
     internal static IEnumerable<CdcPerfBatchRaw> Batches(CdcSinkPerformanceRaw raw) =>
@@ -76,12 +71,12 @@ internal static class CdcPerformanceShaper
         return new CdcPerformanceResponse(enabled, status, lastSyncAt, lagSeconds, recentReads, recentWrites, errorCount, points);
     }
 
-    // Default cap on returned error details â€” mirrors the rolling perf window (~25 entries).
+    // Default cap on returned error details — mirrors the rolling perf window (~25 entries).
     private const int MaxErrors = 25;
 
     /// <summary>Flattens the persistent per-task error store into a flat, newest-first list of
     /// <see cref="CdcError"/> (process + item errors together), capped at <see cref="MaxErrors"/>.
-    /// Backs the dedicated <c>GET /api/apps/{slug}/cdc/errors</c> endpoint. Pure â€” no I/O â€” so it
+    /// Backs the dedicated <c>GET /api/apps/{slug}/cdc/errors</c> endpoint. Pure — no I/O — so it
     /// unit-tests without a live sink.</summary>
     public static CdcError[] ShapeErrors(CdcSinkErrorsRaw raw) =>
         (raw.Results ?? new List<CdcTaskErrorsRaw>())

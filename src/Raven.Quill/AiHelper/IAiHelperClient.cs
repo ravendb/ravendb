@@ -2,12 +2,6 @@ using Raven.Client.Documents.Operations.CdcSink;
 
 namespace Raven.Quill.AiHelper;
 
-/// <summary>
-/// Abstraction over the AI-Helper config-generation calls. The single implementation
-/// (<see cref="AiHelperInternalClient"/>) proxies through the bundled RavenDB server's
-/// <c>/assistant/assist</c> handler, which injects the license + cert and forwards to the internal
-/// AI service on api.ravendb.net.
-/// </summary>
 public interface IAiHelperClient
 {
     Task<SuggestCdcInternalResult> SuggestCdcAsync(

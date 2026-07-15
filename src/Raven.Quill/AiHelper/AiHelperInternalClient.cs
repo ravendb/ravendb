@@ -8,28 +8,13 @@ using Sparrow.Json;
 
 namespace Raven.Quill.AiHelper;
 
-/// <summary>
-/// Typed client for the AI-Helper endpoints, proxied through the bundled RavenDB server's
-/// <c>/assistant/assist</c> handler. That handler injects the license + client-cert thumbprint from
-/// its own ServerStore and forwards to api.ravendb.net, so the appliance never reaches the external
-/// API directly. Maps transport outcomes (401/429/non-2xx) to <see cref="AiHelperStatus"/>; on a
-/// first-use <c>ConsentRequired</c> it signs consent via <c>/assistant/give-consent</c> and retries once.
-/// Request/response payloads are serialized through <c>store.Conventions.Serialization</c>, keeping
-/// the wire shape byte-identical to the RavenDB-based internal service.
-/// Registered as a typed <c>HttpClient</c> whose <c>BaseAddress</c> is the bundled RavenDB node and
-/// whose handler presents the admin client cert.
-/// </summary>
 public sealed class AiHelperInternalClient(
     HttpClient httpClient,
     IDocumentStore store,
     ILogger<AiHelperInternalClient> logger) : IAiHelperClient
 {
-    // Proxy entrypoint on the bundled RavenDB server; the operation is selected by
-    // OperationType on each request DTO (CdcConfigSetup / CdcBasedAgentConfigSetup).
     private const string AssistPath = "/assistant/assist";
 
-    // Sibling proxy that signs AI consent for the server's license + the calling cert thumbprint.
-    // The real /assist gates on a consent document for that pair; we sign on first use, then retry.
     private const string GiveConsentPath = "/assistant/give-consent";
 
     public async Task<SuggestCdcInternalResult> SuggestCdcAsync(
@@ -87,9 +72,6 @@ public sealed class AiHelperInternalClient(
             wire.OutputTokenCount);
     }
 
-    /// Sends the assist request; on the first ConsentRequired (no consent doc yet for this
-    /// license + cert pair) signs consent via the proxy and retries once. give-consent also
-    /// verifies the license, so a failure there surfaces the real credential problem instead.
     private async Task<(AiHelperStatus Transport, string Content)> SendWithConsentRetryAsync(string path, string method, object request, CancellationToken ct)
     {
         var result = await SendAsync(path, method, request, ct);
@@ -103,9 +85,6 @@ public sealed class AiHelperInternalClient(
         var retried = await SendAsync(path, method, request, ct);
         if (retried.Transport == AiHelperStatus.ConsentRequired)
         {
-            // give-consent succeeded yet assist still gates: upstream propagation lag or the consent
-            // was recorded for a different cert thumbprint than assist checks. Surfaced verbatim to
-            // the caller (no masking); this Warning is the triage signal for the anomaly.
             logger.LogWarning(
                 "AI Helper {Path}: assist still returns ConsentRequired after give-consent succeeded — propagation lag or cert-thumbprint mismatch.",
                 path);
@@ -125,8 +104,6 @@ public sealed class AiHelperInternalClient(
             if (response.IsSuccessStatusCode)
                 return (AiHelperStatus.Success, text);
 
-            // A 401 carries the real reason in the forwarded body Status (ConsentRequired vs
-            // InvalidCredentials); the HTTP code alone can't tell them apart.
             var status = response.StatusCode switch
             {
                 HttpStatusCode.Unauthorized => await ClassifyUnauthorizedAsync(text, ct),
@@ -134,10 +111,6 @@ public sealed class AiHelperInternalClient(
                 _ => AiHelperStatus.InternalError,
             };
 
-            // The response body is the internal service's status envelope (no secrets), so log it to
-            // keep this diagnosable. The request body carries license keys — never log that.
-            // First-use ConsentRequired is expected and self-heals (the caller signs consent and
-            // retries), so it logs as Information; every other failure is a real Warning.
             logger.Log(
                 status == AiHelperStatus.ConsentRequired ? LogLevel.Information : LogLevel.Warning,
                 "AI Helper {Path} failed: upstream {Code}, mapped {Status}. Body: {Body}",
@@ -147,17 +120,11 @@ public sealed class AiHelperInternalClient(
         catch (Exception e) when (e is HttpRequestException ||
                                   (e is OperationCanceledException && ct.IsCancellationRequested == false))
         {
-            // DNS/TLS/socket failure or an HttpClient timeout (not caller cancellation) maps to
-            // InternalError; caller cancellation propagates.
-            // `using var response` inside the try guarantees disposal on every path.
             logger.LogWarning(e, "AI Helper {Path} failed (transport).", path);
             return (AiHelperStatus.InternalError, string.Empty);
         }
     }
 
-    /// Signs AI consent for the server's license + the calling cert thumbprint via the proxy (which
-    /// injects both server-side, so an empty body is correct). A 401 here means give-consent's own
-    /// license check rejected the license — surfaced as InvalidCredentials, not a consent problem.
     private async Task<AiHelperStatus> GiveConsentAsync(CancellationToken ct)
     {
         try
@@ -183,8 +150,6 @@ public sealed class AiHelperInternalClient(
         }
     }
 
-    /// The proxy forwards the internal service's 401 body verbatim; its Status distinguishes a
-    /// missing/stale consent doc (ConsentRequired) from a rejected license (InvalidCredentials).
     private async Task<AiHelperStatus> ClassifyUnauthorizedAsync(string body, CancellationToken ct)
     {
         var wire = await DeserializeAsync<StatusOnly>(body, ct);
@@ -219,14 +184,11 @@ public sealed class AiHelperInternalClient(
             ? parsed
             : AiHelperStatus.InternalError;
 
-    // Failure bodies are normally the tiny status envelope, but the proxy chain can return HTML
-    // error pages or large exception payloads; cap what goes to the log (callers get the full body).
     private const int MaxLoggedBodyLength = 2000;
 
     private static string TruncateForLog(string body) =>
         body.Length <= MaxLoggedBodyLength ? body : body[..MaxLoggedBodyLength] + "…(truncated)";
 
-    /// Minimal projection for reading just the Status field from a non-2xx response envelope.
     private sealed class StatusOnly
     {
         public string? Status { get; set; }
@@ -234,8 +196,6 @@ public sealed class AiHelperInternalClient(
 
     private sealed class SuggestCdcApiRequest
     {
-        // OperationType routes the consolidated assist endpoint (sent as the exact enum name).
-        // License + CertificateThumbprint are injected by the RavenDB /assistant/assist proxy.
         public string OperationType { get; set; } = "CdcConfigSetup";
         public object? Schema { get; set; }
         public object? Samples { get; set; }
@@ -244,8 +204,6 @@ public sealed class AiHelperInternalClient(
 
     private sealed class SuggestAiAgentApiRequest
     {
-        // OperationType routes the consolidated assist endpoint (sent as the exact enum name).
-        // License + CertificateThumbprint are injected by the RavenDB /assistant/assist proxy.
         public string OperationType { get; set; } = "CdcBasedAgentConfigSetup";
         public CdcSinkConfiguration CdcConfig { get; set; } = null!;
         public object? CollectionsSample { get; set; }
@@ -272,7 +230,6 @@ public sealed class AiHelperInternalClient(
     }
 }
 
-/// <summary>Draft CDC config + rationale returned by the internal cdc-config endpoint.</summary>
 public sealed record SuggestCdcInternalResult(
     AiHelperStatus Status,
     CdcSinkConfiguration? Configuration,
@@ -280,7 +237,6 @@ public sealed record SuggestCdcInternalResult(
     int InputTokenCount,
     int OutputTokenCount);
 
-/// <summary>Draft agent config candidate(s) + rationale returned by the internal agent-config endpoint.</summary>
 public sealed record SuggestAiAgentInternalResult(
     AiHelperStatus Status,
     IReadOnlyList<AiAgentConfiguration> Configurations,

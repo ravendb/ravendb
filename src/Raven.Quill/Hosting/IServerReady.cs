@@ -1,14 +1,5 @@
 namespace Raven.Quill.Hosting;
 
-/// <summary>
-/// Internal probe-success signal — flips to true once
-/// <see cref="RavenReadinessService"/> has successfully reached RavenDB at
-/// least once. <b>Not the <c>/healthz</c> source of truth</b> — that's
-/// <see cref="IBootstrapState"/>, which also models the pre-activation phases
-/// (NeedsActivation / Redeeming). Both are written together by the readiness
-/// service so internal callers that only care about "did we ever connect?"
-/// can use this flag without parsing the bootstrap phase.
-/// </summary>
 public interface IServerReady
 {
     bool IsReady { get; }

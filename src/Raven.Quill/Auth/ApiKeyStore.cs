@@ -6,16 +6,8 @@ using Raven.Quill.Hosting;
 
 namespace Raven.Quill.Auth;
 
-/// <summary>
-/// Validates operator API keys for the appliance admin surface (the <c>api.*</c> header credential
-/// and the <c>dashboard.*</c> login). Beta model: a single key from <c>QUILL_API_KEY</c> is the
-/// source of truth — its salted hash is computed in-memory (so validation never depends on RavenDB
-/// being reachable) and hard-overwritten into the config DB as the durable record. Fail-closed:
-/// when <c>QUILL_API_KEY</c> is unset, no key validates.
-/// </summary>
 public interface IApiKeyStore
 {
-    /// <summary>Constant-time validation of a presented key against the active key(s).</summary>
     Task<bool> ValidateAsync(string? presentedKey, CancellationToken ct);
 }
 
@@ -38,7 +30,6 @@ public sealed class ApiKeyStore(
         var keys = _keys ?? await EnsureSeededAsync(ct);
         var presented = Encoding.UTF8.GetBytes(presentedKey);
 
-        // No early return on the first match — keep the work uniform across the (tiny) key set.
         var match = false;
         foreach (var key in keys)
         {
@@ -73,7 +64,6 @@ public sealed class ApiKeyStore(
             }
             else
             {
-                // Nudge (don't block) a low-entropy operator key.
                 if (envKey.Length < MinRecommendedApiKeyLength)
                     logger.LogWarning(
                         "QUILL_API_KEY is shorter than {Min} characters; use a high-entropy key in production.",
@@ -94,8 +84,6 @@ public sealed class ApiKeyStore(
         }
     }
 
-    /// Best-effort hard-overwrite of the durable key record. Validation works from the in-memory
-    /// snapshot regardless, so a transient DB hiccup here doesn't break auth.
     private async Task PersistPrimaryAsync(byte[] salt, byte[] hash, CancellationToken ct)
     {
         try

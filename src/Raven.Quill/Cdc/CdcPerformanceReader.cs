@@ -5,12 +5,6 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Quill.Cdc;
 
-/// <summary>
-/// Single home for reading RavenDB's rolling CDC-sink perf window. Telemetry must never
-/// 500 its callers, so an unavailable feed (feature off, older server, parse hiccup)
-/// degrades to an empty snapshot; cancellation still propagates. Shared by the CDC page
-/// endpoint and the App Usage read path.
-/// </summary>
 internal static class CdcPerformanceReader
 {
     public static async Task<CdcSinkPerformanceRaw> ReadAsync(

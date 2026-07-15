@@ -11,7 +11,6 @@ namespace Raven.Quill.Endpoints;
 
 public static class SettingsEndpoints
 {
-    // Generous for genuine feedback yet keeps oversized payloads from being forwarded upstream.
     private const int MaxNameLength = 256;
     private const int MaxEmailLength = 254; // RFC 5321 address limit
     private const int MaxMessageLength = 8_192;

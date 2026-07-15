@@ -12,19 +12,8 @@ using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Endpoints;
 
-/// <summary>
-/// All channel HTTP operations for an app (mirrors
-/// <see cref="AiConnectionStringsEndpoints"/>): create (the wizard's
-/// <c>/setup/channel</c> step), list, edit, and delete. Provision / edit /
-/// delete each <b>dispatch on the channel <see cref="ChannelType"/></b> to a
-/// per-type method — iFrame is implemented; Telegram / WhatsApp are 501 stubs
-/// (the seam RavenDB-26631 fills). Embed rendering (the public consume-side)
-/// lives in <see cref="EmbedEndpoints"/>.
-/// </summary>
 public static class ChannelsEndpoints
 {
-    // M2/M4 caps prevent unbounded doc growth + give the embed page a
-    // trustworthy AllowedOrigins list to consume.
     private const int MaxAllowedOrigins = 32;
     private const int MaxOriginLength = 256;
     private const int MaxDisplayNameLength = 200;
@@ -68,7 +57,6 @@ public static class ChannelsEndpoints
             .ProducesProblem(StatusCodes.Status501NotImplemented);
     }
 
-    // ---- create (dispatch on requested type) ----
 
     private static async Task<IResult> ProvisionChannelAsync(
         string slug,
@@ -80,9 +68,6 @@ public static class ChannelsEndpoints
         if (body is null || string.IsNullOrWhiteSpace(body.AgentId))
             return Results.BadRequest(new ApiErrorResponse("agentId is required"));
 
-        // L1: load App first so unknown-slug always returns 404 regardless of
-        // type/agentId — the 400-vs-404 differential otherwise leaks which
-        // agentIds are registered to unauthenticated probers.
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
@@ -104,16 +89,10 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        // L3: validate against the per-app database AND adopt the persisted
-        // agent's canonical casing for storage (the caller's casing was being
-        // persisted, which would trip later case-sensitive queries on AgentId).
         var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
         if (config is null)
             return Results.BadRequest(new ApiErrorResponse($"unknown agentId '{body.AgentId}'"));
 
-        // "Embeddable from anywhere" must be an explicit opt-in
-        // (allowedOrigins: []) — an omitted property is rejected rather than
-        // silently provisioning an open embed.
         if (body.AllowedOrigins is null)
             return Results.BadRequest(new ApiErrorResponse(
                 "allowedOrigins is required; pass an empty array to make the embed page embeddable from anywhere"));
@@ -125,15 +104,8 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        // C2 (Copilot review #4362803113): idempotency on (slug, type, agentId)
-        // via an atomic guard on a deterministic binding doc id. Write the
-        // binding doc AND the channel doc in one TransactionMode.ClusterWide
-        // session — RavenDB auto-creates an atomic guard at
-        // "rvn-atomic/{bindingId}". Concurrent writers Raft-serialize; the
-        // loser reads the winner's binding and returns the same widgetId.
         var bindingId = $"channel-bindings/{app.Slug}/{ChannelType.IFrame}/{config.Identifier}";
 
-        // Fast path: operator double-click / client retry skips the cluster-wide round trip.
         using (var session = store.OpenAsyncSession(app.Database))
         {
             var existing = await session.LoadAsync<ChannelBinding>(bindingId, ct);
@@ -146,8 +118,6 @@ public static class ChannelsEndpoints
             }
         }
 
-        // Slow path. widgetId is the public bearer id in embed snippets; a random
-        // GUID keeps it unguessable (H1, security review 2026-05-25).
         var widgetId = "wgt_" + Guid.NewGuid().ToString("N");
         var channelDocId = Channel.IdPrefix + widgetId;
 
@@ -188,10 +158,6 @@ public static class ChannelsEndpoints
         }
         catch (ClusterTransactionConcurrencyException e)
         {
-            // Lost the race. The winner's doc is applied async after the guard
-            // commits, so arm the read with the winner's index (from the
-            // violation) — the read then waits for that apply — and read once.
-            // No polling. See ClusterWideConflictReadTests / ayende PR review.
             var winnerIndex = e.ConcurrencyViolations is { Length: > 0 }
                 ? e.ConcurrencyViolations.Max(v => v.Actual)
                 : 0;
@@ -219,7 +185,6 @@ public static class ChannelsEndpoints
 
     private static IResult ProvisionWhatsAppAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
-    // ---- list ----
 
     private static async Task<IResult> ListChannelsAsync(
         string slug,
@@ -232,11 +197,6 @@ public static class ChannelsEndpoints
 
         using var session = store.OpenAsyncSession(app.Database);
 
-        // LoadStartingWith on the shared "channels/" id prefix instead of a
-        // collection Query: immediately consistent (no index-staleness wait
-        // right after a create) and the natural fit since every channel doc
-        // shares the prefix. Page until a short page returns so a large channel
-        // set is never silently truncated. Order by CreatedAt in memory.
         const int pageSize = 1024;
         var channels = new List<Channel>();
         for (var start = 0;; start += pageSize)
@@ -256,7 +216,6 @@ public static class ChannelsEndpoints
         return Results.Ok(items);
     }
 
-    // ---- edit (dispatch on stored type) ----
 
     private static async Task<IResult> UpdateChannelAsync(
         string slug,
@@ -278,7 +237,6 @@ public static class ChannelsEndpoints
         if (channel is null)
             return Results.NotFound(new ApiErrorResponse($"no channel '{channelId}' in app '{slug}'"));
 
-        // The doc's stored Type is authoritative — the request carries no type.
         return channel.Type switch
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ct),
@@ -328,7 +286,6 @@ public static class ChannelsEndpoints
 
     private static IResult UpdateWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
-    // ---- delete (dispatch on stored type) ----
 
     private static async Task<IResult> DeleteChannelAsync(
         string slug,
@@ -366,10 +323,6 @@ public static class ChannelsEndpoints
     {
         var channelDocId = Channel.IdPrefix + channelId;
 
-        // Delete the channel AND its binding in one cluster-wide session.
-        // Removing the binding doc clears the atomic guard at
-        // "rvn-atomic/{bindingId}", so the same (slug, type, agentId) tuple can
-        // be re-provisioned afterwards.
         using (var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
                {
                    Database = app.Database,
@@ -380,9 +333,6 @@ public static class ChannelsEndpoints
             if (channel is not null)
                 session.Delete(channel);
 
-            // Use the BindingId from the channel loaded inside THIS cluster-wide
-            // tx (not a value captured by the earlier non-transactional read) so
-            // the binding doc — and its atomic guard — is always cleared.
             if (channel is not null && string.IsNullOrEmpty(channel.BindingId) == false)
             {
                 var binding = await session.LoadAsync<ChannelBinding>(channel.BindingId, ct);
@@ -401,16 +351,12 @@ public static class ChannelsEndpoints
 
     private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
-    // ---- shared helpers ----
 
     private static IResult NotImplementedChannel(ChannelType type) =>
         Results.Problem(
             detail: $"{type} channels are not yet supported.",
             statusCode: StatusCodes.Status501NotImplemented);
 
-    /// <summary>Validates + normalizes <paramref name="origins"/> in place to the
-    /// canonical <c>scheme://authority</c> form. Returns false with an error on
-    /// the first invalid entry.</summary>
     private static bool TryNormalizeOrigins(string[] origins, out string? error)
     {
         error = null;
@@ -436,11 +382,6 @@ public static class ChannelsEndpoints
                 return false;
             }
 
-            // C3 (Copilot review #4362803113): the browser Origin header is
-            // scheme+host[:port] only — reject anything past the authority,
-            // except a bare "/" path which Uri normalizes onto origin-only URLs.
-            // Also reject userinfo (e.g. https://user:pass@host): a real Origin
-            // never carries it, so such an entry would never match at runtime.
             if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
                 (uri.AbsolutePath != "" && uri.AbsolutePath != "/") ||
@@ -452,17 +393,12 @@ public static class ChannelsEndpoints
                 return false;
             }
 
-            // C2 (Copilot review #4365219160): normalize on persist so runtime
-            // matching at the embed page doesn't have to strip trailing slashes.
             origins[i] = $"{uri.Scheme}://{uri.Authority}";
         }
 
         return true;
     }
 
-    /// <summary>M4: cap DisplayName length and forbid control chars at intake
-    /// (defends against operator-on-operator stored XSS if the dashboard ever
-    /// renders DisplayName unescaped).</summary>
     private static bool TryValidateDisplayName(string? displayName, out string? error)
     {
         error = null;
@@ -484,6 +420,5 @@ public static class ChannelsEndpoints
         return true;
     }
 
-    /// Logger category marker — keeps the ILogger generic-arg out of the public surface.
     internal sealed class ChannelsLogger;
 }

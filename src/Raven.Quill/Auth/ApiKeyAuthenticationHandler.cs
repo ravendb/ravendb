@@ -6,12 +6,6 @@ using Microsoft.Extensions.Options;
 
 namespace Raven.Quill.Auth;
 
-/// <summary>
-/// Per-request API-key authentication for the <c>api.*</c> surface: the key travels in an
-/// <c>X-Api-Key</c> header (or <c>Authorization: Bearer &lt;key&gt;</c>) and is validated against
-/// <see cref="IApiKeyStore"/>. Returns <see cref="AuthenticateResult.NoResult"/> when no key is
-/// present so the cookie scheme (the <c>dashboard.*</c> session) can still authenticate the request.
-/// </summary>
 public sealed class ApiKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
@@ -38,7 +32,6 @@ public sealed class ApiKeyAuthenticationHandler(
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)
     {
-        // Plain 401 — no WWW-Authenticate negotiation, no redirect (this is an API surface).
         Response.StatusCode = StatusCodes.Status401Unauthorized;
         return Task.CompletedTask;
     }
