@@ -414,7 +414,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
             CdcSinkConfiguration.ForEachEmbeddedTable(root.EmbeddedTables, e =>
             {
-                if (e.OnDelete?.IgnoreDeletes == true)
+                // Skip only when the delete is fully ignored. With an OnDelete.Patch the DELETE
+                // event is still processed, so it must carry the join columns for parent routing.
+                if (e.OnDelete?.IgnoreDeletes == true && e.OnDelete.Patch == null)
                     return;
 
                 foreach (var joinCol in e.JoinColumns)
