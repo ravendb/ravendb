@@ -176,7 +176,8 @@ public sealed class AiHelperInternalClient(
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            return null;
+            // Deserialization of a RavenDB response failed
+            return null!;
         }
     }
 
