@@ -13,11 +13,14 @@ type FetchData<T extends pagedResult<unknown>> = (skip: number, take: number) =>
 interface useVirtualTableWithoutTotalCountProps<T extends pagedResultWithToken<unknown>> {
     fetchData: FetchData<T>;
     initialOverscan?: number;
+    // when any of these change, the table resets and refetches page 0 (also covers the initial load)
+    reloadDependencies?: unknown[];
 }
 
 export function useVirtualTableWithoutTotalCount<T extends pagedResultWithToken<unknown>>({
     fetchData,
     initialOverscan = 50,
+    reloadDependencies = [],
 }: useVirtualTableWithoutTotalCountProps<T>) {
     const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -64,15 +67,18 @@ export function useVirtualTableWithoutTotalCount<T extends pagedResultWithToken<
     const asyncLoadDataRef = useRef(asyncLoadData);
     asyncLoadDataRef.current = asyncLoadData;
 
-    useEffect(() => {
-        asyncLoadDataRef.current.execute(true);
-    }, []);
-
     const reload = useCallback(async () => {
         hasMoreRef.current = true;
-        tableContainerRef.current?.scrollTo({ top: 0 });
+        // optional call: jsdom's HTMLElement has no scrollTo
+        tableContainerRef.current?.scrollTo?.({ top: 0 });
         await asyncLoadDataRef.current.execute(true);
     }, []);
+
+    // single load path: runs on mount and whenever a reload dependency changes
+    useEffect(() => {
+        reload();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, reloadDependencies);
 
     // Handle scroll
     useEffect(() => {
