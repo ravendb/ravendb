@@ -102,6 +102,12 @@ internal abstract class AbstractChatCompletionClientSettings
         return refusal;
     }
 
+    public virtual string GetFinishReason(BlittableJsonReaderObject choice0)
+    {
+        choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason);
+        return finishReason;
+    }
+
     public virtual ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)
     {
         return context.ReadForMemoryAsync(stream, "response/object");
