@@ -96,13 +96,13 @@ public static class AiConnectionStringsEndpoints
 
         public AiConnectorType ConnectorType { get; set; }
 
-        public OllamaSettings OllamaSettings { get; set; }
+        public OllamaSettings? OllamaSettings { get; set; }
 
-        public OpenAiSettings OpenAiSettings { get; set; }
+        public OpenAiSettings? OpenAiSettings { get; set; }
 
-        public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
+        public AzureOpenAiSettings? AzureOpenAiSettings { get; set; }
 
-        public GoogleSettings GoogleSettings { get; set; }
+        public GoogleSettings? GoogleSettings { get; set; }
     }
 
     private static async Task<IResult> DeleteAsync(
