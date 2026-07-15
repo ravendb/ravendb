@@ -121,7 +121,7 @@ export default function CompareExchange() {
     };
 
     return (
-        <div className="content-padding vstack">
+        <div className="content-padding vstack h-100">
             <HStack className="justify-content-between">
                 <AboutViewHeading title="Compare Exchange" icon="cmp-xchg" />
                 <CompareExchangeInfoHub />
@@ -154,7 +154,7 @@ export default function CompareExchange() {
                     </Button>
                 </ConditionalPopover>
             </HStack>
-            <div className="flex-grow mt-4">
+            <div className="flex-grow overflow-hidden mt-4">
                 <SizeGetter
                     render={(props) => (
                         <CompareExchangeTable
