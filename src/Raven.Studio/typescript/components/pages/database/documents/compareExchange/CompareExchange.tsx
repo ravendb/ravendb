@@ -192,22 +192,18 @@ function CompareExchangeTable(props: CompareExchangeTableProps) {
 
     const { dataArray, reload, componentProps } = useVirtualTableWithoutTotalCount({
         fetchData: (skip, take) => databasesService.getCompareExchangeItems(databaseName, keyFilter, skip, take),
+        reloadDependencies: [keyFilter],
     });
 
     props.reloadRef.current = reload;
     props.keyFilterRef.current = keyFilter;
 
-    const isFirstRender = useRef(true);
+    // clearing an already-empty selection on mount is a no-op, so no first-render guard is needed
     useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-            return;
-        }
         props.setSelectedRows([]);
         props.setIsAllSelected(false);
-        reload();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [keyFilter, reload]);
+    }, [keyFilter]);
 
     useEffect(() => {
         if (props.isAllSelected) {
