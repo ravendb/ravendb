@@ -687,6 +687,8 @@ public class RavenDB_26838 : RavenTestBase
 
         protected override Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct) => throw new NotSupportedException();
 
+        protected override Task<List<string>> ResolveInitialLoadKeyColumnsAsync(DbConnection conn, string schema, string table, CancellationToken ct) => throw new NotSupportedException();
+
         protected override Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct) => throw new NotSupportedException();
 
         protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo) => throw new NotSupportedException();
