@@ -188,6 +188,14 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getIdentities, dto, DatabasesStubs.getIdentities(5));
     }
 
+    withGetCompareExchangeItems(
+        dto?: MockedValue<
+            pagedResult<Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>
+        >
+    ) {
+        return this.mockResolvedValue(this.mocks.getCompareExchangeItems, dto, DatabasesStubs.compareExchangeItems(30));
+    }
+
     withRevisionsBinCleanerConfiguration(
         dto?: MockedValue<Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration>
     ) {
