@@ -337,6 +337,9 @@ public class CdcSinkTableProcessor
             // Primitive types that ObjectJsonParser handles natively
             bool or int or long or float or double or decimal
                 or DateTime or DateOnly or DateTimeOffset => value,
+            // Postgres time: ObjectJsonParser has no native TimeOnly handling, so render it
+            // in round-trip format ("HH:mm:ss.fffffff") to preserve full precision.
+            TimeOnly time => time.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
             // JSON columns: parse the string into a blittable object/array using the parent context
             string s when isJsonColumn && context != null => ParseJsonColumnValue(s, context),
             string s => s,
