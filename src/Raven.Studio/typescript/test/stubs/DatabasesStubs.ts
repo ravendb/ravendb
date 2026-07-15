@@ -1205,7 +1205,7 @@ return docs[0];`,
                 Key: `products/${i + 1}-a`,
                 Value: {
                     Object: i + 1,
-                    "@metadata": undefined,
+                    "@metadata": undefined as any,
                 },
                 Index: 20,
             })),

@@ -1,7 +1,7 @@
 import { AboutViewHeading } from "components/common/AboutView";
 import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
-import { Button } from "reactstrap";
+import Button from "react-bootstrap/Button";
 import CompareExchangeInfoHub from "./CompareExchangeInfoHub";
 import SizeGetter from "components/common/SizeGetter";
 import { useServices } from "components/hooks/useServices";
@@ -53,11 +53,11 @@ export default function CompareExchange() {
             </HStack>
             {hasDatabaseWriteAccess && (
                 <HStack className="gap-2">
-                    <Button color="primary" onClick={handleAddNewItem}>
+                    <Button variant="primary" onClick={handleAddNewItem}>
                         <Icon icon="plus" />
                         Add new item
                     </Button>
-                    <Button color="danger">
+                    <Button variant="danger">
                         <Icon icon="trash" />
                         Delete
                     </Button>
