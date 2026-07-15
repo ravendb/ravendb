@@ -82,7 +82,7 @@ internal static class MetricsReadService
         var perApp = await ForEachAppAsync(apps, log, async app =>
         {
             using var session = store.OpenAsyncSession(app.Database);
-            return await QueryMetricRowsAsync(session, period.Start, ct);
+            return await QueryMetricRowsInRangeAsync(session, period.Start, period.End, ct);
         }, ct);
 
         foreach (var rows in perApp)
@@ -887,24 +887,9 @@ internal static class MetricsReadService
         return results.Where(r => r.Ok).Select(r => r.Value).ToList();
     }
 
-    // All three index reads degrade to empty when the index isn't deployed on an app
+    // These index reads degrade to empty when the index isn't deployed on an app
     // DB yet (provisioned before this feature, or a brief post-create window) — so the
     // stats endpoints return empty windows instead of HTTP 500 (review SF3).
-
-    /// <summary>Fetches the hour-bucket rows from the widest window (server-side
-    /// filter keeps the row count bounded) for client-side folding/grouping.</summary>
-    private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsAsync(
-        IAsyncDocumentSession session, DateTime since, CancellationToken ct)
-    {
-        try
-        {
-            return await session.Advanced
-                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-                .WhereGreaterThanOrEqual(row => row.Bucket, since)
-                .ToListAsync(ct);
-        }
-        catch (IndexDoesNotExistException) { return []; }
-    }
 
     /// <summary>Fetches every hour-bucket row (no time filter) for all-time totals.
     /// Intentionally unbounded: conversations carry an Expires TTL, so the reduced row

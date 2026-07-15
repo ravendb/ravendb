@@ -271,7 +271,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         Assert.Equal("You are a Northwind support agent. Answer using the orders data.", agent.SystemPrompt);
         var query = Assert.Single(agent.Queries);
         Assert.Equal("findOrdersByCustomer", query.Name);
-        Assert.Equal("from Orders where Customer = $customerId", query.Query);
+        Assert.Equal("from Orders where Customer = $customerId limit 32", query.Query);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

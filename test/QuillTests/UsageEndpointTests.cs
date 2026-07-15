@@ -43,23 +43,26 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
         await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
 
+        // Query a complete past day so the hourly series is the full, unclamped 24 buckets
+        // (the current day would be clamped to now — see UsagePeriodTests).
         var now = DateTime.UtcNow;
-        var earlierToday = EarlierToday(now);
-        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", earlierToday, messages: 3, tokens: 100);
-        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", earlierToday, messages: 5, tokens: 250);
-        // Outside today's window — must not appear in the series.
-        await SeedConversationAsync(store, perAppDb, "chats/old", "demo", now.AddDays(-20), messages: 9, tokens: 999);
+        var day = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(-1);
+        var duringDay = day.AddHours(1);
+        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", duringDay, messages: 3, tokens: 100);
+        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", duringDay, messages: 5, tokens: 250);
+        // Outside the selected day — must not appear in the series.
+        await SeedConversationAsync(store, perAppDb, "chats/old", "demo", day.AddDays(-20), messages: 9, tokens: 999);
         await Indexes.WaitForIndexingAsync(store, perAppDb);
 
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.GetAsync($"/api/usage?{Q(now.Year, now.Month, now.Day)}");
+        var resp = await client.GetAsync($"/api/usage?{Q(day.Year, day.Month, day.Day)}");
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
         var points = await resp.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(JsonValueKind.Array, points.ValueKind);
-        // Contiguous hourly series over the selected day.
+        // Contiguous hourly series over the selected (complete) day.
         Assert.Equal(24, points.GetArrayLength());
 
         long totalInvocations = 0, totalTokens = 0;
@@ -219,7 +222,7 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
         await new ConversationMetricsIndex().ExecuteAsync(store, database: perAppDb);
 
-        // Seed earlier this month so it lands in both the month (year+month) and year (year) windows.
+        // Seed earlier this month so it lands in the current-year window.
         var now = DateTime.UtcNow;
         var thisMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(Math.Min(now.Day - 1, 1));
         await SeedConversationAsync(store, perAppDb, "chats/a", "support", thisMonth, messages: 2, tokens: 100);
@@ -228,14 +231,17 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
+        // Granularity controls the layout. Use a complete past year so counts are the full, unclamped
+        // layout (the current period would be clamped to now — see UsagePeriodTests).
+        var pastYear = now.Year - 1;
         // year+month+day → 24 hours, year+month → the month's days, year → 12 months.
-        Assert.Equal(24, (await client.GetFromJsonAsync<JsonElement>($"/api/usage?{Q(now.Year, now.Month, now.Day)}")).GetArrayLength());
-        Assert.Equal(DateTime.DaysInMonth(now.Year, now.Month),
-            (await client.GetFromJsonAsync<JsonElement>($"/api/usage?{Q(now.Year, now.Month)}")).GetArrayLength());
-        var byMonth = await client.GetFromJsonAsync<JsonElement>($"/api/usage?{Q(now.Year)}");
-        Assert.Equal(12, byMonth.GetArrayLength());
+        Assert.Equal(24, (await client.GetFromJsonAsync<JsonElement>($"/api/usage?{Q(pastYear, 1, 15)}")).GetArrayLength());
+        Assert.Equal(DateTime.DaysInMonth(pastYear, 1),
+            (await client.GetFromJsonAsync<JsonElement>($"/api/usage?{Q(pastYear, 1)}")).GetArrayLength());
+        Assert.Equal(12, (await client.GetFromJsonAsync<JsonElement>($"/api/usage?{Q(pastYear)}")).GetArrayLength());
 
-        // The conversation seeded this month lands in the year window with all three metrics.
+        // The conversation seeded this month lands in the current-year window with all three metrics.
+        var byMonth = await client.GetFromJsonAsync<JsonElement>($"/api/usage?{Q(now.Year)}");
         long conv = 0, msg = 0, tok = 0;
         foreach (var p in byMonth.EnumerateArray())
         {
