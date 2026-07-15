@@ -1,6 +1,6 @@
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./CompareExchange.stories";
-import { rtlRender } from "test/rtlTestUtils";
+import { rtlRender, waitFor } from "test/rtlTestUtils";
 import React from "react";
 
 const { CompareExchangeStory } = composeStories(stories);
@@ -36,5 +36,21 @@ describe("CompareExchange", () => {
 
         expect(await screen.findByText(selectors.keyColumnHeader)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: selectors.deleteBtn })).toBeDisabled();
+    });
+
+    it("select-all arms delete and shows the delete-ALL confirmation", async () => {
+        const { screen, fireClick } = rtlRender(<CompareExchangeStory databaseAccess="DatabaseReadWrite" />);
+
+        expect(await screen.findByText(selectors.keyColumnHeader)).toBeInTheDocument();
+
+        const selectAll = screen.getAllByRole("checkbox")[0];
+        await fireClick(selectAll);
+
+        const deleteButton = await screen.findByRole("button", { name: selectors.deleteBtn });
+        await waitFor(() => expect(deleteButton).toBeEnabled());
+
+        await fireClick(deleteButton);
+
+        expect(await screen.findByText(/ALL compare exchange items/)).toBeInTheDocument();
     });
 });
