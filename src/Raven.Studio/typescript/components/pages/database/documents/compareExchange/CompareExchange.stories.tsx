@@ -3,7 +3,6 @@ import { Meta, StoryObj } from "@storybook/react-webpack5";
 import CompareExchange from "components/pages/database/documents/compareExchange/CompareExchange";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
     title: "Pages/Documents/Compare Exchange",
@@ -32,7 +31,7 @@ export const CompareExchangeStory: StoryObj<CompareExchangeStoryArgs> = {
         });
 
         const { databasesService } = mockServices;
-        databasesService.withGetCompareExchangeItems(DatabasesStubs.compareExchangeItems(args.itemsCount));
+        databasesService.withPagedGetCompareExchangeItems(args.itemsCount);
 
         return (
             <div style={{ height: "800px" }}>

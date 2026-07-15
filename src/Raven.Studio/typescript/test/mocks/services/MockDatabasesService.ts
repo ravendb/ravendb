@@ -196,6 +196,52 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getCompareExchangeItems, dto, DatabasesStubs.compareExchangeItems(30));
     }
 
+    /**
+     * Pages compare exchange items lazily, so huge counts (e.g. millions) don't get materialized
+     * up-front like a static resolved value would. Filtering by prefix is applied before skip/take
+     * so that partial (filtered) pages correctly signal "no more data" via items.length < take.
+     */
+    withPagedGetCompareExchangeItems(itemsCount: number) {
+        const makeItem = (
+            i: number
+        ): Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem => ({
+            Key: `products/${i + 1}-a`,
+            Value: {
+                Object: i + 1,
+                "@metadata": undefined as any,
+            },
+            Index: 20,
+        });
+
+        this.mocks.getCompareExchangeItems.mockImplementation(async (_database, prefix, start, take) => {
+            const items: Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem[] =
+                [];
+
+            if (!prefix) {
+                for (let i = start; i < Math.min(start + take, itemsCount) && items.length < take; i++) {
+                    items.push(makeItem(i));
+                }
+            } else {
+                let skipped = 0;
+                for (let i = 0; i < itemsCount && items.length < take; i++) {
+                    const item = makeItem(i);
+                    if (item.Key.startsWith(prefix)) {
+                        if (skipped < start) {
+                            skipped++;
+                        } else {
+                            items.push(item);
+                        }
+                    }
+                }
+            }
+
+            return {
+                totalResultCount: -1,
+                items,
+            };
+        });
+    }
+
     withRevisionsBinCleanerConfiguration(
         dto?: MockedValue<Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration>
     ) {
