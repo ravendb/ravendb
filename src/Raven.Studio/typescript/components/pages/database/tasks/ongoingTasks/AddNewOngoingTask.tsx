@@ -4,7 +4,8 @@ import { AboutViewHeading } from "components/common/AboutView";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
+import studioSettings = require("common/settings/studioSettings");
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
@@ -28,12 +29,6 @@ interface AddNewOngoingTaskQueryParams {
 
 type DisplayMode = "expanded" | "compact";
 
-const displayModeStorageKey = "ravendb.add-new-ongoing-task.display-mode";
-
-function getStoredDisplayMode(): DisplayMode {
-    return localStorage.getItem(displayModeStorageKey) === "compact" ? "compact" : "expanded";
-}
-
 export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps<AddNewOngoingTaskQueryParams>) {
     const { forCurrentDatabase, appUrl } = useAppUrls();
     const {
@@ -51,11 +46,25 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
     const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl(true)();
     const showBackUrl = !queryParams?.noBack;
 
-    const [displayMode, setDisplayModeState] = useState<DisplayMode>(getStoredDisplayMode);
+    const [displayMode, setDisplayModeState] = useState<DisplayMode>("expanded");
+
+    useEffect(() => {
+        let disposed = false;
+
+        studioSettings.default.globalSettings().done((settings) => {
+            if (!disposed) {
+                setDisplayModeState(settings.ongoingTaskDisplayMode.getValue());
+            }
+        });
+
+        return () => {
+            disposed = true;
+        };
+    }, []);
 
     const setDisplayMode = (mode: DisplayMode) => {
         setDisplayModeState(mode);
-        localStorage.setItem(displayModeStorageKey, mode);
+        studioSettings.default.globalSettings().done((settings) => settings.ongoingTaskDisplayMode.setValue(mode));
     };
 
     return (
@@ -153,7 +162,6 @@ function TaskSearchInput({
 
 interface CategoryNavItem {
     categoryName: string;
-    categoryId: string;
     categoryIcon: IconName;
 }
 
@@ -233,7 +241,6 @@ function TaskCategoryFilter({
 
 interface TaskCategory {
     categoryName: string;
-    categoryId: string;
     categoryHeaderName?: string;
     categoryIcon: IconName;
     tasks: TaskItemProps[];
@@ -254,7 +261,7 @@ export function OngoingTasksList({ filteredTasks, displayMode = "expanded" }: On
     return (
         <>
             {filteredTasks.map((category) => (
-                <div className="pb-2" key={category.categoryName} id={category.categoryId}>
+                <div className="pb-2" key={category.categoryName}>
                     <HrHeader>
                         <Icon icon={category.categoryIcon} />
                         {category.categoryHeaderName ?? category.categoryName}

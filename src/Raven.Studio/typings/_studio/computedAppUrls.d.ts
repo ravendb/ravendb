@@ -46,7 +46,7 @@ interface computedAppUrls {
     sampleDataUrl: KnockoutComputed<string>;
     backupsUrl: KnockoutComputed<string>;
     ongoingTasksUrl: (allowEmpty?: boolean) => KnockoutComputed<string>;
-    addNewOngoingTaskUrl: KnockoutComputed<string>;
+    addNewOngoingTaskUrl: (noBack?: boolean) => KnockoutComputed<string>;
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
     editReplicationHubTaskUrl: KnockoutComputed<string>;
     editReplicationSinkTaskUrl: KnockoutComputed<string>;

@@ -91,7 +91,6 @@ export function OngoingTasksPage({ queryParams }: ReactQueryParamsProps<OngoingT
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const { forCurrentDatabase } = useAppUrls();
-    const addNewOngoingTaskUrl = forCurrentDatabase.addNewOngoingTaskUrl();
     const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
     const fetchTasks = useCallback(
@@ -368,7 +367,7 @@ export function OngoingTasksPage({ queryParams }: ReactQueryParamsProps<OngoingT
         !queryParams?.allowEmpty && allTasksCount === 0 && !showInternalReplication && !hasSeenTasksRef.current;
 
     if (shouldRedirectToAddTask) {
-        router.navigate(addNewOngoingTaskUrl + "&noBack=1");
+        router.navigate(forCurrentDatabase.addNewOngoingTaskUrl(true)());
         return null;
     }
 

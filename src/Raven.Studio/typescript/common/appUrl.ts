@@ -65,7 +65,7 @@ class appUrl {
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
         ongoingTasksUrl: (allowEmpty?: boolean) => ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase(), allowEmpty)),
-        addNewOngoingTaskUrl: ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase())),
+        addNewOngoingTaskUrl: (noBack?: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), noBack)),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
         editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),
@@ -577,9 +577,10 @@ class appUrl {
         return "#databases/tasks/ongoingTasks?" + databasePart + allowEmptyPart;
     }
     
-    static forAddNewOngoingTasks(db: database | string): string {
+    static forAddNewOngoingTasks(db: database | string, noBack?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/addNewOngoingTasks?" + databasePart;
+        const noBackPart = noBack ? "&noBack=1" : "";
+        return "#databases/tasks/addNewOngoingTasks?" + databasePart + noBackPart;
     }
 
     static forEditExternalReplication(db: database | string, taskId?: number): string {
