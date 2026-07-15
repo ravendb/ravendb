@@ -1077,8 +1077,20 @@ namespace Voron.Data.Tables
             {
                 if (_schema.Key is { IsGlobal: false })
                 {
-                    foreach (var holder in SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
-                        yield return holder.Reader.Id;
+                    var tree = GetTree(_schema.Key);
+                    if (tree == null)
+                        yield break;
+
+                    using (var it = tree.Iterate(_prefetch))
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
+                            yield break;
+
+                        do
+                        {
+                            yield return it.CreateReaderForCurrent().Read<long>();
+                        } while (it.MoveNext());
+                    }
 
                     yield break;
                 }
@@ -1086,8 +1098,38 @@ namespace Voron.Data.Tables
                 var variableSizeIndex = _schema.Indexes.Values.FirstOrDefault(x => x.IsGlobal == false);
                 if (variableSizeIndex != null)
                 {
-                    foreach (var seek in SeekForwardFrom(variableSizeIndex, Slices.BeforeAllKeys, 0))
-                        yield return seek.Result.Reader.Id;
+                    var tree = GetTree(variableSizeIndex);
+                    if (tree == null)
+                        yield break;
+
+                    using (var it = tree.Iterate(_prefetch))
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
+                            yield break;
+
+                        do
+                        {
+                            var value = it.CurrentKey.Clone(_tx.Allocator);
+                            try
+                            {
+                                var fstIndex = GetFixedSizeTree(tree, value, 0, variableSizeIndex.IsGlobal);
+                                using (var entryIt = fstIndex.Iterate())
+                                {
+                                    if (entryIt.Seek(long.MinValue) == false)
+                                        continue;
+
+                                    do
+                                    {
+                                        yield return entryIt.CurrentKey;
+                                    } while (entryIt.MoveNext());
+                                }
+                            }
+                            finally
+                            {
+                                value.Release(_tx.Allocator);
+                            }
+                        } while (it.MoveNext());
+                    }
 
                     yield break;
                 }
@@ -1095,8 +1137,17 @@ namespace Voron.Data.Tables
                 var fixedSizeIndex = _schema.FixedSizeIndexes.Values.FirstOrDefault(x => x.IsGlobal == false);
                 if (fixedSizeIndex != null)
                 {
-                    foreach (var holder in SeekForwardFrom(fixedSizeIndex, long.MinValue, 0))
-                        yield return holder.Reader.Id;
+                    var fst = GetFixedSizeTree(fixedSizeIndex);
+                    using (var it = fst.Iterate(_prefetch))
+                    {
+                        if (it.Seek(long.MinValue) == false)
+                            yield break;
+
+                        do
+                        {
+                            yield return ReadFixedSizeIndexEntryId(it);
+                        } while (it.MoveNext());
+                    }
                 }
 
                 // A table with only global indexes cannot be enumerated locally (StorageCompaction throws in
@@ -2268,6 +2319,9 @@ namespace Voron.Data.Tables
             var ptr = DirectRead(id, out int size, out _);
             reader = new TableValueReader(id, ptr, size);
         }
+
+        // Extracted because a pointer deref cannot appear inside an iterator block (see EnumerateAllEntryIds).
+        private long ReadFixedSizeIndexEntryId(FixedSizeTree.IFixedSizeIterator it) => *(long*)it.ValuePtr(out int _);
 
         private void GetTableValueReader(IIterator it, out TableValueReader reader)
         {
