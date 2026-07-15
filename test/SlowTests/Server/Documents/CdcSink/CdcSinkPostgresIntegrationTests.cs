@@ -2528,6 +2528,108 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
+        public async Task PatchOnDelete_EmbeddedTable_IgnoreDeletes_NonPKJoinColumn()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
+                );
+                CREATE TABLE order_lines (
+                    id SERIAL PRIMARY KEY,
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (id, order_id, line_num, product) VALUES (1, 1, 1, 'Apples');
+                INSERT INTO order_lines (id, order_id, line_num, product) VALUES (2, 1, 2, 'Bananas');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-patchondelete-ignoredeletes-nonpkjoin",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                // Simple PK that does NOT include the join column order_id.
+                                PrimaryKeyColumns = new List<string> { "id" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "id", Name = "LineId" },
+                                    new CdcColumnMapping { Column = "line_num", Name = "LineNum" },
+                                    new CdcColumnMapping { Column = "product", Name = "Product" }
+                                },
+                                // IgnoreDeletes keeps the item, but the patch still runs on delete -
+                                // so the DELETE event must carry order_id to route to the parent.
+                                OnDelete = new CdcSinkOnDeleteConfig
+                                {
+                                    IgnoreDeletes = true,
+                                    Patch = "this.LastDeletedLine = $row.line_num; this.DeleteCount = (this.DeleteCount || 0) + 1;"
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+
+            // Delete one embedded row — order_id is NOT in the PK, so without REPLICA IDENTITY
+            // FULL the DELETE event omits it and the patch never reaches Orders/1.
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE id = 2;");
+
+            // The OnDelete patch must run on the correct parent (Orders/1).
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                return order?.DeleteCount;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                // IgnoreDeletes: the item stays in the array.
+                Assert.Equal(2, order.Lines?.Count ?? 0);
+                // The patch ran against the right parent with the right row data.
+                Assert.Equal(2, order.LastDeletedLine);
+                Assert.Equal(1, order.DeleteCount);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
         public async Task ThreeWayNesting_WithPatches_InsertDeleteOrdering()
         {
             // 3-level nesting with patches at root and department level.
