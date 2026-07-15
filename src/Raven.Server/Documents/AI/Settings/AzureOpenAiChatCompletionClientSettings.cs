@@ -64,13 +64,7 @@ internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompl
             && GetFiltersMessage(filtersObj, out var refusal))
             return refusal;
 
-        // Azure also signals a content-policy block via finish_reason == "content_filter".
-        // (A block usually arrives as a non-200 status, handled by ParseError; this covers the in-body case.)
-        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason)
-            && string.Equals(finishReason, "content_filter", StringComparison.OrdinalIgnoreCase))
-            return "Response blocked due to content policy";
-
-        // Otherwise fall back to the OpenAI default (explicit refusal field).
+        // Otherwise fall back to the OpenAI default (explicit refusal field, or finish_reason == "content_filter").
         return base.GetRefusal(choice0, message, streaming, out isCompleteMessage);
     }
 
