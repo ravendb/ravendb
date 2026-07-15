@@ -108,9 +108,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: "databases/cmpXchg",
-            // moduleId: reactUtils.bridgeToReact(CompareExchange.default, "nonShardedView"),
-            moduleId: require("viewmodels/database/cmpXchg/cmpXchg"),
-            // TODO check for sharding
+            moduleId: reactUtils.bridgeToReact(CompareExchange.default, "nonShardedView"),
             shardingMode: "allShards",
             title: "Compare Exchange",
             nav: true,
