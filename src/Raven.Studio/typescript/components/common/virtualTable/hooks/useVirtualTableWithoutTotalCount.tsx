@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import { virtualTableConstants } from "../utils/virtualTableConstants";
 
@@ -31,13 +31,34 @@ export function useVirtualTableWithoutTotalCount<T extends pagedResultWithToken<
     const nextItemToFetchIndexRef = useRef(0);
     const hasMoreRef = useRef(true);
 
-    const asyncLoadData = useAsyncCallback(async (reset: boolean) => {
-        const skip = reset ? 0 : nextItemToFetchIndexRef.current;
-        const result = await fetchDataRef.current(skip, initialItemsCount);
+    // synchronous in-flight guard; asyncLoadData.loading only updates after a re-render
+    const isFetchingRef = useRef(false);
 
-        hasMoreRef.current = result.items.length === initialItemsCount;
-        nextItemToFetchIndexRef.current = skip + result.items.length;
-        setDataArray((prev) => (reset ? result.items : [...prev, ...result.items]));
+    // incremented on every reset so in-flight appends started before the reset discard their results
+    const generationRef = useRef(0);
+
+    const asyncLoadData = useAsyncCallback(async (reset: boolean) => {
+        const generation = reset ? ++generationRef.current : generationRef.current;
+        isFetchingRef.current = true;
+
+        try {
+            const skip = reset ? 0 : nextItemToFetchIndexRef.current;
+            const result = await fetchDataRef.current(skip, initialItemsCount);
+
+            if (generation !== generationRef.current) {
+                // a reset happened while this fetch was in flight - discard the stale result
+                return;
+            }
+
+            hasMoreRef.current = result.items.length === initialItemsCount;
+            nextItemToFetchIndexRef.current = skip + result.items.length;
+            setDataArray((prev) => (reset ? result.items : [...prev, ...result.items]));
+        } finally {
+            // a stale call must not clear the guard while a newer reset fetch is still in flight
+            if (generation === generationRef.current) {
+                isFetchingRef.current = false;
+            }
+        }
     });
 
     const asyncLoadDataRef = useRef(asyncLoadData);
@@ -47,11 +68,11 @@ export function useVirtualTableWithoutTotalCount<T extends pagedResultWithToken<
         asyncLoadDataRef.current.execute(true);
     }, []);
 
-    const reload = async () => {
+    const reload = useCallback(async () => {
         hasMoreRef.current = true;
         tableContainerRef.current?.scrollTo({ top: 0 });
         await asyncLoadDataRef.current.execute(true);
-    };
+    }, []);
 
     // Handle scroll
     useEffect(() => {
@@ -60,7 +81,7 @@ export function useVirtualTableWithoutTotalCount<T extends pagedResultWithToken<
         }
 
         const handleScroll = (e: Event) => {
-            if (!hasMoreRef.current || asyncLoadDataRef.current.loading) {
+            if (!hasMoreRef.current || isFetchingRef.current) {
                 return;
             }
 
