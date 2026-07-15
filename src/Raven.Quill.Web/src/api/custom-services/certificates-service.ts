@@ -1,23 +1,13 @@
 import { API_ENDPOINTS } from "@/api/generated/server-api";
-import type { ApiErrorResponse, DatabaseAccess } from "@/api/generated/server-api";
+import type { ApiErrorResponse, CertificateItem, DatabaseAccess, SecurityClearance } from "@/api/generated/server-api";
 import type { ApiClient } from "@/api/http-client";
 
-// The OpenAPI contract types CertificateDefinition as an untyped record (the RavenDB
-// client class is not introspectable by the schema generator), and the generated
-// certificatesGenerate operation hides that the server responds with a zip file.
-// This service adds the real wire shapes on top of the same endpoints.
+// The certificate GET response is typed as CertificateItem by the backend, so this service
+// reuses that generated type. It still adds the wire shapes the schema can't express:
+// certificatesGenerate responds with a zip download (typed as void), and certificatesEdit
+// takes a raw permissions-record body.
 
-export type SecurityClearance = "UnauthenticatedClients" | "ClusterAdmin" | "ClusterNode" | "Operator" | "ValidUser";
-
-export type CertificateItem = {
-    name: string | null;
-    thumbprint: string;
-    securityClearance: SecurityClearance;
-    notAfter?: string | null;
-    notBefore?: string | null;
-    permissions?: Record<string, DatabaseAccess> | null;
-    disabled?: boolean;
-};
+export type { CertificateItem, SecurityClearance };
 
 export function createCertificatesService(client: ApiClient) {
     return {

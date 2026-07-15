@@ -42,9 +42,9 @@ public static class SettingsEndpoints
             {
                 var op = new GetCertificatesOperation(start, pageSize);
                 var result = await store.Maintenance.Server.SendAsync(op, token);
-                return Results.Ok(result);
+                return Results.Ok(result.Select(CertificateItem.From).ToArray());
             })
-            .Produces<CertificateDefinition[]>()
+            .Produces<CertificateItem[]>()
             .WithName("settings.certificates")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
 
@@ -72,6 +72,25 @@ public static class SettingsEndpoints
             })
             .WithName("settings.certificatesEdit")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+    }
+
+    public record CertificateItem(
+        string Name,
+        SecurityClearance SecurityClearance,
+        string Thumbprint,
+        DateTime? NotAfter,
+        DateTime? NotBefore,
+        Dictionary<string, DatabaseAccess> Permissions,
+        bool Disabled)
+    {
+        public static CertificateItem From(CertificateDefinition source) => new(
+            source.Name,
+            source.SecurityClearance,
+            source.Thumbprint,
+            source.NotAfter,
+            source.NotBefore,
+            new Dictionary<string, DatabaseAccess>(source.Permissions, StringComparer.OrdinalIgnoreCase),
+            source.Disabled);
     }
 
     private static async Task<IResult> SendFeedbackAsync(
