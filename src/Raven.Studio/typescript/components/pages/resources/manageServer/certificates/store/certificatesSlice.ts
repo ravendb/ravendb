@@ -29,6 +29,7 @@ interface InitialState {
     certificateToEdit: CertificateItem;
     certificateToClone: CertificateItem;
     isReplaceServerModalOpen: boolean;
+    isRenewedModalOpen: boolean;
 }
 
 const initialState: InitialState = {
@@ -44,13 +45,14 @@ const initialState: InitialState = {
     nameOrThumbprintFilter: "",
     databaseFilter: "",
     clearanceFilter: [],
-    stateFilter: [],
+    stateFilter: ["Valid"],
     sortMode: "By Name - Asc",
     isGenerateModalOpen: false,
     isUploadModalOpen: false,
     certificateToEdit: null,
     certificateToClone: null,
     isReplaceServerModalOpen: false,
+    isRenewedModalOpen: false,
 };
 
 export const certificatesSlice = createSlice({
@@ -92,6 +94,9 @@ export const certificatesSlice = createSlice({
         },
         isReplaceServerModalOpenToggled: (state) => {
             state.isReplaceServerModalOpen = !state.isReplaceServerModalOpen;
+        },
+        isRenewedModalOpenToggled: (state) => {
+            state.isRenewedModalOpen = !state.isRenewedModalOpen;
         },
     },
     extraReducers: (builder) => {

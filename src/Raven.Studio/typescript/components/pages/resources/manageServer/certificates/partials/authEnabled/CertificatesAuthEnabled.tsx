@@ -16,6 +16,7 @@ import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import CertificatesFilters from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesFilters";
 import CertificatesManageDropdown from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesManageDropdown";
+import CertificatesRenewedModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRenewedModal";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -24,6 +25,7 @@ export default function CertificatesAuthEnabled() {
     const isGenerateModalOpen = useAppSelector(certificatesSelectors.isGenerateModalOpen);
     const isUploadModalOpen = useAppSelector(certificatesSelectors.isUploadModalOpen);
     const isReplaceServerModalOpen = useAppSelector(certificatesSelectors.isReplaceServerModalOpen);
+    const isRenewedModalOpen = useAppSelector(certificatesSelectors.isRenewedModalOpen);
     const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
     const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
 
@@ -82,6 +84,7 @@ export default function CertificatesAuthEnabled() {
             {isGenerateModalOpen && <CertificatesGenerateModal />}
             {isUploadModalOpen && <CertificatesUploadModal />}
             {isReplaceServerModalOpen && <CertificatesReplaceServerModal />}
+            {isRenewedModalOpen && <CertificatesRenewedModal />}
             {certificateToClone && <CertificatesCloneModal />}
             {certificateToEdit && <CertificatesEditModal />}
         </div>
