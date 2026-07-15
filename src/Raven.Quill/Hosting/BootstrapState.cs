@@ -60,6 +60,7 @@ public sealed class BootstrapStateFlag : IBootstrapState
     public string? Reason => Volatile.Read(ref _reason);
     public bool StartedWithSetupPackage => _startedWithSetupPackage;
 
+    // CAS: only the winner extracts the setup package, exactly once
     public bool TryMarkRedeeming()
     {
         var previous = Interlocked.CompareExchange(

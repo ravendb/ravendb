@@ -23,6 +23,7 @@ public sealed class RavenReadinessService(
 
         try
         {
+            // grace period: RavenDB needs ~10-15s; earlier probes just spam errors
             if (opts.ReadinessInitialDelay > TimeSpan.Zero)
             {
                 logger.LogInformation(
@@ -45,6 +46,7 @@ public sealed class RavenReadinessService(
 
             ready.MarkReady();
 
+            // flip bootstrap Ready only from the post-restart secure start (don't clobber activation)
             if (bootstrap.StartedWithSetupPackage)
             {
                 logger.LogInformation("Process started with the setup package present; marking bootstrap Ready.");

@@ -131,6 +131,7 @@ public static class AiConnectionStringsEndpoints
             .Select(a => a.Identifier)
             .ToArray();
 
+        // block delete: an agent still references this CS (would orphan it)
         if (referencing.Length > 0)
         {
             return Results.Conflict(new AiConnectionStringDeleteConflictResponse(
@@ -211,6 +212,7 @@ public static class AiConnectionStringsEndpoints
         if (connectionString.Validate(errors) == false)
             return Results.BadRequest(new ApiErrorResponse(string.Join("; ", errors)));
 
+        // require a Chat model; an embeddings-only CS can't back an agent
         if (connectionString.ModelType != AiModelType.Chat)
             return Results.BadRequest(new ApiErrorResponse($"AI agent connection strings require ModelType=Chat; got '{connectionString.ModelType}'"));
 

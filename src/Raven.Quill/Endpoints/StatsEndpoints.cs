@@ -203,6 +203,7 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
+        // Kestrel keeps %2F encoded; decode the chats/... id back
         var decodedId = Uri.UnescapeDataString(conversationId);
 
         var conversation = await MetricsReadService.GetConversationAsync(store, slug, app.Database, decodedId, DateTime.UtcNow, ct);
@@ -220,6 +221,7 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
+        // deferred: no event-log source yet — empty feed
         return Results.Ok(Array.Empty<ActivityEventDto>());
     }
 

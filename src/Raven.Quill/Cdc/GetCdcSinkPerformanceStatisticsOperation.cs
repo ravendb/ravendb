@@ -25,6 +25,7 @@ internal sealed class GetCdcSinkPerformanceStatisticsOperation : IMaintenanceOpe
 
         public override bool IsReadRequest => true;
 
+        // single-node snapshot; on a cluster this node may be partial (B5)
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/cdc-sink/performance";

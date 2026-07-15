@@ -8,6 +8,7 @@ namespace Raven.Quill.Infrastructure;
 
 internal static class AppDatabaseFeatures
 {
+    // keep ~10 revisions, no age floor: bounds per-turn InvocationCount churn
     private const int MinimumRevisionsToKeep = 10;
 
     public static async Task ConfigureAsync(IDocumentStore store, string database, CancellationToken ct)

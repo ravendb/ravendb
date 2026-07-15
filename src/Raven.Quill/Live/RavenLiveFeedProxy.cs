@@ -5,6 +5,7 @@ namespace Raven.Quill.Live;
 
 internal static class RavenLiveFeedProxy
 {
+    // 12h backstop so a forgotten dashboard tab can't hold a feed forever
     private static readonly TimeSpan MaxLifetime = TimeSpan.FromHours(12);
 
     public static async Task RelayAsync(
@@ -16,6 +17,7 @@ internal static class RavenLiveFeedProxy
     {
         var upstreamUri = await BuildUpstreamUriAsync(store, database, relativeLivePath);
 
+        // bridge is the mTLS proxy: the browser can't present a client cert
         using var upstream = new ClientWebSocket();
         if (store.Certificate is not null)
             upstream.Options.ClientCertificates.Add(store.Certificate);

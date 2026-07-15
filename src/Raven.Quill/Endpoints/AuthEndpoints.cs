@@ -47,6 +47,7 @@ public static class AuthEndpoints
         return Results.Ok(new AuthStatusResponse(true));
     }
 
+    // keep the CT param: avoids the RequestDelegate overload that discards IResult (ASP0016)
     private static async Task<IResult> LogoutAsync(HttpContext ctx, CancellationToken ct)
     {
         await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

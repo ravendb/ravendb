@@ -37,6 +37,7 @@ public static class AppsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapGet("/{slug}/cdc/progress", CdcProgressAsync)
             .WithName("apps.cdcProgress")
+            // WS-only route; OpenAPI can't describe the upgrade + streamed frames
             .ExcludeFromDescription();
         group.MapGet("/{slug}/cdc/performance", CdcPerformanceAsync)
             .WithName("apps.cdcPerformance")
@@ -49,6 +50,7 @@ public static class AppsEndpoints
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
             .Accepts<SetupTryRequest>("application/json")
+            // streams NDJSON frames, not a single body
             .Produces(StatusCodes.Status200OK, contentType: "application/x-ndjson")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
@@ -145,6 +147,7 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
+        // STJ uses the param-less ctor, bypassing the 3-arg guards; validate here
         if (body is null)
             return Results.BadRequest(new ApiErrorResponse("request body is required"));
 
@@ -183,6 +186,7 @@ public static class AppsEndpoints
             return Results.BadRequest(new ApiErrorResponse(
                 $"connection string '{aiCs.Name}' has ModelType={aiCs.ModelType}; agent provisioning requires Chat"));
 
+        // re-gate provider: a CS added via Studio bypasses the POST-time gate
         var provider = aiCs.GetActiveProvider();
         if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
             return Results.BadRequest(new ApiErrorResponse(
@@ -200,6 +204,7 @@ public static class AppsEndpoints
             var result = await AiAgentRegistrar.RegisterAsync(store, body, app.Database, ct);
             return Results.Ok(new ProvisionAgentResponse(result.Identifier));
         }
+        // map RavenDB validation to a 400 instead of a leaked 500
         catch (RavenException ex)
         {
             logger.LogWarning(ex,

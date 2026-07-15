@@ -41,7 +41,6 @@ internal static class MetricsReadService
     private const int TopTablesLimit = 10;
 
     public static async Task<List<UsagePoint>> GetUsageAsync(
-        IDocumentStore store, UsageWindow window, string? appSlug, DateTime nowUtc, ILogger? log, CancellationToken ct)
         ILicenseStatsProvider provider,
         IDocumentStore store, int year, int? month, int? day, string? appSlug, ILogger? log, CancellationToken ct)
     {
@@ -69,7 +68,6 @@ internal static class MetricsReadService
                 tokens[i] += row.Tokens;
             }
 
-                writes[i] += MockWritesForBucket(app, buckets[i], granularity);
         var stats = await provider.GetUsageAsync(year, month, day, ct);
         foreach (var p in stats?.ByPeriod ?? [])
         {
@@ -112,7 +110,6 @@ internal static class MetricsReadService
     }
 
     public static async Task<AppUsageResponse> GetAppUsageAsync(
-        IDocumentStore store, string database, DateTime startUtc, DateTime endUtc, CancellationToken ct)
         IDocumentStore store, string database, int year, int? month, int? day, CancellationToken ct)
     {
         var maintenance = store.Maintenance.ForDatabase(database);
@@ -626,6 +623,7 @@ internal static class MetricsReadService
     private static string State(TimeSpan age) =>
         age < TimeSpan.FromHours(1) ? "active" : age < TimeSpan.FromHours(24) ? "idle" : "closed";
 
+    // FE wire-contract values, not the enum names (nameof would break the contract)
     private static string RoleLabel(AiMessageRole role) => role == AiMessageRole.Assistant ? "agent" : "user";
 
     internal static ConversationTurn[] MapTranscript(IEnumerable<AiConversationMessage> messages) =>
@@ -720,6 +718,7 @@ internal static class MetricsReadService
         _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
     };
 
+    // isolate per-app failures: one bad tenant DB can't 500 a global fan-out
     private static async Task<List<T>> ForEachAppAsync<T>(
         IReadOnlyList<App> apps, ILogger? log, Func<App, Task<T>> body, CancellationToken ct)
     {
@@ -746,8 +745,7 @@ internal static class MetricsReadService
     }
 
 
-    /// <summary>Fetches every hour-bucket row (no time filter) for all-time totals.
-    /// Intentionally unbounded: conversations carry an Expires TTL, so the reduced row
+
     private static async Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
         IAsyncDocumentSession session, CancellationToken ct)
     {

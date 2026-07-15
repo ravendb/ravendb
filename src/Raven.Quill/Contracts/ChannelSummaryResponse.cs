@@ -2,6 +2,7 @@ using Raven.Quill.Channels;
 
 namespace Raven.Quill.Contracts;
 
+// no secrets: never projects binding id / allowed-origins
 public sealed record ChannelSummaryResponse(
     string WidgetId,
     ChannelType Type,

@@ -9,6 +9,7 @@ public static class AiAgentRegistrar
 
     private const string DefaultSampleObject = """{"reply":""}""";
 
+    // Raven's agent op requires OutputSchema or SampleObject; seed a minimal one
     public static void EnsureDefaultOutputShape(AiAgentConfiguration config)
     {
         if (string.IsNullOrWhiteSpace(config.SampleObject) && string.IsNullOrWhiteSpace(config.OutputSchema))

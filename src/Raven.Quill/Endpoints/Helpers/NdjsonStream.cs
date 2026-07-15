@@ -6,6 +6,7 @@ namespace Raven.Quill.Endpoints.Helpers;
 
 internal static class NdjsonStream
 {
+    // bridge wire: STJ/camelCase, NOT RavenDB's Newtonsoft/PascalCase
     public static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

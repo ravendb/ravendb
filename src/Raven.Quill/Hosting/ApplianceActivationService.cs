@@ -41,6 +41,7 @@ public sealed class ApplianceActivationService(
                     await licenseClient.DownloadSetupPackageToAsync(opts.LicenseToken ?? string.Empty, tempFile, stoppingToken);
 
                 Directory.CreateDirectory(opts.SetupPackagePath);
+                // zip-slip guard: ExtractToDirectory rejects ../ and absolute entries
                 ZipFile.ExtractToDirectory(tempZipPath, opts.SetupPackagePath, overwriteFiles: true);
             }
             finally

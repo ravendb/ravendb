@@ -12,6 +12,7 @@ internal sealed class ApiKey
 
     public string Salt { get; set; } = "";
 
+    // fast salted hash is fine: high-entropy bearer secret, not a password
     public string Hash { get; set; } = "";
 
     public bool Revoked { get; set; }

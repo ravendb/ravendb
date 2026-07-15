@@ -124,6 +124,7 @@ internal sealed class RunDraftAgentTestOperation : IMaintenanceOperation<RunDraf
             };
         }
 
+        // parse raw with STJ: RavenDB's blittable sync reader is client-internal
         public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
             Result = new Result();

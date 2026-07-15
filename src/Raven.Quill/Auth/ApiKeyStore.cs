@@ -31,6 +31,7 @@ public sealed class ApiKeyStore(
         var presented = Encoding.UTF8.GetBytes(presentedKey);
 
         var match = false;
+        // no early return on match: keep timing uniform
         foreach (var key in keys)
         {
             var hash = SHA256.HashData(Combine(key.Salt, presented));

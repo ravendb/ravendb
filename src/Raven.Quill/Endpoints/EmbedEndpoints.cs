@@ -20,6 +20,7 @@ public static class EmbedEndpoints
 {
     public const string ChatRateLimitPolicy = "embed-chat";
 
+    // default-deny CSP contains operator CSS (no @import/url exfil)
     internal const string BaseCsp =
         "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
         "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'none'";
@@ -60,6 +61,7 @@ public static class EmbedEndpoints
 
         ctx.Response.Headers["Content-Security-Policy"] = csp;
 
+        // keep the bearer token out of cross-origin referer logs
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
 
         var historyJson = await BuildHistoryJsonAsync(store, app.Database, link.ConversationId, ct);
@@ -146,6 +148,7 @@ public static class EmbedEndpoints
         {
             logger.LogError(e, "embed chat failed for tokenPrefix={TokenPrefix}", EmbedLink.RedactToken(token));
 
+            // refund the reserved invocation only if nothing streamed (mid-stream abort stays consumed)
             if (streamedAny == false)
                 await RefundInvocationAsync(store, app.Database, token, logger);
 
@@ -168,6 +171,7 @@ public static class EmbedEndpoints
         public static readonly InvocationGate Gone = new(GateStatus.Gone, "");
     }
 
+    // OCC + retry so concurrent turns can't exceed MaxInvocations
     private static async Task<InvocationGate> ConsumeInvocationAsync(
         IDocumentStore store, string database, string token, CancellationToken ct)
     {
@@ -326,6 +330,7 @@ public static class EmbedEndpoints
     private static string BuildEmbedHtml(string token, string displayName, ResolvedIFrameStyle style, string historyJson)
     {
         var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
+        // substitute trusted placeholders first so the token can't leak into title/history
         return EmbedHtmlTemplate
             .Replace("__TOKEN__", token)
             .Replace("__BASE_CSS__", BuildWidgetBaseCss(style.Style))
