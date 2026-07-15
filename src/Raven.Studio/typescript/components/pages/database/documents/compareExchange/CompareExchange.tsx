@@ -26,13 +26,18 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import router from "plugins/router";
 import useConfirm from "components/common/ConfirmDialog";
 import { useAsyncCallback } from "react-async-hook";
+import { useAppSelector } from "components/store";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 
 type CompareExchangeListItem =
     Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem;
 
+const requiredAccess: databaseAccessLevel = "DatabaseReadWrite";
+
 export default function CompareExchange() {
     const databaseName = useSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseWriteAccess = useSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
+    const canHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation)(requiredAccess);
 
     const { appUrl } = useAppUrls();
 
@@ -121,22 +126,34 @@ export default function CompareExchange() {
                 <AboutViewHeading title="Compare Exchange" icon="cmp-xchg" />
                 <CompareExchangeInfoHub />
             </HStack>
-            {hasDatabaseWriteAccess && (
-                <HStack className="gap-2">
-                    <Button variant="primary" onClick={handleAddNewItem}>
+            <HStack className="gap-2">
+                <ConditionalPopover
+                    conditions={{
+                        isActive: !canHandleOperation,
+                        message: getDatabaseAccessRequiredMessage(requiredAccess),
+                    }}
+                >
+                    <Button variant="primary" onClick={handleAddNewItem} disabled={!canHandleOperation}>
                         <Icon icon="plus" />
                         Add new item
                     </Button>
+                </ConditionalPopover>
+                <ConditionalPopover
+                    conditions={{
+                        isActive: !canHandleOperation,
+                        message: getDatabaseAccessRequiredMessage(requiredAccess),
+                    }}
+                >
                     <Button
                         variant="danger"
                         onClick={handleDelete}
-                        disabled={selectedRows.length === 0 || asyncDeleteSelected.loading}
+                        disabled={!canHandleOperation || selectedRows.length === 0 || asyncDeleteSelected.loading}
                     >
                         <Icon icon="trash" />
                         Delete{selectedRows.length > 0 && ` (${isAllSelected ? "all" : selectedRows.length})`}
                     </Button>
-                </HStack>
-            )}
+                </ConditionalPopover>
+            </HStack>
             <div className="flex-grow mt-4">
                 <SizeGetter
                     render={(props) => (

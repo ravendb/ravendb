@@ -22,12 +22,12 @@ describe("CompareExchange", () => {
         expect(screen.getByRole("button", { name: selectors.deleteBtn })).toBeInTheDocument();
     });
 
-    it("hides action buttons and checkboxes for read-only access", async () => {
+    it("disables action buttons for read-only access", async () => {
         const { screen } = rtlRender(<CompareExchangeStory databaseAccess="DatabaseRead" />);
 
         expect(await screen.findByText(selectors.keyColumnHeader)).toBeInTheDocument();
-        expect(screen.queryByRole("button", { name: selectors.addNewItemBtn })).not.toBeInTheDocument();
-        expect(screen.queryByRole("button", { name: selectors.deleteBtn })).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: selectors.addNewItemBtn })).toBeDisabled();
+        expect(screen.getByRole("button", { name: selectors.deleteBtn })).toBeDisabled();
         expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     });
 
