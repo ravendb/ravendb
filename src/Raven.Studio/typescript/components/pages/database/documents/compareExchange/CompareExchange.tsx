@@ -2,6 +2,7 @@ import { AboutViewHeading } from "components/common/AboutView";
 import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import CompareExchangeInfoHub from "./CompareExchangeInfoHub";
 import SizeGetter from "components/common/SizeGetter";
 import { useServices } from "components/hooks/useServices";
@@ -51,14 +52,10 @@ export default function CompareExchange() {
     const reloadRef = useRef<() => Promise<void>>(null);
     const keyFilterRef = useRef("");
 
-    const handleAddNewItem = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleAddNewItem = () => {
         reportEvent("cmpXchg", "new");
         const url = appUrl.forNewCmpXchg(databaseName);
-        if (e.ctrlKey) {
-            window.open(url);
-        } else {
-            router.navigate(url);
-        }
+        router.navigate(url);
     };
 
     const asyncDeleteSelected = useAsyncCallback(async () => {
@@ -81,7 +78,7 @@ export default function CompareExchange() {
         }
     });
 
-    const handleDelete = async () => {
+    const asyncHandleDelete = useAsyncCallback(async () => {
         const confirmed = isAllSelected
             ? await confirm({
                   title: "Delete ALL compare exchange items?",
@@ -112,13 +109,11 @@ export default function CompareExchange() {
               });
 
         if (confirmed) {
-            try {
-                await asyncDeleteSelected.execute();
-            } catch {
-                // delete failures are surfaced by the command layer's error toast (deleteCompareExchangeItemCommand)
-            }
+            // delete failures are surfaced by the command layer's error toast (deleteCompareExchangeItemCommand);
+            // the rejection is captured by this useAsyncCallback, so it never surfaces as unhandled
+            await asyncDeleteSelected.execute();
         }
-    };
+    });
 
     return (
         <div className="content-padding vstack h-100">
@@ -144,14 +139,15 @@ export default function CompareExchange() {
                         message: getDatabaseAccessRequiredMessage(requiredAccess),
                     }}
                 >
-                    <Button
+                    <ButtonWithSpinner
                         variant="danger"
-                        onClick={handleDelete}
-                        disabled={!canHandleOperation || selectedRows.length === 0 || asyncDeleteSelected.loading}
+                        icon="trash"
+                        onClick={asyncHandleDelete.execute}
+                        isSpinning={asyncDeleteSelected.loading}
+                        disabled={!canHandleOperation || selectedRows.length === 0 || asyncHandleDelete.loading}
                     >
-                        <Icon icon="trash" />
                         Delete{selectedRows.length > 0 && ` (${isAllSelected ? "all" : selectedRows.length})`}
-                    </Button>
+                    </ButtonWithSpinner>
                 </ConditionalPopover>
             </HStack>
             <div className="flex-grow overflow-hidden mt-4">
