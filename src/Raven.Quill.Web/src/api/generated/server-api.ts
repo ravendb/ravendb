@@ -1166,7 +1166,19 @@ export interface components {
             /** Format: int64 */
             writes: number;
         };
-        CertificateDefinition: Record<string, unknown>;
+        CertificateItem: {
+            name: string;
+            securityClearance: components["schemas"]["SecurityClearance"];
+            thumbprint: string;
+            /** Format: date-time */
+            notAfter: null | string;
+            /** Format: date-time */
+            notBefore: null | string;
+            permissions: {
+                [key: string]: components["schemas"]["DatabaseAccess"];
+            };
+            disabled: boolean;
+        };
         ChannelStatsResponse: {
             /** Format: int32 */
             total: number;
@@ -1225,17 +1237,6 @@ export interface components {
             value: string;
         };
         ConversationStatsResponse: {
-            last24h: components["schemas"]["ConversationWindow"];
-            last7d: components["schemas"]["ConversationWindow"];
-            last30d: components["schemas"]["ConversationWindow"];
-        };
-        ConversationTurn: {
-            role: string;
-            text: string;
-            /** Format: date-time */
-            at: null | string;
-        };
-        ConversationWindow: {
             /** Format: int64 */
             conversations: number;
             /** Format: int64 */
@@ -1243,12 +1244,21 @@ export interface components {
             /** Format: int64 */
             tokens: number;
         };
+        ConversationTurn: {
+            role: string;
+            text: string;
+            /** Format: date-time */
+            at: null | string;
+        };
         DashboardResponse: {
             /** Format: int32 */
             apps: number;
-            last24h: components["schemas"]["ConversationWindow"];
-            last7d: components["schemas"]["ConversationWindow"];
-            last30d: components["schemas"]["ConversationWindow"];
+            /** Format: int64 */
+            conversations: number;
+            /** Format: int64 */
+            messages: number;
+            /** Format: int64 */
+            tokens: number;
         };
         /** @enum {unknown} */
         DatabaseAccess: "ReadWrite" | "Admin" | "Read";
@@ -1499,6 +1509,8 @@ export interface components {
             perApplication: components["schemas"]["QuillApplicationUsage"][];
             byPeriod: components["schemas"]["QuillPeriodUsage"][];
         };
+        /** @enum {unknown} */
+        SecurityClearance: "UnauthenticatedClients" | "ClusterAdmin" | "ClusterNode" | "Operator" | "ValidUser";
         SendFeedbackRequest: {
             name: string;
             email: string;
@@ -1681,7 +1693,11 @@ export interface operations {
     };
     "stats.dashboard": {
         parameters: {
-            query?: never;
+            query: {
+                year: number;
+                month?: number;
+                day?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3030,7 +3046,11 @@ export interface operations {
     };
     "stats.conversationStats": {
         parameters: {
-            query?: never;
+            query: {
+                year: number;
+                month?: number;
+                day?: number;
+            };
             header?: never;
             path: {
                 slug: string;
@@ -3201,7 +3221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CertificateDefinition"][];
+                    "application/json": components["schemas"]["CertificateItem"][];
                 };
             };
             /** @description Bad Request */
@@ -3564,7 +3584,7 @@ export type CdcSinkPostgresSettings = components["schemas"]["CdcSinkPostgresSett
 export type CdcSinkRelationType = components["schemas"]["CdcSinkRelationType"];
 export type CdcSinkTableConfig = components["schemas"]["CdcSinkTableConfig"];
 export type CdcWritePoint = components["schemas"]["CdcWritePoint"];
-export type CertificateDefinition = components["schemas"]["CertificateDefinition"];
+export type CertificateItem = components["schemas"]["CertificateItem"];
 export type ChannelStatsResponse = components["schemas"]["ChannelStatsResponse"];
 export type ChannelSummaryResponse = components["schemas"]["ChannelSummaryResponse"];
 export type ChannelType = components["schemas"]["ChannelType"];
@@ -3576,7 +3596,6 @@ export type ConversationDto = components["schemas"]["ConversationDto"];
 export type ConversationParam = components["schemas"]["ConversationParam"];
 export type ConversationStatsResponse = components["schemas"]["ConversationStatsResponse"];
 export type ConversationTurn = components["schemas"]["ConversationTurn"];
-export type ConversationWindow = components["schemas"]["ConversationWindow"];
 export type DashboardResponse = components["schemas"]["DashboardResponse"];
 export type DatabaseAccess = components["schemas"]["DatabaseAccess"];
 export type DataCollectionDto = components["schemas"]["DataCollectionDto"];
@@ -3616,6 +3635,7 @@ export type ProvisionResponse = components["schemas"]["ProvisionResponse"];
 export type QuillApplicationUsage = components["schemas"]["QuillApplicationUsage"];
 export type QuillPeriodUsage = components["schemas"]["QuillPeriodUsage"];
 export type QuillUsageResponse = components["schemas"]["QuillUsageResponse"];
+export type SecurityClearance = components["schemas"]["SecurityClearance"];
 export type SendFeedbackRequest = components["schemas"]["SendFeedbackRequest"];
 export type SeriesData = components["schemas"]["SeriesData"];
 export type SeriesKey = components["schemas"]["SeriesKey"];
@@ -3779,7 +3799,7 @@ export function createServerApi(client: ApiClient) {
             updateDefaultCustomization: (slug: string, request: UpdateIFrameCustomizationRequest) => client.put<IFrameDefaultCustomizationResponse, ApiErrorResponse>(API_ENDPOINTS.iframe.updateDefaultCustomization(slug), request),
         },
         settings: {
-            certificates: (searchParams: { pageSize: string; start: string; }) => client.get<CertificateDefinition[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
+            certificates: (searchParams: { pageSize: string; start: string; }) => client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
             certificatesEdit: (request: string, searchParams: { disable: boolean; name: string; thumbprint: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, request, { searchParams }),
             certificatesGenerate: (searchParams: { appName: string; name: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, { searchParams }),
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
@@ -3801,8 +3821,8 @@ export function createServerApi(client: ApiClient) {
             collections: (slug: string) => client.get<DataCollectionDto[], ApiErrorResponse>(API_ENDPOINTS.stats.collections(slug)),
             conversation: (slug: string, conversationId: string) => client.get<ConversationDto, ApiErrorResponse>(API_ENDPOINTS.stats.conversation(slug, conversationId)),
             conversations: (slug: string) => client.get<ConversationDto[], ApiErrorResponse>(API_ENDPOINTS.stats.conversations(slug)),
-            conversationStats: (slug: string) => client.get<ConversationStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.conversationStats(slug)),
-            dashboard: () => client.get<DashboardResponse>(API_ENDPOINTS.stats.dashboard),
+            conversationStats: (slug: string, searchParams: { day?: string; month?: string; year: string; }) => client.get<ConversationStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.conversationStats(slug), { searchParams }),
+            dashboard: (searchParams: { day?: string; month?: string; year: string; }) => client.get<DashboardResponse>(API_ENDPOINTS.stats.dashboard, { searchParams }),
             dashboardApp: (slug: string) => client.get<ApplianceAppResponse, ApiErrorResponse>(API_ENDPOINTS.stats.dashboardApp(slug)),
             dashboardApps: () => client.get<ApplianceAppResponse[]>(API_ENDPOINTS.stats.dashboardApps),
             overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),

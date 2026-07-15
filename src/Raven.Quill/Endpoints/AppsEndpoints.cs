@@ -263,13 +263,10 @@ public static class AppsEndpoints
         if (m.Success == false)
             return rql.TrimEnd() + " limit " + MaxLimit;
 
-        if (int.TryParse(m.Groups[1].Value, out var limit) == false)
-            return rql;
-
-        if (limit <= MaxLimit)
-            return rql;
-
         var n = m.Groups[1];
+        if (int.TryParse(n.Value, out var limit) && limit <= MaxLimit)
+            return rql;
+
         return rql[..n.Index] + MaxLimit + rql[(n.Index + n.Length)..];
     }
 

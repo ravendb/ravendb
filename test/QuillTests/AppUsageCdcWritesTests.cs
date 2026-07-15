@@ -14,6 +14,10 @@ namespace QuillTests;
 /// </summary>
 public class AppUsageCdcWritesTests
 {
+    // A fixed "now" well after June 2026 so UsagePeriod isn't clamped — these tests assert full
+    // (unclamped) bucket layouts for a historical period.
+    private static readonly DateTime AfterPeriod = new(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+
     private static CdcSinkPerformanceRaw Raw(params CdcPerfBatchRaw[] batches) =>
         new()
         {
@@ -32,7 +36,7 @@ public class AppUsageCdcWritesTests
     public void BuildCdcWrites_buckets_processed_messages_by_completion()
     {
         var start = new DateTime(2026, 6, 25, 0, 0, 0, DateTimeKind.Utc);
-        var period = new UsagePeriod(2026, 6, 25);   // a specific day → 24 hourly buckets
+        var period = new UsagePeriod(2026, 6, 25, nowUtc: AfterPeriod);   // a specific day → 24 hourly buckets
         var buckets = period.Buckets();
 
         var raw = Raw(
@@ -53,7 +57,7 @@ public class AppUsageCdcWritesTests
     public void BuildCdcWrites_attributes_running_batch_by_start_and_ignores_out_of_window()
     {
         var start = new DateTime(2026, 6, 25, 0, 0, 0, DateTimeKind.Utc);
-        var period = new UsagePeriod(2026, 6, 25);   // a specific day → 24 hourly buckets
+        var period = new UsagePeriod(2026, 6, 25, nowUtc: AfterPeriod);   // a specific day → 24 hourly buckets
         var buckets = period.Buckets();
 
         var raw = Raw(
@@ -71,7 +75,7 @@ public class AppUsageCdcWritesTests
     [RavenFact(RavenTestCategory.Quill)]
     public void BuildCdcWrites_returns_all_zero_series_when_no_batches()
     {
-        var period = new UsagePeriod(2026, 6, null);   // a month → every day of June
+        var period = new UsagePeriod(2026, 6, null, nowUtc: AfterPeriod);   // a month → every day of June
         var buckets = period.Buckets();
 
         var points = MetricsReadService.BuildCdcWrites(new CdcSinkPerformanceRaw(), buckets, period);

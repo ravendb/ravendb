@@ -12,6 +12,8 @@ namespace Raven.Quill.Metrics;
 /// a valid range, the month to 1-12, the day to the month's length, and a day without a month
 /// is dropped (a day is meaningless without one). So a caller can't 400 the endpoint with an
 /// out-of-range value.
+/// The period never extends past <c>now</c>: <see cref="End"/> and <see cref="Buckets"/> stop at
+/// the present, so the current period reports no future entries or empty trailing buckets.
 /// </summary>
 internal readonly struct UsagePeriod
 {
@@ -19,8 +21,13 @@ internal readonly struct UsagePeriod
     public int? Month { get; }
     public int? Day { get; }
 
-    public UsagePeriod(int year, int? month, int? day)
+    // Reference "now" (UTC) used to clamp End/Buckets to the present. Defaults to the wall clock;
+    // tests inject a fixed value for deterministic bucket layouts.
+    private readonly DateTime _nowUtc;
+
+    public UsagePeriod(int year, int? month, int? day, DateTime? nowUtc = null)
     {
+        _nowUtc = nowUtc ?? DateTime.UtcNow;
         Year = Math.Clamp(year, 1, 9999);
         if (month is null)
         {
@@ -43,9 +50,17 @@ internal readonly struct UsagePeriod
         Daily ? new DateTime(Year, Month!.Value, 1, 0, 0, 0, DateTimeKind.Utc) :
         new DateTime(Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>Exclusive upper bound: the start of the next period. Uses calendar arithmetic
-    /// so variable month/year lengths are handled correctly.</summary>
-    public DateTime End => Shift(1);
+    /// <summary>Exclusive upper bound: the start of the next period (calendar arithmetic handles
+    /// variable month/year lengths), clamped to <c>now</c> so the current period stops at the
+    /// present instead of spilling into future buckets.</summary>
+    public DateTime End
+    {
+        get
+        {
+            var next = Shift(1);
+            return next < _nowUtc ? next : _nowUtc;
+        }
+    }
 
     /// <summary>Start of the preceding equal period — the baseline for delta-vs-previous.</summary>
     public DateTime PreviousStart => Shift(-1);
@@ -55,19 +70,24 @@ internal readonly struct UsagePeriod
         Daily ? Start.AddMonths(periods) :
         Start.AddYears(periods);
 
-    /// <summary>The contiguous, zero-fillable bucket layout: 24 hours, the month's days, or 12 months.</summary>
+    /// <summary>The contiguous, zero-fillable bucket layout up to <see cref="End"/>: 24 hours, the
+    /// month's days, or 12 months — with any bucket starting at or after <c>now</c> dropped, so the
+    /// current period carries no empty future buckets.</summary>
     public List<DateTime> Buckets()
     {
-        var start = Start;  // local copy: struct lambdas can't capture `this`
-        return Hourly ? Enumerable.Range(0, 24).Select(h => start.AddHours(h)).ToList() :
-            Daily ? Enumerable.Range(0, DateTime.DaysInMonth(Year, Month!.Value)).Select(d => start.AddDays(d)).ToList() :
-            Enumerable.Range(0, 12).Select(m => start.AddMonths(m)).ToList();
+        var start = Start;  // local copies: struct lambdas can't capture `this`
+        var end = End;
+        var all = Hourly ? Enumerable.Range(0, 24).Select(h => start.AddHours(h)) :
+            Daily ? Enumerable.Range(0, DateTime.DaysInMonth(Year, Month!.Value)).Select(d => start.AddDays(d)) :
+            Enumerable.Range(0, 12).Select(m => start.AddMonths(m));
+        return all.Where(b => b < end).ToList();
     }
 
     /// <summary>Maps a timestamp to its bucket slot (hour-of-day / day-of-month / month-of-year),
     /// or -1 if it falls outside this period so callers drop it.</summary>
     public int IndexOf(DateTime t)
     {
+        if (t >= End) return -1;   // at or past now: outside the clamped period, so it has no bucket
         var (idx, count) =
             Hourly ? (t.Date == Start.Date ? t.Hour : -1, 24) :
             Daily ? (t.Year == Year && t.Month == Month ? t.Day - 1 : -1, DateTime.DaysInMonth(Year, Month!.Value)) :
