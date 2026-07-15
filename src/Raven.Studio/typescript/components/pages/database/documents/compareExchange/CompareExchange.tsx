@@ -64,13 +64,16 @@ export default function CompareExchange() {
                   .items
             : selectedRows;
 
-        await Promise.all(
-            itemsToDelete.map((x) => databasesService.deleteCompareExchangeItem(databaseName, x.Key, x.Index))
-        );
-
-        setSelectedRows([]);
-        setIsAllSelected(false);
-        await reloadRef.current?.();
+        try {
+            await Promise.all(
+                itemsToDelete.map((x) => databasesService.deleteCompareExchangeItem(databaseName, x.Key, x.Index))
+            );
+        } finally {
+            // even on partial failure, clear the selection and reload so already-deleted rows disappear
+            setSelectedRows([]);
+            setIsAllSelected(false);
+            await reloadRef.current?.();
+        }
     });
 
     const handleDelete = async () => {
@@ -104,7 +107,11 @@ export default function CompareExchange() {
               });
 
         if (confirmed) {
-            await asyncDeleteSelected.execute();
+            try {
+                await asyncDeleteSelected.execute();
+            } catch {
+                // delete failures are surfaced by the command layer's error toast (deleteCompareExchangeItemCommand)
+            }
         }
     };
 
