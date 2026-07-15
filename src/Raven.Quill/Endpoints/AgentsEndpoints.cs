@@ -10,12 +10,6 @@ using Raven.Quill.Metrics;
 
 namespace Raven.Quill.Endpoints;
 
-/// <summary>
-/// Read-side listing of an app's provisioned RavenDB AI agents for the
-/// dashboard overview (mirrors <see cref="AiConnectionStringsEndpoints"/> /
-/// <see cref="ChannelsEndpoints"/>). Agent create / edit / delete live in the
-/// wizard (<c>/setup/agent</c>) — this surface is list-only.
-/// </summary>
 public static class AgentsEndpoints
 {
     public static void Map(WebApplication app)
@@ -41,14 +35,10 @@ public static class AgentsEndpoints
 
         var agents = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
 
-        // The agent config stores only the connection-string *name*, not the
-        // model — resolve the model by joining against the database's AI
-        // connection strings (one round trip, indexed by name).
         var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
         var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
             .ToDictionary(pair => pair.Key, pair => AiConnectionStringModel.Resolve(pair.Value), StringComparer.OrdinalIgnoreCase);
 
-        // Per-agent usage (conversations / messages / tokens + last-invoked) from the index.
         var activity = await MetricsReadService.GetAgentActivityAsync(store, app.Database, ct);
 
         var items = (agents.AiAgents ?? [])

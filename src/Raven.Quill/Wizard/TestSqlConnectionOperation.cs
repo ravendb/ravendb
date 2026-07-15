@@ -7,15 +7,6 @@ using Sparrow.Json;
 
 namespace Raven.Quill.Wizard;
 
-/// <summary>
-/// Calls <c>POST /admin/etl/sql/test-connection</c> — the same plain reachability
-/// probe Studio uses (see <c>testSqlConnectionStringCommand.ts</c>). The wizard's
-/// Connect step is reachability-only now; all CDC-readiness verification moved into
-/// Discover (the merged <c>/admin/cdc-sink/schema</c>). The endpoint takes the
-/// provider as a <c>factoryName</c> query argument and the raw connection string as
-/// the plain-text request body (NOT a JSON object), returning
-/// <c>{ Success, Error }</c>.
-/// </summary>
 internal sealed class TestSqlConnectionOperation : IMaintenanceOperation<ConnectResult>
 {
     private readonly string _factoryName;
@@ -33,7 +24,6 @@ internal sealed class TestSqlConnectionOperation : IMaintenanceOperation<Connect
     private sealed class TestConnectionCommand(string factoryName, string connectionString)
         : RavenCommand<ConnectResult>
     {
-        // POST with no server-side state change — just opens and closes a connection.
         public override bool IsReadRequest => true;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -43,8 +33,6 @@ internal sealed class TestSqlConnectionOperation : IMaintenanceOperation<Connect
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                // Raw connection string as plain text — the server reads the body
-                // stream verbatim (no JSON envelope).
                 Content = new StringContent(connectionString),
             };
         }

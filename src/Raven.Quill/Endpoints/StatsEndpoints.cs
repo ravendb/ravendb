@@ -10,7 +10,7 @@ namespace Raven.Quill.Endpoints;
 /// <summary>
 /// Read-side dashboard statistics for the per-app views. Each route aggregates
 /// existing per-app data (conversations, channels, agents, db stats) into the
-/// windows the UI renders — no write path, no live LLM. Live operational
+/// windows the UI renders � no write path, no live LLM. Live operational
 /// telemetry (CDC ingestion) is served separately via the WebSocket feed proxy.
 /// </summary>
 public static class StatsEndpoints
@@ -24,31 +24,24 @@ public static class StatsEndpoints
             .RequireAuthorization()
             .Produces<DashboardResponse>();
 
-        // Usage series (conversations / messages / tokens) over a calendar period — global or per-app.
-        // `GET /api/usage?year={y}[&month={m}][&day={d}][&app={slug}]` (app omitted → summed across all
-        // apps). The granularity follows which fields are set: year → 12 months, +month → the month's
-        // days, +month+day → the day's 24 hours. Out-of-range values are clamped, not rejected.
         app.MapGet("/api/usage", GetUsageAsync)
             .WithTags("stats")
             .WithName("stats.usage")
             .RequireAuthorization()
             .Produces<UsagePoint[]>();
 
-        // Per-app token-usage breakdown.
         app.MapGet("/api/usage/by-app", GetTokensByAppAsync)
             .WithTags("stats")
             .WithName("stats.tokensByApp")
             .RequireAuthorization()
             .Produces<TokensByAppResponse>();
 
-        // Enriched apps list for the Dashboard table.
         app.MapGet("/api/dashboard/apps", GetDashboardAppsAsync)
             .WithTags("stats")
             .WithName("stats.dashboardApps")
             .RequireAuthorization()
             .Produces<ApplianceAppResponse[]>();
 
-        // Single enriched app.
         app.MapGet("/api/dashboard/apps/{slug}", GetDashboardAppAsync)
             .WithTags("stats")
             .WithName("stats.dashboardApp")
@@ -63,21 +56,16 @@ public static class StatsEndpoints
             .Produces<AppOverviewResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // Per-app usage analytics.
         group.MapGet("/usage", GetAppUsageAsync)
             .WithName("stats.appUsage")
             .Produces<AppUsageResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // Mirrored data collections with document counts.
         group.MapGet("/collections", GetCollectionsAsync)
             .WithName("stats.collections")
             .Produces<DataCollectionDto[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // Conversations list + detail.
-        // The {*conversationId} catch-all carries the "chats/..." id (it contains a slash);
-        // the literal "/conversations/stats" route still wins by routing precedence.
         group.MapGet("/conversations", GetConversationsListAsync)
             .WithName("stats.conversations")
             .Produces<ConversationDto[]>()
@@ -88,8 +76,6 @@ public static class StatsEndpoints
             .Produces<ConversationDto>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
-        // CDC "Events" tab. Deferred — no event log yet, so
-        // this returns an empty feed (a real audit log is a separate ticket).
         group.MapGet("/activity", GetActivityAsync)
             .WithName("stats.activity")
             .Produces<ActivityEventDto[]>()
@@ -217,9 +203,6 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // The id carries a '/', e.g. "chats/recent". The browser client percent-encodes it to
-        // "chats%2Frecent" and Kestrel keeps %2F encoded in the path (unlike TestServer), so the
-        // catch-all hands us the still-encoded value — decode it back to the real document id.
         var decodedId = Uri.UnescapeDataString(conversationId);
 
         var conversation = await MetricsReadService.GetConversationAsync(store, slug, app.Database, decodedId, DateTime.UtcNow, ct);
@@ -237,7 +220,6 @@ public static class StatsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // Deferred: no event-log source yet (see impl handoff) — empty feed.
         return Results.Ok(Array.Empty<ActivityEventDto>());
     }
 

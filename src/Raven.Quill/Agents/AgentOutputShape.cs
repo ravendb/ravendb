@@ -3,18 +3,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Quill.Agents;
 
-/// <summary>
-/// Derives, at runtime, an agent's reply field — the single output property whose
-/// value the client streams chunk-by-chunk — from the persisted
-/// <see cref="AiAgentConfiguration"/> rather than a compile-time answer type.
-/// Resolution mirrors how the output shape is declared: the first property of
-/// <see cref="AiAgentConfiguration.SampleObject"/> (the JSON the registrar seeds
-/// and the wizard fills), falling back to the first key under the
-/// <see cref="AiAgentConfiguration.OutputSchema"/>'s <c>properties</c>, then to
-/// <c>"reply"</c>. The client streams the first declared property by convention,
-/// so deriving the path from the same sample that steers the model keeps the
-/// streamed path and the model's output in lockstep.
-/// </summary>
 public static class AgentOutputShape
 {
     public const string DefaultReplyField = "reply";
@@ -30,10 +18,6 @@ public static class AgentOutputShape
         return DefaultReplyField;
     }
 
-    /// <summary>Reads the reply text out of a data-driven answer object,
-    /// matching <paramref name="replyField"/> case-insensitively (the dictionary
-    /// produced by the RavenDB client uses an ordinal key comparer). Returns the
-    /// empty string when the field is absent.</summary>
     public static string ExtractReplyText(IReadOnlyDictionary<string, object>? answer, string replyField)
     {
         if (answer is null)
@@ -68,7 +52,6 @@ public static class AgentOutputShape
         }
         catch (JsonException)
         {
-            // Malformed sample — fall through to the next resolution source.
         }
 
         return false;
@@ -96,7 +79,6 @@ public static class AgentOutputShape
         }
         catch (JsonException)
         {
-            // Malformed schema — fall through to the default.
         }
 
         return false;

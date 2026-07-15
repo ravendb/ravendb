@@ -20,54 +20,28 @@ using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Metrics;
 
-/// <summary>
-/// Read-side aggregation for the dashboard stats endpoints. Queries the
-/// per-app metric indexes and folds the hour buckets into the calendar windows
-/// the views ask for (today by hour / this month by day / this year by month).
-/// Reads accept eventual consistency — no
-/// <c>WaitForNonStaleResults</c> — so a dashboard refresh never blocks on
-/// indexing; tests wait for indexing explicitly.
-/// </summary>
 internal static class MetricsReadService
 {
-    // Channels per app are few (a handful); read them by id prefix (immediately
-    // consistent, no index) with a generous cap rather than a staleness-prone query.
     private const int ChannelPageSize = 1024;
 
-    // Apps (tenants) are also modest in number; read the registry by id prefix.
     private const string AppIdPrefix = "apps/";
     private const int AppPageSize = 1024;
 
-    // Conversation docs (@conversations collection) are id-prefixed "chats/".
     private const string ConversationIdPrefix = "chats/";
     private const int ConversationPageSize = 1024;
 
-    // The conversations-list preview needs only the last exchange, so read a small most-recent tail
-    // per row instead of the whole history. Backward paging returns the newest N (oldest-first), and
-    // DetailLevel.Simple already excludes system/tool turns, so 10 comfortably covers the 2 the preview
-    // keeps even after MapTranscript drops any blank/attachment-only turn.
     private const int LastExchangePageSize = 10;
 
-    // Embed links (iframe channel attribution) are id-prefixed; read by prefix.
     private const int EmbedLinkPageSize = 1024;
 
-    // Per-app fan-out (dashboard/usage) runs bounded-parallel and isolates failures.
     private const int MaxFanoutConcurrency = 8;
 
-    // Series key for tokens whose agent has no resolvable connection-string model.
     private const string UnknownModel = "unknown";
 
-    // Cap on the "top tables" (collections) list returned for the App Usage page.
     private const int TopTablesLimit = 10;
 
-    /// <summary>
-    /// Usage series behind <c>GET /api/usage?time=&amp;app=</c>: one <see cref="UsagePoint"/>
-    /// per bucket over the window (ByHour → 24 hours of today, ByDay → every day of this
-    /// month, ByMonth → 12 months of this year), contiguous + zero-filled, carrying
-    /// conversations / messages / tokens. With
-    /// <paramref name="appSlug"/> it scopes to that app; otherwise it sums across all apps.
-    /// </summary>
     public static async Task<List<UsagePoint>> GetUsageAsync(
+        IDocumentStore store, UsageWindow window, string? appSlug, DateTime nowUtc, ILogger? log, CancellationToken ct)
         ILicenseStatsProvider provider,
         IDocumentStore store, int year, int? month, int? day, string? appSlug, ILogger? log, CancellationToken ct)
     {
@@ -95,8 +69,7 @@ internal static class MetricsReadService
                 tokens[i] += row.Tokens;
             }
 
-        // License write usage: fold each period into its bucket by timestamp — the feed's
-        // period granularity needn't match the bucket layout.
+                writes[i] += MockWritesForBucket(app, buckets[i], granularity);
         var stats = await provider.GetUsageAsync(year, month, day, ct);
         foreach (var p in stats?.ByPeriod ?? [])
         {
@@ -119,11 +92,7 @@ internal static class MetricsReadService
         return app is null ? [] : [app];
     }
 
-    /// <summary>
-    /// Per-app token totals behind the prototype's <c>getTokensByApp()</c>: all-time
-    /// token usage summed from each app's <c>@conversations</c> (fan-out), sorted by
-    /// tokens descending. <c>refreshedMinutesAgo</c> is 0 — computed live per request.
-    /// </summary>
+
     public static async Task<TokensByAppResponse> GetTokensByAppAsync(
         IDocumentStore store, ILogger? log, CancellationToken ct)
     {
@@ -142,16 +111,8 @@ internal static class MetricsReadService
         return new TokensByAppResponse(sorted, RefreshedMinutesAgo: 0);
     }
 
-    /// <summary>
-    /// Per-app usage analytics behind <c>getAppUsage({appId,from,window})</c>. Phase-1
-    /// subset from <see cref="ConversationMetricsIndex"/>: conversations/tokens
-    /// KPI cards (value + delta-vs-previous-window + per-bucket sparkline),
-    /// <c>tokensByCapability</c>, and <c>topCapabilities</c>. <c>cdcWrites</c> and the CDC
-    /// KPI card are bucketed from RavenDB's rolling per-batch perf window (recent activity,
-    /// not full history — see the loop below); <c>topTables</c> stands in with collection
-    /// stats (RavenDB-26780).
-    /// </summary>
     public static async Task<AppUsageResponse> GetAppUsageAsync(
+        IDocumentStore store, string database, DateTime startUtc, DateTime endUtc, CancellationToken ct)
         IDocumentStore store, string database, int year, int? month, int? day, CancellationToken ct)
     {
         var maintenance = store.Maintenance.ForDatabase(database);
@@ -164,9 +125,7 @@ internal static class MetricsReadService
         using var session = store.OpenAsyncSession(database);
         var rows = await QueryMetricRowsInRangeAsync(session, period.Start, period.End, ct);
 
-        // Previous equal-length window drives the percent delta on each card. Both ranges are
-        // half-open [start, end) so a row whose bucket == Start counts in the current window
-        // only, never in both (review M4).
+
         var prevRows = await QueryMetricRowsInRangeAsync(session, period.PreviousStart, period.Start, ct);
 
         long convNow = rows.Sum(r => r.Conversations), tokNow = rows.Sum(r => r.Tokens);
@@ -183,21 +142,15 @@ internal static class MetricsReadService
             tokByBucket[i] += row.Tokens;
         }
 
-        // CDC writes: fold RavenDB's rolling per-batch perf window into the usage buckets
-        // (see BuildCdcWrites). Recent snapshot, not history — buckets before the window stay
-        // zero and the KPI card carries no delta (no reliable previous-window baseline).
         var cdcRaw = await CdcPerformanceReader.ReadAsync(maintenance, ct);
         var cdcWrites = BuildCdcWrites(cdcRaw, buckets, period);
 
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
             Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
-            // Delta 0: the rolling window can't reach the previous window for a real baseline.
             CdcWrites: new MetricCard(cdcWrites.Sum(p => p.Writes), 0,
                 cdcWrites.Select(p => (double)p.Writes).ToArray()));
 
-        // Resolve the agents once: connection-string model for tokensByModel, and the
-        // display name for human-facing series labels / topCapabilities (review M2).
         var agentDefs = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
         var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
         var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
@@ -217,8 +170,6 @@ internal static class MetricsReadService
 
         string NameOf(string agentId) => nameByAgent.GetValueOrDefault(agentId, agentId);
 
-        // Per-bucket token series: by capability (agent) and by model. Same shape,
-        // different key; the capability series labels with the agent display name.
         var tokensByCapability = BuildTokenSeries(rows, buckets, period, agent => agent, NameOf);
         var tokensByModel = BuildTokenSeries(rows, buckets, period,
             agent => modelByAgent.GetValueOrDefault(agent, UnknownModel));
@@ -250,13 +201,8 @@ internal static class MetricsReadService
             TopCapabilities: topCapabilities);
     }
 
-    // Reserved time-axis key in each series point ({ "t": label, <seriesKey>: number }).
-    // A series key colliding with it can't be represented twice in one dict, so such keys
-    // are dropped from the series (see the BuildTokenSeries / BuildConversationsByChannel filters).
     private const string TimeAxisKey = "t";
 
-    // Builds a zero-filled bucket point. Series zeros first, then the time label last so it
-    // can't be clobbered; callers must have already filtered TimeAxisKey out of seriesKeys.
     private static Dictionary<string, object> NewBucketPoint(IReadOnlyList<string> seriesKeys, string label)
     {
         var point = new Dictionary<string, object>(seriesKeys.Count + 1);
@@ -265,16 +211,10 @@ internal static class MetricsReadService
         return point;
     }
 
-    /// <summary>Builds a multi-series token chart from the hour-bucket rows: one
-    /// series per distinct <paramref name="keyOf"/>(agent), per-bucket token sums.
-    /// Used for both tokensByCapability (key = agent) and tokensByModel (key = the
-    /// agent's resolved model).</summary>
     private static SeriesData BuildTokenSeries(
         IReadOnlyList<ConversationMetricsIndex.Result> rows, List<DateTime> buckets,
         UsagePeriod period, Func<string, string> keyOf, Func<string, string>? labelOf = null)
     {
-        // The series key is the stable data key (used in each bucket's points dict); the
-        // label is the human-facing name. Default the label to the key (review M2).
         var label = labelOf ?? (k => k);
         var keys = rows.Select(r => keyOf(r.Agent ?? "")).Distinct()
             .Where(k => k != TimeAxisKey)   // a key colliding with the reserved time axis can't be represented — drop it
@@ -296,10 +236,6 @@ internal static class MetricsReadService
         return new SeriesData(points, seriesKeys);
     }
 
-    /// <summary>conversations-per-channel over time, iframe only: each
-    /// <see cref="EmbedLink"/> (one per conversation) bucketed by its
-    /// <c>CreatedAt</c> and attributed to its channel via <c>WidgetId</c>.
-    /// Telegram/WhatsApp aren't implemented, so they don't appear.</summary>
     private static async Task<SeriesData> BuildConversationsByChannelAsync(
         IAsyncDocumentSession session, List<DateTime> buckets, UsagePeriod period, CancellationToken ct)
     {
@@ -312,8 +248,6 @@ internal static class MetricsReadService
         if (nameByWidget.Count == 0)
             return new SeriesData([], []);
 
-        // Key by the stable WidgetId (dictionary keys are already distinct); the display
-        // name is only the label, so channels sharing a display name don't merge (review C2).
         var keys = nameByWidget.Keys
             .Where(k => k != TimeAxisKey)   // a WidgetId colliding with the reserved time axis can't be represented — drop it
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -337,21 +271,15 @@ internal static class MetricsReadService
         return new SeriesData(points, seriesKeys);
     }
 
-    /// <summary>"Top tables" = the app's business collections by document count
-    /// (collection stats stand in for CDC source-table stats until RavenDB-26780).
-    /// TODO RavenDB-26992: <c>lagSeconds</c>/<c>lastWriteAt</c> ship as placeholders
-    /// (0 / "") until real replication-lag / last-write per table is implemented.</summary>
     private static async Task<TopTable[]> BuildTopTablesAsync(
         MaintenanceOperationExecutor maintenance, CancellationToken ct)
     {
         var stats = await maintenance.SendAsync(new GetCollectionStatisticsOperation(), ct);
-        // name + doc count is what the "Top source tables" view renders.
         return stats.Collections
             .Where(c => c.Key.StartsWith('@') == false)
             .OrderByDescending(c => c.Value)
             .ThenBy(c => c.Key, StringComparer.OrdinalIgnoreCase)
             .Take(TopTablesLimit)
-            // TODO RavenDB-26992: LagSeconds/LastWriteAt are placeholders pending real per-table CDC metrics.
             .Select(c => new TopTable(c.Key, c.Value, LagSeconds: 0, LastWriteAt: ""))
             .ToArray();
     }
@@ -367,12 +295,6 @@ internal static class MetricsReadService
         return result;
     }
 
-    /// <summary>Folds the CDC sink's rolling per-batch perf window into a per-bucket writes
-    /// series: each batch's <c>NumberOfProcessedMessages</c> (docs written into RavenDB) is
-    /// attributed to the bucket of its completion (or start, if still running). Pure so it can
-    /// be unit-tested without a live CDC source. Batches outside <paramref name="buckets"/>
-    /// (older than the rolling window, or a future clock skew) are ignored, so pre-window
-    /// buckets stay zero — this is recent activity, not a historical series.</summary>
     internal static CdcWritePoint[] BuildCdcWrites(
         CdcSinkPerformanceRaw raw, List<DateTime> buckets, UsagePeriod period)
     {
@@ -390,11 +312,6 @@ internal static class MetricsReadService
         return points;
     }
 
-    /// <summary>
-    /// Enriched apps list behind the prototype's <c>listApps()</c> (Dashboard table):
-    /// per-app counts (documents/agents/channels/tables), CDC <c>source.type</c>, and
-    /// a derived <c>status</c>, via fan-out. <c>writesPerMonth</c> is null (no counter).
-    /// </summary>
     public static async Task<List<ApplianceAppResponse>> GetDashboardAppsAsync(
         IDocumentStore store, ILogger? log, CancellationToken ct)
     {
@@ -402,7 +319,6 @@ internal static class MetricsReadService
         return await ForEachAppAsync(apps, log, app => EnrichAppAsync(store, app, ct), ct);
     }
 
-    /// <summary>Single enriched app (mock-api <c>getApp(id)</c>), or null if not found.</summary>
     public static async Task<ApplianceAppResponse?> GetDashboardAppAsync(
         IDocumentStore store, string slug, CancellationToken ct)
     {
@@ -425,7 +341,6 @@ internal static class MetricsReadService
             ? null
             : string.Join(", ", channels.Select(c => ChannelTypeLabel(c.Type)).Distinct());
 
-        // CDC config → tablesCount + source.type (CDC conn string → SQL FactoryName).
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
         var cdc = record?.CdcSinks?.FirstOrDefault();
         var tablesCount = cdc?.Tables?.Count ?? 0;
@@ -455,7 +370,6 @@ internal static class MetricsReadService
             ChannelsLabel: channelsLabel,
             StatusSubtitle: subtitle,
             CreatedAt: Utc(app.CreatedAt),
-            // App carries no update timestamp yet, so updatedAt mirrors createdAt (review B4).
             UpdatedAt: Utc(app.CreatedAt));
     }
 
@@ -489,11 +403,10 @@ internal static class MetricsReadService
     {
         var apps = await LoadAllAppsAsync(store, ct);
 
-        // Calendar period selected by year/month/day, matching the usage endpoints.
+
         var period = new UsagePeriod(year, month, day);
 
-        // Read-time fan-out: each app contributes its rows for the period. A single
-        // bad tenant DB is skipped, not fatal for the whole dashboard (review I2).
+
         var perApp = await ForEachAppAsync(apps, log, async app =>
         {
             using var session = store.OpenAsyncSession(app.Database);
@@ -542,7 +455,6 @@ internal static class MetricsReadService
                 if (channel.Enabled) active++;
             }
 
-            // partial page = no more results
             if (page.Count < ChannelPageSize) break;
             offset += ChannelPageSize;
         }
@@ -566,11 +478,6 @@ internal static class MetricsReadService
             rows.Sum(r => r.Tokens));
     }
 
-    /// <summary>
-    /// Mirrored collections behind <c>listCollections(appId)</c>: each business
-    /// collection with its current document count. System (<c>@</c>-prefixed)
-    /// collections are excluded; <c>fields</c> is empty for now (schemaless).
-    /// </summary>
     public static async Task<List<DataCollectionDto>> GetCollectionsAsync(
         IDocumentStore store, string slug, string database, CancellationToken ct)
     {
@@ -584,9 +491,6 @@ internal static class MetricsReadService
             .ToList();
     }
 
-    /// <summary>Per-agent rollup from the conversation index: conversations, user
-    /// messages, tokens, and last-invoked (latest hour bucket). Returns empty when the
-    /// index isn't deployed yet, so callers degrade to zeroes.</summary>
     public static async Task<Dictionary<string, AgentActivity>> GetAgentActivityAsync(
         IDocumentStore store, string database, CancellationToken ct)
     {
@@ -598,8 +502,6 @@ internal static class MetricsReadService
                 .GroupBy(r => r.Agent ?? "")
                 .ToDictionary(
                     g => g.Key,
-                    // The index Bucket is DateTimeKind.Utc, but a round-trip through the index
-                    // may not preserve Kind, so normalize to UTC to keep the Z designator (review I1).
                     g => new AgentActivity(
                         g.Sum(r => r.Conversations), g.Sum(r => r.Messages), g.Sum(r => r.Tokens),
                         Utc(g.Max(r => r.Bucket))),
@@ -611,10 +513,6 @@ internal static class MetricsReadService
         }
     }
 
-    /// <summary>Conversations for the Conversations list (agent, channel, state, timestamps,
-    /// params, and a last-exchange preview), newest activity first. The last exchange is read
-    /// per row through the AI messages endpoint (bounded fan-out); the full transcript stays
-    /// detail-only.</summary>
     public static async Task<List<ConversationDto>> GetConversationsAsync(
         IDocumentStore store, string slug, string database, DateTime nowUtc, CancellationToken ct)
     {
@@ -623,15 +521,9 @@ internal static class MetricsReadService
         using (var session = store.OpenAsyncSession(database))
         {
             channelByConversation = await BuildConversationChannelMapAsync(session, ct);
-            // Loads every conversation doc (paged) and sorts by last activity in memory — no
-            // truncation. Index-backed *server-side* pagination is a deferred perf follow-up
-            // for very large apps (review SF5).
             docs = await LoadAllByPrefixAsync<ConversationDoc>(session, ConversationIdPrefix, ConversationPageSize, ct);
         }
 
-        // Each row carries its last exchange (newest two turns), read through the AI runtime —
-        // one read per conversation, bounded-parallel. Server-side pagination would cap this
-        // fan-out; until then it mirrors the whole (already in-memory) conversation set.
         using var gate = new SemaphoreSlim(MaxFanoutConcurrency);
         var items = await Task.WhenAll(docs.Select(async doc =>
         {
@@ -644,9 +536,6 @@ internal static class MetricsReadService
         return items.OrderByDescending(c => c.LastActivityAt).ToList();
     }
 
-    /// <summary>Reads the newest two turns of a conversation through the AI runtime, bounded by
-    /// <paramref name="gate"/>. A single unreadable conversation degrades to an empty exchange
-    /// rather than failing the whole list.</summary>
     private static async Task<ConversationTurn[]> LoadLastExchangeAsync(
         IDocumentStore store, string database, string conversationId, SemaphoreSlim gate, CancellationToken ct)
     {
@@ -667,17 +556,9 @@ internal static class MetricsReadService
         }
     }
 
-    /// <summary>One conversation with its full chronological transcript, or null. The AI
-    /// runtime owns the on-disk message format, so we read it through its own
-    /// <c>GetConversationMessages</c> operation (joins multi-part text, and at
-    /// <see cref="AiConversationDetailLevel.Simple"/> returns only user + assistant-with-content)
-    /// instead of re-parsing the raw doc.</summary>
     public static async Task<ConversationDto?> GetConversationAsync(
         IDocumentStore store, string slug, string database, string conversationId, DateTime nowUtc, CancellationToken ct)
     {
-        // Only conversation docs are addressable here; reject other ids (e.g. the
-        // catch-all capturing "channels/x") so we don't read a non-conversation
-        // doc and return nonsense instead of 404 (review M5).
         if (conversationId.StartsWith(ConversationIdPrefix, StringComparison.Ordinal) == false)
             return null;
 
@@ -685,8 +566,6 @@ internal static class MetricsReadService
         if (result is null)
             return null;  // 404 — no such conversation
 
-        // Messages arrive oldest-first; MapTranscript drops blank/attachment-only turns and
-        // normalizes role + reply text without re-ordering.
         var transcript = MapTranscript(result.Messages);
 
         using var session = store.OpenAsyncSession(database);
@@ -706,10 +585,6 @@ internal static class MetricsReadService
             Utc(result.LastMessageAt), startedAt, MaxDuration: null);
     }
 
-    /// <summary>conversationId → channel display-name, for iframe conversations only,
-    /// reverse-mapped via <c>EmbedLink.ConversationId</c> → <c>WidgetId</c> →
-    /// <c>Channel.DisplayName</c>. Telegram/WhatsApp aren't implemented, so their
-    /// conversations have no mapping (channelName stays empty).</summary>
     private static async Task<Dictionary<string, string>> BuildConversationChannelMapAsync(
         IAsyncDocumentSession session, CancellationToken ct)
     {
@@ -742,7 +617,6 @@ internal static class MetricsReadService
             .Select(kv => new ConversationParam(kv.Key, kv.Value?.ToString() ?? ""))
             .ToArray();
 
-        // The full transcript stays detail-only; the list carries just the last-exchange preview.
         return new ConversationDto(
             doc.Id ?? "", slug, channelName, agentName, AgentInitials(agentName),
             prms, lastExchange, Transcript: null,
@@ -752,23 +626,14 @@ internal static class MetricsReadService
     private static string State(TimeSpan age) =>
         age < TimeSpan.FromHours(1) ? "active" : age < TimeSpan.FromHours(24) ? "idle" : "closed";
 
-    // The UI labels the assistant "agent"; these are the FE wire-contract values, not the enum
-    // names (nameof would yield "Assistant"/"User" and break the contract + the FE).
     private static string RoleLabel(AiMessageRole role) => role == AiMessageRole.Assistant ? "agent" : "user";
 
-    // Shared transcript projection: drop attachment-only/blank turns, normalize the role, and
-    // extract the reply text; DetailLevel.Simple already excludes system/tool + assistant-without-
-    // content, so chronological order is preserved. Shared by the conversation detail, the list's
-    // last-exchange preview, and the embed page's history.
     internal static ConversationTurn[] MapTranscript(IEnumerable<AiConversationMessage> messages) =>
         messages
             .Where(m => string.IsNullOrWhiteSpace(m.Content) == false)
             .Select(m => new ConversationTurn(RoleLabel(m.Role), ReplyText(m.Content), Utc(m.Timestamp)))
             .ToArray();
 
-    // AiConversationMessage.Content is already a string: plain text for user / plain-assistant
-    // turns, or the JSON of a structured reply ({"reply":…}) for schema-output agents. For the
-    // latter, surface the reply text; plain prose and scalars pass through unchanged.
     private static string ReplyText(string content)
     {
         try
@@ -796,9 +661,6 @@ internal static class MetricsReadService
         _ => "",
     };
 
-    // A content object is either an array-of-parts element ({type,text}) or the agent's
-    // structured reply ({reply:…} or a custom single-field reply). Prefer "text", then
-    // "reply", then the first non-empty string property so any reply shape surfaces.
     private static string ObjectText(JsonElement o)
     {
         if (o.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
@@ -819,8 +681,6 @@ internal static class MetricsReadService
         return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
     }
 
-    // List-row projection of an @conversations doc — metadata only (no Messages; the
-    // transcript is read on detail via the AI GetConversationMessages operation).
     private sealed class ConversationDoc
     {
         public string? Id { get; set; }
@@ -830,18 +690,12 @@ internal static class MetricsReadService
         public DateTime LastMessageAt { get; set; }
     }
 
-    /// <summary>Loads every registered app from the config DB by id prefix, paging
-    /// so installations with more than one page are fully returned.</summary>
     private static async Task<List<App>> LoadAllAppsAsync(IDocumentStore store, CancellationToken ct)
     {
         using var configSession = store.OpenAsyncSession();
         return await LoadAllByPrefixAsync<App>(configSession, AppIdPrefix, AppPageSize, ct);
     }
 
-    /// <summary>Loads every document whose id starts with <paramref name="prefix"/>, paging
-    /// until a partial page so result sets larger than one page are fully returned. A single
-    /// <c>LoadStartingWithAsync</c> call silently truncates at <paramref name="pageSize"/> —
-    /// every prefix-load in this service goes through here so that never happens.</summary>
     private static async Task<List<T>> LoadAllByPrefixAsync<T>(
         IAsyncDocumentSession session, string prefix, int pageSize, CancellationToken ct) where T : class
     {
@@ -859,8 +713,6 @@ internal static class MetricsReadService
         return all;
     }
 
-    // Normalize an outbound timestamp to UTC so System.Text.Json emits the Z designator
-    // (an Unspecified DateTime serializes without it → the browser parses it as local).
     private static DateTime Utc(DateTime d) => d.Kind switch
     {
         DateTimeKind.Utc => d,
@@ -868,10 +720,6 @@ internal static class MetricsReadService
         _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
     };
 
-    /// <summary>Runs <paramref name="body"/> for each app with bounded concurrency,
-    /// isolating per-app failures: a tenant whose DB is missing/offline/compacting is
-    /// logged and skipped so one bad tenant can't 500 a global fan-out endpoint
-    /// (review I2/I3). Returns only the successful results.</summary>
     private static async Task<List<T>> ForEachAppAsync<T>(
         IReadOnlyList<App> apps, ILogger? log, Func<App, Task<T>> body, CancellationToken ct)
     {
@@ -897,14 +745,9 @@ internal static class MetricsReadService
         return results.Where(r => r.Ok).Select(r => r.Value).ToList();
     }
 
-    // These index reads degrade to empty when the index isn't deployed on an app
-    // DB yet (provisioned before this feature, or a brief post-create window) — so the
-    // stats endpoints return empty windows instead of HTTP 500 (review SF3).
 
     /// <summary>Fetches every hour-bucket row (no time filter) for all-time totals.
     /// Intentionally unbounded: conversations carry an Expires TTL, so the reduced row
-    /// count stays small. No <c>.Take()</c> cap — a silent cap would under-count the
-    /// all-time aggregates rather than fail loudly (review M8).</summary>
     private static async Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
         IAsyncDocumentSession session, CancellationToken ct)
     {
@@ -917,7 +760,6 @@ internal static class MetricsReadService
         catch (IndexDoesNotExistException) { return []; }
     }
 
-    /// <summary>Fetches hour-bucket rows whose bucket falls within the half-open window [start, end).</summary>
     private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
         IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
     {
@@ -935,5 +777,5 @@ internal static class MetricsReadService
 
 }
 
-/// <summary>Per-agent rollup from the conversation index for the merged Agents table.</summary>
+
 internal sealed record AgentActivity(long Conversations, long Messages, long Tokens, DateTime? LastInvokedAt);

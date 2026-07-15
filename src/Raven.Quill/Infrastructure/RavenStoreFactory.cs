@@ -12,20 +12,9 @@ public static class RavenStoreFactory
 {
     public static IDocumentStore Create(ApplianceOptions options)
     {
-        // Specific paramName per field so the stack trace pinpoints the bad
-        // setting (vs. "options" which would just say "the whole options bag
-        // is wrong"). Belt-and-braces alongside the [Required] data-annotation
-        // checks that run on IOptions binding.
         ArgumentException.ThrowIfNullOrWhiteSpace(options.RavenUrl, nameof(ApplianceOptions.RavenUrl));
         ArgumentException.ThrowIfNullOrWhiteSpace(options.ConfigDatabase, nameof(ApplianceOptions.ConfigDatabase));
 
-        // Post-activation: A/settings.json carries the LE-bound PublicServerUrl
-        // (e.g. https://a.<slug>.myquill.ai — the real domain comes from the setup
-        // package at runtime) and the matching admin client cert sits at the package
-        // root. We connect via the public hostname (so the wildcard server cert
-        // validates) — *.<slug>.myquill.ai resolves to 127.0.0.1 via public DNS, no
-        // /etc/hosts hack needed — but on the loopback HTTPS port RavenDB now binds,
-        // since nginx owns :443 (see the port rewrite below).
         if (TryCreateSecureStore(options, out var secureStore))
             return secureStore;
 
@@ -55,21 +44,10 @@ public static class RavenStoreFactory
     {
         store = null!;
 
-        // A/settings.json being absent is the legit pre-activation pathway —
-        // RavenDB hasn't been configured yet, the activation screen is live,
-        // the unsecured loopback store in Create() carries us until the
-        // operator redeems the license. Return false → fall through.
         var settingsFile = Path.Combine(options.SetupPackagePath, "A", "settings.json");
         if (!File.Exists(settingsFile))
             return false;
 
-        // From here on, the setup package marker IS on disk. The appliance is
-        // secure-mode-only — RavenDB has been restarted into secure mode and
-        // is no longer listening on plain HTTP loopback, so any malformed-
-        // package failure below must fail loudly. Returning false would
-        // silently downgrade to the unsecured branch in Create() which
-        // points at RavenDB's now-defunct :8080, leaving the appliance
-        // permanently broken AND hiding the real cause.
         string? publicUrl;
         using (var stream = File.OpenRead(settingsFile))
         using (var doc = JsonDocument.Parse(stream))
@@ -92,11 +70,6 @@ public static class RavenStoreFactory
                 "Re-run activation with a valid setup package.");
         }
 
-        // Admin client cert sits at the package root (not under A/) so the
-        // operator can pull it out for portal access without rummaging through
-        // the per-node directory. Sorted-first cert pick keeps the choice
-        // deterministic across filesystems if a future package ever ships
-        // multiple admin PFXs (today there's always exactly one).
         var adminPfx = Directory.Exists(options.SetupPackagePath)
             ? Directory
                 .GetFiles(options.SetupPackagePath, "admin.client.certificate.*.pfx")
@@ -110,11 +83,6 @@ public static class RavenStoreFactory
                 "Re-run activation with a valid setup package.");
         }
 
-        // RavenDB's setup-wizard produces unprotected admin client PFXs by
-        // default; passing `default` (empty span) matches the loader's
-        // "no password" idiom. Wrap the load so a corrupt or password-
-        // protected PFX surfaces a focused error instead of a raw
-        // CryptographicException out of DI build.
         X509Certificate2 adminCert;
         try
         {
@@ -129,9 +97,6 @@ public static class RavenStoreFactory
                 ex);
         }
 
-        // nginx owns :443; RavenDB listens on the loopback internal port. Keep the wildcard-cert
-        // hostname (resolves to loopback), swap the port. DisableTopologyUpdates so this single-node
-        // store keeps the explicit URL and never adopts the advertised :443 PublicServerUrl (now nginx).
         var connectUrl = new UriBuilder(publicUrl) { Port = options.RavenInternalPort }.Uri.ToString().TrimEnd('/');
 
         var secured = new DocumentStore

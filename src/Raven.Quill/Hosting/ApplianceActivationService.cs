@@ -6,21 +6,6 @@ using Raven.Quill.AiHelper;
 
 namespace Raven.Quill.Hosting;
 
-/// <summary>
-/// First-run activation, driven at startup by the <c>QUILL_LICENSE_KEY</c> token (bound to
-/// <see cref="ApplianceOptions.LicenseToken"/>) — replaces the old operator-triggered
-/// <c>POST /api/bootstrap/redeem-license</c>. Retrieves the setup-package zip via
-/// <see cref="ILicenseClient"/> (the license API on api.ravendb.net; tests point it at an in-process
-/// mock), unpacks it into <see cref="ApplianceOptions.SetupPackagePath"/>, writes the
-/// admin-thumbprint marker, then
-/// either signals s6 to restart RavenDB into secure mode and exits the .NET host (container) or flips
-/// bootstrap to <see cref="BootstrapPhase.Ready"/> inline (unsupervised hosts / tests).
-/// </summary>
-/// <remarks>
-/// Idempotent across restarts: <see cref="IBootstrapState.TryMarkRedeeming"/> only wins from
-/// <see cref="BootstrapPhase.NeedsActivation"/>, so the post-restart start (where the setup package
-/// is already on disk and the phase is <see cref="BootstrapPhase.Restarting"/>) is a no-op here.
-/// </remarks>
 public sealed class ApplianceActivationService(
     IBootstrapState bootstrap,
     IOptions<ApplianceOptions> options,
@@ -32,9 +17,6 @@ public sealed class ApplianceActivationService(
     {
         var opts = options.Value;
 
-        // Nothing to activate without a token — skip without touching the bootstrap phase. Keeps
-        // unconfigured hosts (and tests that drive bootstrap manually) in their current phase instead
-        // of forcing them through a doomed network call.
         if (string.IsNullOrWhiteSpace(opts.LicenseToken))
         {
             logger.LogInformation(
@@ -42,8 +24,6 @@ public sealed class ApplianceActivationService(
             return;
         }
 
-        // Only the fresh start (NeedsActivation) activates; a post-restart start already has the setup
-        // package on disk (phase Restarting) and must not re-redeem.
         if (bootstrap.TryMarkRedeeming() == false)
         {
             logger.LogInformation(
@@ -61,8 +41,6 @@ public sealed class ApplianceActivationService(
                     await licenseClient.DownloadSetupPackageToAsync(opts.LicenseToken ?? string.Empty, tempFile, stoppingToken);
 
                 Directory.CreateDirectory(opts.SetupPackagePath);
-                // Zip Slip protection: ZipFile.ExtractToDirectory (net9+) resolves each entry against
-                // the target dir and throws if it escapes, so `../` / absolute entries are rejected.
                 ZipFile.ExtractToDirectory(tempZipPath, opts.SetupPackagePath, overwriteFiles: true);
             }
             finally
@@ -84,8 +62,6 @@ public sealed class ApplianceActivationService(
                 return;
             }
 
-            // Unsupervised host (tests / local dotnet run): no s6 to restart RavenDB or bring us back.
-            // Flip straight to Ready — the in-process store keeps talking to whatever RavenDB it has.
             bootstrap.MarkReady();
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -94,8 +70,6 @@ public sealed class ApplianceActivationService(
         }
         catch (InvalidDataException ex)
         {
-            // Corrupt / non-zip payload from the upstream — log detail, surface a generic reason
-            // (the /api/bootstrap/status surface is public).
             logger.LogWarning(ex, "Activation: setup package was not a valid zip.");
             bootstrap.MarkFailed("activation failed: the setup package was invalid");
         }
@@ -111,9 +85,6 @@ public sealed class ApplianceActivationService(
         }
     }
 
-    /// Persist the admin client cert's thumbprint next to the unpacked package so the s6
-    /// <c>01-ravendb</c> run script can export it as <c>RAVEN_Security_WellKnownCertificates_Admin</c>
-    /// before RavenDB starts. Computed here (we already have the cert handle) rather than via openssl.
     private void WriteAdminThumbprint(ApplianceOptions opts)
     {
         var adminPfx = Directory
@@ -130,20 +101,12 @@ public sealed class ApplianceActivationService(
             return;
         }
 
-        // Empty password matches the setup-wizard PFXs (the s6 scripts load them with `-passin pass:`).
         using var cert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: "");
         File.WriteAllText(Path.Combine(opts.SetupPackagePath, "admin-thumbprint"), cert.Thumbprint);
     }
 
     private void RestartIntoSecureMode(ApplianceOptions opts)
     {
-        // Container deployment: s6 supervises RavenDB + the web host. Kick RavenDB into secure mode
-        // and exit ourselves; s6 brings us back, and the second start wires the secure IDocumentStore
-        // against PublicServerUrl + the admin cert. Single-writer flow (guarded by TryMarkRedeeming);
-        // the CAS bool is discarded intentionally.
-        // Contract: a non-empty RavenDbS6Service means an s6-supervised host — that supervisor is what
-        // brings both processes back after StopApplication below. The unsupervised path keys off an empty
-        // RavenDbS6Service and never reaches here.
         bootstrap.TryMarkRestarting();
 
         try
@@ -156,8 +119,6 @@ public sealed class ApplianceActivationService(
         }
         catch (Exception ex)
         {
-            // s6-svc missing while RavenDbS6Service is set is a misconfiguration: nothing restarts the
-            // host after StopApplication below, so it strands. Log loud (Error, not Warning).
             logger.LogError(ex, "Could not signal s6 to restart RavenDB ({Service}); an s6 supervisor must restart the host.", opts.RavenDbS6Service);
         }
 

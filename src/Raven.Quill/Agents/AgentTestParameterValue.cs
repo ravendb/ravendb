@@ -3,10 +3,6 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Quill.Agents;
 
-/// <summary>
-/// Converts a System.Text.Json value from the appliance request to the blittable-compatible value
-/// RavenDB's agent endpoint expects.
-/// </summary>
 public static class AgentTestParameterValue
 {
     public static object? Convert(JsonElement? value) => value is null ? null : ToRavenJsonValue(value.Value);
