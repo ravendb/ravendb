@@ -18,9 +18,7 @@ export default function CompareExchangeInfoHub() {
                     <strong>Compare exchange</strong> items are cluster-wide key/value pairs that provide atomic,
                     interlocked compare-exchange operations across the database group.
                 </p>
-                <p className="mb-0">
-                    Their values are kept consistent database-wide via the Raft consensus algorithm.
-                </p>
+                <p className="mb-0">Their values are kept consistent database-wide via the Raft consensus algorithm.</p>
                 <hr />
                 <p>This view displays all compare exchange items.</p>
                 <ul>
@@ -42,8 +40,7 @@ export default function CompareExchangeInfoHub() {
                     <li>
                         <strong>&quot;Raft Index&quot;</strong> column:
                         <br />
-                        The version of the item, as set by the cluster consensus. This is used for concurrency
-                        control.
+                        The version of the item, as set by the cluster consensus. This is used for concurrency control.
                     </li>
                 </ul>
                 <p className="mb-0">

@@ -1,5 +1,4 @@
 import { AboutViewHeading } from "components/common/AboutView";
-import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -28,9 +27,8 @@ import router from "plugins/router";
 import useConfirm from "components/common/ConfirmDialog";
 import { useAsyncCallback } from "react-async-hook";
 import { useAppSelector } from "components/store";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
-import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
+import { AccessPopover } from "components/common/AccessPopover";
 
 type CompareExchangeListItem =
     Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem;
@@ -63,8 +61,7 @@ export default function CompareExchange() {
         reportEvent("cmpXchg", "delete");
 
         const itemsToDelete = isAllSelected
-            ? (await databasesService.getCompareExchangeItems(databaseName, keyFilterRef.current, 0, 2147483647))
-                  .items
+            ? (await databasesService.getCompareExchangeItems(databaseName, keyFilterRef.current, 0, 2147483647)).items
             : selectedRows;
 
         try {
@@ -120,28 +117,18 @@ export default function CompareExchange() {
 
     return (
         <div className="content-padding vstack h-100">
-            <HStack className="justify-content-between">
+            <div className="hstack justify-content-between">
                 <AboutViewHeading title="Compare Exchange" icon="cmp-xchg" />
                 <CompareExchangeInfoHub />
-            </HStack>
-            <HStack className="gap-2">
-                <ConditionalPopover
-                    conditions={{
-                        isActive: !canHandleOperation,
-                        message: getDatabaseAccessRequiredMessage(requiredAccess),
-                    }}
-                >
+            </div>
+            <div className="hstack gap-2">
+                <AccessPopover accessRequired={requiredAccess}>
                     <Button variant="primary" onClick={handleAddNewItem} disabled={!canHandleOperation}>
                         <Icon icon="plus" />
                         Add new item
                     </Button>
-                </ConditionalPopover>
-                <ConditionalPopover
-                    conditions={{
-                        isActive: !canHandleOperation,
-                        message: getDatabaseAccessRequiredMessage(requiredAccess),
-                    }}
-                >
+                </AccessPopover>
+                <AccessPopover accessRequired={requiredAccess}>
                     <ButtonWithSpinner
                         variant="danger"
                         icon="trash"
@@ -151,8 +138,8 @@ export default function CompareExchange() {
                     >
                         Delete{selectedRows.length > 0 && ` (${isAllSelected ? "all" : selectedRows.length})`}
                     </ButtonWithSpinner>
-                </ConditionalPopover>
-            </HStack>
+                </AccessPopover>
+            </div>
             <div className="flex-grow overflow-hidden mt-4">
                 <SizeGetter
                     render={(props) => (
