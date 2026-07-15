@@ -30,6 +30,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { useAppSelector } from "components/store";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 
 type CompareExchangeListItem =
     Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem;
@@ -93,9 +94,11 @@ export default function CompareExchange() {
                   confirmText: "Delete All",
               })
             : await confirm({
-                  title: `Delete ${selectedRows.length} compare exchange ${
-                      selectedRows.length === 1 ? "item" : "items"
-                  }?`,
+                  title: `Delete ${pluralizeHelpers.pluralize(
+                      selectedRows.length,
+                      "compare exchange item",
+                      "compare exchange items"
+                  )}?`,
                   message: (
                       <ul className="overflow-auto" style={{ maxHeight: "300px" }}>
                           {selectedRows.map((x) => (
@@ -169,7 +172,7 @@ export default function CompareExchange() {
     );
 }
 
-function CompareExchangeTable(props: {
+interface CompareExchangeTableProps {
     width: number;
     height: number;
     selectedRows: CompareExchangeListItem[];
@@ -178,7 +181,9 @@ function CompareExchangeTable(props: {
     setIsAllSelected: (value: boolean) => void;
     reloadRef: React.MutableRefObject<() => Promise<void>>;
     keyFilterRef: React.MutableRefObject<string>;
-}) {
+}
+
+function CompareExchangeTable(props: CompareExchangeTableProps) {
     const { databasesService } = useServices();
     const databaseName = useSelector(databaseSelectors.activeDatabaseName);
 
@@ -211,14 +216,14 @@ function CompareExchangeTable(props: {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dataArray]);
 
-    const columns = useCompareExchangeColumns(
-        props.width,
+    const columns = useCompareExchangeColumns({
+        width: props.width,
         dataArray,
-        props.selectedRows,
-        props.setSelectedRows,
-        props.isAllSelected,
-        props.setIsAllSelected
-    );
+        selectedRows: props.selectedRows,
+        setSelectedRows: props.setSelectedRows,
+        isAllSelected: props.isAllSelected,
+        setIsAllSelected: props.setIsAllSelected,
+    });
 
     const table = useReactTable({
         data: dataArray,
@@ -232,14 +237,23 @@ function CompareExchangeTable(props: {
     return <VirtualTable {...componentProps} heightInPx={props.height} table={table} />;
 }
 
-function useCompareExchangeColumns(
-    width: number,
-    dataArray: CompareExchangeListItem[],
-    selectedRows: CompareExchangeListItem[],
-    setSelectedRows: (rows: CompareExchangeListItem[]) => void,
-    isAllSelected: boolean,
-    setIsAllSelected: (value: boolean) => void
-): ColumnDef<CompareExchangeListItem>[] {
+interface UseCompareExchangeColumnsProps {
+    width: number;
+    dataArray: CompareExchangeListItem[];
+    selectedRows: CompareExchangeListItem[];
+    setSelectedRows: (rows: CompareExchangeListItem[]) => void;
+    isAllSelected: boolean;
+    setIsAllSelected: (value: boolean) => void;
+}
+
+function useCompareExchangeColumns({
+    width,
+    dataArray,
+    selectedRows,
+    setSelectedRows,
+    isAllSelected,
+    setIsAllSelected,
+}: UseCompareExchangeColumnsProps): ColumnDef<CompareExchangeListItem>[] {
     const databaseName = useSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseWriteAccess = useSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
 
