@@ -196,6 +196,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             Array.Fill(executingTasks, Task.CompletedTask);
             List<GenAiResultItem> itemsSentToModel = [];
 
+            var certificate = RavenServer.GetCertificateForAuthorization(Database.ServerStore.Server.Certificate.ClientCertificate);
+            var authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(certificate, $"GenAI access for '{Name}'");
+
             foreach (var item in items)
             {
                 statsScope.NumberOfContextObjects++;
@@ -216,8 +219,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 var agentConfiguration = CreateAgentConfiguration(context, item);
                 var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
-                    // GenAI task uses full access
-                    Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
+                    Authentication = authentication
                 };
 
                 handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
