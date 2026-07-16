@@ -63,6 +63,7 @@ public class QueryPlanGraphMatchCoverageTests : RavenTestBase
         "TermsProviderMatch",
         "BitmapMatch",
         "LazyOrMatch",
+        "BoostedSearchMatch",
         "PhraseMatch",
         "AllEntriesMatch",
     };

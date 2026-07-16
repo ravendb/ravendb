@@ -134,6 +134,33 @@ public partial class IndexSearcher
         };
     }
 
+    /// <summary>
+    /// When the field needs relevance scoring, a <c>search()</c> that reduces to plain terms must preserve per-document
+    /// BM25 instead of collapsing into a flat-scored <see cref="BitmapMatch"/> (RavenDB-26975): a single term returns the
+    /// scored <see cref="TermMatch"/> directly, and an OR of terms returns a <see cref="BoostedSearchMatch"/> that unions
+    /// them for Fill while summing their BM25 for Score. Anything richer - wildcards, exists, phrases - has already
+    /// accumulated into <paramref name="searchBitmap"/>, and AND-combined multi-term searches keep the bitmap path.
+    /// </summary>
+    private IQueryMatch TryBuildScoredSearch(in FieldMetadata field, List<Slice> termMatches, in BitmapMatch searchBitmap,
+        Constants.Search.Operator @operator, CancellationToken token)
+    {
+        if (field.HasBoost == false || searchBitmap.IsAllocated || termMatches is not { Count: >= 1 })
+            return null;
+
+        if (termMatches.Count == 1)
+            return TermQuery(field, termMatches[0]);
+
+        // Only an OR union has a well-defined "any term contributes" scoring here; AND keeps the bitmap path.
+        if (@operator != Constants.Search.Operator.Or)
+            return null;
+
+        var terms = new TermMatch[termMatches.Count];
+        for (int i = 0; i < termMatches.Count; i++)
+            terms[i] = TermQuery(field, termMatches[i]);
+
+        return new BoostedSearchMatch(Allocator, terms, token);
+    }
+
     /// <summary>Dispose temporaries and return the final search result.</summary>
     private IQueryMatch FinalizeSearchResult(ref BitmapMatch searchBitmap,
         ref Voron.Data.RoaringBitmaps.RoaringBitmap tempBitmapData)
@@ -206,6 +233,13 @@ public partial class IndexSearcher
                     CreateWildcardOrExistsQuery(field, termType, analyzedTerm, cancellationToken),
                     ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
             }
+        }
+
+        if (TryBuildScoredSearch(field, termMatches, in searchBitmap, @operator, cancellationToken) is { } scoredTerm)
+        {
+            wildcardAnalyzer?.Dispose();
+            tempBitmapData.Dispose();
+            return scoredTerm;
         }
 
         MergeTermMatches(termMatches, field, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
@@ -319,6 +353,13 @@ public partial class IndexSearcher
             AccumulatePhraseQuery(field, terms, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
         }
 
+        if (TryBuildScoredSearch(field, termMatches, in searchBitmap, @operator, cancellationToken) is { } scoredTerm)
+        {
+            wildcardAnalyzer?.Dispose();
+            tempBitmapData.Dispose();
+            return scoredTerm;
+        }
+
         MergeTermMatches(termMatches, field, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
         wildcardAnalyzer?.Dispose();
         return FinalizeSearchResult(ref searchBitmap, ref tempBitmapData);
@@ -410,6 +451,12 @@ public partial class IndexSearcher
 
             // Phrase query (wildcards are not supported in phrase queries)
             AccumulatePhraseQuery(field, terms, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
+        }
+
+        if (TryBuildScoredSearch(field, termMatches, in searchBitmap, @operator, cancellationToken) is { } scoredTerm)
+        {
+            tempBitmapData.Dispose();
+            return scoredTerm;
         }
 
         MergeTermMatches(termMatches, field, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
