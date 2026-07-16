@@ -1,5 +1,6 @@
 import {
     getDatabaseRecordTypes,
+    getDefaultFormData,
     toImportDto,
     hasAnyInclude,
     getItemsToWarnAbout,
@@ -7,92 +8,9 @@ import {
 } from "./importFromFileUtils";
 import { ImportFromFileFormData, importFromFileSchema, databaseSettingKeys } from "./importFromFileValidation";
 
-function createDefaultFormData(): ImportFromFileFormData {
-    // Same shape as useImportFromFileForm's getDefaultFormData(true) (admin access) — all
-    // toggles set per Knockout defaults (importDatabaseModel + smugglerDatabaseRecord).
-    return {
-        file: null,
-        documents: {
-            isIncludeDocuments: true,
-            isIncludeAttachments: true,
-            isIncludeCounters: true,
-            isIncludeRevisions: true,
-            isIncludeTimeSeries: true,
-            isIncludeTimeSeriesDeletedRanges: true,
-            isIncludeArtificialDocuments: false,
-            isIncludeArchivedDocuments: true,
-            isIncludeExpiredDocuments: true,
-            isIncludeConflicts: true,
-            isIncludeCompareExchange: true,
-            isIncludeLegacyAttachments: false,
-            isIncludeDocumentsTombstones: true,
-            isIncludeCompareExchangeTombstones: true,
-            isIncludeSubscriptions: true,
-        },
-        collections: {
-            isImportAllCollections: true,
-            includedCollections: [],
-        },
-        configuration: {
-            isIncludeIndexes: true,
-            isIncludeIndexHistory: false,
-            isRemoveAnalyzers: false,
-            isIncludeIdentities: true,
-            isIncludeConnectionStringsAndOngoingTasks: true,
-            isCustomizeOngoingTasks: false,
-            ongoingTasks: {
-                periodicBackups: true,
-                externalReplications: true,
-                ravenEtls: true,
-                sqlEtls: true,
-                snowflakeEtls: true,
-                olapEtls: true,
-                elasticSearchEtls: true,
-                queueEtls: true,
-                hubReplications: true,
-                sinkReplications: true,
-                embeddingsGeneration: true,
-                genAi: true,
-                cdcSinks: true,
-                aiAgents: true,
-                remoteAttachments: true,
-            },
-            connectionStrings: {
-                ravenConnectionStrings: true,
-                sqlConnectionStrings: true,
-                snowflakeConnectionStrings: true,
-                olapConnectionStrings: true,
-                elasticSearchConnectionStrings: true,
-                queueConnectionStrings: true,
-                aiConnectionStrings: true,
-            },
-            isImportAllSettings: true,
-            databaseSettings: {
-                settings: true,
-                conflictSolverConfig: true,
-                client: true,
-                revisions: true,
-                refresh: true,
-                expiration: true,
-                documentsCompression: true,
-                schemaValidation: true,
-                dataArchival: true,
-                timeSeries: true,
-                sorters: true,
-                analyzers: true,
-                postgreSqlIntegration: true,
-            },
-        },
-        processing: {
-            isUseTransformScript: false,
-            transformScript: "",
-            isSetMaxReadOpsPerSecond: false,
-            maxReadOpsPerSecond: null,
-            isEncrypted: false,
-            encryptionKey: "",
-        },
-    } as ImportFromFileFormData;
-}
+// Knockout defaults (importDatabaseModel + smugglerDatabaseRecord) with admin access — all
+// admin-gated toggles on.
+const createDefaultFormData = () => getDefaultFormData(true);
 
 function setAllDatabaseSettings(data: ImportFromFileFormData, value: boolean) {
     databaseSettingKeys.forEach((key) => {
