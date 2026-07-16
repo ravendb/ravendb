@@ -9,7 +9,9 @@ class importParent extends viewModelBase {
     context: shardingContext;
     
     view = require("views/database/tasks/importParent.html");
-    
+
+    importDataOptionsUrl = appUrl.forCurrentDatabase().importDataOptionsUrl;
+
     getView() {
         return this.view;
     }
