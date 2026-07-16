@@ -58,6 +58,9 @@ public static class WizardEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/provision", ProvisionAsync)
             .WithName("setup.provision")
+            .WithDescription("Creates the app. The slug (also the app's database name, used in public " +
+                             "embed URLs) derives from appName unless an explicit slug is supplied; either " +
+                             "is normalized to lowercase ASCII alphanumerics with hyphens. Duplicate slug => 409.")
             .Accepts<ProvisionRequest>("application/json")
             .Produces<ProvisionResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -268,10 +271,19 @@ public static class WizardEndpoints
         if (body is null || string.IsNullOrWhiteSpace(body.AppName))
             return Results.BadRequest(new ApiErrorResponse("appName is required"));
 
-        var slug = Slugifier.ToSlug(body.AppName);
+        var hasSlugOverride = string.IsNullOrWhiteSpace(body.Slug) == false;
+        var slug = Slugifier.ToSlug(hasSlugOverride ? body.Slug : body.AppName);
         if (string.IsNullOrEmpty(slug))
+            return Results.BadRequest(new ApiErrorResponse(hasSlugOverride
+                ? $"slug '{body.Slug}' has no ASCII alphanumeric characters; cannot derive slug."
+                : $"appName '{body.AppName}' has no ASCII alphanumeric characters; cannot derive slug."));
+
+        if (slug.Length > Slugifier.MaxLength)
             return Results.BadRequest(new ApiErrorResponse(
-                $"appName '{body.AppName}' has no ASCII alphanumeric characters; cannot derive slug."));
+                $"slug '{slug}' exceeds the maximum length of {Slugifier.MaxLength} characters"));
+
+        if (string.Equals(slug, store.Database, StringComparison.OrdinalIgnoreCase))
+            return Results.BadRequest(new ApiErrorResponse($"slug '{slug}' is reserved"));
 
         CdcSinkConfiguration cdcConfig;
         using (var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions { NoTracking = true }))

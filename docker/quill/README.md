@@ -151,10 +151,12 @@ In the appliance UI, run the wizard with your Northwind connection string (provi
 1. **Connect** — reachability check.
 2. **Discover** — lists `customers`, `orders`, `products`, … (`hasPermissionToSetup: true`).
 3. **Map** — accept the suggested Northwind mapping (demo mode → Customers / Orders / Products).
-4. **Provision** — give an app name (e.g. `northwind-demo`). Creates the per-app DB + CDC task and starts the
-   initial load (Customers 91 / Orders 830 / Products 77 mirror into RavenDB).
+4. **Provision** — give an app name (e.g. `Northwind Demo`). The slug is derived from it
+   (lowercased, hyphenated — `northwind-demo`); pass an optional explicit `slug` to override.
+   Creates the per-app DB + CDC task and starts the initial load (Customers 91 / Orders 830 /
+   Products 77 mirror into RavenDB).
 
-Note the **slug** (the app's database name). Verify the app exists (admin `/api/*` needs the API key —
+Note the **slug** (the app's database name; it also appears in public embed URLs). Verify the app exists (admin `/api/*` needs the API key —
 either the `X-Api-Key` header, as below, or the session cookie from the dashboard login):
 
 ```bash
@@ -202,6 +204,13 @@ curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/setup/c
   -H "Content-Type: application/json" \
   -d '{"type":"iframe","agentId":"product-catalog","allowedOrigins":[]}'
 #   -> {"widgetId":"wgt_..."}
+
+# (e) mint a per-user embed link for the channel (short-lived, invocation-capped)
+curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/embed-links \
+  -H "X-Api-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"widgetId":"wgt_...","ttlSeconds":3600,"maxInvocations":100}'
+#   -> {"token":"...","url":"https://public.<your-slug>.myquill.ai/apps/'$SLUG'/embed/<token>", ...}
 ```
 
 > The UI exposes the same steps (AI connection strings, agent Review form, channels) if you prefer clicking.
@@ -210,12 +219,13 @@ curl -sk -X POST https://dashboard.<your-slug>.myquill.ai/api/apps/$SLUG/setup/c
 
 ## 6. Chat
 
-Open **https://public.<your-slug>.myquill.ai/embed/<widgetId>** and chat — e.g. *"Do you have Chai?
-Price, stock, discontinued?"* or *"Search for products with 'lager' in the name."* Smoke-test from
-the CLI:
+Open the **`url` returned by the mint call** — `https://public.<your-slug>.myquill.ai/apps/<app-slug>/embed/<token>` —
+and chat — e.g. *"Do you have Chai? Price, stock, discontinued?"* or *"Search for products with
+'lager' in the name."* The token is the bearer credential: there is no static public widget URL,
+and links die at their TTL / invocation cap (or on revoke). Smoke-test from the CLI:
 
 ```bash
-curl -sk -N -X POST https://public.<your-slug>.myquill.ai/embed/<widgetId>/chat \
+curl -sk -N -X POST https://public.<your-slug>.myquill.ai/apps/<app-slug>/embed/<token>/chat \
   -H "Content-Type: application/json" -d '{"prompt":"Do you have Chai? Give its price and stock."}'
 # NDJSON: {"type":"chunk","text":"…"} … {"type":"done","answer":{"reply":"…"},"conversationId":"chats/…"}
 ```

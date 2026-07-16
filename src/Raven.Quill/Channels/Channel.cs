@@ -21,6 +21,4 @@ internal sealed class Channel
     public IFrameStyle? Style { get; set; }
 
     public string? CustomCss { get; set; }
-
-    public string? BindingId { get; set; }
 }

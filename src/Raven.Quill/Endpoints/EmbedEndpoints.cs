@@ -27,11 +27,11 @@ public static class EmbedEndpoints
 
     public static void Map(WebApplication app)
     {
-        app.MapGet("/embed/{token}", ServeEmbedPageAsync)
+        app.MapGet("/apps/{slug}/embed/{token}", ServeEmbedPageAsync)
             .WithName("embed.page")
             .ExcludeFromDescription();
 
-        app.MapPost("/embed/{token}/chat", StreamEmbedChatAsync)
+        app.MapPost("/apps/{slug}/embed/{token}/chat", StreamEmbedChatAsync)
             .WithName("embed.chat")
             .Accepts<EmbedChatRequest>("application/json")
             .RequireRateLimiting(ChatRateLimitPolicy)
@@ -39,13 +39,14 @@ public static class EmbedEndpoints
     }
 
     private static async Task ServeEmbedPageAsync(
+        string slug,
         string token,
         IDocumentStore store,
         HttpContext ctx)
     {
         var ct = ctx.RequestAborted;
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveStyle: true, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveStyle: true, ct);
         if (resolved is null)
             return;
 
@@ -67,10 +68,11 @@ public static class EmbedEndpoints
         var historyJson = await BuildHistoryJsonAsync(store, app.Database, link.ConversationId, ct);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
-        await ctx.Response.WriteAsync(BuildEmbedHtml(token, channel.DisplayName, style, historyJson), ct);
+        await ctx.Response.WriteAsync(BuildEmbedHtml(app.Slug, token, channel.DisplayName, style, historyJson), ct);
     }
 
     private static async Task StreamEmbedChatAsync(
+        string slug,
         string token,
         EmbedChatRequest body,
         IDocumentStore store,
@@ -87,7 +89,7 @@ public static class EmbedEndpoints
             return;
         }
 
-        var resolved = await TryResolveLiveLinkAsync(ctx, store, token, resolveStyle: false, ct);
+        var resolved = await TryResolveLiveLinkAsync(ctx, store, slug, token, resolveStyle: false, ct);
         if (resolved is null)
             return;
 
@@ -259,7 +261,7 @@ public static class EmbedEndpoints
     }
 
     private static async Task<(App app, EmbedLink link, Channel channel, ResolvedIFrameStyle style)?> TryResolveLiveLinkAsync(
-        HttpContext ctx, IDocumentStore store, string token, bool resolveStyle, CancellationToken ct)
+        HttpContext ctx, IDocumentStore store, string slug, string token, bool resolveStyle, CancellationToken ct)
     {
         if (EmbedLink.IsWellFormedToken(token) == false)
         {
@@ -267,7 +269,13 @@ public static class EmbedEndpoints
             return null;
         }
 
-        var resolved = await ResolveAsync(store, token, resolveStyle, ct);
+        if (Slugifier.IsWellFormed(slug) == false)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return null;
+        }
+
+        var resolved = await ResolveAsync(store, slug, token, resolveStyle, ct);
         if (resolved is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -286,17 +294,11 @@ public static class EmbedEndpoints
     }
 
     private static async Task<(App app, EmbedLink link, Channel channel, ResolvedIFrameStyle style)?> ResolveAsync(
-        IDocumentStore store, string token, bool resolveStyle, CancellationToken ct)
+        IDocumentStore store, string slug, string token, bool resolveStyle, CancellationToken ct)
     {
         App? app;
         using (var cfg = store.OpenAsyncSession())
-        {
-            var index = await cfg.LoadAsync<LinkIndex>(LinkIndex.IdPrefix + token, ct);
-            if (string.IsNullOrEmpty(index?.Slug))
-                return null;
-
-            app = await cfg.LoadAsync<App>($"apps/{index.Slug}", ct);
-        }
+            app = await cfg.LoadAsync<App>($"apps/{slug}", ct);
 
         if (app is null)
             return null;
@@ -327,11 +329,12 @@ public static class EmbedEndpoints
         return (app, link, channel, style);
     }
 
-    private static string BuildEmbedHtml(string token, string displayName, ResolvedIFrameStyle style, string historyJson)
+    private static string BuildEmbedHtml(string slug, string token, string displayName, ResolvedIFrameStyle style, string historyJson)
     {
         var title = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(displayName) ? "AI Assistant" : displayName);
         // substitute trusted placeholders first so the token can't leak into title/history
         return EmbedHtmlTemplate
+            .Replace("__SLUG__", slug)
             .Replace("__TOKEN__", token)
             .Replace("__BASE_CSS__", BuildWidgetBaseCss(style.Style))
             .Replace("__CUSTOM_CSS__", IFrameCss.Sanitize(style.CustomCss))
@@ -411,7 +414,7 @@ public static class EmbedEndpoints
                                                </form>
                                              </div>
                                              <script>
-                                             const token = "__TOKEN__";
+                                             const chatUrl = "/apps/__SLUG__/embed/__TOKEN__/chat";
                                              const feed = document.getElementById("ai-chat-feed");
                                              const form = document.getElementById("ai-chat-form");
                                              const input = document.getElementById("ai-chat-input");
@@ -435,7 +438,7 @@ public static class EmbedEndpoints
                                                addRow("user", prompt);
                                                const agentRow = addRow("agent", "");
                                                try {
-                                                 const resp = await fetch(`/embed/${token}/chat`, {
+                                                 const resp = await fetch(chatUrl, {
                                                    method: "POST",
                                                    headers: { "Content-Type": "application/json" },
                                                    body: JSON.stringify({ prompt })

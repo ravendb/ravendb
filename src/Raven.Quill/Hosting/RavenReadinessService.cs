@@ -42,8 +42,6 @@ public sealed class RavenReadinessService(
                 "RavenDB ready at {Url}; config database {Database} {Action}.",
                 opts.RavenUrl, opts.ConfigDatabase, created ? "created" : "already present");
 
-            await AppDatabaseFeatures.EnableExpirationAsync(store, opts.ConfigDatabase, stoppingToken);
-
             ready.MarkReady();
 
             // flip bootstrap Ready only from the post-restart secure start (don't clobber activation)

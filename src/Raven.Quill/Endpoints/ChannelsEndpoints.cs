@@ -1,9 +1,5 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -106,83 +102,41 @@ public static class ChannelsEndpoints
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
-        var bindingId = $"channel-bindings/{app.Slug}/{ChannelType.IFrame}/{config.Identifier}";
+        using var session = store.OpenAsyncSession(app.Database);
 
-        using (var session = store.OpenAsyncSession(app.Database))
+        var channels = await LoadAllChannelsAsync(session, ct);
+        var existing = channels.FirstOrDefault(c =>
+            c.Type == ChannelType.IFrame &&
+            string.Equals(c.AgentId, config.Identifier, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
         {
-            var existing = await session.LoadAsync<ChannelBinding>(bindingId, ct);
-            if (existing is not null)
-            {
-                logger.LogInformation(
-                    "Channel binding already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
-                    app.Slug, config.Identifier, existing.WidgetId);
-                return Results.Ok(new ProvisionChannelResponse(existing.WidgetId, Existing: true));
-            }
+            var existingWidgetId = existing.Id!.Substring(Channel.IdPrefix.Length);
+            logger.LogInformation(
+                "iFrame channel already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
+                app.Slug, config.Identifier, existingWidgetId);
+            return Results.Ok(new ProvisionChannelResponse(existingWidgetId, Existing: true));
         }
 
         var widgetId = "wgt_" + Guid.NewGuid().ToString("N");
-        var channelDocId = Channel.IdPrefix + widgetId;
 
-        // (slug,type,agentId) uniqueness via a cluster-wide atomic guard
-        try
+        await session.StoreAsync(new Channel
         {
-            using var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
-            {
-                Database = app.Database,
-                TransactionMode = TransactionMode.ClusterWide,
-            });
+            Id = Channel.IdPrefix + widgetId,
+            Type = ChannelType.IFrame,
+            DisplayName = body.DisplayName ?? ChannelType.IFrame.ToString(),
+            AgentId = config.Identifier,
+            AllowedOrigins = origins,
+            Enabled = true,
+            CreatedAt = DateTime.UtcNow,
+        }, ct);
 
-            await session.StoreAsync(new ChannelBinding
-            {
-                Id = bindingId,
-                WidgetId = widgetId,
-                CreatedAt = DateTime.UtcNow,
-            }, ct);
+        await session.SaveChangesAsync(ct);
 
-            await session.StoreAsync(new Channel
-            {
-                Id = channelDocId,
-                Type = ChannelType.IFrame,
-                DisplayName = body.DisplayName ?? ChannelType.IFrame.ToString(),
-                AgentId = config.Identifier,
-                AllowedOrigins = origins,
-                Enabled = true,
-                CreatedAt = DateTime.UtcNow,
-                BindingId = bindingId,
-            }, ct);
+        logger.LogInformation(
+            "Provisioned iFrame channel slug={Slug} widgetId={WidgetId} agentId={AgentId}",
+            app.Slug, widgetId, config.Identifier);
 
-            await session.SaveChangesAsync(ct);
-
-            logger.LogInformation(
-                "Provisioned iFrame channel slug={Slug} widgetId={WidgetId} agentId={AgentId}",
-                app.Slug, widgetId, config.Identifier);
-
-            return Results.Ok(new ProvisionChannelResponse(widgetId));
-        }
-        // race loser: read the winner's binding armed with its index, no polling
-        catch (ClusterTransactionConcurrencyException e)
-        {
-            var winnerIndex = e.ConcurrencyViolations is { Length: > 0 }
-                ? e.ConcurrencyViolations.Max(v => v.Actual)
-                : 0;
-            if (winnerIndex > 0)
-                ((global::Raven.Client.Documents.DocumentStoreBase)store).SetLastTransactionIndex(app.Database, winnerIndex);
-
-            ChannelBinding? winner;
-            using (var session = store.OpenAsyncSession(app.Database))
-                winner = await session.LoadAsync<ChannelBinding>(bindingId, ct);
-
-            if (winner is null)
-            {
-                throw new InvalidOperationException(
-                    $"ClusterTransactionConcurrencyException fired for '{bindingId}' but the binding doc never became visible after waiting for cluster-tx index {winnerIndex}.");
-            }
-
-            logger.LogInformation(
-                "Lost race for binding slug={Slug} agentId={AgentId}; returning winner's widgetId={WidgetId}",
-                app.Slug, config.Identifier, winner.WidgetId);
-            return Results.Ok(new ProvisionChannelResponse(winner.WidgetId, Existing: true));
-        }
+        return Results.Ok(new ProvisionChannelResponse(widgetId));
     }
 
     private static IResult ProvisionTelegramAsync() => NotImplementedChannel(ChannelType.Telegram);
@@ -200,18 +154,7 @@ public static class ChannelsEndpoints
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
         using var session = store.OpenAsyncSession(app.Database);
-
-        // LoadStartingWith: immediately consistent, no post-create index wait; page fully
-        const int pageSize = 1024;
-        var channels = new List<Channel>();
-        for (var start = 0;; start += pageSize)
-        {
-            var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
-                Channel.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
-            channels.AddRange(page);
-            if (page.Length < pageSize)
-                break;
-        }
+        var channels = await LoadAllChannelsAsync(session, ct);
 
         var items = channels
             .OrderByDescending(c => c.CreatedAt)
@@ -326,26 +269,9 @@ public static class ChannelsEndpoints
         ILogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
-        var channelDocId = Channel.IdPrefix + channelId;
-
-        using (var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
-               {
-                   Database = app.Database,
-                   TransactionMode = TransactionMode.ClusterWide,
-               }))
+        using (var session = store.OpenAsyncSession(app.Database))
         {
-            var channel = await session.LoadAsync<Channel>(channelDocId, ct);
-            if (channel is not null)
-                session.Delete(channel);
-
-            // delete the binding too: clears the guard so the tuple can be re-provisioned
-            if (channel is not null && string.IsNullOrEmpty(channel.BindingId) == false)
-            {
-                var binding = await session.LoadAsync<ChannelBinding>(channel.BindingId, ct);
-                if (binding is not null)
-                    session.Delete(binding);
-            }
-
+            session.Delete(Channel.IdPrefix + channelId);
             await session.SaveChangesAsync(ct);
         }
 
@@ -357,6 +283,23 @@ public static class ChannelsEndpoints
 
     private static IResult DeleteWhatsAppChannelAsync() => NotImplementedChannel(ChannelType.WhatsApp);
 
+
+    // LoadStartingWith: immediately consistent, no post-create index wait; page fully
+    private static async Task<List<Channel>> LoadAllChannelsAsync(IAsyncDocumentSession session, CancellationToken ct)
+    {
+        const int pageSize = 1024;
+        var channels = new List<Channel>();
+        for (var start = 0;; start += pageSize)
+        {
+            var page = (await session.Advanced.LoadStartingWithAsync<Channel>(
+                Channel.IdPrefix, start: start, pageSize: pageSize, token: ct)).ToArray();
+            channels.AddRange(page);
+            if (page.Length < pageSize)
+                break;
+        }
+
+        return channels;
+    }
 
     private static IResult NotImplementedChannel(ChannelType type) =>
         Results.Problem(
