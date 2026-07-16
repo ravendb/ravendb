@@ -331,7 +331,7 @@ export function buildImportCurlCommand(
     }
 }
 
-export function getItemsToWarnAbout(formData: ImportFromFileFormData): string[] {
+export function getItemsToWarnAbout(formData: Pick<ImportFromFileFormData, "documents">): string[] {
     const d = formData.documents;
     if (d.isIncludeDocuments) {
         return [];
