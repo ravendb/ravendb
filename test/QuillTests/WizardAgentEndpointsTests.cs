@@ -585,12 +585,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_reprovision_with_different_payload_returns_existing_and_keeps_stored_values()
+    public async Task Channel_repeated_provision_creates_distinct_channels()
     {
-        // M2 (review 2026-06-04): provision is create-only. Re-running it for an
-        // existing (slug, type, agent) with different origins/displayName returns
-        // the existing widgetId, surfaces existing=true, and applies nothing —
-        // edits go through PUT /channels/{id}.
         var store = GetDocumentStore();
         var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
         using var _ = perAppDbCleanup;
@@ -601,58 +597,28 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         await ApplianceTestSeed.SeedMockAgentAsync(client);
 
         var first = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel",
-            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" }, displayName = "Original" });
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://site-a.example" }, displayName = "Site A" });
         Assert.True(first.IsSuccessStatusCode, await first.Content.ReadAsStringAsync());
-        var firstJson = await first.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(firstJson.GetProperty("existing").GetBoolean());
-        var widgetId = firstJson.GetProperty("widgetId").GetString();
+        var widgetId1 = (await first.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
 
         var second = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel",
-            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "https://changed.example.com" }, displayName = "Changed" });
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://site-b.example" }, displayName = "Site B" });
         Assert.True(second.IsSuccessStatusCode, await second.Content.ReadAsStringAsync());
-        var secondJson = await second.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(widgetId, secondJson.GetProperty("widgetId").GetString());
-        Assert.True(secondJson.GetProperty("existing").GetBoolean());
+        var widgetId2 = (await second.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
 
-        // The differing payload was discarded, not applied.
-        using var session = store.OpenAsyncSession(perAppDb);
-        var channel = await session.LoadAsync<Channel>($"channels/{widgetId}");
-        Assert.NotNull(channel);
-        Assert.Equal("Original", channel!.DisplayName);
-        Assert.Equal(new[] { "http://localhost" }, channel.AllowedOrigins);
-    }
+        Assert.NotEqual(widgetId1, widgetId2);
 
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_endpoint_returns_same_widgetId_for_repeated_calls()
-    {
-        // M3: idempotency. Two POSTs with the same body must return the same
-        // widgetId — operator double-click / client retry should not create
-        // orphan channel docs.
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        await ApplianceTestSeed.SeedMockAgentAsync(client);
-
-        var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
-
-        var resp1 = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel", body);
-        Assert.True(resp1.IsSuccessStatusCode, await resp1.Content.ReadAsStringAsync());
-        var widgetId1 = (await resp1.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
-
-        var resp2 = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel", body);
-        Assert.True(resp2.IsSuccessStatusCode, await resp2.Content.ReadAsStringAsync());
-        var widgetId2 = (await resp2.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
-
-        Assert.Equal(widgetId1, widgetId2);
-
-        // And only one channel doc in the per-app DB.
         using var session = store.OpenAsyncSession(perAppDb);
         var channels = await session.Advanced.LoadStartingWithAsync<Channel>("channels/");
-        Assert.Single(channels);
+        Assert.Equal(2, channels.Count());
+
+        var channelA = await session.LoadAsync<Channel>($"channels/{widgetId1}");
+        Assert.Equal("Site A", channelA.DisplayName);
+        Assert.Equal(new[] { "http://site-a.example" }, channelA.AllowedOrigins);
+
+        var channelB = await session.LoadAsync<Channel>($"channels/{widgetId2}");
+        Assert.Equal("Site B", channelB.DisplayName);
+        Assert.Equal(new[] { "http://site-b.example" }, channelB.AllowedOrigins);
     }
 
     [RavenTheory(RavenTestCategory.Quill)]

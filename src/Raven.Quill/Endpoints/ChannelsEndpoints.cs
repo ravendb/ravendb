@@ -24,9 +24,9 @@ public static class ChannelsEndpoints
                 "Registers a channel for the app. allowedOrigins is required; entries are " +
                 "normalized to scheme://authority (max 32). An explicit empty list is the " +
                 "opt-in contract: the embed page emits no CSP frame-ancestors header and is " +
-                "embeddable from any site. Provision is create-only: when the (type, agent) " +
-                "channel already exists the response carries existing=true and the request's " +
-                "allowedOrigins/displayName are NOT applied — edit via PUT /channels/{id}.")
+                "embeddable from any site. Each POST creates a new channel; multiple channels " +
+                "may target the same agent (e.g. different sites, origins, or themes). " +
+                "Edit via PUT /channels/{id}, remove via DELETE /channels/{id}.")
             .Accepts<ProvisionChannelRequest>("application/json")
             .Produces<ProvisionChannelResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -103,19 +103,6 @@ public static class ChannelsEndpoints
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
         using var session = store.OpenAsyncSession(app.Database);
-
-        var channels = await LoadAllChannelsAsync(session, ct);
-        var existing = channels.FirstOrDefault(c =>
-            c.Type == ChannelType.IFrame &&
-            string.Equals(c.AgentId, config.Identifier, StringComparison.OrdinalIgnoreCase));
-        if (existing is not null)
-        {
-            var existingWidgetId = existing.Id!.Substring(Channel.IdPrefix.Length);
-            logger.LogInformation(
-                "iFrame channel already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
-                app.Slug, config.Identifier, existingWidgetId);
-            return Results.Ok(new ProvisionChannelResponse(existingWidgetId, Existing: true));
-        }
 
         var widgetId = "wgt_" + Guid.NewGuid().ToString("N");
 
