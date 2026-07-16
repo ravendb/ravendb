@@ -71,7 +71,7 @@ public class AiAgentErrors : RavenTestBase
         // Raven.Client.Exceptions.InvalidQueryException: Parameter value '["Shahar"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported
         // Query: from 'Customers' where Name == $name
         // Parameters: {"name":["Shahar"]}
-        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<QueryToolFailedException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         Assert.Contains("Parameter value '[\"Shahar\"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported", e.Message);
     }
@@ -142,7 +142,7 @@ public class AiAgentErrors : RavenTestBase
 
         // Raven.Client.Exceptions.RavenException: System.ArgumentException: The field 'Name1' is not indexed in 'Customers/ByName',
 
-        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<QueryToolFailedException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         Assert.Contains("The field 'Name1' is not indexed in 'Customers/ByName'", e.Message);
     }
