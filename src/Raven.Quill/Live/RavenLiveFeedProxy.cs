@@ -100,7 +100,6 @@ internal static class RavenLiveFeedProxy
                 var result = await upstream.ReceiveAsync(new ArraySegment<byte>(buffer), token);
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
-                    await browser.CloseAsync(WebSocketCloseStatus.NormalClosure, "upstream closed", token);
                     return;
                 }
 
