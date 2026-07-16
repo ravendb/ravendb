@@ -17,6 +17,7 @@ require("prismjs/components/prism-csharp");
 require("prismjs/components/prism-json");
 require("prismjs/components/prism-sql");
 require("prismjs/components/prism-python");
+require("prismjs/components/prism-java");
 
 export const supportedCodeLanguages = [
     "plaintext",
