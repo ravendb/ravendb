@@ -194,6 +194,16 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(ordersCount >= 800,
             $"expected >=800 Orders after initial load, got {ordersCount}");
 
+        var perf = await WaitForPopulatedCdcPerformanceAsync(client, slug!, timeoutMs: 30_000);
+        Assert.True(perf.GetProperty("enabled").GetBoolean(),
+            "cdc performance should report enabled after provisioning");
+        Assert.True(perf.GetProperty("recentBatches").GetArrayLength() > 0,
+            "expected at least one recent CDC batch after the initial load");
+        Assert.True(perf.GetProperty("recentWrites").GetInt64() > 0,
+            $"expected recentWrites>0 from the mirrored dump; got {perf.GetProperty("recentWrites").GetInt64()}");
+        // A sink that just ingested cleanly is active or idle — never error.
+        Assert.NotEqual("error", perf.GetProperty("status").GetString());
+
         // ---------- T11a. Create the AI connection string ----------
         // Wizard step: operator picks "add new" on the LLM step and submits
         // their LLM details (provider, endpoint, model, api key). OpenAI here
@@ -361,6 +371,22 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
     /// The base helper resolves the in-process DocumentDatabase from the store's
     /// default DB; we need to target the per-app DB Provision just created.
     /// </summary>
+    private static async Task<JsonElement> WaitForPopulatedCdcPerformanceAsync(HttpClient client, string slug, int timeoutMs)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        JsonElement perf;
+        do
+        {
+            perf = await client.GetFromJsonAsync<JsonElement>($"/api/apps/{slug}/cdc/performance");
+            if (perf.GetProperty("recentBatches").GetArrayLength() > 0 &&
+                perf.GetProperty("recentWrites").GetInt64() > 0)
+                return perf;
+            await Task.Delay(500);
+        } while (sw.ElapsedMilliseconds < timeoutMs);
+
+        return perf;
+    }
+
     private async Task WaitForPerAppCdcInitialLoadAsync(IDocumentStore store, string perAppDatabase, string configName, int timeoutMs)
     {
         var db = await Databases.GetDocumentDatabaseInstanceFor(store, perAppDatabase);

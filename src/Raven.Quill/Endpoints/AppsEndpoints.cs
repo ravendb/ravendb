@@ -193,6 +193,11 @@ public static class AppsEndpoints
                 $"connection string '{aiCs.Name}' uses unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));
 
         body.Disabled = false;
+        body.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
+        {
+            MaxTokensBeforeSummarization = 256 * 1024, // max context window of gpt5.4-mini is 400k tokens
+            MaxTokensAfterSummarization = 4 * 1024
+        });
 
         logger.LogInformation(
             "Provisioning agent for app slug={Slug} name={Name} identifier={Identifier} cs={ConnectionStringName} queries={QueryCount}",
@@ -236,7 +241,7 @@ public static class AppsEndpoints
         var ct = ctx.RequestAborted;
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
-
+        
         if (app is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -252,7 +257,7 @@ public static class AppsEndpoints
         }
 
         using var browser = await ctx.WebSockets.AcceptWebSocketAsync();
-        await RavenLiveFeedProxy.RelayAsync(browser, store, app.Database, "cdc-sink/performance/live", ct);
+        await RavenLiveFeedProxy.RelayAsync(browser, store, app.Database, $"cdc-sink/performance/live?name={app.CdcTaskName}", ct);
     }
 
     private static async Task<IResult> CdcPerformanceAsync(
