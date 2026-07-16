@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -133,45 +134,27 @@ public class CdcSinkTableProcessor
     /// </summary>
     public List<CdcSinkLinkedTableConfig> LinkedTables { get; init; }
 
-    private readonly Queue<object[]> _valuesPool = new();
-
-    // Guards _valuesPool: streaming decode rents on a thread-pool continuation (Task.WhenAny
-    // in ProcessCdcStream) while the stream thread returns/clears pooled arrays, so all pool
-    // access must be serialized.
-    private readonly object _valuesPoolLock = new();
+    // ConcurrentQueue: streaming decode rents on a thread-pool continuation (Task.WhenAny in
+    // ProcessCdcStream) while the stream thread returns/releases arrays. Arrays are cleared on
+    // return, so pooled arrays never retain row references and are never mutated while pooled.
+    private readonly ConcurrentQueue<object[]> _valuesPool = new();
 
     public object[] RentValues()
     {
         var expectedLen = SourceColumnNames.Length;
-        lock (_valuesPoolLock)
+        while (_valuesPool.TryDequeue(out var arr))
         {
-            while (_valuesPool.TryDequeue(out var arr))
-            {
-                if (arr.Length == expectedLen)
-                    return arr;
-                // Discard stale array from before a schema change (wrong size)
-            }
+            if (arr.Length == expectedLen)
+                return arr;
+            // Discard stale array from before a schema change (wrong size)
         }
         return new object[expectedLen];
     }
 
     public void ReturnValues(object[] arr)
     {
-        lock (_valuesPoolLock)
-            _valuesPool.Enqueue(arr);
-    }
-
-    /// <summary>
-    /// Clears array contents to release references for GC, but keeps
-    /// the arrays in the pool for reuse on the next burst.
-    /// </summary>
-    public void ClearPoolArrays()
-    {
-        lock (_valuesPoolLock)
-        {
-            foreach (var arr in _valuesPool)
-                Array.Clear(arr, 0, arr.Length);
-        }
+        Array.Clear(arr, 0, arr.Length);
+        _valuesPool.Enqueue(arr);
     }
 
     /// <summary>
@@ -179,8 +162,7 @@ public class CdcSinkTableProcessor
     /// </summary>
     public void ClearPool()
     {
-        lock (_valuesPoolLock)
-            _valuesPool.Clear();
+        _valuesPool.Clear();
     }
 
     /// <summary>
@@ -195,10 +177,7 @@ public class CdcSinkTableProcessor
     public void SetSourceColumnNames(string[] names)
     {
         if (SourceColumnNames?.Length != names.Length)
-        {
-            lock (_valuesPoolLock)
-                _valuesPool.Clear();
-        }
+            _valuesPool.Clear();
 
         SourceColumnNames = names;
 
