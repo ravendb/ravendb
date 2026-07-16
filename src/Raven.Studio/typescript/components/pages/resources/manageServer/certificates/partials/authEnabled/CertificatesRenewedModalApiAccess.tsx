@@ -69,32 +69,16 @@ export default function CertificatesRenewedModalApiAccess() {
                             </Nav>
                             <Tab.Content className="p-2">
                                 <Tab.Pane eventKey="csharp">
-                                    <Code
-                                        language="csharp"
-                                        code={csharpSnippet(serverUrl, databaseName)}
-                                        elementToCopy={csharpSnippet(serverUrl, databaseName)}
-                                    />
+                                    <Code language="csharp" code={csharpSnippet(serverUrl, databaseName)} />
                                 </Tab.Pane>
                                 <Tab.Pane eventKey="java">
-                                    <Code
-                                        language="java"
-                                        code={javaSnippet(serverUrl, databaseName)}
-                                        elementToCopy={javaSnippet(serverUrl, databaseName)}
-                                    />
+                                    <Code language="java" code={javaSnippet(serverUrl, databaseName)} />
                                 </Tab.Pane>
                                 <Tab.Pane eventKey="nodejs">
-                                    <Code
-                                        language="javascript"
-                                        code={nodejsSnippet(serverUrl, databaseName)}
-                                        elementToCopy={nodejsSnippet(serverUrl, databaseName)}
-                                    />
+                                    <Code language="javascript" code={nodejsSnippet(serverUrl, databaseName)} />
                                 </Tab.Pane>
                                 <Tab.Pane eventKey="python">
-                                    <Code
-                                        language="python"
-                                        code={pythonSnippet(serverUrl, databaseName)}
-                                        elementToCopy={pythonSnippet(serverUrl, databaseName)}
-                                    />
+                                    <Code language="python" code={pythonSnippet(serverUrl, databaseName)} />
                                 </Tab.Pane>
                             </Tab.Content>
                         </div>

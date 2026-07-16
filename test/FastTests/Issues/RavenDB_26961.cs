@@ -4,7 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
+using ITestOutputHelper = Xunit.ITestOutputHelper;
 
 namespace FastTests.Issues
 {
