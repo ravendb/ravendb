@@ -186,6 +186,9 @@ class footer {
         stats.countOfIndexes(event.CountOfIndexes);
         stats.countOfStaleIndexes(event.CountOfStaleIndexes);
         stats.countOfIndexingErrors(event.CountOfIndexingErrors);
+        stats.countOfEtlTasksErrors(event.CountOfEtlTasksErrors);
+        stats.countOfAiTasksErrors(event.CountOfAiTasksErrors);
+        stats.countOfCdcSinkTasksErrors(event.CountOfCdcSinkTasksErrors);
     }
     
 }

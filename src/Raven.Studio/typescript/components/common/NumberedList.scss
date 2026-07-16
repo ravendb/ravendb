@@ -6,24 +6,25 @@
     margin: 0;
     padding: 0 !important;
     position: relative;
-
-    &::before {
-        content: "";
-        position: absolute;
-        left: sizes.$gutter-xs;
-        top: 0;
-        height: calc(100% - sizes.$gutter-md / 2);
-        width: 1px;
-        background-color: colors.$border-color-light-var;
-        height: calc(100% - sizes.$gutter-md / 2);
-        width: 1px;
-    }
 }
 
 .numbered-list-item {
     position: relative;
     margin-bottom: sizes.$gutter-sm;
     padding-left: sizes.$gutter-md;
+
+    // Vertical connector line between dots. Drawn on every item except the
+    // last, spanning from this item's dot down to the next item's dot, so the
+    // line never extends past the final number.
+    &:not(:last-of-type)::before {
+        content: "";
+        position: absolute;
+        left: sizes.$gutter-xs;
+        top: 0;
+        bottom: -#{sizes.$gutter-sm};
+        background-color: colors.$border-color-light-var;
+        width: 1px;
+    }
 
     &:last-of-type {
         margin-bottom: 0;

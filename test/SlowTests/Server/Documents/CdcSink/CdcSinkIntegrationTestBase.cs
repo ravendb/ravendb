@@ -102,6 +102,27 @@ namespace SlowTests.Server.Documents.CdcSink
             return tcs.Task;
         }
 
+        /// <summary>
+        /// Waits until the named CDC Sink process has faulted (a permanent configuration error that
+        /// stops retrying) and returns the exception that faulted it. Polls IsFaulted so it never races
+        /// the fault, unlike subscribing to ProcessError after the process has already started.
+        /// </summary>
+        protected async Task<Exception> WaitForProcessFaultAsync(IDocumentStore store, string configName, int timeoutMs = 60_000)
+        {
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == configName);
+                if (process is { IsFaulted: true })
+                    return process.LastProcessException;
+
+                await Task.Delay(250);
+            }
+
+            throw new TimeoutException($"CDC Sink '{configName}' did not fault within {timeoutMs}ms");
+        }
+
         protected async Task<T> WaitForDocumentAsync<T>(IDocumentStore store, string docId, int timeoutMs = 30_000)
             where T : class
         {

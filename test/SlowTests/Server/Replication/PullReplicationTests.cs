@@ -241,6 +241,15 @@ namespace SlowTests.Server.Replication
                 };
                 await AddWatcherToReplicationTopology(sink, pull, hub2.Urls);
 
+                await WaitForAssertionAsync(async () =>
+                {
+                    var sinkTask = (OngoingTaskPullReplicationAsSink)await GetTaskInfo(sink, pullTasks[0].TaskId, OngoingTaskType.PullReplicationAsSink);
+
+                    Assert.Equal(definitionName2, sinkTask.HubName);
+                    Assert.Equal(hub2.Database, sinkTask.DestinationDatabase);
+                    Assert.Equal(hub2.Urls[0], sinkTask.DestinationUrl);
+                }, TimeSpan.FromSeconds(5));
+
                 using (var main = hub.OpenSession())
                 {
                     main.Store(new User(), "hub1/2");

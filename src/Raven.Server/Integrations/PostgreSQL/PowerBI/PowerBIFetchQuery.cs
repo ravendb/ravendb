@@ -149,7 +149,16 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
                 // only when synthetic id+json are wanted (narrow projections must not pick them up) or
                 // when REPLACE() rewrites need its substitution machinery; const projections work on both
                 // paths, so a `1 as "c0"` marker alone doesn't force the wide path.
-                if (WantsPowerBISyntheticColumns(selectStmt) || allReplaces != null)
+                var wantsSyntheticColumns = WantsPowerBISyntheticColumns(selectStmt);
+
+                if (wantsSyntheticColumns
+                    && IsBareSelectStarProjection(selectStmt)
+                    && TryParseInnerSelectStmt(inner.InnerText, out var innerSelect))
+                {
+                    wantsSyntheticColumns = WantsPowerBISyntheticColumns(innerSelect);
+                }
+
+                if (wantsSyntheticColumns || allReplaces != null)
                 {
                     pgQuery = new PowerBIRqlQuery(newRql, parametersDataTypes, documentDatabase, allReplaces, limit: limit, constProjections: constProjections);
                 }
@@ -501,6 +510,41 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             }
 
             return false;
+        }
+
+        private static bool IsBareSelectStarProjection(SelectStmt selectStmt)
+        {
+            var targets = selectStmt?.TargetList;
+            if (targets == null || targets.Count == 0)
+                return true;
+
+            if (targets.Count != 1)
+                return false;
+
+            var fields = targets[0]?.ResTarget?.Val?.ColumnRef?.Fields;
+            return fields is { Count: 1 } && fields[0]?.AStar != null;
+        }
+
+        private static bool TryParseInnerSelectStmt(string innerText, out SelectStmt selectStmt)
+        {
+            selectStmt = null;
+
+            if (string.IsNullOrWhiteSpace(innerText))
+                return false;
+
+            try
+            {
+                var parseResult = SqlAstCache.GetOrParse(innerText);
+                if (parseResult.IsSuccess == false || parseResult.Value?.Stmts is not { Count: 1 })
+                    return false;
+
+                selectStmt = parseResult.Value.Stmts[0]?.Stmt?.SelectStmt;
+                return selectStmt != null;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool TryGetSimplePublicRangeVarSelect(string sql, out SelectStmt selectStmt)

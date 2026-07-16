@@ -219,25 +219,25 @@ namespace Raven.Server.Web.System
                     WriteGaugeWithHelp(writer, "Server license max CPU cores", "license_max_cores", serverMetrics.License.MaxCores);
                     
                     // ETLs
-                    WriteCounterWithHelp(writer, "Number of ETLs", "server_etls_count", serverMetrics.Etls.Count);
-                    WriteCounterWithHelp(writer, "Number of ETL errors", "server_etls_errors_count", serverMetrics.Etls.ErrorsCount);
-                    WriteCounterWithHelp(writer, "Number of healthy ETLs", "server_etls_healthy_count", serverMetrics.Etls.HealthyEtlsCount);
-                    WriteCounterWithHelp(writer, "Number of impaired ETLs", "server_etls_impaired_count", serverMetrics.Etls.ImpairedEtlsCount);
-                    WriteCounterWithHelp(writer, "Number of failed ETLs", "server_etls_failed_count", serverMetrics.Etls.FailedEtlsCount);
+                    WriteGaugeWithHelp(writer, "Number of ETLs", "server_etls_count", serverMetrics.Etls.Count);
+                    WriteGaugeWithHelp(writer, "Number of ETL errors", "server_etls_errors_count", serverMetrics.Etls.ErrorsCount);
+                    WriteGaugeWithHelp(writer, "Number of healthy ETLs", "server_etls_healthy_count", serverMetrics.Etls.HealthyEtlsCount);
+                    WriteGaugeWithHelp(writer, "Number of impaired ETLs", "server_etls_impaired_count", serverMetrics.Etls.ImpairedEtlsCount);
+                    WriteGaugeWithHelp(writer, "Number of failed ETLs", "server_etls_failed_count", serverMetrics.Etls.FailedEtlsCount);
 
                     // AI Tasks
-                    WriteCounterWithHelp(writer, "Number of AI tasks", "server_ai_tasks_count", serverMetrics.AiTasks.Count);
-                    WriteCounterWithHelp(writer, "Number of AI task errors", "server_ai_tasks_errors_count", serverMetrics.AiTasks.ErrorsCount);
-                    WriteCounterWithHelp(writer, "Number of healthy AI tasks", "server_ai_tasks_healthy_count", serverMetrics.AiTasks.HealthyTasksCount);
-                    WriteCounterWithHelp(writer, "Number of impaired AI tasks", "server_ai_tasks_impaired_count", serverMetrics.AiTasks.ImpairedTasksCount);
-                    WriteCounterWithHelp(writer, "Number of failed AI tasks", "server_ai_tasks_failed_count", serverMetrics.AiTasks.FailedTasksCount);
+                    WriteGaugeWithHelp(writer, "Number of AI tasks", "server_ai_tasks_count", serverMetrics.AiTasks.Count);
+                    WriteGaugeWithHelp(writer, "Number of AI task errors", "server_ai_tasks_errors_count", serverMetrics.AiTasks.ErrorsCount);
+                    WriteGaugeWithHelp(writer, "Number of healthy AI tasks", "server_ai_tasks_healthy_count", serverMetrics.AiTasks.HealthyTasksCount);
+                    WriteGaugeWithHelp(writer, "Number of impaired AI tasks", "server_ai_tasks_impaired_count", serverMetrics.AiTasks.ImpairedTasksCount);
+                    WriteGaugeWithHelp(writer, "Number of failed AI tasks", "server_ai_tasks_failed_count", serverMetrics.AiTasks.FailedTasksCount);
 
                     // CDC CdcSinks
-                    WriteCounterWithHelp(writer, "Number of CDC CdcSinks", "server_cdc_sinks_count", serverMetrics.CdcSinks.Count);
-                    WriteCounterWithHelp(writer, "Number of CDC Sink errors", "server_cdc_sinks_errors_count", serverMetrics.CdcSinks.ErrorsCount);
-                    WriteCounterWithHelp(writer, "Number of healthy CDC CdcSinks", "server_cdc_sinks_healthy_count", serverMetrics.CdcSinks.HealthyCdcSinksCount);
-                    WriteCounterWithHelp(writer, "Number of impaired CDC CdcSinks", "server_cdc_sinks_impaired_count", serverMetrics.CdcSinks.ImpairedCdcSinksCount);
-                    WriteCounterWithHelp(writer, "Number of failed CDC CdcSinks", "server_cdc_sinks_failed_count", serverMetrics.CdcSinks.FailedCdcSinksCount);
+                    WriteGaugeWithHelp(writer, "Number of CDC CdcSinks", "server_cdc_sinks_count", serverMetrics.CdcSinks.Count);
+                    WriteGaugeWithHelp(writer, "Number of CDC Sink errors", "server_cdc_sinks_errors_count", serverMetrics.CdcSinks.ErrorsCount);
+                    WriteGaugeWithHelp(writer, "Number of healthy CDC CdcSinks", "server_cdc_sinks_healthy_count", serverMetrics.CdcSinks.HealthyCdcSinksCount);
+                    WriteGaugeWithHelp(writer, "Number of impaired CDC CdcSinks", "server_cdc_sinks_impaired_count", serverMetrics.CdcSinks.ImpairedCdcSinksCount);
+                    WriteGaugeWithHelp(writer, "Number of failed CDC CdcSinks", "server_cdc_sinks_failed_count", serverMetrics.CdcSinks.FailedCdcSinksCount);
                 }
 
                 ms.Position = 0;

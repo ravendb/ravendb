@@ -3113,7 +3113,7 @@ function execute(doc, args){
             Acornima.Parser parser = new(new ParserOptions
             {
                 AllowReturnOutsideFunction = true,
-                OnNode = (node, context) => validator.Visit(node),
+                OnNode = (node, in _) => validator.Visit(node),
                 Tolerant = true
             });
             Script script = parser.ParseScript("return " + Query.SelectFunctionBody.FunctionText);

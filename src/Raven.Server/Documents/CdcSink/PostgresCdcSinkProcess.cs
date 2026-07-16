@@ -120,6 +120,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     {
         // in case of error, we'll re-learn the schema (it may have changed).
         _columnTypesCache.Clear();
+        _sourcePrimaryKeysCache = null;
+        _sourceUniqueKeysCache = null;
         _relationProcessors.Clear();
         _unconfiguredRelations.Clear();
         await EnsureReplicationSetup(ct);
@@ -414,7 +416,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
             CdcSinkConfiguration.ForEachEmbeddedTable(root.EmbeddedTables, e =>
             {
-                if (e.OnDelete?.IgnoreDeletes == true)
+                // Skip only when the delete is fully ignored. With an OnDelete.Patch the DELETE
+                // event is still processed, so it must carry the join columns for parent routing.
+                if (e.OnDelete?.IgnoreDeletes == true && e.OnDelete.Patch == null)
                     return;
 
                 foreach (var joinCol in e.JoinColumns)
@@ -758,8 +762,60 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
 
     private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
+    
+    // Unique (non-PK) indexes with each column's NOT NULL flag, from pg_catalog so both unique
+    // constraints and CREATE UNIQUE INDEX are covered. Partial/expression indexes are excluded (their
+    // columns don't define a plain keyset order). Columns: schema, table, index name, column, NOT NULL.
+    private const string SelectNotNullUniqueKeysQuery = """
+                                                        SELECT n.nspname, t.relname, i.relname, a.attname, a.attnotnull
+                                                        FROM pg_index ix
+                                                        JOIN pg_class i ON i.oid = ix.indexrelid
+                                                        JOIN pg_class t ON t.oid = ix.indrelid
+                                                        JOIN pg_namespace n ON n.oid = t.relnamespace
+                                                        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+                                                        WHERE ix.indisunique AND ix.indisprimary = false AND ix.indpred IS NULL AND ix.indexprs IS NULL
+                                                          AND t.relkind IN ('r', 'p')
+                                                        ORDER BY n.nspname, t.relname, i.relname, array_position(ix.indkey, a.attnum)
+                                                        """;
 
-    protected override async Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct)
+    private Dictionary<string, List<string>> _sourcePrimaryKeysCache;
+    private Dictionary<string, Dictionary<string, UniqueKeyAccumulator>> _sourceUniqueKeysCache;
+
+    protected override async Task<List<string>> ResolveInitialLoadKeyColumnsAsync(DbConnection conn, string schema, string table, CancellationToken ct)
+    {
+        if (_sourcePrimaryKeysCache == null)
+        {
+            var pks = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var uniques = new Dictionary<string, Dictionary<string, UniqueKeyAccumulator>>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var npgsqlConn = (NpgsqlConnection)conn;
+
+                await using (var cmd = new NpgsqlCommand(new NpgSqlSchemaQueries(new[] { schema }).SelectPrimaryKeysQuery, npgsqlConn))
+                await using (var reader = await cmd.ExecuteReaderAsync(ct))
+                    while (await reader.ReadAsync(ct))
+                        AddDiscoveredPrimaryKeyColumn(pks, reader.GetString(0), reader.GetString(1), reader.GetString(2));
+
+                await using (var cmd = new NpgsqlCommand(SelectNotNullUniqueKeysQuery, npgsqlConn))
+                await using (var reader = await cmd.ExecuteReaderAsync(ct))
+                    while (await reader.ReadAsync(ct))
+                        AddDiscoveredUniqueKeyColumn(uniques, reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetBoolean(4));
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"[{Name}] Failed to read keys from the source catalog; tables without a resolvable primary or NOT-NULL unique key will fault the initial load.", e);
+            }
+
+            _sourcePrimaryKeysCache = pks;
+            _sourceUniqueKeysCache = uniques;
+        }
+
+        var key = $"{schema}.{table}";
+        return ChooseInitialLoadKey(_sourcePrimaryKeysCache.GetValueOrDefault(key), _sourceUniqueKeysCache.GetValueOrDefault(key));
+    }
+
+    protected override async Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns, string[] lastKeys, CancellationToken ct)
     {
         var npgsqlCmd = (NpgsqlCommand)cmd;
 
@@ -773,9 +829,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             _columnTypesCache[tableInfo.FullName] = columnTypes;
         }
 
-        for (int i = 0; i < pkColumns.Count; i++)
+        for (int i = 0; i < keyColumns.Count; i++)
         {
-            var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "text"));
+            var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(keyColumns[i], "text"));
             npgsqlCmd.Parameters.AddWithValue($"k{i}", value);
         }
     }
