@@ -434,6 +434,7 @@ namespace Raven.Server.Documents
                 OnDatabaseRecordChanged(record);
 
                 SupportedFeatures = new SupportedFeature(record);
+                DocumentsStorage.PersistSupportedFeatures(record.SupportedFeatures);
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
