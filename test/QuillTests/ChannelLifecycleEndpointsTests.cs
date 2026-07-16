@@ -356,7 +356,6 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
         Assert.True(reResp.IsSuccessStatusCode, await reResp.Content.ReadAsStringAsync());
         var reJson = await reResp.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(reJson.GetProperty("existing").GetBoolean());
         Assert.NotEqual(widgetId, reJson.GetProperty("widgetId").GetString());
     }
 

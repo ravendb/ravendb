@@ -1,3 +1,3 @@
 namespace Raven.Quill.Contracts;
 
-public sealed record ProvisionChannelResponse(string WidgetId, bool Existing = false);
+public sealed record ProvisionChannelResponse(string WidgetId);
