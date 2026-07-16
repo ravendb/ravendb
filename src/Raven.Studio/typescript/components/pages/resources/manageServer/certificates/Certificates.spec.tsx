@@ -9,6 +9,10 @@ const { CertificatesStory } = composeStories(stories);
 const selectors = {
     authIsDisabledHeader: /Authentication is disabled/,
     renewNowButton: /Renew now/,
+    renewConfirmButton: /Renew certificate/,
+    renewedDialogTitle: /Your new certificate is ready/,
+    browserAccessTab: /Browser Access/,
+    apiAccessTab: /Application Access \(API\)/,
     renewalDate: "2025-01-15",
     editButtonTitle: /Edit certificate/,
     deleteButtonTitle: /Delete certificate/,
@@ -106,6 +110,22 @@ describe("Certificates", () => {
 
             expect(screen.queryByText(selectors.renewalDate)).not.toBeInTheDocument();
             expect(screen.queryByRole("button", { name: selectors.renewNowButton })).not.toBeInTheDocument();
+        });
+
+        it("opens the guidance dialog after renewing the server certificate", async () => {
+            const { screen, fireClick } = await rtlRender_WithWaitForLoad(
+                <CertificatesStory serverCertRenewalDate={selectors.renewalDate} serverCertSetupMode="LetsEncrypt" />
+            );
+
+            const renewButton = screen.getByRole("button", { name: selectors.renewNowButton });
+            await fireClick(renewButton);
+
+            const confirmButton = await screen.findByRole("button", { name: selectors.renewConfirmButton });
+            await fireClick(confirmButton);
+
+            expect(await screen.findByText(selectors.renewedDialogTitle)).toBeInTheDocument();
+            expect(screen.getByText(selectors.browserAccessTab)).toBeInTheDocument();
+            expect(screen.getByText(selectors.apiAccessTab)).toBeInTheDocument();
         });
     });
 

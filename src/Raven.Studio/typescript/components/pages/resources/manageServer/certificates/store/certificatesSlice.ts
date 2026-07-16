@@ -35,6 +35,7 @@ interface InitialState {
     isRegisterSsoUserModalOpen: boolean;
     ssoUserToEdit: CertificateItem;
     ssoUserToClone: CertificateItem;
+    isRenewedModalOpen: boolean;
 }
 
 const initialState: InitialState = {
@@ -62,6 +63,7 @@ const initialState: InitialState = {
     isRegisterSsoUserModalOpen: false,
     ssoUserToEdit: null,
     ssoUserToClone: null,
+    isRenewedModalOpen: false,
 };
 
 export const certificatesSlice = createSlice({
@@ -124,6 +126,9 @@ export const certificatesSlice = createSlice({
             state.ssoUserToClone = action.payload;
             state.ssoUserToEdit = null;
             state.isRegisterSsoUserModalOpen = true;
+        },
+        isRenewedModalOpenToggled: (state) => {
+            state.isRenewedModalOpen = !state.isRenewedModalOpen;
         },
     },
     extraReducers: (builder) => {

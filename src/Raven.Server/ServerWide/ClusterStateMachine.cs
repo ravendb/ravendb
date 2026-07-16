@@ -2528,8 +2528,17 @@ namespace Raven.Server.ServerWide
                 using (var cert = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     if (_clusterAuditLog.IsAuditEnabled)
-                        _clusterAuditLog.Audit($"Registering new certificate '{command.Value.Thumbprint}' in the cluster. Security Clearance: {command.Value.SecurityClearance}. " +
-                                              $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, command.Value.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+                    {
+                        // the same code path handles both the initial registration and later edits of a certificate,
+                        // so check whether the thumbprint already exists to word the audit line accordingly
+                        var alreadyExists = certs.ReadByKey(thumbprintSlice, out _);
+                        var action = alreadyExists ? "Updating" : "Registering new";
+                        var permissions = command.Value.Permissions is { Count: > 0 }
+                            ? $" Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, command.Value.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value))}"
+                            : string.Empty;
+
+                        _clusterAuditLog.Audit($"{action} certificate '{command.Value.Thumbprint}' in the cluster. Security Clearance: {command.Value.SecurityClearance}.{permissions}");
+                    }
 
                     UpdateCertificate(certs, thumbprintSlice, hashSlice, cert);
                     return;
