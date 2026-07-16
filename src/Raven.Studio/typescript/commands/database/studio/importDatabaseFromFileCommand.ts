@@ -30,7 +30,8 @@ class importDatabaseFromFileCommand extends commandBase {
 
         formData.append("file", this.file);
 
-        const isUploading = ko.observable<boolean>(false);
+        // must start true: getOptionsForImport's progress handler early-returns when !isUploading()
+        const isUploading = ko.observable<boolean>(true);
         const uploadStatus = ko.observable<number>(0);
         uploadStatus.subscribe((percent) => this.onUploadProgress(percent));
 
