@@ -88,6 +88,7 @@ namespace Raven.Server.Documents
         public static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
+        public static readonly Slice SupportedFeaturesSlice;
         private readonly Action<LogLevel, string> _addToInitLog;
 
         protected readonly RavenLogger _logger;
@@ -116,6 +117,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
+                Slice.From(ctx, "SupportedFeatures", ByteStringType.Immutable, out SupportedFeaturesSlice);
                 Slice.From(ctx, "FixCountersLastKeySlice", ByteStringType.Immutable, out FixCountersLastKeySlice);
 
             }
@@ -473,6 +475,32 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, fullChangeVector, out var slice))
             {
                 tree.Add(GlobalFullChangeVectorSlice, slice);
+            }
+        }
+
+        public static List<string> ReadSupportedFeatures(Transaction tx)
+        {
+            if (tx.ReadTree(GlobalTreeSlice).TryRead(SupportedFeaturesSlice, out var reader) == false || reader.Length == 0)
+                return [];
+
+            return Encodings.Utf8.GetString(reader.Base, reader.Length).Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        }
+
+        public void PersistSupportedFeatures(IReadOnlyList<string> features)
+        {
+            if (features == null || features.Count == 0)
+                return;
+
+            using (var tx = Environment.ReadTransaction())
+            {
+                if (tx.ReadTree(GlobalTreeSlice).TryRead(SupportedFeaturesSlice, out _))
+                    return;
+            }
+
+            using (var tx = Environment.WriteTransaction())
+            {
+                tx.ReadTree(GlobalTreeSlice).Add(SupportedFeaturesSlice, Encodings.Utf8.GetBytes(string.Join(",", features)));
+                tx.Commit();
             }
         }
 
