@@ -303,16 +303,6 @@ public class CdcSinkDocumentProcessor
     }
 
     /// <summary>
-    /// Clears the contents of pooled arrays (releases references for GC) but keeps
-    /// the arrays in the pool for reuse. Use when idle for a short period.
-    /// </summary>
-    public void ClearValuePoolArrays()
-    {
-        foreach (var (_, processor) in _tableIndex)
-            processor.ClearPoolArrays();
-    }
-
-    /// <summary>
     /// Releases all pooled arrays entirely. Use when idle for a longer period.
     /// </summary>
     public void ClearValuePools()
