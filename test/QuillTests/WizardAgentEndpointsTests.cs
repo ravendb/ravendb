@@ -585,61 +585,6 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_endpoint_returns_same_widgetId_under_concurrent_calls()
-    {
-        // C2 from Copilot review #4362803113: the previous query-then-put
-        // idempotency was only race-safe for *sequential* retries (an
-        // index-staleness scenario the M3 WaitForNonStaleResults handled).
-        // Two concurrent POSTs with the same (slug, type, agentId) could
-        // both miss the query and both store a fresh channels/{widgetId}
-        // — different widgetIds, identical binding tuple, duplicate
-        // channels routing to the same agent. The fix uses an atomic
-        // guard on a deterministic channel-bindings/{slug}/{type}/{agentId}
-        // doc id (Shape B from the planning doc): the cluster-wide tx
-        // serializes concurrent writers through Raft, the loser catches
-        // ClusterTransactionConcurrencyException, reads the winner's
-        // binding, and returns the same widgetId.
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        await ApplianceTestSeed.SeedMockAgentAsync(client);
-        var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
-
-        var tasks = Enumerable.Range(0, 10)
-            .Select(_ => client.PostAsJsonAsync("/api/apps/my-app/setup/channel", body))
-            .ToArray();
-        var responses = await Task.WhenAll(tasks);
-
-        var widgetIds = new HashSet<string>();
-        var freshCreates = 0;
-        foreach (var resp in responses)
-        {
-            Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-            widgetIds.Add(json.GetProperty("widgetId").GetString()!);
-            if (json.GetProperty("existing").GetBoolean() == false)
-                freshCreates++;
-        }
-
-        Assert.Single(widgetIds);
-        // Exactly one request actually created the channel; the rest surfaced
-        // existing=true (fast path or race-loser).
-        Assert.Equal(1, freshCreates);
-
-        // Query<> counts are index-backed and can read stale right after the
-        // concurrent writes — wait for indexing so the asserts can't flake.
-        Indexes.WaitForIndexing(store, perAppDb);
-
-        using var session = store.OpenAsyncSession(perAppDb);
-        Assert.Equal(1, await session.Query<Channel>().CountAsync());
-        Assert.Equal(1, await session.Query<ChannelBinding>().CountAsync());
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_reprovision_with_different_payload_returns_existing_and_keeps_stored_values()
     {
         // M2 (review 2026-06-04): provision is create-only. Re-running it for an
@@ -698,11 +643,6 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         Assert.True(resp1.IsSuccessStatusCode, await resp1.Content.ReadAsStringAsync());
         var widgetId1 = (await resp1.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
 
-        // Let the in-process auto-index catch up so the idempotency query on
-        // the server side sees the freshly-stored channel. Without this the
-        // second POST may read stale and create a second doc.
-        Indexes.WaitForIndexing(store, perAppDb);
-
         var resp2 = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel", body);
         Assert.True(resp2.IsSuccessStatusCode, await resp2.Content.ReadAsStringAsync());
         var widgetId2 = (await resp2.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
@@ -711,8 +651,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         // And only one channel doc in the per-app DB.
         using var session = store.OpenAsyncSession(perAppDb);
-        var count = await session.Query<Channel>().CountAsync();
-        Assert.Equal(1, count);
+        var channels = await session.Advanced.LoadStartingWithAsync<Channel>("channels/");
+        Assert.Single(channels);
     }
 
     [RavenTheory(RavenTestCategory.Quill)]
@@ -875,35 +815,6 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             });
 
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_carries_its_binding_id()
-    {
-        // The reverse direction (channel -> binding) is not derivable from
-        // in-doc fields: rebuilding the binding id needs the app slug, which
-        // lives on the App doc in the config DB, not in the per-app DB. Store
-        // BindingId on the Channel so the future delete-channel / Channels &
-        // Adapters tab can navigate back without a cross-DB lookup.
-        var store = GetDocumentStore();
-        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
-        using var _ = perAppDbCleanup;
-        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-        await ApplianceTestSeed.SeedMockAgentAsync(client);
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/setup/channel",
-            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
-        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
-
-        Indexes.WaitForIndexing(store, perAppDb);
-
-        using var session = store.OpenAsyncSession(perAppDb);
-        var channel = await session.Query<Channel>().FirstAsync();
-        Assert.Equal("channel-bindings/my-app/IFrame/demo-agent", channel.BindingId);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

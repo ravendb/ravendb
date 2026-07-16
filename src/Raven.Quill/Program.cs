@@ -258,7 +258,7 @@ StatsEndpoints.Map(app);
 SettingsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
-// map before MapSpaFallback or /embed/* is swallowed as index.html
+// map before MapSpaFallback or /apps/{slug}/embed/* is swallowed as index.html
 EmbedEndpoints.Map(app);
 StaticAssetEndpoints.MapSpaFallback(app);
 

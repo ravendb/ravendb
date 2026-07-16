@@ -20,7 +20,8 @@ public static class StaticAssetEndpoints
         app.MapFallback("{*path:nonfile}", async context =>
         {
             var path = context.Request.Path;
-            if (path.StartsWithSegments("/api") || path.StartsWithSegments("/healthz"))
+            if (path.StartsWithSegments("/api") || path.StartsWithSegments("/healthz") ||
+                path.StartsWithSegments("/embed") || IsAppsEmbedSubPath(path))
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
@@ -36,5 +37,13 @@ public static class StaticAssetEndpoints
             context.Response.ContentType = "text/html";
             await context.Response.SendFileAsync(indexFile, context.RequestAborted);
         });
+    }
+
+    private static bool IsAppsEmbedSubPath(PathString path)
+    {
+        var segments = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments is { Length: >= 3 } &&
+               string.Equals(segments[0], "apps", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[2], "embed", StringComparison.OrdinalIgnoreCase);
     }
 }

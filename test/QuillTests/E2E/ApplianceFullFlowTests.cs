@@ -159,14 +159,14 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
 
         // ---------- T9. Provision ----------
         var provisionResp = await client.PostAsJsonAsync("/api/setup/provision",
-            new { appName = "northwind-demo" });
+            new { appName = "Northwind Demo", slug = "northwind-demo" });
         Assert.True(provisionResp.IsSuccessStatusCode,
             $"provision returned {provisionResp.StatusCode}: {await provisionResp.Content.ReadAsStringAsync()}");
         var provisionJson = await provisionResp.Content.ReadFromJsonAsync<JsonElement>();
         var appDocId = provisionJson.GetProperty("id").GetString();
         var slug     = provisionJson.GetProperty("slug").GetString();
+        Assert.Equal("northwind-demo", slug);
         Assert.False(string.IsNullOrEmpty(appDocId));
-        Assert.False(string.IsNullOrEmpty(slug));
 
         // ---------- T9b. cdc/progress live feed (WebSocket) ----------
         // During the initial-load window, the bridge proxies RavenDB's native
@@ -254,16 +254,16 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // short-lived, invocation-capped token link per end-user. The token is the
         // bearer credential in the iframe URL — there is no static public widget URL.
         var linkResp = await client.PostAsJsonAsync($"/api/apps/{slug}/embed-links",
-            new { agentId, ttlSeconds = 3600, maxInvocations = 10 });
+            new { widgetId, ttlSeconds = 3600, maxInvocations = 10 });
         Assert.True(linkResp.IsSuccessStatusCode,
             $"mint embed-link returned {linkResp.StatusCode}: {await linkResp.Content.ReadAsStringAsync()}");
         var linkJson = await linkResp.Content.ReadFromJsonAsync<JsonElement>();
         var token = linkJson.GetProperty("token").GetString();
         Assert.Matches("^[a-f0-9]{32}$", token!);
-        Assert.EndsWith($"/embed/{token}", linkJson.GetProperty("url").GetString());
+        Assert.EndsWith($"/apps/{slug}/embed/{token}", linkJson.GetProperty("url").GetString());
 
         // ---------- T13. Embed page renders ----------
-        var embedResp = await client.GetAsync($"/embed/{token}");
+        var embedResp = await client.GetAsync($"/apps/{slug}/embed/{token}");
         Assert.Equal(HttpStatusCode.OK, embedResp.StatusCode);
         Assert.Contains("text/html", embedResp.Content.Headers.ContentType?.ToString() ?? "");
         var embedHtml = await embedResp.Content.ReadAsStringAsync();
@@ -276,7 +276,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // chatting with the agent over the CDC-mirrored Postgres data. Parameters
         // and the conversation are owned by the minted link; the body is just the prompt.
         using var chatCts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-        var chatReq = new HttpRequestMessage(HttpMethod.Post, $"/embed/{token}/chat")
+        var chatReq = new HttpRequestMessage(HttpMethod.Post, $"/apps/{slug}/embed/{token}/chat")
         {
             Content = JsonContent.Create(new { prompt = "Say hello in one short sentence." }),
         };
@@ -294,7 +294,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // Turn 2 reuses the same token; the server binds it to the same conversation
         // (the public surface no longer accepts a client-supplied conversation id).
         using var chat2Cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-        var chat2Req = new HttpRequestMessage(HttpMethod.Post, $"/embed/{token}/chat")
+        var chat2Req = new HttpRequestMessage(HttpMethod.Post, $"/apps/{slug}/embed/{token}/chat")
         {
             Content = JsonContent.Create(new { prompt = "Repeat your previous greeting in the same words." }),
         };

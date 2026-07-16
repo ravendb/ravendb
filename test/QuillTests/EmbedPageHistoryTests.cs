@@ -7,8 +7,8 @@ namespace QuillTests;
 
 /// <summary>
 /// Coverage for chat-history rendering on the public embed page
-/// (<c>GET /embed/{token}</c>, RavenDB-26916): a returning visitor sees the prior
-/// turns of the link's conversation, and a fresh link renders an empty feed.
+/// (<c>GET /apps/{slug}/embed/{token}</c>, RavenDB-26916): a returning visitor sees the
+/// prior turns of the link's conversation, and a fresh link renders an empty feed.
 /// </summary>
 public class EmbedPageHistoryTests(ITestOutputHelper output) : ApplianceMetricsTestBase(output)
 {
@@ -31,7 +31,7 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : ApplianceMetricsT
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var html = await client.GetStringAsync($"/embed/{token}");
+        var html = await client.GetStringAsync($"/apps/my-app/embed/{token}");
 
         // The placeholder is replaced with a script-safe JSON array carrying the prior turns,
         // rendered into the feed on load.
@@ -57,7 +57,7 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : ApplianceMetricsT
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var html = await client.GetStringAsync($"/embed/{token}");
+        var html = await client.GetStringAsync($"/apps/my-app/embed/{token}");
 
         Assert.DoesNotContain("__HISTORY__", html);
         Assert.Contains("for (const turn of [])", html);
@@ -66,24 +66,16 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : ApplianceMetricsT
     private static async Task SeedEmbedLinkAsync(
         IDocumentStore store, string database, string token, string widgetId, string? conversationId, DateTime now)
     {
-        using (var appSession = store.OpenAsyncSession(database))
+        using var appSession = store.OpenAsyncSession(database);
+        await appSession.StoreAsync(new EmbedLink
         {
-            await appSession.StoreAsync(new EmbedLink
-            {
-                WidgetId = widgetId,
-                AgentId = "demo",
-                ExpiresAt = now.AddHours(1),
-                MaxInvocations = 5,
-                ConversationId = conversationId,
-                CreatedAt = now,
-            }, $"{EmbedLink.IdPrefix}{token}");
-            await appSession.SaveChangesAsync();
-        }
-
-        using (var cfgSession = store.OpenAsyncSession())
-        {
-            await cfgSession.StoreAsync(new LinkIndex { Slug = "my-app" }, $"{LinkIndex.IdPrefix}{token}");
-            await cfgSession.SaveChangesAsync();
-        }
+            WidgetId = widgetId,
+            AgentId = "demo",
+            ExpiresAt = now.AddHours(1),
+            MaxInvocations = 5,
+            ConversationId = conversationId,
+            CreatedAt = now,
+        }, $"{EmbedLink.IdPrefix}{token}");
+        await appSession.SaveChangesAsync();
     }
 }

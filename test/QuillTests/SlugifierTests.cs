@@ -31,4 +31,28 @@ public class SlugifierTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
         Assert.Equal(string.Empty, Slugifier.ToSlug(input));
     }
+
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("my-app",  true)]
+    [InlineData("a2",      true)]
+    [InlineData("a",       true)]
+    [InlineData(null,      false)]
+    [InlineData("",        false)]
+    [InlineData("My-App",  false)]
+    [InlineData("a_b",     false)]
+    [InlineData("-a",      false)]
+    [InlineData("a-",      false)]
+    [InlineData("a--b",    false)]
+    [InlineData("a b",     false)]
+    public void IsWellFormed_accepts_only_canonical_slugs(string? input, bool expected)
+    {
+        Assert.Equal(expected, Slugifier.IsWellFormed(input));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void IsWellFormed_enforces_max_length()
+    {
+        Assert.True(Slugifier.IsWellFormed(new string('a', Slugifier.MaxLength)));
+        Assert.False(Slugifier.IsWellFormed(new string('a', Slugifier.MaxLength + 1)));
+    }
 }

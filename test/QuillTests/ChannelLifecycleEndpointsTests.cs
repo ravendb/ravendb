@@ -149,7 +149,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     // ---- delete ----
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_delete_removes_channel_and_binding_and_allows_reprovision()
+    public async Task Channel_delete_removes_channel_and_allows_reprovision()
     {
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
@@ -159,7 +159,12 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
         var widgetId = await ProvisionIFrameChannelAsync(client, "my-app");
-        var bindingId = $"channel-bindings/my-app/IFrame/demo-agent";
+
+        using (var session = store.OpenAsyncSession(perAppDb))
+        {
+            var bindings = await session.Advanced.LoadStartingWithAsync<object>("channel-bindings/");
+            Assert.Empty(bindings);
+        }
 
         var del = await client.DeleteAsync($"/api/apps/my-app/channels/{widgetId}");
         Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);
@@ -167,11 +172,8 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using (var session = store.OpenAsyncSession(perAppDb))
         {
             Assert.Null(await session.LoadAsync<Channel>($"channels/{widgetId}"));
-            Assert.Null(await session.LoadAsync<ChannelBinding>(bindingId));
         }
 
-        // Atomic guard cleared with the binding: the same (slug, type, agentId)
-        // tuple provisions cleanly again.
         var reWidgetId = await ProvisionIFrameChannelAsync(client, "my-app");
         Assert.False(string.IsNullOrEmpty(reWidgetId));
     }
@@ -213,9 +215,9 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
 
         // Non-empty origins -> frame-ancestors CSP on the embed page. 'self'
         // is always present so the appliance's own UI can preview the widget.
-        await ProvisionIFrameChannelAsync(client, "app-a");
-        var restrictedToken = await MintLinkAsync(client, "app-a");
-        var restricted = await client.GetAsync($"/embed/{restrictedToken}");
+        var restrictedWidgetId = await ProvisionIFrameChannelAsync(client, "app-a");
+        var restrictedToken = await MintLinkAsync(client, "app-a", restrictedWidgetId);
+        var restricted = await client.GetAsync($"/apps/app-a/embed/{restrictedToken}");
         Assert.Equal(HttpStatusCode.OK, restricted.StatusCode);
         var csp = Assert.Single(restricted.Headers.GetValues("Content-Security-Policy"));
         Assert.Equal($"{EmbedEndpoints.BaseCsp}; frame-ancestors 'self' http://localhost", csp);
@@ -226,8 +228,10 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         var openProvision = await client.PostAsJsonAsync("/api/apps/app-b/setup/channel",
             new { type = "iframe", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
         Assert.True(openProvision.IsSuccessStatusCode, await openProvision.Content.ReadAsStringAsync());
-        var openToken = await MintLinkAsync(client, "app-b");
-        var open = await client.GetAsync($"/embed/{openToken}");
+        var openWidgetId = (await openProvision.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("widgetId").GetString()!;
+        var openToken = await MintLinkAsync(client, "app-b", openWidgetId);
+        var open = await client.GetAsync($"/apps/app-b/embed/{openToken}");
         Assert.Equal(HttpStatusCode.OK, open.StatusCode);
         var openCsp = Assert.Single(open.Headers.GetValues("Content-Security-Policy"));
         Assert.Equal(EmbedEndpoints.BaseCsp, openCsp);
@@ -248,11 +252,6 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
 
         var token = Guid.NewGuid().ToString("N");
         const string widgetId = "wgt_telegram_x";
-        using (var cfg = store.OpenAsyncSession())
-        {
-            await cfg.StoreAsync(new LinkIndex { Id = $"link-index/{token}", Slug = "my-app" });
-            await cfg.SaveChangesAsync();
-        }
         using (var session = store.OpenAsyncSession(perAppDb))
         {
             await session.StoreAsync(new Channel
@@ -277,10 +276,10 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var page = await client.GetAsync($"/embed/{token}");
+        var page = await client.GetAsync($"/apps/my-app/embed/{token}");
         Assert.Equal(HttpStatusCode.NotFound, page.StatusCode);
 
-        var chat = await client.PostAsJsonAsync($"/embed/{token}/chat", new { prompt = "hi" });
+        var chat = await client.PostAsJsonAsync($"/apps/my-app/embed/{token}/chat", new { prompt = "hi" });
         Assert.Equal(HttpStatusCode.NotFound, chat.StatusCode);
     }
 
@@ -298,11 +297,6 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
 
         var token = Guid.NewGuid().ToString("N");
         const string widgetId = "wgt_ghost_agent";
-        using (var cfg = store.OpenAsyncSession())
-        {
-            await cfg.StoreAsync(new LinkIndex { Id = $"link-index/{token}", Slug = "my-app" });
-            await cfg.SaveChangesAsync();
-        }
         using (var session = store.OpenAsyncSession(perAppDb))
         {
             await session.StoreAsync(new Channel
@@ -327,7 +321,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.PostAsJsonAsync($"/embed/{token}/chat", new { prompt = "hi" });
+        var resp = await client.PostAsJsonAsync($"/apps/my-app/embed/{token}/chat", new { prompt = "hi" });
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
 
         // The gate reserves an invocation before the agent lookup; a deleted agent
@@ -342,10 +336,6 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channel_lifecycle_provision_update_delete_reprovision()
     {
-        // L2 (review 2026-06-04): the only flow mixing a node-local PUT with a
-        // later cluster-wide DELETE of the atomic-guarded docs. Pins that the
-        // guard clears and the same (type, agent) tuple re-provisions as a
-        // brand-new channel.
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
         using var _db = cleanup;
@@ -519,10 +509,10 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : RavenTes
         return json.GetProperty("widgetId").GetString()!;
     }
 
-    private static async Task<string> MintLinkAsync(HttpClient client, string slug, string agentId = "demo-agent")
+    private static async Task<string> MintLinkAsync(HttpClient client, string slug, string widgetId)
     {
         var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/embed-links",
-            new { agentId, ttlSeconds = 3600, maxInvocations = 50 });
+            new { widgetId, ttlSeconds = 3600, maxInvocations = 50 });
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
         return json.GetProperty("token").GetString()!;

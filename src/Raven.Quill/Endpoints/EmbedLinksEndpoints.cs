@@ -28,10 +28,10 @@ public static class EmbedLinksEndpoints
         group.MapPost("/embed-links", MintAsync)
             .WithName("embedLinks.mint")
             .WithDescription(
-                "Mints a per-user embed link for an agent's iFrame channel. Parameters are " +
-                "validated against the agent and bound into the link server-side (never " +
+                "Mints a per-user embed link for an iFrame channel (by widgetId). Parameters are " +
+                "validated against the channel's agent and bound into the link server-side (never " +
                 "client-supplied). ttlSeconds and maxInvocations are bounded; both default " +
-                "when omitted. Returns the opaque token + an absolute, paste-ready /embed/{token} URL.")
+                "when omitted. Returns the opaque token + an absolute, paste-ready embed URL.")
             .Accepts<MintEmbedLinkRequest>("application/json")
             .Produces<MintEmbedLinkResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -84,36 +84,29 @@ public static class EmbedLinksEndpoints
         HttpContext ctx,
         CancellationToken ct)
     {
-        if (body is null || string.IsNullOrWhiteSpace(body.AgentId))
-            return Results.BadRequest(new ApiErrorResponse("agentId is required"));
+        if (body is null || string.IsNullOrWhiteSpace(body.WidgetId))
+            return Results.BadRequest(new ApiErrorResponse("widgetId is required"));
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var config = await AgentLookup.FindAsync(store, app.Database, body.AgentId, ct);
-        if (config is null)
-            return Results.NotFound(new ApiErrorResponse($"no agent '{body.AgentId}' in app '{slug}'"));
-
-        var bindingId = $"channel-bindings/{app.Slug}/{ChannelType.IFrame}/{config.Identifier}";
         Channel? channel;
         using (var session = store.OpenAsyncSession(app.Database))
-        {
-            var binding = await session.LoadAsync<ChannelBinding>(bindingId, ct);
-            if (binding is null)
-                return Results.NotFound(new ApiErrorResponse(
-                    $"no iframe channel for agent '{config.Identifier}' in app '{slug}'"));
-
-            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + binding.WidgetId, ct);
-        }
+            channel = await session.LoadAsync<Channel>(Channel.IdPrefix + body.WidgetId, ct);
 
         if (channel is null || channel.Type != ChannelType.IFrame)
             return Results.NotFound(new ApiErrorResponse(
-                $"no iframe channel for agent '{config.Identifier}' in app '{slug}'"));
+                $"no iframe channel '{body.WidgetId}' in app '{slug}'"));
 
         if (channel.Enabled == false)
             return Results.BadRequest(new ApiErrorResponse(
-                $"the iframe channel for agent '{config.Identifier}' is disabled", Code: "channel_disabled"));
+                $"the iframe channel '{body.WidgetId}' is disabled", Code: "channel_disabled"));
+
+        var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
+        if (config is null)
+            return Results.NotFound(new ApiErrorResponse(
+                $"agent '{channel.AgentId}' is no longer registered in app '{slug}'"));
 
         // bind params at mint: removes the old ?customerId= impersonation
         if (AgentParameters.TryResolve(config, body.Parameters, out var parameters, out var missing) == false)
@@ -152,20 +145,12 @@ public static class EmbedLinksEndpoints
             await session.SaveChangesAsync(ct);
         }
 
-        using (var cfg = store.OpenAsyncSession())
-        {
-            var index = new LinkIndex { Id = LinkIndex.IdPrefix + token, Slug = app.Slug };
-            await cfg.StoreAsync(index, ct);
-            cfg.Advanced.GetMetadataFor(index)[global::Raven.Client.Constants.Documents.Metadata.Expires] = expiresAt;
-            await cfg.SaveChangesAsync(ct);
-        }
-
         // embed is served on public.*; swap the leading DNS label regardless of caller host
         var publicHost = ApplianceHost.WithSubdomain(ctx.Request.Host, "public");
-        var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/embed/{token}";
+        var url = $"{ctx.Request.Scheme}://{publicHost.ToUriComponent()}{ctx.Request.PathBase}/apps/{app.Slug}/embed/{token}";
         logger.LogInformation(
-            "Minted embed link slug={Slug} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
-            app.Slug, config.Identifier, ttlSeconds, maxInvocations);
+            "Minted embed link slug={Slug} widgetId={WidgetId} agentId={AgentId} ttlSeconds={Ttl} maxInvocations={Max}",
+            app.Slug, body.WidgetId, config.Identifier, ttlSeconds, maxInvocations);
 
         return Results.Ok(new MintEmbedLinkResponse(token, url, expiresAt, maxInvocations));
     }
