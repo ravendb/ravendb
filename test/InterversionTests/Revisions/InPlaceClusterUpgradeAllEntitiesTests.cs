@@ -44,48 +44,49 @@ namespace InterversionTests.Revisions
             var node2 = cluster[1];
 
             var dbName = GetDatabaseName();
-            using var bootstrapStore = PinnedStore(node1.Url, dbName);
+            using var store1 = PinnedStore(node1.Url, dbName);
+            using var store2 = PinnedStore(node2.Url, dbName);
 
-            await bootstrapStore.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(dbName)
+            await store1.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(dbName)
             {
                 Settings = { [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false" }
             }, replicationFactor: 2));
 
-            await ConfigureRevisionsAsync(bootstrapStore, minToKeep: 2);
+            await ConfigureRevisionsAsync(store1, minToKeep: 2);
 
             var allDocs = new List<DocSnapshot>();
 
             // STAGE 1: both old
-            allDocs.Add(await CascadeOnNodeAsync(node1, dbName, "users/n1-stage1"));
-            allDocs.Add(await CascadeOnNodeAsync(node2, dbName, "users/n2-stage1"));
+            allDocs.Add(await CascadeOnNodeAsync(store1, "users/n1-stage1"));
+            allDocs.Add(await CascadeOnNodeAsync(store2, "users/n2-stage1"));
 
-            await WaitForReplicationConvergenceAsync(node1, node2, dbName, allDocs);
+            await WaitForReplicationConvergenceAsync(store1, store2);
 
-            await AssertAllEntitiesReachableAsync(node1, dbName, allDocs, label: "STAGE 1 on node1 (old)");
-            await AssertAllEntitiesReachableAsync(node2, dbName, allDocs, label: "STAGE 1 on node2 (old)");
+            await AssertAllEntitiesReachableAsync(store1, allDocs, label: "STAGE 1 on node1 (old)");
+            await AssertAllEntitiesReachableAsync(store2, allDocs, label: "STAGE 1 on node2 (old)");
 
             // STAGE 2: node1 upgraded
             await UpgradeServerAsync(toVersion: "current", node1, customSettings);
 
-            allDocs.Add(await CascadeOnNodeAsync(node1, dbName, "users/n1-stage2"));
-            allDocs.Add(await CascadeOnNodeAsync(node2, dbName, "users/n2-stage2"));
+            allDocs.Add(await CascadeOnNodeAsync(store1, "users/n1-stage2"));
+            allDocs.Add(await CascadeOnNodeAsync(store2, "users/n2-stage2"));
 
-            await WaitForReplicationConvergenceAsync(node1, node2, dbName, allDocs);
+            await WaitForReplicationConvergenceAsync(store1, store2);
 
-            await AssertExactRevisionCountAsync(node1, dbName, allDocs, expected: 2, label: "STAGE 2 on node1 (current, mixed cluster)");
-            await AssertExactRevisionCountAsync(node2, dbName, allDocs, expected: 2, label: "STAGE 2 on node2 (old, mixed cluster)");
+            await AssertExactRevisionCountAsync(store1, allDocs, expected: 2, label: "STAGE 2 on node1 (current, mixed cluster)");
+            await AssertExactRevisionCountAsync(store2, allDocs, expected: 2, label: "STAGE 2 on node2 (old, mixed cluster)");
 
             // STAGE 3: node2 upgraded
             await UpgradeServerAsync(toVersion: "current", node2, customSettings);
 
             await Task.Delay(2000);
 
-            await AssertExactRevisionCountAsync(node1, dbName, allDocs, expected: 2, label: "STAGE 3 on node1 (current)");
-            await AssertExactRevisionCountAsync(node2, dbName, allDocs, expected: 2, label: "STAGE 3 on node2 (current)");
+            await AssertExactRevisionCountAsync(store1, allDocs, expected: 2, label: "STAGE 3 on node1 (current)");
+            await AssertExactRevisionCountAsync(store2, allDocs, expected: 2, label: "STAGE 3 on node2 (current)");
 
             // Internal-Voron assertions only valid once both nodes are current bits.
-            await AssertStrictEntityRowsAsync(node1, dbName, allDocs, label: "STAGE 3 strict on node1");
-            await AssertStrictEntityRowsAsync(node2, dbName, allDocs, label: "STAGE 3 strict on node2");
+            await AssertStrictEntityRowsAsync(store1, allDocs, label: "STAGE 3 strict on node1");
+            await AssertStrictEntityRowsAsync(store2, allDocs, label: "STAGE 3 strict on node2");
         }
 
         private sealed class DocSnapshot
@@ -99,14 +100,12 @@ namespace InterversionTests.Revisions
             public string AttachmentTombstoneParentRevisionCV; // E4 parent (tombstone)
         }
         // Cap=2 means every step past the first two also produces a revision-tombstone, so the cascade fills all four tables.
-        private static async Task<DocSnapshot> CascadeOnNodeAsync(InterversionTestBase.ProcessNode node, string dbName, string docId)
+        private static async Task<DocSnapshot> CascadeOnNodeAsync(IDocumentStore store, string docId)
         {
-            using var store = PinnedStore(node.Url, dbName);
-
             var snapshot = new DocSnapshot
             {
                 DocId = docId,
-                CreatedOnNodeUrl = node.Url,
+                CreatedOnNodeUrl = store.Urls[0],
                 AttachmentName = "att-1",
                 AttachmentContentType = "application/octet-stream"
             };
@@ -165,52 +164,21 @@ namespace InterversionTests.Revisions
             store.Initialize();
             return store;
         }
-        private static async Task WaitForReplicationConvergenceAsync(
-            InterversionTestBase.ProcessNode node1,
-            InterversionTestBase.ProcessNode node2,
-            string dbName,
-            List<DocSnapshot> expectedDocs,
-            int timeoutMs = 60_000)
+        private static async Task WaitForReplicationConvergenceAsync(IDocumentStore store1, IDocumentStore store2, int timeoutMs = 60_000)
         {
-            using var s1 = PinnedStore(node1.Url, dbName);
-            using var s2 = PinnedStore(node2.Url, dbName);
+            var fromNode1 = $"sync/from-node1-{Guid.NewGuid():N}";
+            var fromNode2 = $"sync/from-node2-{Guid.NewGuid():N}";
 
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < timeoutMs)
-            {
-                bool allConverged = true;
-                foreach (var doc in expectedDocs)
-                {
-                    int c1 = await RevisionCountAsync(s1, doc.DocId);
-                    int c2 = await RevisionCountAsync(s2, doc.DocId);
-                    if (c1 < 1 || c2 < 1 || c1 != c2)
-                    {
-                        allConverged = false;
-                        break;
-                    }
-                }
-                if (allConverged)
-                    return;
-                await Task.Delay(500);
-            }
-        }
+            using (var s = store1.OpenAsyncSession()) { await s.StoreAsync(new User { Name = "sync" }, fromNode1); await s.SaveChangesAsync(); }
+            using (var s = store2.OpenAsyncSession()) { await s.StoreAsync(new User { Name = "sync" }, fromNode2); await s.SaveChangesAsync(); }
 
-        private static async Task<int> RevisionCountAsync(IDocumentStore store, string docId)
-        {
-            try
-            {
-                using var session = store.OpenAsyncSession();
-                var md = await session.Advanced.Revisions.GetMetadataForAsync(docId, pageSize: 100);
-                return md.Count;
-            }
-            catch { return -1; }
+            await WaitForDocumentNameAsync(store2, fromNode1, "sync", timeoutMs);
+            await WaitForDocumentNameAsync(store1, fromNode2, "sync", timeoutMs);
         }
 
         private static async Task AssertExactRevisionCountAsync(
-            InterversionTestBase.ProcessNode node, string dbName, List<DocSnapshot> docs, int expected, string label)
+            IDocumentStore store, List<DocSnapshot> docs, int expected, string label)
         {
-            using var store = PinnedStore(node.Url, dbName);
-
             var mismatches = new List<string>();
             foreach (var doc in docs)
             {
@@ -223,15 +191,13 @@ namespace InterversionTests.Revisions
             }
 
             Assert.True(mismatches.Count == 0,
-                $"[{label}] revision-count mismatch on {node.Url}:\n" + string.Join("\n", mismatches));
+                $"[{label}] revision-count mismatch on {store.Urls[0]}:\n" + string.Join("\n", mismatches));
         }
 
         // Client-API check usable on either old or current bits.
         private static async Task AssertAllEntitiesReachableAsync(
-            InterversionTestBase.ProcessNode node, string dbName, List<DocSnapshot> docs, string label)
+            IDocumentStore store, List<DocSnapshot> docs, string label)
         {
-            using var store = PinnedStore(node.Url, dbName);
-
             foreach (var doc in docs)
             {
                 using var session = store.OpenAsyncSession();
@@ -246,10 +212,10 @@ namespace InterversionTests.Revisions
 
         // Current-bits only (requires DocumentDatabase access).
         private async Task AssertStrictEntityRowsAsync(
-            InterversionTestBase.ProcessNode node, string dbName, List<DocSnapshot> docs, string label)
+            IDocumentStore store, List<DocSnapshot> docs, string label)
         {
-            var server = Servers.Single(s => s.WebUrl == node.Url);
-            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+            var server = Servers.Single(s => s.WebUrl == store.Urls[0]);
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
