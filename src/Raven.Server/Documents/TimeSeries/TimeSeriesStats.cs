@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -31,7 +31,8 @@ namespace Raven.Server.Documents.TimeSeries
             Start = 2,
             End = 3,
             Count = 4,
-            Name = 5 // original casing
+            Name = 5, // original casing
+            MergedChangeVector = 6
         }
 
         static TimeSeriesStats()
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(TimeSeriesStatsKey);
         }
 
-        private Table GetOrCreateTable(Transaction tx, CollectionName collection)
+        internal static Table GetOrCreateTable(Transaction tx, CollectionName collection)
         {
             var tableName = collection.GetTableName(CollectionTableType.TimeSeriesStats); // TODO: cache the collection and pass Slice
             
@@ -89,58 +90,42 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
 
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
-            using (ReadStats(context, table, slicer, out var oldCount, out var start, out var end, out var name))
+            using (ReadStats(context, table, slicer, out var oldCount, out var start, out var end, out var name, out var mergedChangeVector))
             {
                 if (oldCount == 0)
                     return;
 
-                using (table.Allocate(out var tvb))
-                {
-                    tvb.Add(slicer.StatsKey);
-                    tvb.Add(GetPolicy(slicer));
-                    tvb.Add(Bits.SwapBytes(start.Ticks));
-                    tvb.Add(end);
-                    tvb.Add(oldCount + count);
-                    tvb.Add(name);
-
-                    table.Set(tvb);
-                }
+                WriteStatsTableRecord(context, table, slicer, start, end, oldCount + count, name, mergedChangeVector);
             }
         }
 
         public void UpdateDates(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, DateTime start, DateTime end)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
-            using (ReadStats(context, table, slicer, out var count, out _, out _, out var name))
-            using (table.Allocate(out var tvb))
+            using (ReadStats(context, table, slicer, out var count, out _, out _, out var name, out var mergedChangeVector))
             {
                 if (count == 0)
                     return;
 
-                tvb.Add(slicer.StatsKey);
-                tvb.Add(GetPolicy(slicer));
-                tvb.Add(Bits.SwapBytes(start.Ticks));
-                tvb.Add(end);
-                tvb.Add(count);
-                tvb.Add(name);
-
-                table.Set(tvb);
+                WriteStatsTableRecord(context, table, slicer, start, end, count, name, mergedChangeVector);
             }
         }
 
-        private static IDisposable ReadStats(DocumentsOperationContext context, Table table, TimeSeriesSliceHolder slicer, out long count, out DateTime start, out DateTime end, out Slice name)
+        internal static IDisposable ReadStats(DocumentsOperationContext context, Table table, TimeSeriesSliceHolder slicer, out long count, out DateTime start, out DateTime end, out Slice name, out ChangeVector mergedChangeVector)
         {
             count = 0;
             start = DateTime.MaxValue;
             end = DateTime.MinValue;
             name = slicer.NameSlice;
+            mergedChangeVector = null;
 
-            if (table.ReadByKey(slicer.StatsKey, out var tvr) == false) 
+            if (table.ReadByKey(slicer.StatsKey, out var tvr) == false)
                 return null;
 
             count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
             start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
             end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
+            mergedChangeVector = ReadMergedChangeVector(context, ref tvr);
 
             if (count == 0 && start == default && end == default)
             {
@@ -151,10 +136,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             return DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, ref tvr, out name);
-
         }
 
-        public long UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline, int modifiedEntries)
+        public long UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline, int modifiedEntries, ChangeVector changeVectorToMerge)
         {
             long previousCount;
             DateTime start, end;
@@ -164,7 +148,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
 
-            using (ReadStats(context, table, slicer, out previousCount, out start, out end, out var name))
+            using (ReadStats(context, table, slicer, out previousCount, out start, out end, out var name, out var mergedChangeVector))
             {
                 var liveEntries = segment.NumberOfLiveEntries;
                 if (liveEntries > 0)
@@ -183,17 +167,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var count = previousCount + liveEntries;
 
-                using (table.Allocate(out var tvb))
-                {
-                    tvb.Add(slicer.StatsKey);
-                    tvb.Add(GetPolicy(slicer));
-                    tvb.Add(Bits.SwapBytes(start.Ticks));
-                    tvb.Add(end);
-                    tvb.Add(count);
-                    tvb.Add(name);
-
-                    table.Set(tvb);
-                }
+                var mergedChangeVectorToSet = ChangeVector.Merge(mergedChangeVector, changeVectorToMerge, context);
+                WriteStatsTableRecord(context, table, slicer, start, end, count, name, mergedChangeVectorToSet);
 
                 return count;
 
@@ -277,6 +252,41 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        // Field 6 (MergedChangeVector) is present only on newer stats rows; legacy rows have <=6 fields.
+        private static ChangeVector ReadMergedChangeVector(DocumentsOperationContext context, ref TableValueReader tvr)
+        {
+            if (tvr.Count <= (int)StatsColumns.MergedChangeVector)
+                return null;
+
+            return DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.MergedChangeVector, ref tvr);
+        }
+
+        internal static void WriteStatsTableRecord(DocumentsOperationContext context, Table table, TimeSeriesSliceHolder slicer, DateTime start, DateTime end, long count, Slice name, ChangeVector mergedChangeVector)
+        {
+            using (table.Allocate(out var tvb))
+            using (ChangeVectorToSlice(context, mergedChangeVector, out var mergedChangeVectorSlice))
+            {
+                tvb.Add(slicer.StatsKey);
+                tvb.Add(GetPolicy(slicer));
+                tvb.Add(Bits.SwapBytes(start.Ticks));
+                tvb.Add(end);
+                tvb.Add(count);
+                tvb.Add(name);
+                tvb.Add(mergedChangeVectorSlice);
+
+                table.Set(tvb);
+            }
+        }
+
+        private static ByteStringContext.InternalScope ChangeVectorToSlice(DocumentsOperationContext context, ChangeVector changeVector, out Slice changeVectorSlice)
+        {
+            if (changeVector != null)
+                return Slice.From(context.Allocator, changeVector, out changeVectorSlice);
+
+            changeVectorSlice = Slices.Empty;
+            return default;
+        }
+
         private static DateTime GetLastLiveTimestamp(DocumentsOperationContext context, TimeSeriesValuesSegment segment, DateTime baseline)
         {
             return segment.NumberOfEntries == segment.NumberOfLiveEntries
@@ -305,7 +315,7 @@ namespace Raven.Server.Documents.TimeSeries
             return GetStats(context, slicer.StatsKey);
         }
 
-        public (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, Slice statsKey)
+        public static (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, Slice statsKey)
         {
             var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
             if (table.ReadByKey(statsKey, out var tvr) == false)
@@ -314,7 +324,7 @@ namespace Raven.Server.Documents.TimeSeries
             return GetStats(ref tvr);
         }
 
-        public (long Count, DateTime Start, DateTime End) GetStats(ref TableValueReader tvr)
+        public static (long Count, DateTime Start, DateTime End) GetStats(ref TableValueReader tvr)
         {
             var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
             var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)), DateTimeKind.Utc);
@@ -355,22 +365,12 @@ namespace Raven.Server.Documents.TimeSeries
             // and local-name > remote-name lexicographically 
 
             var table = context.Transaction.InnerTransaction.OpenTable(TimeSeriesStatsSchema, collection.GetTableName(CollectionTableType.TimeSeriesStats));
-            using (ReadStats(context, table, slicer, out var count, out var start, out var end, out _))
+            using (ReadStats(context, table, slicer, out var count, out var start, out var end, out _, out var mergedChangeVector))
             {
                 if (count == 0)
                     return;
 
-                using (table.Allocate(out var tvb))
-                {
-                    tvb.Add(slicer.StatsKey);
-                    tvb.Add(GetPolicy(slicer));
-                    tvb.Add(Bits.SwapBytes(start.Ticks));
-                    tvb.Add(end);
-                    tvb.Add(count);
-                    tvb.Add(slicer.NameSlice);
-
-                    table.Set(tvb);
-                }
+                WriteStatsTableRecord(context, table, slicer, start, end, count, slicer.NameSlice, mergedChangeVector);
             }
         }
 
@@ -463,7 +463,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public bool DeleteStats(DocumentsOperationContext context, CollectionName collection, Slice key)
+        public static bool Delete(DocumentsOperationContext context, CollectionName collection, Slice key)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             return table.DeleteByKey(key);
@@ -475,7 +475,7 @@ namespace Raven.Server.Documents.TimeSeries
             return table.DeleteByPrimaryKeyPrefix(key);
         }
 
-        private Slice GetPolicy(TimeSeriesSliceHolder slicer)
+        private static Slice GetPolicy(TimeSeriesSliceHolder slicer)
         {
             var name = slicer.LowerTimeSeriesName;
             var index = name.Content.IndexOf((byte)TimeSeriesConfiguration.TimeSeriesRollupSeparator);

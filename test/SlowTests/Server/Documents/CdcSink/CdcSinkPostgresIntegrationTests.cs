@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
@@ -119,6 +120,184 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.NotNull(p4);
                 Assert.Equal(123456789.01m, p4.Price);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
+        public async Task InitialLoad_NoPrimaryKeyOrUniqueKey_Faults()
+        {
+            // A heap table (no primary key, no unique key) has nothing safe to keyset-paginate by,
+            // so initial load must fault loudly rather than risk silently skipping rows.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE items (
+                    id INT NOT NULL,
+                    name VARCHAR(200) NOT NULL
+                )");
+            ExecuteNpgSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Alpha'), (2, 'Beta');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-no-key-faults",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableSchema = "public",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+
+            var fault = await WaitForProcessFaultAsync(store, config.Name);
+            Assert.IsType<Raven.Server.Documents.CdcSink.CdcSinkFaultedException>(fault);
+            Assert.Contains("neither a primary key nor a NOT-NULL unique key", fault.Message);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
+        public async Task InitialLoad_NoPrimaryKey_UsesNotNullUniqueKey()
+        {
+            // No primary key, but a NOT-NULL unique key. Initial load must paginate by that key and
+            // load every row (the document id still comes from the configured PrimaryKeyColumns).
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE items (
+                    id INT NOT NULL UNIQUE,
+                    name VARCHAR(200) NOT NULL
+                )");
+            ExecuteNpgSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Alpha'), (2, 'Beta'), (3, 'Gamma');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-unique-key-fallback",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableSchema = "public",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+
+            Assert.Equal("Alpha", (await WaitForSinkDocumentAsync<Item>(store, config.Name, "Items/1")).Name);
+            Assert.Equal("Gamma", (await WaitForSinkDocumentAsync<Item>(store, config.Name, "Items/3")).Name);
+            Assert.Equal(3, await WaitForDocumentCountAsync(store, "Items", expectedCount: 3, timeoutMs: 60_000));
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
+        public async Task InitialLoad_EmbeddedTableWithNonUniqueConfiguredKey_LoadsAllRows()
+        {
+            // Regression for RavenDB-26926. order_details has a composite real PK (order_id, product_id),
+            // but the embedded config's PrimaryKeyColumns is just product_id — unique within one order,
+            // NOT across the table. Under the old heuristic, keyset pagination by product_id dropped rows
+            // across batch boundaries. A tiny MaxBatchSize forces multi-batch pagination; paginating by
+            // the real composite PK must load all rows.
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                    record.Settings[RavenConfiguration.GetKey(x => x.CdcSink.MaxBatchSize)] = "2"
+            });
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (id INT PRIMARY KEY, customer VARCHAR(200) NOT NULL);
+                CREATE TABLE order_details (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    product_id INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL,
+                    PRIMARY KEY (order_id, product_id)
+                );");
+
+            // 4 orders x 3 lines = 12 detail rows; product_id in {1,2,3} repeats across every order.
+            var sb = new System.Text.StringBuilder();
+            for (int o = 1; o <= 4; o++)
+            {
+                sb.AppendLine($"INSERT INTO orders (id, customer) VALUES ({o}, 'Customer {o}');");
+                for (int p = 1; p <= 3; p++)
+                    sb.AppendLine($"INSERT INTO order_details (order_id, product_id, product, quantity) VALUES ({o}, {p}, 'P{p}', {p * 10});");
+            }
+            ExecuteNpgSql(connectionString, sb.ToString());
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-nonunique-embedded-key",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "customer", Name = "Customer" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_details",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "product_id" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "product_id", Name = "ProductNum" },
+                                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                                    new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+
+            await WaitForCdcInitialLoadAsync(store, config.Name, timeoutMs: 60_000);
+
+            // All 12 detail rows must be present (4 orders x 3 lines) — none dropped across batches.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                int total = 0;
+                for (int o = 1; o <= 4; o++)
+                {
+                    var order = await session.LoadAsync<Order>($"Orders/{o}");
+                    total += order?.Lines?.Count ?? 0;
+                }
+                return total;
+            }, 12, timeout: 60_000);
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
@@ -2522,6 +2701,108 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal(1, order.Lines?.Count ?? 0);
                 Assert.Equal("Apples", order.Lines[0].Product);
                 // But the patch still ran — audit fields are set
+                Assert.Equal(2, order.LastDeletedLine);
+                Assert.Equal(1, order.DeleteCount);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlCdcRequired = true)]
+        public async Task PatchOnDelete_EmbeddedTable_IgnoreDeletes_NonPKJoinColumn()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
+                );
+                CREATE TABLE order_lines (
+                    id SERIAL PRIMARY KEY,
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (id, order_id, line_num, product) VALUES (1, 1, 1, 'Apples');
+                INSERT INTO order_lines (id, order_id, line_num, product) VALUES (2, 1, 2, 'Bananas');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-patchondelete-ignoredeletes-nonpkjoin",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                // Simple PK that does NOT include the join column order_id.
+                                PrimaryKeyColumns = new List<string> { "id" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "id", Name = "LineId" },
+                                    new CdcColumnMapping { Column = "line_num", Name = "LineNum" },
+                                    new CdcColumnMapping { Column = "product", Name = "Product" }
+                                },
+                                // IgnoreDeletes keeps the item, but the patch still runs on delete -
+                                // so the DELETE event must carry order_id to route to the parent.
+                                OnDelete = new CdcSinkOnDeleteConfig
+                                {
+                                    IgnoreDeletes = true,
+                                    Patch = "this.LastDeletedLine = $row.line_num; this.DeleteCount = (this.DeleteCount || 0) + 1;"
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+
+            // Delete one embedded row — order_id is NOT in the PK, so without REPLICA IDENTITY
+            // FULL the DELETE event omits it and the patch never reaches Orders/1.
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE id = 2;");
+
+            // The OnDelete patch must run on the correct parent (Orders/1).
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                return order?.DeleteCount;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                // IgnoreDeletes: the item stays in the array.
+                Assert.Equal(2, order.Lines?.Count ?? 0);
+                // The patch ran against the right parent with the right row data.
                 Assert.Equal(2, order.LastDeletedLine);
                 Assert.Equal(1, order.DeleteCount);
             }

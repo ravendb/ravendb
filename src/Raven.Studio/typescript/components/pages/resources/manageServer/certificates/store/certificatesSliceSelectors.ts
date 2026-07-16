@@ -8,6 +8,7 @@ import {
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { RootState } from "components/store";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 const selectClearanceFilterOptions = createSelector(
     (state: RootState) => state.certificates.certificates,
@@ -131,7 +132,11 @@ const selectFilteredCertificates = createSelector(
             }
 
             const permissionKeys = Object.keys(cert.Permissions);
-            if (databaseFilter && permissionKeys.length > 0 && !permissionKeys.includes(databaseFilter)) {
+            if (
+                databaseFilter &&
+                permissionKeys.length > 0 &&
+                !permissionKeys.some((x) => DatabaseUtils.namesEqualIgnoreCase(x, databaseFilter))
+            ) {
                 return false;
             }
 
@@ -254,4 +259,5 @@ export const certificatesSelectors = {
     ssoServerCertificates: selectSsoServerCertificates,
     ssoUserCertificates: selectSsoUserCertificates,
     hasActiveFilter: selectHasActiveFilter,
+    isRenewedModalOpen: (state: RootState) => state.certificates.isRenewedModalOpen,
 };

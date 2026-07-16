@@ -78,6 +78,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 {
                     throw;
                 }
+                catch (QueryToolFailedException)
+                {
+                    throw;
+                }
                 catch (AttachmentDoesNotExistException)
                 {
                     throw;

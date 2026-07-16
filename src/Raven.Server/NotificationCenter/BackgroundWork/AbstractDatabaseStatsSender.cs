@@ -47,6 +47,9 @@ public abstract class AbstractDatabaseStatsSender : BackgroundWorkBase
             current.GlobalChangeVector,
             current.LastEtag,
             current.CountOfIndexingErrors,
+            current.CountOfEtlTasksErrors,
+            current.CountOfAiTasksErrors,
+            current.CountOfCdcSinkTasksErrors,
             current.LastIndexingErrorTime,
             modifiedCollections,
             current.CountOfRevisions));

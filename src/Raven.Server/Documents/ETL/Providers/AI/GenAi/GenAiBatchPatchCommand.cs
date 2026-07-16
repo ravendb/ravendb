@@ -24,6 +24,8 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
     private readonly EtlProcessStatistics _statistics;
     private readonly GenAiStatsScope _scope;
 
+    internal static readonly TimeSpan RefreshDelay = TimeSpan.FromMinutes(10);
+
     public GenAiBatchPatchCommand(
         List<GenAiResultItem> items,
         PatchRequest patchRequest,
@@ -45,7 +47,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        var hashes = new Dictionary<string, (Document Doc, List<string> Hashes)>();
+        var hashes = new Dictionary<string, (Document Doc, List<string> Hashes, bool Refresh)>();
 
         using (var statsScope = _scope.For(GenAiOperations.ApplyUpdateScript))
         {
@@ -58,14 +60,17 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     if (item.ContextOutput.IsCached)
                         statsScope.TotalCachedContexts++;
 
-                    if (item.UpdateHash == false)
-                        continue;
-                    
                     ref var tuple = ref CollectionsMarshal.GetValueRefOrAddDefault(hashes, item.DocumentId, out var exists);
                     if (exists is false)
                     {
                         Document document = GetCurrentDocument(context, item.DocumentId);
-                        tuple = (document, []);
+                        tuple = (document, [], false);
+                    }
+
+                    if (item.UpdateHash == false)
+                    {
+                        tuple.Refresh = true;
+                        continue;
                     }
 
                     if (tuple.Doc is null)
@@ -105,16 +110,9 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                 }
             }
 
-            // update metadata for each doc in same transaction
-            foreach (var (id, (doc, allHashes)) in hashes)
-            {
-                // this indicates that there was an error in the update script
-                // and that we should not update this document
-                if (allHashes.Count is 0)
-                    continue;
-
-                UpdateHashesInMetadata(id, doc.Data, _taskIdentifier, allHashes, context);
-            }
+            var refreshAt = context.DocumentDatabase.Time.GetUtcNow().Add(RefreshDelay);
+            foreach (var (id, (doc, allHashes, refresh)) in hashes)
+                UpdateMetadata(id, doc?.Data, _taskIdentifier, allHashes, refresh ? refreshAt : null, context);
 
             return statsScope.TotalUpdates;
         }
@@ -131,88 +129,93 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
         return context.ReadObject(djv, item.DocumentId);
     }
 
-    internal static BlittableJsonReaderObject UpdateHashesInMetadata(string id, BlittableJsonReaderObject doc, string taskIdentifier, List<string> allHashes, DocumentsOperationContext context)
+    internal static BlittableJsonReaderObject UpdateMetadata(string id, BlittableJsonReaderObject doc, string taskIdentifier, List<string> allHashes, DateTime? refreshAt, DocumentsOperationContext context)
     {
+        // no document, or nothing to write (no hashes and no @refresh) - nothing to persist
+        if (doc == null || (allHashes.Count == 0 && refreshAt.HasValue == false))
+            return null;
+
+        var changed = false;
         if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
         {
-            // no metadata at all (shouldn't happen)
+            var newMetadata = new DynamicJsonValue();
+            if (allHashes.Count > 0)
+                newMetadata[Constants.Documents.Metadata.GenAiHashes] = new DynamicJsonValue { [taskIdentifier] = allHashes };
+            if (refreshAt.HasValue)
+                newMetadata[Constants.Documents.Metadata.Refresh] = refreshAt.Value;
 
             doc.Modifications = new DynamicJsonValue(doc)
             {
-                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.GenAiHashes] = new DynamicJsonValue
-                    {
-                        [taskIdentifier] = allHashes
-                    }
-                }
+                [Constants.Documents.Metadata.Key] = newMetadata
             };
+            changed = true;
         }
-
-        else if (metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashes) == false)
-        {
-            // no hashes section
-
-            metadata.Modifications = new DynamicJsonValue(metadata)
-            {
-                [Constants.Documents.Metadata.GenAiHashes] = new DynamicJsonValue
-                {
-                    [taskIdentifier] = allHashes
-                }
-            };
-            doc.Modifications = new DynamicJsonValue(doc)
-            {
-                [Constants.Documents.Metadata.Key] = metadata
-            };
-        }
-
         else
         {
-            // we already have the hashes section, need to modify it
+            changed = allHashes.Count > 0 && TryUpdateHashesIfNeeded(metadata, taskIdentifier, allHashes);
 
-            if (hashes.TryGet(taskIdentifier, out BlittableJsonReaderArray existingHashes) && existingHashes != null && 
-                existingHashes.Length == allHashes.Count)
+            if (refreshAt.HasValue && metadata.TryGet(Constants.Documents.Metadata.Refresh, out object _) == false)
             {
-                bool needToUpdate = false;
-
-                foreach (var hash in existingHashes)
-                {
-                    if (allHashes.Contains(hash.ToString())) 
-                        continue;
-
-                    // we have a new hash that is not in the existing hashes
-                    needToUpdate = true;
-                    break;
-                }
-
-                if (needToUpdate == false)
-                    return doc; // we already have the hashes for this task, no need to update
+                metadata.Modifications ??= new DynamicJsonValue(metadata);
+                metadata.Modifications[Constants.Documents.Metadata.Refresh] = refreshAt.Value;
+                changed = true;
             }
 
-            hashes.Modifications = new DynamicJsonValue(hashes)
+            if (changed)
             {
-                [taskIdentifier] = allHashes
-            };
-
-            metadata.Modifications = new DynamicJsonValue(metadata)
-            {
-                [Constants.Documents.Metadata.GenAiHashes] = hashes
-            };
-
-            doc.Modifications = new DynamicJsonValue(doc)
-            {
-                [Constants.Documents.Metadata.Key] = metadata
-            };
+                doc.Modifications = new DynamicJsonValue(doc)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+            }
         }
 
-        using (var old = doc)
-        {
-            doc = context.ReadObject(old, id);
-        }
+        if (changed == false)
+            return doc;
+
+        doc = context.ReadObject(doc, id);
 
         context.DocumentDatabase.DocumentsStorage.Put(context, id, expectedChangeVector: null, doc);
 
         return doc;
+    }
+
+    private static bool TryUpdateHashesIfNeeded(BlittableJsonReaderObject metadata, string taskIdentifier, List<string> allHashes)
+    {
+        if (metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashes) == false)
+        {
+            metadata.Modifications ??= new DynamicJsonValue(metadata);
+            metadata.Modifications[Constants.Documents.Metadata.GenAiHashes] = new DynamicJsonValue
+            {
+                [taskIdentifier] = allHashes
+            };
+            return true;
+        }
+
+        if (hashes.TryGet(taskIdentifier, out BlittableJsonReaderArray existingHashes) && existingHashes != null &&
+            existingHashes.Length == allHashes.Count)
+        {
+            var needToUpdate = false;
+            foreach (var hash in existingHashes)
+            {
+                if (allHashes.Contains(hash.ToString()))
+                    continue;
+
+                needToUpdate = true;
+                break;
+            }
+
+            if (needToUpdate == false)
+                return false;
+        }
+
+        hashes.Modifications = new DynamicJsonValue(hashes)
+        {
+            [taskIdentifier] = allHashes
+        };
+        metadata.Modifications ??= new DynamicJsonValue(metadata);
+        metadata.Modifications[Constants.Documents.Metadata.GenAiHashes] = hashes;
+        return true;
     }
 
     private Document GetCurrentDocument(DocumentsOperationContext context, string id)

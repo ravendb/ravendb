@@ -25,6 +25,12 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public long CountOfIndexingErrors { get; private set; }
 
+        public long CountOfEtlTasksErrors { get; private set; }
+
+        public long CountOfAiTasksErrors { get; private set; }
+
+        public long CountOfCdcSinkTasksErrors { get; private set; }
+
         public DateTime? LastIndexingErrorTime { get; private set; }
 
         public string GlobalChangeVector { get; private set; }
@@ -46,6 +52,9 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(LastEtag)] = LastEtag;
             json[nameof(GlobalChangeVector)] = GlobalChangeVector;
             json[nameof(CountOfIndexingErrors)] = CountOfIndexingErrors;
+            json[nameof(CountOfEtlTasksErrors)] = CountOfEtlTasksErrors;
+            json[nameof(CountOfAiTasksErrors)] = CountOfAiTasksErrors;
+            json[nameof(CountOfCdcSinkTasksErrors)] = CountOfCdcSinkTasksErrors;
             json[nameof(LastIndexingErrorTime)] = LastIndexingErrorTime;
             json[nameof(ModifiedCollections)] = new DynamicJsonArray(ModifiedCollections.Select(x => x.ToJson()));
             json[nameof(CountOfRevisions)] = CountOfRevisions;
@@ -62,6 +71,9 @@ namespace Raven.Server.NotificationCenter.Notifications
             string globalChangeVector,
             long lastEtag,
             long countOfIndexingErrors,
+            long countOfEtlTasksErrors,
+            long countOfAiTasksErrors,
+            long countOfCdcSinkTasksErrors,
             DateTime? lastIndexingErrorTime,
             List<ModifiedCollection> modifiedCollections,
             long countOfRevisions)
@@ -77,6 +89,9 @@ namespace Raven.Server.NotificationCenter.Notifications
                 LastEtag = lastEtag,
                 GlobalChangeVector = globalChangeVector,
                 CountOfIndexingErrors = countOfIndexingErrors,
+                CountOfEtlTasksErrors = countOfEtlTasksErrors,
+                CountOfAiTasksErrors = countOfAiTasksErrors,
+                CountOfCdcSinkTasksErrors = countOfCdcSinkTasksErrors,
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
                 LastIndexingErrorTime = lastIndexingErrorTime,

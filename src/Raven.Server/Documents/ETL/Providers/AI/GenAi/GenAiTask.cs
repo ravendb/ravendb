@@ -114,8 +114,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
     protected override void EnterFallbackMode(Exception e, DateTime? lastErrorTime)
     {
-        if (e is AggregateException ae &&
-            ae.InnerExceptions.OfType<RateLimitException>().FirstOrDefault() is { } rateLimitException)
+        var rateLimitException = e as RateLimitException ??
+                                 (e as AggregateException)?.Flatten().InnerExceptions.OfType<RateLimitException>().FirstOrDefault();
+
+        if (rateLimitException != null)
         {
             FallbackTime = rateLimitException.RetryAfter;
             return;
@@ -158,10 +160,21 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         // Prevent database unloading during long-running AI operations
         using (Database.PreventFromUnloadingByIdleOperations())
         using (EnterLoadStep(TaskErrorStep.ModelInference))
-        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken))
         {
-            cts.CancelAfter(Database.Configuration.Ai.GenAiSendToModelTimeout.AsTimeSpan);
-            exceptions = SendToModel(results, context, scope, cts.Token);
+            exceptions = SendToModel(results, context, scope, CancellationToken);
+        }
+
+        var batch = AnalyzeAttemptedBatch(results);
+
+        if (batch.AllAttemptedFailedNonDeterministically)
+        {
+            LoadErrorStep = TaskErrorStep.ModelInference;
+            _maxConcurrency = 1;
+
+            if (exceptions?.Count > 0)
+                throw new AggregateException(exceptions).ExtractSingleInnerException();
+
+            throw new InvalidOperationException("The whole attempted GenAI batch failed without a captured exception.");
         }
 
         using (EnterLoadStep(TaskErrorStep.Persistence))
@@ -169,17 +182,25 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             ApplyUpdateScript(results, scope);
         }
 
-        if (exceptions?.Count > 0)
+        if (exceptions?.OfType<RateLimitException>().Any() == true)
         {
             LoadErrorStep = TaskErrorStep.ModelInference;
             _maxConcurrency = 1;
+
             throw new AggregateException(exceptions).ExtractSingleInnerException();
         }
 
+        // Whole attempted failures were handled above by throwing.
+        // If this is only a partial transient failure, persist successful/handled items,
+        // but back off instead of increasing concurrency.
+        if (batch.HasNonDeterministicFailures)
+        {
+            _maxConcurrency = 1;
+        }
         // we had no errors, re-raise max concurrency slowly
-        if (_maxConcurrency < Configuration.MaxConcurrency &&
-            // we had sufficient changes to actually use the current limit  
-            results.Count >= _maxConcurrency)
+        else if (_maxConcurrency < Configuration.MaxConcurrency &&
+                 // we had sufficient changes to actually use the current limit
+                 results.Count >= _maxConcurrency)
         {
             _maxConcurrency++;
         }
@@ -187,7 +208,34 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return results.Count;
     }
 
-    private List<Exception> SendToModel(List<GenAiResultItem> items, JsonOperationContext context, GenAiStatsScope scope, CancellationToken batchToken)
+    private readonly record struct AttemptedBatch(int AttemptedCount, int NonDeterministicFailures)
+    {
+        public bool HasNonDeterministicFailures => NonDeterministicFailures > 0;
+
+        public bool AllAttemptedFailedNonDeterministically => AttemptedCount > 0 && NonDeterministicFailures == AttemptedCount;
+    }
+
+    private static AttemptedBatch AnalyzeAttemptedBatch(List<GenAiResultItem> results)
+    {
+        var attempted = 0;
+        var nonDeterministicFailures = 0;
+        foreach (var item in results)
+        {
+            if (item.ContextOutput.IsCached)
+                continue; // cached items were not attempted in this batch
+
+            attempted++;
+            if (item.UpdateHash == false)
+                nonDeterministicFailures++;
+        }
+
+        return new AttemptedBatch(attempted, nonDeterministicFailures);
+    }
+
+    internal static bool IsWholeAttemptedBatchFailure(List<GenAiResultItem> results) =>
+        AnalyzeAttemptedBatch(results).AllAttemptedFailedNonDeterministically;
+
+    private List<Exception> SendToModel(List<GenAiResultItem> items, JsonOperationContext context, GenAiStatsScope scope, CancellationToken shutdown)
     {
         using (var statsScope = scope.For(GenAiOperations.LoadToModel))
         {
@@ -195,6 +243,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             Task[] executingTasks = new Task[Math.Max(1, _maxConcurrency)];
             Array.Fill(executingTasks, Task.CompletedTask);
             List<GenAiResultItem> itemsSentToModel = [];
+
+            var certificate = RavenServer.GetCertificateForAuthorization(Database.ServerStore.Server.Certificate.ClientCertificate);
+            var authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(certificate, $"GenAI access for '{Name}'");
 
             foreach (var item in items)
             {
@@ -207,7 +258,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 }
 
                 // this is how we ensure that we don't have too many outstanding tasks 
-                var idx = Task.WaitAny(executingTasks, CancellationToken);
+                var idx = Task.WaitAny(executingTasks, shutdown);
                 statsScope.TotalSentToModel++;
 
                 string json = item.ContextOutput.Context.ToString();
@@ -216,8 +267,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 var agentConfiguration = CreateAgentConfiguration(context, item);
                 var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
-                    // GenAI task uses full access
-                    Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
+                    Authentication = authentication
                 };
 
                 handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
@@ -234,7 +284,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 handler.SetClient(_chatCompletionClient);
                 try
                 {
-                    task = handler.HandleRequestAsync(batchToken);
+                    task = handler.HandleRequestAsync(Database.Configuration.Ai.GenAiSendToModelTimeout.AsTimeSpan, shutdown);
                 }
                 catch (Exception e)
                 {
@@ -250,7 +300,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
             try
             {
-                Task.WaitAll(executingTasks, CancellationToken); // only the pending tasks remain here
+                Task.WaitAll(executingTasks, shutdown); // only the pending tasks remain here
             }
             catch (Exception)
             {
@@ -507,8 +557,15 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                         context.DocumentDatabase.DocumentsStorage.Put(context, document!.Id, expectedChangeVector: null, document.Data);
                     }
 
+                    var refresh = false;
                     foreach (var item in items)
                     {
+                        if (item.UpdateHash == false)
+                        {
+                            refresh = true;
+                            continue;
+                        }
+
                         hashes.Add(item.ContextOutput.AiHash);
 
                         if (item.ModelOutput is null)
@@ -540,18 +597,24 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     }
 
 
+                    DateTime? refreshAt = refresh
+                        ? context.DocumentDatabase.Time.GetUtcNow().Add(GenAiBatchPatchCommand.RefreshDelay)
+                        : null;
+
                     if (lastPatch != null)
                     {
                         status = lastPatch.PatchResult.Status;
-                        debugActions = lastPatch?.DebugActions;
-                        debugOutput = lastPatch?.DebugOutput;
-
-                        if (lastPatch?.PatchResult?.ModifiedDocument != null)
-                        {
-                            outputDocument = GenAiBatchPatchCommand.UpdateHashesInMetadata(document.Id, lastPatch.PatchResult.ModifiedDocument, Configuration.Identifier,
-                                hashes, context);
-                        }
+                        debugActions = lastPatch.DebugActions;
+                        debugOutput = lastPatch.DebugOutput;
                     }
+
+                    outputDocument = GenAiBatchPatchCommand.UpdateMetadata(
+                        document?.Id,
+                        lastPatch?.PatchResult?.ModifiedDocument ?? document?.Data,
+                        Configuration.Identifier,
+                        hashes,
+                        refreshAt,
+                        context);
 
                     break;
                 }
