@@ -1,0 +1,129 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+
+$translate-before-hover-x: 0;
+$translate-hover-x: 100%;
+
+%navigation-card {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    min-height: 131.55px;
+    border: 1px solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+    transition: bs5variables.$transition-base;
+
+    .card-body {
+        position: relative;
+        z-index: 4;
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        width: 66.66%;
+        height: 100%;
+        background: transparent;
+        filter: blur(50px);
+        transition: bs5variables.$transition-base;
+    }
+}
+
+@function variant-gradient($color) {
+    @return linear-gradient(102deg, rgba($color, 0.35) 1.5%, rgba($color, 0) 91.78%);
+}
+
+$variant-colors: (
+    Replication: map-get(colors.$task-colors, "replication"),
+    Backups: map-get(colors.$task-colors, "backups"),
+    Subscriptions: map-get(colors.$task-colors, "subscriptions"),
+    ETL: map-get(colors.$task-colors, "etl"),
+    Sink: map-get(colors.$task-colors, "sink"),
+    ImportFile: colors.$color-4-3,
+    ImportRavenDb: colors.$color-1-1,
+    ImportCsv: colors.$color-2-1,
+    ImportSql: colors.$color-4,
+    ImportNoSql: colors.$color-3,
+);
+
+$variants: (
+    AI: (
+        border-color: map-get(colors.$task-colors, "ai"),
+        before-gradient: linear-gradient(
+                102deg,
+                rgba(map-get(colors.$task-colors, "ai"), 0.3) 0%,
+                rgba(map-get(colors.$task-colors, "ai"), 0.2) 33%,
+                rgba(123, 81, 255, 0.1) 66%,
+                rgba(123, 81, 255, 0) 91.78%
+            ),
+        before-transform: translateX(50%),
+        before-hover-transform: translateX($translate-hover-x),
+    ),
+);
+
+@each $name, $color in $variant-colors {
+    $variants: map-merge(
+        $variants,
+        (
+            $name: (
+                border-color: $color,
+                before-gradient: variant-gradient($color),
+                before-transform: translateX($translate-before-hover-x),
+                before-hover-transform: translateX($translate-hover-x),
+                icon-color: $color,
+            ),
+        )
+    );
+}
+
+@each $name, $props in $variants {
+    .navigation-card.variant-#{$name} {
+        @extend %navigation-card;
+
+        .task-icon {
+            color: map-get($props, icon-color);
+        }
+
+        &::before {
+            width: 100%;
+            background: map-get($props, before-gradient);
+            left: -100%;
+            filter: blur(2px);
+            transition: bs5variables.$transition-base;
+            transform: map-get($props, before-transform);
+        }
+
+        &:hover {
+            border-color: map-get($props, border-color);
+
+            &::before {
+                transform: map-get($props, before-hover-transform);
+            }
+        }
+    }
+}
+
+.navigation-card.variant-AI {
+    i {
+        &::before {
+            background: colors.$ai-gradient;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    }
+}
+
+// Pair with Bootstrap "d-grid gap-3" at the call site — this class only defines column counts.
+.navigation-cards-grid {
+    grid-template-columns: 1fr;
+
+    @media (min-width: sizes.$screen-sm) {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    @media (min-width: sizes.$screen-lg) {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
