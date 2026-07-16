@@ -21,18 +21,18 @@ public static class RavenTraitHelper
 
         var list = new KeyValuePair<string, string>[distinctCategories];
         var at = 0;
-        
-        foreach (RavenTestCategory value in AllTestCategories)
-        {
-            if (value == RavenTestCategory.None)
-                continue;
 
-            if (category.HasFlag(value))
-            {
-                list[at++] = new KeyValuePair<string, string>("Category", CategoryNames[GetIndexFor(value)]);
-            }
+        // Walk only the bits that are actually set: take the lowest set bit, map it to its name,
+        // clear it with an xor, and repeat until none remain. That's exactly distinctCategories
+        // iterations (two or three in practice) instead of scanning every declared category.
+        var bits = (ulong)category;
+        while (bits != 0)
+        {
+            var index = BitOperations.TrailingZeroCount(bits);
+            list[at++] = new KeyValuePair<string, string>("Category", CategoryNames[index]);
+            bits ^= 1UL << index;
         }
-        
+
         return list;
     }
 
