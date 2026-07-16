@@ -45,6 +45,7 @@ interface computedAppUrls {
     editGenAi: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
+    importDataOptionsUrl: KnockoutComputed<string>;
     importDatabaseFromFileUrl: KnockoutComputed<string>;
     importCollectionFromCsv: KnockoutComputed<string>;
     importDatabaseFromSql: KnockoutComputed<string>;
