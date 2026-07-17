@@ -29,10 +29,28 @@ namespace SlowTests.Server.Documents.CdcSink
 
         public CdcSqlServerFixture()
         {
-            _databaseName = "CdcTest_" + Guid.NewGuid();
             var masterCs = MsSqlConnectionString.Instance.VerifiedConnectionString.Value;
-            ConnectionString = masterCs + $";Initial Catalog={_databaseName}";
+            
+            const int maxAttempts = 5;
+            for (var attempt = 1; ; attempt++)
+            {
+                _databaseName = "CdcTest_" + Guid.NewGuid();
+                ConnectionString = masterCs + $";Initial Catalog={_databaseName}";
+                try
+                {
+                    BootstrapDatabase(masterCs);
+                    return;
+                }
+                catch (SqlException e) when (IsDeadlock(e) && attempt < maxAttempts)
+                {
+                    DropDatabase(masterCs); // best-effort — free the half-created DB before retrying
+                    System.Threading.Thread.Sleep(500 * attempt);
+                }
+            }
+        }
 
+        private void BootstrapDatabase(string masterCs)
+        {
             using (var conn = new SqlConnection(masterCs))
             {
                 conn.Open();
@@ -63,16 +81,18 @@ namespace SlowTests.Server.Documents.CdcSink
                 }
             }
         }
+        
+        internal static bool IsDeadlock(SqlException e) =>
+            e.Number == 1205 || e.Message.Contains("deadlock", StringComparison.OrdinalIgnoreCase);
 
-        public void Dispose()
+        private void DropDatabase(string masterCs)
         {
             try
             {
-                var masterCs = MsSqlConnectionString.Instance.VerifiedConnectionString.Value;
                 using var conn = new SqlConnection(masterCs);
                 conn.Open();
                 using var cmd = new SqlCommand(
-                    $"ALTER DATABASE [{_databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{_databaseName}]", conn);
+                    $"IF DB_ID('{_databaseName}') IS NOT NULL BEGIN ALTER DATABASE [{_databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{_databaseName}]; END", conn);
                 cmd.CommandTimeout = 120;
                 cmd.ExecuteNonQuery();
             }
@@ -80,6 +100,11 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 // best-effort cleanup
             }
+        }
+
+        public void Dispose()
+        {
+            DropDatabase(MsSqlConnectionString.Instance.VerifiedConnectionString.Value);
         }
     }
 
