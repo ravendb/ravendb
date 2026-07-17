@@ -16,20 +16,27 @@ import {
     type CdcLiveStatus,
 } from "@/pages/apps/use-cdc-live-performance";
 
-export function CdcPerformanceSection({ slug }: { slug: string }) {
+export function CdcPerformanceSection({
+    slug,
+    title = "Live CDC performance",
+    loadingLabel = "Connecting to live CDC performance...",
+    errorTitle = "Could not connect to the live CDC feed",
+}: {
+    slug: string;
+    title?: string;
+    loadingLabel?: string;
+    errorTitle?: string;
+}) {
     const live = useCdcLivePerformance(slug);
 
     return (
-        <SectionCard
-            title="Live CDC performance"
-            action={live.performance && <CdcStatusBadge status={live.performance.status} />}
-        >
+        <SectionCard title={title} action={live.performance && <CdcStatusBadge status={live.performance.status} />}>
             <ApiState
                 isLoading={live.connection === "connecting"}
                 isError={live.connection === "error"}
-                errorTitle="Could not connect to the live CDC feed"
+                errorTitle={errorTitle}
                 onRetry={live.retry}
-                loadingLabel="Connecting to live CDC performance..."
+                loadingLabel={loadingLabel}
             >
                 {live.performance && <CdcPerformanceContent performance={live.performance} />}
             </ApiState>
@@ -85,10 +92,11 @@ function CdcPerformanceContent({ performance }: { performance: CdcLivePerformanc
     );
 }
 
-// recharts 3.x drops `Cell` fills inside `Bar`, so per-batch coloring is done with two
+// recharts 3.x drops `Cell` fills inside `Bar`, so per-batch coloring is done with
 // stacked series where each batch populates exactly one of them.
 const batchesChartConfig = {
-    okProcessed: { label: "Processed", color: "var(--primary)" },
+    okProcessed: { label: "Processed", color: "var(--success)" },
+    inProgressProcessed: { label: "In progress", color: "var(--text-muted)" },
     errorProcessed: { label: "Processed (errors)", color: "var(--destructive)" },
 } satisfies ChartConfig;
 
@@ -104,11 +112,15 @@ function CdcBatchesChart({ batches }: { batches: CdcLiveBatch[] }) {
         return <p className="py-8 text-center text-sm text-muted-foreground">No recent batches.</p>;
     }
 
-    const points = batches.map((batch) => ({
-        ...batch,
-        okProcessed: batch.errors > 0 ? null : batch.processed,
-        errorProcessed: batch.errors > 0 ? batch.processed : null,
-    }));
+    const points = batches.map((batch) => {
+        const isInProgress = batch.ended === null;
+        return {
+            ...batch,
+            okProcessed: batch.errors === 0 && !isInProgress ? batch.processed : null,
+            inProgressProcessed: batch.errors === 0 && isInProgress ? batch.processed : null,
+            errorProcessed: batch.errors > 0 ? batch.processed : null,
+        };
+    });
 
     return (
         <ChartContainer config={batchesChartConfig} className="aspect-auto h-56 w-full">
@@ -124,6 +136,12 @@ function CdcBatchesChart({ batches }: { batches: CdcLiveBatch[] }) {
                 <YAxis hide domain={[0, "dataMax"]} />
                 <ChartTooltip cursor={false} content={<CdcBatchTooltip />} />
                 <Bar dataKey="okProcessed" stackId="batch" fill="var(--color-okProcessed)" radius={[4, 4, 0, 0]} />
+                <Bar
+                    dataKey="inProgressProcessed"
+                    stackId="batch"
+                    fill="var(--color-inProgressProcessed)"
+                    radius={[4, 4, 0, 0]}
+                />
                 <Bar
                     dataKey="errorProcessed"
                     stackId="batch"
@@ -143,11 +161,11 @@ function CdcBatchTooltip({ active, payload }: { active?: boolean; payload?: Read
 
     return (
         <div className="grid min-w-40 gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
-            <div className="font-medium">{formatDateTime(batch.started)}</div>
+            <CdcBatchTooltipRow label="Started" value={formatDateTime(batch.started)} />
+            <CdcBatchTooltipRow label="Ended" value={batch.ended ? formatDateTime(batch.ended) : "In progress"} />
             <CdcBatchTooltipRow label="Processed" value={formatCompact(batch.processed)} />
             <CdcBatchTooltipRow label="Duration" value={`${Math.round(batch.durationInMs)} ms`} />
-            <CdcBatchTooltipRow label="Ended" value={batch.ended ? formatDateTime(batch.ended) : "In progress"} />
-            <CdcBatchTooltipRow label="Errors" value={String(batch.errors)} />
+            {batch.errors > 0 && <CdcBatchTooltipRow label="Errors" value={String(batch.errors)} />}
         </div>
     );
 }
