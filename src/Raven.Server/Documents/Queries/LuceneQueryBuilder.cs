@@ -357,6 +357,7 @@ namespace Raven.Server.Documents.Queries
                 
                 var termType = LuceneTermType.Null;
                 var hasGotTheRealType = false;
+                var fieldHasTime = index.IndexFieldsPersistence.HasTimeValues(fieldName);
 
                 if (ie.All)
                 {
@@ -370,7 +371,9 @@ namespace Raven.Server.Documents.Queries
                             hasGotTheRealType = true;
                         }
                         
-                        allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value.Value, exact), Occur.MUST);
+                        allInQuery.Add(fieldHasTime && QueryBuilderHelper.TryGetTimeForInQuery(index, value.Value, out var canonicalAll) && canonicalAll != null
+                                ? LuceneQueryHelper.Equal(fieldName, LuceneTermType.String, canonicalAll, exact: true)
+                                : LuceneQueryHelper.Equal(fieldName, termType, value.Value, exact), Occur.MUST);
                     }
 
                     return allInQuery;
@@ -386,7 +389,9 @@ namespace Raven.Server.Documents.Queries
                         hasGotTheRealType = true;
                     }
 
-                    matches.Add(LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact || tuple.Type == ValueTokenType.Parameter));
+                    matches.Add(fieldHasTime && QueryBuilderHelper.TryGetTimeForInQuery(index, tuple.Value, out var canonical) && canonical != null
+                        ? canonical
+                        : LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact || tuple.Type == ValueTokenType.Parameter));
                 }
 
                 return new InQuery(fieldName, matches);
