@@ -8,6 +8,12 @@ namespace FastTests.Utils;
 public class RavenTraitHelperTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Codebase)]
+    public void Emits_none_category()
+    {
+        AssertTraits(RavenTestCategory.None);
+    }
+
+    [RavenFact(RavenTestCategory.Codebase)]
     public void Emits_single_category()
     {
         AssertTraits(
@@ -32,6 +38,17 @@ public class RavenTraitHelperTests(ITestOutputHelper output) : NoDisposalNeeded(
             nameof(RavenTestCategory.Querying),
             nameof(RavenTestCategory.Indexes),
             nameof(RavenTestCategory.Corax));
+    }
+    
+    [RavenFact(RavenTestCategory.Codebase)]
+    public void Emits_bulk_insert_includes_client_api()
+    {
+        AssertTraits(
+            RavenTestCategory.BulkInsert | RavenTestCategory.Counters,
+            nameof(RavenTestCategory.ClientApi),
+            nameof(RavenTestCategory.BulkInsert),
+            nameof(RavenTestCategory.Counters)
+        );
     }
 
     private static void AssertTraits(RavenTestCategory category, params string[] expectedCategoryNames)

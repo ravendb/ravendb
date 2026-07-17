@@ -7,6 +7,7 @@ namespace Tests.Infrastructure.XunitExtensions;
 public static class RavenTraitHelper
 {
     private const int MaxFlagCount = 64;
+    private const string Category = "Category";
     private static readonly RavenTestCategory[] AllTestCategories = Enum.GetValues<RavenTestCategory>();
     private static readonly string[] CategoryNames = BuildCategoryNames();
     private static readonly IReadOnlyCollection<KeyValuePair<string, string>>[] SingleCategoryTraits = BuildSingleCategoryTraits();
@@ -14,9 +15,16 @@ public static class RavenTraitHelper
     public static IReadOnlyCollection<KeyValuePair<string, string>> GetTraitsFor(RavenTestCategory category)
     {
         int distinctCategories = CountDistinctCategories(category);
+
+        if (distinctCategories == 0)
+        {
+            return [];
+        }
+        
         if (distinctCategories == 1)
         {
-            return SingleCategoryTraits[GetIndexFor(category)];
+            int index = GetIndexFor(category);
+            return SingleCategoryTraits[index] ?? [new KeyValuePair<string, string>(Category, CategoryNames[index])];
         }
 
         var list = new KeyValuePair<string, string>[distinctCategories];
@@ -29,7 +37,7 @@ public static class RavenTraitHelper
         while (bits != 0)
         {
             var index = BitOperations.TrailingZeroCount(bits);
-            list[at++] = new KeyValuePair<string, string>("Category", CategoryNames[index]);
+            list[at++] = new KeyValuePair<string, string>(Category, CategoryNames[index]);
             bits ^= 1UL << index;
         }
 
@@ -68,11 +76,12 @@ public static class RavenTraitHelper
             if (value == RavenTestCategory.None)
                 continue;
 
+            // Check if it's an actual flag
             if (BitOperations.PopCount((ulong)value) != 1)
                 continue;
 
             var index = GetIndexFor(value);
-            traits[index] = [new KeyValuePair<string, string>("Category", CategoryNames[index])];
+            traits[index] = [new KeyValuePair<string, string>(Category, CategoryNames[index])];
         }
         return traits;
     }
