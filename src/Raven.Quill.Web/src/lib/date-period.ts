@@ -71,6 +71,23 @@ export function formatPeriodLabel(period: DatePeriod): string {
     return format(toDate(period), period.day === null ? "MMMM yyyy" : "MMMM d, yyyy");
 }
 
+// True while a clicked chart bar can drill the period one level finer: a year
+// drills into a month, a month into a day. A day already shows hours, the finest
+// bucket, so it is not drillable.
+export function canDrillInto(period: DatePeriod): boolean {
+    return period.day === null;
+}
+
+// Resolves the period a clicked bar drills into from that bucket's date (its
+// `from` timestamp or `t` label). Returns null when the value cannot be parsed
+// as a date, so callers can ignore the click.
+export function drillInto(period: DatePeriod, bucketDate: string): DatePeriod | null {
+    const date = new Date(bucketDate);
+    if (Number.isNaN(date.getTime())) return null;
+    if (period.month === null) return clampToToday({ year: date.getFullYear(), month: date.getMonth() + 1, day: null });
+    return clampToToday({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() });
+}
+
 // Query-string shape shared by the period endpoints (stats.usage, stats.appUsage,
 // settings.usage, stats.dashboard, stats.conversationStats), which all take the
 // period as year/month/day parameters.
