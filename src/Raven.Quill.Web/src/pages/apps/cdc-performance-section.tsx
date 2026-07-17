@@ -125,7 +125,12 @@ function CdcBatchesChart({ batches }: { batches: CdcLiveBatch[] }) {
 
     return (
         <ChartContainer config={batchesChartConfig} className="aspect-auto h-56 w-full">
-            <BarChart accessibilityLayer data={points} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+            <BarChart
+                accessibilityLayer
+                data={points}
+                maxBarSize={24}
+                margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
+            >
                 <CartesianGrid vertical={false} />
                 <XAxis
                     dataKey="started"
