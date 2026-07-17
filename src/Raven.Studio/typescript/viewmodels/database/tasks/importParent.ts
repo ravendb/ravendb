@@ -26,15 +26,6 @@ class importParent extends viewModelBase {
         this.router = durandalRouter.createChildRouter()
             .map([
                 {
-                    route: 'databases/tasks/import/file',
-                    moduleId: this.wrapModuleId(require("viewmodels/database/tasks/importDatabaseFromFile")),
-                    title: 'Import database from file',
-                    nav: true,
-                    tabName: "From file (.ravendbdump)",
-                    dynamicHash: appUrl.forCurrentDatabase().importDatabaseFromFileUrl,
-                    requiredAccess: "DatabaseReadWrite"
-                },
-                {
                     route: 'databases/tasks/import/migrateRavenDB',
                     moduleId: this.wrapModuleId(require('viewmodels/database/tasks/migrateRavenDbDatabase')),
                     title: 'Import database from another RavenDB',
