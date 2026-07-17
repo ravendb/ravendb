@@ -99,7 +99,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice).Delete(DocumentsStorage.SupportedFeaturesSlice);
+                    context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice).Delete(DocumentsStorage.SupportedFeaturesKey);
                     tx.Commit();
                 }
 
@@ -118,7 +118,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (context.OpenReadTransaction())
                 {
                     var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice);
-                    Assert.False(tree.TryRead(DocumentsStorage.SupportedFeaturesSlice, out _));
+                    Assert.False(tree.TryRead(DocumentsStorage.SupportedFeaturesKey, out _));
                 }
             }
         }
