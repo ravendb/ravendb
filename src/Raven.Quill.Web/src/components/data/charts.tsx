@@ -9,6 +9,7 @@ import {
     ChartTooltipContent,
     type ChartConfig,
 } from "@/components/shadcn/ui/chart";
+import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
 import { seriesColor } from "@/lib/palette";
 
 const writesChartConfig = {
@@ -55,7 +56,7 @@ export function WritesBarChart({
                 <BarChart accessibilityLayer data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey={xKey} tickLine={false} axisLine={false} tickMargin={8} interval={2} />
-                    <YAxis hide domain={[0, "dataMax"]} />
+                    <YAxis hide domain={ZERO_SAFE_Y_DOMAIN} />
                     <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                     <Bar
                         dataKey="writes"
@@ -106,7 +107,7 @@ export function SeriesBarChart({
                 <BarChart accessibilityLayer data={data.points} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="t" tickLine={false} axisLine={false} tickMargin={8} interval={2} />
-                    <YAxis hide domain={[0, "dataMax"]} />
+                    <YAxis hide domain={ZERO_SAFE_Y_DOMAIN} />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <ChartLegend content={<ChartLegendContent />} />
                     {data.keys.map((series, index) => (

@@ -1,6 +1,7 @@
 import { useState, type ComponentProps } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ApiState } from "@/components/data/api-state";
+import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/shadcn/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
@@ -133,7 +134,7 @@ function CdcBatchesChart({ batches }: { batches: CdcLiveBatch[] }) {
                     tickMargin={8}
                     tickFormatter={formatBatchTick}
                 />
-                <YAxis hide domain={[0, "dataMax"]} />
+                <YAxis hide domain={ZERO_SAFE_Y_DOMAIN} />
                 <ChartTooltip cursor={false} content={<CdcBatchTooltip />} />
                 <Bar dataKey="okProcessed" stackId="batch" fill="var(--color-okProcessed)" radius={[4, 4, 0, 0]} />
                 <Bar
