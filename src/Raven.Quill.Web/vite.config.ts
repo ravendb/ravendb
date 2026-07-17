@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
         },
         server: {
             proxy: {
-                "/api": apiProxyTarget,
+                "/api": { target: apiProxyTarget, ws: true },
                 "/healthz": apiProxyTarget,
                 // Public embed page, iframed by the channel widget preview.
                 "/embed": apiProxyTarget,
