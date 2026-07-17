@@ -66,7 +66,7 @@ public static class RavenTraitHelper
 
     /// <summary>
     /// Pre-builds the trait list for every single-bit category, indexed by the flag's bit position.
-    /// Composite flags (more than one bit set, e.g. BulkInsert) are left null and fall back to the scan.
+    /// Composite flags (more than one bit set, e.g. BulkInsert) are left null and handled by the multi-bit code path.
     /// </summary>
     private static IReadOnlyCollection<KeyValuePair<string, string>>[] BuildSingleCategoryTraits()
     {
