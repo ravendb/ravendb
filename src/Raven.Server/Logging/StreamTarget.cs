@@ -10,13 +10,13 @@ namespace Raven.Server.Logging;
 
 public class StreamTarget : AbstractTarget
 {
-    private static readonly ReadOnlyMemory<byte> HeaderBytes = Encoding.UTF8.GetBytes(Constants.Logging.DefaultHeaderAndFooterLayout + Environment.NewLine);
+    private static readonly ReadOnlyMemory<byte> HeaderBytes = Encoding.UTF8.GetBytes(Constants.Logging.DefaultServerHeaderAndFooterLayout + Environment.NewLine);
 
     private static readonly ConcurrentSet<Stream> Streams = new();
 
     public static readonly StreamTarget Instance = new()
     {
-        Layout = Constants.Logging.DefaultLayout
+        Layout = Constants.Logging.DefaultServerLayout
     };
 
     private static readonly TargetCountGuardian RegisteredSockets = new();
