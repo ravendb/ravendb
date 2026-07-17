@@ -5,7 +5,9 @@ import type { CdcLiveRawFrame } from "@/pages/apps/use-cdc-live-performance";
 import { apiHttp } from "./api-http";
 
 // WS-only relay route, so it has no generated client or `apiHttp` path to lean on.
-const cdcProgressFeed = ws.link("ws://*/api/apps/:slug/cdc/progress");
+// The pattern must start with "*": msw resolves other patterns through `new URL()`,
+// and Chrome percent-encodes the "*" host (ws://%2A/...), so they never match.
+const cdcProgressFeed = ws.link("*/api/apps/:slug/cdc/progress");
 
 export const appsMocks = {
     list: (apps: AppResponse[] = sampleApps) => apiHttp.get("/api/apps", ({ response }) => response(200).json(apps)),
@@ -71,18 +73,20 @@ export function sampleCdcProgressFrame(): CdcLiveRawFrame {
                 TaskName: "cdc/demo-shop",
                 Stats: [
                     {
-                        Performance: Array.from({ length: 6 }, (_, index) => {
+                        Performance: Array.from({ length: 51 }, (_, index) => {
                             const startedMs = Date.now() - 5_000 - index * 90_000;
                             const durationInMs = 900 + Math.round(Math.abs(Math.sin(index)) * 800);
                             const read = 480 + index * 7;
+                            // One failing batch so stories exercise the error styling.
+                            const scriptErrors = index === 2 ? 3 : 0;
                             return {
-                                Id: 6 - index,
+                                Id: index,
                                 Started: new Date(startedMs).toISOString(),
                                 Completed: new Date(startedMs + durationInMs).toISOString(),
                                 DurationInMs: durationInMs,
                                 NumberOfReadMessages: read,
-                                NumberOfProcessedMessages: read,
-                                ScriptProcessingErrorCount: 0,
+                                NumberOfProcessedMessages: read - scriptErrors,
+                                ScriptProcessingErrorCount: scriptErrors,
                                 ReadErrorCount: 0,
                             };
                         }),
