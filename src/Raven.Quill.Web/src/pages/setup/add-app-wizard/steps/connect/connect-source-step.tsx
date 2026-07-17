@@ -21,8 +21,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const importState = useSetupWizardStore((state) => state.importState);
     const isLocked = importState === "locked";
 
-    // The slug follows the app name until the operator edits it; clearing the field hands
-    // control back to the auto-fill (an empty slug is also valid — the server derives one).
+    // The slug follows the app name until the operator touch it
     const isSlugTouched = Boolean(touchedFields.externalConnection?.slug);
 
     const {
@@ -61,7 +60,7 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
             <FormInput
                 control={control}
                 name="externalConnection.slug"
-                label="Public URL slug"
+                label="Public URL slug (optional)"
                 placeholder="e.g. acme-shop"
                 disabled={isBusy}
                 description="Appears in every public embed URL and becomes the app's database name. Permanent once the app is created."
