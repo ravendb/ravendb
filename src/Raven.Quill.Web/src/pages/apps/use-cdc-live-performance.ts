@@ -23,6 +23,7 @@ export type CdcLiveRawFrame = {
 export type CdcLiveBatch = {
     key: string;
     started: string;
+    ended: string | null;
     durationInMs: number;
     processed: number;
     errors: number;
@@ -32,9 +33,10 @@ export type CdcLiveStatus = "active" | "error" | "idle";
 
 export type CdcLivePerformance = {
     status: CdcLiveStatus;
-    lagSeconds: number | null;
     recentWrites: number;
     errorCount: number;
+    // Batches observed since the connection opened, including ones pruned from recentBatches.
+    totalBatches: number;
     recentBatches: CdcLiveBatch[];
 };
 
@@ -64,6 +66,7 @@ export function useCdcLivePerformance(slug: string) {
         const batches = new Map<string, CdcLiveRawBatch>();
         const socket = new WebSocket(buildProgressUrl(slug));
         let isDisposed = false;
+        let totalBatches = 0;
 
         socket.onmessage = (event) => {
             if (isDisposed || typeof event.data !== "string") {
@@ -72,12 +75,16 @@ export function useCdcLivePerformance(slug: string) {
 
             const frame = parseFrame(event.data);
             if (frame) {
-                mergeFrame(batches, frame);
+                totalBatches += mergeFrame(batches, frame);
             }
 
             // Heartbeats (no frame) still land here every few seconds, keeping lag and
             // status fresh while the sink is idle.
-            setState({ connectionId, connection: "open", performance: shape(batches, Date.now()) });
+            setState({
+                connectionId,
+                connection: "open",
+                performance: shape(batches, totalBatches, Date.now()),
+            });
         };
 
         const fail = () => {
@@ -121,20 +128,27 @@ function parseFrame(data: string): CdcLiveRawFrame | null {
 }
 
 // The feed resends an in-progress batch (same Id) until it completes, so merge by
-// task/process/batch identity instead of appending.
-function mergeFrame(batches: Map<string, CdcLiveRawBatch>, frame: CdcLiveRawFrame) {
+// task/process/batch identity instead of appending. Returns the number of batches not
+// seen before, so the caller can keep a running total across pruning.
+function mergeFrame(batches: Map<string, CdcLiveRawBatch>, frame: CdcLiveRawFrame): number {
+    let newBatches = 0;
     for (const task of frame.Results ?? []) {
         (task.Stats ?? []).forEach((process, processIndex) => {
             for (const batch of process.Performance ?? []) {
-                batches.set(`${task.TaskName ?? ""}/${processIndex}/${batch.Id}`, batch);
+                const key = `${task.TaskName ?? ""}/${processIndex}/${batch.Id}`;
+                if (!batches.has(key)) {
+                    newBatches += 1;
+                }
+                batches.set(key, batch);
             }
         });
     }
 
     pruneOldest(batches);
+    return newBatches;
 }
 
-const MAX_TRACKED_BATCHES = 50;
+export const MAX_TRACKED_BATCHES = 500;
 
 function pruneOldest(batches: Map<string, CdcLiveRawBatch>) {
     if (batches.size <= MAX_TRACKED_BATCHES) {
@@ -151,7 +165,7 @@ function pruneOldest(batches: Map<string, CdcLiveRawBatch>) {
 // does not carry (task disabled flag, persisted last-activity timestamp).
 const ACTIVE_WINDOW_MS = 60_000;
 
-function shape(batches: Map<string, CdcLiveRawBatch>, nowMs: number): CdcLivePerformance {
+function shape(batches: Map<string, CdcLiveRawBatch>, totalBatches: number, nowMs: number): CdcLivePerformance {
     const orderedBatches = [...batches.entries()]
         .map(([key, raw]) => ({ key, raw, startedMs: Date.parse(raw.Started) }))
         .sort((a, b) => a.startedMs - b.startedMs);
@@ -180,12 +194,13 @@ function shape(batches: Map<string, CdcLiveRawBatch>, nowMs: number): CdcLivePer
 
     return {
         status,
-        lagSeconds: lastSyncMs === null ? null : Math.max(0, Math.floor((nowMs - lastSyncMs) / 1000)),
         recentWrites,
         errorCount,
+        totalBatches,
         recentBatches: orderedBatches.map(({ key, raw }) => ({
             key,
             started: raw.Started,
+            ended: raw.Completed ?? null,
             durationInMs: raw.DurationInMs,
             processed: raw.NumberOfProcessedMessages,
             errors: raw.ScriptProcessingErrorCount + raw.ReadErrorCount,
