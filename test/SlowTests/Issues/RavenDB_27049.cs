@@ -12,7 +12,6 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -94,7 +93,7 @@ namespace SlowTests.Issues
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice).Delete(DocumentsStorage.SupportedFeaturesSlice);
+                    context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice).Delete(DocumentsStorage.SupportedFeaturesKey);
                     tx.Commit();
                 }
 
@@ -112,7 +111,7 @@ namespace SlowTests.Issues
                 using (context.OpenReadTransaction())
                 {
                     var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice);
-                    Assert.Null(tree.Read(DocumentsStorage.SupportedFeaturesSlice));
+                    Assert.Null(tree.Read(DocumentsStorage.SupportedFeaturesKey));
                 }
             }
         }
@@ -131,9 +130,8 @@ namespace SlowTests.Issues
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice);
-                    using (Slice.From(context.Allocator, Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix, out var value))
-                        tree.Add(DocumentsStorage.SupportedFeaturesSlice, value);
+                    context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice)
+                        .Add(DocumentsStorage.SupportedFeaturesKey, Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix);
                     tx.Commit();
                 }
 
