@@ -250,6 +250,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Before Kill')");
 
+            await WaitForCdcCapture(connectionString);
+
             var sqlCs = SetupSqlConnectionString(store, connectionString);
             var config = new CdcSinkConfiguration
             {
@@ -276,6 +278,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var doc = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
+
+            await WaitForCdcInitialLoadAsync(store, "test-conn-failure");
 
             // SQL Server poll-based CDC doesn't hold a persistent connection,
             // so killing a session has limited impact — the next poll opens a new connection.
