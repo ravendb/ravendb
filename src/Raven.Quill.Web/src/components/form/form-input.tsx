@@ -1,4 +1,4 @@
-import { useId, useState, type ComponentProps, type ReactNode } from "react";
+import { useId, useState, type ChangeEvent, type ComponentProps, type ReactNode } from "react";
 import { type FieldPath, type FieldValues, type UseControllerProps, useController } from "react-hook-form";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
@@ -13,6 +13,7 @@ type FormInputProps<TFieldValues extends FieldValues, TName extends FieldPath<TF
         addons?: ReactNode;
         label?: ReactNode;
         description?: ReactNode;
+        afterChange?: (event: ChangeEvent<HTMLInputElement>) => void;
     };
 
 export function FormInput<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -27,6 +28,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
     name,
     type,
     description,
+    afterChange,
     ...restProps
 }: FormInputProps<TFieldValues, TName>) {
     const generatedId = useId();
@@ -45,13 +47,16 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
 
     const actualInputType = type === "password" && isPasswordVisible ? "text" : type;
 
-    function handleValueChange(value: string) {
+    function handleValueChange(event: ChangeEvent<HTMLInputElement>) {
+        const value = event.target.value;
+
         if (type === "number") {
             onChange(value === "" ? null : Number(value));
-            return;
+        } else {
+            onChange(value);
         }
 
-        onChange(value);
+        afterChange?.(event);
     }
 
     return (
@@ -61,7 +66,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
                 <InputGroupInput
                     id={inputId}
                     placeholder={placeholder}
-                    onChange={(e) => handleValueChange(e.target.value)}
+                    onChange={handleValueChange}
                     value={value ?? ""}
                     ref={ref}
                     onBlur={onBlur}

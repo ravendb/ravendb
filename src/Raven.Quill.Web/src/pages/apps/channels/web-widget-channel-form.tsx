@@ -60,13 +60,9 @@ export function WebWidgetChannelForm({
                 displayName: values.displayName.trim() || null,
                 allowedOrigins: values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean),
             }),
-        onSuccess: async (result) => {
+        onSuccess: async () => {
             await invalidateChannelQueries(queryClient, slug);
-            if (result.existing) {
-                toast.info("This agent already has a web widget. Showing the existing channel.");
-            } else {
-                toast.success("Web widget channel created");
-            }
+            toast.success("Web widget channel created");
             onCreated();
         },
     });

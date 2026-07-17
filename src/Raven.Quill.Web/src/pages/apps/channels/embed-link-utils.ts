@@ -1,8 +1,10 @@
-/** Builds the absolute, paste-ready embed URL from a token. The embed surface is served on the
- *  public.* subdomain only, so swap the operator host's leading label (dashboard.* / api.*) for
- *  public.* — falling back to the current origin when there is no subdomain to swap (dev/localhost). */
-export function buildEmbedUrl(token: string) {
-    return `${originForSubdomain("public")}/embed/${token}`;
+/** Builds the absolute, paste-ready embed URL from the app slug and a token. The embed surface is
+ *  served on the public.* subdomain only, so swap the operator host's leading label (dashboard.* /
+ *  api.*) for public.* — falling back to the current origin when there is no subdomain to swap
+ *  (dev/localhost). Prefer the mint response's `url` when available; this rebuilds the same shape
+ *  for links loaded from the list endpoint. */
+export function buildEmbedUrl(slug: string, token: string) {
+    return `${originForSubdomain("public")}/apps/${encodeURIComponent(slug)}/embed/${token}`;
 }
 
 /** Builds the absolute embed-links mint endpoint shown in the "Generate links via the API" docs. The

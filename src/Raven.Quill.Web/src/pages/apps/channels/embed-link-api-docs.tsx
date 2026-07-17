@@ -45,13 +45,13 @@ function readLanguage(): Language {
 
 type EmbedLinkApiDocsProps = {
     slug: string;
-    agentId: string;
+    widgetId: string;
     parameterNames: string[];
 };
 
-export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApiDocsProps) {
+export function EmbedLinkApiDocs({ slug, widgetId, parameterNames }: EmbedLinkApiDocsProps) {
     const hasParameters = parameterNames.length > 0;
-    const requests = buildRequestSnippets(slug, agentId, parameterNames);
+    const requests = buildRequestSnippets(slug, widgetId, parameterNames);
 
     const [isOpen, setIsOpen] = useState(readIsOpen);
     const [language, setLanguage] = useState<Language>(readLanguage);
@@ -68,7 +68,7 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
     };
 
     const fields = [
-        { name: "agentId", description: "The agent this channel is bound to (already filled in)." },
+        { name: "widgetId", description: "The web widget channel the link is minted for (already filled in)." },
         {
             name: "ttlSeconds",
             description: `Link lifetime in seconds, ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} (default ${DEFAULT_TTL_SECONDS.toLocaleString()}).`,
@@ -102,8 +102,8 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
             <CollapsibleContent className="mt-4 grid gap-4">
                 <p className="text-sm text-muted-foreground">
                     Mint links from your own backend by POSTing to the embed-links endpoint, authenticated with your
-                    operator key in the <InlineCode>X-Api-Key</InlineCode> header. The app and agent are already filled
-                    in below — swap in your <InlineCode>QUILL_API_KEY</InlineCode>
+                    operator key in the <InlineCode>X-Api-Key</InlineCode> header. The app and channel are already
+                    filled in below — swap in your <InlineCode>QUILL_API_KEY</InlineCode>
                     {hasParameters ? " and the parameter values" : ""}.
                 </p>
 
@@ -142,24 +142,24 @@ export function EmbedLinkApiDocs({ slug, agentId, parameterNames }: EmbedLinkApi
 
 const API_KEY_PLACEHOLDER = "<your QUILL_API_KEY>";
 
-function buildRequestSnippets(slug: string, agentId: string, parameterNames: string[]): Record<Language, string> {
+function buildRequestSnippets(slug: string, widgetId: string, parameterNames: string[]): Record<Language, string> {
     const url = buildMintEmbedLinkUrl(slug);
     const hasParameters = parameterNames.length > 0;
 
     return {
-        bash: buildCurlSnippet(url, agentId, parameterNames, "curl", "\\"),
-        powershell: buildCurlSnippet(url, agentId, parameterNames, "curl.exe", "`"),
-        csharp: buildCSharpSnippet(url, agentId, parameterNames, hasParameters),
-        python: buildPythonSnippet(url, agentId, parameterNames, hasParameters),
-        node: buildNodeSnippet(url, agentId, parameterNames, hasParameters),
+        bash: buildCurlSnippet(url, widgetId, parameterNames, "curl", "\\"),
+        powershell: buildCurlSnippet(url, widgetId, parameterNames, "curl.exe", "`"),
+        csharp: buildCSharpSnippet(url, widgetId, parameterNames, hasParameters),
+        python: buildPythonSnippet(url, widgetId, parameterNames, hasParameters),
+        node: buildNodeSnippet(url, widgetId, parameterNames, hasParameters),
     };
 }
 
 // bash continues lines with "\", PowerShell with a backtick; PowerShell also needs curl.exe so
 // it doesn't resolve to the Invoke-WebRequest alias on Windows PowerShell 5.1.
-function buildCurlSnippet(url: string, agentId: string, parameterNames: string[], curl: string, continuation: string) {
+function buildCurlSnippet(url: string, widgetId: string, parameterNames: string[], curl: string, continuation: string) {
     const body: Record<string, unknown> = {
-        agentId,
+        widgetId,
         ttlSeconds: DEFAULT_TTL_SECONDS,
         maxInvocations: DEFAULT_MAX_INVOCATIONS,
     };
@@ -181,7 +181,7 @@ function buildCurlSnippet(url: string, agentId: string, parameterNames: string[]
     ].join("\n");
 }
 
-function buildCSharpSnippet(url: string, agentId: string, parameterNames: string[], hasParameters: boolean) {
+function buildCSharpSnippet(url: string, widgetId: string, parameterNames: string[], hasParameters: boolean) {
     const parameterEntries = parameterNames.map((name) => `[${JSON.stringify(name)}] = "<value>"`).join(", ");
 
     return [
@@ -195,7 +195,7 @@ function buildCSharpSnippet(url: string, agentId: string, parameterNames: string
         `    "${url}",`,
         "    new",
         "    {",
-        `        agentId = "${agentId}",`,
+        `        widgetId = "${widgetId}",`,
         `        ttlSeconds = ${DEFAULT_TTL_SECONDS},`,
         `        maxInvocations = ${DEFAULT_MAX_INVOCATIONS},`,
         ...(hasParameters ? [`        parameters = new Dictionary<string, string> { ${parameterEntries} },`] : []),
@@ -207,7 +207,7 @@ function buildCSharpSnippet(url: string, agentId: string, parameterNames: string
     ].join("\n");
 }
 
-function buildPythonSnippet(url: string, agentId: string, parameterNames: string[], hasParameters: boolean) {
+function buildPythonSnippet(url: string, widgetId: string, parameterNames: string[], hasParameters: boolean) {
     const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
 
     return [
@@ -217,7 +217,7 @@ function buildPythonSnippet(url: string, agentId: string, parameterNames: string
         `    "${url}",`,
         `    headers={"X-Api-Key": "${API_KEY_PLACEHOLDER}"},`,
         "    json={",
-        `        "agentId": "${agentId}",`,
+        `        "widgetId": "${widgetId}",`,
         `        "ttlSeconds": ${DEFAULT_TTL_SECONDS},`,
         `        "maxInvocations": ${DEFAULT_MAX_INVOCATIONS},`,
         ...(hasParameters ? [`        "parameters": {${parameterEntries}},`] : []),
@@ -228,7 +228,7 @@ function buildPythonSnippet(url: string, agentId: string, parameterNames: string
     ].join("\n");
 }
 
-function buildNodeSnippet(url: string, agentId: string, parameterNames: string[], hasParameters: boolean) {
+function buildNodeSnippet(url: string, widgetId: string, parameterNames: string[], hasParameters: boolean) {
     const parameterEntries = parameterNames.map((name) => `${JSON.stringify(name)}: "<value>"`).join(", ");
 
     return [
@@ -239,7 +239,7 @@ function buildNodeSnippet(url: string, agentId: string, parameterNames: string[]
         '        "Content-Type": "application/json",',
         "    },",
         "    body: JSON.stringify({",
-        `        agentId: "${agentId}",`,
+        `        widgetId: "${widgetId}",`,
         `        ttlSeconds: ${DEFAULT_TTL_SECONDS},`,
         `        maxInvocations: ${DEFAULT_MAX_INVOCATIONS},`,
         ...(hasParameters ? [`        parameters: { ${parameterEntries} },`] : []),

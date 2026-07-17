@@ -1,9 +1,30 @@
 import type { CdcColumnType, CdcSinkRelationType } from "@/api/generated/server-api";
 import { z } from "zod";
+import { MAX_SLUG_LENGTH, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 
 // Mirrors the generated CdcSinkTableConfig graph. Kept in sync with the API enums via `satisfies`.
 const COLUMN_TYPES = ["Default", "Json", "Attachment"] as const satisfies readonly CdcColumnType[];
 const RELATION_TYPES = ["Array", "Map", "Value"] as const satisfies readonly CdcSinkRelationType[];
+
+// Optional override; when empty the server derives the slug from the app name. Mirrors the
+// server's normalization checks so obvious problems surface before provisioning (reserved
+// names and duplicates are only known server-side and come back as 400/409).
+const slugSchema = z
+    .string()
+    .trim()
+    .superRefine((value, ctx) => {
+        if (value === "") {
+            return;
+        }
+
+        const normalized = toSlug(value);
+
+        if (normalized === "") {
+            ctx.addIssue({ code: "custom", message: "Slug must contain at least one letter or digit (a–z, 0–9)" });
+        } else if (normalized.length > MAX_SLUG_LENGTH) {
+            ctx.addIssue({ code: "custom", message: `Slug must be at most ${MAX_SLUG_LENGTH} characters` });
+        }
+    });
 
 export const providerSchema = z.union([
     z.literal("Npgsql"),
@@ -141,6 +162,7 @@ export const appSchema = z.object({
     }),
     externalConnection: z.object({
         appName: z.string().trim().min(1, "Application name is required"),
+        slug: slugSchema,
         provider: providerSchema,
         connectionString: z.string().trim().min(1, "Connection string is required."),
     }),

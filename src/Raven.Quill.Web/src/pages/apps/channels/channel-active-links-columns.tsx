@@ -100,7 +100,7 @@ function LinkActions({ slug, link }: { slug: string; link: EmbedLinkSummaryRespo
                 size="icon-sm"
                 aria-label={`Copy embed link ${link.token}`}
                 title="Copy link"
-                onClick={() => copyToClipboard(buildEmbedUrl(link.token))}
+                onClick={() => copyToClipboard(buildEmbedUrl(slug, link.token))}
             >
                 <Copy className="size-3.5" aria-hidden="true" />
             </Button>

@@ -1,4 +1,4 @@
-import { useController, useFormContext } from "react-hook-form";
+import { useController, useFormContext, useFormState } from "react-hook-form";
 import { SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
 import { FormTextarea } from "@/components/form/form-textarea";
@@ -10,11 +10,20 @@ import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-valida
 import { ImportedConfigAlert } from "@/pages/setup/add-app-wizard/imported-config-alert";
 import { PROVIDER_OPTIONS } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { ImportConfigDialog } from "@/pages/setup/add-app-wizard/steps/connect/import-config-dialog";
+import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
+import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
+import { Button } from "@/components/shadcn/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
-    const { control } = useFormContext<AppFormData>();
+    const { control, setValue, getValues } = useFormContext<AppFormData>();
+    const { touchedFields } = useFormState({ control });
     const importState = useSetupWizardStore((state) => state.importState);
     const isLocked = importState === "locked";
+
+    // The slug follows the app name until the operator edits it; clearing the field hands
+    // control back to the auto-fill (an empty slug is also valid — the server derives one).
+    const isSlugTouched = Boolean(touchedFields.externalConnection?.slug);
 
     const {
         field: { value, onChange },
@@ -43,6 +52,34 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 label="Application name"
                 placeholder="e.g. AcmeShop"
                 disabled={isBusy}
+                afterChange={(event) => {
+                    if (!isSlugTouched) {
+                        setValue("externalConnection.slug", toSlug(event.target.value), { shouldValidate: true });
+                    }
+                }}
+            />
+            <FormInput
+                control={control}
+                name="externalConnection.slug"
+                label="Public URL slug"
+                placeholder="e.g. acme-shop"
+                disabled={isBusy}
+                description="Appears in every public embed URL and becomes the app's database name. Permanent once the app is created."
+                addons={
+                    <InputGroupAddon align="inline-end">
+                        <Button
+                            variant="ghost"
+                            onClick={() =>
+                                setValue("externalConnection.slug", toSlug(getValues("externalConnection.appName")), {
+                                    shouldValidate: true,
+                                })
+                            }
+                        >
+                            <RefreshCw />
+                            Regenerate
+                        </Button>
+                    </InputGroupAddon>
+                }
             />
             <Field data-invalid={invalid}>
                 <FieldLabel>Source database type</FieldLabel>

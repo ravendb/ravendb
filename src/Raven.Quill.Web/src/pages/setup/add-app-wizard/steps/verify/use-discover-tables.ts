@@ -11,7 +11,10 @@ export function normalizeDiscoverSchemas(schemas: string[] | undefined): string[
 }
 
 /** Discovers source tables. An empty schema list means the connection's default schema. */
-export function discoverTables(connection: AppFormData["externalConnection"], schemas: string[]) {
+export function discoverTables(
+    connection: Pick<AppFormData["externalConnection"], "provider" | "connectionString">,
+    schemas: string[],
+) {
     return api.services.setup.discover({
         provider: connection.provider,
         connectionString: connection.connectionString,

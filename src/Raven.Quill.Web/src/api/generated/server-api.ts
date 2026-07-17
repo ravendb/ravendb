@@ -285,7 +285,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Registers a channel for the app. allowedOrigins is required; entries are normalized to scheme://authority (max 32). An explicit empty list is the opt-in contract: the embed page emits no CSP frame-ancestors header and is embeddable from any site. Provision is create-only: when the (type, agent) channel already exists the response carries existing=true and the request's allowedOrigins/displayName are NOT applied — edit via PUT /channels/{id}. */
+        /** @description Registers a channel for the app. allowedOrigins is required; entries are normalized to scheme://authority (max 32). An explicit empty list is the opt-in contract: the embed page emits no CSP frame-ancestors header and is embeddable from any site. Each POST creates a new channel; multiple channels may target the same agent (e.g. different sites, origins, or themes). Edit via PUT /channels/{id}, remove via DELETE /channels/{id}. */
         post: operations["channels.create"];
         delete?: never;
         options?: never;
@@ -405,7 +405,7 @@ export interface paths {
         /** @description Lists the app's active embed links (non-expired, non-revoked), most recent first. Each item carries its token, the channel + agent it targets, the bound parameters, the TTL/cap, and how many turns it has consumed — so the operator can audit and revoke links. */
         get: operations["embedLinks.list"];
         put?: never;
-        /** @description Mints a per-user embed link for an agent's iFrame channel. Parameters are validated against the agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready /embed/{token} URL. */
+        /** @description Mints a per-user embed link for an iFrame channel (by widgetId). Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
         post: operations["embedLinks.mint"];
         delete?: never;
         options?: never;
@@ -807,6 +807,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Creates the app. The slug (also the app's database name, used in public embed URLs) derives from appName unless an explicit slug is supplied; either is normalized to lowercase ASCII alphanumerics with hyphens. Duplicate slug => 409. */
         post: operations["setup.provision"];
         delete?: never;
         options?: never;
@@ -1406,7 +1407,7 @@ export interface components {
             sparkline: number[];
         };
         MintEmbedLinkRequest: {
-            agentId: string;
+            widgetId: string;
             parameters?: null | {
                 [key: string]: string;
             };
@@ -1477,11 +1478,10 @@ export interface components {
         };
         ProvisionChannelResponse: {
             widgetId: string;
-            /** @default false */
-            existing: boolean;
         };
         ProvisionRequest: {
             appName: string;
+            slug?: null | string;
         };
         ProvisionResponse: {
             id: string;

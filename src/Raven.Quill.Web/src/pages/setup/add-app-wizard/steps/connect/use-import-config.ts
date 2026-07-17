@@ -48,7 +48,7 @@ export function useImportConfig() {
             // in custom schemas can still be verified.
             const schemas = collectConfigSchemas(config.tables);
             const discoverResult = await discoverTables(
-                { appName: "", provider: config.provider, connectionString: config.connectionString },
+                { provider: config.provider, connectionString: config.connectionString },
                 schemas,
             );
 
