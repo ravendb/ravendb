@@ -36,13 +36,12 @@ import {
     TaskCardInfo,
 } from "components/pages/database/tasks/shared/AddTaskCardList";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
-import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import {
-    serverWideConnectionStringPrefix,
     getServerWideShortName,
+    serverWideConnectionStringPrefix,
 } from "components/pages/database/settings/connectionStrings/connectionStringsUtils";
+import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -528,7 +527,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
     }): TaskCardDisabledCondition[] => [
         {
             isActive: !getCanHandleOperation(opts.accessRequired),
-            message: getDatabaseAccessRequiredMessage(opts.accessRequired),
+            message: getAccessRequiredMessage(opts.accessRequired),
         },
         {
             isActive: !opts.isShardingSupported && isSharded,
@@ -540,7 +539,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         },
     ];
 
-    const ongoingTasks: TaskCardCategory[] = [
+    let ongoingTasks: TaskCardCategory[] = [
         {
             categoryName: "AI",
             categoryIcon: "ai",
@@ -554,7 +553,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     showLicenseBadge: !hasGenAi,
                     licenseBadge: "Enterprise AI",
                     link: forCurrentDatabase.editGenAiTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "Embeddings Generation",
@@ -564,8 +565,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     target: "EmbeddingsGeneration",
                     showLicenseBadge: !hasEmbeddingGeneration,
                     link: forCurrentDatabase.editEmbeddingsGenerationTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
             ],
         },
@@ -737,8 +740,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasSnowflakeEtl,
                     link: forCurrentDatabase.editSnowflakeEtlTaskUrl(),
-                    isShardingSupported: true,
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                        isShardingSupported: true,
+                    }),
                 },
                 {
                     title: "OLAP ETL",
@@ -792,7 +797,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasAmazonSqsEtl,
                     link: forCurrentDatabase.editAmazonSqsEtlTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
             ],
         },
@@ -839,7 +846,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasAzureServiceBusSink,
                     link: forCurrentDatabase.editAzureServiceBusSinkTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
                 {
                     title: "CDC Sink",
@@ -851,7 +860,9 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasCdcSink,
                     link: forCurrentDatabase.editCdcSinkTaskUrl(),
-                    accessRequired: "DatabaseAdmin",
+                    disabledConditions: getDisabledConditions({
+                        accessRequired: "DatabaseAdmin",
+                    }),
                 },
             ],
         },
