@@ -81,7 +81,9 @@ export default function DataToImportSection() {
 
     return (
         <ImportSection id="data-to-import" title="Data to import">
-            <div className="small-label mb-2">Choose collections to import</div>
+            <div id="collections-to-import" className="small-label mb-2">
+                Choose collections to import
+            </div>
             <div className="d-flex gap-3 mb-4">
                 <Button
                     variant={isImportAll ? "primary" : "outline-secondary"}
@@ -178,7 +180,9 @@ export default function DataToImportSection() {
             )}
 
             <div className="d-flex justify-content-between align-items-center mb-2">
-                <div className="small-label">Select documents and extensions</div>
+                <div id="documents-and-extensions" className="small-label">
+                    Select documents and extensions
+                </div>
                 <Button variant="link" size="sm" onClick={selectAllDocuments}>
                     Select all
                 </Button>
@@ -218,7 +222,7 @@ export default function DataToImportSection() {
                     >
                         {/* prevent the click on the icon from toggling the surrounding switch label */}
                         <span onClick={(e) => e.preventDefault()}>
-                            <Icon icon="info" margin="ms-1" />
+                            <Icon icon="info" color="info" margin="ms-1" />
                         </span>
                     </PopoverWithHoverWrapper>
                 </FormSwitch>
