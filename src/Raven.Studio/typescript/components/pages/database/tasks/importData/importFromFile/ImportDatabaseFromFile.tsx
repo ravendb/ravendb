@@ -1,3 +1,4 @@
+import "./ImportDatabaseFromFile.scss";
 import React, { useEffect, useRef, useState } from "react";
 import { FormProvider } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
@@ -33,12 +34,39 @@ type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
 
 const sectionIds = ["select-file", "data-to-import", "configuration-to-import", "import-processing"];
 
-const sectionNav: { id: string; label: string; icon: IconName }[] = [
-    { id: "select-file", label: "Select file to import", icon: "document" },
-    { id: "data-to-import", label: "Data to import", icon: "documents" },
-    { id: "configuration-to-import", label: "Configuration to import", icon: "database" },
+interface SectionNavItem {
+    id: string;
+    label: string;
+    icon: IconName;
+    children?: { id: string; label: string }[];
+}
+
+const sectionNav: SectionNavItem[] = [
+    { id: "select-file", label: "Select file to import", icon: "folder" },
+    {
+        id: "data-to-import",
+        label: "Data to import",
+        icon: "document",
+        children: [
+            { id: "collections-to-import", label: "Collections to import" },
+            { id: "documents-and-extensions", label: "Documents and extensions" },
+        ],
+    },
+    {
+        id: "configuration-to-import",
+        label: "Configuration to import",
+        icon: "database",
+        children: [
+            { id: "database-entities", label: "Database entities" },
+            { id: "database-settings", label: "Database settings" },
+        ],
+    },
     { id: "import-processing", label: "Import processing & security", icon: "settings" },
 ];
+
+function scrollToSection(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function findScrollParent(element: HTMLElement | null): Element | null {
     let current = element?.parentElement;
@@ -219,24 +247,32 @@ export default function ImportDatabaseFromFile() {
                     <Alert variant="warning">Note: At least one &apos;include&apos; option must be checked.</Alert>
                 )}
                 <div className="d-flex gap-4">
-                    <nav className="position-sticky align-self-start" style={{ minWidth: 220, top: 20 }}>
-                        {sectionNav.map((item) => (
-                            // plain buttons on purpose: anchor hrefs would change the location hash,
-                            // which the Studio router interprets as a route change
-                            <button
-                                key={item.id}
-                                type="button"
-                                className={classNames("btn btn-link d-block p-0 py-1 no-decor text-start", {
-                                    "fw-bold": activeSectionId === item.id,
-                                })}
-                                onClick={() =>
-                                    document
-                                        .getElementById(item.id)
-                                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                                }
-                            >
-                                <Icon icon={item.icon} /> {item.label}
-                            </button>
+                    <nav className="import-side-nav position-sticky align-self-start" style={{ top: 20 }}>
+                        {sectionNav.map((item, index) => (
+                            <React.Fragment key={item.id}>
+                                {index > 0 && <hr />}
+                                {/* plain buttons on purpose: anchor hrefs would change the location
+                                    hash, which the Studio router interprets as a route change */}
+                                <button
+                                    type="button"
+                                    className={classNames("import-side-nav-item", {
+                                        active: activeSectionId === item.id,
+                                    })}
+                                    onClick={() => scrollToSection(item.id)}
+                                >
+                                    <Icon icon={item.icon} margin="m-0" /> {item.label}
+                                </button>
+                                {item.children?.map((child) => (
+                                    <button
+                                        key={child.id}
+                                        type="button"
+                                        className="import-side-nav-item import-side-nav-subitem"
+                                        onClick={() => scrollToSection(child.id)}
+                                    >
+                                        {child.label}
+                                    </button>
+                                ))}
+                            </React.Fragment>
                         ))}
                     </nav>
                     <div className="flex-grow-1">
