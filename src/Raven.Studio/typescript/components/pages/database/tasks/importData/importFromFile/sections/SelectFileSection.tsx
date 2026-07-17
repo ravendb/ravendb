@@ -2,12 +2,16 @@ import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
+import classNames from "classnames";
 import { Icon } from "components/common/Icon";
+import { getLicenseBadgeClassName } from "components/common/LicenseRestrictedBadge";
 import FileDropzone from "components/common/FileDropzone";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 import { RestrictedImportFeature } from "../useImportLicenseRestrictions";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 import genUtils from "common/generalUtils";
 
 const backupExtensions = [
@@ -25,6 +29,7 @@ export default function SelectFileSection({ restrictedFeatures }: SelectFileSect
     const { control, setValue, formState } = useFormContext<ImportFromFileFormData>();
     const file = useWatch({ control, name: "file" });
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
 
     const fileExtension = file ? genUtils.getFileExtension(file.name) : null;
     const isBackupFile = fileExtension ? backupExtensions.includes(fileExtension) : false;
@@ -55,8 +60,8 @@ export default function SelectFileSection({ restrictedFeatures }: SelectFileSect
                 )}
                 {restrictedFeatures.length > 0 ? (
                     <Alert variant="warning" className="mt-3 mb-0">
-                        <div className="fw-bold">
-                            <Icon icon="warning" /> Some data may not be imported
+                        <div className="fw-bold text-warning">
+                            <Icon icon="warning" color="warning" /> Some data may not be imported
                         </div>
                         <div>
                             Your license doesn&apos;t include the following features. Any related data in this file
@@ -64,13 +69,20 @@ export default function SelectFileSection({ restrictedFeatures }: SelectFileSect
                         </div>
                         <div className="d-flex gap-2 flex-wrap mt-2">
                             {restrictedFeatures.map((feature) => (
-                                <Badge key={feature.settingKey} bg="secondary">
+                                <Badge
+                                    key={feature.settingKey}
+                                    bg="secondary"
+                                    className={classNames(
+                                        "license-restricted-badge",
+                                        getLicenseBadgeClassName(feature.licenseRequired, isCloud)
+                                    )}
+                                >
                                     <Icon icon="license" /> {feature.label}
                                 </Badge>
                             ))}
                         </div>
                         <div className="mt-2">
-                            <Icon icon="info" /> Upgrade to include this data on import.{" "}
+                            <Icon icon="info" color="info" /> Upgrade to include this data on import.{" "}
                             <a href={buyLink} target="_blank" rel="noreferrer">
                                 See license comparison <Icon icon="newtab" margin="m-0" />
                             </a>
