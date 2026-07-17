@@ -23,7 +23,6 @@ export const Empty: Story = {
             // endpoints and only swap the apps list for an empty one.
             handlers: {
                 stats: [
-                    statsMocks.dashboard(),
                     statsMocks.dashboardApps([]),
                     statsMocks.usage(),
                     statsMocks.tokensByApp(),

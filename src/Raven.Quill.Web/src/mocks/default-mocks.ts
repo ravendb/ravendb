@@ -54,7 +54,6 @@ export const defaultApiMocks = {
         settingsMocks.certificatesEdit(),
     ],
     stats: [
-        statsMocks.dashboard(),
         statsMocks.dashboardApps(),
         statsMocks.dashboardApp(),
         statsMocks.usage(),

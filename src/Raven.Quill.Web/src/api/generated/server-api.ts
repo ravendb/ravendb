@@ -20,22 +20,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/dashboard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["stats.dashboard"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/usage": {
         parameters: {
             query?: never;
@@ -190,7 +174,7 @@ export interface paths {
         get: operations["apps.detail"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["apps.delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -236,6 +220,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["apps.cdcErrors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/cdc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["apps.cdcGet"];
         put?: never;
         post?: never;
         delete?: never;
@@ -488,6 +488,38 @@ export interface paths {
         get: operations["agents.list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/agent/{agentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agents.get"];
+        put?: never;
+        post?: never;
+        delete: operations["agents.delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{slug}/agent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["agents.edit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1200,8 +1232,8 @@ export interface components {
         ChatRequest: {
             agentId: string;
             prompt: string;
-            conversationId: null | string;
-            parameters: null | {
+            conversationId: string;
+            parameters: {
                 [key: string]: string;
             };
         };
@@ -1233,6 +1265,11 @@ export interface components {
             startedAt: null | string;
             maxDuration: null | string;
         };
+        ConversationListResult: {
+            conversations: components["schemas"]["ConversationDto"][];
+            /** Format: int64 */
+            totalResults: number;
+        };
         ConversationParam: {
             key: string;
             value: string;
@@ -1250,16 +1287,6 @@ export interface components {
             text: string;
             /** Format: date-time */
             at: null | string;
-        };
-        DashboardResponse: {
-            /** Format: int32 */
-            apps: number;
-            /** Format: int64 */
-            conversations: number;
-            /** Format: int64 */
-            messages: number;
-            /** Format: int64 */
-            tokens: number;
         };
         /** @enum {unknown} */
         DatabaseAccess: "ReadWrite" | "Admin" | "Read";
@@ -1691,37 +1718,13 @@ export interface operations {
             };
         };
     };
-    "stats.dashboard": {
-        parameters: {
-            query: {
-                year: number;
-                month?: number;
-                day?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardResponse"];
-                };
-            };
-        };
-    };
     "stats.usage": {
         parameters: {
             query: {
+                app?: string;
                 year: number;
                 month?: number;
                 day?: number;
-                app?: string;
             };
             header?: never;
             path?: never;
@@ -1953,6 +1956,28 @@ export interface operations {
             };
         };
     };
+    "apps.delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "apps.provisionAgent": {
         parameters: {
             query?: never;
@@ -2046,6 +2071,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CdcError"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "apps.cdcGet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CdcSinkConfiguration"];
                 };
             };
             /** @description Not Found */
@@ -2853,6 +2909,121 @@ export interface operations {
             };
         };
     };
+    "agents.get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                agentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiAgentConfiguration"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "agents.delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                agentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "agents.edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiAgentConfiguration"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvisionAgentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "stats.overview": {
         parameters: {
             query?: never;
@@ -2952,7 +3123,13 @@ export interface operations {
     };
     "stats.conversations": {
         parameters: {
-            query?: never;
+            query: {
+                year: number;
+                month?: number;
+                day?: number;
+                start?: number;
+                pageSize?: number;
+            };
             header?: never;
             path: {
                 slug: string;
@@ -2967,7 +3144,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ConversationDto"][];
+                    "application/json": components["schemas"]["ConversationListResult"];
                 };
             };
             /** @description Not Found */
@@ -3238,14 +3415,20 @@ export interface operations {
     "settings.certificatesGenerate": {
         parameters: {
             query: {
-                appName: string;
                 name: string;
+                clearance: components["schemas"]["SecurityClearance"];
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: components["schemas"]["DatabaseAccess"];
+                };
+            };
+        };
         responses: {
             /** @description Bad Request */
             400: {
@@ -3263,6 +3446,7 @@ export interface operations {
             query: {
                 thumbprint: string;
                 name: string;
+                clearance: components["schemas"]["SecurityClearance"];
                 disable: boolean;
             };
             header?: never;
@@ -3593,10 +3777,10 @@ export type ConnectivityStatus = components["schemas"]["ConnectivityStatus"];
 export type ConnectRequest = components["schemas"]["ConnectRequest"];
 export type ConnectResult = components["schemas"]["ConnectResult"];
 export type ConversationDto = components["schemas"]["ConversationDto"];
+export type ConversationListResult = components["schemas"]["ConversationListResult"];
 export type ConversationParam = components["schemas"]["ConversationParam"];
 export type ConversationStatsResponse = components["schemas"]["ConversationStatsResponse"];
 export type ConversationTurn = components["schemas"]["ConversationTurn"];
-export type DashboardResponse = components["schemas"]["DashboardResponse"];
 export type DatabaseAccess = components["schemas"]["DatabaseAccess"];
 export type DataCollectionDto = components["schemas"]["DataCollectionDto"];
 export type DiscoverColumnResponse = components["schemas"]["DiscoverColumnResponse"];
@@ -3660,6 +3844,9 @@ export type VertexSettings = components["schemas"]["VertexSettings"];
 
 export const API_ENDPOINTS = {
     agents: {
+        delete: (slug: string, agentId: string) => `/apps/${encodeURIComponent(slug)}/agent/${encodeURIComponent(agentId)}`,
+        edit: (slug: string) => `/apps/${encodeURIComponent(slug)}/agent`,
+        get: (slug: string, agentId: string) => `/apps/${encodeURIComponent(slug)}/agent/${encodeURIComponent(agentId)}`,
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/agents`,
     },
     aiConnectionStrings: {
@@ -3674,7 +3861,9 @@ export const API_ENDPOINTS = {
     },
     apps: {
         cdcErrors: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/errors`,
+        cdcGet: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc`,
         cdcPerformance: (slug: string) => `/apps/${encodeURIComponent(slug)}/cdc/performance`,
+        delete: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
         detail: (slug: string) => `/apps/${encodeURIComponent(slug)}`,
         list: "/apps",
         provisionAgent: (slug: string) => `/apps/${encodeURIComponent(slug)}/setup/agent`,
@@ -3735,7 +3924,6 @@ export const API_ENDPOINTS = {
         conversation: (slug: string, conversationId: string) => `/apps/${encodeURIComponent(slug)}/conversations/${encodeURIComponent(conversationId)}`,
         conversations: (slug: string) => `/apps/${encodeURIComponent(slug)}/conversations`,
         conversationStats: (slug: string) => `/apps/${encodeURIComponent(slug)}/conversations/stats`,
-        dashboard: "/dashboard",
         dashboardApp: (slug: string) => `/dashboard/apps/${encodeURIComponent(slug)}`,
         dashboardApps: "/dashboard/apps",
         overview: (slug: string) => `/apps/${encodeURIComponent(slug)}/overview`,
@@ -3747,6 +3935,9 @@ export const API_ENDPOINTS = {
 export function createServerApi(client: ApiClient) {
     return {
         agents: {
+            delete: (slug: string, agentId: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.agents.delete(slug, agentId)),
+            edit: (slug: string, request: AiAgentConfiguration) => client.post<ProvisionAgentResponse, ApiErrorResponse>(API_ENDPOINTS.agents.edit(slug), request),
+            get: (slug: string, agentId: string) => client.get<AiAgentConfiguration, ApiErrorResponse>(API_ENDPOINTS.agents.get(slug, agentId)),
             list: (slug: string) => client.get<AgentSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.agents.list(slug)),
         },
         aiConnectionStrings: {
@@ -3761,7 +3952,9 @@ export function createServerApi(client: ApiClient) {
         },
         apps: {
             cdcErrors: (slug: string) => client.get<CdcError[], ApiErrorResponse>(API_ENDPOINTS.apps.cdcErrors(slug)),
+            cdcGet: (slug: string) => client.get<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.apps.cdcGet(slug)),
             cdcPerformance: (slug: string) => client.get<CdcPerformanceResponse, ApiErrorResponse>(API_ENDPOINTS.apps.cdcPerformance(slug)),
+            delete: (slug: string) => client.delete<void, ApiErrorResponse>(API_ENDPOINTS.apps.delete(slug)),
             detail: (slug: string) => client.get<AppResponse, ApiErrorResponse>(API_ENDPOINTS.apps.detail(slug)),
             list: () => client.get<AppResponse[]>(API_ENDPOINTS.apps.list),
             provisionAgent: (slug: string, request: AiAgentConfiguration) => client.post<ProvisionAgentResponse, ApiErrorResponse>(API_ENDPOINTS.apps.provisionAgent(slug), request),
@@ -3800,8 +3993,8 @@ export function createServerApi(client: ApiClient) {
         },
         settings: {
             certificates: (searchParams: { pageSize: string; start: string; }) => client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
-            certificatesEdit: (request: string, searchParams: { disable: boolean; name: string; thumbprint: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, request, { searchParams }),
-            certificatesGenerate: (searchParams: { appName: string; name: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, { searchParams }),
+            certificatesEdit: (request: string, searchParams: { clearance: SecurityClearance; disable: boolean; name: string; thumbprint: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, request, { searchParams }),
+            certificatesGenerate: (request: string, searchParams: { clearance: SecurityClearance; name: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, request, { searchParams }),
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
             usage: (searchParams: { day?: string; month?: string; year: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),
@@ -3820,9 +4013,8 @@ export function createServerApi(client: ApiClient) {
             channels: (slug: string) => client.get<ChannelStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.channels(slug)),
             collections: (slug: string) => client.get<DataCollectionDto[], ApiErrorResponse>(API_ENDPOINTS.stats.collections(slug)),
             conversation: (slug: string, conversationId: string) => client.get<ConversationDto, ApiErrorResponse>(API_ENDPOINTS.stats.conversation(slug, conversationId)),
-            conversations: (slug: string) => client.get<ConversationDto[], ApiErrorResponse>(API_ENDPOINTS.stats.conversations(slug)),
+            conversations: (slug: string, searchParams: { day?: string; month?: string; pageSize?: string; start?: string; year: string; }) => client.get<ConversationListResult, ApiErrorResponse>(API_ENDPOINTS.stats.conversations(slug), { searchParams }),
             conversationStats: (slug: string, searchParams: { day?: string; month?: string; year: string; }) => client.get<ConversationStatsResponse, ApiErrorResponse>(API_ENDPOINTS.stats.conversationStats(slug), { searchParams }),
-            dashboard: (searchParams: { day?: string; month?: string; year: string; }) => client.get<DashboardResponse>(API_ENDPOINTS.stats.dashboard, { searchParams }),
             dashboardApp: (slug: string) => client.get<ApplianceAppResponse, ApiErrorResponse>(API_ENDPOINTS.stats.dashboardApp(slug)),
             dashboardApps: () => client.get<ApplianceAppResponse[]>(API_ENDPOINTS.stats.dashboardApps),
             overview: (slug: string) => client.get<AppOverviewResponse, ApiErrorResponse>(API_ENDPOINTS.stats.overview(slug)),

@@ -13,6 +13,13 @@ internal static class AppLookup
         return await session.LoadAsync<App>($"apps/{slug}", ct);
     }
 
+    internal static async Task DeleteAppAsync(IDocumentStore store, string slug, CancellationToken ct)
+    {
+        using var session = store.OpenAsyncSession();
+        session.Delete($"apps/{slug}");
+        await session.SaveChangesAsync(ct);
+    }
+
     internal static async Task<(CdcSinkTaskState State, DateTime LastModified)> LoadCdcStateAsync(IDocumentStore store, string database, string taskName, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);

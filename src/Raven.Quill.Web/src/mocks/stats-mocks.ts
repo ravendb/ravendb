@@ -5,7 +5,6 @@ import type {
     ConversationDto,
     ConversationStatsResponse,
     DataCollectionDto,
-    DashboardResponse,
     SeriesData,
     SeriesKey,
     TokensByAppResponse,
@@ -14,8 +13,6 @@ import type {
 import { apiHttp } from "./api-http";
 
 export const statsMocks = {
-    dashboard: (response: DashboardResponse = sampleDashboard) =>
-        apiHttp.get("/api/dashboard", ({ response: res }) => res(200).json(response)),
     dashboardApps: (apps: ApplianceAppResponse[] = sampleDashboardApps) =>
         apiHttp.get("/api/dashboard/apps", ({ response }) => response(200).json(apps)),
     dashboardApp: (app: ApplianceAppResponse = sampleDashboardApps[0]) =>
@@ -50,13 +47,6 @@ export const statsMocks = {
         }),
     appUsage: (response: AppUsageResponse = sampleAppUsage) =>
         apiHttp.get("/api/apps/{slug}/usage", ({ response: res }) => res(200).json(response)),
-};
-
-export const sampleDashboard: DashboardResponse = {
-    apps: 4,
-    conversations: 28900,
-    messages: 86400,
-    tokens: 24300000,
 };
 
 // 24 hourly points (the Last24h window) with a gentle wave so the series have shape.
