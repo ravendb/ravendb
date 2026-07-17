@@ -624,8 +624,9 @@ public static partial class CoraxQueryBuilder
                 if (exact && builderParameters.Metadata.IsDynamic)
                     fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
-                bool isTime = hasTime && tuple.Value != null && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
-                uniqueMatches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
+                string canonical = null;
+                bool isTime = hasTime && QueryBuilderHelper.TryGetTimeForInQuery(builderParameters.Index, tuple.Value, out canonical);
+                uniqueMatches.Add((canonical ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
             }
 
             return builderParameters.IndexSearcher.AllInQuery(fieldMetadata, uniqueMatches);
@@ -634,8 +635,9 @@ public static partial class CoraxQueryBuilder
         var matches = new List<(string Term, bool Exact)>();
         foreach (var tuple in QueryBuilderHelper.GetValuesForIn(metadata.Query, ie, metadata, queryParameters))
         {
-            bool isTime = hasTime && tuple.Value != null && QueryBuilderHelper.TryGetTime(builderParameters.Index, tuple.Value, out var _);
-            matches.Add((QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
+            string canonical = null;
+            bool isTime = hasTime && QueryBuilderHelper.TryGetTimeForInQuery(builderParameters.Index, tuple.Value, out canonical);
+            matches.Add((canonical ?? QueryBuilderHelper.CoraxGetValueAsString(tuple.Value), isTime));
         }
 
         if (highlightingTerm != null)
