@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -42,6 +41,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
         Dictionary<long, string> owners;
         long totalPages;
+        var unownedOverflowPages = new Dictionary<long, (string ClaimedTableName, byte TableType, long NumberOfPages, long SizeInBytes)>();
 
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (var tx = env.Environment.ReadTransaction())
@@ -71,7 +71,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
                 }
 
                 return list;
-            });
+            }, unownedOverflowPages);
         }
 
         var gaps = new List<(long Start, long End)>();
@@ -96,10 +96,10 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         switch (output)
         {
             case OutputType.Emojis:
-                await RenderEmojis(env.Environment, owners, gaps, totalPages);
+                await RenderEmojis(env.Environment, owners, gaps, unownedOverflowPages, totalPages);
                 break;
             default:
-                await RenderRaw(env.Environment, owners, gaps);
+                await RenderRaw(env.Environment, owners, gaps, unownedOverflowPages);
                 break;
         }
     }
@@ -110,7 +110,8 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         Text,
     }
 
-    private async Task RenderRaw(StorageEnvironment env, Dictionary<long, string> owners, List<(long Start, long End)> gaps)
+    private async Task RenderRaw(StorageEnvironment env, Dictionary<long, string> owners, List<(long Start, long End)> gaps,
+        Dictionary<long, (string ClaimedTableName, byte TableType, long NumberOfPages, long SizeInBytes)> unownedOverflowPages)
     {
         HttpContext.Response.Headers.ContentType = "text/plain; charset=utf-8";
 
@@ -119,7 +120,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         // it is not meant for general consumption, that is partly why it returns text
         // and not JSON, this is meant purely to be human readable.
         await using var sw = new StreamWriter(RequestHandler.ResponseBodyStream(), Encoding.UTF8);
-        
+
         if (gaps.Count > 0)
         {
             await sw.WriteLineAsync("Gaps");
@@ -129,11 +130,28 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
                 await sw.WriteLineAsync($"{start}-{end}");
                 for (long i = start; i < end; i++)
                 {
-                    await sw.WriteLineAsync($"  Page {i:N0}");
+                    if (unownedOverflowPages.TryGetValue(i, out var claim))
+                        await sw.WriteLineAsync($"  Page {i:N0} 🚨 header claims '{GetClaimedTableName(claim)}', {claim.NumberOfPages:N0} pages, ~{new Sparrow.Size(claim.SizeInBytes, Sparrow.SizeUnit.Bytes)} - leaked LargeValue?");
+                    else
+                        await sw.WriteLineAsync($"  Page {i:N0}");
                 }
             }
             await sw.WriteLineAsync("------------------");
             await sw.WriteLineAsync();
+
+            if (unownedOverflowPages.Count > 0)
+            {
+                await sw.WriteLineAsync("Leaked by table (claimed)");
+                await sw.WriteLineAsync("------------------");
+                foreach (var group in unownedOverflowPages.GroupBy(x => GetClaimedTableName(x.Value)).OrderBy(x => x.Key))
+                {
+                    var pages = group.Sum(x => x.Value.NumberOfPages);
+                    var bytes = group.Sum(x => x.Value.SizeInBytes);
+                    await sw.WriteLineAsync($"{group.Key}: {group.Count():N0} large values, {pages:N0} pages, ~{new Sparrow.Size(bytes, Sparrow.SizeUnit.Bytes)}");
+                }
+                await sw.WriteLineAsync("------------------");
+                await sw.WriteLineAsync();
+            }
         }
 
         await sw.WriteLineAsync("Pages");
@@ -146,20 +164,28 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         await sw.WriteLineAsync("------------------");
     }
 
-    private async Task RenderEmojis(StorageEnvironment env, Dictionary<long, string> owners, List<(long Start, long End)> gaps, long totalPages)
+    private async Task RenderEmojis(StorageEnvironment env, Dictionary<long, string> owners, List<(long Start, long End)> gaps,
+        Dictionary<long, (string ClaimedTableName, byte TableType, long NumberOfPages, long SizeInBytes)> unownedOverflowPages, long totalPages)
     {
         await using var sw = new StreamWriter(RequestHandler.ResponseBodyStream(), Encoding.UTF8);
         HttpContext.Response.Headers.ContentType = "text/html; charset=utf-8";
 
         var filePath = env.DataPager.FileName;
-        
+
         var pages = new string[totalPages];
         Array.Fill(pages, "Unassigned");
-        
+
         foreach (var gap in gaps)
         {
             for (long i = gap.Start; i < gap.End && i < totalPages; i++)
                 pages[i] = "Gap";
+        }
+
+        foreach (var (startPage, claim) in unownedOverflowPages)
+        {
+            var label = $"Gap (header claims '{GetClaimedTableName(claim)}', leaked LargeValue?)";
+            for (long i = startPage; i < startPage + claim.NumberOfPages && i < totalPages; i++)
+                pages[i] = label;
         }
 
         foreach (var (page, owner) in owners)
@@ -269,6 +295,8 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
             return ("🚨", "Sparse DUPE (BUG!)");
         if (owner == "Gap")
             return ("🚨", "Gap (BUG!)");
+        if (owner.StartsWith("Gap (header claims"))
+            return ("🚨", "Gap - header claims a table large value, leaked? (BUG!)");
         if (owner == "Sparse")
             return ("🗑️", "Sparse (returned to OS...)");
         if (owner == "Unassigned")
@@ -279,6 +307,8 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
             return ("⚪", "Unused Page");
         if (owner == "$free-space")
             return ("♻️", "$free-space");
+        if (owner.EndsWith("/LargeValue"))
+            return ("🟧", "Overflow (Large Data)");
         if (owner.StartsWith("Collection.Documents."))
             return ("📄", "Documents");
         if (owner.StartsWith("Collection.Tombstones."))
@@ -314,4 +344,8 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         return ("🟦", owner);
     }
 
+    private static string GetClaimedTableName((string ClaimedTableName, byte TableType, long NumberOfPages, long SizeInBytes) claim)
+    {
+        return claim.ClaimedTableName ?? $"unknown table (type: {claim.TableType})";
+    }
 }

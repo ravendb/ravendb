@@ -1049,11 +1049,14 @@ namespace Voron
             return generator.Generate(detailedReportInput);
         }
 
-        public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null)
+        public unsafe Dictionary<long, string> GetPageOwners(Transaction tx, Func<PostingList, List<long>> onPostingList = null,
+            Dictionary<long, (string ClaimedTableName, byte TableType, long NumberOfPages, long SizeInBytes)> unownedOverflowPages = null)
         {
             var r = new Dictionary<long, string>();
+            var numberOfAllocatedPages = tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages;
+            var sectionOwnerHashToTableName = new Dictionary<ulong, string>();
             RegisterPages(_freeSpaceHandling.AllPages(tx.LowLevelTransaction), "Freed Page");
-            for (long pageNumber = NextPageNumber; pageNumber < tx.LowLevelTransaction.DataPagerState.NumberOfAllocatedPages; pageNumber++)
+            for (long pageNumber = NextPageNumber; pageNumber < numberOfAllocatedPages; pageNumber++)
             {
                 r[pageNumber] = "Unused Page";
             }
@@ -1153,6 +1156,7 @@ namespace Voron
                                 var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
                                 long pageNumber = readResult.Reader.Read<long>();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
+                                sectionOwnerHashToTableName[activeDataSmallSection.SectionOwnerHash] = name;
                                 RegisterSectionPages(activeDataSmallSection, name + "/" + TableSchema.ActiveSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
@@ -1199,6 +1203,37 @@ namespace Voron
                                 throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
                         }
                     } while (rootIterator.MoveNext());
+                }
+            }
+
+            if (unownedOverflowPages != null)
+            {
+                for (long pageNumber = 0; pageNumber < numberOfAllocatedPages; pageNumber++)
+                {
+                    if (r.ContainsKey(pageNumber))
+                        continue;
+
+                    var page = tx.LowLevelTransaction.GetPage(pageNumber);
+                    if (page.PageNumber != pageNumber ||
+                        page.IsOverflow == false ||
+                        (page.Flags & PageFlags.RawData) != PageFlags.RawData ||
+                        page.OverflowSize <= 0)
+                        continue;
+
+                    var header = (RawDataOverflowPageHeader*)page.Pointer;
+                    sectionOwnerHashToTableName.TryGetValue(header->SectionOwnerHash, out var claimedTableName);
+
+                    long numberOfPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                    long run = 1;
+                    while (run < numberOfPages &&
+                           pageNumber + run < numberOfAllocatedPages &&
+                           r.ContainsKey(pageNumber + run) is false)
+                    {
+                        run++;
+                    }
+
+                    unownedOverflowPages[pageNumber] = (claimedTableName, header->TableType, run, page.OverflowSize);
+                    pageNumber += run - 1;
                 }
             }
 
