@@ -4,7 +4,7 @@ import { apiHttp } from "./api-http";
 export const channelsMocks = {
     list: (channels: ChannelSummaryResponse[] = sampleChannels) =>
         apiHttp.get("/api/apps/{slug}/channels", ({ response }) => response(200).json(channels)),
-    create: (result: ProvisionChannelResponse = { widgetId: SAMPLE_WEB_WIDGET_ID, existing: false }) =>
+    create: (result: ProvisionChannelResponse = { widgetId: SAMPLE_WEB_WIDGET_ID }) =>
         apiHttp.post("/api/apps/{slug}/setup/channel", ({ response }) => response(200).json(result)),
     update: (channels: ChannelSummaryResponse[] = sampleChannels) =>
         apiHttp.put("/api/apps/{slug}/channels/{channelId}", async ({ params, request, response }) => {

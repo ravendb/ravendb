@@ -54,7 +54,7 @@ export const sampleEmbedLinks: EmbedLinkSummaryResponse[] = [
 
 export const sampleMintedLink: MintEmbedLinkResponse = {
     token: "3f2a9c1b4d5e6f708192a3b4c5d6e7f8",
-    url: "https://acme-shop.myquill.ai/embed/3f2a9c1b4d5e6f708192a3b4c5d6e7f8",
+    url: "https://public.myquill.ai/apps/acme-shop/embed/3f2a9c1b4d5e6f708192a3b4c5d6e7f8",
     expiresAt: "2026-06-16T20:00:00Z",
     maxInvocations: 100,
 };

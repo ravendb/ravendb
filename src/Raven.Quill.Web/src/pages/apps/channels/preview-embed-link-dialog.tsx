@@ -47,7 +47,7 @@ export function PreviewEmbedLinkDialog({ slug, link, trigger }: PreviewEmbedLink
                 </DialogHeader>
 
                 <EmbedLinkPreview
-                    url={buildEmbedUrl(link.token)}
+                    url={buildEmbedUrl(slug, link.token)}
                     expiresAt={link.expiresAt}
                     maxInvocations={link.maxInvocations}
                 />

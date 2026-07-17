@@ -86,7 +86,7 @@ export function AppChannelDetail() {
                                 <>
                                     <EmbedLinkApiDocs
                                         slug={slug}
-                                        agentId={channel.agentId}
+                                        widgetId={channel.widgetId}
                                         parameterNames={agent?.parameters ?? []}
                                     />
                                     <SectionCard
@@ -94,7 +94,7 @@ export function AppChannelDetail() {
                                         action={
                                             <GenerateEmbedLinkDialog
                                                 slug={slug}
-                                                agentId={channel.agentId}
+                                                widgetId={channel.widgetId}
                                                 displayName={channel.displayName}
                                                 parameterNames={agent?.parameters ?? []}
                                                 trigger={

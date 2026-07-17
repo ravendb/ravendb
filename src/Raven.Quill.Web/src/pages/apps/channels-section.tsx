@@ -97,7 +97,7 @@ export function ChannelsSection({ slug }: { slug: string }) {
                                             {channel.type === "IFrame" && (
                                                 <GenerateEmbedLinkDialog
                                                     slug={slug}
-                                                    agentId={channel.agentId}
+                                                    widgetId={channel.widgetId}
                                                     displayName={channel.displayName}
                                                     parameterNames={agent?.parameters ?? []}
                                                     trigger={

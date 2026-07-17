@@ -38,6 +38,7 @@ function buildSeed(discovery: DiscoverResponse): AppFormData {
         dataSource: { source: "external" },
         externalConnection: {
             appName: "AcmeShop",
+            slug: "acme-shop",
             provider: "Npgsql",
             connectionString: "Host=localhost;Port=5432;Database=acme_shop;Username=admin;Password=secret",
         },

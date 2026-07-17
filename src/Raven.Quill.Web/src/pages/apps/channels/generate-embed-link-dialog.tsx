@@ -32,8 +32,7 @@ import {
 
 type GenerateEmbedLinkDialogProps = {
     slug: string;
-    /** The agent the channel is bound to; the backend resolves its iFrame channel. */
-    agentId: string;
+    widgetId: string;
     displayName: string;
     /** The agent's declared parameter names — one value is bound per name at mint time. */
     parameterNames: string[];
@@ -86,7 +85,7 @@ type GenerateEmbedLinkFormData = z.infer<typeof generateEmbedLinkSchema>;
 
 export function GenerateEmbedLinkDialog({
     slug,
-    agentId,
+    widgetId,
     displayName,
     parameterNames,
     trigger,
@@ -123,7 +122,7 @@ export function GenerateEmbedLinkDialog({
         const parameters = Object.fromEntries(values.parameters.map(({ name, value }) => [name, value.trim()]));
 
         mintMutation.mutate({
-            agentId,
+            widgetId,
             parameters: values.parameters.length > 0 ? parameters : undefined,
             ttlSeconds,
             maxInvocations: values.maxInvocations,
