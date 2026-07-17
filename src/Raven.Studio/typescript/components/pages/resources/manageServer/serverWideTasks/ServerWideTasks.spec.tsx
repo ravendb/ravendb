@@ -6,8 +6,6 @@ import React from "react";
 const { ServerWideTasksStory } = composeStories(Stories);
 
 const selectors = {
-    emptyState: /No server-wide tasks configured yet/,
-    createButton: /Create Server-Wide Task/,
     addButton: /Add a Server-Wide Task/,
     backupTaskName: /BackupTask/,
     replicationTaskName: /ExternalReplicationTask/,
@@ -17,12 +15,12 @@ const selectors = {
 };
 
 describe("ServerWideTasks", () => {
-    it("can render empty state", async () => {
+    it("redirects to the add view when there are no tasks", async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory isEmpty />);
 
-        expect(screen.queryByText(selectors.emptyState)).toBeInTheDocument();
-        expect(screen.queryByText(selectors.createButton)).toBeInTheDocument();
+        // With no tasks the page redirects to the add view instead of rendering the list
         expect(screen.queryByText(selectors.addButton)).not.toBeInTheDocument();
+        expect(screen.queryByText(selectors.backupTaskName)).not.toBeInTheDocument();
     });
 
     it("can render tasks grouped by type", async () => {

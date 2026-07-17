@@ -8,12 +8,18 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { AddTaskCardList, TaskCardCategory } from "components/pages/database/tasks/shared/AddTaskCardList";
 import { PerDatabaseOngoingTasksLink } from "./partials/PerDatabaseOngoingTasksLink";
 import { ServerWideTasksInfoHub } from "./partials/ServerWideTasksInfoHub";
+import { useServerWideTasks } from "./useServerWideTasks";
 
 export default function AddServerWideTask() {
     const hasServerWideBackups = useAppSelector(licenseSelectors.statusValue("HasServerWideBackups"));
     const hasServerWideExternalReplications = useAppSelector(
         licenseSelectors.statusValue("HasServerWideExternalReplications")
     );
+
+    // Show the back button only when there are existing tasks to go back to —
+    // otherwise the list view would just redirect here again
+    const { tasks } = useServerWideTasks();
+    const hasExistingTasks = tasks.length > 0;
 
     const categories: TaskCardCategory[] = [
         {
@@ -66,10 +72,12 @@ export default function AddServerWideTask() {
                     <ServerWideTasksInfoHub />
                 </div>
             </div>
-            <Button href={appUrl.forServerWideTasks()} className="rounded-pill mb-3" variant="secondary">
-                <Icon icon="arrow-left" />
-                Back to server-wide tasks
-            </Button>
+            {hasExistingTasks && (
+                <Button href={appUrl.forServerWideTasks()} className="rounded-pill mb-3" variant="secondary">
+                    <Icon icon="arrow-left" />
+                    Back to server-wide tasks
+                </Button>
+            )}
             <AddTaskCardList categories={categories} />
         </div>
     );
