@@ -1,4 +1,9 @@
-import { DatabaseSettingKey, ImportFromFileFormData } from "./importFromFileValidation";
+import {
+    ConnectionStringKey,
+    DatabaseSettingKey,
+    ImportFromFileFormData,
+    OngoingTaskKey,
+} from "./importFromFileValidation";
 import endpoints = require("endpoints");
 import appUrl = require("common/appUrl");
 
@@ -8,7 +13,7 @@ type ImportOptions = Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptio
 
 export type ImportCommandType = "PowerShell" | "Cmd" | "Bash";
 
-const databaseSettingTokens: Record<keyof ImportFromFileFormData["configuration"]["databaseSettings"], DatabaseRecordItemType> = {
+const databaseSettingTokens: Record<DatabaseSettingKey, DatabaseRecordItemType> = {
     settings: "Settings",
     conflictSolverConfig: "ConflictSolverConfig",
     client: "Client",
@@ -24,7 +29,7 @@ const databaseSettingTokens: Record<keyof ImportFromFileFormData["configuration"
     postgreSqlIntegration: "PostgreSQLIntegration",
 };
 
-const ongoingTaskTokens: Record<keyof ImportFromFileFormData["configuration"]["ongoingTasks"], DatabaseRecordItemType> = {
+const ongoingTaskTokens: Record<OngoingTaskKey, DatabaseRecordItemType> = {
     periodicBackups: "PeriodicBackups",
     externalReplications: "ExternalReplications",
     ravenEtls: "RavenEtls",
@@ -42,7 +47,7 @@ const ongoingTaskTokens: Record<keyof ImportFromFileFormData["configuration"]["o
     remoteAttachments: "RemoteAttachments",
 };
 
-const connectionStringTokens: Record<keyof ImportFromFileFormData["configuration"]["connectionStrings"], DatabaseRecordItemType> = {
+const connectionStringTokens: Record<ConnectionStringKey, DatabaseRecordItemType> = {
     ravenConnectionStrings: "RavenConnectionStrings",
     sqlConnectionStrings: "SqlConnectionStrings",
     snowflakeConnectionStrings: "SnowflakeConnectionStrings",
