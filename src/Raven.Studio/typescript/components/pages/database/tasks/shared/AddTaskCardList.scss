@@ -165,14 +165,28 @@ $variants: (
     }
 }
 
+.add-task-card {
+    .task-icon {
+        font-size: 1.25rem;
+    }
+
+    .license-restricted-badge {
+        z-index: 4;
+    }
+}
+
+.add-task-card-category {
+    container-type: inline-size;
+}
+
 .add-task-card-grid {
     grid-template-columns: 1fr;
 
-    @media (min-width: sizes.$screen-sm) {
+    @container (min-width: 480px) {
         grid-template-columns: 1fr 1fr;
     }
 
-    @media (min-width: sizes.$screen-lg) {
+    @container (min-width: 720px) {
         grid-template-columns: 1fr 1fr 1fr;
     }
 }

@@ -49,7 +49,7 @@ export function AddTaskCardList({ categories, isAiOnly }: AddTaskCardListProps) 
     return (
         <>
             {categories.map((category) => (
-                <div className="pb-2" key={category.categoryName}>
+                <div className="pb-2 add-task-card-category" key={category.categoryName}>
                     {!isAiOnly && (
                         <HrHeader>
                             <Icon icon={category.categoryIcon} />
@@ -93,17 +93,13 @@ export function TaskCard({
                     "item-disabled": isDisabled,
                 })}
             >
-                <Card.Body className="d-flex align-items gap-3">
-                    <div className="align-self-center">
-                        <Icon icon={iconName} className="task-icon fs-2" />
+                <Card.Body className="d-flex flex-column gap-1">
+                    <div className="d-flex align-items-center gap-2">
+                        <Icon icon={iconName} className="task-icon" margin="me-2" />
+                        <h4 className="mb-0">{title}</h4>
+                        {counterBadge}
                     </div>
-                    <div className="d-flex flex-column align-self-center gap-1">
-                        <div className="d-flex align-items-center gap-2">
-                            <h4 className="mb-0">{title}</h4>
-                            {counterBadge}
-                        </div>
-                        <div>{description}</div>
-                    </div>
+                    <div className="small">{description}</div>
                 </Card.Body>
 
                 {showLicenseBadge && (
