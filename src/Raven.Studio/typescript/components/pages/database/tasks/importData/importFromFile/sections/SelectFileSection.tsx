@@ -37,13 +37,14 @@ export default function SelectFileSection({ restrictedFeatures }: SelectFileSect
                 <FileDropzone
                     onChange={(files) => setValue("file", files[0] ?? null, { shouldValidate: true, shouldDirty: true })}
                     maxFiles={1}
+                    // backup/snapshot extensions are selectable on purpose - dedicated alerts below
+                    // redirect the user to the Restore flow instead of a generic rejection
                     validExtensions={["ravendbdump", ...backupExtensions, "ravendb-snapshot", "ravendb-encrypted-snapshot"]}
+                    isExtensionsListHidden
                 />
-                {file && (
-                    <div className="mt-2">
-                        <Icon icon="document" /> {file.name}
-                    </div>
-                )}
+                <div className="d-flex mt-1 justify-content-end">
+                    <small className="text-muted">Supported file type: .ravendbdump</small>
+                </div>
                 {fileError && <div className="text-danger mt-2">{fileError}</div>}
                 {isBackupFile && (
                     <Alert variant="warning" className="mt-3 mb-0">
