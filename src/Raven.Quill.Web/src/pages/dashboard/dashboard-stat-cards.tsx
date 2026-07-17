@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, YAxis } from "recharts";
+import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Card, CardContent } from "@/components/shadcn/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/shadcn/ui/chart";
@@ -112,7 +113,7 @@ function Sparkline({ series, dates, label }: { series: number[]; dates?: string[
                         <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} />
                     </linearGradient>
                 </defs>
-                <YAxis hide domain={[0, "dataMax"]} />
+                <YAxis hide domain={ZERO_SAFE_Y_DOMAIN} />
                 <ChartTooltip
                     content={
                         <ChartTooltipContent
