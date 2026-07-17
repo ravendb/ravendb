@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -133,7 +134,10 @@ public class CdcSinkTableProcessor
     /// </summary>
     public List<CdcSinkLinkedTableConfig> LinkedTables { get; init; }
 
-    private readonly Queue<object[]> _valuesPool = new();
+    // ConcurrentQueue: streaming decode rents on a thread-pool continuation (Task.WhenAny in
+    // ProcessCdcStream) while the stream thread returns/releases arrays. Arrays are cleared on
+    // return, so pooled arrays never retain row references and are never mutated while pooled.
+    private readonly ConcurrentQueue<object[]> _valuesPool = new();
 
     public object[] RentValues()
     {
@@ -149,17 +153,8 @@ public class CdcSinkTableProcessor
 
     public void ReturnValues(object[] arr)
     {
+        Array.Clear(arr, 0, arr.Length);
         _valuesPool.Enqueue(arr);
-    }
-
-    /// <summary>
-    /// Clears array contents to release references for GC, but keeps
-    /// the arrays in the pool for reuse on the next burst.
-    /// </summary>
-    public void ClearPoolArrays()
-    {
-        foreach (var arr in _valuesPool)
-            Array.Clear(arr, 0, arr.Length);
     }
 
     /// <summary>
