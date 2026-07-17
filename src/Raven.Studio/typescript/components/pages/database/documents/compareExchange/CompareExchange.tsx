@@ -117,8 +117,8 @@ export default function CompareExchange() {
 
     return (
         <div className="content-padding vstack h-100">
-            <div className="hstack justify-content-between">
-                <AboutViewHeading title="Compare Exchange" icon="cmp-xchg" />
+            <div className="hstack justify-content-between mb-5">
+                <AboutViewHeading title="Compare Exchange" icon="cmp-xchg" marginBottom={0} />
                 <CompareExchangeInfoHub />
             </div>
             <div className="hstack gap-2">
