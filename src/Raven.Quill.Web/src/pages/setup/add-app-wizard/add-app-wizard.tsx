@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -12,11 +12,24 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { invalidateAppQueries } from "@/lib/query-invalidation";
 import { toast } from "sonner";
+import { Button } from "@/components/shadcn/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/shadcn/ui/dialog";
+import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
+
+type CreatedApp = { slug: string; name: string };
 
 export function AddAppWizard() {
     const resetStore = useSetupWizardStore((state) => state.reset);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const [createdApp, setCreatedApp] = useState<CreatedApp | null>(null);
 
     const form = useForm<AppFormData>({
         mode: "onChange",
@@ -38,10 +51,9 @@ export function AddAppWizard() {
                 appName: formValues.externalConnection.appName,
             });
         },
-        onSuccess: async (result) => {
+        onSuccess: async (result, formValues) => {
             await invalidateAppQueries(queryClient);
-            toast.success(`App ${result.slug} created`);
-            navigate(appRoutes.addCapability(result.slug, "agent"));
+            setCreatedApp({ slug: result.slug, name: formValues.externalConnection.appName });
         },
         onError: (error) => {
             const message = error instanceof Error ? error.message.split("\n")[0] : "Could not create app.";
@@ -58,7 +70,38 @@ export function AddAppWizard() {
             >
                 <AddAppWizardBody />
             </form>
+            <AppCreatedDialog
+                app={createdApp}
+                onContinue={() => createdApp && navigate(appRoutes.addCapability(createdApp.slug, "agent"))}
+            />
         </FormProvider>
+    );
+}
+
+function AppCreatedDialog({ app, onContinue }: { app: CreatedApp | null; onContinue: () => void }) {
+    return (
+        <Dialog open={app !== null} onOpenChange={(open) => !open && onContinue()}>
+            {app && (
+                <DialogContent className="sm:max-w-xl" showCloseButton={false}>
+                    <DialogHeader>
+                        <DialogTitle>App &ldquo;{app.name}&rdquo; created</DialogTitle>
+                        <DialogDescription>
+                            We&rsquo;re syncing your data in the background. This can take a while, and you don&rsquo;t
+                            have to wait for it to finish.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <CdcPerformanceSection
+                        slug={app.slug}
+                        title="Sync progress"
+                        loadingLabel="Connecting to the live data sync..."
+                        errorTitle="Could not connect to the live data sync"
+                    />
+                    <DialogFooter>
+                        <Button onClick={onContinue}>Continue</Button>
+                    </DialogFooter>
+                </DialogContent>
+            )}
+        </Dialog>
     );
 }
 

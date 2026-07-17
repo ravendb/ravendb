@@ -77,12 +77,14 @@ export function sampleCdcProgressFrame(): CdcLiveRawFrame {
                             const startedMs = Date.now() - 5_000 - index * 90_000;
                             const durationInMs = 900 + Math.round(Math.abs(Math.sin(index)) * 800);
                             const read = 480 + index * 7;
-                            // One failing batch so stories exercise the error styling.
+
                             const scriptErrors = index === 2 ? 3 : 0;
+                            const inProgress = index === 0;
+
                             return {
                                 Id: index,
                                 Started: new Date(startedMs).toISOString(),
-                                Completed: new Date(startedMs + durationInMs).toISOString(),
+                                Completed: inProgress ? null : new Date(startedMs + durationInMs).toISOString(),
                                 DurationInMs: durationInMs,
                                 NumberOfReadMessages: read,
                                 NumberOfProcessedMessages: read - scriptErrors,
