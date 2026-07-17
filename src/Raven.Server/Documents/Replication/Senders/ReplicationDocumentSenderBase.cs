@@ -701,6 +701,11 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected virtual void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
+            // pre-6.0  stored revisions with the full CV as the key (6.0+ always use cv.Version).
+            // to avoid duplicate revisions for pre-6.0 we need to send only the version
+            if (_parent.SupportedFeatures.Replication.RevisionTombstonesWithId == false && IsRevisionItem(item))
+                item.ChangeVector = documentsContext.GetChangeVector(item.ChangeVector).Version;
+
             // we will dispose item when we are done with writing the stream in the loop below
             using (item is AttachmentReplicationItem ? item : null)
             using (Slice.From(documentsContext.Allocator, item.ChangeVector, out var cv))
@@ -708,6 +713,11 @@ namespace Raven.Server.Documents.Replication.Senders
                 item.Write(cv, _stream, _tempBuffer, stats);
             }
         }
+
+        private static bool IsRevisionItem(ReplicationBatchItem item) =>
+            item is RevisionTombstoneReplicationItem ||
+            (item is DocumentReplicationItem doc &&
+             (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision)));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(OutgoingReplicationStatsScope stats)
