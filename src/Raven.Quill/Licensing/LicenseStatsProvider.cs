@@ -34,13 +34,25 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
 
     public async Task<QuillUsageResponse> GetUsageAsync(int year, int? month, int? day, CancellationToken token)
     {
-        var usage = await _ravendb.SendAsync("/admin/license/quill/usage", "POST", new
+        var r = await _ravendb.SendAsync("/admin/license/quill/usage", "POST", new
         {
             Month = month,
             Year = year,
             Day = day
         }, token);
 
-        return await _ravendb.DeserializeAsync<QuillUsageResponse>(usage.Content, token);
+        var usage = await _ravendb.DeserializeAsync<QuillUsageResponse>(r.Content, token);
+
+        var perApplicationUsages = (usage.PerApplication ?? [])
+            .GroupBy(p => (p.TopologyId, p.ApplicationName))
+            .Select(g => new QuillApplicationUsage(
+                g.Key.TopologyId,
+                g.Key.ApplicationName,
+                g.Min(x => x.From),
+                g.Max(x => x.To),
+                g.Sum(x => x.Usage)))
+            .ToList();
+
+        return new QuillUsageResponse(perApplicationUsages, usage.ByPeriod);
     }
 }

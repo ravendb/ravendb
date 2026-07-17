@@ -128,14 +128,14 @@ public static class EmbedEndpoints
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(app.Database, config.Identifier, gate.ConversationId, body.Prompt, link.Parameters),
+                new AgentRequest(app.Database, config.Identifier, gate.ConversationId, body.Prompt, link.WidgetId, link.Parameters),
                 async chunk =>
                 {
                     streamedAny = true;
                     await NdjsonStream.WriteLineAsync(ctx, new { type = "chunk", text = chunk });
                 },
-                ct,
-                resolved: config);
+                config,
+                ct);
 
             await NdjsonStream.WriteLineAsync(ctx, new
             {

@@ -17,3 +17,5 @@ public sealed record ConversationDto(
 public sealed record ConversationParam(string Key, string Value);
 
 public sealed record ConversationTurn(string Role, string Text, DateTime? At);
+
+public sealed record ConversationListResult(List<ConversationDto> Conversations, long TotalResults);

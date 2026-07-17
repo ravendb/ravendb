@@ -207,10 +207,6 @@ public class UsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsTest
         }
         Assert.Equal(3, invocations);
         Assert.Equal(120, tokens);
-
-        // The global dashboard fan-out is resilient too.
-        var dashResp = await client.GetAsync($"/api/dashboard?{Q(now.Year, now.Month, now.Day)}");
-        Assert.Equal(HttpStatusCode.OK, dashResp.StatusCode);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

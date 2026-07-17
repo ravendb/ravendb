@@ -6,11 +6,6 @@ const baseKey = "stats";
 
 export function createStatsQueries(api: ServerApi["stats"]) {
     return {
-        dashboard: (period: DatePeriod) =>
-            queryOptions({
-                queryKey: [baseKey, "dashboard", period.year, period.month, period.day],
-                queryFn: () => api.dashboard(datePeriodToSearchParams(period)),
-            }),
         dashboardApps: () =>
             queryOptions({
                 queryKey: [baseKey, "dashboardApps"],

@@ -1,9 +1,6 @@
-using System.Text.RegularExpressions;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.CdcSink;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
@@ -47,6 +44,11 @@ public static class AppsEndpoints
             .WithName("apps.cdcErrors")
             .Produces<CdcError[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapGet("/{slug}/cdc", GetCdcAsync)
+            .WithName("apps.cdcGet")
+            .Produces<CdcSinkConfiguration>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+
         group.MapPost("/{slug}/setup/try", SetupTryAsync)
             .WithName("apps.setupTry")
             .Accepts<SetupTryRequest>("application/json")
@@ -61,6 +63,32 @@ public static class AppsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapDelete("/{slug}", DeleteAppAsync)
+            .WithName("apps.delete")
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> DeleteAppAsync(
+        string slug,
+        IDocumentStore store,
+        ILogger<AppsLogger> logger,
+        CancellationToken ct)
+    {
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Deleting app with slug={Slug}", slug);
+        }
+
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);
+        await AppLookup.DeleteAppAsync(store, slug, ct);
+
+        return Results.Ok();
     }
 
     private static async Task<IResult> SuggestAgentAsync(
@@ -147,62 +175,15 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        // STJ uses the param-less ctor, bypassing the 3-arg guards; validate here
-        if (body is null)
-            return Results.BadRequest(new ApiErrorResponse("request body is required"));
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, app.Database, body, ct);
+        if (validationError is not null)
+            return validationError;
 
-        if (string.IsNullOrWhiteSpace(body.Name))
-            return Results.BadRequest(new ApiErrorResponse("name is required"));
-
-        if (string.IsNullOrWhiteSpace(body.SystemPrompt))
-            return Results.BadRequest(new ApiErrorResponse("systemPrompt is required"));
-
-        if (string.IsNullOrWhiteSpace(body.ConnectionStringName))
-            return Results.BadRequest(new ApiErrorResponse("connectionStringName is required"));
-
-        if (body.Actions is { Count: > 0 })
-            return Results.BadRequest(new ApiErrorResponse("actions are not supported in demo"));
-
-        if (body.SubAgents is { Count: > 0 })
-            return Results.BadRequest(new ApiErrorResponse("subAgents are not supported in demo"));
-
-        foreach (var query in body.Queries ?? [])
-        {
-            query.Query = EnforceLimit(query.Query);
-        }
-
-        var cs = await store.Maintenance.ForDatabase(app.Database)
-        .SendAsync(new GetConnectionStringsOperation(body.ConnectionStringName, ConnectionStringType.Ai), ct);
-
-        if (cs.AiConnectionStrings is null ||
-            cs.AiConnectionStrings.TryGetValue(body.ConnectionStringName, out var aiCs) == false)
-        {
-            return Results.BadRequest(new ApiErrorResponse(
-                $"connection string '{body.ConnectionStringName}' not found; create it via " +
-                $"POST /api/apps/{slug}/ai/connection-strings first"));
-        }
-
-        if (aiCs.ModelType != AiModelType.Chat)
-            return Results.BadRequest(new ApiErrorResponse(
-                $"connection string '{aiCs.Name}' has ModelType={aiCs.ModelType}; agent provisioning requires Chat"));
-
-        // re-gate provider: a CS added via Studio bypasses the POST-time gate
-        var provider = aiCs.GetActiveProvider();
-        if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
-            return Results.BadRequest(new ApiErrorResponse(
-                $"connection string '{aiCs.Name}' uses unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));
-
-        body.Disabled = false;
-        body.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
-        {
-            MaxTokensBeforeSummarization = 256 * 1024, // max context window of gpt5.4-mini is 400k tokens
-            MaxTokensAfterSummarization = 4 * 1024
-        });
-
-        logger.LogInformation(
-            "Provisioning agent for app slug={Slug} name={Name} identifier={Identifier} cs={ConnectionStringName} queries={QueryCount}",
-            app.Slug, body.Name, string.IsNullOrWhiteSpace(body.Identifier) ? "(server-assigned)" : body.Identifier,
-            aiCs.Name, body.Queries?.Count ?? 0);
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation(
+                "Provisioning agent for app slug={Slug} name={Name} identifier={Identifier} cs={ConnectionStringName} queries={QueryCount}",
+                app.Slug, body.Name, string.IsNullOrWhiteSpace(body.Identifier) ? "(server-assigned)" : body.Identifier,
+                body.ConnectionStringName, body.Queries?.Count ?? 0);
 
         try
         {
@@ -212,25 +193,11 @@ public static class AppsEndpoints
         // map RavenDB validation to a 400 instead of a leaked 500
         catch (RavenException ex)
         {
-            logger.LogWarning(ex,
-                "Agent provisioning rejected by RavenDB for app slug={Slug} name={Name}", app.Slug, body.Name);
+            if (logger.IsEnabled(LogLevel.Warning))
+                logger.LogWarning(ex,
+                    "Agent provisioning rejected by RavenDB for app slug={Slug} name={Name}", app.Slug, body.Name);
             return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
         }
-    }
-
-    private static readonly Regex AgentQueryLimit = new(@"\blimit\s+(\S+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private const int MaxLimit = 32;
-    private static string EnforceLimit(string rql)
-    {
-        var m = AgentQueryLimit.Match(rql);
-        if (m.Success == false)
-            return rql.TrimEnd() + " limit " + MaxLimit;
-
-        var n = m.Groups[1];
-        if (int.TryParse(n.Value, out var limit) && limit <= MaxLimit)
-            return rql;
-
-        return rql[..n.Index] + MaxLimit + rql[(n.Index + n.Length)..];
     }
 
     private static async Task CdcProgressAsync(
@@ -293,6 +260,24 @@ public static class AppsEndpoints
 
         var raw = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct);
         return Results.Ok(CdcPerformanceShaper.ShapeErrors(raw));
+    }
+
+    // read-side: the current CDC sink config, so the UI can populate an edit form
+    private static async Task<IResult> GetCdcAsync(
+        string slug,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
+        var cdc = record?.CdcSinks?.FirstOrDefault();
+        if (cdc is null)
+            return Results.NotFound(new ApiErrorResponse("cdc task not found"));
+
+        return Results.Ok(cdc);
     }
 
     private static async Task SetupTryAsync(

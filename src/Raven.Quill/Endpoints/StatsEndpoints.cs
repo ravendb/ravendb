@@ -4,6 +4,7 @@ using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
 using Raven.Quill.Metrics;
+using Raven.Quill.Wizard;
 
 namespace Raven.Quill.Endpoints;
 
@@ -17,13 +18,6 @@ public static class StatsEndpoints
 {
     public static void Map(WebApplication app)
     {
-        // Global roll-up across all apps (not per-slug).
-        app.MapGet("/api/dashboard", GetDashboardAsync)
-            .WithTags("stats")
-            .WithName("stats.dashboard")
-            .RequireAuthorization()
-            .Produces<DashboardResponse>();
-
         app.MapGet("/api/usage", GetUsageAsync)
             .WithTags("stats")
             .WithName("stats.usage")
@@ -68,7 +62,7 @@ public static class StatsEndpoints
 
         group.MapGet("/conversations", GetConversationsListAsync)
             .WithName("stats.conversations")
-            .Produces<ConversationDto[]>()
+            .Produces<ConversationListResult>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapGet("/conversations/{*conversationId}", GetConversationByIdAsync)
@@ -92,31 +86,32 @@ public static class StatsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }
 
-    private static async Task<IResult> GetDashboardAsync(
-        IDocumentStore store,
-        ILoggerFactory loggerFactory,
-        int year,
-        int? month,
-        int? day,
-        CancellationToken ct)
-    {
-        var dashboard = await MetricsReadService.GetDashboardStatsAsync(
-            store, year, month, day, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
-        return Results.Ok(dashboard);
-    }
-
     private static async Task<IResult> GetUsageAsync(
         ILicenseStatsProvider provider,
         IDocumentStore store,
         ILoggerFactory loggerFactory,
+        string? app,
         int year,
         int? month,
         int? day,
-        string? app,
         CancellationToken ct)
     {
+        List<App> apps = [];
+        if (app is not null)
+        {
+            var loadedApp = await AppLookup.LoadAppAsync(store, app, ct);
+            if (loadedApp is null)
+                return Results.NotFound($"no app with slug '{app}'");
+
+            apps.Add(loadedApp);
+        }
+        else
+        {
+            apps = await MetricsReadService.LoadAllAppsAsync(store, ct);
+        }
+
         var usage = await MetricsReadService.GetUsageAsync(provider,
-            store, year, month, day, app, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
+            store, apps, year, month, day, loggerFactory.CreateLogger(nameof(MetricsReadService)), ct);
         return Results.Ok(usage);
     }
 
@@ -180,16 +175,25 @@ public static class StatsEndpoints
         return Results.Ok(collections);
     }
 
+
     private static async Task<IResult> GetConversationsListAsync(
         string slug,
         IDocumentStore store,
+        int year,
+        int? month,
+        int? day,
+        int? start,
+        int? pageSize,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var items = await MetricsReadService.GetConversationsAsync(store, slug, app.Database, DateTime.UtcNow, ct);
+        var now = DateTime.UtcNow;
+        var period = new UsagePeriod(year, month, day, now);
+
+        var items = await MetricsReadService.GetConversationsAsync(store, slug, app.Database, period, start ?? 0, pageSize ?? int.MaxValue, now, ct);
         return Results.Ok(items);
     }
 

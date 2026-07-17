@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Wizard;
 using Xunit;
@@ -88,12 +89,26 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
         await session.SaveChangesAsync();
     }
 
+    /// <summary>Writes a <c>ConversationPreview</c> read-model doc — what the conversations list reads
+    /// (one row per conversation, updated each turn by the agent router). Private: the read-model is a
+    /// production side effect of a turn, so the only writer is <see cref="SeedConversationAsync"/>.</summary>
+    private static Task SeedPreviewAsync(
+        IDocumentStore store, string database, string conversationId, string agent, DateTime lastMessageAt,
+        string? channelWidgetId = null, string lastUserPrompt = "", string lastAgentReply = "",
+        IReadOnlyDictionary<string, string>? parameters = null) =>
+        AgentRouter.UpsertPreviewAsync(store,
+            new AgentRequest(database, AgentId: agent, ConversationId: conversationId, Prompt: lastUserPrompt,
+                ChannelWidgetId: channelWidgetId ?? "", Parameters: parameters ?? new Dictionary<string, string>()),
+            agent, conversationId, reply: lastAgentReply, nowUtc: lastMessageAt, CancellationToken.None);
+
     /// <summary>Writes a document into the per-app <c>@conversations</c> collection
     /// (the collection the AI agent runtime owns) so the metric index can aggregate
     /// it without running a live turn.</summary>
     protected static async Task SeedConversationAsync(
         IDocumentStore store, string database, string id, string agent, DateTime createdAt,
-        int messages = 1, long tokens = 0, (string Role, string Text)[]? turns = null)
+        int messages = 1, long tokens = 0, (string Role, string Text)[]? turns = null,
+        IReadOnlyDictionary<string, object>? parameters = null, string? channelWidgetId = null,
+        IReadOnlyList<(string Role, object? Content)>? richMessages = null)
     {
         var conversation = new SeedConversation
         {
@@ -101,8 +116,14 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
             CreatedAt = createdAt,
             LastMessageAt = createdAt,
             TotalUsage = new SeedUsage { TotalTokens = tokens },
+            Parameters = parameters is null ? new() : new Dictionary<string, object>(parameters),
         };
-        if (turns is not null)
+        if (richMessages is not null)
+            // arbitrary AI-runtime shapes (array-of-parts / {reply} / null content, tool messages); the
+            // per-index second offset keeps a deterministic order for transcript assertions.
+            for (var i = 0; i < richMessages.Count; i++)
+                conversation.Messages.Add(new SeedMessage { date = createdAt.AddSeconds(i), role = richMessages[i].Role, content = richMessages[i].Content });
+        else if (turns is not null)
             foreach (var (role, text) in turns)
                 conversation.Messages.Add(new SeedMessage { date = createdAt, role = role, content = text });
         else
@@ -111,33 +132,35 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
                 conversation.Messages.Add(new SeedMessage { date = createdAt, role = "user" });
 
         await PutConversationAsync(store, database, id, conversation);
+
+        // Production co-writes the read-model preview on every turn, so a seeded conversation must too —
+        // the conversations list (and the detail endpoint's channel attribution) reads it. Last exchange
+        // is derived from the seeded turns; params are flattened to strings to match the preview shape.
+        var lastUser = turns is null ? "" : (turns.LastOrDefault(t => t.Role == "user").Text ?? "");
+        var lastAgent = turns is null ? "" : (turns.LastOrDefault(t => t.Role is "assistant" or "agent").Text ?? "");
+        await SeedPreviewAsync(store, database, id, agent, createdAt, channelWidgetId,
+            lastUserPrompt: lastUser, lastAgentReply: lastAgent,
+            parameters: parameters?.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? ""));
     }
 
     /// <summary>Seeds a <c>@conversations</c> doc shaped like the real AI-runtime output:
     /// a <c>system</c> prompt message, <c>user</c>/<c>assistant</c> turns (assistant
     /// <c>content</c> as an array-of-parts), and a <c>tool</c> message — to exercise
     /// transcript role-filtering + array-content extraction. One user turn → invocations = 1.</summary>
-    protected static async Task SeedRealisticConversationAsync(
-        IDocumentStore store, string database, string id, string agent, DateTime createdAt, long tokens = 0)
-    {
-        var conversation = new SeedConversation
-        {
-            Agent = agent,
-            CreatedAt = createdAt,
-            LastMessageAt = createdAt,
-            TotalUsage = new SeedUsage { TotalTokens = tokens },
-            Messages =
-            [
-                new SeedMessage { date = createdAt, role = "system", content = "You are a helpful assistant." },
-                new SeedMessage { date = createdAt, role = "user", content = new List<object> { new Dictionary<string, object> { ["type"] = "text", ["text"] = "hello" } } },
-                new SeedMessage { date = createdAt, role = "assistant", content = new Dictionary<string, object> { ["reply"] = "hi there" } },
-                // tool-call step: assistant message with tool_calls but no content — must be dropped.
-                new SeedMessage { date = createdAt.AddSeconds(1), role = "assistant", content = null },
-                new SeedMessage { date = createdAt.AddSeconds(2), role = "tool", content = "{\"result\":42}" },
-            ],
-        };
-        await PutConversationAsync(store, database, id, conversation);
-    }
+    protected static Task SeedRealisticConversationAsync(
+        IDocumentStore store, string database, string id, string agent, DateTime createdAt, long tokens = 0) =>
+        // Single write through the one seed owner: the realistic AI-runtime shape goes in as the
+        // @conversations doc, and the preview is co-written by SeedConversationAsync. system prompt +
+        // array-of-parts user content + {reply} assistant content + a contentless tool-call step + a
+        // tool message — exercises the detail endpoint's transcript role-filtering + array extraction.
+        SeedConversationAsync(store, database, id, agent, createdAt, tokens: tokens, richMessages:
+        [
+            ("system", "You are a helpful assistant."),
+            ("user", new List<object> { new Dictionary<string, object> { ["type"] = "text", ["text"] = "hello" } }),
+            ("assistant", new Dictionary<string, object> { ["reply"] = "hi there" }),
+            ("assistant", null),
+            ("tool", "{\"result\":42}"),
+        ]);
 
     private static Task PutConversationAsync(IDocumentStore store, string database, string id, SeedConversation conversation)
         => PutConversationDocAsync(store, database, id, conversation);

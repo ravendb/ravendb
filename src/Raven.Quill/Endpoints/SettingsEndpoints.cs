@@ -47,16 +47,16 @@ public static class SettingsEndpoints
             .WithName("settings.certificates")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
 
-        group.MapPost("/certificates/generate", async (IDocumentStore store, string appName, string name, CancellationToken token) =>
+        group.MapPost("/certificates/generate", async (IDocumentStore store, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, CancellationToken token) =>
             {
-                var op = new CreateClientCertificateOperation(name, new Dictionary<string, DatabaseAccess> { [appName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
+                var op = new CreateClientCertificateOperation(name, permissions, clearance);
                 var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
-                return Results.File(fileBytes.RawData, "application/octet-stream", $"{appName}_{name}_certificates.zip");
+                return Results.File(fileBytes.RawData, "application/octet-stream", $"{name}_certificates.zip");
             })
             .WithName("settings.certificatesGenerate")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
 
-        group.MapPost("/certificates/edit", async (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, bool disable, CancellationToken token) =>
+        group.MapPost("/certificates/edit", async (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, CancellationToken token) =>
             {
                 var op = new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
                 {
@@ -64,7 +64,7 @@ public static class SettingsEndpoints
                     Permissions = permissions,
                     Disabled = disable,
                     Name = name,
-                    Clearance = SecurityClearance.ValidUser
+                    Clearance = clearance
                 });
                 await store.Maintenance.Server.SendAsync(op, token);
                 return Results.Ok();
