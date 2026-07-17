@@ -6,7 +6,7 @@ import {
 } from "components/models/tasks";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import React, { useId, useState } from "react";
+import { useId, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
@@ -139,6 +139,13 @@ function buildSyntheticNode(
     };
 }
 
+interface InternalEntry {
+    nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">;
+    progress: OngoingTaskNodeInternalReplicationProgressDetails | null;
+    key: string;
+    syntheticNode: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
+}
+
 export function InternalReplicationTaskDistribution(props: InternalReplicationTaskDistributionProps) {
     const { data } = props;
 
@@ -148,13 +155,6 @@ export function InternalReplicationTaskDistribution(props: InternalReplicationTa
     const { activeSheetOwnerId } = useViewSheet();
 
     // Build a flat list of (nodeInfo, progress) pairs with synthetic nodes for the sheet
-    interface InternalEntry {
-        nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">;
-        progress: OngoingTaskNodeInternalReplicationProgressDetails | null;
-        key: string;
-        syntheticNode: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
-    }
-
     const entries: InternalEntry[] = data.flatMap((nodeInfo) => {
         if (!nodeInfo.progress.length) {
             const label = `${nodeInfo.location.nodeTag} → ?`;

@@ -6,9 +6,14 @@ import {
     OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationSinkInfo,
 } from "components/models/tasks";
-import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
+import {
+    ClickableProgress,
+    DistributionItem,
+    DistributionLegend,
+    LocationDistribution,
+} from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import React, { useId, useState } from "react";
+import { useId, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
@@ -192,21 +197,6 @@ interface ExternalReplicationTaskProgressProps {
     nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
     task: OngoingTaskInfo;
     onClick?: () => void;
-}
-
-function ClickableProgress({ onClick, children }: { onClick?: () => void; children: React.ReactNode }) {
-    if (!onClick) {
-        return <>{children}</>;
-    }
-    return (
-        <div className="clickable-progress">
-            {children}
-            <div className="clickable-progress-hint cursor-pointer" onClick={onClick}>
-                <Icon icon="preview" margin="me-1" />
-                See details
-            </div>
-        </div>
-    );
 }
 
 export function ExternalReplicationTaskProgress(props: ExternalReplicationTaskProgressProps) {

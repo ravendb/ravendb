@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ViewSheet } from "components/common/splitView/ViewSheet";
 import {
     OngoingTaskAbstractReplicationNodeInfoDetails,
@@ -59,6 +59,107 @@ function ReplicationProgressCard({ label, progress }: { label: string; progress:
     );
 }
 
+function ReplicationError({ error }: { error: string }) {
+    return (
+        <div className="vstack gap-1">
+            <div className="text-danger fw-bold">
+                <Icon icon="warning" color="danger" /> {getErrorHeadline(error)}
+            </div>
+            <Code code={error} language="plaintext" />
+        </div>
+    );
+}
+
+interface ReplicationProgressBodyProps {
+    nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
+    isDebugInfoExpanded: boolean;
+    onToggleDebugInfo: () => void;
+}
+
+function ReplicationProgressBody({ nodeInfo, isDebugInfoExpanded, onToggleDebugInfo }: ReplicationProgressBodyProps) {
+    if (nodeInfo.status === "failure") {
+        const error = nodeInfo.details?.error;
+        return (
+            <div className="vstack gap-2 py-2">
+                <div className="text-danger fw-bold">
+                    <Icon icon="warning" color="danger" />{" "}
+                    {error ? getErrorHeadline(error) : "Unable to load task status"}
+                </div>
+                {error && <Code code={error} language="plaintext" />}
+            </div>
+        );
+    }
+
+    if (nodeInfo.status === "loading" || nodeInfo.status === "idle") {
+        return (
+            <div className="d-flex justify-content-center py-4">
+                <Spinner animation="border" />
+            </div>
+        );
+    }
+
+    const hasError = !!nodeInfo.details?.error;
+    const progress: OngoingTaskNodeReplicationProgressDetails[] = nodeInfo.progress ?? [];
+
+    if (progress.length === 0 && !hasError) {
+        return <div className="text-muted text-center py-3">No progress data available.</div>;
+    }
+
+    const sourceDatabaseCV = nodeInfo.details?.sourceDatabaseChangeVector;
+    const lastAcceptedCV = nodeInfo.details?.lastAcceptedChangeVectorFromDestination;
+    const hasDebugInfo = !!sourceDatabaseCV || !!lastAcceptedCV;
+
+    return (
+        <div className="vstack gap-3">
+            {hasError && <ReplicationError error={nodeInfo.details.error} />}
+            {progress.map((singleProgress, index) => (
+                <div key={"progress-" + index} className="vstack gap-2">
+                    <h4 className="mb-0">Replication process overview</h4>
+                    <div className="replication-progress-grid">
+                        <ReplicationProgressCard label="documents" progress={singleProgress.documents} />
+                        <ReplicationProgressCard label="tombstones" progress={singleProgress.documentTombstones} />
+                        <ReplicationProgressCard label="revisions" progress={singleProgress.revisions} />
+                        <ReplicationProgressCard label="attachments" progress={singleProgress.attachments} />
+                        <ReplicationProgressCard label="counters" progress={singleProgress.counterGroups} />
+                        <ReplicationProgressCard label="time-series" progress={singleProgress.timeSeries} />
+                        <ReplicationProgressCard
+                            label="time-series deleted ranges"
+                            progress={singleProgress.timeSeriesDeletedRanges}
+                        />
+                    </div>
+                    {index !== progress.length - 1 && <hr className="mt-2 mb-0" />}
+                </div>
+            ))}
+            {hasDebugInfo && (
+                <div className="vstack gap-2">
+                    <div className="d-flex align-items-center justify-content-between">
+                        <h4 className="mb-0">Debug info</h4>
+                        <Button variant="link" size="xs" onClick={onToggleDebugInfo} className="p-0">
+                            {isDebugInfoExpanded ? (
+                                <>
+                                    <Icon icon="collapse-vertical" margin="me-1" />
+                                    Collapse
+                                </>
+                            ) : (
+                                <>
+                                    <Icon icon="expand-vertical" margin="me-1" />
+                                    Expand
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                    {isDebugInfoExpanded && (
+                        <ChangeVectorDetails
+                            sourceDatabaseChangeVector={sourceDatabaseCV}
+                            lastAcceptedChangeVectorFromDestination={lastAcceptedCV}
+                        />
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function ReplicationProgressDetailsSheet(props: ReplicationProgressDetailsSheetProps) {
     const { taskType, taskName, allNodes, initialNodeIndex, onNodeChange } = props;
 
@@ -79,104 +180,6 @@ export function ReplicationProgressDetailsSheet(props: ReplicationProgressDetail
     };
     const [isDebugInfoExpanded, setIsDebugInfoExpanded] = useState(false);
     const nodeInfo = allNodes[selectedIndex];
-
-    const renderError = (error: string) => (
-        <div className="vstack gap-1">
-            <div className="text-danger fw-bold">
-                <Icon icon="warning" color="danger" /> {getErrorHeadline(error)}
-            </div>
-            <Code code={error} language="plaintext" />
-        </div>
-    );
-
-    const renderBody = () => {
-        if (nodeInfo.status === "failure") {
-            const error = nodeInfo.details?.error;
-            return (
-                <div className="vstack gap-2 py-2">
-                    <div className="text-danger fw-bold">
-                        <Icon icon="warning" color="danger" />{" "}
-                        {error ? getErrorHeadline(error) : "Unable to load task status"}
-                    </div>
-                    {error && <Code code={error} language="plaintext" />}
-                </div>
-            );
-        }
-
-        if (nodeInfo.status === "loading" || nodeInfo.status === "idle") {
-            return (
-                <div className="d-flex justify-content-center py-4">
-                    <Spinner animation="border" />
-                </div>
-            );
-        }
-
-        const hasError = !!nodeInfo.details?.error;
-        const progress: OngoingTaskNodeReplicationProgressDetails[] = nodeInfo.progress ?? [];
-
-        if (progress.length === 0 && !hasError) {
-            return <div className="text-muted text-center py-3">No progress data available.</div>;
-        }
-
-        const sourceDatabaseCV = nodeInfo.details?.sourceDatabaseChangeVector;
-        const lastAcceptedCV = nodeInfo.details?.lastAcceptedChangeVectorFromDestination;
-        const hasDebugInfo = !!sourceDatabaseCV || !!lastAcceptedCV;
-
-        return (
-            <div className="vstack gap-3">
-                {hasError && renderError(nodeInfo.details.error)}
-                {progress.map((singleProgress, index) => (
-                    <div key={"progress-" + index} className="vstack gap-2">
-                        <h4 className="mb-0">Replication process overview</h4>
-                        <div className="replication-progress-grid">
-                            <ReplicationProgressCard label="documents" progress={singleProgress.documents} />
-                            <ReplicationProgressCard label="tombstones" progress={singleProgress.documentTombstones} />
-                            <ReplicationProgressCard label="revisions" progress={singleProgress.revisions} />
-                            <ReplicationProgressCard label="attachments" progress={singleProgress.attachments} />
-                            <ReplicationProgressCard label="counters" progress={singleProgress.counterGroups} />
-                            <ReplicationProgressCard label="time-series" progress={singleProgress.timeSeries} />
-                            <ReplicationProgressCard
-                                label="time-series deleted ranges"
-                                progress={singleProgress.timeSeriesDeletedRanges}
-                            />
-                        </div>
-                        {index !== progress.length - 1 && <hr className="mt-2 mb-0" />}
-                    </div>
-                ))}
-                {hasDebugInfo && (
-                    <div className="vstack gap-2">
-                        <div className="d-flex align-items-center justify-content-between">
-                            <h4 className="mb-0">Debug info</h4>
-                            <Button
-                                variant="link"
-                                size="xs"
-                                onClick={() => setIsDebugInfoExpanded((prev) => !prev)}
-                                className="p-0"
-                            >
-                                {isDebugInfoExpanded ? (
-                                    <>
-                                        <Icon icon="collapse-vertical" margin="me-1" />
-                                        Collapse
-                                    </>
-                                ) : (
-                                    <>
-                                        <Icon icon="expand-vertical" margin="me-1" />
-                                        Expand
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                        {isDebugInfoExpanded && (
-                            <ChangeVectorDetails
-                                sourceDatabaseChangeVector={sourceDatabaseCV}
-                                lastAcceptedChangeVectorFromDestination={lastAcceptedCV}
-                            />
-                        )}
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     return (
         <ViewSheet>
@@ -213,7 +216,11 @@ export function ReplicationProgressDetailsSheet(props: ReplicationProgressDetail
                             exit="exit"
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
-                            {renderBody()}
+                            <ReplicationProgressBody
+                                nodeInfo={nodeInfo}
+                                isDebugInfoExpanded={isDebugInfoExpanded}
+                                onToggleDebugInfo={() => setIsDebugInfoExpanded((prev) => !prev)}
+                            />
                         </motion.div>
                     </AnimatePresence>
                 </div>

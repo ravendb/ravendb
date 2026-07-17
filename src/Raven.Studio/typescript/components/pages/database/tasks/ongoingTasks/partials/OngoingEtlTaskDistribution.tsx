@@ -1,5 +1,10 @@
 ﻿import { useId, useState } from "react";
-import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
+import {
+    ClickableProgress,
+    DistributionItem,
+    DistributionLegend,
+    LocationDistribution,
+} from "components/common/LocationDistribution";
 import classNames from "classnames";
 import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
 import { ProgressCircle } from "components/common/ProgressCircle";
@@ -527,21 +532,6 @@ interface OngoingEtlTaskProgressProps {
     nodeInfo: OngoingEtlTaskNodeInfo;
     task: OngoingTaskInfo;
     onClick?: () => void;
-}
-
-function ClickableProgress({ onClick, children }: { onClick?: () => void; children: React.ReactNode }) {
-    if (!onClick) {
-        return <>{children}</>;
-    }
-    return (
-        <div className="clickable-progress">
-            {children}
-            <div className="clickable-progress-hint cursor-pointer" onClick={onClick}>
-                <Icon icon="preview" margin="me-1" />
-                See details
-            </div>
-        </div>
-    );
 }
 
 export function OngoingEtlTaskProgress(props: OngoingEtlTaskProgressProps) {

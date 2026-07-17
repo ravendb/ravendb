@@ -212,6 +212,110 @@ function ScriptSection({ task, scriptProgress, isInitiallyExpanded }: ScriptSect
     );
 }
 
+function EtlError({ error }: { error: string }) {
+    return (
+        <div className="vstack gap-1">
+            <div className="text-danger fw-bold">
+                <Icon icon="warning" color="danger" /> {getErrorHeadline(error)}
+            </div>
+            <Code code={error} language="plaintext" />
+        </div>
+    );
+}
+
+interface EtlProgressBodyProps {
+    task: AnyEtlOngoingTaskInfo;
+    nodeInfo: OngoingEtlTaskNodeInfo;
+}
+
+function EtlProgressBody({ task, nodeInfo }: EtlProgressBodyProps) {
+    if (nodeInfo.status === "failure") {
+        const error = nodeInfo.details?.error;
+        return (
+            <div className="vstack gap-2 py-2">
+                <div className="text-danger fw-bold">
+                    <Icon icon="warning" color="danger" />{" "}
+                    {error ? getErrorHeadline(error) : "Unable to load task status"}
+                </div>
+                {error && <Code code={error} language="plaintext" />}
+            </div>
+        );
+    }
+
+    if (nodeInfo.status === "loading" || nodeInfo.status === "idle") {
+        return (
+            <div className="d-flex justify-content-center py-4">
+                <Spinner animation="border" />
+            </div>
+        );
+    }
+
+    const hasError = !!nodeInfo.details?.error;
+    const progress = nodeInfo.etlProgress ?? [];
+
+    if (progress.length === 0 && !hasError) {
+        return <div className="text-muted text-center py-3">No progress data available.</div>;
+    }
+
+    const isSingleScript = progress.length === 1;
+
+    return (
+        <div className="vstack gap-3">
+            {hasError && <EtlError error={nodeInfo.details.error} />}
+            {isSingleScript ? (
+                <div>
+                    <h4 className="mb-2">{progress[0].transformationName}</h4>
+                    {progress[0].transactionalId && (
+                        <div className="d-flex align-items-center gap-1 mb-2">
+                            <Icon icon="identities" margin="m-0" />
+                            <small className="small">Transactional ID</small>
+                            <div className="d-flex align-items-center gap-1 small">
+                                <span className="text-truncate" title={progress[0].transactionalId}>
+                                    {progress[0].transactionalId}
+                                </span>
+                                <Button
+                                    variant="link"
+                                    size="xs"
+                                    className="p-0 flex-shrink-0"
+                                    title="Copy to clipboard"
+                                    onClick={() =>
+                                        copyToClipboard.copy(
+                                            progress[0].transactionalId,
+                                            "Transactional Id was copied to clipboard."
+                                        )
+                                    }
+                                >
+                                    <Icon icon="copy" margin="m-0" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                    <NamedProgress name={null} vertical>
+                        <NamedProgressItem progress={progress[0].documents}>documents</NamedProgressItem>
+                        <NamedProgressItem progress={progress[0].documentTombstones}>tombstones</NamedProgressItem>
+                        {progress[0].counterGroups.total > 0 && (
+                            <NamedProgressItem progress={progress[0].counterGroups}>counters</NamedProgressItem>
+                        )}
+                    </NamedProgress>
+                    <hr className="script-separator" />
+                    <ScriptPreview task={task} transformationName={progress[0].transformationName} />
+                </div>
+            ) : (
+                <div>
+                    {progress.map((scriptProgress) => (
+                        <ScriptSection
+                            key={scriptProgress.transformationName}
+                            task={task}
+                            scriptProgress={scriptProgress}
+                            isInitiallyExpanded
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function EtlProgressDetailsSheet(props: EtlProgressDetailsSheetProps) {
     const { task, allNodes, initialNodeIndex, onNodeChange } = props;
 
@@ -231,103 +335,6 @@ export function EtlProgressDetailsSheet(props: EtlProgressDetailsSheetProps) {
         onNodeChange?.(index);
     };
     const nodeInfo = allNodes[selectedIndex];
-
-    const renderError = (error: string) => (
-        <div className="vstack gap-1">
-            <div className="text-danger fw-bold">
-                <Icon icon="warning" color="danger" /> {getErrorHeadline(error)}
-            </div>
-            <Code code={error} language="plaintext" />
-        </div>
-    );
-
-    const renderBody = () => {
-        if (nodeInfo.status === "failure") {
-            const error = nodeInfo.details?.error;
-            return (
-                <div className="vstack gap-2 py-2">
-                    <div className="text-danger fw-bold">
-                        <Icon icon="warning" color="danger" />{" "}
-                        {error ? getErrorHeadline(error) : "Unable to load task status"}
-                    </div>
-                    {error && <Code code={error} language="plaintext" />}
-                </div>
-            );
-        }
-
-        if (nodeInfo.status === "loading" || nodeInfo.status === "idle") {
-            return (
-                <div className="d-flex justify-content-center py-4">
-                    <Spinner animation="border" />
-                </div>
-            );
-        }
-
-        const hasError = !!nodeInfo.details?.error;
-        const progress = nodeInfo.etlProgress ?? [];
-
-        if (progress.length === 0 && !hasError) {
-            return <div className="text-muted text-center py-3">No progress data available.</div>;
-        }
-
-        const isSingleScript = progress.length === 1;
-
-        return (
-            <div className="vstack gap-3">
-                {hasError && renderError(nodeInfo.details.error)}
-                {isSingleScript ? (
-                    <div>
-                        <h4 className="mb-2">{progress[0].transformationName}</h4>
-                        {progress[0].transactionalId && (
-                            <div className="d-flex align-items-center gap-1 mb-2">
-                                <Icon icon="identities" margin="m-0" />
-                                <small className="small">Transactional ID</small>
-                                <div className="d-flex align-items-center gap-1 small">
-                                    <span className="text-truncate" title={progress[0].transactionalId}>
-                                        {progress[0].transactionalId}
-                                    </span>
-                                    <Button
-                                        variant="link"
-                                        size="xs"
-                                        className="p-0 flex-shrink-0"
-                                        title="Copy to clipboard"
-                                        onClick={() =>
-                                            copyToClipboard.copy(
-                                                progress[0].transactionalId,
-                                                "Transactional Id was copied to clipboard."
-                                            )
-                                        }
-                                    >
-                                        <Icon icon="copy" margin="m-0" />
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                        <NamedProgress name={null} vertical>
-                            <NamedProgressItem progress={progress[0].documents}>documents</NamedProgressItem>
-                            <NamedProgressItem progress={progress[0].documentTombstones}>tombstones</NamedProgressItem>
-                            {progress[0].counterGroups.total > 0 && (
-                                <NamedProgressItem progress={progress[0].counterGroups}>counters</NamedProgressItem>
-                            )}
-                        </NamedProgress>
-                        <hr className="script-separator" />
-                        <ScriptPreview task={task} transformationName={progress[0].transformationName} />
-                    </div>
-                ) : (
-                    <div>
-                        {progress.map((scriptProgress) => (
-                            <ScriptSection
-                                key={scriptProgress.transformationName}
-                                task={task}
-                                scriptProgress={scriptProgress}
-                                isInitiallyExpanded
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     return (
         <ViewSheet className="etl-progress-details-sheet">
@@ -366,7 +373,7 @@ export function EtlProgressDetailsSheet(props: EtlProgressDetailsSheetProps) {
                             exit="exit"
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
-                            {renderBody()}
+                            <EtlProgressBody task={task} nodeInfo={nodeInfo} />
                         </motion.div>
                     </AnimatePresence>
                 </div>
