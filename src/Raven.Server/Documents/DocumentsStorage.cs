@@ -86,6 +86,7 @@ namespace Raven.Server.Documents
         public static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
+        public const string SupportedFeaturesKey = "SupportedFeatures";
         private readonly Action<LogMode, string> _addToInitLog;
 
         protected readonly Logger _logger;
@@ -469,6 +470,33 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, fullChangeVector, out var slice))
             {
                 tree.Add(GlobalFullChangeVectorSlice, slice);
+            }
+        }
+
+        public static List<string> ReadSupportedFeatures(Transaction tx)
+        {
+            var val = tx.ReadTree(GlobalTreeSlice).Read(SupportedFeaturesKey);
+            if (val == null || val.Reader.Length == 0)
+                return [];
+
+            return val.Reader.ToStringValue().Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        }
+
+        public void PersistSupportedFeatures(IReadOnlyList<string> features)
+        {
+            if (features == null || features.Count == 0)
+                return;
+
+            using (var tx = Environment.ReadTransaction())
+            {
+                if (tx.ReadTree(GlobalTreeSlice).Read(SupportedFeaturesKey) != null)
+                    return;
+            }
+
+            using (var tx = Environment.WriteTransaction())
+            {
+                tx.ReadTree(GlobalTreeSlice).Add(SupportedFeaturesKey, string.Join(",", features));
+                tx.Commit();
             }
         }
 
