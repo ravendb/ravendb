@@ -17,7 +17,7 @@ export default function ImportSection({ id, title, children }: ImportSectionProp
                 <h3 className="mb-0">{title}</h3>
                 <button
                     type="button"
-                    className="btn btn-link p-0"
+                    className="btn btn-link p-0 text-secondary no-decor"
                     aria-expanded={isOpen}
                     title={isOpen ? "Collapse section" : "Expand section"}
                     onClick={() => setIsOpen(!isOpen)}

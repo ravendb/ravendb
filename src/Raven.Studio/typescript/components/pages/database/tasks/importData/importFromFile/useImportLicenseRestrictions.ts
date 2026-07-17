@@ -1,17 +1,21 @@
 import { useMemo } from "react";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { DatabaseSettingKey } from "./importFromFileValidation";
 
 export interface RestrictedImportFeature {
     settingKey: DatabaseSettingKey;
     label: string;
+    // lowest license tier that includes the feature (per the availability matrix in LicenseDetails.tsx)
+    licenseRequired: LicenseBadgeText;
 }
 
 export function useImportLicenseRestrictions(): {
     restrictedFeatures: RestrictedImportFeature[];
     isSettingRestricted: (key: DatabaseSettingKey) => boolean;
     getRestrictionTooltip: (key: DatabaseSettingKey) => string | null;
+    getLicenseRequired: (key: DatabaseSettingKey) => LicenseBadgeText | null;
 } {
     const hasDocumentsCompression = useAppSelector(licenseSelectors.statusValue("HasDocumentsCompression"));
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
@@ -25,19 +29,39 @@ export function useImportLicenseRestrictions(): {
         const restrictedFeatures: RestrictedImportFeature[] = [];
 
         if (!hasDocumentsCompression) {
-            restrictedFeatures.push({ settingKey: "documentsCompression", label: "Documents Compression" });
+            restrictedFeatures.push({
+                settingKey: "documentsCompression",
+                label: "Documents Compression",
+                licenseRequired: "Enterprise",
+            });
         }
         if (!hasDataArchival) {
-            restrictedFeatures.push({ settingKey: "dataArchival", label: "Data Archival" });
+            restrictedFeatures.push({
+                settingKey: "dataArchival",
+                label: "Data Archival",
+                licenseRequired: "Enterprise",
+            });
         }
         if (!hasTimeSeriesRollupsAndRetention) {
-            restrictedFeatures.push({ settingKey: "timeSeries", label: "Time Series Configuration" });
+            restrictedFeatures.push({
+                settingKey: "timeSeries",
+                label: "Time Series Configuration",
+                licenseRequired: "Professional +",
+            });
         }
         if (!hasPostgreSqlIntegration) {
-            restrictedFeatures.push({ settingKey: "postgreSqlIntegration", label: "PostgreSQL Integration" });
+            restrictedFeatures.push({
+                settingKey: "postgreSqlIntegration",
+                label: "PostgreSQL Integration",
+                licenseRequired: "Enterprise",
+            });
         }
         if (!hasClientConfiguration) {
-            restrictedFeatures.push({ settingKey: "client", label: "Client Configuration" });
+            restrictedFeatures.push({
+                settingKey: "client",
+                label: "Client Configuration",
+                licenseRequired: "Professional +",
+            });
         }
 
         const isSettingRestricted = (key: DatabaseSettingKey) =>
@@ -50,7 +74,10 @@ export function useImportLicenseRestrictions(): {
                 : null;
         };
 
-        return { restrictedFeatures, isSettingRestricted, getRestrictionTooltip };
+        const getLicenseRequired = (key: DatabaseSettingKey) =>
+            restrictedFeatures.find((f) => f.settingKey === key)?.licenseRequired ?? null;
+
+        return { restrictedFeatures, isSettingRestricted, getRestrictionTooltip, getLicenseRequired };
     }, [
         hasDocumentsCompression,
         hasDataArchival,

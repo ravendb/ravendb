@@ -40,6 +40,10 @@ export default function LicenseRestrictedBadge({ className, licenseRequired }: L
 
 type LicenseClassName = "enterprise" | "professional" | "enterprise-ai";
 
+export function getLicenseBadgeClassName(licenseBadgeText: LicenseBadgeText, isCloud: boolean): LicenseClassName {
+    return getClassName(licenseBadgeText, isCloud);
+}
+
 function getClassName(licenseBadgeText: LicenseBadgeText, isCloud: boolean): LicenseClassName {
     if (isCloud) {
         return "enterprise";
