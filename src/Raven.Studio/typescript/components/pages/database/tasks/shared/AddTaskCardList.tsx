@@ -10,7 +10,7 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import IconName from "typings/server/icons";
 
-export type TaskCardVariant = "Replication" | "Backups" | "Subscriptions" | "ETL" | "Sink";
+export type TaskCardVariant = "AI" | "Replication" | "Backups" | "Subscriptions" | "ETL" | "Sink";
 
 export interface TaskCardDisabledCondition {
     isActive: boolean;
@@ -38,9 +38,10 @@ export interface TaskCardCategory {
 
 interface AddTaskCardListProps {
     categories: TaskCardCategory[];
+    isAiOnly?: boolean;
 }
 
-export function AddTaskCardList({ categories }: AddTaskCardListProps) {
+export function AddTaskCardList({ categories, isAiOnly }: AddTaskCardListProps) {
     if (categories.length === 0) {
         return <EmptySet>No tasks match your filter criteria</EmptySet>;
     }
@@ -49,10 +50,12 @@ export function AddTaskCardList({ categories }: AddTaskCardListProps) {
         <>
             {categories.map((category) => (
                 <div className="pb-2" key={category.categoryName}>
-                    <HrHeader>
-                        <Icon icon={category.categoryIcon} />
-                        {category.categoryName}
-                    </HrHeader>
+                    {!isAiOnly && (
+                        <HrHeader>
+                            <Icon icon={category.categoryIcon} />
+                            {category.categoryName}
+                        </HrHeader>
+                    )}
                     <div className="d-grid gap-3 add-task-card-grid">
                         {category.tasks.map((task) => (
                             <TaskCard key={task.title} {...task} />
