@@ -2,6 +2,7 @@
 
 import classNames from "classnames";
 import { LazyLoad } from "./LazyLoad";
+import { Icon } from "./Icon";
 
 import "./LocationDistribution.scss";
 
@@ -32,4 +33,24 @@ export function DistributionLegend(props: { children: ReactNode }) {
 
 export function LocationDistribution(props: { children: ReactNode }) {
     return <div className="location-distribution">{props.children}</div>;
+}
+
+interface ClickableProgressProps {
+    onClick?: () => void;
+    children: ReactNode;
+}
+
+export function ClickableProgress({ onClick, children }: ClickableProgressProps) {
+    if (!onClick) {
+        return children;
+    }
+    return (
+        <div className="clickable-progress">
+            {children}
+            <div className="clickable-progress-hint cursor-pointer" onClick={onClick}>
+                <Icon icon="preview" margin="me-1" />
+                See details
+            </div>
+        </div>
+    );
 }
