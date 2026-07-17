@@ -1,22 +1,36 @@
 import { useState } from "react";
 import { useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { AppUsageResponse, SeriesData } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { SeriesBarChart, WritesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { PagePanel } from "@/components/data/page-panel";
-import { getDefaultDatePeriod } from "@/lib/date-period";
+import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard, SectionTable } from "@/pages/apps/section-card";
 
+type BarClickHandler = (entry: Record<string, unknown>) => void;
+
 export function AppUsage() {
     const { slug = "" } = useParams();
     const [period, setPeriod] = useState(getDefaultDatePeriod);
-    const appUsageQuery = useQuery(api.queries.stats.appUsage(slug, period));
+
+    // Keep the previous charts on screen while the finer-grained period loads, so
+    // drilling in reads as a zoom rather than the page blanking out and back in.
+    const appUsageQuery = useQuery({ ...api.queries.stats.appUsage(slug, period), placeholderData: keepPreviousData });
+
+    // Every chart is bucketed on the same shared period, so clicking a bucket in
+    // any of them drills the whole page from its `t` label.
+    const drillFromBar: BarClickHandler | undefined = canDrillInto(period)
+        ? (entry) => {
+              const next = drillInto(period, entry.t as string);
+              if (next) setPeriod(next);
+          }
+        : undefined;
 
     return (
         <PagePanel>
@@ -36,13 +50,19 @@ export function AppUsage() {
                         <UsageSeriesSection
                             title="Tokens by capability"
                             series={appUsageQuery.data.tokensByCapability}
+                            onBarClick={drillFromBar}
                         />
-                        <UsageSeriesSection title="Tokens by model" series={appUsageQuery.data.tokensByModel} />
+                        <UsageSeriesSection
+                            title="Tokens by model"
+                            series={appUsageQuery.data.tokensByModel}
+                            onBarClick={drillFromBar}
+                        />
                         <UsageSeriesSection
                             title="Conversations by channel"
                             series={appUsageQuery.data.conversationsByChannel}
+                            onBarClick={drillFromBar}
                         />
-                        <CdcWritesSection points={appUsageQuery.data.cdcWrites} />
+                        <CdcWritesSection points={appUsageQuery.data.cdcWrites} onBarClick={drillFromBar} />
                         <TopTablesSection tables={appUsageQuery.data.topTables} />
                         <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
                     </div>
@@ -75,25 +95,39 @@ function UsageMetricCards({ usage }: { usage: AppUsageResponse }) {
     return <DashboardStatCards cards={cards} />;
 }
 
-function UsageSeriesSection({ title, series }: { title: string; series: SeriesData }) {
+function UsageSeriesSection({
+    title,
+    series,
+    onBarClick,
+}: {
+    title: string;
+    series: SeriesData;
+    onBarClick?: BarClickHandler;
+}) {
     return (
         <SectionCard title={title}>
             <div className="rounded-lg border p-4">
                 {series.keys.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">No data for this period.</p>
                 ) : (
-                    <SeriesBarChart data={series} />
+                    <SeriesBarChart data={series} onBarClick={onBarClick} />
                 )}
             </div>
         </SectionCard>
     );
 }
 
-function CdcWritesSection({ points }: { points: AppUsageResponse["cdcWrites"] }) {
+function CdcWritesSection({
+    points,
+    onBarClick,
+}: {
+    points: AppUsageResponse["cdcWrites"];
+    onBarClick?: BarClickHandler;
+}) {
     return (
         <SectionCard title="CDC writes">
             <div className="rounded-lg border p-4">
-                <WritesBarChart data={points} xKey="t" />
+                <WritesBarChart data={points} xKey="t" onBarClick={onBarClick} />
             </div>
         </SectionCard>
     );

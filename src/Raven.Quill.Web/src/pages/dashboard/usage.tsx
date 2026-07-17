@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { api } from "@/api/api";
 import type { QuillApplicationUsage, QuillPeriodUsage } from "@/api/generated/server-api";
@@ -7,18 +7,26 @@ import { ApiState } from "@/components/data/api-state";
 import { WritesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card";
-import { formatPeriodLabel, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
+import { canDrillInto, drillInto, formatPeriodLabel, getDefaultDatePeriod, type DatePeriod } from "@/lib/date-period";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table";
 import { formatCompact } from "@/lib/format";
 
 export function DashboardUsage() {
     const [period, setPeriod] = useState(getDefaultDatePeriod);
 
-    const usageQuery = useQuery(api.queries.settings.usage(period));
+    // Keep the previous chart on screen while the finer-grained period loads, so
+    // drilling in reads as a zoom rather than the chart blanking out and back in.
+    const usageQuery = useQuery({ ...api.queries.settings.usage(period), placeholderData: keepPreviousData });
 
     const totalUsage = usageQuery.data?.byPeriod?.reduce((sum, bucket) => sum + bucket.usage, 0);
 
     const periodLabel = formatPeriodLabel(period);
+    const chartData = toChartData(usageQuery.data?.byPeriod ?? [], period);
+
+    const drillFromBar = (entry: Record<string, unknown>) => {
+        const next = drillInto(period, entry.from as string);
+        if (next) setPeriod(next);
+    };
 
     return (
         <div className="space-y-5">
@@ -49,7 +57,11 @@ export function DashboardUsage() {
                         loadingLabel="Loading chart…"
                     >
                         {usageQuery.data && (
-                            <WritesBarChart data={toChartData(usageQuery.data.byPeriod ?? [], period)} xKey="label" />
+                            <WritesBarChart
+                                data={chartData}
+                                xKey="label"
+                                onBarClick={canDrillInto(period) ? drillFromBar : undefined}
+                            />
                         )}
                     </ApiState>
                 </CardContent>
@@ -92,6 +104,7 @@ function toChartData(byPeriod: QuillPeriodUsage[], period: DatePeriod) {
         .map((bucket) => ({
             label: format(new Date(bucket.from), labelFormat),
             writes: bucket.usage,
+            from: bucket.from,
         }));
 }
 
