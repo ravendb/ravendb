@@ -1,0 +1,37 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.import-side-nav {
+    width: 225px;
+
+    hr {
+        margin: sizes.$gutter-xxs 0;
+    }
+
+    .import-side-nav-item {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+        width: 100%;
+        padding: sizes.$gutter-xxs sizes.$gutter-xs;
+        background: transparent;
+        border: none;
+        border-radius: sizes.$border-radius;
+        color: colors.$text-muted-color;
+        text-align: left;
+
+        &:hover {
+            color: colors.$text-emphasis-color;
+        }
+
+        &.active {
+            background-color: colors.$panel-bg-2;
+            color: colors.$text-emphasis-color;
+        }
+    }
+
+    .import-side-nav-subitem {
+        padding-left: sizes.$gutter-md;
+        font-size: 0.875rem;
+    }
+}
