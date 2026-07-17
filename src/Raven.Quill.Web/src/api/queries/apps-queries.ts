@@ -5,11 +5,6 @@ const baseKey = "apps";
 
 export function createAppsQueries(api: ServerApi["apps"]) {
     return {
-        cdcPerformance: (slug: string) =>
-            queryOptions({
-                queryKey: [baseKey, "cdcPerformance", slug],
-                queryFn: () => api.cdcPerformance(slug),
-            }),
         detail: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "detail", slug],

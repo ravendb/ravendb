@@ -2,10 +2,7 @@
 "use no memo";
 
 import type { ComponentProps } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { api } from "@/api/api";
-import type { CdcPerformanceResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
@@ -13,43 +10,46 @@ import { formatCompact, formatDuration } from "@/lib/format";
 import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { SectionCard } from "@/pages/apps/section-card";
+import {
+    useCdcLivePerformance,
+    type CdcLiveBatch,
+    type CdcLivePerformance,
+    type CdcLiveStatus,
+} from "@/pages/apps/use-cdc-live-performance";
 
 export function CdcPerformanceSection({ slug }: { slug: string }) {
-    const cdcQuery = useQuery(api.queries.apps.cdcPerformance(slug));
+    const live = useCdcLivePerformance(slug);
 
     return (
-        <SectionCard title="CDC performance" action={cdcQuery.data && <CdcStatusBadge performance={cdcQuery.data} />}>
+        <SectionCard
+            title="Live CDC performance"
+            action={live.performance && <CdcStatusBadge status={live.performance.status} />}
+        >
             <ApiState
-                isLoading={cdcQuery.isPending}
-                isError={cdcQuery.isError}
-                errorTitle="Could not load CDC performance"
-                onRetry={() => void cdcQuery.refetch()}
-                loadingLabel="Loading CDC performance..."
+                isLoading={live.connection === "connecting"}
+                isError={live.connection === "error"}
+                errorTitle="Could not connect to the live CDC feed"
+                onRetry={live.retry}
+                loadingLabel="Connecting to live CDC performance..."
             >
-                {cdcQuery.data && <CdcPerformanceContent performance={cdcQuery.data} />}
+                {live.performance && <CdcPerformanceContent performance={live.performance} />}
             </ApiState>
         </SectionCard>
     );
 }
 
-// Maps the backend CDC status contract ("not-configured" | "disabled" | "idle" | "active"
-// | "error") to a badge — a healthy "active" sink reads as success, not a warning.
-const CDC_STATUS_BADGES: Record<string, { variant: ComponentProps<typeof Badge>["variant"]; label: string }> = {
+const CDC_STATUS_BADGES: Record<CdcLiveStatus, { variant: ComponentProps<typeof Badge>["variant"]; label: string }> = {
     active: { variant: "success", label: "Active" },
     idle: { variant: "secondary", label: "Idle" },
-    disabled: { variant: "secondary", label: "Disabled" },
-    "not-configured": { variant: "outline", label: "Not configured" },
     error: { variant: "destructive", label: "Error" },
 };
 
-function CdcStatusBadge({ performance }: { performance: CdcPerformanceResponse }) {
-    const badge = CDC_STATUS_BADGES[performance.status] ?? { variant: "warning" as const, label: performance.status };
+function CdcStatusBadge({ status }: { status: CdcLiveStatus }) {
+    const badge = CDC_STATUS_BADGES[status];
     return <Badge variant={badge.variant}>{badge.label}</Badge>;
 }
 
-type CdcBatch = CdcPerformanceResponse["recentBatches"][number];
-
-const batchColumns: ColumnDef<CdcBatch>[] = [
+const batchColumns: ColumnDef<CdcLiveBatch>[] = [
     {
         accessorKey: "started",
         header: "Started",
@@ -72,7 +72,7 @@ const batchColumns: ColumnDef<CdcBatch>[] = [
     },
 ];
 
-function CdcPerformanceContent({ performance }: { performance: CdcPerformanceResponse }) {
+function CdcPerformanceContent({ performance }: { performance: CdcLivePerformance }) {
     const cards: DashboardStatCard[] = [
         {
             label: "Replication lag",
@@ -88,7 +88,7 @@ function CdcPerformanceContent({ performance }: { performance: CdcPerformanceRes
         columns: batchColumns,
         data: performance.recentBatches,
         getCoreRowModel: getCoreRowModel(),
-        getRowId: (batch, index) => `${batch.started}-${index}`,
+        getRowId: (batch) => batch.key,
     });
 
     return (

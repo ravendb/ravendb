@@ -1,17 +1,20 @@
-import { delay, http, HttpResponse } from "msw";
-import type {
-    AppResponse,
-    CdcPerformanceResponse,
-    ProvisionAgentResponse,
-    SuggestAgentResponse,
-} from "@/api/generated/server-api";
+import { delay, http, HttpResponse, ws, type RequestHandler } from "msw";
+import type { AppResponse, ProvisionAgentResponse, SuggestAgentResponse } from "@/api/generated/server-api";
 import type { AgentStreamEvent } from "@/api/custom-services/agent-stream";
+import type { CdcLiveRawFrame } from "@/pages/apps/use-cdc-live-performance";
 import { apiHttp } from "./api-http";
+
+// WS-only relay route, so it has no generated client or `apiHttp` path to lean on.
+const cdcProgressFeed = ws.link("ws://*/api/apps/:slug/cdc/progress");
 
 export const appsMocks = {
     list: (apps: AppResponse[] = sampleApps) => apiHttp.get("/api/apps", ({ response }) => response(200).json(apps)),
-    cdcPerformance: (response: CdcPerformanceResponse = sampleCdcPerformance) =>
-        apiHttp.get("/api/apps/{slug}/cdc/performance", ({ response: res }) => res(200).json(response)),
+    // msw-storybook-addon's typings only know RequestHandler, but its runtime forwards
+    // every handler to worker.use, which accepts WebSocket handlers since msw 2.6.
+    cdcProgress: (frame: CdcLiveRawFrame = sampleCdcProgressFrame()) =>
+        cdcProgressFeed.addEventListener("connection", ({ client }) => {
+            client.send(JSON.stringify(frame));
+        }) as unknown as RequestHandler,
     detail: (apps: AppResponse[] = sampleApps) =>
         apiHttp.get("/api/apps/{slug}", ({ params, response }) => {
             const app = apps.find((candidate) => candidate.slug === params.slug);
@@ -60,29 +63,35 @@ export const sampleApps: AppResponse[] = [
     },
 ];
 
-export const sampleCdcPerformance: CdcPerformanceResponse = {
-    enabled: true,
-    status: "active",
-    lastSyncAt: "2026-06-25T09:01:30Z",
-    lagSeconds: 2,
-    recentReads: 12840,
-    recentWrites: 12810,
-    errorCount: 0,
-    recentBatches: Array.from({ length: 6 }, (_, index) => {
-        const startedMs = Date.parse("2026-06-25T09:00:00Z") - index * 90_000;
-        const durationInMs = 900 + Math.round(Math.abs(Math.sin(index)) * 800);
-        const read = 480 + index * 7;
-        return {
-            started: new Date(startedMs).toISOString(),
-            completed: new Date(startedMs + durationInMs).toISOString(),
-            durationInMs,
-            read,
-            processed: read - (index === 2 ? 3 : 0),
-            errors: index === 2 ? 3 : 0,
-            stopReason: "BatchSizeReached",
-        };
-    }),
-};
+// Recent, now-relative batches so the live shaper reads them as an active feed.
+export function sampleCdcProgressFrame(): CdcLiveRawFrame {
+    return {
+        Results: [
+            {
+                TaskName: "cdc/demo-shop",
+                Stats: [
+                    {
+                        Performance: Array.from({ length: 6 }, (_, index) => {
+                            const startedMs = Date.now() - 5_000 - index * 90_000;
+                            const durationInMs = 900 + Math.round(Math.abs(Math.sin(index)) * 800);
+                            const read = 480 + index * 7;
+                            return {
+                                Id: 6 - index,
+                                Started: new Date(startedMs).toISOString(),
+                                Completed: new Date(startedMs + durationInMs).toISOString(),
+                                DurationInMs: durationInMs,
+                                NumberOfReadMessages: read,
+                                NumberOfProcessedMessages: read,
+                                ScriptProcessingErrorCount: 0,
+                                ReadErrorCount: 0,
+                            };
+                        }),
+                    },
+                ],
+            },
+        ],
+    };
+}
 
 export const sampleAgentSuggestion: SuggestAgentResponse = {
     configurations: [
