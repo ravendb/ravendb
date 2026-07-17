@@ -4,6 +4,7 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ImportFromFileFormData, importFromFileYupResolver } from "./importFromFileValidation";
 import { getDefaultFormData } from "./importFromFileUtils";
+import { useImportLicenseRestrictions } from "./useImportLicenseRestrictions";
 
 export { getDefaultFormData };
 
@@ -14,11 +15,19 @@ export const defaultTransformScript =
 
 export function useImportFromFileForm() {
     const isAdminAccessOrAbove = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const { restrictedFeatures } = useImportLicenseRestrictions();
+
+    // License state lives in Redux before mount, so the defaults are deterministic:
+    // license-restricted settings start (and stay) unchecked.
+    const defaults = getDefaultFormData(isAdminAccessOrAbove);
+    restrictedFeatures.forEach(({ settingKey }) => {
+        defaults.configuration.databaseSettings[settingKey] = false;
+    });
 
     const form = useForm<ImportFromFileFormData>({
         resolver: importFromFileYupResolver,
         mode: "onChange",
-        defaultValues: getDefaultFormData(isAdminAccessOrAbove),
+        defaultValues: defaults,
     });
 
     const { control, setValue } = form;
