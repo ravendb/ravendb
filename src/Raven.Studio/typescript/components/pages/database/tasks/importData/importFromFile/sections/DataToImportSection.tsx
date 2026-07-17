@@ -1,27 +1,36 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
+import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 import { getItemsToWarnAbout } from "../importFromFileUtils";
-import { useAppSelector } from "components/store";
-import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import { useDumpFileCollections } from "../useDumpFileCollections";
 
 export default function DataToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
     const documents = useWatch({ control, name: "documents" });
-    const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
+    const file = useWatch({ control, name: "file" });
     const [collectionFilter, setCollectionFilter] = useState("");
 
     const isImportAll = useWatch({ control, name: "collections.isImportAllCollections" });
     const includedCollections = useWatch({ control, name: "collections.includedCollections" }) ?? [];
 
-    const filteredCollections = collectionNames.filter((name) =>
+    // The Collections filter applies to collections in the imported FILE - the list is read
+    // client-side from the selected dump. All collections start included; toggles exclude.
+    const { collections: fileCollections, isReading, readError } = useDumpFileCollections(file ?? null);
+
+    useEffect(() => {
+        setValue("collections.includedCollections", fileCollections, { shouldDirty: true });
+    }, [fileCollections, setValue]);
+
+    const filteredCollections = fileCollections.filter((name) =>
         name.toLowerCase().includes(collectionFilter.toLowerCase())
     );
 
@@ -122,6 +131,29 @@ export default function DataToImportSection() {
                             </tr>
                         </thead>
                         <tbody>
+                            {isReading && (
+                                <tr>
+                                    <td colSpan={2} className="text-muted">
+                                        <Spinner size="sm" /> Reading collections from the selected file...
+                                    </td>
+                                </tr>
+                            )}
+                            {!isReading && readError && (
+                                <tr>
+                                    <td colSpan={2} className="text-warning">
+                                        <Icon icon="warning" /> {readError}
+                                    </td>
+                                </tr>
+                            )}
+                            {!isReading && !readError && filteredCollections.length === 0 && (
+                                <tr>
+                                    <td colSpan={2} className="text-muted">
+                                        {fileCollections.length === 0
+                                            ? "No collections were found in the selected file."
+                                            : "No collections match your filter."}
+                                    </td>
+                                </tr>
+                            )}
                             {filteredCollections.map((name) => (
                                 <tr key={name}>
                                     <td colSpan={2}>
@@ -175,11 +207,14 @@ export default function DataToImportSection() {
                 <hr />
                 <FormSwitch control={control} name="documents.isIncludeArtificialDocuments">
                     Include Artificial Documents{" "}
-                    <Icon
-                        icon="info"
-                        margin="ms-1"
-                        title="Importing artificial documents might cause import error of Map-Reduce indexes with OutputReduceToCollection."
-                    />
+                    <PopoverWithHoverWrapper
+                        message="Importing artificial documents might cause import error of Map-Reduce indexes with OutputReduceToCollection."
+                    >
+                        {/* prevent the click on the icon from toggling the surrounding switch label */}
+                        <span onClick={(e) => e.preventDefault()}>
+                            <Icon icon="info" margin="ms-1" />
+                        </span>
+                    </PopoverWithHoverWrapper>
                 </FormSwitch>
                 <FormSwitch control={control} name="documents.isIncludeArchivedDocuments">
                     Include Archived Documents

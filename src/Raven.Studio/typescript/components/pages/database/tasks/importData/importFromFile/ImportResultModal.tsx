@@ -1,4 +1,4 @@
-import React from "react";
+import React, { JSX } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
@@ -53,7 +53,7 @@ function getRowStatus(counts: Counts): { label: string; icon: JSX.Element } {
 }
 
 function getSkippedCount(counts: Counts): string {
-    return "SkippedCount" in counts ? (counts as any).SkippedCount.toLocaleString() : "-";
+    return "SkippedCount" in counts ? counts.SkippedCount.toLocaleString() : "-";
 }
 
 interface ImportResultModalProps {

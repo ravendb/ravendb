@@ -6,6 +6,7 @@ import Collapse from "react-bootstrap/Collapse";
 import Table from "react-bootstrap/Table";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import {
@@ -65,7 +66,7 @@ const connectionStringLabels: Record<ConnectionStringKey, string> = {
 
 export default function ConfigurationToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
-    const { isSettingRestricted, getRestrictionTooltip } = useImportLicenseRestrictions();
+    const { isSettingRestricted, getRestrictionTooltip, getLicenseRequired } = useImportLicenseRestrictions();
 
     const isIncludeTasks = useWatch({ control, name: "configuration.isIncludeConnectionStringsAndOngoingTasks" });
     const isCustomizeTasks = useWatch({ control, name: "configuration.isCustomizeOngoingTasks" });
@@ -204,16 +205,22 @@ export default function ConfigurationToImportSection() {
                     <tbody>
                         {databaseSettingKeys.map((key) => {
                             const restricted = isSettingRestricted(key);
+                            const licenseRequired = getLicenseRequired(key);
                             return (
                                 <tr key={key} title={restricted ? getRestrictionTooltip(key) : undefined}>
                                     <td colSpan={2} className={restricted ? "item-disabled" : undefined}>
-                                        <FormSwitch
-                                            control={control}
-                                            name={`configuration.databaseSettings.${key}`}
-                                            {...(restricted && { disabled: true })}
-                                        >
-                                            {databaseSettingLabels[key]}
-                                        </FormSwitch>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <FormSwitch
+                                                control={control}
+                                                name={`configuration.databaseSettings.${key}`}
+                                                {...(restricted && { disabled: true })}
+                                            >
+                                                {databaseSettingLabels[key]}
+                                            </FormSwitch>
+                                            {restricted && (
+                                                <LicenseRestrictedBadge licenseRequired={licenseRequired} />
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             );
