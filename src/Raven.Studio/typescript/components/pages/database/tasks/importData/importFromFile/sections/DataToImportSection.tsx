@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -11,28 +10,40 @@ import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 import { getItemsToWarnAbout } from "../importFromFileUtils";
-import { useDumpFileCollections } from "../useDumpFileCollections";
+import { useAppSelector } from "components/store";
+import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 
 export default function DataToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
     const documents = useWatch({ control, name: "documents" });
-    const file = useWatch({ control, name: "file" });
+    const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
     const [collectionFilter, setCollectionFilter] = useState("");
 
     const isImportAll = useWatch({ control, name: "collections.isImportAllCollections" });
     const includedCollections = useWatch({ control, name: "collections.includedCollections" }) ?? [];
 
-    // The Collections filter applies to collections in the imported FILE - the list is read
-    // client-side from the selected dump. All collections start included; toggles exclude.
-    const { collections: fileCollections, isReading, readError } = useDumpFileCollections(file ?? null);
+    // The Collections filter applies to collections in the imported FILE, which the server cannot
+    // list before the upload. The current database's collections are offered as suggestions, and
+    // any other collection name from the file can be typed in and added manually.
+    const manuallyAddedCollections = includedCollections.filter((name) => !collectionNames.includes(name));
+    const allCollectionNames = [...collectionNames, ...manuallyAddedCollections];
 
-    useEffect(() => {
-        setValue("collections.includedCollections", fileCollections, { shouldDirty: true });
-    }, [fileCollections, setValue]);
-
-    const filteredCollections = fileCollections.filter((name) =>
+    const filteredCollections = allCollectionNames.filter((name) =>
         name.toLowerCase().includes(collectionFilter.toLowerCase())
     );
+
+    const trimmedFilter = collectionFilter.trim();
+    const canAddCollection =
+        trimmedFilter.length > 0 &&
+        !allCollectionNames.some((name) => name.toLowerCase() === trimmedFilter.toLowerCase());
+
+    const addCollection = () => {
+        if (!canAddCollection) {
+            return;
+        }
+        setValue("collections.includedCollections", [...includedCollections, trimmedFilter], { shouldDirty: true });
+        setCollectionFilter("");
+    };
 
     const toggleCollection = (name: string, include: boolean) => {
         setValue(
@@ -89,13 +100,23 @@ export default function DataToImportSection() {
             </div>
             {!isImportAll && (
                 <div className="mb-4">
-                    <Form.Control
-                        type="text"
-                        placeholder="Search for collection"
-                        value={collectionFilter}
-                        onChange={(e) => setCollectionFilter(e.target.value)}
-                        className="mb-2"
-                    />
+                    <div className="d-flex gap-2 mb-2">
+                        <Form.Control
+                            type="text"
+                            placeholder="Search or add a collection from the imported file"
+                            value={collectionFilter}
+                            onChange={(e) => setCollectionFilter(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addCollection();
+                                }
+                            }}
+                        />
+                        <Button variant="secondary" disabled={!canAddCollection} onClick={addCollection}>
+                            <Icon icon="plus" /> Add
+                        </Button>
+                    </div>
                     <Table className="mb-0">
                         <thead>
                             <tr>
@@ -131,26 +152,11 @@ export default function DataToImportSection() {
                             </tr>
                         </thead>
                         <tbody>
-                            {isReading && (
+                            {filteredCollections.length === 0 && (
                                 <tr>
                                     <td colSpan={2} className="text-muted">
-                                        <Spinner size="sm" /> Reading collections from the selected file...
-                                    </td>
-                                </tr>
-                            )}
-                            {!isReading && readError && (
-                                <tr>
-                                    <td colSpan={2} className="text-warning">
-                                        <Icon icon="warning" /> {readError}
-                                    </td>
-                                </tr>
-                            )}
-                            {!isReading && !readError && filteredCollections.length === 0 && (
-                                <tr>
-                                    <td colSpan={2} className="text-muted">
-                                        {fileCollections.length === 0
-                                            ? "No collections were found in the selected file."
-                                            : "No collections match your filter."}
+                                        No collections found. Type a collection name from the imported file above and
+                                        click Add.
                                     </td>
                                 </tr>
                             )}

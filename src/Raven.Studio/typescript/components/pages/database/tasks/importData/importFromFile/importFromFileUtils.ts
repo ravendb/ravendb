@@ -144,7 +144,8 @@ export function getDefaultFormData(isAdminAccessOrAbove: boolean): ImportFromFil
 
 function pushGroupTokens<TKey extends string>(
     tokens: Record<TKey, DatabaseRecordItemType>,
-    values: Record<TKey, boolean>,
+    // yup infers the form groups as index signatures, so literal-keyed Records aren't assignable
+    values: Record<string, boolean>,
     includeAll: boolean,
     result: DatabaseRecordItemType[]
 ) {
