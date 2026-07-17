@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FormProvider } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -40,6 +40,18 @@ const sectionNav: { id: string; label: string; icon: IconName }[] = [
     { id: "import-processing", label: "Import processing & security", icon: "settings" },
 ];
 
+function findScrollParent(element: HTMLElement | null): Element | null {
+    let current = element?.parentElement;
+    while (current && current !== document.body) {
+        const { overflowY } = getComputedStyle(current);
+        if ((overflowY === "auto" || overflowY === "scroll") && current.scrollHeight > current.clientHeight) {
+            return current;
+        }
+        current = current.parentElement;
+    }
+    return null;
+}
+
 interface OperationState {
     operationId: number;
     databaseName: string;
@@ -68,7 +80,15 @@ export default function ImportDatabaseFromFile() {
     const isUploading = uploadPercent != null;
     useDirtyFlag(isUploading);
 
-    const activeSectionId = useScrollSpy(sectionIds);
+    // The Studio scrolls the view inside a container (not the document), so the scroll-spy needs
+    // that container as its root - otherwise its bottom-of-scroll fallback always fires.
+    const pageRef = useRef<HTMLDivElement>(null);
+    const [scrollRoot, setScrollRoot] = useState<Element | null>(null);
+    useEffect(() => {
+        setScrollRoot(findScrollParent(pageRef.current));
+    }, []);
+
+    const activeSectionId = useScrollSpy(sectionIds, { root: scrollRoot });
 
     const importOptionsUrl = forCurrentDatabase.importDataOptionsUrl();
 
@@ -170,17 +190,17 @@ export default function ImportDatabaseFromFile() {
 
     return (
         <FormProvider {...form}>
-            <div className="content-margin">
+            <div className="content-margin" ref={pageRef}>
                 <AboutViewHeading
                     title="Import data from a .ravendbdump file into the current database"
                     icon="import-database"
-                    marginBottom={2}
+                    // marginBottom={5}
                     backUrl={importOptionsUrl}
                 />
-                <Alert variant="info">
+                <Alert variant="info" className="w-50">
                     <Icon icon="info" /> Note: Importing will overwrite any existing documents and indexes.
                 </Alert>
-                <div className="mb-4 d-flex align-items-center gap-3">
+                <div className="my-4 d-flex align-items-center gap-3">
                     <Button
                         variant="primary"
                         className="rounded-pill"
@@ -201,15 +221,22 @@ export default function ImportDatabaseFromFile() {
                 <div className="d-flex gap-4">
                     <nav className="position-sticky align-self-start" style={{ minWidth: 220, top: 20 }}>
                         {sectionNav.map((item) => (
-                            <a
+                            // plain buttons on purpose: anchor hrefs would change the location hash,
+                            // which the Studio router interprets as a route change
+                            <button
                                 key={item.id}
-                                href={`#${item.id}`}
-                                className={classNames("d-block py-1 no-decor", {
+                                type="button"
+                                className={classNames("btn btn-link d-block p-0 py-1 no-decor text-start", {
                                     "fw-bold": activeSectionId === item.id,
                                 })}
+                                onClick={() =>
+                                    document
+                                        .getElementById(item.id)
+                                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                                }
                             >
                                 <Icon icon={item.icon} /> {item.label}
-                            </a>
+                            </button>
                         ))}
                     </nav>
                     <div className="flex-grow-1">

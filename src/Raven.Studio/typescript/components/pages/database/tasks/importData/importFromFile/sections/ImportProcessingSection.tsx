@@ -6,6 +6,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import { Icon } from "components/common/Icon";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { FormAceEditor, FormInput, FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
@@ -41,7 +42,27 @@ export default function ImportProcessingSection() {
             <div className="card p-4 mb-4">
                 <FormSwitch control={control} name="processing.isUseTransformScript">
                     Use transform script{" "}
-                    <Icon icon="info" margin="ms-1" title="Transform scripts are written in JavaScript" />
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                <div className="text-center">Transform scripts are written in JavaScript</div>
+                                <pre className="mb-0">
+                                    <code>
+                                        {"var name = this.FirstName;\n" +
+                                            "if (name === 'Bob')\n" +
+                                            "    throw 'skip'; // filter-out\n" +
+                                            "\n" +
+                                            "this.Freight = 15.3;"}
+                                    </code>
+                                </pre>
+                            </>
+                        }
+                    >
+                        {/* prevent the click on the icon from toggling the surrounding switch label */}
+                        <span onClick={(e) => e.preventDefault()}>
+                            <Icon icon="info" margin="ms-1" />
+                        </span>
+                    </PopoverWithHoverWrapper>
                 </FormSwitch>
                 <Collapse in={isUseTransformScript}>
                     <div className="mt-3">
