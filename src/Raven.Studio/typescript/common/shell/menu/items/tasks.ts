@@ -6,6 +6,7 @@ import CreateSampleData = require("components/pages/database/tasks/createSampleD
 import EditCdcSinkTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/EditCdcSinkTask");
 import EditGenAiTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/EditGenAiTask");
 import ImportDataOptions = require("components/pages/database/tasks/importData/ImportDataOptions");
+import ImportDatabaseFromFile = require("components/pages/database/tasks/importData/importFromFile/ImportDatabaseFromFile");
 import OngoingTasksPage = require("components/pages/database/tasks/ongoingTasks/OngoingTasksPage");
 import AddNewOngoingTask = require("components/pages/database/tasks/ongoingTasks/AddNewOngoingTask");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
@@ -98,6 +99,21 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.importDataOptionsUrl,
         }),
         new leafMenuItem({
+            // must precede the 'databases/tasks/import*details' entry — its splat route also matches this path
+            route: 'databases/tasks/import/file',
+            moduleId: reactUtils.bridgeToReact(ImportDatabaseFromFile.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Import Data',
+            nav: false,
+            css: 'icon-import-database',
+            dynamicHash: appUrls.importDatabaseFromFileUrl,
+            itemRouteToHighlight: 'databases/tasks/importOptions',
+            requiredAccess: "DatabaseReadWrite",
+            search: {
+                overrideTitle: "Import Database From File",
+            },
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/import*details',
             moduleId: require('viewmodels/database/tasks/importParent'),
             title: 'Import Data',
@@ -108,18 +124,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             requiredAccess: "DatabaseReadWrite",
             search: {
                 isExcluded: true,
-            },
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/import/file',
-            moduleId: require('viewmodels/database/tasks/importDatabaseFromFile'),
-            title: 'Import Data',
-            nav: false,
-            css: 'icon-import-database',
-            dynamicHash: appUrls.importDatabaseFromFileUrl,
-            itemRouteToHighlight: 'databases/tasks/importOptions',
-            search: {
-                overrideTitle: "Import Database From File",
             },
         }),
         new leafMenuItem({
