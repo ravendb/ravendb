@@ -157,6 +157,56 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         }
     }
 
+    public override async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+
+        GC.SuppressFinalize(this);
+
+        if (_abortUpload)
+        {
+            using (Client)
+            using (_backupStatusIDisposable)
+            using (_uploadStream)
+            using (_writeStream)
+                return;
+        }
+
+        using (Client)
+        using (_backupStatusIDisposable)
+        {
+            using (_uploadStream)
+            using (_writeStream)
+            {
+                if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
+                {
+                    _onProgress.Invoke("Waiting for previous upload task to finish");
+                    await _uploadTask.ConfigureAwait(false);
+                }
+
+                var toUpload = _writeStream.Position;
+                if (toUpload > 0)
+                {
+                    _writeStream.Position = 0;
+                    await _multiPartUploader.UploadPartAsync(_writeStream).ConfigureAwait(false);
+                }
+            }
+
+            await _multiPartUploader.CompleteUploadAsync().ConfigureAwait(false);
+
+            _cloudUploadStatus.UploadProgress.SetUploaded(_position);
+            _cloudUploadStatus.UploadProgress.SetTotal(_position);
+            _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Done);
+
+            _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
+
+            OnCompleteUpload();
+        }
+    }
+
     protected abstract void OnCompleteUpload();
 
     public override bool CanRead => false;
