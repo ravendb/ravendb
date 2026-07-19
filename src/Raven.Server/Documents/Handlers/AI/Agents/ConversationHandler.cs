@@ -198,7 +198,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 continue;
             }
 
-            if (GetValueType(value, out var actualType, out var unsupportedType) == false)
+            if (TryGetValueType(value, out var actualType, out var unsupportedType) == false)
                 throw new InvalidCastException(
                     $"Parameter '{configParam.Name}' has unsupported type. " +
                     $"Actual: {unsupportedType}");
@@ -212,7 +212,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private static bool GetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
+    internal static bool TryGetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
     {
         type = default;
         unsupportedType = null;
@@ -248,6 +248,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 return true;
 
             case BlittableJsonReaderArray array:
+                if (array.Length == 0)
+                    return true; // empty array: a provided empty query value (no element type to infer)
+
                 bool first = true;
                 var elementType = AiAgentParameterValueType.Default;
 
@@ -255,7 +258,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 // make sure all elements have a valid type
                 foreach (var element in array)
                 {
-                    if (GetValueType(element, out var curType, out var elementUnsupportedType) == false)
+                    if (TryGetValueType(element, out var curType, out var elementUnsupportedType) == false)
                     {
                         unsupportedType = $"Array contains an element of unsupported type '{elementUnsupportedType}'.";
                         return false;
