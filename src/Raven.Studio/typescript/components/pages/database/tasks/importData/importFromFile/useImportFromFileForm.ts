@@ -15,13 +15,16 @@ export const defaultTransformScript =
 
 export function useImportFromFileForm() {
     const isAdminAccessOrAbove = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const { restrictedFeatures } = useImportLicenseRestrictions();
+    const { restrictedFeatures, restrictedOngoingTasks } = useImportLicenseRestrictions();
 
     // License state lives in Redux before mount, so the defaults are deterministic:
-    // license-restricted settings start (and stay) unchecked.
+    // license-restricted settings and ongoing tasks start (and stay) unchecked.
     const defaults = getDefaultFormData(isAdminAccessOrAbove);
     restrictedFeatures.forEach(({ settingKey }) => {
         defaults.configuration.databaseSettings[settingKey] = false;
+    });
+    restrictedOngoingTasks.forEach(({ taskKey }) => {
+        defaults.configuration.ongoingTasks[taskKey] = false;
     });
 
     const form = useForm<ImportFromFileFormData>({

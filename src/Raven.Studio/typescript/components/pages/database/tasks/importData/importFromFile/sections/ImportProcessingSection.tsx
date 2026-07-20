@@ -14,9 +14,8 @@ import { buildImportCurlCommand, ImportCommandType } from "../importFromFileUtil
 import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import Code from "components/common/Code";
 import copyToClipboard = require("common/copyToClipboard");
-
-const commandTypes: ImportCommandType[] = ["PowerShell", "Cmd", "Bash"];
 
 export default function ImportProcessingSection() {
     const { control } = useFormContext<ImportFromFileFormData>();
@@ -28,12 +27,13 @@ export default function ImportProcessingSection() {
     const isSetMaxReadOps = !!formData.processing?.isSetMaxReadOpsPerSecond;
     const isEncrypted = !!formData.processing?.isEncrypted;
 
-    const { restrictedFeatures } = useImportLicenseRestrictions();
+    const { restrictedFeatures, restrictedOngoingTasks } = useImportLicenseRestrictions();
     const curlCommand = buildImportCurlCommand(
         commandType,
         formData as ImportFromFileFormData,
         databaseName,
-        restrictedFeatures.map((x) => x.settingKey)
+        restrictedFeatures.map((x) => x.settingKey),
+        restrictedOngoingTasks.map((x) => x.taskKey)
     );
 
     return (
@@ -45,22 +45,13 @@ export default function ImportProcessingSection() {
                     <PopoverWithHoverWrapper
                         message={
                             <>
-                                <div className="text-center">Transform scripts are written in JavaScript</div>
-                                <pre className="mb-0">
-                                    <code>
-                                        {"var name = this.FirstName;\n" +
-                                            "if (name === 'Bob')\n" +
-                                            "    throw 'skip'; // filter-out\n" +
-                                            "\n" +
-                                            "this.Freight = 15.3;"}
-                                    </code>
-                                </pre>
+                                <div className="mb-1 text-center">Transform scripts are written in JavaScript</div>
+                                <Code code={codeSample} language="javascript" />
                             </>
                         }
                     >
-                        {/* prevent the click on the icon from toggling the surrounding switch label */}
                         <span onClick={(e) => e.preventDefault()}>
-                            <Icon icon="info" margin="ms-1" />
+                            <Icon color="info" icon="info" margin="ms-1" />
                         </span>
                     </PopoverWithHoverWrapper>
                 </FormSwitch>
@@ -73,27 +64,27 @@ export default function ImportProcessingSection() {
 
             <div className="small-label mb-2">Import optimization &amp; security</div>
             <div className="card p-4 mb-4">
-                <FormSwitch control={control} name="processing.isSetMaxReadOpsPerSecond">
-                    Set max read operations per second
-                </FormSwitch>
-                <Collapse in={isSetMaxReadOps}>
-                    <div>
-                        <FormGroup marginClass="mt-2 mb-0" style={{ maxWidth: 300 }}>
+                <FormGroup>
+                    <FormSwitch control={control} name="processing.isSetMaxReadOpsPerSecond">
+                        Set max read operations per second
+                    </FormSwitch>
+                    <Collapse in={isSetMaxReadOps}>
+                        <div>
                             <FormInput
                                 control={control}
                                 name="processing.maxReadOpsPerSecond"
                                 type="number"
                                 placeholder="Max read operations per second"
                             />
-                        </FormGroup>
-                    </div>
-                </Collapse>
-                <FormSwitch control={control} name="processing.isEncrypted">
-                    Imported file is encrypted
-                </FormSwitch>
-                <Collapse in={isEncrypted}>
-                    <div>
-                        <FormGroup marginClass="mt-2 mb-0" style={{ maxWidth: 460 }}>
+                        </div>
+                    </Collapse>
+                </FormGroup>
+                <FormGroup>
+                    <FormSwitch control={control} name="processing.isEncrypted">
+                        Imported file is encrypted
+                    </FormSwitch>
+                    <Collapse in={isEncrypted}>
+                        <div>
                             <FormInput
                                 control={control}
                                 name="processing.encryptionKey"
@@ -103,9 +94,9 @@ export default function ImportProcessingSection() {
                                 autoComplete="off"
                             />
                             <div className="small text-muted mt-1">Encryption Key (Base64 Encoding)</div>
-                        </FormGroup>
-                    </div>
-                </Collapse>
+                        </div>
+                    </Collapse>
+                </FormGroup>
             </div>
 
             <div className="small-label mb-2">Import command</div>
@@ -121,7 +112,11 @@ export default function ImportProcessingSection() {
                             ))}
                         </Dropdown.Menu>
                     </Dropdown>
-                    <Form.Control readOnly value={curlCommand} onClick={(e) => (e.target as HTMLInputElement).select()} />
+                    <Form.Control
+                        readOnly
+                        value={curlCommand}
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                    />
                     <Button
                         variant="secondary"
                         title="Copy import command"
@@ -134,3 +129,13 @@ export default function ImportProcessingSection() {
         </ImportSection>
     );
 }
+
+const codeSample = `const name = this.FirstName;
+    
+if (name === "Bob")
+    throw 'skip'; // filter-out
+    
+this.Freight = 15.3;
+    `;
+
+const commandTypes: ImportCommandType[] = ["PowerShell", "Cmd", "Bash"];
