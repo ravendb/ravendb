@@ -72,7 +72,7 @@ export function DashboardUsage() {
                     <CardTitle>Usage per app</CardTitle>
                     <CardDescription>Totals for {periodLabel}.</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0">
+                <CardContent className={usageQuery.data ? "px-0" : undefined}>
                     <ApiState
                         isLoading={usageQuery.isPending}
                         isError={usageQuery.isError}
