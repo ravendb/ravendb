@@ -274,6 +274,12 @@ export const dashboardNavigationSections = dashboardNavigationSectionDefinitions
     ),
 })) satisfies Array<{ label: string; items: NavigationItem[] }>;
 
+// Sub-pages that exist in every app, so the app switcher can stay on them.
+// Excludes detail pages whose path contains a resource id from the current app.
+export const appSectionPaths = new Set(
+    appPages.flatMap((page) => (page.path && page.element && !page.path.includes(":") ? [page.path] : [])),
+);
+
 const appNavigationSectionDefinitions = [
     { section: "database", label: "Database" },
     { section: "data-prep", label: "Data prep" },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronsUpDown } from "lucide-react";
 import { api } from "@/api/api";
@@ -14,6 +14,7 @@ import {
 } from "@/components/shadcn/ui/dropdown-menu";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { appRoutes } from "@/lib/app-routes";
+import { appSectionPaths } from "@/routes";
 
 type AppBreadcrumbSwitcherProps = {
     slug: string;
@@ -23,14 +24,20 @@ type AppBreadcrumbSwitcherProps = {
 export function AppBreadcrumbSwitcher({ slug, appName }: AppBreadcrumbSwitcherProps) {
     const [isOpen, setIsOpen] = useState(false);
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     // The list is only needed once the menu opens; fetch lazily like the command palette.
     const appsQuery = useQuery({ ...api.queries.apps.list(), enabled: isOpen });
     const apps = appsQuery.data ?? [];
 
     const switchToApp = (nextSlug: string) => {
-        if (nextSlug !== slug) {
-            navigate(appRoutes.app(nextSlug));
+        if (nextSlug === slug) {
+            return;
         }
+        const currentAppPrefix = `${appRoutes.app(slug)}/`;
+        const sectionPath = pathname.startsWith(currentAppPrefix) ? pathname.slice(currentAppPrefix.length) : "";
+        // Stay on the same section in the next app; detail pages reference
+        // resources of the current app, so those fall back to the overview.
+        navigate(appRoutes.app(nextSlug, appSectionPaths.has(sectionPath) ? sectionPath : undefined));
     };
 
     return (
