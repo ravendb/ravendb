@@ -56,11 +56,6 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "conversation", slug, conversationId],
                 queryFn: () => api.conversation(slug, conversationId),
             }),
-        activity: (slug: string) =>
-            queryOptions({
-                queryKey: [baseKey, "activity", slug],
-                queryFn: () => api.activity(slug),
-            }),
         conversationStats: (slug: string, period: DatePeriod) =>
             queryOptions({
                 queryKey: [baseKey, "conversationStats", slug, period.year, period.month, period.day],

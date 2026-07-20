@@ -60,7 +60,6 @@ export const defaultApiMocks = {
         statsMocks.usage(),
         statsMocks.tokensByApp(),
         statsMocks.conversationStats(),
-        statsMocks.activity(),
         statsMocks.channels(),
         statsMocks.collections(),
         statsMocks.conversations(),
