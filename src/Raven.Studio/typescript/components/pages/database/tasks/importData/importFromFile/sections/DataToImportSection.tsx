@@ -61,22 +61,28 @@ export default function DataToImportSection() {
         }
     };
 
-    const selectAllDocuments = () => {
-        setValue("documents.isIncludeDocuments", true, { shouldDirty: true });
-        setValue("documents.isIncludeAttachments", true, { shouldDirty: true });
-        setValue("documents.isIncludeCounters", true, { shouldDirty: true });
-        setValue("documents.isIncludeRevisions", true, { shouldDirty: true });
-        setValue("documents.isIncludeTimeSeries", true, { shouldDirty: true });
-        setValue("documents.isIncludeTimeSeriesDeletedRanges", true, { shouldDirty: true });
-        setValue("documents.isIncludeArtificialDocuments", true, { shouldDirty: true });
-        setValue("documents.isIncludeArchivedDocuments", true, { shouldDirty: true });
-        setValue("documents.isIncludeExpiredDocuments", true, { shouldDirty: true });
-        setValue("documents.isIncludeConflicts", true, { shouldDirty: true });
-        setValue("documents.isIncludeCompareExchange", true, { shouldDirty: true });
-        setValue("documents.isIncludeLegacyAttachments", true, { shouldDirty: true });
-        setValue("documents.isIncludeDocumentsTombstones", true, { shouldDirty: true });
-        setValue("documents.isIncludeCompareExchangeTombstones", true, { shouldDirty: true });
-        setValue("documents.isIncludeSubscriptions", true, { shouldDirty: true });
+    const documentToggleNames = [
+        "isIncludeDocuments",
+        "isIncludeAttachments",
+        "isIncludeCounters",
+        "isIncludeRevisions",
+        "isIncludeTimeSeries",
+        "isIncludeTimeSeriesDeletedRanges",
+        "isIncludeArtificialDocuments",
+        "isIncludeArchivedDocuments",
+        "isIncludeExpiredDocuments",
+        "isIncludeConflicts",
+        "isIncludeCompareExchange",
+        "isIncludeLegacyAttachments",
+        "isIncludeDocumentsTombstones",
+        "isIncludeCompareExchangeTombstones",
+        "isIncludeSubscriptions",
+    ] as const;
+
+    const areAllDocumentsSelected = documentToggleNames.every((name) => documents[name]);
+
+    const setAllDocuments = (value: boolean) => {
+        documentToggleNames.forEach((name) => setValue(`documents.${name}`, value, { shouldDirty: true }));
     };
 
     return (
@@ -183,8 +189,8 @@ export default function DataToImportSection() {
                 <div id="documents-and-extensions" className="small-label">
                     Select documents and extensions
                 </div>
-                <Button variant="link" size="sm" onClick={selectAllDocuments}>
-                    Select all
+                <Button variant="link" size="sm" onClick={() => setAllDocuments(!areAllDocumentsSelected)}>
+                    {areAllDocumentsSelected ? "Deselect all" : "Select all"}
                 </Button>
             </div>
             <div className="card p-4">
