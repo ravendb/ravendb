@@ -15,7 +15,7 @@ import {
 import { TableEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/table-editor";
 import { TablesExplorer } from "@/pages/setup/add-app-wizard/steps/map-tables/tables-explorer";
 
-// Matches the h-[34rem] explorer/editor panel so the raw editor fills the same area.
+// Ace manages its own pixel-based resizable height, so the raw editor cannot flex-fill the step.
 const RAW_EDITOR_HEIGHT_PX = 544;
 
 export function MapTablesStep() {
@@ -59,7 +59,7 @@ export function MapTablesStep() {
     };
 
     return (
-        <div className="grid gap-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
             <Field orientation="horizontal" className="justify-self-end">
                 <Switch id="map-tables-raw-view" checked={isRawView} onCheckedChange={handleToggleRawView} />
                 <FieldLabel htmlFor="map-tables-raw-view">Raw JSON</FieldLabel>
@@ -76,7 +76,7 @@ export function MapTablesStep() {
                 />
             ) : (
                 <>
-                    <ResizablePanelGroup orientation="horizontal" className="h-[34rem] rounded-lg border bg-background">
+                    <ResizablePanelGroup orientation="horizontal" className="min-h-80 flex-1 rounded-lg border bg-background">
                         <ResizablePanel defaultSize="30%" minSize="180px" maxSize="50%" className="min-w-0">
                             <TablesExplorer />
                         </ResizablePanel>
