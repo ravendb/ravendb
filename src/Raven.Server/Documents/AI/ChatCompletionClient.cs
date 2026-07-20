@@ -192,6 +192,7 @@ public class ChatCompletionClient : IDisposable
         IToolCallState toolCallState = _settings.CreateToolCallState();
         object message = null;
         StringBuilder stringContent = structuredOutput ? null : new StringBuilder();
+        var refusalSb = new StringBuilder();
 
         // need two contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
@@ -233,6 +234,10 @@ public class ChatCompletionClient : IDisposable
             }
 
             var choice = (BlittableJsonReaderObject)choices[0];
+            var refusalDelta = _settings.GetRefusalOnStreaming(choice);
+            if (string.IsNullOrEmpty(refusalDelta) == false)
+                refusalSb.Append(refusalDelta);
+            
             if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
             {
                 if (TryGetDeltaContent(delta, out LazyStringValue content))
@@ -291,6 +296,10 @@ public class ChatCompletionClient : IDisposable
             };
         }
 
+        var refusal = refusalSb.ToString();
+        if (string.IsNullOrEmpty(refusal) == false)
+            RefusedToAnswerException.Throw(refusal, message?.ToString(), "refusal", GetRequestId(response.Headers));
+        
         if (structuredOutput == false)
         {
             var fullText = stringContent.ToString();
