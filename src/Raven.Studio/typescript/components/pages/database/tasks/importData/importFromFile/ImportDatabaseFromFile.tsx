@@ -135,7 +135,7 @@ export default function ImportDatabaseFromFile() {
         let operationId: number;
         try {
             operationId = await tasksService.getNextOperationId(databaseName);
-        } catch (error: any) {
+        } catch (error) {
             messagePublisher.reportError(
                 "Could not get next task id.",
                 error?.responseText ?? String(error),
