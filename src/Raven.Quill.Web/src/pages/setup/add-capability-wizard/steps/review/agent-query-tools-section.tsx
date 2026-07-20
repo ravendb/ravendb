@@ -11,6 +11,7 @@ import type {
 } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { emptyAgentQueryTool } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { ConfigItemCard, ConfigListEmpty } from "@/pages/setup/add-capability-wizard/steps/review/config-item-card";
+import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
 import AceEditor from "@/components/ace-editor/ace-editor";
 
 const TRI_STATE_OPTIONS: FormSelectOption<AgentQueryToolFormData["allowModelQueries"]>[] = [
@@ -105,33 +106,20 @@ function QueryToolItem({ index, remove }: { index: number; remove: () => void })
                     { component: <AceEditor.AutoResizeHeightAction /> },
                 ]}
             />
-            <FormAceEditor
-                control={control}
-                name={`review.queries.${index}.parametersSampleObject`}
-                mode="json"
-                height="100px"
-                label="Sample parameters object (optional)"
-                placeholder={`{\n    // "ParamName": "Instruction to the LLM"\n}`}
-                description="A JSON object defining the parameters the LLM should supply when it requests this query."
-                actions={[
-                    { component: <AceEditor.FullScreenAction /> },
-                    { component: <AceEditor.FormatAction /> },
-                    { component: <AceEditor.AutoResizeHeightAction /> },
-                ]}
-            />
-            <FormAceEditor
-                control={control}
-                name={`review.queries.${index}.parametersSchema`}
-                mode="json"
-                height="100px"
-                label="Parameters JSON schema (optional)"
-                placeholder={`{\n    "type": "object",\n    "properties": { ... }\n}`}
-                description="Generated automatically from the sample parameters object when left empty."
-                actions={[
-                    { component: <AceEditor.FullScreenAction /> },
-                    { component: <AceEditor.FormatAction /> },
-                    { component: <AceEditor.AutoResizeHeightAction /> },
-                ]}
+            <SampleObjectAndSchemaTabs
+                sampleObject={{
+                    name: `review.queries.${index}.parametersSampleObject`,
+                    label: "Sample parameters object",
+                    placeholder: `{\n    // "ParamName": "Instruction to the LLM"\n}`,
+                    description:
+                        "A JSON object defining the parameters the LLM should supply when it requests this query.",
+                }}
+                schema={{
+                    name: `review.queries.${index}.parametersSchema`,
+                    label: "Parameters JSON schema",
+                    placeholder: `{\n    "type": "object",\n    "properties": { ... }\n}`,
+                    description: "Generated automatically from the sample parameters object when left empty.",
+                }}
             />
             <div className="grid gap-4 sm:grid-cols-2">
                 <FormSelect

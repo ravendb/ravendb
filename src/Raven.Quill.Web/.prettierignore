@@ -1,3 +1,4 @@
 pnpm-lock.yaml
 src/api/generated/server-api.ts
 public/mockServiceWorker.js
+pnpm-workspace.yaml
