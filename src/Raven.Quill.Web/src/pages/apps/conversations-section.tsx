@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { ConversationDto } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
-import { DatePeriodPicker } from "@/components/data/date-period-picker";
-import { getDefaultDatePeriod } from "@/lib/date-period";
+import type { DatePeriod } from "@/lib/date-period";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { ConversationsTable } from "@/pages/apps/conversations/conversations-table";
 import {
@@ -14,8 +13,12 @@ import {
 } from "@/pages/apps/conversations/conversations-toolbar";
 import { SectionCard } from "@/pages/apps/section-card";
 
-export function ConversationStatsCards({ slug }: { slug: string }) {
-    const [period, setPeriod] = useState(getDefaultDatePeriod);
+interface ConversationsSectionProps {
+    slug: string;
+    period: DatePeriod;
+}
+
+export function ConversationStatsCards({ slug, period }: ConversationsSectionProps) {
     const conversationStatsQuery = useQuery(api.queries.stats.conversationStats(slug, period));
     const stats = conversationStatsQuery.data;
 
@@ -26,7 +29,7 @@ export function ConversationStatsCards({ slug }: { slug: string }) {
     ];
 
     return (
-        <SectionCard title="Activity" action={<DatePeriodPicker value={period} onChange={setPeriod} />}>
+        <SectionCard title="Activity">
             <DashboardStatCards cards={cards} />
         </SectionCard>
     );
@@ -34,9 +37,9 @@ export function ConversationStatsCards({ slug }: { slug: string }) {
 
 const EMPTY_CONVERSATIONS: ConversationDto[] = [];
 
-export function ConversationsSection({ slug }: { slug: string }) {
-    const conversationsQuery = useQuery(api.queries.stats.conversations(slug));
-    const conversations = conversationsQuery.data ?? EMPTY_CONVERSATIONS;
+export function ConversationsSection({ slug, period }: ConversationsSectionProps) {
+    const conversationsQuery = useQuery(api.queries.stats.conversations(slug, period));
+    const conversations = conversationsQuery.data?.conversations ?? EMPTY_CONVERSATIONS;
 
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("all");

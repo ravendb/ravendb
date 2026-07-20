@@ -29,12 +29,13 @@ export const statsMocks = {
         apiHttp.get("/api/apps/{slug}/collections", ({ response }) => response(200).json(collections)),
     conversations: (conversations: ConversationDto[] = sampleConversations) =>
         apiHttp.get("/api/apps/{slug}/conversations", ({ response }) =>
-            response(200).json(
-                conversations.map((conversation) => ({
+            response(200).json({
+                conversations: conversations.map((conversation) => ({
                     ...conversation,
                     transcript: null,
                 })),
-            ),
+                totalResults: conversations.length,
+            }),
         ),
     conversation: (conversations: ConversationDto[] = sampleConversations) =>
         apiHttp.get("/api/apps/{slug}/conversations/{conversationId}", ({ params, response }) => {
