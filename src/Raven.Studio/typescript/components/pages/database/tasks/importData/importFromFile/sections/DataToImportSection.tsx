@@ -10,12 +10,16 @@ import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 import { getItemsToWarnAbout } from "../importFromFileUtils";
+import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
+import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { useAppSelector } from "components/store";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 
 export default function DataToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
     const documents = useWatch({ control, name: "documents" });
+    const { isDocumentToggleRestricted, getDocumentToggleRestrictionTooltip, getDocumentToggleLicenseRequired } =
+        useImportLicenseRestrictions();
     const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
     const [collectionFilter, setCollectionFilter] = useState("");
 
@@ -24,13 +28,20 @@ export default function DataToImportSection() {
 
     // The Collections filter applies to collections in the imported FILE, which the server cannot
     // list before the upload. The current database's collections are offered as suggestions, and
-    // any other collection name from the file can be typed in and added manually.
-    const manuallyAddedCollections = includedCollections.filter((name) => !collectionNames.includes(name));
-    const allCollectionNames = [...collectionNames, ...manuallyAddedCollections];
+    // any other collection name from the file can be typed in and added manually. Manually added
+    // rows live in local state so deselecting them only turns the toggle off - the trash icon removes them.
+    const [manualCollections, setManualCollections] = useState<string[]>([]);
+    const allCollectionNames = [
+        ...collectionNames,
+        ...manualCollections.filter((name) => !collectionNames.includes(name)),
+    ];
 
     const filteredCollections = allCollectionNames.filter((name) =>
         name.toLowerCase().includes(collectionFilter.toLowerCase())
     );
+
+    const areAllFilteredCollectionsSelected =
+        filteredCollections.length > 0 && filteredCollections.every((name) => includedCollections.includes(name));
 
     const trimmedFilter = collectionFilter.trim();
     const canAddCollection =
@@ -41,8 +52,18 @@ export default function DataToImportSection() {
         if (!canAddCollection) {
             return;
         }
+        setManualCollections((prev) => [...prev, trimmedFilter]);
         setValue("collections.includedCollections", [...includedCollections, trimmedFilter], { shouldDirty: true });
         setCollectionFilter("");
+    };
+
+    const removeCollection = (name: string) => {
+        setManualCollections((prev) => prev.filter((x) => x !== name));
+        setValue(
+            "collections.includedCollections",
+            includedCollections.filter((x) => x !== name),
+            { shouldDirty: true }
+        );
     };
 
     const toggleCollection = (name: string, include: boolean) => {
@@ -79,11 +100,17 @@ export default function DataToImportSection() {
         "isIncludeSubscriptions",
     ] as const;
 
-    const areAllDocumentsSelected = documentToggleNames.every((name) => documents[name]);
+    const selectableDocumentToggleNames = documentToggleNames.filter(
+        (name) => name !== "isIncludeArchivedDocuments" || !isDocumentToggleRestricted("isIncludeArchivedDocuments")
+    );
+
+    const areAllDocumentsSelected = selectableDocumentToggleNames.every((name) => documents[name]);
 
     const setAllDocuments = (value: boolean) => {
-        documentToggleNames.forEach((name) => setValue(`documents.${name}`, value, { shouldDirty: true }));
+        selectableDocumentToggleNames.forEach((name) => setValue(`documents.${name}`, value, { shouldDirty: true }));
     };
+
+    const isArchivedRestricted = isDocumentToggleRestricted("isIncludeArchivedDocuments");
 
     return (
         <ImportSection id="data-to-import" title="Data to import">
@@ -122,7 +149,7 @@ export default function DataToImportSection() {
                             }}
                         />
                         <Button variant="secondary" disabled={!canAddCollection} onClick={addCollection}>
-                            <Icon icon="plus" /> Add
+                            <Icon icon="plus" margin="m-0" /> Add
                         </Button>
                     </div>
                     <Table className="mb-0">
@@ -130,32 +157,30 @@ export default function DataToImportSection() {
                             <tr>
                                 <th>Collection name</th>
                                 <th className="text-end">
-                                    Select all{" "}
-                                    <Form.Check
-                                        inline
-                                        type="switch"
-                                        aria-label="Select all collections"
-                                        checked={
-                                            filteredCollections.length > 0 &&
-                                            filteredCollections.every((name) => includedCollections.includes(name))
-                                        }
-                                        onChange={(e) =>
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        className="p-0"
+                                        disabled={filteredCollections.length === 0}
+                                        onClick={() =>
                                             setValue(
                                                 "collections.includedCollections",
-                                                e.target.checked
-                                                    ? [
+                                                areAllFilteredCollectionsSelected
+                                                    ? includedCollections.filter(
+                                                          (name) => !filteredCollections.includes(name)
+                                                      )
+                                                    : [
                                                           ...includedCollections,
                                                           ...filteredCollections.filter(
                                                               (name) => !includedCollections.includes(name)
                                                           ),
-                                                      ]
-                                                    : includedCollections.filter(
-                                                          (name) => !filteredCollections.includes(name)
-                                                      ),
+                                                      ],
                                                 { shouldDirty: true }
                                             )
                                         }
-                                    />
+                                    >
+                                        {areAllFilteredCollectionsSelected ? "Deselect all" : "Select all"}
+                                    </Button>
                                 </th>
                             </tr>
                         </thead>
@@ -171,12 +196,25 @@ export default function DataToImportSection() {
                             {filteredCollections.map((name) => (
                                 <tr key={name}>
                                     <td colSpan={2}>
-                                        <Form.Check
-                                            type="switch"
-                                            label={name}
-                                            checked={includedCollections.includes(name)}
-                                            onChange={(e) => toggleCollection(name, e.target.checked)}
-                                        />
+                                        <div className="d-flex align-items-center justify-content-between">
+                                            <Form.Check
+                                                type="switch"
+                                                label={name}
+                                                checked={includedCollections.includes(name)}
+                                                onChange={(e) => toggleCollection(name, e.target.checked)}
+                                            />
+                                            {manualCollections.includes(name) && (
+                                                <Button
+                                                    variant="link"
+                                                    size="sm"
+                                                    className="p-0 text-danger"
+                                                    title="Remove collection"
+                                                    onClick={() => removeCollection(name)}
+                                                >
+                                                    <Icon icon="trash" margin="m-0" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -232,9 +270,30 @@ export default function DataToImportSection() {
                         </span>
                     </PopoverWithHoverWrapper>
                 </FormSwitch>
-                <FormSwitch control={control} name="documents.isIncludeArchivedDocuments">
-                    Include Archived Documents
-                </FormSwitch>
+                <div
+                    className="d-flex align-items-center gap-2"
+                    title={
+                        isArchivedRestricted
+                            ? getDocumentToggleRestrictionTooltip("isIncludeArchivedDocuments")
+                            : undefined
+                    }
+                >
+                    {/* dim only the switch - the license badge must stay fully visible */}
+                    <div className={isArchivedRestricted ? "item-disabled" : undefined}>
+                        <FormSwitch
+                            control={control}
+                            name="documents.isIncludeArchivedDocuments"
+                            {...(isArchivedRestricted && { disabled: true })}
+                        >
+                            Include Archived Documents
+                        </FormSwitch>
+                    </div>
+                    {isArchivedRestricted && (
+                        <LicenseRestrictedBadge
+                            licenseRequired={getDocumentToggleLicenseRequired("isIncludeArchivedDocuments")}
+                        />
+                    )}
+                </div>
                 <FormSwitch control={control} name="documents.isIncludeExpiredDocuments">
                     Include Expired Documents
                 </FormSwitch>
