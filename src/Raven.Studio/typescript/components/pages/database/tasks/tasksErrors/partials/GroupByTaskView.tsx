@@ -1,12 +1,12 @@
 import React, { useMemo } from "react";
 import { EmptySet } from "components/common/EmptySet";
-import { EtlTaskWithErrors, TasksFiltersState } from "../utils/tasksErrorsUtils";
+import { TaskWithErrors, TasksFiltersState } from "../utils/tasksErrorsUtils";
 import { filterTasksWithErrors } from "../utils/filterTasksErrors";
 import { TaskPanel } from "./TaskPanel";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 interface GroupByTaskViewProps {
-    tasksWithErrors: EtlTaskWithErrors[];
+    tasksWithErrors: TaskWithErrors[];
     etlStats: EtlTaskStats[];
     filters: TasksFiltersState;
     onRefresh: () => void;

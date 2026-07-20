@@ -106,6 +106,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex);
             UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate);
+            // This code misses the schemaBase.SerializeSchemaIntoTableTree call.
+            // It works for runtime operations, but not for features that use offline database files,
+            // which use the serialized schema from disk to perform their operations.
+            // The schema was repaired in From72001.cs
 
             return true;
         }
@@ -210,8 +214,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             toDispose.Add(writeTable.Allocate(out tvb));
             toDispose.Add(Slice.From(context.Allocator, attachment.ChangeVector, out var changeVectorSlice));
             toDispose.Add(Slice.From(context.Allocator, attachment.Key.Buffer, attachment.Key.Size, ByteStringType.Immutable, out keySlice));
-            toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.Name, out Slice lowerName1, out Slice namePtr));
-            toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.ContentType, out Slice lowerName2, out Slice contentTypePtr));
+            toDispose.Add(DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice lowerName1, out Slice namePtr));
+            toDispose.Add(DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice lowerName2, out Slice contentTypePtr));
 
             tvb.Add(keySlice.Content.Ptr, keySlice.Size);
             tvb.Add(Bits.SwapBytes(attachment.Etag));

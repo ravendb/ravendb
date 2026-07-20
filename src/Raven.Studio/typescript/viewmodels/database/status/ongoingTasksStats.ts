@@ -22,6 +22,7 @@ import TaskUtils = require("components/utils/TaskUtils");
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 import DatabaseUtils = require("components/utils/DatabaseUtils");
 import liveQueueSinkStatsWebSocketClient = require("common/liveQueueSinkStatsWebSocketClient");
+import liveCdcSinkStatsWebSocketClient = require("common/liveCdcSinkStatsWebSocketClient");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import app = require("durandal/app");
 import typeUtils = require("common/typeUtils");
@@ -43,6 +44,7 @@ type rTreeLeaf = {
 type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOperation |
                      Raven.Server.Documents.ETL.Stats.EtlPerformanceOperation |
                      Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkPerformanceOperation |
+                     Raven.Server.Documents.CdcSink.Stats.Performance.CdcSinkPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionConnectionPerformanceOperation |
                      Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceOperation &
                      Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats.EmbeddingsGenerationPerformanceOperation;
@@ -50,6 +52,7 @@ type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOp
 type performanceBaseWithCache = ReplicationPerformanceWithCache |
                                 EtlPerformanceBaseWithCache |
                                 QueueSinkPerformanceBaseWithCache |
+                                CdcSinkPerformanceBaseWithCache |
                                 SubscriptionConnectionPerformanceStatsWithCache |
                                 SubscriptionBatchPerformanceStatsWithCache;
 type trackInfo = {
@@ -64,6 +67,7 @@ type exportFileFormat = {
     Etl: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[];
     Subscription: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[];
     QueueSink: Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkTaskPerformanceStats[];
+    CdcSink: Raven.Server.Documents.CdcSink.Stats.Performance.CdcSinkTaskPerformanceStats[];
 }
 
 type trackItemContext = {
@@ -393,6 +397,7 @@ class ongoingTasksStats extends shardViewModelBase {
     private liveViewReplicationClient = ko.observable<liveReplicationStatsWebSocketClient>();
     private liveViewEtlClient = ko.observable<liveEtlStatsWebSocketClient>();
     private liveViewQueueSinkClient = ko.observable<liveQueueSinkStatsWebSocketClient>();
+    private liveViewCdcSinkClient = ko.observable<liveCdcSinkStatsWebSocketClient>();
     private liveViewSubscriptionClient = ko.observable<liveSubscriptionStatsWebSocketClient>();
     
     private autoScroll = ko.observable<boolean>(false);
@@ -412,6 +417,7 @@ class ongoingTasksStats extends shardViewModelBase {
     private replicationData: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
     private etlData: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[] = [];
     private queueSinkData: Raven.Server.Documents.QueueSink.Stats.Performance.QueueSinkTaskPerformanceStats[] = [];
+    private cdcSinkData: Raven.Server.Documents.CdcSink.Stats.Performance.CdcSinkTaskPerformanceStats[] = [];
     private subscriptionData: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[] = [];
     
     private etlDefinitionsCache: etlScriptDefinitionCache;
@@ -555,14 +561,16 @@ class ongoingTasksStats extends shardViewModelBase {
             const replicationClient = this.liveViewReplicationClient();
             const etlClient = this.liveViewEtlClient();
             const queueSinkClient = this.liveViewQueueSinkClient();
+            const cdcSinkClient = this.liveViewCdcSinkClient();
             const subscriptionClient = this.liveViewSubscriptionClient();
 
             const replicationLoading = replicationClient ? replicationClient.loading() : true;
             const etlLoading = etlClient ? etlClient.loading() : true;
             const queueSinkLoading = queueSinkClient ? queueSinkClient.loading() : true;
+            const cdcSinkLoading = cdcSinkClient ? cdcSinkClient.loading() : true;
             const subscriptionLoading = subscriptionClient ? subscriptionClient.loading() : true;
             
-            return replicationLoading || etlLoading || queueSinkLoading || subscriptionLoading;
+            return replicationLoading || etlLoading || queueSinkLoading || cdcSinkLoading || subscriptionLoading;
         });
     }
 
@@ -577,7 +585,7 @@ class ongoingTasksStats extends shardViewModelBase {
     deactivate() {
         super.deactivate();
 
-        if (this.liveViewReplicationClient() || this.liveViewEtlClient() || this.liveViewQueueSinkClient() || this.liveViewSubscriptionClient()) {
+        if (this.liveViewReplicationClient() || this.liveViewEtlClient() || this.liveViewQueueSinkClient() || this.liveViewCdcSinkClient() || this.liveViewSubscriptionClient()) {
             this.cancelLiveView();
         }
     }
@@ -701,6 +709,9 @@ class ongoingTasksStats extends shardViewModelBase {
                 if (this.liveViewQueueSinkClient()) {
                     this.liveViewQueueSinkClient().pauseUpdates();
                 }
+                if (this.liveViewCdcSinkClient()) {
+                    this.liveViewCdcSinkClient().pauseUpdates();
+                }
                 if (this.liveViewSubscriptionClient()) {
                     this.liveViewSubscriptionClient().pauseUpdates();
                 }
@@ -718,6 +729,9 @@ class ongoingTasksStats extends shardViewModelBase {
                 }
                 if (this.liveViewQueueSinkClient()) {
                     this.liveViewQueueSinkClient().resumeUpdates();
+                }
+                if (this.liveViewCdcSinkClient()) {
+                    this.liveViewCdcSinkClient().resumeUpdates();
                 }
                 if (this.liveViewSubscriptionClient()) {
                     this.liveViewSubscriptionClient().resumeUpdates();
@@ -817,6 +831,12 @@ class ongoingTasksStats extends shardViewModelBase {
             }
             onDataUpdatedThrottle();
         }, this.dateCutoff));
+        this.liveViewCdcSinkClient(new liveCdcSinkStatsWebSocketClient(this.db, this.location, d => {
+            if (!this.filteredTaskTypes.length || this.filteredTaskTypes.includes("CdcSink")) {
+                this.cdcSinkData = d;
+            }
+            onDataUpdatedThrottle();
+        }, this.dateCutoff));
         this.liveViewSubscriptionClient(new liveSubscriptionStatsWebSocketClient(this.db, this.location, d => {
             if (!this.filteredTaskTypes.length || this.filteredTaskTypes.includes("Subscription")) {
                 this.subscriptionData = d;
@@ -829,9 +849,10 @@ class ongoingTasksStats extends shardViewModelBase {
         const replicationDataCount = typeUtils.sumBy(this.replicationData, x => x.Performance.length);
         const etlDataCount = typeUtils.sumBy(this.etlData, t => typeUtils.sumBy(t.Stats, s => s.Performance.length));
         const queueSinkDataCount = typeUtils.sumBy(this.queueSinkData, t => typeUtils.sumBy(t.Stats, s => s.Performance.length));
+        const cdcSinkDataCount = typeUtils.sumBy(this.cdcSinkData, t => typeUtils.sumBy(t.Stats, s => s.Performance.length));
         const subscriptionDataCount = typeUtils.sumBy(this.subscriptionData, x => x.BatchPerformance.length + x.ConnectionPerformance.length);
         
-        const dataCount = replicationDataCount + etlDataCount + queueSinkDataCount + subscriptionDataCount;
+        const dataCount = replicationDataCount + etlDataCount + queueSinkDataCount + cdcSinkDataCount + subscriptionDataCount;
 
         const usage = Math.min(100, dataCount * 100.0 / ongoingTasksStats.bufferSize);
         this.bufferUsage(usage.toFixed(1));
@@ -896,6 +917,11 @@ class ongoingTasksStats extends shardViewModelBase {
             this.liveViewQueueSinkClient(null);
         }
 
+        if (this.liveViewCdcSinkClient()) {
+            this.liveViewCdcSinkClient().dispose();
+            this.liveViewCdcSinkClient(null);
+        }
+
         if (this.liveViewSubscriptionClient()) {
             this.liveViewSubscriptionClient().dispose();
             this.liveViewSubscriptionClient(null);
@@ -904,7 +930,7 @@ class ongoingTasksStats extends shardViewModelBase {
 
     private draw(workData: workData[], maxConcurrentActions: number, resetFilter: boolean) {
         const anySubscriptionData = this.subscriptionData.some(x => x.BatchPerformance.length || x.ConnectionPerformance.length);
-        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0 || this.queueSinkData.length > 0 || anySubscriptionData);
+        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0 || this.queueSinkData.length > 0 || this.cdcSinkData.length > 0 || anySubscriptionData);
 
         this.prepareBrushSection(workData, maxConcurrentActions);
         this.prepareMainSection(resetFilter);
@@ -1035,6 +1061,7 @@ class ongoingTasksStats extends shardViewModelBase {
         this.replicationData = _.orderBy(this.replicationData, [(x: any) => x.Type, (x: any) => x.Description], ["desc", "asc"]);
         this.etlData = _.orderBy(this.etlData, [(x: any) => x.EtlType, (x: any) => x.TaskName], ["asc", "asc"]);
         this.queueSinkData = _.orderBy(this.queueSinkData, [(x: any) => x.BrokerType, (x: any) => x.TaskName], ["asc", "asc"]);
+        this.cdcSinkData = _.orderBy(this.cdcSinkData, [(x: any) => x.TaskName], ["asc"]);
         this.subscriptionData = _.orderBy(this.subscriptionData, [(x: any) => x.TaskName]);
         
         this.etlData.forEach(etl => {
@@ -1112,6 +1139,30 @@ class ongoingTasksStats extends shardViewModelBase {
                 closedHeight: closedHeight
             });
         })
+
+        this.cdcSinkData.forEach(cdcSinkTask => {
+            const statsCount = Math.max(cdcSinkTask.Stats.length, 1);
+
+            const closedHeight = ongoingTasksStats.openedTrackPadding
+                + (statsCount + 1) * ongoingTasksStats.trackHeight
+                + statsCount * ongoingTasksStats.betweenScriptsPadding
+                + ongoingTasksStats.openedTrackPadding;
+
+            const heightCount = 2;
+
+            const openedHeight = 2 * ongoingTasksStats.openedTrackPadding
+                + ongoingTasksStats.trackHeight * heightCount
+                + (statsCount - 1) * ongoingTasksStats.betweenScriptsPadding
+                + statsCount * ongoingTasksStats.singleOpenedEtlItemHeight
+                + ongoingTasksStats.openedTrackPadding;
+
+            trackInfos.push({
+                name: cdcSinkTask.TaskName,
+                type: "CdcSink",
+                openedHeight: openedHeight,
+                closedHeight: closedHeight
+            });
+        });
         
         this.subscriptionData.forEach(subscriptionTask => {
             const subscriptionName = subscriptionTask.TaskName;
@@ -1287,6 +1338,12 @@ class ongoingTasksStats extends shardViewModelBase {
             })
         });
 
+        this.cdcSinkData.forEach(stats => {
+            stats.Stats.forEach(stat => {
+                stat.Performance.forEach(s => onPerf(s as performanceBaseWithCache));
+            })
+        });
+
         this.subscriptionData.forEach(subscriptionStats => {
             subscriptionStats.ConnectionPerformance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
             subscriptionStats.BatchPerformance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
@@ -1382,6 +1439,9 @@ class ongoingTasksStats extends shardViewModelBase {
             drawBackground(x.TaskName);
         });
         this.queueSinkData.forEach(x => {
+            drawBackground(x.TaskName);
+        });
+        this.cdcSinkData.forEach(x => {
             drawBackground(x.TaskName);
         });
         this.subscriptionData.forEach(x => {
@@ -1704,6 +1764,22 @@ class ongoingTasksStats extends shardViewModelBase {
                 });
             }
         })
+
+        this.cdcSinkData.forEach(cdcSinkItem => {
+            const trackName = cdcSinkItem.TaskName;
+            if (_.includes(this.filteredTrackNames(), trackName)) {
+                const yStartBase = this.yScale(trackName);
+                const isOpened = _.includes(this.expandedTracks(), trackName);
+
+                cdcSinkItem.Stats.forEach((cdcSinkStat, idx) => {
+                    const openedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.singleOpenedEtlItemHeight;
+                    const closedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.trackHeight;
+                    const offset = isOpened ? idx * openedTrackItemOffset : (idx + 1) * closedTrackItemOffset;
+
+                    drawTrack(trackName, yStartBase + offset, isOpened, cdcSinkStat.Performance as performanceBaseWithCache[]);
+                });
+            }
+        });
         
         this.subscriptionData.forEach(subscriptionItem => {
             const trackName = subscriptionItem.TaskName;
@@ -1846,6 +1922,8 @@ class ongoingTasksStats extends shardViewModelBase {
                 return "RabbitMQ Sink";
             case "AzureServiceBusQueueSink":
                 return "Azure Service Bus Queue Sink";
+            case "CdcSink":
+                return "CDC Sink";
             case "EmbeddingsGeneration":
                 return "Embeddings Generation";
             case "GenAi":
@@ -2159,8 +2237,9 @@ class ongoingTasksStats extends shardViewModelBase {
             if (isRootItem) {
                 switch (type) {
                     case "KafkaQueueSink":
-                    case "RabbitQueueSink": {
-                        const elementWithData = context.rootStats as any as QueueSinkPerformanceBaseWithCache;
+                    case "RabbitQueueSink":
+                    case "CdcSink": {
+                        const elementWithData = context.rootStats as any as QueueSinkPerformanceBaseWithCache | CdcSinkPerformanceBaseWithCache;
                         if (elementWithData.CurrentlyAllocated && elementWithData.CurrentlyAllocated.SizeInBytes) {
                             tooltipHtml += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} </div></div>`;
                         }
@@ -2610,7 +2689,8 @@ class ongoingTasksStats extends shardViewModelBase {
                     Replication: importedData as any, // we force casting here
                     Etl: [],
                     Subscription: [],
-                    QueueSink: []
+                    QueueSink: [],
+                    CdcSink: []
                 }
             }
 
@@ -2621,6 +2701,7 @@ class ongoingTasksStats extends shardViewModelBase {
                 this.replicationData = importedData.Replication;
                 this.etlData = importedData.Etl;
                 this.queueSinkData = importedData.QueueSink ?? [];
+                this.cdcSinkData = importedData.CdcSink ?? [];
                 this.subscriptionData = importedData.Subscription;
 
                 this.fillCache();
@@ -2656,6 +2737,14 @@ class ongoingTasksStats extends shardViewModelBase {
             queueSinkData.Stats.forEach(sinkData => {
                 sinkData.Performance.forEach(perfStat => {
                     liveQueueSinkStatsWebSocketClient.fillCache(perfStat, TaskUtils.default.queueTypeToStudioType(queueSinkData.BrokerType));
+                });
+            });
+        });
+
+        this.cdcSinkData.forEach(cdcSinkData => {
+            cdcSinkData.Stats.forEach(sinkData => {
+                sinkData.Performance.forEach(perfStat => {
+                    liveCdcSinkStatsWebSocketClient.fillCache(perfStat);
                 });
             });
         });
@@ -2704,9 +2793,14 @@ class ongoingTasksStats extends shardViewModelBase {
                 taskData => d3.max(taskData.Stats, 
                         stats => d3.max(stats.Performance, 
                             (x: QueueSinkPerformanceBaseWithCache) => x.StartedAsDate)));
+
+        const cdcSinkMax = d3.max(this.cdcSinkData,
+                taskData => d3.max(taskData.Stats,
+                        stats => d3.max(stats.Performance,
+                            (x: CdcSinkPerformanceBaseWithCache) => x.StartedAsDate)));
         
         
-        this.dateCutoff = d3.max([replicationMax, etlMax, queueSinkMax]);
+        this.dateCutoff = d3.max([replicationMax, etlMax, queueSinkMax, cdcSinkMax]);
     }
 
     closeImport() {
@@ -2753,7 +2847,8 @@ class ongoingTasksStats extends shardViewModelBase {
             Replication: this.replicationData,
             Etl: this.etlData,
             Subscription: this.subscriptionData,
-            QueueSink: this.queueSinkData
+            QueueSink: this.queueSinkData,
+            CdcSink: this.cdcSinkData
         };
         
         fileDownloader.downloadAsJson(filePayload, exportFileName + ".json", exportFileName, (key, value) => {

@@ -98,8 +98,17 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 item.RemoteIdentifier = Slices.Empty;
             }
 
-            // although the key is LSV but is treated as slice and doesn't respect escaping
-            item.ToDispose(Slice.From(context.Allocator, attachment.Key.Buffer, attachment.Key.Size, ByteStringType.Immutable, out item.Key));
+            var attachmentsStorage = context.DocumentDatabase.DocumentsStorage.AttachmentsStorage;
+            if (AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) == AttachmentType.Revision)
+            {
+                // Sender-side Legacy-form rebuild: emits rawCv in the revCv slot regardless of on-disk form.
+                item.ToDispose(attachmentsStorage.BuildAttachmentRevisionKey(context, attachment, out item.Key));
+            }
+            else
+            {
+                // although the key is LSV but is treated as slice and doesn't respect escaping
+                item.ToDispose(Slice.From(context.Allocator, attachment.Key.Buffer, attachment.Key.Size, ByteStringType.Immutable, out item.Key));
+            }
             return item;
         }
 

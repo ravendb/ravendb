@@ -886,6 +886,8 @@ namespace Raven.Client
                 }
 
                 public const string ThrowRevisionKeyTooBigFix = "ThrowRevisionKeyTooBigFix";
+                public const string HashedRevisionPk = "HashedRevisionPk";
+                public const string PullReplicationCompositeChangeVectors = "PullReplicationCompositeChangeVectors";
                 public const string ThrowControlCharactersInIdentifier = "ThrowControlCharactersInIdentifier";
             }
         }

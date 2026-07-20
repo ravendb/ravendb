@@ -25,6 +25,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
@@ -1131,6 +1132,41 @@ namespace Raven.Server.Json
         {
             var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
             writer.WriteObject(context.ReadObject(djv, "queue-sink/performance"));
+        }
+
+        public static void WriteCdcSinkTaskPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<CdcSinkTaskPerformanceStats> stats)
+        {
+            writer.WriteStartObject();
+            writer.WriteArray(context, "Results", stats, (w, c, taskStats) =>
+            {
+                w.WriteStartObject();
+
+                w.WritePropertyName(nameof(taskStats.TaskId));
+                w.WriteInteger(taskStats.TaskId);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(taskStats.TaskName));
+                w.WriteString(taskStats.TaskName);
+                w.WriteComma();
+
+                w.WriteArray(c, nameof(taskStats.Stats), taskStats.Stats, (wp, cp, scriptStats) =>
+                {
+                    wp.WriteStartObject();
+
+                    wp.WriteArray(cp, nameof(scriptStats.Performance), scriptStats.Performance, (wpp, cpp, perfStats) => wpp.WriteCdcSinkPerformanceStats(cpp, perfStats));
+
+                    wp.WriteEndObject();
+                });
+
+                w.WriteEndObject();
+            });
+            writer.WriteEndObject();
+        }
+
+        private static void WriteCdcSinkPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, CdcSinkPerformanceStats stats)
+        {
+            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
+            writer.WriteObject(context.ReadObject(djv, "cdc-sink/performance"));
         }
 
         public static void WriteSubscriptionBatchPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchPerformanceStats batchStats)

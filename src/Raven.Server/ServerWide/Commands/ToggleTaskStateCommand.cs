@@ -137,6 +137,15 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     break;
 
+                case OngoingTaskType.CdcSink:
+
+                    var cdcSink = record?.CdcSinks?.Find(x => x.TaskId == TaskId);
+                    if (cdcSink != null)
+                    {
+                        cdcSink.Disabled = Disable;
+                    }
+                    break;
+
                 case OngoingTaskType.EmbeddingsGeneration:
 
                     var embeddingGenerationTask = record?.EmbeddingsGenerations?.Find(x => x.TaskId == TaskId);

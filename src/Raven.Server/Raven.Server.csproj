@@ -36,6 +36,9 @@
     <None Include="..\..\libs\libzstd\libzstd.linux.arm.64.so" Link="libzstd.linux.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\libs\libpgquery\libpg_query.linux.arm64.so" Link="libpg_query.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm32)' == 'true'">
     <None Include="..\..\libs\libzstd\libzstd.linux.arm.32.so" Link="libzstd.linux.arm.32.so">
@@ -130,6 +133,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.SqlServer.Types" />
     <PackageReference Include="Microsoft.ML.Tokenizers" />
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" />
@@ -143,6 +147,8 @@
     <PackageReference Include="NCrontab.Advanced" />
     <PackageReference Include="NLog.Web.AspNetCore" />
     <PackageReference Include="Npgsql" />
+    <PackageReference Include="MySqlCdc" />
+    <PackageReference Include="Pgvector" />
     <PackageReference Include="NuGet.Commands" Alias="NGC" />
     <PackageReference Include="NuGet.ProjectModel" />
     <PackageReference Include="NuGet.Resolver" />

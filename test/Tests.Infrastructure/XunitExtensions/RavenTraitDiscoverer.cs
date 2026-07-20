@@ -17,7 +17,7 @@ public static class RavenTraitHelper
                 continue;
 
             if (category.HasFlag(value))
-                list.Add(new KeyValuePair<string, string>("Category", value.GetDescription()));
+                list.Add(new KeyValuePair<string, string>("Category", value.ToString()));
         }
         return list;
     }

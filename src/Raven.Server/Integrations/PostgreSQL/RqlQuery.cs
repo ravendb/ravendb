@@ -293,11 +293,11 @@ namespace Raven.Server.Integrations.PostgreSQL
                 var parameters = DynamicJsonValue.Convert(Parameters);
                 var queryParameters = _queryOperationContext.Documents.ReadObject(parameters, "query/parameters");
                 var indexQuery = new IndexQueryServerSide(QueryString, queryParameters);
+                
+                ApplyEmbeddedLimits(indexQuery);
 
                 if (_limit.HasValue)
-                    indexQuery.PageSize = _limit.Value;
-                else
-                    ApplyEmbeddedLimits(indexQuery);
+                    indexQuery.PageSize = Math.Min(indexQuery.PageSize, _limit.Value);
 
                 await using var streamWriter = new PgStreamDocumentQueryResultWriter(
                     writer, builder, this, Columns, GetDocumentIdColumnIndex(), GetPowerBIJsonColumnIndex(), _queryOperationContext.Documents);

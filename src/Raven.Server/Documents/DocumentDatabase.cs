@@ -32,6 +32,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Smuggler;
@@ -80,6 +81,7 @@ using Raven.Server.Rachis;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents
 {
@@ -214,6 +216,7 @@ namespace Raven.Server.Documents
                 _hasClusterTransaction = new ManualResetEventSlim(false);
                 CountersRepairTask = new CountersRepairTask(this, DatabaseShutdown);
                 QueueSinkLoader = new QueueSinkLoader(this, serverStore);
+                CdcSinkLoader = new CdcSinkLoader(this, serverStore);
                 _proxyRequestExecutor = CreateRequestExecutor();
                 _serverStore.Server.ServerCertificateChanged += OnCertificateChange;
             }
@@ -350,6 +353,8 @@ namespace Raven.Server.Documents
 
         public QueueSinkLoader QueueSinkLoader { get; private set; }
 
+        public CdcSinkLoader CdcSinkLoader { get; private set; }
+
         public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
         public readonly DateTime StartTime;
@@ -468,6 +473,7 @@ namespace Raven.Server.Documents
                 OnDatabaseRecordChanged(record);
 
                 SupportedFeatures = new SupportedFeature(record);
+                DocumentsStorage.PersistSupportedFeatures(record.SupportedFeatures);
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
@@ -482,6 +488,9 @@ namespace Raven.Server.Documents
 
                 _addToInitLog(LogLevel.Debug, "Initializing Queue Sinks");
                 QueueSinkLoader.Initialize(record);
+
+                _addToInitLog(LogLevel.Debug, "Initializing CDC Sinks");
+                CdcSinkLoader.Initialize(record);
 
                 InitializeAndStartDocumentsMigration();
 
@@ -1133,6 +1142,11 @@ namespace Raven.Server.Documents
                 QueueSinkLoader?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed QueueSinkLoader");
+
+            exceptionAggregator.Execute(() =>
+            {
+                CdcSinkLoader?.Dispose();
+            });
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing AI Integrations");
             exceptionAggregator.Execute(() =>
@@ -1802,6 +1816,7 @@ namespace Raven.Server.Documents
             }
 
             QueueSinkLoader?.HandleDatabaseRecordChange(record);
+            CdcSinkLoader?.HandleDatabaseRecordChange(record);
 
             OnDatabaseRecordChanged(record);
         }
@@ -1922,6 +1937,7 @@ namespace Raven.Server.Documents
             if (record == null || DocumentsStorage == null)
                 return;
 
+            SupportedFeatures = new SupportedFeature(record);
             ClientConfiguration = record.Client;
             StudioConfiguration = record.Studio;
             InitializeCompressionFromDatabaseRecord(record);
@@ -2312,6 +2328,8 @@ namespace Raven.Server.Documents
 
             internal AsyncManualResetEvent DelayQueryByPatch;
 
+            internal AsyncManualResetEvent DelayDeleteBucket;
+
             internal bool EnableWritesToTheWrongShard = false;
             
             internal TimeSpan? EtlFallbackTime;
@@ -2394,6 +2412,12 @@ namespace Raven.Server.Documents
 
             if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix))
                 SupportedFeatureTypes.ThrowRevisionKeyTooBigFix = true;
+
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.HashedRevisionPk))
+                SupportedFeatureTypes.HashedRevisionPk = true;
+
+            if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.PullReplicationCompositeChangeVectors))
+                SupportedFeatureTypes.PullReplicationCompositeChangeVectors = true;
             
             if (databaseRecord.SupportedFeatures.Contains(Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier))
                 SupportedFeatureTypes.ThrowControlCharactersInIdentifier = true;
@@ -2403,6 +2427,10 @@ namespace Raven.Server.Documents
     public class SupportedFeatureTypes
     {
         public bool ThrowRevisionKeyTooBigFix;
+        // Gate matching the HashedRevisionPk wire token; suppresses the raw-form probe in DualFormProbe
+        // on born-clean databases.
+        public bool HashedRevisionPk;
+        public bool PullReplicationCompositeChangeVectors;
         public bool ThrowControlCharactersInIdentifier;
     }
 }

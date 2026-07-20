@@ -43,13 +43,7 @@ export function DatabaseCustomSortersInfoHub({ databaseSortersCount }: DatabaseC
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <p>
                     A <strong>Custom Sorter</strong> allows you to define how documents will be ordered in the query
                     results

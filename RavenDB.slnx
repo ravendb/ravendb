@@ -46,7 +46,7 @@
     </Project>
   </Folder>
   <Folder Name="/Solution Items/">
-    <File Path="agents.md" />
+    <File Path="AGENTS.md" />
     <File Path="Directory.Packages.props" />
     <File Path="global.json" />
     <File Path="RavenDB.ruleset" />

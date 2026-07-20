@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions.Security;
@@ -73,10 +74,19 @@ namespace Raven.Client.Documents.Operations.Replication
                        Mode == sink.Mode &&
                        string.Equals(HubName, sink.HubName) &&
                        string.Equals(CertificatePassword, sink.CertificatePassword) &&
-                       string.Equals(CertificateWithPrivateKey, sink.CertificateWithPrivateKey);
+                       string.Equals(CertificateWithPrivateKey, sink.CertificateWithPrivateKey) &&
+                       AllowedPathsEqual(AllowedHubToSinkPaths, sink.AllowedHubToSinkPaths) &&
+                       AllowedPathsEqual(AllowedSinkToHubPaths, sink.AllowedSinkToHubPaths);
             }
 
             return false;
+        }
+
+        private static bool AllowedPathsEqual(string[] left, string[] right)
+        {
+            var orderedLeft = (left ?? Array.Empty<string>()).OrderBy(x => x, StringComparer.Ordinal);
+            var orderedRight = (right ?? Array.Empty<string>()).OrderBy(x => x, StringComparer.Ordinal);
+            return orderedLeft.SequenceEqual(orderedRight, StringComparer.Ordinal);
         }
 
         public override ulong GetTaskKey()

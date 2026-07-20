@@ -67,18 +67,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task TestConnection_AcceptsText_RejectsImages_ProbeReturnsFalse()
         {
-            var connection = new AiConnectionString
-            {
-                Name = ConnectionStringName,
-                ModelType = AiModelType.Chat,
-                OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini")
-            };
-
-            Assert.True(AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings));
-
-            using var storageEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests());
-            using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), storageEnv);
-            using var client = new MockLlm(contextPool, settings, ChatCompletionClient.ConventionsToUse, MockResponseBehavior.AcceptsTextRejectsImages);
+            using var harness = CreateMockClient(MockResponseBehavior.AcceptsTextRejectsImages);
+            var client = harness.Client;
 
             var schema = ChatCompletionClient.GetSchemaFromSampleObject("{}");
             await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, CancellationToken.None);
@@ -90,18 +80,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task TestConnection_AcceptsTextAndImages_ProbeReturnsTrue()
         {
-            var connection = new AiConnectionString
-            {
-                Name = ConnectionStringName,
-                ModelType = AiModelType.Chat,
-                OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini")
-            };
-
-            Assert.True(AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings));
-
-            using var storageEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests());
-            using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), storageEnv);
-            using var client = new MockLlm(contextPool, settings, ChatCompletionClient.ConventionsToUse, MockResponseBehavior.OpenAiSuccess);
+            using var harness = CreateMockClient(MockResponseBehavior.OpenAiSuccess);
+            var client = harness.Client;
 
             var schema = ChatCompletionClient.GetSchemaFromSampleObject("{}");
             await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, CancellationToken.None);
@@ -111,6 +91,37 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             // The probe must actually send the image, exactly once (guards against a dropped image or a re-introduced double-send).
             Assert.Equal(1, Regex.Matches(client.LastRequestBody, "data:image/png;base64,").Count);
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task TestConnection_ImageProbeHangs_ConnectionSucceedsWithoutImageSupport()
+        {
+            using var harness = CreateMockClient(MockResponseBehavior.AcceptsTextHangsOnImage);
+            var client = harness.Client;
+
+            var schema = ChatCompletionClient.GetSchemaFromSampleObject("{}");
+
+            // Mirror AiIntegrationHandlerProcessorForTestAiConnection.ExecuteAsync: both calls share the one operation
+            // token, and the reported result is derived exactly as the processor does (Success = neither call threw).
+            // Validation returns fast; then the operation token fires (here at 300ms) while the image request hangs,
+            // but the probe swallows it and reports "no image support" instead of failing the connection test.
+            bool success;
+            bool acceptsImageInput = false;
+            using var operationCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+            try
+            {
+                await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, operationCts.Token);
+                acceptsImageInput = await client.TestAcceptsImageInputAsync(operationCts.Token);
+                success = true;
+            }
+            catch
+            {
+                success = false;
+            }
+
+            // A hanging image probe no longer fails the connection test: it succeeds, just without image support.
+            Assert.True(success);
+            Assert.False(acceptsImageInput);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -154,6 +165,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             OpenAiSuccess,
             AzureGatewayTextPlain,
             AcceptsTextRejectsImages,
+            AcceptsTextHangsOnImage,
         }
 
         private sealed class MockHandler : ConversationHandler
@@ -194,6 +206,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             {
                 LastRequestBody = request.Content != null ? await request.Content.ReadAsStringAsync(token) : null;
 
+                if (_behavior == MockResponseBehavior.AcceptsTextHangsOnImage && RequestContainsImagePngDataUrl(LastRequestBody))
+                    await Task.Delay(Timeout.Infinite, token);
+
                 return _behavior switch
                 {
                     MockResponseBehavior.OpenAiSuccess => OpenAiSuccess(),
@@ -203,6 +218,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     MockResponseBehavior.AcceptsTextRejectsImages => RequestContainsImagePngDataUrl(LastRequestBody)
                         ? AzureGatewayBadRequest()
                         : OpenAiSuccess(),
+
+                    // Text path returns success; the image path already hung above until cancellation.
+                    MockResponseBehavior.AcceptsTextHangsOnImage => OpenAiSuccess(),
 
                     _ => throw new InvalidOperationException($"Unknown behavior: {_behavior}")
                 };
@@ -229,5 +247,47 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             "\"prompt_tokens_details\":{\"cached_tokens\":0,\"audio_tokens\":0}," +
             "\"completion_tokens_details\":{\"reasoning_tokens\":0,\"audio_tokens\":0,\"accepted_prediction_tokens\":0,\"rejected_prediction_tokens\":0}}," +
             "\"service_tier\":\"default\",\"system_fingerprint\":\"fp_mock\"}";
+
+        private static MockClientHarness CreateMockClient(MockResponseBehavior behavior)
+        {
+            var connection = new AiConnectionString
+            {
+                Name = ConnectionStringName,
+                ModelType = AiModelType.Chat,
+                OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini")
+            };
+
+            Assert.True(AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings));
+
+            StorageEnvironment storageEnv = null;
+            TransactionContextPool contextPool = null;
+            MockLlm client = null;
+            try
+            {
+                storageEnv = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests());
+                contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), storageEnv);
+                client = new MockLlm(contextPool, settings, ChatCompletionClient.ConventionsToUse, behavior);
+                return new MockClientHarness(storageEnv, contextPool, client);
+            }
+            catch
+            {
+                client?.Dispose();
+                contextPool?.Dispose();
+                storageEnv?.Dispose();
+                throw;
+            }
+        }
+
+        private sealed class MockClientHarness(StorageEnvironment storageEnv, TransactionContextPool contextPool, MockLlm client) : IDisposable
+        {
+            public MockLlm Client => client;
+
+            public void Dispose()
+            {
+                client.Dispose();
+                contextPool.Dispose();
+                storageEnv.Dispose();
+            }
+        }
     }
 }

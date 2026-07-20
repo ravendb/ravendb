@@ -36,7 +36,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
-import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
+import { getAccessRequiredMessage } from "components/utils/accessUtils";
 import classNames from "classnames";
 
 export default function RemoteAttachments() {
@@ -115,7 +115,7 @@ export default function RemoteAttachments() {
                                     },
                                     {
                                         isActive: !hasDatabaseAdminAccess,
-                                        message: getDatabaseAccessRequiredMessage("DatabaseAdmin"),
+                                        message: getAccessRequiredMessage("DatabaseAdmin"),
                                     },
                                 ]}
                             >
@@ -198,7 +198,7 @@ function DestinationsList() {
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasDatabaseAdminAccess,
-                            message: getDatabaseAccessRequiredMessage("DatabaseAdmin"),
+                            message: getAccessRequiredMessage("DatabaseAdmin"),
                         }}
                     >
                         <Button

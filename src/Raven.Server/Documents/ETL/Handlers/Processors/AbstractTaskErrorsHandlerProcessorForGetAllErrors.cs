@@ -3,6 +3,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Sparrow.Json;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Handlers.Processors;
 

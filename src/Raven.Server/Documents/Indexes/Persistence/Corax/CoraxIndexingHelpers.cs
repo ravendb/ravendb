@@ -210,6 +210,12 @@ public static class CoraxIndexingHelpers
                     // BACKWARD COMPATIBILITY.
                     return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformerPre22999));
                 }
+
+                if (indexDefinition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxUnicodeLengthAnalyzers_62)
+                {
+                    // BACKWARD COMPATIBILITY.
+                    return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformerPre24423));
+                }
                 
                 return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformer));
             }

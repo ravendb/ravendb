@@ -28,6 +28,9 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
+using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -46,6 +49,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -253,6 +257,20 @@ namespace Raven.Client.Json.Serialization
         
         internal static readonly Func<BlittableJsonReaderObject, UpdateQueueSinkOperationResult> UpdateQueueSinkOperationResult = GenerateJsonDeserializationRoutine<UpdateQueueSinkOperationResult>();
 
+        internal static readonly Func<BlittableJsonReaderObject, AddCdcSinkOperationResult> AddCdcSinkOperationResult = GenerateJsonDeserializationRoutine<AddCdcSinkOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, TestCdcSinkMappingResult> TestCdcSinkMappingResult = GenerateJsonDeserializationRoutine<TestCdcSinkMappingResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, TestCdcSinkMappingRequest> TestCdcSinkMappingRequest = GenerateJsonDeserializationRoutine<TestCdcSinkMappingRequest>();
+
+        internal static readonly Func<BlittableJsonReaderObject, CdcSinkSourceSchema> CdcSinkSourceSchema = GenerateJsonDeserializationRoutine<CdcSinkSourceSchema>();
+
+        internal static readonly Func<BlittableJsonReaderObject, CdcSinkSchemaRequest> CdcSinkSchemaRequest = GenerateJsonDeserializationRoutine<CdcSinkSchemaRequest>();
+
+        internal static readonly Func<BlittableJsonReaderObject, UpdateCdcSinkOperationResult> UpdateCdcSinkOperationResult = GenerateJsonDeserializationRoutine<UpdateCdcSinkOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, CdcSinkProcessState> CdcSinkProcessState = GenerateJsonDeserializationRoutine<CdcSinkProcessState>();
+
         internal static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessState = GenerateJsonDeserializationRoutine<EtlProcessState>();
         
         internal static readonly Func<BlittableJsonReaderObject, QueueSinkProcessState> QueueSinkProcessState = GenerateJsonDeserializationRoutine<QueueSinkProcessState>();
@@ -274,6 +292,10 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, PutServerWideBackupConfigurationResponse> PutServerWideBackupConfigurationResponse = GenerateJsonDeserializationRoutine<PutServerWideBackupConfigurationResponse>();
         
         internal static readonly Func<BlittableJsonReaderObject, ServerWideExternalReplicationResponse> PutServerWideConfigurationResponse = GenerateJsonDeserializationRoutine<ServerWideExternalReplicationResponse>();
+
+        internal static readonly Func<BlittableJsonReaderObject, PutServerWideConnectionStringResult> PutServerWideConnectionStringResult = GenerateJsonDeserializationRoutine<PutServerWideConnectionStringResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, RemoveServerWideConnectionStringResult> RemoveServerWideConnectionStringResult = GenerateJsonDeserializationRoutine<RemoveServerWideConnectionStringResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetServerWideBackupConfigurationsResponse> GetServerWideBackupConfigurationsResponse = GenerateJsonDeserializationRoutine<GetServerWideBackupConfigurationsResponse>();
         
@@ -349,6 +371,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, AiConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiConnectionString>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskQueueSink> GetOngoingTaskQueueSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskQueueSink>();
+
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskCdcSink> GetOngoingTaskCdcSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskCdcSink>();
 
         public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsOperation.Result> DeleteRevisionsResult = GenerateJsonDeserializationRoutine<DeleteRevisionsOperation.Result>();
 

@@ -12,6 +12,7 @@ using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
 using Task = System.Threading.Tasks.Task;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {

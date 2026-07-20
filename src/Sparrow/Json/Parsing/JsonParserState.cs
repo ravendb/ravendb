@@ -273,13 +273,5 @@ namespace Sparrow.Json.Parsing
             return sequence.Count;
         }
         
-#if NET8_0_OR_GREATER
-        //RavenDB-25738 For backward compatibility only. Use only for document IDs, collection, attachment name & type, and timeseries tag
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(byte* str, ref int len, int previousComputedMaxSize)
-        {
-            StringUtils.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(EscapePositions, str, ref len, previousComputedMaxSize);
-        }
-#endif
     }
 }

@@ -16,7 +16,8 @@ public class NetworkAnalysisInfo : IDynamicJson
         return new DynamicJsonValue
         {
             [nameof(TotalActiveTcpConnections)] = TotalActiveTcpConnections,
-            [nameof(TcpConnections)] = new DynamicJsonArray(TcpConnections.Select(x => x.ToJson()))
+            [nameof(TcpConnections)] = new DynamicJsonArray(TcpConnections.Select(x => x.ToJson())),
+            [nameof(PingTestResults)] = PingTestResults != null ? new DynamicJsonArray(PingTestResults.Select(x => x.ToJson())) : null
         };
     }
 }

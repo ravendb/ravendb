@@ -51,6 +51,9 @@ namespace Raven.Server.Documents.Replication
             JsonOperationContext.MemoryBuffer buffer,
             CancellationToken token)
         {
+            if (timeout <= 0)
+                return new Result { Timeout = true };
+
             if (_prevCall == null)
             {
                 _prevCall = ReadNextObject(debugTag, buffer, token);

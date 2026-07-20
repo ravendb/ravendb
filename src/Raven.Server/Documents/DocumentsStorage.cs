@@ -87,6 +87,7 @@ namespace Raven.Server.Documents
         public static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
+        public static readonly Slice SupportedFeaturesSlice;
         private readonly Action<LogLevel, string> _addToInitLog;
         
         public Action<LogLevel, string> AddToInitLog => _addToInitLog;
@@ -110,10 +111,10 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "LastCompletedClusterTransactionIndex", ByteStringType.Immutable, out LastCompletedClusterTransactionIndexSlice);
                 Slice.From(ctx, "LastRevisionsBinCleanerState", ByteStringType.Immutable, out RevisionsBinCleanerLastEtag);
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
+                Slice.From(ctx, "SupportedFeatures", ByteStringType.Immutable, out SupportedFeaturesSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
                 Slice.From(ctx, "FixCountersLastKeySlice", ByteStringType.Immutable, out FixCountersLastKeySlice);
-
             }
         }
 
@@ -465,6 +466,32 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, fullChangeVector, out var slice))
             {
                 tree.Add(GlobalFullChangeVectorSlice, slice);
+            }
+        }
+
+        public static List<string> ReadSupportedFeatures(Transaction tx)
+        {
+            if (tx.ReadTree(GlobalTreeSlice).TryRead(SupportedFeaturesSlice, out var reader) == false || reader.Length == 0)
+                return [];
+
+            return reader.ToStringValue().Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+        }
+
+        public void PersistSupportedFeatures(IReadOnlyList<string> features)
+        {
+            if (features == null || features.Count == 0)
+                return;
+
+            using (var tx = Environment.ReadTransaction())
+            {
+                if (tx.ReadTree(GlobalTreeSlice).TryRead(SupportedFeaturesSlice, out _))
+                    return;
+            }
+
+            using (var tx = Environment.WriteTransaction())
+            {
+                tx.ReadTree(GlobalTreeSlice).Add(SupportedFeaturesSlice, Encodings.Utf8.GetBytes(string.Join(",", features)));
+                tx.Commit();
             }
         }
 
@@ -1665,7 +1692,7 @@ namespace Raven.Server.Documents
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
                 ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
+                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr),
             };
 
             switch (result.Type)
@@ -1676,10 +1703,22 @@ namespace Raven.Server.Documents
                     break;
                 case Tombstone.TombstoneType.Revision:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
+                    break;
+                case Tombstone.TombstoneType.Attachment:
+                    result.RevisionVersion = ReadRevisionVersion(context, ref tvr);
                     break;
             }
 
             return result;
+        }
+
+        // Field 9 (TombstoneTable.RevisionVersion) -- present only on Hashed-form RT/RAT writes; legacy 9-field rows have no slot.
+        private static string ReadRevisionVersion(JsonOperationContext context, ref TableValueReader tvr)
+        {
+            return tvr.Count > (int)TombstoneTable.RevisionVersion
+                ? TableValueToChangeVector(context, (int)TombstoneTable.RevisionVersion, ref tvr)
+                : null;
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)
@@ -2569,24 +2608,14 @@ namespace Raven.Server.Documents
         {
             var remoteChangeVector = context.GetChangeVector(remote);
             var localChangeVector = context.GetChangeVector(local);
+
+            // TRXN adds no ordering beyond RAFT; stripping it avoids false conflicts between cluster-tx and normal CVs.
+            remoteChangeVector = remoteChangeVector.StripTrxnTags(context);
+            localChangeVector = localChangeVector.StripTrxnTags(context);
+
             var originalStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, localChangeVector, mode: mode);
-
-            // conflicts for document with cluster tx have a special treatment in case of conflict
-            // because in some cases newer document in a normal tx can be conflicted with an older document/tombstone that was created in cluster tx
-            // so we should pick the newer version
-
-            // our local change vector is           RAFT:2, TRXN:10
-            // case 1: incoming change vector A:10, RAFT:3          -> update    (although it is a conflict) 
-            // case 2: incoming change vector A:10, RAFT:2          -> update    (although it is a conflict)
-            // case 3: incoming change vector A:10, RAFT:1          -> already merged
-            var partOfClusterTx = false;
-            var clusterTransactionId = DocumentDatabase.ClusterTransactionId;
-            if (string.IsNullOrEmpty(clusterTransactionId) == false)
-            {
-                partOfClusterTx = remote?.Contains(clusterTransactionId) == true || local?.Contains(clusterTransactionId) == true;
-            }
-
-            if (originalStatus == ConflictStatus.Conflict && (HasUnusedDatabaseIds() || partOfClusterTx))
+            
+            if (originalStatus == ConflictStatus.Conflict && HasUnusedDatabaseIds())
             {
                 // We need to distinguish between few cases here
                 // let's assume that node C was removed
@@ -2602,10 +2631,7 @@ namespace Raven.Server.Documents
                 // case 2: incoming change vector A:10, B:11, C:10 -> conflict              (original: conflict, after: conflict)
                 // case 3: incoming change vector A:11, B:10, C:10 -> update                (original: update, after: already merged)
                 // case 4: incoming change vector A:11, B:12, C:10 -> update                (original: conflict, after: update)
-
-                remoteChangeVector = remoteChangeVector.StripTrxnTags(context);
-                localChangeVector = localChangeVector.StripTrxnTags(context);
-
+              
                 remoteChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out remoteChangeVector);
                 var skipValidation = localChangeVector.TryRemoveIds(UnusedDatabaseIds, context, out localChangeVector);
                 context.SkipChangeVectorValidation |= skipValidation;

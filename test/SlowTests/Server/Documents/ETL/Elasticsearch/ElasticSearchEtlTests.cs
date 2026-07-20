@@ -20,6 +20,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {

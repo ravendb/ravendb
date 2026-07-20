@@ -56,6 +56,7 @@
     <EmbeddedResource Include="Data\RavenDB_19449\RavenDB_19449.zip" />
     <EmbeddedResource Include="Data\RavenDB_19560\ravendb_19560.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21263\revisionsWithLargeChangeVector-oldDatabaseVersion.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_26945\RavenDB_26945.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21263\test1111-emptySupportedFeatures.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_21263\test1111-withoutSupportedFeatures.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_21889\RavenDB_21889_BackwardCompatibility.ravendb-snapshot" />

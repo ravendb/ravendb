@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             if (batch.Items.Count == 0)
             {
-                SendHeartbeat(null);
+                SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: null);
                 batch.LastAcceptedChangeVector = LastAcceptedChangeVector;
                 return;
             }

@@ -276,12 +276,8 @@ namespace Raven.Server.Documents
                     }
                     else if (conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
                     {
-                        using (Slice.External(context.Allocator, conflicted.LowerId, out var key))
-                        using (RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, conflicted.LowerId, out var changeVectorSlice))
-                        {
-                            var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks, changeVectorSlice, fromReplication: false);
-                        }
+                        var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+                        _documentsStorage.RevisionsStorage.DeleteRevision(context, conflicted.Id, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks);
                     }
                     _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);
                     changeVectors.Add(conflicted.ChangeVector);
@@ -468,7 +464,7 @@ namespace Raven.Server.Documents
 
             var fromSmuggler = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out Slice lowerId, out Slice idPtr))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 CollectionName collectionName;
 
@@ -648,7 +644,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var existingConflict in conflicts)
                 {
-                    status = ChangeVectorUtils.GetConflictStatus(context.GetChangeVector(changeVector), context.GetChangeVector(existingConflict.ChangeVector));
+                    status = context.DocumentDatabase.DocumentsStorage.GetConflictStatusForVersion(context, changeVector, existingConflict.ChangeVector);
                     if (status == ConflictStatus.Conflict)
                     {
                         ConflictManager.AssertChangeVectorNotNull(existingConflict.ChangeVector);

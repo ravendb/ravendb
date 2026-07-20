@@ -222,13 +222,7 @@ export default function DocumentRefresh() {
                     </Col>
                     <Col sm={12} lg={4}>
                         <AboutViewAnchored>
-                            <AccordionItemWrapper
-                                targetId="1"
-                                icon="about"
-                                color="info"
-                                description="Get additional info on this feature"
-                                heading="About this view"
-                            >
+                            <AccordionItemWrapper targetId="1" icon="about" color="info">
                                 <p>
                                     When <strong>Document Refresh</strong> is enabled:
                                 </p>

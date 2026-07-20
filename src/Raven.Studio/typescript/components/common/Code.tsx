@@ -1,5 +1,5 @@
 import "./Code.scss";
-import { useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import Prism from "prismjs";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
@@ -17,6 +17,7 @@ require("prismjs/components/prism-csharp");
 require("prismjs/components/prism-json");
 require("prismjs/components/prism-sql");
 require("prismjs/components/prism-python");
+require("prismjs/components/prism-java");
 
 export const supportedCodeLanguages = [
     "plaintext",
@@ -36,6 +37,7 @@ export const supportedCodeLanguages = [
     "sql",
     "rql",
     "python",
+    "java",
 ] as const;
 
 export type CodeLanguage = (typeof supportedCodeLanguages)[number];
@@ -45,14 +47,32 @@ interface CodeProps {
     language: CodeLanguage;
     className?: string;
     codeClassName?: string;
-    whiteSpace?: "pre" | "normal";
+    whiteSpace?: "pre" | "pre-wrap" | "normal";
+    // Adds a "Wrap" toggle to the actions bar (on by default) so long lines wrap instead of overflowing horizontally.
+    wrappable?: boolean;
     isActionsHidden?: boolean;
+    isRunQueryHidden?: boolean;
+    extraActions?: ReactNode;
     sourceView?: "chatbot";
     isTitleHidden?: boolean;
 }
 
 export default function Code(props: CodeProps) {
-    const { code, className, codeClassName, whiteSpace, isActionsHidden, sourceView, isTitleHidden } = props;
+    const {
+        code,
+        className,
+        codeClassName,
+        whiteSpace,
+        wrappable,
+        isActionsHidden,
+        isRunQueryHidden,
+        extraActions,
+        sourceView,
+        isTitleHidden,
+    } = props;
+
+    const [wrapped, setWrapped] = useState(true);
+    const isWrapped = wrappable === true && wrapped;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const chatbotDatabaseContext = useAppSelector((state) =>
@@ -119,6 +139,20 @@ export default function Code(props: CodeProps) {
                 <div className="code-actions">
                     {!isTitleHidden && languageTitle && <div>{languageTitle}</div>}
                     <div className="hstack gap-2 ms-auto">
+                        {wrappable && (
+                            <Button
+                                variant="link"
+                                className="text-emphasis"
+                                active={wrapped}
+                                aria-pressed={wrapped}
+                                title={wrapped ? "Disable line wrapping" : "Enable line wrapping"}
+                                onClick={() => setWrapped((prev) => !prev)}
+                            >
+                                <Icon icon="newline" />
+                                Wrap
+                            </Button>
+                        )}
+                        {extraActions}
                         <Button
                             variant="link"
                             className="text-emphasis"
@@ -128,7 +162,7 @@ export default function Code(props: CodeProps) {
                             <Icon icon="copy" />
                             Copy
                         </Button>
-                        {hasDatabase && props.language === "rql" && (
+                        {!isRunQueryHidden && hasDatabase && props.language === "rql" && (
                             <Button variant="link" className="text-emphasis" onClick={handleRunQuery}>
                                 <Icon icon="rocket" />
                                 Run query
@@ -139,8 +173,10 @@ export default function Code(props: CodeProps) {
             )}
             <pre className="code-classes d-flex flex-grow-1 m-0">
                 <code
-                    className={classNames(`language-${languageToHighlight}`, "monospace-font", codeClassName)}
-                    style={{ whiteSpace: whiteSpace ?? "pre" }}
+                    className={classNames(`language-${languageToHighlight}`, "monospace-font", codeClassName, {
+                        wrapped: isWrapped,
+                    })}
+                    style={{ whiteSpace: isWrapped ? "pre-wrap" : (whiteSpace ?? "pre") }}
                 >
                     <div dangerouslySetInnerHTML={{ __html: html }} />
                 </code>
@@ -176,4 +212,5 @@ const languageTitles: Record<CodeLanguage, string> = {
     sql: "SQL",
     rql: "RQL",
     python: "Python",
+    java: "Java",
 };

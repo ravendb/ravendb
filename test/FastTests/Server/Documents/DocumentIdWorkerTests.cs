@@ -135,8 +135,8 @@ namespace FastTests.Server.Documents
             using var memoryStream = new MemoryStream();
 
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, id, out var withoutAsciiSliceLower, out var withoutAsciiSlice))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, idWithNonAscii, out var withAsciiSliceLower, out var withAsciiSlice))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, id, out var withoutAsciiSliceLower, out var withoutAsciiSlice))
+            using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, idWithNonAscii, out var withAsciiSliceLower, out var withAsciiSlice))
             {
                 var withoutAsciiLazyString = GetLazyStringValue(context, withoutAsciiSlice);
                 var withAsciiLazyString = GetLazyStringValue(context, withAsciiSlice);

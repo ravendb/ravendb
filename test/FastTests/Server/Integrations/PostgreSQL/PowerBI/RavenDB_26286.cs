@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Integrations.PostgreSQL.PowerBI;
+using Raven.Server.Integrations.PostgreSQL.Translation;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -31,7 +32,7 @@ where ""Title"" = 'Sales Representative'
 limit 0";
 
             Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
-            Assert.IsType<PowerBIRqlQuery>(pgQuery);
+            Assert.IsType<PgSqlTranslatedRqlQuery>(pgQuery);
 
             var queryString = GetQueryString(pgQuery);
             Assert.NotNull(queryString);

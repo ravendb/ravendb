@@ -1,17 +1,9 @@
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormInput, FormSwitch, FormGroup, FormLabel, FormSelect } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
 import { SelectOption } from "components/common/select/Select";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import useBoolean from "components/hooks/useBoolean";
-import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
-import { useAppDispatch, useAppSelector } from "components/store";
-import { sortBy } from "lodash";
-import { useAsync } from "react-async-hook";
-import { editGenAiTaskActions, editGenAiTaskSelectors } from "../../store/editGenAiTaskSlice";
-import EditGenAiTaskNodeField from "./EditGenAiTaskNodeField";
-import InputGroup from "react-bootstrap/InputGroup";
-import { useServices } from "components/hooks/useServices";
+import { useAppSelector } from "components/store";
+import { editGenAiTaskSelectors } from "../../store/editGenAiTaskSlice";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditGenAiTaskFormData, GenAiStartingPoint } from "../../utils/editGenAiTaskValidation";
 import TaskUtils from "components/utils/TaskUtils";
@@ -22,46 +14,17 @@ import Button from "react-bootstrap/Button";
 import { editGenAiTaskUtils } from "../../utils/editGenAiTaskUtils";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import tasksCommonContent from "models/database/tasks/tasksCommonContent";
+import { FormTaskResponsibleNode } from "components/common/formFields/FormTaskResponsibleNode";
+import { FormTaskConnectionString } from "components/common/formFields/FormTaskConnectionString";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
 export default function EditGenAiTaskBasicFields() {
-    const dispatch = useAppDispatch();
-
     const isEncrypted = useAppSelector(databaseSelectors.activeDatabase)?.isEncrypted;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isEditTask = useAppSelector(editGenAiTaskSelectors.isEditTask);
-
-    const { value: isNewConnectionStringOpen, toggle: toggleIsNewConnectionStringOpen } = useBoolean(false);
-
-    const { tasksService } = useServices();
-
     const { control, setValue } = useFormContext<EditGenAiTaskFormData>();
     const formValues = useWatch({ control });
-
-    const asyncGetConnectionStringsOptions = useAsync(async () => {
-        const result = await tasksService.getConnectionStrings(databaseName);
-
-        dispatch(editGenAiTaskActions.aiConnectionStringsSet(result.AiConnectionStrings));
-
-        const connectionStrings = Object.values(result.AiConnectionStrings)
-            .filter((x) => x.ModelType === "Chat")
-            .map((x) => x.Name);
-
-        return sortBy(connectionStrings, (x) => x.toUpperCase()).map(
-            (x) => ({ value: x, label: x }) satisfies SelectOption
-        );
-    }, []);
-
-    const handleConnectionStringSave = async (connectionName: string) => {
-        await asyncGetConnectionStringsOptions.execute();
-        setValue("connectionStringName", connectionName, {
-            shouldValidate: true,
-            shouldTouch: true,
-            shouldDirty: true,
-        });
-        toggleIsNewConnectionStringOpen();
-    };
 
     const handleGenerateIdentifier = () => {
         setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
@@ -145,36 +108,13 @@ export default function EditGenAiTaskBasicFields() {
                     </FormGroup>
                 </div>
             )}
-            <EditGenAiTaskNodeField />
-            <FormGroup>
-                <FormLabel>Connection String</FormLabel>
-                <InputGroup>
-                    <FormSelect
-                        control={control}
-                        name="connectionStringName"
-                        options={asyncGetConnectionStringsOptions.result ?? []}
-                        isLoading={asyncGetConnectionStringsOptions.loading}
-                    />
-                    <InputGroup.Text>
-                        <ButtonWithSpinner
-                            variant="link"
-                            className="text-reset px-0"
-                            icon="plus"
-                            isSpinning={asyncGetConnectionStringsOptions.loading}
-                            onClick={toggleIsNewConnectionStringOpen}
-                        >
-                            Create a new AI connection string
-                        </ButtonWithSpinner>
-                    </InputGroup.Text>
-                    {isNewConnectionStringOpen && (
-                        <EditConnectionStrings
-                            initialConnection={{ type: "Ai", modelType: "Chat" }}
-                            afterSave={handleConnectionStringSave}
-                            afterClose={toggleIsNewConnectionStringOpen}
-                        />
-                    )}
-                </InputGroup>
-            </FormGroup>
+            <FormTaskResponsibleNode
+                control={control}
+                isSetName="isSetResponsibleNode"
+                nodeName="responsibleNode"
+                isPinName="isPinResponsibleNode"
+            />
+            <FormTaskConnectionString control={control} name="connectionStringName" type="Ai" modelType="Chat" />
             <FormGroup>
                 <FormLabel>
                     Max concurrency <OptionalLabel />

@@ -6,6 +6,11 @@ import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import { SharedStubs } from "test/stubs/SharedStubs";
 import { mockJQueryError } from "test/mocks/utils";
+import { DebugPackageStubs } from "test/stubs/DebugPackageStubs";
+
+type RaftDebugView = Raven.Server.Rachis.RaftDebugView;
+type OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
+type SettingsResult = Raven.Server.Config.SettingsResult;
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -146,5 +151,109 @@ export default class MockManageServerService extends AutoMockService<ManageServe
 
     withGenerateTwoFactorSecret(dto?: MockedValue<{ Secret: string }>) {
         return this.mockResolvedValue(this.mocks.generateTwoFactorSecret, dto, ManageServerStubs.twoFactorSecret());
+    }
+
+    // ----- Debug Package Analyzer (on-demand section data) -----
+    // Each helper resolves a filled stub by default; pass `empty: true` to resolve the no-data value
+    // so the corresponding section in the story renders its empty state.
+
+    private mockDebugPackageValue<T>(mock: any, empty: boolean, emptyValue: T, filledValue: T): T {
+        const value = empty ? emptyValue : filledValue;
+        mock.mockResolvedValue(value);
+        return value;
+    }
+
+    withDebugPackageClusterLog(empty = false) {
+        return this.mocks.getDebugPackageClusterLog.mockImplementation(
+            async (_packageId: string, nodeTag: string): Promise<RaftDebugView> => {
+                if (empty) {
+                    return null as unknown as RaftDebugView;
+                }
+                return nodeTag === "A"
+                    ? ManageServerStubs.getClusterLogLeader()
+                    : ManageServerStubs.getClusterLogFollower();
+            }
+        );
+    }
+
+    withDebugPackageClusterObserverDecisions(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageClusterObserverDecisions,
+            empty,
+            null,
+            DebugPackageStubs.observerDecisions()
+        );
+    }
+
+    withDebugPackageDatabaseStats(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageDatabaseStats,
+            empty,
+            null,
+            DebugPackageStubs.databaseStats()
+        );
+    }
+
+    withDebugPackageDatabaseIndexStats(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageDatabaseIndexStats,
+            empty,
+            [],
+            DebugPackageStubs.databaseIndexStats()
+        );
+    }
+
+    withDebugPackageDatabaseIndexDefinitions(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageDatabaseIndexDefinitions,
+            empty,
+            [],
+            DebugPackageStubs.databaseIndexDefinitions()
+        );
+    }
+
+    withDebugPackageDatabaseIndexErrors(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageDatabaseIndexErrors,
+            empty,
+            [],
+            DebugPackageStubs.databaseIndexErrors()
+        );
+    }
+
+    withDebugPackageDatabaseOngoingTasks(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageDatabaseOngoingTasks,
+            empty,
+            { OngoingTasks: [] } as unknown as OngoingTasksResult,
+            DebugPackageStubs.databaseOngoingTasks()
+        );
+    }
+
+    withDebugPackageDatabaseSettings(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageDatabaseSettings,
+            empty,
+            { Settings: [] } as unknown as SettingsResult,
+            DebugPackageStubs.databaseSettings()
+        );
+    }
+
+    withDebugPackageNetworkInfo(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageNetworkInfo,
+            empty,
+            null,
+            DebugPackageStubs.networkInfo()
+        );
+    }
+
+    withDebugPackageThreadsInfo(empty = false) {
+        return this.mockDebugPackageValue(
+            this.mocks.getDebugPackageThreadsInfo,
+            empty,
+            null,
+            DebugPackageStubs.threadsInfo()
+        );
     }
 }

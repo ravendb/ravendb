@@ -6,6 +6,7 @@ import {
     OngoingTaskEmbeddingsGenerationInfo,
     OngoingTaskAmazonSqsEtlInfo,
     OngoingTaskAzureQueueStorageEtlInfo,
+    OngoingTaskCdcSinkInfo,
     OngoingTaskElasticSearchEtlInfo,
     OngoingTaskExternalReplicationInfo,
     OngoingTaskInfo,
@@ -54,6 +55,7 @@ import OngoingTaskOperationConfirm from "../shared/OngoingTaskOperationConfirm";
 import { KafkaSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/KafkaSinkPanel";
 import { RabbitMqSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/RabbitMqSinkPanel";
 import { AzureServiceBusSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/AzureServiceBusSinkPanel";
+import { CdcSinkPanel } from "components/pages/database/tasks/ongoingTasks/panels/CdcSinkPanel";
 import { CounterBadge } from "components/common/CounterBadge";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useAppSelector } from "components/store";
@@ -78,7 +80,7 @@ import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.Replic
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import genUtils from "common/generalUtils";
-import { EtlErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
+import { TaskErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
 interface OngoingTasksPageProps {
     isAiOnly?: boolean;
@@ -128,13 +130,13 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
         [db.name]
     );
 
-    const getEtlErrors = useCallback(
-        (location: databaseLocationSpecifier) => tasksService.getEtlErrors(db.name, location),
+    const getTaskErrors = useCallback(
+        (location: databaseLocationSpecifier) => tasksService.getTaskErrors(db.name, location),
         [db.name]
     );
 
     const { result: etlStatsResult } = useDatabaseWideAsync(getEtlStats);
-    const { result: etlErrorsResult } = useDatabaseWideAsync(getEtlErrors);
+    const { result: taskErrorsResult } = useDatabaseWideAsync(getTaskErrors);
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
@@ -256,6 +258,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
         kafkaSinks,
         rabbitMqSinks,
         azureServiceBusSinks,
+        cdcSinks,
         elasticSearchEtls,
         embeddingsGenerations,
         genAiTasks,
@@ -283,7 +286,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
     ];
 
     const flatEtlStats: EtlTaskStats[] = etlStatsResult.flatMap((x) => x.data ?? []);
-    const flatEtlErrors: EtlErrorsWithLocation[] = etlErrorsResult.flatMap((x) =>
+    const flatTaskErrors: TaskErrorsWithLocation[] = taskErrorsResult.flatMap((x) =>
         (x.data ?? []).map((e) => ({
             ...e,
             nodeTag: x.location.nodeTag,
@@ -291,7 +294,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
         }))
     );
 
-    const sinks = [...kafkaSinks, ...rabbitMqSinks, ...azureServiceBusSinks];
+    const sinks = [...kafkaSinks, ...rabbitMqSinks, ...azureServiceBusSinks, ...cdcSinks];
 
     useEffect(() => {
         throttledUpdateLicenseLimitsUsage();
@@ -523,7 +526,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                         data={x}
                                         showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
-                                        etlErrors={flatEtlErrors}
+                                        taskErrors={flatTaskErrors}
                                     />
                                 ))}
                                 {embeddingsGenerations.map((x) => (
@@ -533,7 +536,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                         data={x}
                                         showItemPreview={showItemPreview}
                                         etlStats={flatEtlStats}
-                                        etlErrors={flatEtlErrors}
+                                        taskErrors={flatTaskErrors}
                                     />
                                 ))}
                             </div>
@@ -663,7 +666,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -673,7 +676,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -683,7 +686,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -693,7 +696,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -703,7 +706,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -713,7 +716,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -723,7 +726,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -733,7 +736,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -743,7 +746,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 key={taskKey(x.shared)}
                                                 data={x}
                                                 etlStats={flatEtlStats}
-                                                etlErrors={flatEtlErrors}
+                                                taskErrors={flatTaskErrors}
                                                 showItemPreview={showItemPreview}
                                             />
                                         ))}
@@ -767,6 +770,14 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                                 {...sharedPanelProps}
                                                 key={taskKey(x.shared)}
                                                 data={x}
+                                            />
+                                        ))}
+                                        {cdcSinks.map((x) => (
+                                            <CdcSinkPanel
+                                                {...sharedPanelProps}
+                                                key={taskKey(x.shared)}
+                                                data={x}
+                                                taskErrors={flatTaskErrors}
                                             />
                                         ))}
                                     </div>
@@ -811,7 +822,8 @@ function filterOngoingTask(sharedInfo: OngoingTaskSharedInfo, filter: OngoingTas
         filter.types.includes("Sink") &&
         (sharedInfo.taskType === "KafkaQueueSink" ||
             sharedInfo.taskType === "RabbitQueueSink" ||
-            sharedInfo.taskType === "AzureServiceBusQueueSink");
+            sharedInfo.taskType === "AzureServiceBusQueueSink" ||
+            sharedInfo.taskType === "CdcSink");
 
     const isBackupTypeMatching = filter.types.includes("Backup") && sharedInfo.taskType === "Backup";
 
@@ -868,6 +880,7 @@ function getFilteredTasks(state: OngoingTasksState, filter: OngoingTasksFilterCr
         azureServiceBusSinks: filteredTasks.filter(
             (x) => x.shared.taskType === "AzureServiceBusQueueSink"
         ) as OngoingTaskAzureServiceBusSinkInfo[],
+        cdcSinks: filteredTasks.filter((x) => x.shared.taskType === "CdcSink") as OngoingTaskCdcSinkInfo[],
         elasticSearchEtls: filteredTasks.filter(
             (x) => x.shared.taskType === "ElasticSearchEtl"
         ) as OngoingTaskElasticSearchEtlInfo[],
