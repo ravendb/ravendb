@@ -11,7 +11,7 @@ public sealed record AgentRequest(
     string AgentId,
     string ConversationId,
     string Prompt,
-    string ChannelWidgetId,
+    string ChannelId,
     IReadOnlyDictionary<string, string> Parameters
     );
 
@@ -72,7 +72,7 @@ internal sealed class AgentRouter(IDocumentStore store) : IAgentRouter
         {
             ConversationId = conversationId,
             Agent = agent,
-            ChannelWidgetId = request.ChannelWidgetId,
+            ChannelId = request.ChannelId,
             Parameters = new Dictionary<string, string>(request.Parameters),
             CreatedAt = nowUtc
         };
