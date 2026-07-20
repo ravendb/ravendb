@@ -128,7 +128,7 @@ public static class EmbedEndpoints
         try
         {
             var result = await router.RunAsync(
-                new AgentRequest(app.Database, config.Identifier, gate.ConversationId, body.Prompt, link.WidgetId, link.Parameters),
+                new AgentRequest(app.Database, config.Identifier, gate.ConversationId, body.Prompt, channel.Id!, link.Parameters),
                 async chunk =>
                 {
                     streamedAny = true;

@@ -52,7 +52,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         Assert.Equal("user", firstExchange[1].GetProperty("role").GetString());
         Assert.Equal("hello", firstExchange[1].GetProperty("text").GetString());
         Assert.Equal(JsonValueKind.Null, first.GetProperty("transcript").ValueKind);
-        Assert.Equal("wgt1", first.GetProperty("channelName").GetString());      // attributed via the preview's ChannelWidgetId
+        Assert.Equal("wgt1", first.GetProperty("channelName").GetString());      // attributed via the preview's ChannelId (no display name → bare widget-id label)
 
         Assert.Equal("closed", list[1].GetProperty("state").GetString());        // 3 days ago
         Assert.Equal("", list[1].GetProperty("channelName").GetString());        // direct chat → unattributed

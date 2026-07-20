@@ -98,7 +98,7 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
         IReadOnlyDictionary<string, string>? parameters = null) =>
         AgentRouter.UpsertPreviewAsync(store,
             new AgentRequest(database, AgentId: agent, ConversationId: conversationId, Prompt: lastUserPrompt,
-                ChannelWidgetId: channelWidgetId ?? "", Parameters: parameters ?? new Dictionary<string, string>()),
+                ChannelId: channelWidgetId is null ? "" : Channel.IdPrefix + channelWidgetId, Parameters: parameters ?? new Dictionary<string, string>()),
             agent, conversationId, reply: lastAgentReply, nowUtc: lastMessageAt, CancellationToken.None);
 
     /// <summary>Writes a document into the per-app <c>@conversations</c> collection

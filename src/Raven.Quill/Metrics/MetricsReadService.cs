@@ -529,14 +529,14 @@ internal static class MetricsReadService
         var previews = await session.Query<ConversationPreview, ConversationPreviewIndex>()
             .Where(x => x.LastMessageAt >= period.Start && x.LastMessageAt < period.End)
             .Statistics(out var stats)
-                .Include(i => i.IncludeDocuments<Channel>(p => p.ChannelWidgetId))
+                .Include(i => i.IncludeDocuments<Channel>(p => p.ChannelId))
                 .OrderByDescending(x => x.LastMessageAt)
                 .Skip(start).Take(pageSize)
                 .ToListAsync(ct);
 
         var items = new List<ConversationDto>(previews.Count);
         foreach (var p in previews)
-            items.Add(BuildPreviewDto(p, slug, await ChannelNameAsync(session, p.ChannelWidgetId, ct), nowUtc));
+            items.Add(BuildPreviewDto(p, slug, await ChannelNameAsync(session, p.ChannelId, ct), nowUtc));
 
         return new ConversationListResult(items, stats.TotalResults);
     }
@@ -559,19 +559,24 @@ internal static class MetricsReadService
 
         using var session = store.OpenAsyncSession(database);
         var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor(conversationId),
-            include => include.IncludeDocuments<Channel>(p => p.ChannelWidgetId), ct)
+            include => include.IncludeDocuments<Channel>(p => p.ChannelId), ct)
             ?? new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
-        var channelName = await ChannelNameAsync(session, preview.ChannelWidgetId, ct);
+        var channelName = await ChannelNameAsync(session, preview.ChannelId, ct);
 
         return BuildDto(result, slug, preview, channelName, nowUtc);
     }
 
-    private static async Task<string> ChannelNameAsync(IAsyncDocumentSession session, string widgetId, CancellationToken ct)
+    private static async Task<string> ChannelNameAsync(IAsyncDocumentSession session, string channelId, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(widgetId))
+        if (string.IsNullOrEmpty(channelId))
             return "";
-        var channel = await session.LoadAsync<Channel>(Channel.IdPrefix + widgetId, ct);
-        return channel is null ? "" : string.IsNullOrWhiteSpace(channel.DisplayName) ? widgetId : channel.DisplayName;
+        var channel = await session.LoadAsync<Channel>(channelId, ct);
+        if (channel is null)
+            return "";
+        // fall back to the bare widget id as a label when the channel has no display name
+        return string.IsNullOrWhiteSpace(channel.DisplayName)
+            ? channelId[Channel.IdPrefix.Length..]
+            : channel.DisplayName;
     }
 
     private static ConversationDto BuildPreviewDto(ConversationPreview p, string slug, string channelName, DateTime nowUtc)

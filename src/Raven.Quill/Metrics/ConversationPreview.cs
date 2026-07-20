@@ -21,8 +21,8 @@ internal sealed class ConversationPreview
 
     public string Agent { get; set; } = "";
 
-    // widgetId of the serving channel; null for a direct (playground/API) chat
-    public string ChannelWidgetId { get; set; } = "";
+    // full channel document id (channels/<widgetId>) of the serving channel; empty for a direct chat
+    public string ChannelId { get; set; } = "";
 
     // the conversation's bound (agent-declared) parameters, shown in the list
     public Dictionary<string, string> Parameters { get; set; } = new();
