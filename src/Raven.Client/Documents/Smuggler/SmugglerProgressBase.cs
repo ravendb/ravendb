@@ -143,6 +143,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         public bool QueueSinksUpdated { get; set; }
 
+        public bool CdcSinksUpdated { get; set; }
+
         public bool IndexesHistoryUpdated { get; set; }
 
         public override DynamicJsonValue ToJson()
@@ -259,6 +261,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (QueueSinksUpdated)
                 json[nameof(QueueSinksUpdated)] = QueueSinksUpdated;
+
+            if (CdcSinksUpdated)
+                json[nameof(CdcSinksUpdated)] = CdcSinksUpdated;
 
             return json;
         }

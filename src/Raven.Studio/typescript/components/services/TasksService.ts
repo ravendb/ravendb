@@ -23,6 +23,18 @@ import testSqlConnectionStringCommand from "commands/database/cluster/testSqlCon
 import deleteConnectionStringCommand from "commands/database/settings/deleteConnectionStringCommand";
 import getConnectionStringsCommand from "commands/database/settings/getConnectionStringsCommand";
 import saveConnectionStringCommand from "commands/database/settings/saveConnectionStringCommand";
+import getServerWideConnectionStringsCommand from "commands/serverWide/connectionStrings/getServerWideConnectionStringsCommand";
+import saveServerWideConnectionStringCommand from "commands/serverWide/connectionStrings/saveServerWideConnectionStringCommand";
+import deleteServerWideConnectionStringCommand from "commands/serverWide/connectionStrings/deleteServerWideConnectionStringCommand";
+import testServerWideSqlConnectionStringCommand from "commands/serverWide/connectionStrings/testServerWideSqlConnectionStringCommand";
+import testServerWideSnowflakeConnectionStringCommand from "commands/serverWide/connectionStrings/testServerWideSnowflakeConnectionStringCommand";
+import testServerWideElasticSearchNodeConnectionCommand from "commands/serverWide/connectionStrings/testServerWideElasticSearchNodeConnectionCommand";
+import testServerWideKafkaServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideKafkaServerConnectionCommand";
+import testServerWideRabbitMqServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideRabbitMqServerConnectionCommand";
+import testServerWideAzureQueueStorageServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAzureQueueStorageServerConnectionCommand";
+import testServerWideAmazonSqsServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAmazonSqsServerConnectionCommand";
+import testServerWideAzureServiceBusServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAzureServiceBusServerConnectionCommand";
+import testServerWideAiConnectionStringCommand from "commands/serverWide/connectionStrings/testServerWideAiConnectionStringCommand";
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
@@ -37,10 +49,13 @@ import saveEtlTaskCommand from "commands/database/tasks/saveEtlTaskCommand";
 import testGenAiCommand from "commands/database/tasks/testGenAiCommand";
 import geAiModelsCommand from "commands/database/tasks/geAiModelsCommand";
 import getJsonSchemaFromSampleObjectCommand from "commands/database/tasks/getJsonSchemaFromSampleObjectCommand";
-import getEtlErrorsCommand from "commands/database/tasks/getEtlErrorsCommand";
+import getTaskErrorsCommand from "commands/database/tasks/getTaskErrorsCommand";
 import getEtlStatsCommand from "commands/database/tasks/getEtlStatsCommand";
-import deleteEtlErrorsCommand from "commands/database/tasks/deleteEtlErrorsCommand";
+import deleteTaskErrorsCommand from "commands/database/tasks/deleteTaskErrorsCommand";
 import retryBatchEtlCommand from "commands/database/tasks/retryBatchEtlCommand";
+import testCdcSinkCommand from "commands/database/tasks/testCdcSinkCommand";
+import saveCdcSinkTaskCommand from "commands/database/tasks/saveCdcSinkTaskCommand";
+import getCdcSinkTaskSchemaCommand from "commands/database/tasks/getCdcSinkTaskSchemaCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -96,6 +111,10 @@ export default class TasksService {
         return new getManualBackupCommand(databaseName).execute();
     }
 
+    async getCdcSinkTaskInfo(...args: Parameters<typeof getOngoingTaskInfoCommand.forCdcSink>) {
+        return getOngoingTaskInfoCommand.forCdcSink(...args).execute();
+    }
+
     async getSampleDataClasses(databaseName: string): Promise<string> {
         return new createSampleDataClassCommand(databaseName).execute();
     }
@@ -122,6 +141,74 @@ export default class TasksService {
 
     async deleteConnectionString(...args: ConstructorParameters<typeof deleteConnectionStringCommand>) {
         return new deleteConnectionStringCommand(...args).execute();
+    }
+
+    async getServerWideConnectionStrings() {
+        return new getServerWideConnectionStringsCommand().execute();
+    }
+
+    async saveServerWideConnectionString(...args: ConstructorParameters<typeof saveServerWideConnectionStringCommand>) {
+        return new saveServerWideConnectionStringCommand(...args).execute();
+    }
+
+    async deleteServerWideConnectionString(
+        ...args: ConstructorParameters<typeof deleteServerWideConnectionStringCommand>
+    ) {
+        return new deleteServerWideConnectionStringCommand(...args).execute();
+    }
+
+    async testServerWideSqlConnectionString(
+        ...args: ConstructorParameters<typeof testServerWideSqlConnectionStringCommand>
+    ) {
+        return new testServerWideSqlConnectionStringCommand(...args).execute();
+    }
+
+    async testServerWideSnowflakeConnectionString(
+        ...args: ConstructorParameters<typeof testServerWideSnowflakeConnectionStringCommand>
+    ) {
+        return new testServerWideSnowflakeConnectionStringCommand(...args).execute();
+    }
+
+    async testServerWideElasticSearchNodeConnection(
+        ...args: ConstructorParameters<typeof testServerWideElasticSearchNodeConnectionCommand>
+    ) {
+        return new testServerWideElasticSearchNodeConnectionCommand(...args).execute();
+    }
+
+    async testServerWideKafkaServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideKafkaServerConnectionCommand>
+    ) {
+        return new testServerWideKafkaServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideRabbitMqServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideRabbitMqServerConnectionCommand>
+    ) {
+        return new testServerWideRabbitMqServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAzureQueueStorageServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideAzureQueueStorageServerConnectionCommand>
+    ) {
+        return new testServerWideAzureQueueStorageServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAmazonSqsServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideAmazonSqsServerConnectionCommand>
+    ) {
+        return new testServerWideAmazonSqsServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAzureServiceBusServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideAzureServiceBusServerConnectionCommand>
+    ) {
+        return new testServerWideAzureServiceBusServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAiConnectionString(
+        ...args: ConstructorParameters<typeof testServerWideAiConnectionStringCommand>
+    ) {
+        return new testServerWideAiConnectionStringCommand(...args).execute();
     }
 
     async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
@@ -217,19 +304,31 @@ export default class TasksService {
         return new getJsonSchemaFromSampleObjectCommand(...args).execute();
     }
 
-    async getEtlErrors(...args: ConstructorParameters<typeof getEtlErrorsCommand>) {
-        return new getEtlErrorsCommand(...args).execute();
+    async getTaskErrors(...args: ConstructorParameters<typeof getTaskErrorsCommand>) {
+        return new getTaskErrorsCommand(...args).execute();
     }
 
     async getEtlStats(...args: ConstructorParameters<typeof getEtlStatsCommand>) {
         return new getEtlStatsCommand(...args).execute();
     }
 
-    async deleteEtlErrors(...args: ConstructorParameters<typeof deleteEtlErrorsCommand>) {
-        return new deleteEtlErrorsCommand(...args).execute();
+    async deleteTaskErrors(...args: ConstructorParameters<typeof deleteTaskErrorsCommand>) {
+        return new deleteTaskErrorsCommand(...args).execute();
     }
 
     async retryBatch(...args: ConstructorParameters<typeof retryBatchEtlCommand>) {
         return new retryBatchEtlCommand(...args).execute();
+    }
+
+    async testCdcSink(...args: ConstructorParameters<typeof testCdcSinkCommand>) {
+        return new testCdcSinkCommand(...args).execute();
+    }
+
+    async saveCdcSinkTask(...args: ConstructorParameters<typeof saveCdcSinkTaskCommand>) {
+        return new saveCdcSinkTaskCommand(...args).execute();
+    }
+
+    async getCdcSinkTaskSchema(...args: ConstructorParameters<typeof getCdcSinkTaskSchemaCommand>) {
+        return new getCdcSinkTaskSchemaCommand(...args).execute();
     }
 }

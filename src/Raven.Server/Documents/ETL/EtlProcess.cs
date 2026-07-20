@@ -55,6 +55,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlType EtlType { get; }
 
-        public TaskCategory TaskCategory => TaskTypeExtensions.FromEtlType(EtlType);
+        public TaskCategory TaskCategory => TaskTypeExtensions.GetTaskCategoryFromEtlType(EtlType);
 
         public virtual string EtlSubType { get; }
 
@@ -556,7 +557,11 @@ namespace Raven.Server.Documents.ETL
                 // double the fallback time (but don't cross Etl.MaxFallbackTime)
                 var secondsSinceLastError = (now - lastErrorTime.Value).TotalSeconds;
 
-                FallbackTime = TimeSpan.FromSeconds(Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2)));
+                // Jitter: add up to 10% random variation to avoid synchronized retries
+                // across multiple ETL processes when a shared destination goes down.
+                var baseSeconds = Math.Min(Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan.TotalSeconds, Math.Max(5, secondsSinceLastError * 2));
+                var jitter = baseSeconds * Random.Shared.NextDouble() * 0.1;
+                FallbackTime = TimeSpan.FromSeconds(baseSeconds + jitter);
             }
             
             Statistics.NextBatchRetryTime = now + FallbackTime;

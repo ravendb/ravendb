@@ -30,9 +30,7 @@ type KafkaSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaSinkInfo>;
 
 function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Kafka", data.shared.connectionStringName);
 
     return (
         <RichPanelDetails>
@@ -41,7 +39,8 @@ function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
                 connectionStringDefined
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
+                connectionStringType="Kafka"
+                databaseName={databaseName}
             />
         </RichPanelDetails>
     );

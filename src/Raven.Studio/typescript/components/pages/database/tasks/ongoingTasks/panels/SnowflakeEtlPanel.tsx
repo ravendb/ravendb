@@ -26,14 +26,14 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
 type SnowflakeEtlPanelProps = EtlPanelBaseProps<OngoingTaskSnowflakeEtlInfo>;
 
 export function SnowflakeEtlPanel(props: SnowflakeEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editSnowflakeEtl(data.shared.taskId)();
 
     const {
@@ -50,11 +50,6 @@ export function SnowflakeEtlPanel(props: SnowflakeEtlPanelProps & ICanShowTransf
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        databaseName,
-        "Snowflake",
-        data.shared.connectionStringName
-    );
 
     return (
         <RichPanel>
@@ -101,10 +96,11 @@ export function SnowflakeEtlPanel(props: SnowflakeEtlPanelProps & ICanShowTransf
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Snowflake"
+                    databaseName={databaseName}
                 />
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}

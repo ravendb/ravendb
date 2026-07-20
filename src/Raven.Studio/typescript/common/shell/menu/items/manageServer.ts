@@ -7,11 +7,13 @@ import AdminJsConsole = require("components/pages/resources/manageServer/adminJs
 import ClientGlobalConfiguration = require("components/pages/resources/manageServer/clientConfiguration/ClientGlobalConfiguration");
 import StudioGlobalConfiguration = require("components/pages/resources/manageServer/studioConfiguration/StudioGlobalConfiguration");
 import GatherDebugInfo = require("components/pages/resources/manageServer/gatherDebugInfo/GatherDebugInfo");
+import DebugPackage = require("components/pages/resources/manageServer/debugPackageAnalyzer/DebugPackage");
 import ServerWideCustomAnalyzers = require("components/pages/resources/manageServer/serverWideAnalyzers/ServerWideCustomAnalyzers");
 import ServerWideCustomSorters = require("components/pages/resources/manageServer/serverWideSorters/ServerWideCustomSorters");
 import ServerSettings = require("components/pages/resources/manageServer/serverSettings/ServerSettings");
 import AdminLogs = require("components/pages/resources/manageServer/adminLogs/AdminLogs");
 import Certificates = require("components/pages/resources/manageServer/certificates/Certificates");
+import ServerWideConnectionStrings = require("components/pages/resources/manageServer/serverWideConnectionStrings/ServerWideConnectionStrings");
 
 export = getManageServerMenuItem;
 
@@ -186,6 +188,22 @@ function getManageServerMenuItem() {
                 ],
             },
         }),
+        new leafMenuItem({
+            route: 'admin/settings/serverWideConnectionStrings',
+            moduleId: reactUtils.bridgeToReact(ServerWideConnectionStrings.default, "nonShardedView"),
+            title: "Server-Wide Connection Strings",
+            nav: true,
+            css: 'icon-manage-connection-strings',
+            dynamicHash: appUrl.forServerWideConnectionStrings,
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Add New Server-Wide Connection String", alternativeNames: ["Create Server-Wide Connection String"] },
+                    { name: "Edit Server-Wide Connection String" },
+                    { name: "Delete Server-Wide Connection String", alternativeNames: ["Remove Server-Wide Connection String"] },
+                ],
+            },
+        }),
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
         new leafMenuItem({
@@ -218,18 +236,35 @@ function getManageServerMenuItem() {
             },
         }),
         new leafMenuItem({
-            route: 'admin/settings/debugInfo',
+            route: 'admin/settings/debugPackage',
             moduleId: reactUtils.bridgeToReact(GatherDebugInfo.default, "nonShardedView"),
-            title: 'Gather Debug Info',
+            title: 'Debug Package',
             nav: true,
             css: 'icon-gather-debug-information',
-            dynamicHash: appUrl.forDebugInfo,
+            dynamicHash: appUrl.forDebugPackage,
             requiredAccess: "Operator",
             search: {
-                alternativeTitles: ["Create Debug Package"],
+                alternativeTitles: ["Create Debug Package", "Gather Debug Info"],
                 innerActions: [
-                    { name: "Gather Debug Info" },
+                    { name: "Create Debug Package" },
                     { name: "Download Debug Package" },
+                ],
+            }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debugPackageAnalyzer',
+            moduleId: reactUtils.bridgeToReact(DebugPackage.default, "nonShardedView"),
+            title: 'Debug Package Analyzer',
+            nav: false,
+            css: 'icon-gather-debug-information',
+            dynamicHash: appUrl.forDebugPackageAnalyzer,
+            itemRouteToHighlight: 'admin/settings/debugPackage',
+            requiredAccess: "Operator",
+            search: {
+                alternativeTitles: ["Analyze Debug Package"],
+                innerActions: [
+                    { name: "Analyze Debug Package" },
+                    { name: "Upload Debug Package" },
                 ],
             }
         }),

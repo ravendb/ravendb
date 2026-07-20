@@ -83,10 +83,11 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         });
     }
 
-    static empty(): connectionStringRavenEtlModel {
+    static empty() {
         return new connectionStringRavenEtlModel({
             Type: "Raven",
-            Name: "", 
+            Name: "",
+            UsedBy: [],
             TopologyDiscoveryUrls: [],
             Database: ""
         }, true, []);

@@ -147,13 +147,7 @@ export default function AdminJSConsole() {
                     </Col>
                     <Col sm={12} lg={4}>
                         <AboutViewAnchored>
-                            <AccordionItemWrapper
-                                targetId="1"
-                                icon="about"
-                                color="info"
-                                description="Get additional info on this feature"
-                                heading="About this view"
-                            >
+                            <AccordionItemWrapper targetId="1" icon="about" color="info">
                                 <p>
                                     <strong>Admin JS Console</strong> is a specialized feature primarily intended for
                                     resolving server errors. It provides a direct interface to the underlying system,

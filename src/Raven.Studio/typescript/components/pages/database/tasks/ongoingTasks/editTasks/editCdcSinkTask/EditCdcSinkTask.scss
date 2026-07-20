@@ -1,0 +1,73 @@
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+
+.edit-cdc-sink-task {
+    .explorer-row-item {
+        .dropdown {
+            opacity: 0;
+            transition: bs5variables.$transition-fade;
+        }
+
+        &:hover {
+            .dropdown {
+                opacity: 1;
+            }
+        }
+    }
+
+    .field-mapping-row {
+        $column-sizes: (
+            "source": 2fr,
+            "arrow": 16.8px,
+            "target": 2fr,
+            "type": 1fr,
+            "delete": 34.4px,
+        );
+
+        display: grid;
+        grid-template-columns:
+            map-get($column-sizes, "source")
+            map-get($column-sizes, "arrow")
+            map-get($column-sizes, "target")
+            map-get($column-sizes, "type")
+            map-get($column-sizes, "delete");
+        gap: sizes.$gutter-xxs;
+        align-items: center;
+
+        --input-height: 30px;
+        --input-padding: 2px;
+
+        .form-control {
+            min-height: var(--input-height);
+            font-size: sizes.$font-size-root;
+        }
+
+        .react-select-container {
+            font-size: sizes.$font-size-root;
+
+            .react-select__control {
+                min-height: var(--input-height);
+            }
+
+            .react-select__value-container {
+                min-height: calc(var(--input-height) - var(--input-padding));
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+
+            .react-select__input-container {
+                margin: 0;
+                padding: 0;
+            }
+
+            .react-select__indicators {
+                height: calc(var(--input-height) - var(--input-padding));
+            }
+
+            .react-select__dropdown-indicator {
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+        }
+    }
+}

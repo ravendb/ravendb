@@ -1,5 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.SqlMigration;
+using Raven.Server.SqlMigration.Oracle;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure;
 using Xunit;
@@ -10,6 +15,32 @@ namespace SlowTests.Server.Documents.Migration
     {
         public OracleSchemaTest(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task FetchRowsAsync_OnOracle_ThrowsNotSupportedException()
+        {
+            // The shared GenericDatabaseMigrator.BuildSelectByPrimaryKeyQuery emits @pN
+            // placeholders, but Oracle uses :pN — calling FetchRowsAsync with
+            // RowFetchMode.ByPrimaryKey on the Oracle driver would generate SQL Oracle
+            // can't bind. The CDC sink (FetchRowsAsync's only production caller) already
+            // rejects Oracle at the handler level (CdcSinkSchemaDiscovery.IsSupportedFactoryName).
+            // Defensive override on the Oracle migrator throws NotSupportedException
+            // immediately so a future caller can't silently regress. No Oracle DB needed —
+            // the override fires before OpenConnection runs.
+            var driver = new OracleDatabaseMigrator("User Id=x;Password=y;Data Source=irrelevant");
+
+            await Assert.ThrowsAsync<NotSupportedException>(async () =>
+            {
+                await driver.FetchRowsAsync(
+                    tableSchema: "X",
+                    tableName: "t",
+                    primaryKeyColumns: new List<string> { "id" },
+                    mode: RowFetchMode.ByPrimaryKey,
+                    primaryKeyValues: new[] { "1" },
+                    maxRows: 1,
+                    ct: CancellationToken.None);
+            });
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport, Requires = RavenServiceRequirement.OracleSql)]

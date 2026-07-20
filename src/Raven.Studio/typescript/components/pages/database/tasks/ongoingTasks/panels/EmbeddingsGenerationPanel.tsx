@@ -26,7 +26,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 import copyToClipboard from "common/copyToClipboard";
 
 type EmbeddingsGenerationPanelProps = EtlPanelBaseProps<OngoingTaskEmbeddingsGenerationInfo>;
@@ -34,7 +34,7 @@ type EmbeddingsGenerationPanelProps = EtlPanelBaseProps<OngoingTaskEmbeddingsGen
 export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editEmbeddingsGeneration(data.shared.taskId)();
 
     const {
@@ -51,7 +51,6 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Ai", data.shared.connectionStringName);
 
     const identifier = data.shared.identifier;
 
@@ -112,10 +111,11 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Ai"
+                    databaseName={databaseName}
                 />
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}

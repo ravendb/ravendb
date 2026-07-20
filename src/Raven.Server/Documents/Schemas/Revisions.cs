@@ -40,8 +40,8 @@ namespace Raven.Server.Documents.Schemas
 
         public enum RevisionsTable
         {
-            /* ChangeVector is the table's key as it's unique and will avoid conflicts (by replication) */
-            ChangeVector = 0,
+            // Primary key. Raw cv.Version bytes for Legacy rows; [u16 BE etag-sum][Blake2b-128] for Hashed rows.
+            RevisionPk = 0,
             LowerId = 1,
             /* We are you using the record separator in order to avoid loading another documents that has the same ID prefix,
                 e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it. */
@@ -58,6 +58,9 @@ namespace Raven.Server.Documents.Schemas
             Resolved = 10,
 
             SwappedLastModified = 11,
+
+            // Full canonical CV ("order|version") on Hashed rows; absent on legacy 12-field rows (readers fall back to field 0 via tvr.Count >= 13).
+            FullChangeVector = 12,
         }
 
         static Revisions()
@@ -98,7 +101,7 @@ namespace Raven.Server.Documents.Schemas
         {
             revisionsSchema.DefineKey(new TableSchema.IndexDef
             {
-                StartIndex = (int)RevisionsTable.ChangeVector,
+                StartIndex = (int)RevisionsTable.RevisionPk,
                 Count = 1,
                 Name = changeVectorSlice,
                 IsGlobal = true

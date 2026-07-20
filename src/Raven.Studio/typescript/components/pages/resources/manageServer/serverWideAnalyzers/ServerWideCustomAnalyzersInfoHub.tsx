@@ -25,13 +25,7 @@ export default function ServerWideCustomAnalyzersInfoHub() {
 
     return (
         <AboutViewAnchored defaultOpen={hasServerWideCustomAnalyzers ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <p>
                     <strong>Analyzers</strong> are used by indexes to split the index-fields into tokens (terms).
                     <br />

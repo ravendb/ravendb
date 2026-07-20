@@ -32,6 +32,7 @@ export interface AceEditorProps extends IAceEditorProps {
     isFullScreenLabelHidden?: boolean;
     minHeight?: number | string;
     maxHeight?: number | string;
+    disabled?: boolean;
 }
 
 function AceEditor(props: AceEditorProps) {
@@ -47,6 +48,8 @@ function AceEditor(props: AceEditorProps) {
         minHeight = aceEditorConstants.minHeightInPx,
         maxHeight = aceEditorConstants.maxHeightInPx,
         isFullScreenLabelHidden,
+        readOnly,
+        disabled,
         ...rest
     } = props;
 
@@ -158,7 +161,8 @@ function AceEditor(props: AceEditorProps) {
                     "ace-editor",
                     "position-relative",
                     { "has-error": errorMessage },
-                    { "is-dragging": resizableHeight.isDragging }
+                    { "is-dragging": resizableHeight.isDragging },
+                    { "form-disabled": disabled }
                 )}
             >
                 <div
@@ -182,6 +186,7 @@ function AceEditor(props: AceEditorProps) {
                         setOptions={overriddenSetOptions}
                         commands={commands}
                         onLoad={handleLoad}
+                        readOnly={disabled || readOnly}
                         {...rest}
                     />
                     {actions.length > 0 && (

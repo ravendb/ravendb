@@ -28,8 +28,6 @@ export function EditExternalReplicationInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <div>
                     Schedule an <strong>External Replication</strong> ongoing-task in order to have a live replica of

@@ -37,6 +37,7 @@ using Voron.Impl.Paging;
 using Voron.Recovery.Logging;
 using static System.String;
 using static Raven.Server.Documents.Schemas.Counters;
+using static Raven.Server.Documents.Schemas.Revisions;
 using static Voron.Data.BTrees.Tree;
 using Constants = Voron.Global.Constants;
 
@@ -1623,7 +1624,7 @@ namespace Voron.Recovery
                 Document revision = null;
                 try
                 {
-                    revision = RevisionsStorage.ParseRawDataSectionRevisionWithValidation(context, ref tvr, sizeInBytes, out var changeVector);
+                    revision = ParseRawDataSectionRevisionWithValidation(context, ref tvr, sizeInBytes);
                     if (revision == null)
                     {
                         if (_logger.IsErrorEnabled)
@@ -1657,6 +1658,40 @@ namespace Voron.Recovery
             }
         }
 
+        private static string ReadChangeVectorStringFromTvr(JsonOperationContext context, ref TableValueReader tvr)
+        {
+            int index = tvr.Count > (int)RevisionsTable.FullChangeVector
+                ? (int)RevisionsTable.FullChangeVector
+                : (int)RevisionsTable.RevisionPk;
+            return DocumentsStorage.TableValueToChangeVector(context, index, ref tvr);
+        }
+
+        private static Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
+        {
+            var ptr = tvr.Read((int)RevisionsTable.Document, out var size);
+            if (size > expectedSize || size <= 0)
+                throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
+
+            BlittableJsonReaderObject.BlittableValidation(context, ptr, size);
+
+            var result = new Document
+            {
+                StorageId = tvr.Id,
+                LowerId = DocumentsStorage.TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
+                Id = DocumentsStorage.TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
+                Data = new BlittableJsonReaderObject(ptr, size, context),
+                LastModified = DocumentsStorage.TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
+                Flags = DocumentsStorage.TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
+                TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out size),
+                ChangeVector = ReadChangeVectorStringFromTvr(context, ref tvr)
+            };
+
+            if (size != sizeof(short))
+                throw new ArgumentException("TransactionMarker size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
+
+            return result;
+        }
         private bool WriteConflict(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, JsonOperationContext context, long startOffset)
         {
             try

@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 {
                                     unsafe
                                     {
-                                        StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(doc.LowerId.Buffer, doc.LowerId.Size, out var count);
+                                        StringUtils.Compatibility.FindMaxEscapePositionAndControlCharSize(doc.LowerId.Buffer, doc.LowerId.Size, out var count);
                                         if (count > 0)
                                         {
                                             AddToResult(unescapedControlCharacterIds, doc);

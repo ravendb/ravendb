@@ -532,6 +532,21 @@ namespace Sparrow.Json
             }
         }
 
+        // Byte-faithful copy into context memory. Skips the JSON control-character escape pass that
+        // the regular `GetLazyString(byte*, int)` runs -- use for binary buffers whose bytes (e.g. the
+        // 0x1E RecordSeparator inside revision-tombstone / revision-attachment composite PKs) must
+        // reach consumers unchanged. The Slice-accepting overload (Voron-side extension) calls this.
+        public unsafe LazyStringValue GetLazyStringRaw(byte* ptr, int size, bool longLived = false)
+        {
+            var memory = longLived ? GetLongLivedMemory(size) : GetMemory(size);
+            var address = memory.Address;
+            Memory.Copy(address, ptr, size);
+
+            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
+            result.AllocatedMemoryData = memory;
+            return result;
+        }
+
         public unsafe LazyStringValue GetLazyString(byte* ptr, int size, bool longLived = false)
         {
             var state = new JsonParserState();
@@ -1244,32 +1259,6 @@ namespace Sparrow.Json
             return allocatedArray;
         }
 
-#if NET8_0_OR_GREATER
-        public unsafe LazyStringValue GetLazyStringForBackwardCompatibility(byte* ptr, int size, bool longLived = false)
-        {
-            var state = new JsonParserState();
-            var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
-
-            int escapePositionsSize = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(ptr, size, out _);
-
-            int memorySize = maxByteCount + escapePositionsSize;
-            var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
-
-            var address = memory.Address;
-
-            Memory.Copy(address, ptr, size);
-
-            state.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(address, ref size, escapePositionsSize);
-
-            state.WriteEscapedPositionsTo(address + size);
-            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
-            result.AllocatedMemoryData = memory;
-
-            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
-            return result;
-        }
-#endif
-        
 #if DEBUG || VALIDATE
 
         private sealed class IntReference

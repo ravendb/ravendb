@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -525,6 +526,15 @@ namespace Raven.Server.SqlMigration
 
         protected abstract string QuoteTable(string schema, string tableName);
         protected abstract string QuoteColumn(string columnName);
+
+        // Identifier quoting for the CDC test-mapping row-fetch path (BuildSelectFirstRowsQuery /
+        // BuildSelectByPrimaryKeyQuery). Defaults to QuoteTable/QuoteColumn, which already quote
+        // correctly for SQL Server ([..]) and MySQL (`..`). Postgres overrides these because its
+        // QuoteTable/QuoteColumn deliberately emit RAW identifiers for the long-standing SQL-import
+        // path; the test-mapping path needs exact-case double-quoting instead.
+        protected virtual string QuoteTableForRowFetch(string schema, string tableName) => QuoteTable(schema, tableName);
+        protected virtual string QuoteColumnForRowFetch(string columnName) => QuoteColumn(columnName);
+
         protected abstract string FactoryName { get; }
 
         protected IDataProvider<string> CreateObjectLinkDataProvider(ReferenceInformation refInfo)
@@ -585,10 +595,25 @@ namespace Raven.Server.SqlMigration
 
         public object ValueAsObject(SqlTableSchema tableSchema, string column, string[] primaryKeyValue, int index)
         {
-            var type = tableSchema.Columns.Find(x => x.Name == column).Type;
-            var value = type == ColumnType.Number ? (object)int.Parse(primaryKeyValue[index].ToString()) : primaryKeyValue[index];
+            // Case-insensitive match resolves the column type only; the emitted identifier keeps the configured
+            // casing (case-sensitive in Postgres once quoted).
+            var columnSchema = tableSchema.Columns.Find(x => string.Equals(x.Name, column, StringComparison.OrdinalIgnoreCase));
+            if (columnSchema == null)
+                throw new InvalidOperationException($"Primary key column '{column}' was not found in the schema of table '{tableSchema.Schema}.{tableSchema.TableName}'.");
 
-            return value;
+            var raw = primaryKeyValue[index];
+
+            if (columnSchema.Type != ColumnType.Number)
+                return raw;
+
+            // Widen the numeric parse with invariant culture: integer keys may be bigint (beyond int range), so try
+            // long first, then decimal for fixed-point/scaled keys.
+            if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var asLong))
+                return asLong;
+            if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var asDecimal))
+                return asDecimal;
+
+            throw new InvalidOperationException($"Primary key value '{raw}' for numeric column '{column}' of table '{tableSchema.Schema}.{tableSchema.TableName}' is not a valid number.");
         }
 
         protected IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
@@ -707,6 +732,128 @@ namespace Raven.Server.SqlMigration
             }
 
             return GetSelectAllQueryForTable(collection.SourceTableSchema, collection.SourceTableName);
+        }
+
+        public virtual async Task<MigratorRowFetchResult> FetchRowsAsync(
+            string tableSchema,
+            string tableName,
+            IReadOnlyList<string> primaryKeyColumns,
+            RowFetchMode mode,
+            IReadOnlyList<string> primaryKeyValues,
+            int maxRows,
+            CancellationToken ct)
+        {
+            if (maxRows < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxRows), $"{nameof(maxRows)} must be >= 1.");
+
+            if (mode == RowFetchMode.ByPrimaryKey)
+            {
+                if (primaryKeyColumns == null || primaryKeyColumns.Count == 0)
+                    throw new ArgumentException("Cannot fetch by primary key when the target table has no primary key columns configured.", nameof(primaryKeyColumns));
+                if (primaryKeyValues == null || primaryKeyValues.Count != primaryKeyColumns.Count)
+                    throw new ArgumentException($"Expected {primaryKeyColumns.Count} primary-key value(s), got {primaryKeyValues?.Count ?? 0}.", nameof(primaryKeyValues));
+            }
+
+            // ByPrimaryKey: Postgres/MySQL/SQL Server reject text vs int comparisons in WHERE clauses,
+            // so the PK values must be parsed into typed objects before binding. The migrator's
+            // existing ValueAsObject already does the parse keyed on ColumnType.Number; reuse it
+            // by reading the source schema (one-time per request — interactive endpoint, no hot path).
+            SqlTableSchema typedTableSchema = null;
+            if (mode == RowFetchMode.ByPrimaryKey)
+            {
+                var schema = FindSchema();
+                typedTableSchema = schema.GetTable(tableSchema, tableName)
+                    ?? throw new InvalidOperationException($"Table '{tableSchema}.{tableName}' was not found in the source database.");
+            }
+
+            await using var connection = OpenConnection();
+            await using var cmd = connection.CreateCommand();
+
+            switch (mode)
+            {
+                case RowFetchMode.First:
+                    cmd.CommandText = BuildSelectFirstRowsQuery(tableSchema, tableName, primaryKeyColumns, maxRows);
+                    break;
+
+                case RowFetchMode.ByPrimaryKey:
+                    cmd.CommandText = BuildSelectByPrimaryKeyQuery(tableSchema, tableName, primaryKeyColumns, primaryKeyValues, typedTableSchema, cmd, maxRows);
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown row-fetch mode.");
+            }
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+
+            var columnNames = new string[reader.FieldCount];
+            for (int i = 0; i < reader.FieldCount; i++)
+                columnNames[i] = reader.GetName(i);
+
+            var rows = new List<object[]>();
+            while (await reader.ReadAsync(ct))
+            {
+                var values = new object[reader.FieldCount];
+                reader.GetValues(values);
+                for (int i = 0; i < values.Length; i++)
+                {
+                    if (values[i] == DBNull.Value)
+                        values[i] = null;
+                }
+                rows.Add(values);
+            }
+
+            return new MigratorRowFetchResult { ColumnNames = columnNames, Rows = rows };
+        }
+
+        private string BuildSelectFirstRowsQuery(string tableSchema, string tableName, IReadOnlyList<string> orderByColumns, int maxRows)
+        {
+            // LimitRowsNumber wraps the inner query in a subquery (SELECT TOP N * FROM (inner)).
+            // SQL Server rejects ORDER BY inside an un-TOP'd subquery, so ORDER BY has to live
+            // at the same level as the row-limit. Build the dialect-aware shape via BuildLimitedSelectQuery.
+            var orderBy = orderByColumns != null && orderByColumns.Count > 0
+                ? " order by " + string.Join(", ", orderByColumns.Select(QuoteColumnForRowFetch))
+                : string.Empty;
+            return BuildLimitedSelectQuery(QuoteTableForRowFetch(tableSchema, tableName), whereClause: string.Empty, orderBy, maxRows);
+        }
+
+        /// <summary>
+        /// Build a <c>SELECT TOP N / LIMIT N</c> query with the ORDER BY at the same level as the
+        /// row cap so the ordering survives. The optional <paramref name="whereClause"/> is the
+        /// raw <c>pk1 = @p0 AND ...</c> body (no leading <c>where</c>) — passed as a parameter so
+        /// <c>ByPrimaryKey</c> mode also gets the row limit applied, in case the configured PK
+        /// column list doesn't actually enforce uniqueness on the source. Default uses ANSI
+        /// <c>... ORDER BY ... LIMIT n</c> (Postgres / MySQL); SQL Server overrides with
+        /// <c>SELECT TOP n ... ORDER BY ...</c> and Oracle with <c>... FETCH NEXT n ROWS ONLY</c>.
+        /// </summary>
+        protected virtual string BuildLimitedSelectQuery(string quotedTable, string whereClause, string orderByClause, int maxRows)
+        {
+            var where = string.IsNullOrEmpty(whereClause) ? string.Empty : $" where {whereClause}";
+            return $"select * from {quotedTable}{where}{orderByClause} limit {maxRows}";
+        }
+
+        private string BuildSelectByPrimaryKeyQuery(
+            string tableSchema, string tableName,
+            IReadOnlyList<string> pkColumns, IReadOnlyList<string> pkValues,
+            SqlTableSchema typedTableSchema,
+            DbCommand cmd,
+            int maxRows)
+        {
+            var pkValueArray = pkValues.ToArray();
+            var whereClause = string.Join(" and ", pkColumns.Select((column, idx) =>
+            {
+                var parameter = cmd.CreateParameter();
+                parameter.ParameterName = $"p{idx}";
+                parameter.Value = ValueAsObject(typedTableSchema, column, pkValueArray, idx) ?? DBNull.Value;
+                cmd.Parameters.Add(parameter);
+                return $"{QuoteColumnForRowFetch(column)} = @p{idx}";
+            }));
+
+            // Apply the dialect-aware row cap even though the handler only accepts maxRows=1 for
+            // ByPrimaryKey today — the configured pk columns may not actually enforce uniqueness
+            // on the source (mis-configured CDC task, or a source table without a true PK), in
+            // which case the WHERE alone could still match multiple rows. The server-side cap
+            // must hold regardless of source metadata quality.
+            return BuildLimitedSelectQuery(QuoteTableForRowFetch(tableSchema, tableName), whereClause, orderByClause: string.Empty, maxRows);
         }
     }
 }

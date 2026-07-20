@@ -116,7 +116,7 @@ class olapTaskTestMode {
 
     testResults = ko.observableArray<partitionTable>([]);
     debugOutput = ko.observableArray<string>([]);
-    transformationErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
+    transformationErrors = ko.observableArray<Raven.Server.Documents.TasksErrors.TaskItemError>([]);
 
     warningsCount = ko.pureComputed(() => this.transformationErrors().length);
 

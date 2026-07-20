@@ -21,6 +21,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
 

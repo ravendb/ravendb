@@ -309,7 +309,7 @@ namespace Voron
             var txHeader = stackalloc TransactionHeader[1];
 
             Options.AddToInitLog?.Invoke(LogLevel.Debug, "Starting Recovery");
-            bool hadIntegrityIssues = _journal.RecoverDatabase(txHeader, out var lastJournalNumber, Options.AddToInitLog);
+            bool hadIntegrityIssues = _journal.RecoverDatabase(txHeader, Options.AddToInitLog, out var lastJournalNumber, out var skippedInvalidJournals);
             var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
             Options.AddToInitLog?.Invoke(LogLevel.Debug, $"Recovery Ended {successString}");
 
@@ -322,7 +322,14 @@ namespace Voron
 
             var fileHeader = _headerAccessor.CopyHeader();
             var nextPageNumber = (txHeader->TransactionId == 0 ? fileHeader.LastPageNumber : txHeader->LastPageNumber) + 1;
-            
+
+            if (skippedInvalidJournals)
+            {
+                Debug.Assert(Options.IgnoreInvalidJournalErrors == true, "Options.IgnoreInvalidJournalErrors == true");
+
+                nextPageNumber = Math.Max(nextPageNumber, _currentStateRecord.DataPagerState.NumberOfAllocatedPages);
+            }
+
             _currentStateRecord = _currentStateRecord with
             {
                 TransactionId = txHeader->TransactionId == 0 ? fileHeader.TransactionId : txHeader->TransactionId,

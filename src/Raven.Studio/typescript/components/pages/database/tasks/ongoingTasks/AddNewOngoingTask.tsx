@@ -20,7 +20,7 @@ import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongo
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
+import { AccessPopover } from "components/common/AccessPopover";
 
 interface AddNewOngoingTaskProps {
     isAiOnly: boolean;
@@ -184,7 +184,7 @@ function TaskItem({
     const isDisabled = isShardingNotSupported || !canHandleOperation || !!customDisabledReason;
 
     return (
-        <DatabaseAccessPopover
+        <AccessPopover
             className="w-100 h-100"
             accessRequired={accessRequired}
             conditions={[
@@ -229,6 +229,6 @@ function TaskItem({
                     />
                 )}
             </a>
-        </DatabaseAccessPopover>
+        </AccessPopover>
     );
 }

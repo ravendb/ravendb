@@ -58,10 +58,10 @@ class snowflakeTaskTestMode {
     debugOutput = ko.observableArray<string>([]);
     
     // all kinds of alerts:
-    transformationErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
-    loadErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
+    transformationErrors = ko.observableArray<Raven.Server.Documents.TasksErrors.TaskItemError>([]);
+    loadErrors = ko.observableArray<Raven.Server.Documents.TasksErrors.TaskItemError>([]);
     slowSqlWarnings = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>([]);
-    processError = ko.observable<Raven.Server.Documents.ETL.TaskProcessError>(null);
+    processError = ko.observable<Raven.Server.Documents.TasksErrors.TaskProcessError>(null);
 
     warningsCount = ko.pureComputed(() => {
         const transformationCount = this.transformationErrors().length;

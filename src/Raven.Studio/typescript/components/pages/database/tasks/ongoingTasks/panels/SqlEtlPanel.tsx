@@ -26,14 +26,14 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
 type SqlEtlPanelProps = EtlPanelBaseProps<OngoingTaskSqlEtlInfo>;
 
 export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScriptPreview) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editSqlEtl(data.shared.taskId)();
 
     const {
@@ -50,7 +50,6 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Sql", data.shared.connectionStringName);
     const connectionStringDefined = data.shared.connectionStringDefined;
 
     return (
@@ -98,7 +97,8 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
                     connectionStringDefined={connectionStringDefined}
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="Sql"
+                    databaseName={databaseName}
                 />
                 {connectionStringDefined && (
                     <RichPanelDetailItem label="Destination" title="Destination <database>@<server>">
@@ -106,7 +106,7 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
                     </RichPanelDetailItem>
                 )}
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}

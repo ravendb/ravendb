@@ -4,7 +4,6 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using FastTests;
 using Microsoft.Data.SqlClient;
@@ -14,8 +13,8 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure.ConnectionString;
-using DisposableAction = Raven.Client.Util.DisposableAction;
 using Xunit;
+using DisposableAction = Raven.Client.Util.DisposableAction;
 
 namespace Tests.Infrastructure
 {
@@ -129,7 +128,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        internal DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
+        internal virtual DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
         {
             switch (provider)
             {
@@ -390,6 +389,77 @@ namespace Tests.Infrastructure
       AND pid <> pg_backend_pid();";
 
                         dbCommand.ExecuteNonQuery();
+
+                        // Drop any logical replication slots for this database.
+                        // PostgreSQL refuses to drop a database that has active slots. Terminate
+                        // any wal_sender attached to a slot FIRST, then retry the drop. If the
+                        // sink's replication loop reconnects mid-retry, re-terminate each iteration.
+                        // All pre-DROP steps are best-effort — we must reach DROP DATABASE below
+                        // even if slot cleanup fails, otherwise we'd leak both the slot AND the DB.
+                        try
+                        {
+                            TerminateWalSender(dbCommand, dbName);
+                        }
+                        catch
+                        {
+                            /* best effort */
+                        }
+
+                        for (int attempt = 0; attempt < 10; attempt++)
+                        {
+                            try
+                            {
+                                dbCommand.Parameters.Clear();
+                                dbCommand.CommandText = @"
+                                    SELECT pg_drop_replication_slot(slot_name)
+                                    FROM pg_replication_slots
+                                    WHERE database = @dbName";
+                                dbCommand.Parameters.AddWithValue("dbName", dbName);
+                                dbCommand.ExecuteNonQuery();
+                                break;
+                            }
+                            catch (PostgresException ex) when (ex.SqlState == "55006")
+                            {
+                                // 55006 = object_in_use (slot still active — sink may have reconnected).
+                                // Re-terminate the wal_sender and wait. The outer sibling catch does NOT
+                                // catch exceptions thrown from inside this catch block, so we must swallow
+                                // locally to avoid escaping the retry loop.
+                                try
+                                {
+                                    TerminateWalSender(dbCommand, dbName);
+
+                                }
+                                catch
+                                {
+                                    /* best effort */
+                                }
+                                Thread.Sleep(1000);
+                            }
+                            catch (PostgresException)
+                            {
+                                // Ignore other exceptions, such as "slot does not exist".
+                                // We want to make sure the database is dropped, even if we fail to drop the slots.
+                                break;
+                            }
+                        }
+
+                        // Warn (don't throw) if anything still remains so CI logs surface leaks.
+                        // Wrapped so a transient error here can't skip DROP DATABASE below.
+                        try
+                        {
+                            dbCommand.Parameters.Clear();
+                            dbCommand.CommandText = "SELECT count(*) FROM pg_replication_slots WHERE database = @dbName";
+                            dbCommand.Parameters.AddWithValue("dbName", dbName);
+                            var remainingSlots = (long)dbCommand.ExecuteScalar();
+                            if (remainingSlots > 0)
+                                Console.Error.WriteLine($"[CDC-TEST-CLEANUP] WARN: {remainingSlots} replication slot(s) still on {dbName} after teardown");
+                        }
+                        catch
+                        {
+                            // diagnostic only — don't block DROP DATABASE
+                        }
+
+                        dbCommand.Parameters.Clear();
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
                         dbCommand.ExecuteNonQuery();
@@ -397,6 +467,17 @@ namespace Tests.Infrastructure
                     con.Close();
                 }
             });
+        }
+
+        private static void TerminateWalSender(NpgsqlCommand dbCommand, string dbName)
+        {
+            dbCommand.Parameters.Clear();
+            dbCommand.CommandText = @"
+                            SELECT pg_terminate_backend(active_pid)
+                            FROM pg_replication_slots
+                            WHERE database = @dbName AND active_pid IS NOT NULL";
+            dbCommand.Parameters.AddWithValue("dbName", dbName);
+            dbCommand.ExecuteNonQuery();
         }
 
         private DisposableAction WithOracleDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)

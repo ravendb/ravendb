@@ -55,20 +55,20 @@ export function EtlPanelHealthBadge({ taskHealth }: EtlPanelHealthBadgeProps) {
     );
 }
 
-interface EtlPanelErrorsProps {
+interface TaskPanelErrorsProps {
     errorCount: number;
     errorsByLocation: TaskErrorsByLocation[];
     goToTaskErrors: string;
 }
 
-export function EtlPanelErrors({ errorCount, errorsByLocation, goToTaskErrors }: EtlPanelErrorsProps) {
+export function TaskPanelErrors({ errorCount, errorsByLocation, goToTaskErrors }: TaskPanelErrorsProps) {
     if (errorCount === 0) {
         return null;
     }
 
     return (
         <RichPanelDetailItem>
-            <PopoverWithHoverWrapper message={<EtlPanelErrorsTooltip errorsByLocation={errorsByLocation} />}>
+            <PopoverWithHoverWrapper message={<TaskPanelErrorsTooltip errorsByLocation={errorsByLocation} />}>
                 <a href={goToTaskErrors} className="d-flex gap-1 align-items-center">
                     <Icon icon="warning" color="danger" margin="m-0" />
                     <span className="text-danger">Errors</span>
@@ -79,7 +79,7 @@ export function EtlPanelErrors({ errorCount, errorsByLocation, goToTaskErrors }:
     );
 }
 
-function EtlPanelErrorsTooltip({ errorsByLocation }: { errorsByLocation: TaskErrorsByLocation[] }) {
+function TaskPanelErrorsTooltip({ errorsByLocation }: { errorsByLocation: TaskErrorsByLocation[] }) {
     return (
         <div className="d-flex flex-column gap-1">
             <div className="small text-muted mb-1">Errors per node</div>

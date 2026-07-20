@@ -1,5 +1,5 @@
 import * as stories from "./Certificates.stories";
-import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { act, rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import moment from "moment";
@@ -9,15 +9,23 @@ const { CertificatesStory } = composeStories(stories);
 const selectors = {
     authIsDisabledHeader: /Authentication is disabled/,
     renewNowButton: /Renew now/,
+    renewConfirmButton: /Renew certificate/,
+    renewedDialogTitle: /Your new certificate is ready/,
+    browserAccessTab: /Browser Access/,
+    apiAccessTab: /Application Access \(API\)/,
     renewalDate: "2025-01-15",
     editButtonTitle: /Edit certificate/,
     deleteButtonTitle: /Delete certificate/,
     wellKnownServerCerts: /Well known admin certificates/,
     wellKnownIssuerCerts: /Well known issuer certificates/,
+    stateFilterLabel: "Filter by state",
+    expiredStateOption: "Expired",
 };
 
-const serverCert = ManageServerStubs.certificates().Certificates[0];
-const clientCert = ManageServerStubs.certificates().Certificates[1];
+const stubCertificates = ManageServerStubs.certificates().Certificates;
+const clientCertName = stubCertificates[1].Name;
+const aboutToExpireCertName = stubCertificates[2].Name;
+const expiredCertName = stubCertificates[3].Name;
 
 describe("Certificates", () => {
     it("can render when server is not secure", () => {
@@ -103,6 +111,22 @@ describe("Certificates", () => {
             expect(screen.queryByText(selectors.renewalDate)).not.toBeInTheDocument();
             expect(screen.queryByRole("button", { name: selectors.renewNowButton })).not.toBeInTheDocument();
         });
+
+        it("opens the guidance dialog after renewing the server certificate", async () => {
+            const { screen, fireClick } = await rtlRender_WithWaitForLoad(
+                <CertificatesStory serverCertRenewalDate={selectors.renewalDate} serverCertSetupMode="LetsEncrypt" />
+            );
+
+            const renewButton = screen.getByRole("button", { name: selectors.renewNowButton });
+            await fireClick(renewButton);
+
+            const confirmButton = await screen.findByRole("button", { name: selectors.renewConfirmButton });
+            await fireClick(confirmButton);
+
+            expect(await screen.findByText(selectors.renewedDialogTitle)).toBeInTheDocument();
+            expect(screen.getByText(selectors.browserAccessTab)).toBeInTheDocument();
+            expect(screen.getByText(selectors.apiAccessTab)).toBeInTheDocument();
+        });
     });
 
     describe("client certificate", () => {
@@ -110,7 +134,7 @@ describe("Certificates", () => {
             const { screen } = await rtlRender_WithWaitForLoad(
                 <CertificatesStory
                     certificates={(x) => {
-                        x.Certificates = [serverCert, clientCert];
+                        x.Certificates = [x.Certificates[0], x.Certificates[1]];
                         x.Certificates[1].NotAfter = moment().add(1, "days").format();
                     }}
                 />
@@ -120,15 +144,18 @@ describe("Certificates", () => {
         });
 
         it("can hide edit button when cert is expired", async () => {
-            const { screen } = await rtlRender_WithWaitForLoad(
+            const { screen, user } = await rtlRender_WithWaitForLoad(
                 <CertificatesStory
                     certificates={(x) => {
-                        x.Certificates = [serverCert, clientCert];
+                        x.Certificates = [x.Certificates[0], x.Certificates[1]];
                         x.Certificates[1].NotAfter = moment().subtract(1, "days").format();
                     }}
                 />
             );
 
+            await selectStateFilterOption(screen, user, selectors.expiredStateOption);
+
+            expect(screen.getByText(clientCertName)).toBeInTheDocument();
             expect(screen.queryByTitle(selectors.editButtonTitle)).not.toBeInTheDocument();
         });
 
@@ -136,7 +163,7 @@ describe("Certificates", () => {
             const { screen } = await rtlRender_WithWaitForLoad(
                 <CertificatesStory
                     certificates={(x) => {
-                        x.Certificates = [serverCert, clientCert];
+                        x.Certificates = [x.Certificates[0], x.Certificates[1]];
                         x.Certificates[1].SecurityClearance = "Operator";
                     }}
                     securityClearance="Operator"
@@ -150,7 +177,7 @@ describe("Certificates", () => {
             const { screen } = await rtlRender_WithWaitForLoad(
                 <CertificatesStory
                     certificates={(x) => {
-                        x.Certificates = [serverCert, clientCert];
+                        x.Certificates = [x.Certificates[0], x.Certificates[1]];
                         x.Certificates[1].SecurityClearance = "ClusterAdmin";
                     }}
                     securityClearance="Operator"
@@ -160,4 +187,41 @@ describe("Certificates", () => {
             expect(screen.queryByTitle(selectors.deleteButtonTitle)).not.toBeInTheDocument();
         });
     });
+
+    describe("state filter", () => {
+        it("shows only valid and about to expire certificates by default", async () => {
+            const { screen } = await rtlRender_WithWaitForLoad(<CertificatesStory />);
+
+            const stateFilter = screen.getByText(selectors.stateFilterLabel).closest("div");
+            expect(stateFilter.querySelectorAll(".react-select__multi-value")).toHaveLength(1);
+            expect(stateFilter.querySelector(".react-select__multi-value")).toHaveTextContent("Valid");
+
+            expect(screen.getByText(clientCertName)).toBeInTheDocument();
+            expect(screen.getByText(aboutToExpireCertName)).toBeInTheDocument();
+            expect(screen.queryByText(expiredCertName)).not.toBeInTheDocument();
+        });
+
+        it("can show expired certificates after selecting the Expired state", async () => {
+            const { screen, user } = await rtlRender_WithWaitForLoad(<CertificatesStory />);
+
+            await selectStateFilterOption(screen, user, selectors.expiredStateOption);
+
+            expect(screen.getByText(expiredCertName)).toBeInTheDocument();
+        });
+    });
 });
+
+async function selectStateFilterOption(
+    screen: ReturnType<typeof rtlRender>["screen"],
+    user: ReturnType<typeof rtlRender>["user"],
+    optionLabel: string
+) {
+    const stateFilterInput = screen.getByText(selectors.stateFilterLabel).closest("div").querySelector("input");
+
+    await act(async () => {
+        await user.click(stateFilterInput);
+    });
+    await act(async () => {
+        await user.click(await screen.findByText(optionLabel));
+    });
+}

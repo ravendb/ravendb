@@ -1003,6 +1003,16 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "HasQueueSink",
             },
             {
+                name: "CDC Sink",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasCdcSink",
+            },
+            {
                 name: "Grafana plugin for data",
                 ...availableEverywhere,
                 fieldInLicense: null,

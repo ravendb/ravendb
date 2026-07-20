@@ -1,5 +1,6 @@
 import {
-    ConnectionStringUsedTask,
+    Connection,
+    ConnectionStringUsage,
     ElasticSearchAuthenticationMethod,
     ElasticSearchConnection,
     KafkaConnection,
@@ -13,7 +14,11 @@ import {
     AzureServiceBusConnection,
     AiConnection,
     StudioConnectionType,
+    WithExcludedDatabases,
+    ServerWideConnectionStringDto,
 } from "../connectionStringsTypes";
+
+export type { ServerWideConnectionStringDto };
 
 import ElasticSearchConnectionStringDto = Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString;
 import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString;
@@ -26,137 +31,96 @@ type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 type AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
 
-type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
-    ConnectionStringName?: string;
-    BrokerType?: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
-};
-
-function getConnectionStringUsedTasks(
-    tasks: OngoingTaskForConnection[],
-    connectionType: StudioConnectionType,
-    connectionName: string
-): ConnectionStringUsedTask[] {
-    let filteredTasks: OngoingTaskForConnection[] = [];
-
-    switch (connectionType) {
-        case "Raven":
-            filteredTasks = tasks.filter((task) =>
-                ["RavenEtl", "Replication", "PullReplicationAsSink"].includes(task.TaskType)
-            );
-            break;
-        case "Sql":
-            filteredTasks = tasks.filter((task) => task.TaskType === "SqlEtl");
-            break;
-        case "Snowflake":
-            filteredTasks = tasks.filter((task) => task.TaskType === "SnowflakeEtl");
-            break;
-        case "Olap":
-            filteredTasks = tasks.filter((task) => task.TaskType === "OlapEtl");
-            break;
-        case "ElasticSearch":
-            filteredTasks = tasks.filter((task) => task.TaskType === "ElasticSearchEtl");
-            break;
-        case "RabbitMQ":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "RabbitMq");
-            break;
-        case "Kafka":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "Kafka");
-            break;
-        case "AzureQueueStorage":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "AzureQueueStorage");
-            break;
-        case "AmazonSqs":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
-            break;
-        case "AzureServiceBus":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "AzureServiceBus");
-            break;
-        case "Ai":
-            filteredTasks = tasks.filter((task) => task.TaskType === "EmbeddingsGeneration");
-            break;
-        default:
-            assertUnreachable(connectionType);
-    }
-
-    filteredTasks = filteredTasks.filter((task) => task.ConnectionStringName === connectionName);
-
-    return filteredTasks.map(
-        (x) =>
+function mapUsedByFromDto(
+    dto: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionString,
+    includeDatabaseName = false
+): ConnectionStringUsage[] {
+    return (dto.UsedBy ?? []).map(
+        (t) =>
             ({
-                id: x.TaskId,
-                name: x.TaskName,
-            }) satisfies ConnectionStringUsedTask
+                kind: t.Kind,
+                id: t.Id,
+                identifier: t.Identifier,
+                name: t.Name,
+                ...(includeDatabaseName ? { databaseName: t.DatabaseName } : {}),
+            }) satisfies ConnectionStringUsage
     );
 }
 
-export function mapRavenConnectionsFromDto(
-    connections: Record<string, RavenConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): RavenConnection[] {
-    const type: RavenConnection["type"] = "Raven";
-
-    return Object.values(connections).map(
-        (connection) =>
-            ({
-                type,
-                name: connection.Name,
-                database: connection.Database,
-                topologyDiscoveryUrls: connection.TopologyDiscoveryUrls.map((x) => ({ url: x })),
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-            }) satisfies RavenConnection
-    );
+function mapRavenFromSingleDto(
+    d: RavenConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): RavenConnection {
+    return {
+        type: "Raven",
+        name: d.Name,
+        database: d.Database,
+        topologyDiscoveryUrls: d.TopologyDiscoveryUrls.map((url) => ({ url })),
+        usedBy,
+        excludedDatabases,
+    } satisfies RavenConnection;
 }
 
-export function mapSqlConnectionsFromDto(
-    connections: Record<string, SqlConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): SqlConnection[] {
-    const type: SqlConnection["type"] = "Sql";
+function mapSqlFromSingleDto(
+    d: SqlConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): SqlConnection {
+    return {
+        type: "Sql",
+        name: d.Name,
+        connectionString: d.ConnectionString,
+        factoryName: d.FactoryName,
+        usedBy,
+        excludedDatabases,
+    } satisfies SqlConnection;
+}
 
-    return Object.values(connections).map(
-        (connection) =>
-            ({
-                type,
-                name: connection.Name,
-                connectionString: connection.ConnectionString,
-                factoryName: connection.FactoryName,
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-            }) satisfies SqlConnection
-    );
+function mapSnowflakeFromSingleDto(
+    d: SnowflakeConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): SnowflakeConnection {
+    return {
+        type: "Snowflake",
+        name: d.Name,
+        connectionString: d.ConnectionString,
+        usedBy,
+        excludedDatabases,
+    } satisfies SnowflakeConnection;
+}
+
+export function mapRavenConnectionsFromDto(connections: Record<string, RavenConnectionStringDto>): RavenConnection[] {
+    return Object.values(connections).map((d) => mapRavenFromSingleDto(d, mapUsedByFromDto(d)));
+}
+
+export function mapSqlConnectionsFromDto(connections: Record<string, SqlConnectionStringDto>): SqlConnection[] {
+    return Object.values(connections).map((d) => mapSqlFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapSnowflakeConnectionsFromDto(
-    connections: Record<string, SnowflakeConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, SnowflakeConnectionStringDto>
 ): SnowflakeConnection[] {
-    const type: SnowflakeConnection["type"] = "Snowflake";
-
-    return Object.values(connections).map(
-        (connection) =>
-            ({
-                type,
-                name: connection.Name,
-                connectionString: connection.ConnectionString,
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-            }) satisfies SnowflakeConnection
-    );
+    return Object.values(connections).map((d) => mapSnowflakeFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
-export function mapOlapConnectionsFromDto(
-    connections: Record<string, OlapConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): OlapConnection[] {
-    const type: OlapConnection["type"] = "Olap";
+function mapOlapFromSingleDto(
+    d: OlapConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): OlapConnection {
+    return {
+        type: "Olap",
+        name: d.Name,
+        usedBy,
+        excludedDatabases,
+        ...mapDestinationsFromDto(_.omit(d, "Type", "Name")),
+    } satisfies OlapConnection;
+}
 
-    return Object.values(connections).map(
-        (connection) =>
-            ({
-                type,
-                name: connection.Name,
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                ...mapDestinationsFromDto(_.omit(connection, "Type", "Name")),
-            }) satisfies OlapConnection
-    );
+export function mapOlapConnectionsFromDto(connections: Record<string, OlapConnectionStringDto>): OlapConnection[] {
+    return Object.values(connections).map((d) => mapOlapFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function getElasticSearchAuthenticationMethod(
@@ -183,72 +147,77 @@ function getElasticSearchAuthenticationMethod(
     return "No authentication";
 }
 
-export function mapElasticSearchConnectionsFromDto(
-    connections: Record<string, ElasticSearchConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): ElasticSearchConnection[] {
-    const type: ElasticSearchConnection["type"] = "ElasticSearch";
-
-    return Object.values(connections).map(
-        (connection) =>
-            ({
-                type,
-                name: connection.Name,
-                authMethodUsed: getElasticSearchAuthenticationMethod(connection),
-                apiKey: connection.Authentication?.ApiKey?.ApiKey,
-                apiKeyId: connection.Authentication?.ApiKey?.ApiKeyId,
-                username: connection.Authentication?.Basic?.Username,
-                password: connection.Authentication?.Basic?.Password,
-                certificatesBase64: connection.Authentication?.Certificate?.CertificatesBase64,
-                nodes: connection.Nodes.map((x) => ({
-                    url: x,
-                })),
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-            }) satisfies ElasticSearchConnection
-    );
+function mapElasticSearchFromSingleDto(
+    d: ElasticSearchConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): ElasticSearchConnection {
+    return {
+        type: "ElasticSearch",
+        name: d.Name,
+        authMethodUsed: getElasticSearchAuthenticationMethod(d),
+        apiKey: d.Authentication?.ApiKey?.ApiKey,
+        apiKeyId: d.Authentication?.ApiKey?.ApiKeyId,
+        username: d.Authentication?.Basic?.Username,
+        password: d.Authentication?.Basic?.Password,
+        certificatesBase64: d.Authentication?.Certificate?.CertificatesBase64,
+        nodes: d.Nodes.map((url) => ({ url })),
+        usedBy,
+        excludedDatabases,
+    } satisfies ElasticSearchConnection;
 }
 
-export function mapKafkaConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): KafkaConnection[] {
-    const type: KafkaConnection["type"] = "Kafka";
+export function mapElasticSearchConnectionsFromDto(
+    connections: Record<string, ElasticSearchConnectionStringDto>
+): ElasticSearchConnection[] {
+    return Object.values(connections).map((d) => mapElasticSearchFromSingleDto(d, mapUsedByFromDto(d)));
+}
 
+function mapKafkaFromSingleDto(
+    d: QueueConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): KafkaConnection {
+    return {
+        type: "Kafka",
+        name: d.Name,
+        bootstrapServers: d.KafkaConnectionSettings.BootstrapServers,
+        connectionOptions: Object.keys(d.KafkaConnectionSettings.ConnectionOptions).map((key) => ({
+            key,
+            value: d.KafkaConnectionSettings.ConnectionOptions[key],
+        })),
+        isUseRavenCertificate: d.KafkaConnectionSettings.UseRavenCertificate,
+        usedBy,
+        excludedDatabases,
+    } satisfies KafkaConnection;
+}
+
+function mapRabbitMqFromSingleDto(
+    d: QueueConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): RabbitMqConnection {
+    return {
+        type: "RabbitMQ",
+        name: d.Name,
+        connectionString: d.RabbitMqConnectionSettings.ConnectionString,
+        usedBy,
+        excludedDatabases,
+    } satisfies RabbitMqConnection;
+}
+
+export function mapKafkaConnectionsFromDto(connections: Record<string, QueueConnectionStringDto>): KafkaConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "Kafka")
-        .map(
-            (connection) =>
-                ({
-                    type,
-                    name: connection.Name,
-                    bootstrapServers: connection.KafkaConnectionSettings.BootstrapServers,
-                    connectionOptions: Object.keys(connection.KafkaConnectionSettings.ConnectionOptions).map((key) => ({
-                        key,
-                        value: connection.KafkaConnectionSettings.ConnectionOptions[key],
-                    })),
-                    isUseRavenCertificate: connection.KafkaConnectionSettings.UseRavenCertificate,
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                }) satisfies KafkaConnection
-        );
+        .map((d) => mapKafkaFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapRabbitMqConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, QueueConnectionStringDto>
 ): RabbitMqConnection[] {
-    const type: RabbitMqConnection["type"] = "RabbitMQ";
-
     return Object.values(connections)
         .filter((x) => x.BrokerType === "RabbitMq")
-        .map(
-            (connection) =>
-                ({
-                    type,
-                    name: connection.Name,
-                    connectionString: connection.RabbitMqConnectionSettings.ConnectionString,
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                }) satisfies RabbitMqConnection
-        );
+        .map((d) => mapRabbitMqFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function getAzureQueueStorageAuthType(dto: QueueConnectionStringDto): AzureQueueStorageAuthenticationType {
@@ -263,66 +232,70 @@ function getAzureQueueStorageAuthType(dto: QueueConnectionStringDto): AzureQueue
     }
 }
 
-export function mapAzureQueueStorageConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): AzureQueueStorageConnection[] {
-    const type: AzureQueueStorageConnection["type"] = "AzureQueueStorage";
+function mapAzureQueueStorageFromSingleDto(
+    d: QueueConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): AzureQueueStorageConnection {
+    return {
+        type: "AzureQueueStorage",
+        name: d.Name,
+        authType: getAzureQueueStorageAuthType(d),
+        settings: {
+            connectionString: {
+                connectionStringValue: d.AzureQueueStorageConnectionSettings.ConnectionString,
+            },
+            entraId: {
+                clientId: d.AzureQueueStorageConnectionSettings.EntraId?.ClientId,
+                clientSecret: d.AzureQueueStorageConnectionSettings.EntraId?.ClientSecret,
+                storageAccountName: d.AzureQueueStorageConnectionSettings.EntraId?.StorageAccountName,
+                tenantId: d.AzureQueueStorageConnectionSettings.EntraId?.TenantId,
+            },
+            passwordless: {
+                storageAccountName: d.AzureQueueStorageConnectionSettings.Passwordless?.StorageAccountName,
+            },
+        },
+        usedBy,
+        excludedDatabases,
+    } satisfies AzureQueueStorageConnection;
+}
 
+function mapAmazonSqsFromSingleDto(
+    d: QueueConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): AmazonSqsConnection {
+    return {
+        type: "AmazonSqs",
+        name: d.Name,
+        authType: getAmazonSqsAuthType(d),
+        settings: {
+            passwordless: d.AmazonSqsConnectionSettings.Passwordless,
+            basic: {
+                accessKey: d.AmazonSqsConnectionSettings.Basic?.AccessKey,
+                secretKey: d.AmazonSqsConnectionSettings.Basic?.SecretKey,
+                regionName: d.AmazonSqsConnectionSettings.Basic?.RegionName,
+            },
+        },
+        usedBy,
+        excludedDatabases,
+    } satisfies AmazonSqsConnection;
+}
+
+export function mapAzureQueueStorageConnectionsFromDto(
+    connections: Record<string, QueueConnectionStringDto>
+): AzureQueueStorageConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AzureQueueStorage")
-        .map(
-            (connection) =>
-                ({
-                    type,
-                    name: connection.Name,
-                    authType: getAzureQueueStorageAuthType(connection),
-                    settings: {
-                        connectionString: {
-                            connectionStringValue: connection.AzureQueueStorageConnectionSettings.ConnectionString,
-                        },
-                        entraId: {
-                            clientId: connection.AzureQueueStorageConnectionSettings.EntraId?.ClientId,
-                            clientSecret: connection.AzureQueueStorageConnectionSettings.EntraId?.ClientSecret,
-                            storageAccountName:
-                                connection.AzureQueueStorageConnectionSettings.EntraId?.StorageAccountName,
-                            tenantId: connection.AzureQueueStorageConnectionSettings.EntraId?.TenantId,
-                        },
-                        passwordless: {
-                            storageAccountName:
-                                connection.AzureQueueStorageConnectionSettings.Passwordless?.StorageAccountName,
-                        },
-                    },
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                }) satisfies AzureQueueStorageConnection
-        );
+        .map((d) => mapAzureQueueStorageFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 export function mapAmazonSqsConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, QueueConnectionStringDto>
 ): AmazonSqsConnection[] {
-    const type: AmazonSqsConnection["type"] = "AmazonSqs";
-
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AmazonSqs")
-        .map(
-            (connection) =>
-                ({
-                    type,
-                    name: connection.Name,
-                    authType: getAmazonSqsAuthType(connection),
-                    settings: {
-                        passwordless: connection.AmazonSqsConnectionSettings.Passwordless,
-                        basic: {
-                            accessKey: connection.AmazonSqsConnectionSettings.Basic?.AccessKey,
-                            secretKey: connection.AmazonSqsConnectionSettings.Basic?.SecretKey,
-                            regionName: connection.AmazonSqsConnectionSettings.Basic?.RegionName,
-                        },
-                    },
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                }) satisfies AmazonSqsConnection
-        );
+        .map((d) => mapAmazonSqsFromSingleDto(d, mapUsedByFromDto(d)));
 }
 
 function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthenticationType {
@@ -347,143 +320,251 @@ function getAzureServiceBusAuthType(dto: QueueConnectionStringDto): AzureService
     }
 }
 
-export function mapAzureServiceBusConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): AzureServiceBusConnection[] {
-    const type: AzureServiceBusConnection["type"] = "AzureServiceBus";
-
-    return Object.values(connections)
-        .filter((x) => x.BrokerType === "AzureServiceBus")
-        .map(
-            (connection) =>
-                ({
-                    type,
-                    name: connection.Name,
-                    authType: getAzureServiceBusAuthType(connection),
-                    settings: {
-                        connectionString: {
-                            connectionStringValue: connection.AzureServiceBusConnectionSettings.ConnectionString,
-                        },
-                        entraId: {
-                            namespace: connection.AzureServiceBusConnectionSettings.EntraId?.Namespace,
-                            tenantId: connection.AzureServiceBusConnectionSettings.EntraId?.TenantId,
-                            clientId: connection.AzureServiceBusConnectionSettings.EntraId?.ClientId,
-                            clientSecret: connection.AzureServiceBusConnectionSettings.EntraId?.ClientSecret,
-                        },
-                        passwordless: {
-                            namespace: connection.AzureServiceBusConnectionSettings.Passwordless?.Namespace,
-                        },
-                    },
-                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                }) satisfies AzureServiceBusConnection
-        );
+function mapAzureServiceBusFromSingleDto(
+    d: QueueConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): AzureServiceBusConnection {
+    return {
+        type: "AzureServiceBus",
+        name: d.Name,
+        authType: getAzureServiceBusAuthType(d),
+        settings: {
+            connectionString: {
+                connectionStringValue: d.AzureServiceBusConnectionSettings.ConnectionString,
+            },
+            entraId: {
+                namespace: d.AzureServiceBusConnectionSettings.EntraId?.Namespace,
+                tenantId: d.AzureServiceBusConnectionSettings.EntraId?.TenantId,
+                clientId: d.AzureServiceBusConnectionSettings.EntraId?.ClientId,
+                clientSecret: d.AzureServiceBusConnectionSettings.EntraId?.ClientSecret,
+            },
+            passwordless: {
+                namespace: d.AzureServiceBusConnectionSettings.Passwordless?.Namespace,
+            },
+        },
+        usedBy,
+        excludedDatabases,
+    } satisfies AzureServiceBusConnection;
 }
 
-export function mapAiConnectionsFromDto(
-    connections: Record<string, AiConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): AiConnection[] {
-    const type: AiConnection["type"] = "Ai";
+export function mapAzureServiceBusConnectionsFromDto(
+    connections: Record<string, QueueConnectionStringDto>
+): AzureServiceBusConnection[] {
+    return Object.values(connections)
+        .filter((x) => x.BrokerType === "AzureServiceBus")
+        .map((d) => mapAzureServiceBusFromSingleDto(d, mapUsedByFromDto(d)));
+}
 
-    const getConnectorType = (connection: AiConnectionStringDto): AiConnection["connectorType"] => {
-        if (connection.AzureOpenAiSettings) {
-            return "azureOpenAiSettings";
-        }
-        if (connection.GoogleSettings) {
-            return "googleSettings";
-        }
-        if (connection.HuggingFaceSettings) {
-            return "huggingFaceSettings";
-        }
-        if (connection.OllamaSettings) {
-            return "ollamaSettings";
-        }
-        if (connection.EmbeddedSettings) {
-            return "embeddedSettings";
-        }
-        if (connection.OpenAiSettings) {
-            return "openAiSettings";
-        }
-        if (connection.MistralAiSettings) {
-            return "mistralAiSettings";
-        }
-        if (connection.VertexSettings) {
-            return "vertexSettings";
-        }
-        return null;
+function getAiConnectorType(connection: AiConnectionStringDto): AiConnection["connectorType"] {
+    if (connection.AzureOpenAiSettings) {
+        return "azureOpenAiSettings";
+    }
+    if (connection.GoogleSettings) {
+        return "googleSettings";
+    }
+    if (connection.HuggingFaceSettings) {
+        return "huggingFaceSettings";
+    }
+    if (connection.OllamaSettings) {
+        return "ollamaSettings";
+    }
+    if (connection.EmbeddedSettings) {
+        return "embeddedSettings";
+    }
+    if (connection.OpenAiSettings) {
+        return "openAiSettings";
+    }
+    if (connection.MistralAiSettings) {
+        return "mistralAiSettings";
+    }
+    if (connection.VertexSettings) {
+        return "vertexSettings";
+    }
+    return null;
+}
+
+function mapAiFromSingleDto(
+    d: AiConnectionStringDto,
+    usedBy: ConnectionStringUsage[],
+    excludedDatabases?: string[]
+): AiConnection {
+    return {
+        type: "Ai",
+        name: d.Name,
+        usedBy,
+        excludedDatabases,
+        identifier: d.Identifier,
+        connectorType: getAiConnectorType(d),
+        modelType: d.ModelType,
+        azureOpenAiSettings: {
+            apiKey: d.AzureOpenAiSettings?.ApiKey,
+            endpoint: d.AzureOpenAiSettings?.Endpoint,
+            model: d.AzureOpenAiSettings?.Model,
+            deploymentName: d.AzureOpenAiSettings?.DeploymentName,
+            dimensions: d.AzureOpenAiSettings?.Dimensions,
+            embeddingsMaxConcurrentBatches: d.AzureOpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+            enablePromptCache: d.AzureOpenAiSettings?.EnablePromptCache,
+            isSetTemperature: d.AzureOpenAiSettings?.Temperature != null,
+            temperature: d.AzureOpenAiSettings?.Temperature ?? null,
+        },
+        googleSettings: {
+            aiVersion: d.GoogleSettings?.AiVersion,
+            apiKey: d.GoogleSettings?.ApiKey,
+            model: d.GoogleSettings?.Model,
+            dimensions: d.GoogleSettings?.Dimensions,
+            embeddingsMaxConcurrentBatches: d.GoogleSettings?.EmbeddingsMaxConcurrentBatches,
+            enablePromptCache: d.GoogleSettings?.EnablePromptCache,
+        },
+        huggingFaceSettings: {
+            apiKey: d.HuggingFaceSettings?.ApiKey,
+            endpoint: d.HuggingFaceSettings?.Endpoint,
+            model: d.HuggingFaceSettings?.Model,
+            embeddingsMaxConcurrentBatches: d.HuggingFaceSettings?.EmbeddingsMaxConcurrentBatches,
+        },
+        ollamaSettings: {
+            model: d.OllamaSettings?.Model,
+            uri: d.OllamaSettings?.Uri,
+            think: d.OllamaSettings?.Think,
+            embeddingsMaxConcurrentBatches: d.OllamaSettings?.EmbeddingsMaxConcurrentBatches,
+            isSetTemperature: d.OllamaSettings?.Temperature != null,
+            temperature: d.OllamaSettings?.Temperature ?? null,
+        },
+        embeddedSettings: {
+            embeddingsMaxConcurrentBatches: d.EmbeddedSettings?.EmbeddingsMaxConcurrentBatches,
+        },
+        openAiSettings: {
+            apiKey: d.OpenAiSettings?.ApiKey,
+            endpoint: d.OpenAiSettings?.Endpoint,
+            model: d.OpenAiSettings?.Model,
+            organizationId: d.OpenAiSettings?.OrganizationId,
+            projectId: d.OpenAiSettings?.ProjectId,
+            dimensions: d.OpenAiSettings?.Dimensions,
+            embeddingsMaxConcurrentBatches: d.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+            enablePromptCache: d.OpenAiSettings?.EnablePromptCache,
+            isSetTemperature: d.OpenAiSettings?.Temperature != null,
+            temperature: d.OpenAiSettings?.Temperature ?? null,
+        },
+        mistralAiSettings: {
+            apiKey: d.MistralAiSettings?.ApiKey,
+            endpoint: d.MistralAiSettings?.Endpoint,
+            model: d.MistralAiSettings?.Model,
+            embeddingsMaxConcurrentBatches: d.MistralAiSettings?.EmbeddingsMaxConcurrentBatches,
+        },
+        vertexSettings: {
+            aiVersion: d.VertexSettings?.AiVersion,
+            googleCredentialsJson: d.VertexSettings?.GoogleCredentialsJson,
+            location: d.VertexSettings?.Location,
+            model: d.VertexSettings?.Model,
+            embeddingsMaxConcurrentBatches: d.VertexSettings?.EmbeddingsMaxConcurrentBatches,
+        },
+    } satisfies AiConnection;
+}
+
+export function mapAiConnectionsFromDto(connections: Record<string, AiConnectionStringDto>): AiConnection[] {
+    return Object.values(connections).map((d) => mapAiFromSingleDto(d, mapUsedByFromDto(d)));
+}
+
+export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStringsResult): {
+    [key in StudioConnectionType]: Connection[];
+} {
+    return {
+        Raven: mapRavenConnectionsFromDto(connectionStringsDto.RavenConnectionStrings),
+        Sql: mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings),
+        Snowflake: mapSnowflakeConnectionsFromDto(connectionStringsDto.SnowflakeConnectionStrings),
+        Olap: mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings),
+        ElasticSearch: mapElasticSearchConnectionsFromDto(connectionStringsDto.ElasticSearchConnectionStrings),
+        Kafka: mapKafkaConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        RabbitMQ: mapRabbitMqConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        AzureQueueStorage: mapAzureQueueStorageConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        AmazonSqs: mapAmazonSqsConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        AzureServiceBus: mapAzureServiceBusConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        Ai: mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings),
+    };
+}
+
+export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStringDto[]): {
+    [key in StudioConnectionType]: Connection[];
+} {
+    const mapped: Record<StudioConnectionType, Connection[]> = {
+        Raven: [],
+        Sql: [],
+        Snowflake: [],
+        Olap: [],
+        ElasticSearch: [],
+        Kafka: [],
+        RabbitMQ: [],
+        AzureQueueStorage: [],
+        AmazonSqs: [],
+        AzureServiceBus: [],
+        Ai: [],
     };
 
-    return Object.values(connections).map(
-        (connection) =>
-            ({
-                type,
-                name: connection.Name,
-                usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
-                identifier: connection.Identifier,
-                connectorType: getConnectorType(connection),
-                modelType: connection.ModelType,
-                azureOpenAiSettings: {
-                    apiKey: connection.AzureOpenAiSettings?.ApiKey,
-                    endpoint: connection.AzureOpenAiSettings?.Endpoint,
-                    model: connection.AzureOpenAiSettings?.Model,
-                    deploymentName: connection.AzureOpenAiSettings?.DeploymentName,
-                    dimensions: connection.AzureOpenAiSettings?.Dimensions,
-                    embeddingsMaxConcurrentBatches: connection.AzureOpenAiSettings?.EmbeddingsMaxConcurrentBatches,
-                    enablePromptCache: connection.AzureOpenAiSettings?.EnablePromptCache ?? null,
-                    isSetTemperature: connection.AzureOpenAiSettings?.Temperature != null,
-                    temperature: connection.AzureOpenAiSettings?.Temperature ?? null,
-                },
-                googleSettings: {
-                    aiVersion: connection.GoogleSettings?.AiVersion,
-                    apiKey: connection.GoogleSettings?.ApiKey,
-                    model: connection.GoogleSettings?.Model,
-                    dimensions: connection.GoogleSettings?.Dimensions,
-                    embeddingsMaxConcurrentBatches: connection.GoogleSettings?.EmbeddingsMaxConcurrentBatches,
-                    enablePromptCache: connection.GoogleSettings?.EnablePromptCache ?? null,
-                },
-                huggingFaceSettings: {
-                    apiKey: connection.HuggingFaceSettings?.ApiKey,
-                    endpoint: connection.HuggingFaceSettings?.Endpoint,
-                    model: connection.HuggingFaceSettings?.Model,
-                    embeddingsMaxConcurrentBatches: connection.HuggingFaceSettings?.EmbeddingsMaxConcurrentBatches,
-                },
-                ollamaSettings: {
-                    model: connection.OllamaSettings?.Model,
-                    uri: connection.OllamaSettings?.Uri,
-                    think: connection.OllamaSettings?.Think,
-                    embeddingsMaxConcurrentBatches: connection.OllamaSettings?.EmbeddingsMaxConcurrentBatches,
-                    isSetTemperature: connection.OllamaSettings?.Temperature != null,
-                    temperature: connection.OllamaSettings?.Temperature ?? null,
-                },
-                embeddedSettings: {
-                    embeddingsMaxConcurrentBatches: connection.EmbeddedSettings?.EmbeddingsMaxConcurrentBatches,
-                },
-                openAiSettings: {
-                    apiKey: connection.OpenAiSettings?.ApiKey,
-                    endpoint: connection.OpenAiSettings?.Endpoint,
-                    model: connection.OpenAiSettings?.Model,
-                    organizationId: connection.OpenAiSettings?.OrganizationId,
-                    projectId: connection.OpenAiSettings?.ProjectId,
-                    dimensions: connection.OpenAiSettings?.Dimensions,
-                    embeddingsMaxConcurrentBatches: connection.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
-                    enablePromptCache: connection.OpenAiSettings?.EnablePromptCache ?? null,
-                    isSetTemperature: connection.OpenAiSettings?.Temperature != null,
-                    temperature: connection.OpenAiSettings?.Temperature ?? null,
-                },
-                mistralAiSettings: {
-                    apiKey: connection.MistralAiSettings?.ApiKey,
-                    endpoint: connection.MistralAiSettings?.Endpoint,
-                    model: connection.MistralAiSettings?.Model,
-                    embeddingsMaxConcurrentBatches: connection.MistralAiSettings?.EmbeddingsMaxConcurrentBatches,
-                },
-                vertexSettings: {
-                    aiVersion: connection.VertexSettings?.AiVersion,
-                    googleCredentialsJson: connection.VertexSettings?.GoogleCredentialsJson,
-                    location: connection.VertexSettings?.Location,
-                    model: connection.VertexSettings?.Model,
-                    embeddingsMaxConcurrentBatches: connection.VertexSettings?.EmbeddingsMaxConcurrentBatches,
-                },
-            }) satisfies AiConnection
-    );
+    for (const dto of results) {
+        const excludedDatabases = dto.ExcludedDatabases ?? [];
+        const usedBy = mapUsedByFromDto(dto, true);
+        switch (dto.Type) {
+            case "Raven": {
+                const d = dto as WithExcludedDatabases<RavenConnectionStringDto>;
+                mapped.Raven.push(mapRavenFromSingleDto(d, usedBy, excludedDatabases));
+                break;
+            }
+            case "Sql": {
+                const d = dto as WithExcludedDatabases<SqlConnectionStringDto>;
+                mapped.Sql.push(mapSqlFromSingleDto(d, usedBy, excludedDatabases));
+                break;
+            }
+            case "Snowflake": {
+                const d = dto as WithExcludedDatabases<SnowflakeConnectionStringDto>;
+                mapped.Snowflake.push(mapSnowflakeFromSingleDto(d, usedBy, excludedDatabases));
+                break;
+            }
+            case "Olap": {
+                const d = dto as WithExcludedDatabases<OlapConnectionStringDto>;
+                mapped.Olap.push(mapOlapFromSingleDto(d, usedBy, excludedDatabases));
+                break;
+            }
+            case "ElasticSearch": {
+                const d = dto as WithExcludedDatabases<ElasticSearchConnectionStringDto>;
+                mapped.ElasticSearch.push(mapElasticSearchFromSingleDto(d, usedBy, excludedDatabases));
+                break;
+            }
+            case "Queue": {
+                const d = dto as WithExcludedDatabases<QueueConnectionStringDto>;
+                switch (d.BrokerType) {
+                    case "Kafka":
+                        mapped.Kafka.push(mapKafkaFromSingleDto(d, usedBy, excludedDatabases));
+                        break;
+                    case "RabbitMq":
+                        mapped.RabbitMQ.push(mapRabbitMqFromSingleDto(d, usedBy, excludedDatabases));
+                        break;
+                    case "AzureQueueStorage":
+                        mapped.AzureQueueStorage.push(mapAzureQueueStorageFromSingleDto(d, usedBy, excludedDatabases));
+                        break;
+                    case "AmazonSqs":
+                        mapped.AmazonSqs.push(mapAmazonSqsFromSingleDto(d, usedBy, excludedDatabases));
+                        break;
+                    case "AzureServiceBus":
+                        mapped.AzureServiceBus.push(mapAzureServiceBusFromSingleDto(d, usedBy, excludedDatabases));
+                        break;
+                    case "None":
+                        break;
+                    default:
+                        assertUnreachable(d.BrokerType);
+                }
+                break;
+            }
+            case "Ai": {
+                const d = dto as WithExcludedDatabases<AiConnectionStringDto>;
+                mapped.Ai.push(mapAiFromSingleDto(d, usedBy, excludedDatabases));
+                break;
+            }
+            case "None":
+                break;
+            default:
+                assertUnreachable(dto.Type);
+        }
+    }
+
+    return mapped;
 }

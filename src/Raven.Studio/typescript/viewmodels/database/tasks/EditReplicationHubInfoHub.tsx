@@ -27,8 +27,6 @@ export function EditReplicationHubInfoHub() {
                 targetId="about"
                 icon="about"
                 color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
             >
                 <div>
                     Define a <strong>Replication Hub</strong> for replicating documents to and/or from multiple Replication

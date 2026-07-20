@@ -15,6 +15,7 @@ export function useEditGenAiTaskTests() {
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const taskId = useAppSelector(editGenAiTaskSelectors.taskId);
+    const isPlaygroundEditMode = useAppSelector(editGenAiTaskSelectors.isPlaygroundEditMode);
 
     const handleContextTest = async () => {
         const areTestRelatedFieldsValid = await trigger(["collectionName", "script"]);
@@ -22,11 +23,17 @@ export function useEditGenAiTaskTests() {
             return;
         }
 
+        const { Document, DocumentId } = editGenAiTaskUtils.getTestDocumentPayload(
+            formValues.playgroundDocument,
+            formValues.documentId,
+            isPlaygroundEditMode
+        );
+
         const dto: Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.TestGenAiScript = {
             TestStage: "CreateContextObjects",
             Input: null,
-            Document: JSON.parse(formValues.playgroundDocument),
-            DocumentId: getDocumentId(formValues),
+            Document,
+            DocumentId,
             IsDelete: false,
             Configuration: editGenAiTaskUtils.mapToDto(formValues, taskId),
         };
@@ -123,11 +130,17 @@ export function useEditGenAiTaskTests() {
             };
         });
 
+        const { Document, DocumentId } = editGenAiTaskUtils.getTestDocumentPayload(
+            formValues.playgroundDocument,
+            formValues.documentId,
+            isPlaygroundEditMode
+        );
+
         const dto: Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.TestGenAiScript = {
             TestStage: "ApplyUpdateScript",
             Input: input,
-            Document: JSON.parse(formValues.playgroundDocument),
-            DocumentId: undefined,
+            Document,
+            DocumentId,
             IsDelete: false,
             Configuration: editGenAiTaskUtils.mapToDto(formValues, taskId),
         };

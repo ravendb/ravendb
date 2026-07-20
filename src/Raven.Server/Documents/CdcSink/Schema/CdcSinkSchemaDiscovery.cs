@@ -1,0 +1,95 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
+
+namespace Raven.Server.Documents.CdcSink.Schema
+{
+    /// <summary>
+    /// Source-side schema browser for the CDC Sink mapping UI. Each provider implementation
+    /// enumerates tables / columns / PKs / FKs from the source database and annotates the
+    /// result with CDC-specific hints (suggested column type, capturability, table enrollment).
+    /// Consumed by <c>POST /admin/cdc-sink/schema</c>.
+    /// </summary>
+    internal abstract class CdcSinkSchemaDiscovery
+    {
+        // ADO.NET factory names. Kept here so `For`, `IsSupportedFactoryName`, and
+        // `ResolveDefaultSchema` all agree on the canonical strings and any future caller
+        // (e.g. the CDC verify endpoint) can compare against the same identifiers instead
+        // of repeating the literals.
+        internal const string NpgsqlFactory = "Npgsql";
+        internal const string MicrosoftDataSqlClientFactory = "Microsoft.Data.SqlClient";
+        internal const string MySqlDataFactory = "MySql.Data.MySqlClient";
+        internal const string MySqlConnectorFactory = "MySqlConnector.MySqlConnectorFactory";
+
+        public abstract Task<CdcSinkSourceSchema> DiscoverAsync(string connectionString, string[] schemas, CancellationToken ct);
+
+        /// <summary>
+        /// Factory keyed on <see cref="Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString.FactoryName"/>.
+        /// The accepted strings mirror <see cref="CdcSinkSourceVerifier.AnnotateAsync"/> so
+        /// discovery and verification stay aligned on which providers CDC supports.
+        /// </summary>
+        public static CdcSinkSchemaDiscovery For(string factoryName)
+        {
+            return factoryName switch
+            {
+                NpgsqlFactory => new PostgresCdcSinkSchemaDiscovery(),
+                MicrosoftDataSqlClientFactory => new SqlServerCdcSinkSchemaDiscovery(),
+                MySqlDataFactory or MySqlConnectorFactory => new MySqlCdcSinkSchemaDiscovery(),
+                _ => throw new InvalidOperationException(UnsupportedProviderMessage(factoryName)),
+            };
+        }
+
+        /// <summary>
+        /// True if the CDC sink subsystem (verify / schema / test / runtime) supports the given
+        /// ADO.NET factory name. <see cref="DatabaseDriverDispatcher.GetProviderFromFactoryName"/>
+        /// accepts a wider set (including Oracle) because the SQL Migration feature supports it,
+        /// but CDC does not — so the CDC admin endpoints must gate on this narrower list.
+        /// </summary>
+        public static bool IsSupportedFactoryName(string factoryName)
+        {
+            return factoryName is NpgsqlFactory
+                or MicrosoftDataSqlClientFactory
+                or MySqlDataFactory or MySqlConnectorFactory;
+        }
+
+        /// <summary>
+        /// Returns the schema name the CDC runtime substitutes when a <see cref="CdcSinkTableConfig.SourceTableSchema"/>
+        /// is empty: <c>"public"</c> on Postgres, <c>"dbo"</c> on SQL Server, the connection's
+        /// database name on MySQL. The CDC handlers must use this when resolving a saved
+        /// configuration's tables, so the test endpoint matches what the runtime would do —
+        /// Studio's schema-discovery output always carries explicit schema names, but a saved
+        /// task may have left them empty to rely on the runtime default. Each per-provider
+        /// <c>CdcSinkProcess</c> already passes the same value down to <c>CdcSinkDocumentProcessor</c>.
+        /// </summary>
+        public static string ResolveDefaultSchema(string factoryName, string connectionString)
+        {
+            return factoryName switch
+            {
+                NpgsqlFactory => "public",
+                MicrosoftDataSqlClientFactory => "dbo",
+                MySqlDataFactory or MySqlConnectorFactory
+                    // Fully qualified on purpose — this shared CDC-discovery class lives outside
+                    // the MySQL-specific subtrees that RavenDB_20286 exempts from its
+                    // `using` import check, so we resolve the builder by full namespace path
+                    // rather than adding a top-level import here.
+                    => new MySqlConnector.MySqlConnectionStringBuilder(connectionString).Database ?? "mysql",
+                _ => throw new InvalidOperationException(UnsupportedProviderMessage(factoryName)),
+            };
+        }
+
+        /// <summary>
+        /// Reason attached to a discovered column that CDC cannot capture because the source
+        /// database computes it (a generated/computed column). Shared by the MySQL and PostgreSQL
+        /// discovery implementations so the wording can't drift.
+        /// </summary>
+        internal const string GeneratedColumnReason =
+            "Column is generated/computed by the source database and is not emitted by CDC.";
+
+        internal static string UnsupportedProviderMessage(string factoryName) =>
+            $"CDC sink does not support provider '{factoryName}'. " +
+            $"Supported providers: {NpgsqlFactory} (PostgreSQL), " +
+            $"{MicrosoftDataSqlClientFactory} (SQL Server), " +
+            $"{MySqlDataFactory} / {MySqlConnectorFactory} (MySQL/MariaDB).";
+    }
+}

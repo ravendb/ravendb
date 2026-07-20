@@ -39,6 +39,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
@@ -75,6 +76,7 @@ using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
@@ -2227,6 +2229,20 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(command);
         }
 
+        public Task<(long Index, object Result)> PutServerWideConnectionStringAsync(ServerWideConnectionString connectionString, string raftRequestId)
+        {
+            var command = new PutServerWideConnectionStringCommand(connectionString, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
+        public Task<(long Index, object Result)> RemoveServerWideConnectionStringAsync(RemoveServerWideConnectionStringCommand.DeleteConfiguration configuration, string raftRequestId)
+        {
+            var command = new RemoveServerWideConnectionStringCommand(configuration, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
         public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, PeriodicBackupConfiguration configuration, string raftRequestId)
         {
             var modifyPeriodicBackup = new UpdatePeriodicBackupCommand(configuration, name, raftRequestId);
@@ -2618,6 +2634,73 @@ namespace Raven.Server.ServerWide
         public Task<(long, object)> RemoveQueueSinkProcessState(TransactionOperationContext context, string databaseName, string configurationName, string scriptName, string raftRequestId)
         {
             var command = new RemoveQueueSinkProcessStateCommand(databaseName, configurationName, scriptName, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
+        public async Task<(long, object)> AddCdcSink(TransactionOperationContext context,
+            string databaseName, BlittableJsonReaderObject cdcSinkConfiguration, string raftRequestId)
+        {
+            var cdcSink = ValidateCdcSinkConfiguration(databaseName, cdcSinkConfiguration);
+            var command = new AddCdcSinkCommand(cdcSink, databaseName, raftRequestId);
+            return await SendToLeaderAsync(command);
+        }
+
+        public async Task<(long, object)> UpdateCdcSink(TransactionOperationContext context, string databaseName,
+            long id, BlittableJsonReaderObject cdcSinkConfiguration, string raftRequestId)
+        {
+            var cdcSink = ValidateCdcSinkConfiguration(databaseName, cdcSinkConfiguration);
+            var command = new UpdateCdcSinkCommand(id, cdcSink, databaseName, raftRequestId);
+            return await SendToLeaderAsync(command);
+        }
+
+        private Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration ValidateCdcSinkConfiguration(string databaseName, BlittableJsonReaderObject cdcSinkConfiguration)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
+            {
+                var cdcSink = JsonDeserializationCluster.CdcSinkConfiguration(cdcSinkConfiguration);
+                cdcSink.Validate(out var cdcSinkErr, validateName: false, validateConnection: false);
+
+                var sqlConnectionStrings = rawRecord.SqlConnectionStrings;
+                if (string.IsNullOrEmpty(cdcSink.ConnectionStringName))
+                    cdcSinkErr.Add($"'{nameof(cdcSink.ConnectionStringName)}' is required.");
+                else if (sqlConnectionStrings == null || sqlConnectionStrings.TryGetValue(cdcSink.ConnectionStringName, out _) == false)
+                    cdcSinkErr.Add($"Could not find connection string named '{cdcSink.ConnectionStringName}'. Please supply an existing connection string.");
+
+                ThrowInvalidCdcSinkConfigurationIfNecessary(cdcSinkConfiguration, cdcSinkErr);
+                return cdcSink;
+            }
+        }
+
+        private void ThrowInvalidCdcSinkConfigurationIfNecessary(BlittableJsonReaderObject cdcSinkConfiguration,
+            IReadOnlyCollection<string> errors)
+        {
+            if (errors.Count <= 0)
+                return;
+
+            var sb = new StringBuilder();
+            sb
+                .AppendLine("Invalid CDC Sink configuration.")
+                .AppendLine("Errors:");
+
+            foreach (var err in errors)
+            {
+                sb
+                    .Append("- ")
+                    .AppendLine(err);
+            }
+
+            sb.AppendLine("Configuration:");
+            sb.AppendLine(cdcSinkConfiguration.ToString());
+
+            throw new InvalidOperationException(sb.ToString());
+        }
+
+        public Task<(long, object)> RemoveCdcSinkProcessState(TransactionOperationContext context, string databaseName, string configurationName, string raftRequestId)
+        {
+            var command = new RemoveCdcSinkProcessStateCommand(databaseName, configurationName, raftRequestId);
 
             return SendToLeaderAsync(command);
         }

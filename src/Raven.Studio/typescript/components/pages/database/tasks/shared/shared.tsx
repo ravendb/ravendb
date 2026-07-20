@@ -28,10 +28,16 @@ import {
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
 import { useAppUrls } from "hooks/useAppUrls";
+import appUrl from "common/appUrl";
 import { CounterBadge } from "components/common/CounterBadge";
 import IconName from "../../../../../../typings/server/icons";
 import { TaskItemProps } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
 import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
+import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import {
+    serverWideConnectionStringPrefix,
+    getServerWideShortName,
+} from "components/pages/database/settings/connectionStrings/connectionStringsUtils";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -215,10 +221,17 @@ export function OngoingTaskActions(props: OngoingTaskActionsProps) {
 export function ConnectionStringItem(props: {
     canEdit: boolean;
     connectionStringName: string;
-    connectionStringsUrl: string;
+    connectionStringType: StudioConnectionType;
+    databaseName: string;
     connectionStringDefined: boolean;
 }) {
-    const { canEdit, connectionStringDefined, connectionStringName, connectionStringsUrl } = props;
+    const { canEdit, connectionStringDefined, connectionStringName, connectionStringType, databaseName } = props;
+
+    const isServerWide = connectionStringName?.startsWith(serverWideConnectionStringPrefix);
+
+    const connectionStringsUrl = isServerWide
+        ? appUrl.forServerWideConnectionStrings(connectionStringType, getServerWideShortName(connectionStringName))
+        : appUrl.forConnectionStrings(databaseName, connectionStringType, connectionStringName);
 
     if (connectionStringDefined) {
         return (
@@ -260,6 +273,24 @@ export function DestinationUrlItem({
             </a>
         </RichPanelDetailItem>
     );
+}
+
+// Mode is a [Flags] enum, so the bidirectional case arrives as a combined string (e.g. "HubToSink, SinkToHub").
+// Use includes() to stay robust to the flag formatting and render a readable label.
+export function formatReplicationMode(mode: Raven.Client.Documents.Operations.Replication.PullReplicationMode): string {
+    const hubToSink = mode?.includes("HubToSink");
+    const sinkToHub = mode?.includes("SinkToHub");
+
+    if (hubToSink && sinkToHub) {
+        return "Hub to Sink & Sink to Hub";
+    }
+    if (hubToSink) {
+        return "Hub to Sink";
+    }
+    if (sinkToHub) {
+        return "Sink to Hub";
+    }
+    return null;
 }
 
 export function EmptyScriptsWarning(props: { task: AnyEtlOngoingTaskInfo }) {
@@ -439,6 +470,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasAzureServiceBusSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const hasCdcSink = useAppSelector(licenseSelectors.statusValue("HasCdcSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
     const hasEmbeddingGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
@@ -745,6 +777,18 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasAzureServiceBusSink,
                     link: forCurrentDatabase.editAzureServiceBusSinkTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
+                },
+                {
+                    title: "CDC Sink",
+                    description:
+                        "Consume Change Data Capture streams from relational databases and apply inserts, updates, and deletes to documents in RavenDB.",
+                    iconName: "sql-etl",
+                    target: "CdcSink",
+                    variant: "Sink",
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasCdcSink,
+                    link: forCurrentDatabase.editCdcSinkTaskUrl(),
                     accessRequired: "DatabaseAdmin",
                 },
             ],
