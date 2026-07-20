@@ -147,9 +147,13 @@ function pushGroupTokens<TKey extends string>(
     // yup infers the form groups as index signatures, so literal-keyed Records aren't assignable
     values: Record<string, boolean>,
     includeAll: boolean,
-    result: DatabaseRecordItemType[]
+    result: DatabaseRecordItemType[],
+    excludedKeys: string[] = []
 ) {
     (Object.keys(tokens) as TKey[]).forEach((key) => {
+        if (excludedKeys.includes(key)) {
+            return; // license-restricted entries are never emitted
+        }
         if (includeAll || values[key]) {
             result.push(tokens[key]);
         }
@@ -158,15 +162,18 @@ function pushGroupTokens<TKey extends string>(
 
 export function getDatabaseRecordTypes(
     formData: ImportFromFileFormData,
-    restrictedSettingKeys: DatabaseSettingKey[] = []
+    restrictedSettingKeys: DatabaseSettingKey[] = [],
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
 ): DatabaseRecordItemType[] {
     const { configuration } = formData;
+
+    const hasRestrictions = restrictedSettingKeys.length > 0 || restrictedOngoingTaskKeys.length > 0;
 
     const isCustomized =
         !configuration.isImportAllSettings ||
         configuration.isCustomizeOngoingTasks ||
         !configuration.isIncludeConnectionStringsAndOngoingTasks ||
-        restrictedSettingKeys.length > 0;
+        hasRestrictions;
 
     if (!isCustomized) {
         // Knockout parity: non-customized mode
@@ -182,7 +189,7 @@ export function getDatabaseRecordTypes(
         configuration.isImportAllSettings &&
         !configuration.isCustomizeOngoingTasks &&
         configuration.isIncludeConnectionStringsAndOngoingTasks &&
-        restrictedSettingKeys.length > 0;
+        hasRestrictions;
 
     const result: DatabaseRecordItemType[] = [];
 
@@ -197,7 +204,7 @@ export function getDatabaseRecordTypes(
 
     if (configuration.isIncludeConnectionStringsAndOngoingTasks) {
         const includeAll = !configuration.isCustomizeOngoingTasks;
-        pushGroupTokens(ongoingTaskTokens, configuration.ongoingTasks, includeAll, result);
+        pushGroupTokens(ongoingTaskTokens, configuration.ongoingTasks, includeAll, result, restrictedOngoingTaskKeys);
         pushGroupTokens(connectionStringTokens, configuration.connectionStrings, includeAll, result);
     }
 
@@ -214,13 +221,14 @@ export function getDatabaseRecordTypes(
 
 export function toImportDto(
     formData: ImportFromFileFormData,
-    restrictedSettingKeys: DatabaseSettingKey[] = []
+    restrictedSettingKeys: DatabaseSettingKey[] = [],
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
 ): ImportOptions {
     const { documents, collections, configuration, processing } = formData;
 
     const operateOnTypes: DatabaseItemType[] = [];
 
-    const databaseRecordTypes = getDatabaseRecordTypes(formData, restrictedSettingKeys);
+    const databaseRecordTypes = getDatabaseRecordTypes(formData, restrictedSettingKeys, restrictedOngoingTaskKeys);
 
     if (databaseRecordTypes.length) {
         operateOnTypes.push("DatabaseRecord");
@@ -286,7 +294,8 @@ export function toImportDto(
 
 export function hasAnyInclude(
     formData: ImportFromFileFormData,
-    restrictedSettingKeys: DatabaseSettingKey[] = []
+    restrictedSettingKeys: DatabaseSettingKey[] = [],
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
 ): boolean {
     const d = formData.documents;
     const c = formData.configuration;
@@ -308,7 +317,7 @@ export function hasAnyInclude(
         c.isIncludeIndexes ||
         c.isIncludeIdentities ||
         c.isIncludeConnectionStringsAndOngoingTasks ||
-        getDatabaseRecordTypes(formData, restrictedSettingKeys).length > 0
+        getDatabaseRecordTypes(formData, restrictedSettingKeys, restrictedOngoingTaskKeys).length > 0
     );
 }
 
@@ -316,9 +325,10 @@ export function buildImportCurlCommand(
     commandType: ImportCommandType,
     formData: ImportFromFileFormData,
     databaseName: string,
-    restrictedSettingKeys: DatabaseSettingKey[] = []
+    restrictedSettingKeys: DatabaseSettingKey[] = [],
+    restrictedOngoingTaskKeys: OngoingTaskKey[] = []
 ): string {
-    const dto = toImportDto(formData, restrictedSettingKeys);
+    const dto = toImportDto(formData, restrictedSettingKeys, restrictedOngoingTaskKeys);
     if (!dto.TransformScript) {
         delete dto.TransformScript;
     }
