@@ -1,0 +1,63 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+
+$translate-before-hover-x: 0;
+$translate-hover-x: 100%;
+
+@function variant-gradient($color) {
+    @return linear-gradient(102deg, rgba($color, 0.35) 1.5%, rgba($color, 0) 91.78%);
+}
+
+@mixin navigation-card-base {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    min-height: 131.55px;
+    border: 1px solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+    transition: bs5variables.$transition-base;
+
+    .card-body {
+        position: relative;
+        z-index: 4;
+    }
+}
+
+// Registers a NavigationCard variant. Call it from the stylesheet of the page that
+// renders the card, next to the TypeScript type listing that page's variant names.
+@mixin navigation-card-variant(
+    $name,
+    $color,
+    $before-gradient: variant-gradient($color),
+    $before-transform: translateX($translate-before-hover-x),
+    $icon-color: $color
+) {
+    .navigation-card.variant-#{$name} {
+        @include navigation-card-base;
+
+        .task-icon {
+            color: $icon-color;
+        }
+
+        &::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: -100%;
+            background: $before-gradient;
+            filter: blur(2px);
+            transition: bs5variables.$transition-base;
+            transform: $before-transform;
+        }
+
+        &:hover {
+            border-color: $color;
+
+            &::before {
+                transform: translateX($translate-hover-x);
+            }
+        }
+    }
+}

@@ -1,6 +1,8 @@
+import "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask.scss";
+import "components/pages/database/tasks/importData/ImportDataOptions.scss";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
-import NavigationCard, { NavigationCardVariant } from "./NavigationCard";
+import NavigationCard from "./NavigationCard";
 import { mockStore } from "test/mocks/store/MockStore";
 import IconName from "typings/server/icons";
 
@@ -10,7 +12,7 @@ export default {
     component: NavigationCard,
 } satisfies Meta;
 
-const variants: { variant: NavigationCardVariant; iconName: IconName }[] = [
+const variants: { variant: string; iconName: IconName }[] = [
     { variant: "AI", iconName: "ai-etl" },
     { variant: "Replication", iconName: "external-replication" },
     { variant: "Backups", iconName: "backups" },
