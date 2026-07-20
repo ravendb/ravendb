@@ -4,7 +4,6 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
 import Table from "react-bootstrap/Table";
-import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { FormSwitch } from "components/common/Form";
@@ -72,6 +71,9 @@ export default function ConfigurationToImportSection() {
     const isCustomizeTasks = useWatch({ control, name: "configuration.isCustomizeOngoingTasks" });
     const isImportAllSettings = useWatch({ control, name: "configuration.isImportAllSettings" });
     const databaseSettings = useWatch({ control, name: "configuration.databaseSettings" });
+    const isIncludeIndexes = useWatch({ control, name: "configuration.isIncludeIndexes" });
+    const isIncludeIndexHistory = useWatch({ control, name: "configuration.isIncludeIndexHistory" });
+    const isIncludeIdentities = useWatch({ control, name: "configuration.isIncludeIdentities" });
 
     const forceIndexesOn = (value: boolean) => {
         if (value) {
@@ -88,11 +90,27 @@ export default function ConfigurationToImportSection() {
         );
     };
 
-    const selectAllEntities = () => {
-        setValue("configuration.isIncludeIndexes", true, { shouldDirty: true });
-        setValue("configuration.isIncludeIndexHistory", true, { shouldDirty: true });
-        setValue("configuration.isIncludeIdentities", true, { shouldDirty: true });
-        setValue("configuration.isIncludeConnectionStringsAndOngoingTasks", true, { shouldDirty: true });
+    const areAllEntitiesSelected = isIncludeIndexes && isIncludeIndexHistory && isIncludeIdentities && isIncludeTasks;
+
+    const ongoingTasks = useWatch({ control, name: "configuration.ongoingTasks" });
+    const connectionStrings = useWatch({ control, name: "configuration.connectionStrings" });
+
+    const areAllCustomizedTasksSelected =
+        ongoingTaskKeys.every((key) => ongoingTasks[key]) &&
+        connectionStringKeys.every((key) => connectionStrings[key]);
+
+    const setAllCustomizedTasks = (value: boolean) => {
+        ongoingTaskKeys.forEach((key) => setValue(`configuration.ongoingTasks.${key}`, value, { shouldDirty: true }));
+        connectionStringKeys.forEach((key) =>
+            setValue(`configuration.connectionStrings.${key}`, value, { shouldDirty: true })
+        );
+    };
+
+    const setAllEntities = (value: boolean) => {
+        setValue("configuration.isIncludeIndexes", value, { shouldDirty: true });
+        setValue("configuration.isIncludeIndexHistory", value, { shouldDirty: true });
+        setValue("configuration.isIncludeIdentities", value, { shouldDirty: true });
+        setValue("configuration.isIncludeConnectionStringsAndOngoingTasks", value, { shouldDirty: true });
     };
 
     return (
@@ -101,8 +119,8 @@ export default function ConfigurationToImportSection() {
                 <div id="database-entities" className="small-label">
                     Select database entities
                 </div>
-                <Button variant="link" size="sm" onClick={selectAllEntities}>
-                    Select all
+                <Button variant="link" size="sm" onClick={() => setAllEntities(!areAllEntitiesSelected)}>
+                    {areAllEntitiesSelected ? "Deselect all" : "Select all"}
                 </Button>
             </div>
             <div className="card p-4 mb-4">
@@ -139,7 +157,16 @@ export default function ConfigurationToImportSection() {
                 </div>
                 <Collapse in={isIncludeTasks && isCustomizeTasks}>
                     <div>
-                        <div className="row mt-3">
+                        <div className="d-flex justify-content-end mt-2">
+                            <Button
+                                variant="link"
+                                size="sm"
+                                onClick={() => setAllCustomizedTasks(!areAllCustomizedTasksSelected)}
+                            >
+                                {areAllCustomizedTasksSelected ? "Deselect all" : "Select all"}
+                            </Button>
+                        </div>
+                        <div className="row">
                             <div className="col-md-6">
                                 <div className="small-label mb-2">Ongoing tasks</div>
                                 {ongoingTaskKeys.map((key) => (
@@ -195,14 +222,14 @@ export default function ConfigurationToImportSection() {
                         <tr>
                             <th>Setting name</th>
                             <th className="text-end">
-                                Select all{" "}
-                                <Form.Check
-                                    inline
-                                    type="switch"
-                                    aria-label="Select all settings"
-                                    checked={areAllSettingsSelected}
-                                    onChange={(e) => setAllSettings(e.target.checked)}
-                                />
+                                <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="p-0"
+                                    onClick={() => setAllSettings(!areAllSettingsSelected)}
+                                >
+                                    {areAllSettingsSelected ? "Deselect all" : "Select all"}
+                                </Button>
                             </th>
                         </tr>
                     </thead>

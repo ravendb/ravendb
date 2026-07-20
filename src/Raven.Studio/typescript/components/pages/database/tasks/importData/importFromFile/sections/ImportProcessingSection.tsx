@@ -7,7 +7,7 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { FormAceEditor, FormInput, FormSwitch } from "components/common/Form";
+import { FormAceEditor, FormGroup, FormInput, FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 import { buildImportCurlCommand, ImportCommandType } from "../importFromFileUtils";
@@ -77,29 +77,33 @@ export default function ImportProcessingSection() {
                     Set max read operations per second
                 </FormSwitch>
                 <Collapse in={isSetMaxReadOps}>
-                    <div className="mt-2" style={{ maxWidth: 300 }}>
-                        <FormInput
-                            control={control}
-                            name="processing.maxReadOpsPerSecond"
-                            type="number"
-                            placeholder="Max read operations per second"
-                        />
+                    <div>
+                        <FormGroup marginClass="mt-2 mb-0" style={{ maxWidth: 300 }}>
+                            <FormInput
+                                control={control}
+                                name="processing.maxReadOpsPerSecond"
+                                type="number"
+                                placeholder="Max read operations per second"
+                            />
+                        </FormGroup>
                     </div>
                 </Collapse>
                 <FormSwitch control={control} name="processing.isEncrypted">
                     Imported file is encrypted
                 </FormSwitch>
                 <Collapse in={isEncrypted}>
-                    <div className="mt-2" style={{ maxWidth: 460 }}>
-                        <FormInput
-                            control={control}
-                            name="processing.encryptionKey"
-                            type="password"
-                            passwordPreview
-                            placeholder="Key"
-                            autoComplete="off"
-                        />
-                        <div className="small text-muted mt-1">Encryption Key (Base64 Encoding)</div>
+                    <div>
+                        <FormGroup marginClass="mt-2 mb-0" style={{ maxWidth: 460 }}>
+                            <FormInput
+                                control={control}
+                                name="processing.encryptionKey"
+                                type="password"
+                                passwordPreview
+                                placeholder="Key"
+                                autoComplete="off"
+                            />
+                            <div className="small text-muted mt-1">Encryption Key (Base64 Encoding)</div>
+                        </FormGroup>
                     </div>
                 </Collapse>
             </div>
