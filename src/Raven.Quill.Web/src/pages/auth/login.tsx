@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
 import { CircleAlert } from "lucide-react";
 import { z } from "zod";
 import { isApiError } from "@/api/http-client";
@@ -11,14 +10,12 @@ import { FormInput } from "@/components/form/form-input";
 import { Alert, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
-import { appRoutes } from "@/lib/app-routes";
 
 const INVALID_KEY_MESSAGE = "That API key wasn't accepted. Double-check it and try again.";
 const SIGN_IN_ERROR_MESSAGE = "We couldn't sign you in. Please try again in a moment.";
 
 export function Login() {
     const { login } = useAuth();
-    const navigate = useNavigate();
     const [formError, setFormError] = useState<string | null>(null);
     const {
         control,
@@ -37,12 +34,10 @@ export function Login() {
         try {
             const result = await login(values.apiKey);
 
-            if (result.authenticated) {
-                navigate(result.hasApps ? appRoutes.dashboard() : appRoutes.addApp(), { replace: true });
-                return;
+            // On success RedirectAuthenticated takes over and navigates to the landing page.
+            if (!result.authenticated) {
+                setFormError(INVALID_KEY_MESSAGE);
             }
-
-            setFormError(INVALID_KEY_MESSAGE);
         } catch (error) {
             setFormError(isApiError(error) && error.status === 401 ? INVALID_KEY_MESSAGE : SIGN_IN_ERROR_MESSAGE);
         }

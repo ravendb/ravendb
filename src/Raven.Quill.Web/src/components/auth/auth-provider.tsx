@@ -14,28 +14,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function login(apiKey: string): Promise<LoginResult> {
         const status = await api.services.auth.login({ apiKey });
-
-        if (!status.authenticated) {
-            queryClient.setQueryData(AUTH_STATUS_QUERY_KEY, status);
-            return { authenticated: false };
-        }
-
-        // The apps lookup runs before the auth cache is set: flipping isAuthenticated first would
-        // let RedirectAuthenticated race the caller's has-apps redirect.
-        const hasApps = await checkHasApps();
         queryClient.setQueryData(AUTH_STATUS_QUERY_KEY, status);
-        return { authenticated: true, hasApps };
-    }
-
-    // The session is already live when this runs, so a failed lookup must not fail the
-    // sign-in; default to the dashboard.
-    async function checkHasApps(): Promise<boolean> {
-        try {
-            const apps = await queryClient.fetchQuery(api.queries.apps.list());
-            return apps?.length > 0;
-        } catch {
-            return true;
-        }
+        return { authenticated: status.authenticated };
     }
 
     async function logout() {
