@@ -302,7 +302,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/license/quill/usage", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/license/quill/usage", "POST", AuthorizationStatus.Operator)]
         public async Task GetQuillUsage()
         {
             var licenseType = ServerStore.LicenseManager.LicenseStatus.Type;

@@ -34,7 +34,7 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
 
     public async Task<QuillUsageResponse> GetUsageAsync(int year, int? month, int? day, CancellationToken token)
     {
-        var usage = await _ravendb.SendAsync("/license/quill/usage", "POST", new
+        var usage = await _ravendb.SendAsync("/admin/license/quill/usage", "POST", new
         {
             Month = month,
             Year = year,
