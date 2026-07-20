@@ -58,6 +58,10 @@ public static class SettingsEndpoints
 
         group.MapPost("/certificates/edit", async (IDocumentStore store, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disable, CancellationToken token) =>
             {
+                var existing = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(thumbprint), token);
+                if (existing is null)
+                    return Results.NotFound(new ApiErrorResponse($"no certificate with thumbprint '{thumbprint}'"));
+
                 var op = new EditClientCertificateOperation(new EditClientCertificateOperation.Parameters
                 {
                     Thumbprint = thumbprint,
@@ -70,6 +74,7 @@ public static class SettingsEndpoints
                 return Results.Ok();
             })
             .WithName("settings.certificatesEdit")
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
     }
 

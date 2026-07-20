@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Quill.Auth;
 using Raven.Quill.Cdc;
 using Tests.Infrastructure;
@@ -156,6 +159,41 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : ApplianceMe
         // No CDC sink configured on the app → 404 (no snapshot to shape).
         var resp = await client.GetAsync("/api/apps/my-app/cdc/performance");
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task CdcPerformance_returns_200_before_first_sink_state_is_persisted()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _db = cleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        await store.Maintenance.ForDatabase(perAppDb).SendAsync(
+            new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+            {
+                Name = "src",
+                FactoryName = "Npgsql",
+                ConnectionString = "Host=localhost;Database=src",
+            }));
+
+        // Disabled + SkipInitialLoad: the sink never runs, so no CdcSinkTaskState doc
+        // exists yet — the just-provisioned window the endpoint must survive.
+        var cdc = AiHelperSamples.BuildCdcConfig();
+        cdc.ConnectionStringName = "src";
+        cdc.Disabled = true;
+        cdc.SkipInitialLoad = true;
+        await store.Maintenance.ForDatabase(perAppDb).SendAsync(new AddCdcSinkOperation(cdc));
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.GetAsync("/api/apps/my-app/cdc/performance");
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(json.GetProperty("enabled").GetBoolean());
+        Assert.Equal("disabled", json.GetProperty("status").GetString());
     }
 
     [RavenFact(RavenTestCategory.Quill)]

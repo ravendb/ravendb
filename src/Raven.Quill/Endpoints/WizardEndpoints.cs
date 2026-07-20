@@ -303,11 +303,11 @@ public static class WizardEndpoints
         }
         catch (ConcurrencyException)
         {
-            return Results.Conflict(new ApiErrorResponse($"database '{slug}' already exists"));
+            return Results.Conflict(new ApiErrorResponse(DatabaseExistsMessage(slug)));
         }
 
         if (!created)
-            return Results.Conflict(new ApiErrorResponse($"database '{slug}' already exists"));
+            return Results.Conflict(new ApiErrorResponse(DatabaseExistsMessage(slug)));
 
         var probes = await store.Maintenance.ForDatabase(store.Database).SendAsync(
             new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql), ct);
@@ -355,6 +355,9 @@ public static class WizardEndpoints
 
         return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
     }
+
+    private static string DatabaseExistsMessage(string slug) =>
+        $"database '{slug}' already exists; delete it in RavenDB Studio (or choose another name) and run the setup wizard again";
 
     private static bool TryRejectInvalidRequest(string? provider, string? connectionString, out string factoryName, out IResult error)
     {

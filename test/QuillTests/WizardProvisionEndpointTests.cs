@@ -101,6 +101,26 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output) : RavenTestB
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_returns_409_when_slug_is_already_provisioned()
+    {
+        var store = GetDocumentStore();
+        await SeedWizardMapAsync(store);
+        await RegisterProbeAsync(store);
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var slug = "twice-" + Guid.NewGuid().ToString("N");
+        var first = await client.PostAsJsonAsync("/api/setup/provision", new { appName = "First App", slug });
+        using var _db = Databases.EnsureDatabaseDeletion(slug, store);
+        Assert.True(first.IsSuccessStatusCode, await first.Content.ReadAsStringAsync());
+
+        var second = await client.PostAsJsonAsync("/api/setup/provision", new { appName = "Second App", slug });
+
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        Assert.Contains(slug, await second.Content.ReadAsStringAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_uses_explicit_slug_override()
     {
         var store = GetDocumentStore();

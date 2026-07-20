@@ -27,9 +27,9 @@ public class ConversationStatsEndpointsTests(ITestOutputHelper output) : Applian
         var now = DateTime.UtcNow;
         var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         // Three inside the queried month, one in the previous month (excluded).
-        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", monthStart.AddHours(1));
-        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", monthStart.AddDays(1));
-        await SeedConversationAsync(store, perAppDb, "chats/c", "demo", monthStart.AddDays(2));
+        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", PastInMonth(now, 2));
+        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", PastInMonth(now, 1));
+        await SeedConversationAsync(store, perAppDb, "chats/c", "demo", PastInMonth(now, 0));
         await SeedConversationAsync(store, perAppDb, "chats/prev", "demo", monthStart.AddDays(-3));
         await Indexes.WaitForIndexingAsync(store, perAppDb);
 
@@ -54,8 +54,8 @@ public class ConversationStatsEndpointsTests(ITestOutputHelper output) : Applian
 
         var now = DateTime.UtcNow;
         var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", monthStart.AddHours(1), messages: 3, tokens: 100);
-        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", monthStart.AddHours(2), messages: 5, tokens: 250);
+        await SeedConversationAsync(store, perAppDb, "chats/a", "demo", PastInMonth(now, 2), messages: 3, tokens: 100);
+        await SeedConversationAsync(store, perAppDb, "chats/b", "demo", PastInMonth(now, 1), messages: 5, tokens: 250);
         // Previous month — excluded from the queried period.
         await SeedConversationAsync(store, perAppDb, "chats/prev", "demo", monthStart.AddDays(-3), messages: 9, tokens: 999);
         await Indexes.WaitForIndexingAsync(store, perAppDb);
