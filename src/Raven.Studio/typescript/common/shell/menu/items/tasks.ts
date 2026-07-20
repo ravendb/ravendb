@@ -89,7 +89,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/addNewOngoingTasks',
         }),
         new leafMenuItem({
-            // must precede the 'databases/tasks/import*details' entry — its splat route also matches this path
             route: 'databases/tasks/importOptions',
             moduleId: reactUtils.bridgeToReact(ImportDataOptions.default, "nonShardedView"),
             shardingMode: "allShards",
@@ -99,7 +98,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.importDataOptionsUrl,
         }),
         new leafMenuItem({
-            // must precede the 'databases/tasks/import*details' entry — its splat route also matches this path
             route: 'databases/tasks/import/file',
             moduleId: reactUtils.bridgeToReact(ImportDatabaseFromFile.default, "nonShardedView"),
             shardingMode: "allShards",
