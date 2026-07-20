@@ -29,13 +29,17 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
+using Voron;
+using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -2393,7 +2397,142 @@ select incl(c)"
                 Assert.Equal(count, await session.Query<TestObj>().CountAsync());
             }
         }
-        
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ReadCommandsBatch_ShouldReturnAllDatabaseCommands_RespectingFromCountAndTake()
+        {
+            const int count = 20;
+
+            using var store = GetDocumentStore();
+
+            var database = await GetDatabase(store.Database);
+
+            // Block the database tx-merger so the cluster-transaction executor cannot drain (and clean up)
+            // the commands. This keeps them in the cluster-storage table while we read them back.
+            using var mre = new ManualResetEvent(false);
+            var blockerTask = database.TxMerger.Enqueue(new TestCommand(mre, TimeSpan.FromSeconds(30)));
+
+            // The rows are written to the cluster-storage table when the raft command is applied, but the
+            // client-side await of a cluster-wide tx only completes once the (blocked) database applies it -
+            // so we fire the transactions here and await them only after releasing the merger.
+            var tasks = Task.WhenAll(Enumerable.Range(0, count).Select(async i =>
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
+            }));
+
+            try
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    // wait until all the commands were persisted to the cluster-storage table
+                    await AssertWaitForTrueAsync(() =>
+                    {
+                        using (context.OpenReadTransaction())
+                            return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() == count);
+                    });
+
+                    using (context.OpenReadTransaction())
+                    {
+                        // reading from the beginning must return every command of the database, in ascending order
+                        var all = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).ToList();
+                        Assert.Equal(count, all.Count);
+                        Assert.All(all, c => Assert.Equal(store.Database.ToLowerInvariant(), c.Database));
+                        Assert.Equal(all.Select(c => c.PreviousCount).OrderBy(x => x), all.Select(c => c.PreviousCount));
+
+                        // 'take' must bound the number of commands returned
+                        var firstFive = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: 5).ToList();
+                        Assert.Equal(5, firstFive.Count);
+                        Assert.Equal(all.Take(5).Select(c => c.PreviousCount), firstFive.Select(c => c.PreviousCount));
+
+                        // 'fromCount' must return the tail starting at the requested count (inclusive)
+                        var from = all[12].PreviousCount;
+                        var tail = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: from, take: long.MaxValue).ToList();
+                        Assert.Equal(count - 12, tail.Count);
+                        Assert.Equal(from, tail[0].PreviousCount);
+                        Assert.Equal(all.Skip(12).Select(c => c.PreviousCount), tail.Select(c => c.PreviousCount));
+                    }
+                }
+            }
+            finally
+            {
+                mre.Set();
+            }
+
+            await blockerTask;
+            await tasks;
+
+            using (var session = store.OpenAsyncSession())
+                Assert.Equal(count, await session.Query<TestObj>().CountAsync());
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public void ReadCommandsBatch_ShouldSeekCorrectly_WithLargePreviousCount()
+        {
+            // Bootstrap the single-node cluster so the cluster-storage schema (the TransactionCommands table) exists.
+            using var store = GetDocumentStore();
+            const string database = "read-commands-batch-large-count";
+
+            // PreviousCount values chosen to exercise the big-endian key ordering, including values above
+            // int.MaxValue and around the 2^32 byte-carry boundary (where 'fromCount - 1' borrows across bytes).
+            var counts = new[]
+            {
+                0L,
+                1L,
+                int.MaxValue,            // 2^31 - 1
+                (long)int.MaxValue + 1,  // 2^31
+                (1L << 32) - 1,          // 2^32 - 1  (the lower 4 bytes are all 0xFF)
+                1L << 32,                // 2^32      (carry into the 5th byte)
+                1_000_000_000_000L       // 10^12
+            };
+
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
+                    foreach (var previousCount in counts)
+                        InsertTransactionCommand(context, items, database, previousCount);
+
+                    tx.Commit();
+                }
+
+                using (context.OpenReadTransaction())
+                {
+                    // reading from 0 must return every row in ascending order - validates big-endian key ordering at large values
+                    var all = ClusterTransactionCommand.ReadCommandsBatch(context, database, fromCount: 0, take: long.MaxValue).ToList();
+                    Assert.Equal(counts.OrderBy(x => x).ToArray(), all.Select(c => c.PreviousCount).ToArray());
+
+                    // a 'fromCount' that exactly matches a large row must include that row.
+                    // Here fromCount - 1 == (2^32 - 1), which is itself a present row and borrows across a byte boundary.
+                    const long fromExact = 1L << 32; // 2^32
+                    var tailExact = ClusterTransactionCommand.ReadCommandsBatch(context, database, fromCount: fromExact, take: long.MaxValue).ToList();
+                    Assert.Equal(counts.Where(c => c >= fromExact).OrderBy(x => x).ToArray(), tailExact.Select(c => c.PreviousCount).ToArray());
+                    Assert.Equal(fromExact, tailExact[0].PreviousCount);
+
+                    // a 'fromCount' that falls between two large rows (no exact match) must return only the next-higher rows
+                    const long fromBetween = 4_000_000_000L; // between 2^31 and (2^32 - 1)
+                    var tailBetween = ClusterTransactionCommand.ReadCommandsBatch(context, database, fromCount: fromBetween, take: long.MaxValue).ToList();
+                    Assert.Equal(counts.Where(c => c >= fromBetween).OrderBy(x => x).ToArray(), tailBetween.Select(c => c.PreviousCount).ToArray());
+                }
+            }
+        }
+
+        private static unsafe void InsertTransactionCommand(TransactionOperationContext context, Table items, string database, long previousCount)
+        {
+            // mirrors ClusterTransactionCommand.SaveCommandBatch: Key = db <sep> big-endian(previousCount), then the commands blittable and the raft index.
+            using (ClusterTransactionCommand.GetPrefix(context, database, out Slice keySlice, previousCount))
+            using (var commands = context.ReadObject(new DynamicJsonValue { ["DatabaseCommands"] = new DynamicJsonArray() }, "cmd"))
+            using (items.Allocate(out TableValueBuilder tvb))
+            {
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(commands.BasePointer, commands.Size);
+                tvb.Add(previousCount); // RaftIndex - unique per row, not asserted on
+                items.Insert(tvb);
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestCase()
         {
