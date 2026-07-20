@@ -5,8 +5,7 @@ import { FormTextarea } from "@/components/form/form-textarea";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-parameters-section";
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
-import { FormAceEditor } from "@/components/form/form-ace-editor";
-import AceEditor from "@/components/ace-editor/ace-editor";
+import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
 
 const SYSTEM_PROMPT_PLACEHOLDER =
     "Describe the agent's purpose and capabilities. " +
@@ -44,33 +43,21 @@ export function AgentConfigurationTab() {
                         rows={7}
                         description="Defines the agent's role and capabilities, guiding the LLM's responses throughout the conversation."
                     />
-                    <FormAceEditor
-                        control={control}
-                        name="review.sampleObject"
-                        mode="json"
-                        label="Sample response object (optional)"
-                        placeholder={`{\n    // "ResponseField": "Instruction to the LLM"\n}`}
-                        description="A JSON object defining the structure of the responses you expect from the LLM. RavenDB generates the response JSON schema from it."
-                        height="100px"
-                        actions={[
-                            { component: <AceEditor.FullScreenAction /> },
-                            { component: <AceEditor.FormatAction /> },
-                            { component: <AceEditor.AutoResizeHeightAction /> },
-                        ]}
-                    />
-                    <FormAceEditor
-                        control={control}
-                        name="review.outputSchema"
-                        mode="json"
-                        label="Response JSON schema (optional)"
-                        placeholder={`{\n    "type": "object",\n    "properties": { ... }\n}`}
-                        description="Takes precedence over the sample response object when both are provided."
-                        height="100px"
-                        actions={[
-                            { component: <AceEditor.FullScreenAction /> },
-                            { component: <AceEditor.FormatAction /> },
-                            { component: <AceEditor.AutoResizeHeightAction /> },
-                        ]}
+                    <SampleObjectAndSchemaTabs
+                        sampleObject={{
+                            name: "review.sampleObject",
+                            label: "Sample response object",
+                            placeholder: `{\n    // "ResponseField": "Instruction to the LLM"\n}`,
+                            description:
+                                "A JSON object defining the structure of the responses you expect from the LLM. " +
+                                "RavenDB generates the response JSON schema from it.",
+                        }}
+                        schema={{
+                            name: "review.outputSchema",
+                            label: "Response JSON schema",
+                            placeholder: `{\n    "type": "object",\n    "properties": { ... }\n}`,
+                            description: "Takes precedence over the sample response object when both are provided.",
+                        }}
                     />
                 </div>
             </ConfigurationSection>

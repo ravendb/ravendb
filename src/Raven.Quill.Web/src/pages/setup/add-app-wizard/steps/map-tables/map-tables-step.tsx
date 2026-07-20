@@ -76,7 +76,10 @@ export function MapTablesStep() {
                 />
             ) : (
                 <>
-                    <ResizablePanelGroup orientation="horizontal" className="min-h-80 flex-1 rounded-lg border bg-background">
+                    <ResizablePanelGroup
+                        orientation="horizontal"
+                        className="min-h-80 flex-1 rounded-lg border bg-background"
+                    >
                         <ResizablePanel defaultSize="30%" minSize="180px" maxSize="50%" className="min-w-0">
                             <TablesExplorer />
                         </ResizablePanel>
