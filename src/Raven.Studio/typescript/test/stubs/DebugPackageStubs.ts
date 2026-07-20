@@ -532,7 +532,7 @@ export class DebugPackageStubs {
             CountOfTombstones: 1500,
             CountOfCounterEntries: 240,
             CountOfTimeSeriesSegments: 96,
-            SizeOnDisk: { HumaneSize: "512 MBytes", SizeInBytes: 512 * mb },
+            PhysicalSizeOnDisk: { HumaneSize: "512 MBytes", SizeInBytes: 512 * mb },
             TempBuffersSizeOnDisk: { HumaneSize: "32 MBytes", SizeInBytes: 32 * mb },
             DatabaseId: "0fb9f6d4-2e1a-4c2c-9d3a-7f1f0c2b8a11",
             DatabaseChangeVector: "A:1234-3f1f0c2b, B:980-7f1f0c2b",

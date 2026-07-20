@@ -91,7 +91,7 @@ export default memo(function DatabaseStats({ packageId, database, node }: Databa
                                 <StatTile
                                     label="Size on disk"
                                     icon="storage"
-                                    value={info.SizeOnDisk?.HumaneSize ?? "-"}
+                                    value={info.PhysicalSizeOnDisk?.HumaneSize ?? "-"}
                                 />
                                 <StatTile
                                     label="Temp buffers"
