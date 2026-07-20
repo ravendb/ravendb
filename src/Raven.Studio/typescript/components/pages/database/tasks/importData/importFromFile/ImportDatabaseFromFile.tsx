@@ -109,6 +109,16 @@ export default function ImportDatabaseFromFile() {
     const isUploading = uploadPercent != null;
     useDirtyFlag(isUploading);
 
+    // monitorOperation gives no way to detach its callbacks, so guard them manually - otherwise
+    // navigating away mid-import keeps calling setState on the unmounted view
+    const isUnmountedRef = useRef(false);
+    useEffect(() => {
+        isUnmountedRef.current = false;
+        return () => {
+            isUnmountedRef.current = true;
+        };
+    }, []);
+
     // The Studio scrolls the view inside a container (not the document), so the scroll-spy needs
     // that container as its root - otherwise its bottom-of-scroll fallback always fires.
     const pageRef = useRef<HTMLDivElement>(null);
@@ -172,27 +182,41 @@ export default function ImportDatabaseFromFile() {
         const monitor = notificationCenter.instance.monitorOperation<SmugglerProgress>(
             databaseName,
             operationId,
-            (progress) => setOperationState((prev) => (prev ? { ...prev, progress } : prev))
+            (progress) => {
+                if (!isUnmountedRef.current) {
+                    setOperationState((prev) => (prev ? { ...prev, progress } : prev));
+                }
+            }
         );
 
         monitor
-            .done((result: SmugglerProgress) =>
-                setOperationState((prev) =>
-                    prev ? { ...prev, progress: result, status: "Completed", endTime: new Date() } : prev
-                )
-            )
-            .fail(() =>
-                setOperationState((prev) => (prev ? { ...prev, status: "Faulted", endTime: new Date() } : prev))
-            );
+            .done((result: SmugglerProgress) => {
+                if (!isUnmountedRef.current) {
+                    setOperationState((prev) =>
+                        prev ? { ...prev, progress: result, status: "Completed", endTime: new Date() } : prev
+                    );
+                }
+            })
+            .fail(() => {
+                if (!isUnmountedRef.current) {
+                    setOperationState((prev) => (prev ? { ...prev, status: "Faulted", endTime: new Date() } : prev));
+                }
+            });
 
         // Knockout parity: refresh revisions config when import enabled it
         const db = activeDatabaseTracker.default.database();
         if (db && !db.hasRevisionsConfiguration()) {
             monitor.done(async () => {
-                const dbInfo = await tasksService.getDatabaseForStudio(databaseName);
-                if (dbInfo.HasRevisionsConfiguration) {
-                    db.hasRevisionsConfiguration(true);
-                    collectionsTracker.default.configureRevisions(db);
+                // a rejection here would surface as an unhandled promise rejection inside a
+                // jQuery done callback - the refresh is best-effort, so swallow the failure
+                try {
+                    const dbInfo = await tasksService.getDatabaseForStudio(databaseName);
+                    if (dbInfo.HasRevisionsConfiguration) {
+                        db.hasRevisionsConfiguration(true);
+                        collectionsTracker.default.configureRevisions(db);
+                    }
+                } catch {
+                    // ignore - the revisions config will refresh on the next full load
                 }
             });
         }
@@ -204,13 +228,17 @@ export default function ImportDatabaseFromFile() {
         } catch {
             // the command reports the upload error itself; if the upload died before the server
             // registered any progress, monitorOperation will never settle - mark Faulted ourselves
-            setOperationState((prev) =>
-                prev && prev.status === "InProgress" && !prev.progress
-                    ? { ...prev, status: "Faulted", endTime: new Date() }
-                    : prev
-            );
+            if (!isUnmountedRef.current) {
+                setOperationState((prev) =>
+                    prev && prev.status === "InProgress" && !prev.progress
+                        ? { ...prev, status: "Faulted", endTime: new Date() }
+                        : prev
+                );
+            }
         } finally {
-            setUploadPercent(null);
+            if (!isUnmountedRef.current) {
+                setUploadPercent(null);
+            }
         }
     };
 
@@ -227,7 +255,6 @@ export default function ImportDatabaseFromFile() {
                 <AboutViewHeading
                     title="Import data from a .ravendbdump file into the current database"
                     icon="import-database"
-                    // marginBottom={5}
                     backUrl={importOptionsUrl}
                 />
                 <Alert variant="info" className="w-50">
