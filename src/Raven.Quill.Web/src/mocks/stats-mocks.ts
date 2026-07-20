@@ -1,5 +1,4 @@
 import type {
-    ActivityEventDto,
     ApplianceAppResponse,
     AppUsageResponse,
     ChannelStatsResponse,
@@ -27,8 +26,6 @@ export const statsMocks = {
         apiHttp.get("/api/usage/by-app", ({ response: res }) => res(200).json(response)),
     conversationStats: (response: ConversationStatsResponse = sampleConversationStats) =>
         apiHttp.get("/api/apps/{slug}/conversations/stats", ({ response: res }) => res(200).json(response)),
-    activity: (events: ActivityEventDto[] = sampleActivity) =>
-        apiHttp.get("/api/apps/{slug}/activity", ({ response }) => response(200).json(events)),
     channels: (response: ChannelStatsResponse = sampleChannelStats) =>
         apiHttp.get("/api/apps/{slug}/channels/stats", ({ response: res }) => res(200).json(response)),
     collections: (collections: DataCollectionDto[] = sampleCollections) =>
@@ -164,37 +161,6 @@ export const sampleConversationStats: ConversationStatsResponse = {
     messages: 21800,
     tokens: 6100000,
 };
-
-export const sampleActivity: ActivityEventDto[] = [
-    {
-        id: "act-1",
-        appId: "acme-shop",
-        type: "conversation",
-        message: "Sales assistant resolved a conversation in #sales",
-        timestamp: "2026-06-25T09:02:00Z",
-    },
-    {
-        id: "act-2",
-        appId: "acme-shop",
-        type: "cdc",
-        message: "CDC batch processed 1,240 documents",
-        timestamp: "2026-06-25T08:41:00Z",
-    },
-    {
-        id: "act-3",
-        appId: "acme-shop",
-        type: "channel",
-        message: "Web widget “Website widget” connected",
-        timestamp: "2026-06-24T17:15:00Z",
-    },
-    {
-        id: "act-4",
-        appId: "acme-shop",
-        type: "agent",
-        message: "FAQ bot was disabled",
-        timestamp: "2026-06-24T11:30:00Z",
-    },
-];
 
 export const sampleChannelStats: ChannelStatsResponse = {
     total: 2,

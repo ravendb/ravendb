@@ -27,27 +27,22 @@ const agentParameterSchema = z.object({
     isExpanded: z.boolean(),
 });
 
-const agentQueryToolSchema = z
-    .object({
-        name: z
-            .string()
-            .trim()
-            .min(1, "Tool name is required")
-            .regex(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens"),
-        description: z.string().trim().min(1, "Description is required"),
-        query: z.string().trim().min(1, "Query is required"),
-        parametersSampleObject: z.string(),
-        parametersSchema: z.string(),
-        allowModelQueries: z.enum(QUERY_TOOL_OPTION_CHOICES),
-        addToInitialContext: z.enum(QUERY_TOOL_OPTION_CHOICES),
-        isExpanded: z.boolean(),
-    })
-    .superRefine((tool, ctx) => {
-        addMissingObjectOrSchemaIssue(ctx, tool.parametersSampleObject, tool.parametersSchema, "parametersSchema", {
-            sampleObjectLabel: "Sample parameters object",
-            schemaLabel: "Parameters JSON schema",
-        });
-    });
+// Parameters stay optional: parameterless queries are valid, and the provision payload
+// falls back to a "{}" sample object when both fields are empty (see agent-config-form.ts).
+const agentQueryToolSchema = z.object({
+    name: z
+        .string()
+        .trim()
+        .min(1, "Tool name is required")
+        .regex(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens"),
+    description: z.string().trim().min(1, "Description is required"),
+    query: z.string().trim().min(1, "Query is required"),
+    parametersSampleObject: z.string(),
+    parametersSchema: z.string(),
+    allowModelQueries: z.enum(QUERY_TOOL_OPTION_CHOICES),
+    addToInitialContext: z.enum(QUERY_TOOL_OPTION_CHOICES),
+    isExpanded: z.boolean(),
+});
 
 // The working copy of the agent configuration edited in the review step. Seeded from an
 // AI suggestion (mode "ai") or left empty (mode "manual"); always the source the wizard
@@ -65,27 +60,14 @@ const agentConfigurationSchema = z
     .superRefine((config, ctx) => {
         addDuplicateNameIssues(ctx, config.parameters, "parameters", "Parameter name must be unique");
         addDuplicateNameIssues(ctx, config.queries, "queries", "Tool name must be unique");
-        addMissingObjectOrSchemaIssue(ctx, config.sampleObject, config.outputSchema, "outputSchema", {
-            sampleObjectLabel: "Sample response object",
-            schemaLabel: "Response JSON schema",
-        });
+        if (config.sampleObject.trim().length === 0 && config.outputSchema.trim().length === 0) {
+            ctx.addIssue({
+                code: "custom",
+                message: "Either 'Sample response object' or 'Response JSON schema' must be provided",
+                path: ["outputSchema"],
+            });
+        }
     });
-
-function addMissingObjectOrSchemaIssue(
-    ctx: z.RefinementCtx,
-    sampleObject: string,
-    schema: string,
-    schemaKey: string,
-    labels: { sampleObjectLabel: string; schemaLabel: string },
-) {
-    if (sampleObject.trim().length === 0 && schema.trim().length === 0) {
-        ctx.addIssue({
-            code: "custom",
-            message: `Either '${labels.sampleObjectLabel}' or '${labels.schemaLabel}' must be provided`,
-            path: [schemaKey],
-        });
-    }
-}
 
 function addDuplicateNameIssues(ctx: z.RefinementCtx, items: { name: string }[], listKey: string, message: string) {
     const counts = new Map<string, number>();
