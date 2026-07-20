@@ -1,68 +1,27 @@
-import React from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import React, { ReactNode } from "react";
+import { Control, FieldPath, useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
 import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
-import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
+import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import {
-    ConnectionStringKey,
     connectionStringKeys,
-    DatabaseSettingKey,
     databaseSettingKeys,
     ImportFromFileFormData,
-    OngoingTaskKey,
     ongoingTaskKeys,
 } from "../importFromFileValidation";
 import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
 import Card from "react-bootstrap/Card";
-
-const databaseSettingLabels: Record<DatabaseSettingKey, string> = {
-    settings: "Settings",
-    conflictSolverConfig: "Conflict Solver Configuration",
-    client: "Client Configuration",
-    revisions: "Revisions Configuration",
-    refresh: "Document Refresh",
-    expiration: "Document Expiration",
-    documentsCompression: "Documents Compression",
-    schemaValidation: "Document Schema",
-    dataArchival: "Data Archival",
-    timeSeries: "Time Series Configuration",
-    sorters: "Custom Sorters",
-    analyzers: "Custom Analyzers",
-    postgreSqlIntegration: "PostgreSQL Integration",
-};
-
-const ongoingTaskLabels: Record<OngoingTaskKey, string> = {
-    periodicBackups: "Periodic Backups",
-    externalReplications: "External Replications",
-    ravenEtls: "RavenDB ETLs",
-    sqlEtls: "SQL ETLs",
-    snowflakeEtls: "Snowflake ETLs",
-    olapEtls: "OLAP ETLs",
-    elasticSearchEtls: "Elasticsearch ETLs",
-    queueEtls: "Queue ETLs (Kafka, RabbitMQ, Azure Queue Storage)",
-    hubReplications: "Replication Hubs",
-    sinkReplications: "Replication Sinks",
-    embeddingsGeneration: "Embeddings Generation",
-    genAi: "GenAI",
-    cdcSinks: "CDC Sinks",
-    aiAgents: "AI Agents",
-    remoteAttachments: "Remote Attachments",
-};
-
-const connectionStringLabels: Record<ConnectionStringKey, string> = {
-    ravenConnectionStrings: "RavenDB Connection Strings",
-    sqlConnectionStrings: "SQL Connection Strings",
-    snowflakeConnectionStrings: "Snowflake Connection Strings",
-    olapConnectionStrings: "OLAP Connection Strings",
-    elasticSearchConnectionStrings: "Elasticsearch Connection Strings",
-    queueConnectionStrings: "Queue Connection Strings (Kafka, RabbitMQ, Azure Queue Storage)",
-    aiConnectionStrings: "AI Connection Strings",
-};
+import {
+    connectionStringLabels,
+    databaseSettingLabels,
+    ongoingTaskLabels,
+} from "components/pages/database/tasks/importData/importFromFile/sections/configurationToImportSectionUtils";
+import classNames from "classnames";
 
 export default function ConfigurationToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
@@ -185,32 +144,18 @@ export default function ConfigurationToImportSection() {
                         <div className="row">
                             <div className="col-md-6">
                                 <div className="small-label mb-2">Ongoing tasks</div>
-                                {ongoingTaskKeys.map((key) => {
-                                    const restricted = isOngoingTaskRestricted(key);
-                                    return (
-                                        <div
-                                            key={key}
-                                            className="d-flex align-items-center gap-2"
-                                            title={restricted ? getOngoingTaskRestrictionTooltip(key) : undefined}
-                                        >
-                                            {/* dim only the switch - the license badge must stay fully visible */}
-                                            <div className={restricted ? "item-disabled" : undefined}>
-                                                <FormSwitch
-                                                    control={control}
-                                                    name={`configuration.ongoingTasks.${key}`}
-                                                    {...(restricted && { disabled: true })}
-                                                >
-                                                    {ongoingTaskLabels[key]}
-                                                </FormSwitch>
-                                            </div>
-                                            {restricted && (
-                                                <LicenseRestrictedBadge
-                                                    licenseRequired={getOngoingTaskLicenseRequired(key)}
-                                                />
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                {ongoingTaskKeys.map((key) => (
+                                    <LicenseRestrictedSwitch
+                                        key={key}
+                                        control={control}
+                                        name={`configuration.ongoingTasks.${key}`}
+                                        restricted={isOngoingTaskRestricted(key)}
+                                        tooltip={getOngoingTaskRestrictionTooltip(key)}
+                                        licenseRequired={getOngoingTaskLicenseRequired(key)}
+                                    >
+                                        {ongoingTaskLabels[key]}
+                                    </LicenseRestrictedSwitch>
+                                ))}
                             </div>
                             <div className="col-md-6">
                                 <div className="small-label mb-2">Connection strings</div>
@@ -237,7 +182,7 @@ export default function ConfigurationToImportSection() {
             <div id="database-settings" className="small-label mb-2">
                 Select database settings
             </div>
-            <Card>
+            <Card className="p-4">
                 <div className="d-flex gap-3">
                     <Button
                         variant={isImportAllSettings ? "primary" : "outline-secondary"}
@@ -272,32 +217,58 @@ export default function ConfigurationToImportSection() {
                             </tr>
                         </thead>
                         <tbody>
-                            {databaseSettingKeys.map((key) => {
-                                const restricted = isSettingRestricted(key);
-                                const licenseRequired = getLicenseRequired(key);
-                                return (
-                                    <tr key={key} title={restricted ? getRestrictionTooltip(key) : undefined}>
-                                        <td colSpan={2}>
-                                            <div className="d-flex align-items-center gap-2">
-                                                <div className={restricted ? "item-disabled" : undefined}>
-                                                    <FormSwitch
-                                                        control={control}
-                                                        name={`configuration.databaseSettings.${key}`}
-                                                        {...(restricted && { disabled: true })}
-                                                    >
-                                                        {databaseSettingLabels[key]}
-                                                    </FormSwitch>
-                                                </div>
-                                                {restricted && <LicenseRestrictedBadge licenseRequired={licenseRequired} />}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                            {databaseSettingKeys.map((key) => (
+                                <tr key={key}>
+                                    <td colSpan={2}>
+                                        <LicenseRestrictedSwitch
+                                            control={control}
+                                            name={`configuration.databaseSettings.${key}`}
+                                            restricted={isSettingRestricted(key)}
+                                            tooltip={getRestrictionTooltip(key)}
+                                            licenseRequired={getLicenseRequired(key)}
+                                        >
+                                            {databaseSettingLabels[key]}
+                                        </LicenseRestrictedSwitch>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </Table>
                 )}
             </Card>
         </ImportSection>
+    );
+}
+
+interface LicenseRestrictedSwitchProps {
+    control: Control<ImportFromFileFormData>;
+    name: FieldPath<ImportFromFileFormData>;
+    restricted: boolean;
+    tooltip: string | null;
+    licenseRequired: LicenseBadgeText | null;
+    children: ReactNode;
+}
+
+function LicenseRestrictedSwitch({
+    control,
+    name,
+    restricted,
+    tooltip,
+    licenseRequired,
+    children,
+}: LicenseRestrictedSwitchProps) {
+    return (
+        <div className="d-flex align-items-center gap-2" title={restricted ? tooltip : undefined}>
+            <div
+                className={classNames({
+                    "item-disabled": restricted,
+                })}
+            >
+                <FormSwitch control={control} name={name} {...(restricted && { disabled: true })}>
+                    {children}
+                </FormSwitch>
+            </div>
+            {restricted && <LicenseRestrictedBadge licenseRequired={licenseRequired} />}
+        </div>
     );
 }

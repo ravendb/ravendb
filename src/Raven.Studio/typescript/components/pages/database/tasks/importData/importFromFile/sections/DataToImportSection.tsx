@@ -15,6 +15,12 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { useAppSelector } from "components/store";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import Card from "react-bootstrap/Card";
+import SelectCreatable from "components/common/select/SelectCreatable";
+
+interface CollectionOption {
+    label: string;
+    value: string;
+}
 
 export default function DataToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
@@ -44,17 +50,33 @@ export default function DataToImportSection() {
     const areAllFilteredCollectionsSelected =
         filteredCollections.length > 0 && filteredCollections.every((name) => includedCollections.includes(name));
 
-    const trimmedFilter = collectionFilter.trim();
-    const canAddCollection =
-        trimmedFilter.length > 0 &&
-        !allCollectionNames.some((name) => name.toLowerCase() === trimmedFilter.toLowerCase());
+    // the select's menu offers collections that aren't included yet; anything else typed in
+    // becomes an "Add ..." create option
+    const collectionOptions: CollectionOption[] = allCollectionNames
+        .filter((name) => !includedCollections.includes(name))
+        .map((name) => ({ label: name, value: name }));
 
-    const addCollection = () => {
-        if (!canAddCollection) {
+    const isNewCollection = (input: string) => {
+        const trimmed = input.trim();
+        return trimmed.length > 0 && !allCollectionNames.some((name) => name.toLowerCase() === trimmed.toLowerCase());
+    };
+
+    const onCollectionPicked = (option: CollectionOption | null) => {
+        if (!option) {
             return;
         }
-        setManualCollections((prev) => [...prev, trimmedFilter]);
-        setValue("collections.includedCollections", [...includedCollections, trimmedFilter], { shouldDirty: true });
+        const trimmed = option.value.trim();
+        if (isNewCollection(trimmed)) {
+            setManualCollections((prev) => [...prev, trimmed]);
+            setValue("collections.includedCollections", [...includedCollections, trimmed], { shouldDirty: true });
+        } else {
+            const existing = allCollectionNames.find((name) => name.toLowerCase() === trimmed.toLowerCase());
+            if (existing && !includedCollections.includes(existing)) {
+                setValue("collections.includedCollections", [...includedCollections, existing], {
+                    shouldDirty: true,
+                });
+            }
+        }
         setCollectionFilter("");
     };
 
@@ -118,7 +140,7 @@ export default function DataToImportSection() {
             <div id="collections-to-import" className="small-label mb-2">
                 Choose collections to import
             </div>
-            <Card className="mb-4">
+            <Card className="mb-4 p-4">
                 <div className="d-flex gap-3">
                     <Button
                         variant={isImportAll ? "primary" : "outline-secondary"}
@@ -137,22 +159,24 @@ export default function DataToImportSection() {
                 </div>
                 {!isImportAll && (
                     <div className="mt-4">
-                        <div className="d-flex gap-2 mb-2">
-                            <Form.Control
-                                type="text"
+                        <div className="mb-2">
+                            {/* typing filters the table below AND offers an "Add ..." create option
+                                for collections that exist only in the imported file */}
+                            <SelectCreatable<CollectionOption>
                                 placeholder="Search or add a collection from the imported file"
-                                value={collectionFilter}
-                                onChange={(e) => setCollectionFilter(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        addCollection();
+                                options={collectionOptions}
+                                inputValue={collectionFilter}
+                                onInputChange={(value, meta) => {
+                                    if (meta.action === "input-change") {
+                                        setCollectionFilter(value);
                                     }
                                 }}
+                                onChange={onCollectionPicked}
+                                isValidNewOption={isNewCollection}
+                                formatCreateLabel={(input) => `Add "${input.trim()}"`}
+                                isClearedAfterSelect
+                                maxMenuHeight={300}
                             />
-                            <Button variant="secondary" disabled={!canAddCollection} onClick={addCollection}>
-                                <Icon icon="plus" margin="m-0" /> Add
-                            </Button>
                         </div>
                         <Table className="mb-0">
                             <thead>
@@ -191,7 +215,7 @@ export default function DataToImportSection() {
                                     <tr>
                                         <td colSpan={2} className="text-muted">
                                             No collections found. Type a collection name from the imported file above
-                                            and click Add.
+                                            and pick &quot;Add&quot;.
                                         </td>
                                     </tr>
                                 )}
