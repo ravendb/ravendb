@@ -67,12 +67,12 @@ $variants: (
         $variants,
         (
             $name: (
-                border-color: $color,
-                before-gradient: variant-gradient($color),
-                before-transform: translateX($translate-before-hover-x),
-                before-hover-transform: translateX($translate-hover-x),
-                icon-color: $color,
-            ),
+                    border-color: $color,
+                    before-gradient: variant-gradient($color),
+                    before-transform: translateX($translate-before-hover-x),
+                    before-hover-transform: translateX($translate-hover-x),
+                    icon-color: $color,
+                ),
         )
     );
 }

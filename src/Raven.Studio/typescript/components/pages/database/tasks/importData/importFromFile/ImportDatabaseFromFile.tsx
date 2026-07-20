@@ -20,7 +20,7 @@ import collectionsTracker from "common/helpers/database/collectionsTracker";
 import messagePublisher from "common/messagePublisher";
 import { useImportFromFileForm } from "./useImportFromFileForm";
 import { useImportLicenseRestrictions } from "./useImportLicenseRestrictions";
-import { toImportDto, hasAnyInclude } from "./importFromFileUtils";
+import { hasAnyInclude, toImportDto } from "./importFromFileUtils";
 import { ImportFromFileFormData } from "./importFromFileValidation";
 import SelectFileSection from "./sections/SelectFileSection";
 import DataToImportSection from "./sections/DataToImportSection";
@@ -32,52 +32,30 @@ import IconName from "typings/server/icons";
 type SmugglerProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
 
-const sectionIds = ["select-file", "data-to-import", "configuration-to-import", "import-processing"];
-
-interface SectionNavItem {
-    id: string;
-    label: string;
-    icon: IconName;
-    children?: { id: string; label: string }[];
-}
-
-const sectionNav: SectionNavItem[] = [
-    { id: "select-file", label: "Select file to import", icon: "folder" },
-    {
-        id: "data-to-import",
-        label: "Data to import",
-        icon: "document",
-        children: [
-            { id: "collections-to-import", label: "Collections to import" },
-            { id: "documents-and-extensions", label: "Documents and extensions" },
-        ],
-    },
-    {
-        id: "configuration-to-import",
-        label: "Configuration to import",
-        icon: "database",
-        children: [
-            { id: "database-entities", label: "Database entities" },
-            { id: "database-settings", label: "Database settings" },
-        ],
-    },
-    { id: "import-processing", label: "Import processing & security", icon: "settings" },
-];
-
-function scrollToSection(id: string) {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function findScrollParent(element: HTMLElement | null): Element | null {
-    let current = element?.parentElement;
-    while (current && current !== document.body) {
-        const { overflowY } = getComputedStyle(current);
-        if ((overflowY === "auto" || overflowY === "scroll") && current.scrollHeight > current.clientHeight) {
-            return current;
-        }
-        current = current.parentElement;
-    }
-    return null;
+function ImportSideNavItem({ item, activeSectionId }: ImportSideNavItemProps) {
+    return (
+        <>
+            <button
+                type="button"
+                className={classNames("import-side-nav-item", {
+                    active: activeSectionId === item.id,
+                })}
+                onClick={() => scrollToSection(item.id)}
+            >
+                <Icon icon={item.icon} margin="m-0" /> {item.label}
+            </button>
+            {item.children?.map((child) => (
+                <button
+                    key={child.id}
+                    type="button"
+                    className="import-side-nav-item import-side-nav-subitem"
+                    onClick={() => scrollToSection(child.id)}
+                >
+                    {child.label}
+                </button>
+            ))}
+        </>
+    );
 }
 
 interface OperationState {
@@ -119,12 +97,10 @@ export default function ImportDatabaseFromFile() {
         };
     }, []);
 
-    // The Studio scrolls the view inside a container (not the document), so the scroll-spy needs
-    // that container as its root - otherwise its bottom-of-scroll fallback always fires.
-    const pageRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
     const [scrollRoot, setScrollRoot] = useState<Element | null>(null);
     useEffect(() => {
-        setScrollRoot(findScrollParent(pageRef.current));
+        setScrollRoot(contentRef.current);
     }, []);
 
     const activeSectionId = useScrollSpy(sectionIds, { root: scrollRoot });
@@ -133,7 +109,7 @@ export default function ImportDatabaseFromFile() {
 
     const onSubmit = async (formData: ImportFromFileFormData) => {
         if (!hasAnyInclude(formData, restrictedKeys, restrictedTaskKeys)) {
-            return; // guarded by disabled submit; double check
+            return;
         }
 
         reportEvent("database", "import");
@@ -142,10 +118,12 @@ export default function ImportDatabaseFromFile() {
 
         try {
             await tasksService.validateSmugglerOptions(
-                { TransformScript: dto.TransformScript } as Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide,
+                {
+                    TransformScript: dto.TransformScript,
+                } as Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide,
                 databaseName
             );
-        } catch (error: any) {
+        } catch (error) {
             messagePublisher.reportError(
                 "Invalid import options",
                 error?.responseText ?? String(error),
@@ -251,7 +229,7 @@ export default function ImportDatabaseFromFile() {
 
     return (
         <FormProvider {...form}>
-            <div className="content-margin" ref={pageRef}>
+            <div className="import-page">
                 <AboutViewHeading
                     title="Import data from a .ravendbdump file into the current database"
                     icon="import-database"
@@ -270,7 +248,7 @@ export default function ImportDatabaseFromFile() {
                         <Icon icon="import-database" /> Import database
                     </Button>
                     {uploadPercent != null && (
-                        <div style={{ minWidth: 220 }}>
+                        <div>
                             <ProgressBar animated now={uploadPercent} label={`${uploadPercent}%`} />
                         </div>
                     )}
@@ -278,36 +256,16 @@ export default function ImportDatabaseFromFile() {
                 {!hasAnyInclude(watchedFormData, restrictedKeys, restrictedTaskKeys) && (
                     <Alert variant="warning">Note: At least one &apos;include&apos; option must be checked.</Alert>
                 )}
-                <div className="d-flex gap-4">
-                    <nav className="import-side-nav position-sticky align-self-start" style={{ top: 20 }}>
+                <div className="d-flex gap-4 import-page-body">
+                    <nav className="import-side-nav align-self-start">
                         {sectionNav.map((item, index) => (
                             <React.Fragment key={item.id}>
                                 {index > 0 && <hr />}
-                                {/* plain buttons on purpose: anchor hrefs would change the location
-                                    hash, which the Studio router interprets as a route change */}
-                                <button
-                                    type="button"
-                                    className={classNames("import-side-nav-item", {
-                                        active: activeSectionId === item.id,
-                                    })}
-                                    onClick={() => scrollToSection(item.id)}
-                                >
-                                    <Icon icon={item.icon} margin="m-0" /> {item.label}
-                                </button>
-                                {item.children?.map((child) => (
-                                    <button
-                                        key={child.id}
-                                        type="button"
-                                        className="import-side-nav-item import-side-nav-subitem"
-                                        onClick={() => scrollToSection(child.id)}
-                                    >
-                                        {child.label}
-                                    </button>
-                                ))}
+                                <ImportSideNavItem item={item} activeSectionId={activeSectionId} />
                             </React.Fragment>
                         ))}
                     </nav>
-                    <div className="flex-grow-1">
+                    <div className="flex-grow-1 import-page-content" ref={contentRef}>
                         <SelectFileSection restrictedItems={allRestrictedItems} />
                         <fieldset disabled={!file} className={classNames({ "item-disabled": !file })}>
                             <DataToImportSection />
@@ -334,4 +292,45 @@ export default function ImportDatabaseFromFile() {
             </div>
         </FormProvider>
     );
+}
+
+const sectionIds = ["select-file", "data-to-import", "configuration-to-import", "import-processing"];
+
+interface SectionNavItem {
+    id: string;
+    label: string;
+    icon: IconName;
+    children?: { id: string; label: string }[];
+}
+
+const sectionNav: SectionNavItem[] = [
+    { id: "select-file", label: "Select file to import", icon: "folder" },
+    {
+        id: "data-to-import",
+        label: "Data to import",
+        icon: "document",
+        children: [
+            { id: "collections-to-import", label: "Collections to import" },
+            { id: "documents-and-extensions", label: "Documents and extensions" },
+        ],
+    },
+    {
+        id: "configuration-to-import",
+        label: "Configuration to import",
+        icon: "database",
+        children: [
+            { id: "database-entities", label: "Database entities" },
+            { id: "database-settings", label: "Database settings" },
+        ],
+    },
+    { id: "import-processing", label: "Import processing & security", icon: "settings" },
+];
+
+function scrollToSection(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+interface ImportSideNavItemProps {
+    item: SectionNavItem;
+    activeSectionId: string | null;
 }

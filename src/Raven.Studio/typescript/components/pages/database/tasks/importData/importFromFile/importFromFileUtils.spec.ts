@@ -150,9 +150,22 @@ describe("importFromFileUtils", () => {
             const dto = toImportDto(createDefaultFormData());
             const types = (dto.OperateOnTypes as string).split(",");
             expect(types).toEqual(
-                expect.arrayContaining(["DatabaseRecord", "Documents", "Conflicts", "Indexes", "RevisionDocuments",
-                    "Identities", "CompareExchange", "CounterGroups", "Attachments", "TimeSeries",
-                    "TimeSeriesDeletedRanges", "Subscriptions", "Tombstones", "CompareExchangeTombstones"])
+                expect.arrayContaining([
+                    "DatabaseRecord",
+                    "Documents",
+                    "Conflicts",
+                    "Indexes",
+                    "RevisionDocuments",
+                    "Identities",
+                    "CompareExchange",
+                    "CounterGroups",
+                    "Attachments",
+                    "TimeSeries",
+                    "TimeSeriesDeletedRanges",
+                    "Subscriptions",
+                    "Tombstones",
+                    "CompareExchangeTombstones",
+                ])
             );
             expect(types).not.toContain("LegacyAttachments");
             expect(dto.OperateOnDatabaseRecordTypes).toBe("None");
