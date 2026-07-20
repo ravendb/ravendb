@@ -1,13 +1,8 @@
 import { createContext, useContext } from "react";
 
-export type LoginResult =
-    | {
-          authenticated: true;
-          hasApps: boolean;
-      }
-    | {
-          authenticated: false;
-      };
+export type LoginResult = {
+    authenticated: boolean;
+};
 
 export type AuthContextValue = {
     isAuthenticated: boolean;
