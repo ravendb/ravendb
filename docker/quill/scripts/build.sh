@@ -12,6 +12,11 @@ Options:
   --tag <name>          Image tag. Repeatable. (default: ravendb/quill:dev)
   --push                Push to registry instead of loading locally
   --platforms <list>    Comma-separated platforms (default: linux/amd64)
+  --mode <mode>         Build mode: source|nightly (default: source)
+                        source  -> docker/quill/Dockerfile.source (compile
+                                   Raven.Server + Raven.Studio from source)
+                        nightly -> docker/quill/Dockerfile (pull RavenDB
+                                   binaries from ravendb/ravendb-nightly)
   --no-cache            Force a full rebuild, ignoring layer cache
   --dry-run             Build locally without pushing (overrides --push)
   -h, --help            Show this help
@@ -21,11 +26,13 @@ Examples:
   $(basename "$0") --tag ravendb/quill:smoke
   $(basename "$0") --tag ravendb/quill:0.1.0 --tag ravendb/quill:latest --push
   $(basename "$0") --tag ravendb/quill:0.1.0 --platforms linux/amd64,linux/arm64 --push
+  $(basename "$0") --tag ravendb/quill:nightly --mode nightly --push
 EOF
 }
 
 TAGS=()
 PLATFORMS="linux/amd64"
+MODE="source"
 PUSH="false"
 NO_CACHE="false"
 DRY_RUN="false"
@@ -42,12 +49,19 @@ while [[ $# -gt 0 ]]; do
     --tag)       require_value --tag "$#";       TAGS+=("$2"); shift 2 ;;
     --push)      PUSH="true"; shift ;;
     --platforms) require_value --platforms "$#"; PLATFORMS="$2"; shift 2 ;;
+    --mode)      require_value --mode "$#";      MODE="$2"; shift 2 ;;
     --no-cache)  NO_CACHE="true"; shift ;;
     --dry-run)   DRY_RUN="true"; shift ;;
     -h|--help)   show_help; exit 0 ;;
     *) echo "Unknown flag: $1" >&2; show_help >&2; exit 1 ;;
   esac
 done
+
+case "$MODE" in
+  source)  DOCKERFILE="docker/quill/Dockerfile.source" ;;
+  nightly) DOCKERFILE="docker/quill/Dockerfile" ;;
+  *) echo "error: --mode must be source or nightly (got: $MODE)" >&2; exit 1 ;;
+esac
 
 # default tag if none was given
 if [ ${#TAGS[@]} -eq 0 ]; then
@@ -70,7 +84,7 @@ fi
 
 cd "$(git rev-parse --show-toplevel)"
 
-cmd=(docker buildx build --platform "$PLATFORMS" -f docker/quill/Dockerfile)
+cmd=(docker buildx build --platform "$PLATFORMS" -f "$DOCKERFILE")
 
 for tag in "${TAGS[@]}"; do
   cmd+=(-t "$tag")
