@@ -101,6 +101,26 @@ describe("importFromFileUtils", () => {
             expect(types).toContain("IndexesHistory");
         });
 
+        it("excludes restricted ongoing task tokens while keeping the rest of the server defaults", () => {
+            const types = getDatabaseRecordTypes(createDefaultFormData(), [], ["elasticSearchEtls", "genAi"]);
+            expect(types).not.toContain("ElasticSearchEtls");
+            expect(types).not.toContain("GenAiEtls");
+            expect(types).toContain("RavenEtls");
+            expect(types).toContain("Settings");
+            expect(types).toContain("ElasticSearchConnectionStrings");
+            // restrictions alone still trigger the server-default-equivalent bypass
+            expect(types).toContain("LockMode");
+            expect(types).toContain("QueueSinks");
+        });
+
+        it("excludes restricted ongoing tasks even when explicitly checked in customize mode", () => {
+            const data = createDefaultFormData();
+            data.configuration.isCustomizeOngoingTasks = true;
+            data.configuration.ongoingTasks.elasticSearchEtls = true;
+            const types = getDatabaseRecordTypes(data, [], ["elasticSearchEtls"]);
+            expect(types).not.toContain("ElasticSearchEtls");
+        });
+
         it("excludes restricted keys even when explicitly checked in customize mode", () => {
             const data = createDefaultFormData();
             data.configuration.isImportAllSettings = false;
