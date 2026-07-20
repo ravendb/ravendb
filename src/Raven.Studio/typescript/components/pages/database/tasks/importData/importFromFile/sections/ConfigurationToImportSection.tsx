@@ -65,7 +65,14 @@ const connectionStringLabels: Record<ConnectionStringKey, string> = {
 
 export default function ConfigurationToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
-    const { isSettingRestricted, getRestrictionTooltip, getLicenseRequired } = useImportLicenseRestrictions();
+    const {
+        isSettingRestricted,
+        getRestrictionTooltip,
+        getLicenseRequired,
+        isOngoingTaskRestricted,
+        getOngoingTaskRestrictionTooltip,
+        getOngoingTaskLicenseRequired,
+    } = useImportLicenseRestrictions();
 
     const isIncludeTasks = useWatch({ control, name: "configuration.isIncludeConnectionStringsAndOngoingTasks" });
     const isCustomizeTasks = useWatch({ control, name: "configuration.isCustomizeOngoingTasks" });
@@ -95,12 +102,16 @@ export default function ConfigurationToImportSection() {
     const ongoingTasks = useWatch({ control, name: "configuration.ongoingTasks" });
     const connectionStrings = useWatch({ control, name: "configuration.connectionStrings" });
 
+    const selectableOngoingTaskKeys = ongoingTaskKeys.filter((key) => !isOngoingTaskRestricted(key));
+
     const areAllCustomizedTasksSelected =
-        ongoingTaskKeys.every((key) => ongoingTasks[key]) &&
+        selectableOngoingTaskKeys.every((key) => ongoingTasks[key]) &&
         connectionStringKeys.every((key) => connectionStrings[key]);
 
     const setAllCustomizedTasks = (value: boolean) => {
-        ongoingTaskKeys.forEach((key) => setValue(`configuration.ongoingTasks.${key}`, value, { shouldDirty: true }));
+        selectableOngoingTaskKeys.forEach((key) =>
+            setValue(`configuration.ongoingTasks.${key}`, value, { shouldDirty: true })
+        );
         connectionStringKeys.forEach((key) =>
             setValue(`configuration.connectionStrings.${key}`, value, { shouldDirty: true })
         );
@@ -169,11 +180,32 @@ export default function ConfigurationToImportSection() {
                         <div className="row">
                             <div className="col-md-6">
                                 <div className="small-label mb-2">Ongoing tasks</div>
-                                {ongoingTaskKeys.map((key) => (
-                                    <FormSwitch key={key} control={control} name={`configuration.ongoingTasks.${key}`}>
-                                        {ongoingTaskLabels[key]}
-                                    </FormSwitch>
-                                ))}
+                                {ongoingTaskKeys.map((key) => {
+                                    const restricted = isOngoingTaskRestricted(key);
+                                    return (
+                                        <div
+                                            key={key}
+                                            className="d-flex align-items-center gap-2"
+                                            title={restricted ? getOngoingTaskRestrictionTooltip(key) : undefined}
+                                        >
+                                            {/* dim only the switch - the license badge must stay fully visible */}
+                                            <div className={restricted ? "item-disabled" : undefined}>
+                                                <FormSwitch
+                                                    control={control}
+                                                    name={`configuration.ongoingTasks.${key}`}
+                                                    {...(restricted && { disabled: true })}
+                                                >
+                                                    {ongoingTaskLabels[key]}
+                                                </FormSwitch>
+                                            </div>
+                                            {restricted && (
+                                                <LicenseRestrictedBadge
+                                                    licenseRequired={getOngoingTaskLicenseRequired(key)}
+                                                />
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                             <div className="col-md-6">
                                 <div className="small-label mb-2">Connection strings</div>
