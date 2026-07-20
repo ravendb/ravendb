@@ -9,15 +9,16 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { FormSwitch } from "components/common/Form";
 import ImportSection from "./ImportSection";
 import {
-    ImportFromFileFormData,
-    databaseSettingKeys,
-    DatabaseSettingKey,
-    ongoingTaskKeys,
-    OngoingTaskKey,
-    connectionStringKeys,
     ConnectionStringKey,
+    connectionStringKeys,
+    DatabaseSettingKey,
+    databaseSettingKeys,
+    ImportFromFileFormData,
+    OngoingTaskKey,
+    ongoingTaskKeys,
 } from "../importFromFileValidation";
 import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
+import Card from "react-bootstrap/Card";
 
 const databaseSettingLabels: Record<DatabaseSettingKey, string> = {
     settings: "Settings",
@@ -139,7 +140,11 @@ export default function ConfigurationToImportSection() {
                     Include Indexes
                 </FormSwitch>
                 <div className="ms-4">
-                    <FormSwitch control={control} name="configuration.isIncludeIndexHistory" afterChange={forceIndexesOn}>
+                    <FormSwitch
+                        control={control}
+                        name="configuration.isIncludeIndexHistory"
+                        afterChange={forceIndexesOn}
+                    >
                         Include Index History
                     </FormSwitch>
                     <FormSwitch control={control} name="configuration.isRemoveAnalyzers" afterChange={forceIndexesOn}>
@@ -232,68 +237,67 @@ export default function ConfigurationToImportSection() {
             <div id="database-settings" className="small-label mb-2">
                 Select database settings
             </div>
-            <div className="d-flex gap-3 mb-3">
-                <Button
-                    variant={isImportAllSettings ? "primary" : "outline-secondary"}
-                    className="flex-grow-1 py-3"
-                    onClick={() => setValue("configuration.isImportAllSettings", true, { shouldDirty: true })}
-                >
-                    <Icon icon="database" /> Import all settings
-                </Button>
-                <Button
-                    variant={!isImportAllSettings ? "primary" : "outline-secondary"}
-                    className="flex-grow-1 py-3"
-                    onClick={() => setValue("configuration.isImportAllSettings", false, { shouldDirty: true })}
-                >
-                    <Icon icon="settings" /> Customize
-                </Button>
-            </div>
-            {!isImportAllSettings && (
-                <Table className="mb-0">
-                    <thead>
-                        <tr>
-                            <th>Setting name</th>
-                            <th className="text-end">
-                                <Button
-                                    variant="link"
-                                    size="sm"
-                                    className="p-0"
-                                    onClick={() => setAllSettings(!areAllSettingsSelected)}
-                                >
-                                    {areAllSettingsSelected ? "Deselect all" : "Select all"}
-                                </Button>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {databaseSettingKeys.map((key) => {
-                            const restricted = isSettingRestricted(key);
-                            const licenseRequired = getLicenseRequired(key);
-                            return (
-                                <tr key={key} title={restricted ? getRestrictionTooltip(key) : undefined}>
-                                    <td colSpan={2}>
-                                        <div className="d-flex align-items-center gap-2">
-                                            {/* dim only the switch - the license badge must stay fully visible */}
-                                            <div className={restricted ? "item-disabled" : undefined}>
-                                                <FormSwitch
-                                                    control={control}
-                                                    name={`configuration.databaseSettings.${key}`}
-                                                    {...(restricted && { disabled: true })}
-                                                >
-                                                    {databaseSettingLabels[key]}
-                                                </FormSwitch>
+            <Card>
+                <div className="d-flex gap-3">
+                    <Button
+                        variant={isImportAllSettings ? "primary" : "outline-secondary"}
+                        className="flex-grow-1 py-3"
+                        onClick={() => setValue("configuration.isImportAllSettings", true, { shouldDirty: true })}
+                    >
+                        <Icon icon="database" /> Import all settings
+                    </Button>
+                    <Button
+                        variant={!isImportAllSettings ? "primary" : "outline-secondary"}
+                        className="flex-grow-1 py-3"
+                        onClick={() => setValue("configuration.isImportAllSettings", false, { shouldDirty: true })}
+                    >
+                        <Icon icon="settings" addon="edit" /> Customize
+                    </Button>
+                </div>
+                {!isImportAllSettings && (
+                    <Table className="mb-0 mt-4">
+                        <thead>
+                            <tr>
+                                <th>Setting name</th>
+                                <th className="text-end">
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        className="p-0"
+                                        onClick={() => setAllSettings(!areAllSettingsSelected)}
+                                    >
+                                        {areAllSettingsSelected ? "Deselect all" : "Select all"}
+                                    </Button>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {databaseSettingKeys.map((key) => {
+                                const restricted = isSettingRestricted(key);
+                                const licenseRequired = getLicenseRequired(key);
+                                return (
+                                    <tr key={key} title={restricted ? getRestrictionTooltip(key) : undefined}>
+                                        <td colSpan={2}>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <div className={restricted ? "item-disabled" : undefined}>
+                                                    <FormSwitch
+                                                        control={control}
+                                                        name={`configuration.databaseSettings.${key}`}
+                                                        {...(restricted && { disabled: true })}
+                                                    >
+                                                        {databaseSettingLabels[key]}
+                                                    </FormSwitch>
+                                                </div>
+                                                {restricted && <LicenseRestrictedBadge licenseRequired={licenseRequired} />}
                                             </div>
-                                            {restricted && (
-                                                <LicenseRestrictedBadge licenseRequired={licenseRequired} />
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </Table>
-            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </Table>
+                )}
+            </Card>
         </ImportSection>
     );
 }

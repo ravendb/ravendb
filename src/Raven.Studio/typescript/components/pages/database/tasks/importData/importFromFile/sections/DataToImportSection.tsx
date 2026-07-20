@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -14,6 +14,7 @@ import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { useAppSelector } from "components/store";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import Card from "react-bootstrap/Card";
 
 export default function DataToImportSection() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
@@ -117,111 +118,113 @@ export default function DataToImportSection() {
             <div id="collections-to-import" className="small-label mb-2">
                 Choose collections to import
             </div>
-            <div className="d-flex gap-3 mb-4">
-                <Button
-                    variant={isImportAll ? "primary" : "outline-secondary"}
-                    className="flex-grow-1 py-3"
-                    onClick={() => setValue("collections.isImportAllCollections", true, { shouldDirty: true })}
-                >
-                    <Icon icon="documents" /> Import all collections
-                </Button>
-                <Button
-                    variant={!isImportAll ? "primary" : "outline-secondary"}
-                    className="flex-grow-1 py-3"
-                    onClick={() => setValue("collections.isImportAllCollections", false, { shouldDirty: true })}
-                >
-                    <Icon icon="document-group" /> Customize imported collections
-                </Button>
-            </div>
-            {!isImportAll && (
-                <div className="mb-4">
-                    <div className="d-flex gap-2 mb-2">
-                        <Form.Control
-                            type="text"
-                            placeholder="Search or add a collection from the imported file"
-                            value={collectionFilter}
-                            onChange={(e) => setCollectionFilter(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    addCollection();
-                                }
-                            }}
-                        />
-                        <Button variant="secondary" disabled={!canAddCollection} onClick={addCollection}>
-                            <Icon icon="plus" margin="m-0" /> Add
-                        </Button>
-                    </div>
-                    <Table className="mb-0">
-                        <thead>
-                            <tr>
-                                <th>Collection name</th>
-                                <th className="text-end">
-                                    <Button
-                                        variant="link"
-                                        size="sm"
-                                        className="p-0"
-                                        disabled={filteredCollections.length === 0}
-                                        onClick={() =>
-                                            setValue(
-                                                "collections.includedCollections",
-                                                areAllFilteredCollectionsSelected
-                                                    ? includedCollections.filter(
-                                                          (name) => !filteredCollections.includes(name)
-                                                      )
-                                                    : [
-                                                          ...includedCollections,
-                                                          ...filteredCollections.filter(
-                                                              (name) => !includedCollections.includes(name)
-                                                          ),
-                                                      ],
-                                                { shouldDirty: true }
-                                            )
-                                        }
-                                    >
-                                        {areAllFilteredCollectionsSelected ? "Deselect all" : "Select all"}
-                                    </Button>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredCollections.length === 0 && (
-                                <tr>
-                                    <td colSpan={2} className="text-muted">
-                                        No collections found. Type a collection name from the imported file above and
-                                        click Add.
-                                    </td>
-                                </tr>
-                            )}
-                            {filteredCollections.map((name) => (
-                                <tr key={name}>
-                                    <td colSpan={2}>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <Form.Check
-                                                type="switch"
-                                                label={name}
-                                                checked={includedCollections.includes(name)}
-                                                onChange={(e) => toggleCollection(name, e.target.checked)}
-                                            />
-                                            {manualCollections.includes(name) && (
-                                                <Button
-                                                    variant="link"
-                                                    size="sm"
-                                                    className="p-0 text-danger"
-                                                    title="Remove collection"
-                                                    onClick={() => removeCollection(name)}
-                                                >
-                                                    <Icon icon="trash" margin="m-0" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </Table>
+            <Card className="mb-4">
+                <div className="d-flex gap-3">
+                    <Button
+                        variant={isImportAll ? "primary" : "outline-secondary"}
+                        className="flex-grow-1 py-3"
+                        onClick={() => setValue("collections.isImportAllCollections", true, { shouldDirty: true })}
+                    >
+                        <Icon icon="documents" /> Import all collections
+                    </Button>
+                    <Button
+                        variant={!isImportAll ? "primary" : "outline-secondary"}
+                        className="flex-grow-1 py-3"
+                        onClick={() => setValue("collections.isImportAllCollections", false, { shouldDirty: true })}
+                    >
+                        <Icon icon="document-group" addon="edit" /> Customize imported collections
+                    </Button>
                 </div>
-            )}
+                {!isImportAll && (
+                    <div className="mt-4">
+                        <div className="d-flex gap-2 mb-2">
+                            <Form.Control
+                                type="text"
+                                placeholder="Search or add a collection from the imported file"
+                                value={collectionFilter}
+                                onChange={(e) => setCollectionFilter(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        addCollection();
+                                    }
+                                }}
+                            />
+                            <Button variant="secondary" disabled={!canAddCollection} onClick={addCollection}>
+                                <Icon icon="plus" margin="m-0" /> Add
+                            </Button>
+                        </div>
+                        <Table className="mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Collection name</th>
+                                    <th className="text-end">
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            className="p-0"
+                                            disabled={filteredCollections.length === 0}
+                                            onClick={() =>
+                                                setValue(
+                                                    "collections.includedCollections",
+                                                    areAllFilteredCollectionsSelected
+                                                        ? includedCollections.filter(
+                                                              (name) => !filteredCollections.includes(name)
+                                                          )
+                                                        : [
+                                                              ...includedCollections,
+                                                              ...filteredCollections.filter(
+                                                                  (name) => !includedCollections.includes(name)
+                                                              ),
+                                                          ],
+                                                    { shouldDirty: true }
+                                                )
+                                            }
+                                        >
+                                            {areAllFilteredCollectionsSelected ? "Deselect all" : "Select all"}
+                                        </Button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredCollections.length === 0 && (
+                                    <tr>
+                                        <td colSpan={2} className="text-muted">
+                                            No collections found. Type a collection name from the imported file above
+                                            and click Add.
+                                        </td>
+                                    </tr>
+                                )}
+                                {filteredCollections.map((name) => (
+                                    <tr key={name}>
+                                        <td colSpan={2}>
+                                            <div className="d-flex align-items-center justify-content-between">
+                                                <Form.Check
+                                                    type="switch"
+                                                    label={name}
+                                                    checked={includedCollections.includes(name)}
+                                                    onChange={(e) => toggleCollection(name, e.target.checked)}
+                                                />
+                                                {manualCollections.includes(name) && (
+                                                    <Button
+                                                        variant="link"
+                                                        size="sm"
+                                                        className="p-0 text-danger"
+                                                        title="Remove collection"
+                                                        onClick={() => removeCollection(name)}
+                                                    >
+                                                        <Icon icon="trash" margin="m-0" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                    </div>
+                )}
+            </Card>
 
             <div className="d-flex justify-content-between align-items-center mb-2">
                 <div id="documents-and-extensions" className="small-label">
@@ -231,7 +234,7 @@ export default function DataToImportSection() {
                     {areAllDocumentsSelected ? "Deselect all" : "Select all"}
                 </Button>
             </div>
-            <div className="card p-4">
+            <Card className="p-4">
                 <FormSwitch control={control} name="documents.isIncludeDocuments">
                     Include Documents
                 </FormSwitch>
@@ -261,10 +264,7 @@ export default function DataToImportSection() {
                 <hr />
                 <FormSwitch control={control} name="documents.isIncludeArtificialDocuments">
                     Include Artificial Documents{" "}
-                    <PopoverWithHoverWrapper
-                        message="Importing artificial documents might cause import error of Map-Reduce indexes with OutputReduceToCollection."
-                    >
-                        {/* prevent the click on the icon from toggling the surrounding switch label */}
+                    <PopoverWithHoverWrapper message="Importing artificial documents might cause import error of Map-Reduce indexes with OutputReduceToCollection.">
                         <span onClick={(e) => e.preventDefault()}>
                             <Icon icon="info" color="info" margin="ms-1" />
                         </span>
@@ -278,7 +278,6 @@ export default function DataToImportSection() {
                             : undefined
                     }
                 >
-                    {/* dim only the switch - the license badge must stay fully visible */}
                     <div className={isArchivedRestricted ? "item-disabled" : undefined}>
                         <FormSwitch
                             control={control}
@@ -317,7 +316,7 @@ export default function DataToImportSection() {
                         database.
                     </Alert>
                 )}
-            </div>
+            </Card>
         </ImportSection>
     );
 }

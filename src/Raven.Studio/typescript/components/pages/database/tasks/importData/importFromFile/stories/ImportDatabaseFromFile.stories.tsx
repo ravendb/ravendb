@@ -45,7 +45,8 @@ export const CommunityLicense: StoryObj<ImportFromFileStoryArgs> = {
 
         // getStatusLimited() doesn't zero these flags on its own - override explicitly so the
         // restricted-features alert (SelectFileSection) and disabled toggles (ConfigurationToImportSection)
-        // actually render as restricted in the story.
+        // actually render as restricted in the story. Keep this list in sync with the flags used
+        // in useImportLicenseRestrictions.
         license.with_LicenseLimited({
             Type: props.licenseType,
             HasDocumentsCompression: false,
@@ -53,6 +54,21 @@ export const CommunityLicense: StoryObj<ImportFromFileStoryArgs> = {
             HasTimeSeriesRollupsAndRetention: false,
             HasPostgreSqlIntegration: false,
             HasClientConfiguration: false,
+            HasSchemaValidation: false,
+            HasPeriodicBackup: false,
+            HasExternalReplication: false,
+            HasRavenEtl: false,
+            HasSqlEtl: false,
+            HasSnowflakeEtl: false,
+            HasOlapEtl: false,
+            HasElasticSearchEtl: false,
+            HasQueueEtl: false,
+            HasPullReplicationAsHub: false,
+            HasPullReplicationAsSink: false,
+            HasEmbeddingsGeneration: false,
+            HasGenAi: false,
+            HasCdcSink: false,
+            HasRemoteAttachments: false,
         });
 
         return <ImportDatabaseFromFile />;
