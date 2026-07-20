@@ -883,45 +883,58 @@ namespace Raven.Server.ServerWide.Commands
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-            using (GetPrefix(context, database, out Slice prefixSlice, fromCount))
+
+            // The required prefix is the database only, so the iterator stops at the database boundary
+            // and doesn't read (and deserialize) commands that belong to other databases.
+            using (GetPrefix(context, database, out Slice databasePrefix))
             {
-                var readSize = 0;
-                var commandsBulk = items.SeekByPrimaryKey(prefixSlice, 0);
-                foreach (var command in commandsBulk)
+                // 'startAfter' is exclusive, so we seek after (fromCount - 1) in order to include the command at
+                // exactly 'fromCount'. Counts are discrete, so excluding (fromCount - 1) starts inclusively at 'fromCount'.
+                var startAfter = Slices.Empty;
+                IDisposable startAfterScope = null;
+                if (fromCount is > 0)
+                    startAfterScope = GetPrefix(context, database, out startAfter, fromCount.Value - 1);
+
+                using (startAfterScope)
                 {
-                    if (take <= 0)
-                        yield break;
-
-                    var reader = command.Reader;
-                    var result = ReadCommand(context, reader);
-                    if (result == null)
-                        yield break;
-
-                    if (result.Database != lowerDb)
+                    var readSize = 0;
+                    var commandsBulk = items.SeekByPrimaryKeyPrefix(databasePrefix, startAfter, 0);
+                    foreach (var command in commandsBulk)
                     {
-                        // beware of reading commands of other databases.
-                        result.Dispose();
-                        continue;
+                        if (take <= 0)
+                            yield break;
+
+                        var reader = command.Value.Reader;
+                        var result = ReadCommand(context, reader);
+                        if (result == null)
+                            yield break;
+
+                        if (result.Database != lowerDb)
+                        {
+                            // beware of reading commands of other databases.
+                            result.Dispose();
+                            continue;
+                        }
+
+                        if (result.PreviousCount < fromCount)
+                        {
+                            result.Dispose();
+                            continue;
+                        }
+
+                        if (lastCompletedClusterTransactionIndex.HasValue && result.Index <= lastCompletedClusterTransactionIndex)
+                        {
+                            result.Dispose();
+                            continue;
+                        }
+
+                        take--;
+                        yield return result;
+
+                        readSize += reader.Size;
+                        if (readSize > maxBytesToRead)
+                            yield break;
                     }
-
-                    if (result.PreviousCount < fromCount)
-                    {
-                        result.Dispose();
-                        continue;
-                    }
-
-                    if (lastCompletedClusterTransactionIndex.HasValue && result.Index <= lastCompletedClusterTransactionIndex)
-                    {
-                        result.Dispose();
-                        continue;
-                    }
-
-                    take--;
-                    yield return result;
-
-                    readSize += reader.Size;
-                    if(readSize > maxBytesToRead)
-                        yield break;
                 }
             }
         }
