@@ -11,24 +11,13 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { AccessPopover } from "components/common/AccessPopover";
 
-export type NavigationCardVariant =
-    | "AI"
-    | "Replication"
-    | "Backups"
-    | "Subscriptions"
-    | "ETL"
-    | "Sink"
-    | "ImportFile"
-    | "ImportRavenDb"
-    | "ImportCsv"
-    | "ImportSql"
-    | "ImportNoSql";
-
-export interface NavigationCardProps {
+// Each variant must have matching styles registered via the navigation-card-variant
+// mixin (navigationCardVariants.scss) in the stylesheet of the page using the card.
+export interface NavigationCardProps<TVariant extends string = string> {
     title: string;
     description: string;
     iconName: IconName;
-    variant: NavigationCardVariant;
+    variant: TVariant;
     link: string;
     target: string;
     licenseBadge?: LicenseBadgeText;

@@ -1,0 +1,9 @@
+@use "Content/scss/colors";
+@use "components/common/navigationCard/navigationCardVariants" as navigationCard;
+
+// Keep in sync with ImportDataVariant in ImportDataOptions.tsx
+@include navigationCard.navigation-card-variant("ImportFile", colors.$color-4-3);
+@include navigationCard.navigation-card-variant("ImportRavenDb", colors.$color-1-1);
+@include navigationCard.navigation-card-variant("ImportCsv", colors.$color-2-1);
+@include navigationCard.navigation-card-variant("ImportSql", colors.$color-4);
+@include navigationCard.navigation-card-variant("ImportNoSql", colors.$color-3);
