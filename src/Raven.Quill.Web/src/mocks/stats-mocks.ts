@@ -28,15 +28,17 @@ export const statsMocks = {
     collections: (collections: DataCollectionDto[] = sampleCollections) =>
         apiHttp.get("/api/apps/{slug}/collections", ({ response }) => response(200).json(collections)),
     conversations: (conversations: ConversationDto[] = sampleConversations) =>
-        apiHttp.get("/api/apps/{slug}/conversations", ({ response }) =>
-            response(200).json({
-                conversations: conversations.map((conversation) => ({
+        apiHttp.get("/api/apps/{slug}/conversations", ({ query, response }) => {
+            const start = Number(query.get("start") ?? 0);
+            const pageSize = Number(query.get("pageSize") ?? conversations.length);
+            return response(200).json({
+                conversations: conversations.slice(start, start + pageSize).map((conversation) => ({
                     ...conversation,
                     transcript: null,
                 })),
                 totalResults: conversations.length,
-            }),
-        ),
+            });
+        }),
     conversation: (conversations: ConversationDto[] = sampleConversations) =>
         apiHttp.get("/api/apps/{slug}/conversations/{conversationId}", ({ params, response }) => {
             const found = conversations.find((candidate) => candidate.id === params.conversationId);

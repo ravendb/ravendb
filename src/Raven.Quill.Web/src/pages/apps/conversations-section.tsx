@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import type { ConversationDto } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
+import { TablePagination } from "@/components/table/table-pagination";
 import type { DatePeriod } from "@/lib/date-period";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
 import { ConversationsTable } from "@/pages/apps/conversations/conversations-table";
@@ -36,10 +37,26 @@ export function ConversationStatsCards({ slug, period }: ConversationsSectionPro
 }
 
 const EMPTY_CONVERSATIONS: ConversationDto[] = [];
+const PAGE_SIZE = 50;
 
 export function ConversationsSection({ slug, period }: ConversationsSectionProps) {
-    const conversationsQuery = useQuery(api.queries.stats.conversations(slug, period));
+    const [pageIndex, setPageIndex] = useState(0);
+
+    // A page number only makes sense within one period, so switching periods jumps back to the
+    // first page. Adjusting state during render avoids fetching the stale page first.
+    const periodKey = `${period.year}-${period.month ?? ""}-${period.day ?? ""}`;
+    const [prevPeriodKey, setPrevPeriodKey] = useState(periodKey);
+    if (periodKey !== prevPeriodKey) {
+        setPrevPeriodKey(periodKey);
+        setPageIndex(0);
+    }
+
+    const conversationsQuery = useQuery({
+        ...api.queries.stats.conversations(slug, period, { start: pageIndex * PAGE_SIZE, pageSize: PAGE_SIZE }),
+        placeholderData: keepPreviousData,
+    });
     const conversations = conversationsQuery.data?.conversations ?? EMPTY_CONVERSATIONS;
+    const totalResults = conversationsQuery.data?.totalResults ?? 0;
 
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("all");
@@ -82,6 +99,12 @@ export function ConversationsSection({ slug, period }: ConversationsSectionProps
                             channelOptions={channelOptions}
                         />
                         <ConversationsTable slug={slug} conversations={filteredConversations} />
+                        <TablePagination
+                            pageIndex={pageIndex}
+                            pageSize={PAGE_SIZE}
+                            totalCount={totalResults}
+                            onPageIndexChange={setPageIndex}
+                        />
                     </div>
                 )}
             </ApiState>
