@@ -1,5 +1,4 @@
 import { useParams } from "react-router";
-import { ActivitySection } from "@/pages/apps/activity-section";
 import { AgentsSection } from "@/pages/apps/agents-section";
 import { ChannelsSection } from "@/pages/apps/channels-section";
 import { StatisticsSection } from "@/pages/apps/statistics-section";
@@ -14,7 +13,6 @@ export function AppOverview() {
             <StatisticsSection slug={slug} />
             <AgentsSection slug={slug} />
             <ChannelsSection slug={slug} />
-            <ActivitySection slug={slug} />
         </div>
     );
 }
