@@ -4,7 +4,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
@@ -158,13 +157,12 @@ internal static class MetricsReadService
             CdcWrites: new MetricCard(cdcWrites.Sum(p => p.Writes), 0,
                 cdcWrites.Select(p => (double)p.Writes).ToArray()));
 
-        var agentDefs = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
-        var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
-        var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
+        var modelByConnectionString = (record.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
             .ToDictionary(p => p.Key, p => AiConnectionStringModel.Resolve(p.Value), StringComparer.OrdinalIgnoreCase);
         var modelByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var nameByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var agent in agentDefs.AiAgents ?? [])
+        foreach (var agent in record.AiAgents ?? [])
         {
             nameByAgent[agent.Identifier] = string.IsNullOrWhiteSpace(agent.Name) ? agent.Identifier : agent.Name;
             if (agent.ConnectionStringName is { } name
@@ -368,8 +366,7 @@ internal static class MetricsReadService
 
     private static async Task<ApplianceAppResponse> EnrichAppAsync(IDocumentStore store, App app, CancellationToken ct)
     {
-        var maintenance = store.Maintenance.ForDatabase(app.Database);
-        var stats = await maintenance.SendAsync(new GetStatisticsOperation(), ct);
+        var stats = await store.Maintenance.ForDatabase(app.Database).SendAsync(new GetStatisticsOperation(), ct);
 
         List<Channel> channels;
         using (var session = store.OpenAsyncSession(app.Database))
@@ -523,7 +520,12 @@ internal static class MetricsReadService
     public static async Task<ConversationListResult> GetConversationsAsync(IDocumentStore store, string slug, string database, UsagePeriod period, int start, int pageSize, DateTime nowUtc, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);
+        return await GetConversationsAsync(session, slug, period, start, pageSize, nowUtc, ct);
+    }
 
+    internal static async Task<ConversationListResult> GetConversationsAsync(
+        IAsyncDocumentSession session, string slug, UsagePeriod period, int start, int pageSize, DateTime nowUtc, CancellationToken ct)
+    {
         var previews = await session.Query<ConversationPreview, ConversationPreviewIndex>()
             .Where(x => x.LastMessageAt >= period.Start && x.LastMessageAt < period.End)
             .Statistics(out var stats)

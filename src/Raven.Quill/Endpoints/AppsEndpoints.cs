@@ -66,6 +66,7 @@ public static class AppsEndpoints
 
         group.MapDelete("/{slug}", DeleteAppAsync)
             .WithName("apps.delete")
+            .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }
 
@@ -88,7 +89,7 @@ public static class AppsEndpoints
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);
         await AppLookup.DeleteAppAsync(store, slug, ct);
 
-        return Results.Ok();
+        return Results.NoContent();
     }
 
     private static async Task<IResult> SuggestAgentAsync(

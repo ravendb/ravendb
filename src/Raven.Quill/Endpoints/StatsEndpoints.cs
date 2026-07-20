@@ -101,7 +101,7 @@ public static class StatsEndpoints
         {
             var loadedApp = await AppLookup.LoadAppAsync(store, app, ct);
             if (loadedApp is null)
-                return Results.NotFound($"no app with slug '{app}'");
+                return Results.NotFound(new ApiErrorResponse($"no app with slug '{app}'"));
 
             apps.Add(loadedApp);
         }
