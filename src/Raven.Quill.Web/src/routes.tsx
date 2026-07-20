@@ -33,7 +33,10 @@ import { DashboardHome } from "@/pages/dashboard/dashboard-home";
 import { DashboardLicense } from "@/pages/dashboard/license";
 import { DashboardUsage } from "@/pages/dashboard/usage";
 import { appRoutes as appRouteBuilders, ROUTE_PATTERNS } from "@/lib/app-routes";
+import { RequireApp } from "@/pages/apps/require-app";
 import { AiPage } from "@/pages/utility/ai-page";
+import { AppScopedNotFoundPage, NotFoundPage } from "@/pages/utility/not-found-page";
+import { RouteErrorBoundary } from "@/pages/utility/route-error-boundary";
 import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
 import { AddAppWizard } from "@/pages/setup/add-app-wizard/add-app-wizard";
 import { AddCapabilityWizard } from "@/pages/setup/add-capability-wizard/add-capability-wizard";
@@ -355,36 +358,59 @@ export function isAppRouteHandle(handle: unknown): handle is AppRouteHandle {
 
 export const router = createBrowserRouter([
     {
-        path: "/login",
-        element: (
-            <RedirectAuthenticated>
-                <Login />
-            </RedirectAuthenticated>
-        ),
-    },
-    {
-        path: "/",
-        element: (
-            <RequireAuth>
-                <App />
-            </RequireAuth>
-        ),
+        errorElement: <RouteErrorBoundary />,
         children: [
-            ...dashboardRoutes,
-            ...utilityRoutes,
             {
-                path: ROUTE_PATTERNS.app,
+                path: "/login",
+                element: (
+                    <RedirectAuthenticated>
+                        <Login />
+                    </RedirectAuthenticated>
+                ),
+            },
+            {
+                path: "/",
+                element: (
+                    <RequireAuth>
+                        <App />
+                    </RequireAuth>
+                ),
                 children: [
-                    ...appRoutes,
+                    ...dashboardRoutes,
+                    ...utilityRoutes,
                     {
-                        path: ROUTE_PATTERNS.addCapability,
-                        element: <AddCapabilityWizard />,
+                        path: ROUTE_PATTERNS.app,
+                        element: <RequireApp />,
+                        children: [
+                            ...appRoutes,
+                            {
+                                path: ROUTE_PATTERNS.addCapability,
+                                element: <AddCapabilityWizard />,
+                                handle: {
+                                    title: "Add AI Capability",
+                                    appScoped: true,
+                                    isBareLayout: true,
+                                    isPageTitleHidden: true,
+                                    isSidebarCollapsed: true,
+                                } satisfies AppRouteHandle,
+                            },
+                            {
+                                path: "*",
+                                element: <AppScopedNotFoundPage />,
+                                handle: {
+                                    title: "Page not found",
+                                    appScoped: true,
+                                    isPageTitleHidden: true,
+                                } satisfies AppRouteHandle,
+                            },
+                        ],
+                    },
+                    {
+                        path: "*",
+                        element: <NotFoundPage />,
                         handle: {
-                            title: "Add AI Capability",
-                            appScoped: true,
-                            isBareLayout: true,
+                            title: "Page not found",
                             isPageTitleHidden: true,
-                            isSidebarCollapsed: true,
                         } satisfies AppRouteHandle,
                     },
                 ],
