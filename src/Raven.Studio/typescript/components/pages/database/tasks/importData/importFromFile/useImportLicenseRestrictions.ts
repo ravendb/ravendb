@@ -19,45 +19,6 @@ export interface RestrictedImportOngoingTask {
     licenseRequired: LicenseBadgeText;
 }
 
-const settingFlags: { settingKey: DatabaseSettingKey; label: string; flag: LicenseStatusKey; licenseRequired: LicenseBadgeText }[] = [
-    { settingKey: "documentsCompression", label: "Documents Compression", flag: "HasDocumentsCompression", licenseRequired: "Enterprise" },
-    { settingKey: "dataArchival", label: "Data Archival", flag: "HasDataArchival", licenseRequired: "Enterprise" },
-    { settingKey: "timeSeries", label: "Time Series Configuration", flag: "HasTimeSeriesRollupsAndRetention", licenseRequired: "Professional +" },
-    { settingKey: "postgreSqlIntegration", label: "PostgreSQL Integration", flag: "HasPostgreSqlIntegration", licenseRequired: "Enterprise" },
-    { settingKey: "client", label: "Client Configuration", flag: "HasClientConfiguration", licenseRequired: "Professional +" },
-    { settingKey: "schemaValidation", label: "Document Schema", flag: "HasSchemaValidation", licenseRequired: "Professional +" },
-];
-
-export type DocumentToggleKey = "isIncludeArchivedDocuments";
-
-// archived documents are the data produced by the Data Archival feature - without the license the
-// server skips them, so the toggle is disabled (the "Data Archival" chip already covers the alert)
-const documentToggleFlags: { toggleKey: DocumentToggleKey; label: string; flag: LicenseStatusKey; licenseRequired: LicenseBadgeText }[] = [
-    { toggleKey: "isIncludeArchivedDocuments", label: "Archived Documents", flag: "HasDataArchival", licenseRequired: "Enterprise" },
-];
-
-// aiAgents and connection strings have no dedicated license flag - not gated
-const ongoingTaskFlags: { taskKey: OngoingTaskKey; label: string; flag: LicenseStatusKey; licenseRequired: LicenseBadgeText }[] = [
-    { taskKey: "periodicBackups", label: "Periodic Backups", flag: "HasPeriodicBackup", licenseRequired: "Professional +" },
-    { taskKey: "externalReplications", label: "External Replications", flag: "HasExternalReplication", licenseRequired: "Professional +" },
-    { taskKey: "ravenEtls", label: "RavenDB ETLs", flag: "HasRavenEtl", licenseRequired: "Professional +" },
-    { taskKey: "sqlEtls", label: "SQL ETLs", flag: "HasSqlEtl", licenseRequired: "Professional +" },
-    { taskKey: "snowflakeEtls", label: "Snowflake ETLs", flag: "HasSnowflakeEtl", licenseRequired: "Enterprise" },
-    { taskKey: "olapEtls", label: "OLAP ETLs", flag: "HasOlapEtl", licenseRequired: "Enterprise" },
-    { taskKey: "elasticSearchEtls", label: "Elasticsearch ETLs", flag: "HasElasticSearchEtl", licenseRequired: "Enterprise" },
-    { taskKey: "queueEtls", label: "Queue ETLs", flag: "HasQueueEtl", licenseRequired: "Enterprise" },
-    { taskKey: "hubReplications", label: "Replication Hubs", flag: "HasPullReplicationAsHub", licenseRequired: "Enterprise" },
-    { taskKey: "sinkReplications", label: "Replication Sinks", flag: "HasPullReplicationAsSink", licenseRequired: "Professional +" },
-    { taskKey: "embeddingsGeneration", label: "Embeddings Generation", flag: "HasEmbeddingsGeneration", licenseRequired: "Enterprise" },
-    { taskKey: "genAi", label: "GenAI", flag: "HasGenAi", licenseRequired: "Enterprise AI" },
-    { taskKey: "cdcSinks", label: "CDC Sinks", flag: "HasCdcSink", licenseRequired: "Enterprise" },
-    { taskKey: "remoteAttachments", label: "Remote Attachments", flag: "HasRemoteAttachments", licenseRequired: "Enterprise" },
-];
-
-function getRestrictionTooltipText(label: string): string {
-    return `Data created with ${label} won't be imported - this feature isn't included in your license`;
-}
-
 export function useImportLicenseRestrictions(): {
     restrictedFeatures: RestrictedImportFeature[];
     restrictedOngoingTasks: RestrictedImportOngoingTask[];
@@ -86,8 +47,16 @@ export function useImportLicenseRestrictions(): {
             .map(({ taskKey, label, licenseRequired }) => ({ taskKey, label, licenseRequired }));
 
         const allRestrictedItems = [
-            ...restrictedFeatures.map((x) => ({ key: `setting-${x.settingKey}`, label: x.label, licenseRequired: x.licenseRequired })),
-            ...restrictedOngoingTasks.map((x) => ({ key: `task-${x.taskKey}`, label: x.label, licenseRequired: x.licenseRequired })),
+            ...restrictedFeatures.map((x) => ({
+                key: `setting-${x.settingKey}`,
+                label: x.label,
+                licenseRequired: x.licenseRequired,
+            })),
+            ...restrictedOngoingTasks.map((x) => ({
+                key: `task-${x.taskKey}`,
+                label: x.label,
+                licenseRequired: x.licenseRequired,
+            })),
         ];
 
         const isSettingRestricted = (key: DatabaseSettingKey) =>
@@ -141,4 +110,123 @@ export function useImportLicenseRestrictions(): {
             getDocumentToggleLicenseRequired,
         };
     }, [licenseStatus]);
+}
+
+const settingFlags: {
+    settingKey: DatabaseSettingKey;
+    label: string;
+    flag: LicenseStatusKey;
+    licenseRequired: LicenseBadgeText;
+}[] = [
+    {
+        settingKey: "documentsCompression",
+        label: "Documents Compression",
+        flag: "HasDocumentsCompression",
+        licenseRequired: "Enterprise",
+    },
+    { settingKey: "dataArchival", label: "Data Archival", flag: "HasDataArchival", licenseRequired: "Enterprise" },
+    {
+        settingKey: "timeSeries",
+        label: "Time Series Configuration",
+        flag: "HasTimeSeriesRollupsAndRetention",
+        licenseRequired: "Professional +",
+    },
+    {
+        settingKey: "postgreSqlIntegration",
+        label: "PostgreSQL Integration",
+        flag: "HasPostgreSqlIntegration",
+        licenseRequired: "Enterprise",
+    },
+    {
+        settingKey: "client",
+        label: "Client Configuration",
+        flag: "HasClientConfiguration",
+        licenseRequired: "Professional +",
+    },
+    {
+        settingKey: "schemaValidation",
+        label: "Document Schema",
+        flag: "HasSchemaValidation",
+        licenseRequired: "Professional +",
+    },
+];
+
+export type DocumentToggleKey = "isIncludeArchivedDocuments";
+
+// archived documents are the data produced by the Data Archival feature - without the license the
+// server skips them, so the toggle is disabled (the "Data Archival" chip already covers the alert)
+const documentToggleFlags: {
+    toggleKey: DocumentToggleKey;
+    label: string;
+    flag: LicenseStatusKey;
+    licenseRequired: LicenseBadgeText;
+}[] = [
+    {
+        toggleKey: "isIncludeArchivedDocuments",
+        label: "Archived Documents",
+        flag: "HasDataArchival",
+        licenseRequired: "Enterprise",
+    },
+];
+
+// aiAgents and connection strings have no dedicated license flag - not gated
+const ongoingTaskFlags: {
+    taskKey: OngoingTaskKey;
+    label: string;
+    flag: LicenseStatusKey;
+    licenseRequired: LicenseBadgeText;
+}[] = [
+    {
+        taskKey: "periodicBackups",
+        label: "Periodic Backups",
+        flag: "HasPeriodicBackup",
+        licenseRequired: "Professional +",
+    },
+    {
+        taskKey: "externalReplications",
+        label: "External Replications",
+        flag: "HasExternalReplication",
+        licenseRequired: "Professional +",
+    },
+    { taskKey: "ravenEtls", label: "RavenDB ETLs", flag: "HasRavenEtl", licenseRequired: "Professional +" },
+    { taskKey: "sqlEtls", label: "SQL ETLs", flag: "HasSqlEtl", licenseRequired: "Professional +" },
+    { taskKey: "snowflakeEtls", label: "Snowflake ETLs", flag: "HasSnowflakeEtl", licenseRequired: "Enterprise" },
+    { taskKey: "olapEtls", label: "OLAP ETLs", flag: "HasOlapEtl", licenseRequired: "Enterprise" },
+    {
+        taskKey: "elasticSearchEtls",
+        label: "Elasticsearch ETLs",
+        flag: "HasElasticSearchEtl",
+        licenseRequired: "Enterprise",
+    },
+    { taskKey: "queueEtls", label: "Queue ETLs", flag: "HasQueueEtl", licenseRequired: "Enterprise" },
+    {
+        taskKey: "hubReplications",
+        label: "Replication Hubs",
+        flag: "HasPullReplicationAsHub",
+        licenseRequired: "Enterprise",
+    },
+    {
+        taskKey: "sinkReplications",
+        label: "Replication Sinks",
+        flag: "HasPullReplicationAsSink",
+        licenseRequired: "Professional +",
+    },
+    {
+        taskKey: "embeddingsGeneration",
+        label: "Embeddings Generation",
+        flag: "HasEmbeddingsGeneration",
+        licenseRequired: "Enterprise",
+    },
+    { taskKey: "genAi", label: "GenAI", flag: "HasGenAi", licenseRequired: "Enterprise AI" },
+    { taskKey: "cdcSinks", label: "CDC Sinks", flag: "HasCdcSink", licenseRequired: "Enterprise" },
+    {
+        taskKey: "remoteAttachments",
+        label: "Remote Attachments",
+        flag: "HasRemoteAttachments",
+        licenseRequired: "Enterprise",
+    },
+];
+
+function getRestrictionTooltipText(label: string) {
+    return `Data created with ${label} won't be imported - this feature isn't included in your license`;
 }
