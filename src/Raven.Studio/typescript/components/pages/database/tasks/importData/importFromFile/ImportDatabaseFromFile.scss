@@ -1,6 +1,25 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
+.import-page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: sizes.$gutter;
+    overflow: hidden;
+}
+
+.import-page-body {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.import-page-content {
+    min-height: 0;
+    overflow-y: auto;
+}
+
 .import-side-nav {
     width: 225px;
 
