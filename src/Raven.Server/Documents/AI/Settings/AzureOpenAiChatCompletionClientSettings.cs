@@ -62,6 +62,19 @@ internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompl
         return refusal;
     }
 
+    public override string GetRefusalOnStreaming(BlittableJsonReaderObject choice0)
+    {
+        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason) == false
+            || string.Equals(finishReason, "content_filter", StringComparison.OrdinalIgnoreCase) == false)
+            return null;
+        
+        if (choice0.TryGet(FiltersConstants.ContentFilterResults, out BlittableJsonReaderObject filtersObj)
+            && filtersObj != null
+            && GetFiltersMessage(filtersObj, out var refusal))
+            return refusal;
+    
+        return "Response blocked due to content policy";
+    }
 
     internal static bool GetFiltersMessage(BlittableJsonReaderObject filtersObj, out string message)
     {

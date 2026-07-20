@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -103,6 +104,18 @@ internal abstract class AbstractChatCompletionClientSettings
             || message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal);
 
         return refusal;
+    }
+
+    public virtual string GetRefusalOnStreaming(BlittableJsonReaderObject choice0)
+    {
+        // each inherited class should collect by its own response structure, by its 'GetRefusal'
+        // OpenAi:
+        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
+        {
+            if (delta.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal))
+                return refusal;
+        }
+        return null;
     }
 
     public virtual ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)

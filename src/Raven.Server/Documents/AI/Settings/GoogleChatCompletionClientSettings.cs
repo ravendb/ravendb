@@ -209,6 +209,17 @@ internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletion
         return "The model refused to answer";
     }
 
+    public override string GetRefusalOnStreaming(BlittableJsonReaderObject choice0)
+    {
+        if (choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason) == false || 
+            string.IsNullOrWhiteSpace(finishReason))
+            return null;
+
+        if (finishReason != "stop")
+            return $"The model refused to answer (finish_reason: '{finishReason}')";
+        
+        return null;
+    }
     public override async ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)
     {
         /*
