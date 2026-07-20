@@ -25,6 +25,15 @@ const settingFlags: { settingKey: DatabaseSettingKey; label: string; flag: Licen
     { settingKey: "timeSeries", label: "Time Series Configuration", flag: "HasTimeSeriesRollupsAndRetention", licenseRequired: "Professional +" },
     { settingKey: "postgreSqlIntegration", label: "PostgreSQL Integration", flag: "HasPostgreSqlIntegration", licenseRequired: "Enterprise" },
     { settingKey: "client", label: "Client Configuration", flag: "HasClientConfiguration", licenseRequired: "Professional +" },
+    { settingKey: "schemaValidation", label: "Document Schema", flag: "HasSchemaValidation", licenseRequired: "Professional +" },
+];
+
+export type DocumentToggleKey = "isIncludeArchivedDocuments";
+
+// archived documents are the data produced by the Data Archival feature - without the license the
+// server skips them, so the toggle is disabled (the "Data Archival" chip already covers the alert)
+const documentToggleFlags: { toggleKey: DocumentToggleKey; label: string; flag: LicenseStatusKey; licenseRequired: LicenseBadgeText }[] = [
+    { toggleKey: "isIncludeArchivedDocuments", label: "Archived Documents", flag: "HasDataArchival", licenseRequired: "Enterprise" },
 ];
 
 // aiAgents and connection strings have no dedicated license flag - not gated
@@ -60,6 +69,10 @@ export function useImportLicenseRestrictions(): {
     isOngoingTaskRestricted: (key: OngoingTaskKey) => boolean;
     getOngoingTaskRestrictionTooltip: (key: OngoingTaskKey) => string | null;
     getOngoingTaskLicenseRequired: (key: OngoingTaskKey) => LicenseBadgeText | null;
+    restrictedDocumentToggles: DocumentToggleKey[];
+    isDocumentToggleRestricted: (key: DocumentToggleKey) => boolean;
+    getDocumentToggleRestrictionTooltip: (key: DocumentToggleKey) => string | null;
+    getDocumentToggleLicenseRequired: (key: DocumentToggleKey) => LicenseBadgeText | null;
 } {
     const licenseStatus = useAppSelector(licenseSelectors.status);
 
@@ -99,6 +112,19 @@ export function useImportLicenseRestrictions(): {
         const getOngoingTaskLicenseRequired = (key: OngoingTaskKey) =>
             restrictedOngoingTasks.find((t) => t.taskKey === key)?.licenseRequired ?? null;
 
+        const restrictedDocumentToggleEntries = documentToggleFlags.filter(({ flag }) => !licenseStatus?.[flag]);
+        const restrictedDocumentToggles = restrictedDocumentToggleEntries.map((x) => x.toggleKey);
+
+        const isDocumentToggleRestricted = (key: DocumentToggleKey) => restrictedDocumentToggles.includes(key);
+
+        const getDocumentToggleRestrictionTooltip = (key: DocumentToggleKey) => {
+            const entry = restrictedDocumentToggleEntries.find((x) => x.toggleKey === key);
+            return entry ? getRestrictionTooltipText(entry.label) : null;
+        };
+
+        const getDocumentToggleLicenseRequired = (key: DocumentToggleKey) =>
+            restrictedDocumentToggleEntries.find((x) => x.toggleKey === key)?.licenseRequired ?? null;
+
         return {
             restrictedFeatures,
             restrictedOngoingTasks,
@@ -109,6 +135,10 @@ export function useImportLicenseRestrictions(): {
             isOngoingTaskRestricted,
             getOngoingTaskRestrictionTooltip,
             getOngoingTaskLicenseRequired,
+            restrictedDocumentToggles,
+            isDocumentToggleRestricted,
+            getDocumentToggleRestrictionTooltip,
+            getDocumentToggleLicenseRequired,
         };
     }, [licenseStatus]);
 }
