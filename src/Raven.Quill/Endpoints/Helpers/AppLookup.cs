@@ -20,11 +20,13 @@ internal static class AppLookup
         await session.SaveChangesAsync(ct);
     }
 
-    internal static async Task<(CdcSinkTaskState State, DateTime LastModified)> LoadCdcStateAsync(IDocumentStore store, string database, string taskName, CancellationToken ct)
+    internal static async Task<(CdcSinkTaskState? State, DateTime? LastModified)> LoadCdcStateAsync(IDocumentStore store, string database, string taskName, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(database);
         var state = await session.LoadAsync<CdcSinkTaskState>(CdcSinkTaskState.GetDocumentId(taskName), ct);
-        var lastModified = session.Advanced.GetLastModifiedFor(state);
-        return (state, lastModified ?? default);
+        if (state is null)
+            return (null, null);
+
+        return (state, session.Advanced.GetLastModifiedFor(state));
     }
 }

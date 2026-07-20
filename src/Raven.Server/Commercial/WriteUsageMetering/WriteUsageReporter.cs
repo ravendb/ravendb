@@ -101,12 +101,13 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                 using (var content = new StringContent(json, Encoding.UTF8, "application/json"))
                 {
                     // no client-side retry: a failed report is simply retried on the next reporting interval.
-                    var response = await ApiHttpClient
+                    using (var response = await ApiHttpClient
                         .PutAsync(WriteUsageMeteringConstants.UsageEndpointPath, content, shouldRetry: false, token: CancellationToken)
-                        .ConfigureAwait(false);
-
-                    if (Logger.IsDebugEnabled)
-                        Logger.Debug($"Reported write-usage for {report.Applications.Count} application(s) to api.ravendb.net, response: {(int)response.StatusCode} {response.StatusCode}.");
+                        .ConfigureAwait(false))
+                    {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug($"Reported write-usage for {report.Applications.Count} application(s) to api.ravendb.net, response: {(int)response.StatusCode} {response.StatusCode}.");
+                    }
                 }
             }
             catch (Exception e)

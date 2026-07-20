@@ -49,6 +49,17 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
         await session.SaveChangesAsync();
     }
 
+    /// <summary>A seed time inside the current month that is never a future bucket
+    /// (<c>UsagePeriod</c> clamps the window end to now and drops future buckets, so
+    /// fixed month-start offsets fail near month boundaries): <c>now - hoursBack</c>,
+    /// clamped to the start of the month.</summary>
+    protected static DateTime PastInMonth(DateTime now, int hoursBack)
+    {
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var seed = now.AddHours(-hoursBack);
+        return seed < monthStart ? monthStart : seed;
+    }
+
     /// <summary>Provisions a real RavenDB AI agent in the per-app DB (connection
     /// string + agent are pure maintenance ops; no LLM is dialed). Used to drive
     /// the configured-agent count.</summary>

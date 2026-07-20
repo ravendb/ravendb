@@ -11,8 +11,6 @@ using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Polly;
-using Polly.Retry;
-using Polly.Timeout;
 using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Auth;
@@ -83,6 +81,17 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_AI_ASSIST_TIMEOUT_SECONDS", v =>
         {
             if (int.TryParse(v, out var s) && s > 0) options.AiAssistTimeout = TimeSpan.FromSeconds(s);
+        });        ReadEnv("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v =>
+        {
+            if (int.TryParse(v, out var s)) options.ReadinessInitialDelay = TimeSpan.FromSeconds(s);
+        });
+        ReadEnv("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v =>
+        {
+            if (int.TryParse(v, out var s)) options.ReadinessAttemptTimeout = TimeSpan.FromSeconds(s);
+        });
+        ReadEnv("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v =>
+        {
+            if (int.TryParse(v, out var s)) options.ReadinessOverallTimeout = TimeSpan.FromSeconds(s);
         });
     })
     .ValidateDataAnnotations()
@@ -135,18 +144,7 @@ builder.Services.ConfigureHttpJsonOptions(opts =>
 builder.Services.AddResiliencePipeline(RavenReadinessService.PipelineName, (pipelineBuilder, ctx) =>
 {
     var opts = ctx.ServiceProvider.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-    pipelineBuilder
-        .AddTimeout(new TimeoutStrategyOptions { Timeout = opts.ReadinessAttemptTimeout })
-        .AddRetry(new RetryStrategyOptions
-        {
-            ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => ex is not OperationCanceledException),
-            BackoffType = DelayBackoffType.Exponential,
-            UseJitter = true,
-            Delay = TimeSpan.FromMilliseconds(250),
-            MaxDelay = TimeSpan.FromSeconds(2),
-            MaxRetryAttempts = int.MaxValue,
-        })
-        .AddTimeout(new TimeoutStrategyOptions { Timeout = opts.ReadinessOverallTimeout });
+    RavenReadinessService.ConfigureProbePipeline(pipelineBuilder, opts);
 });
 
 builder.Services.AddHealthChecks()

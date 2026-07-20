@@ -182,7 +182,7 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : ApplianceMetricsT
         var now = DateTime.UtcNow;
         var start = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
 
-        await SeedConversationAsync(store, perAppDb, "chats/cur", "support", start.AddHours(2), messages: 1, tokens: 10);
+        await SeedConversationAsync(store, perAppDb, "chats/cur", "support", start.AddHours(Math.Min(now.Hour, 2)), messages: 1, tokens: 10);
         await SeedConversationAsync(store, perAppDb, "chats/boundary", "support", start, messages: 1, tokens: 10);
         await SeedConversationAsync(store, perAppDb, "chats/prev", "support", start.AddHours(-2), messages: 1, tokens: 10);
         await Indexes.WaitForIndexingAsync(store, perAppDb);
