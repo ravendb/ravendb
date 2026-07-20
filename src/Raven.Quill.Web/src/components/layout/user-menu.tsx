@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { KeyRound, LineChart, LogOut, MessageCircle, UserRound } from "lucide-react";
+import { KeyRound, LineChart, LogOut, MessageCircle, ShieldCheck, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/auth-context";
 import { Button } from "@/components/shadcn/ui/button";
@@ -59,6 +59,12 @@ export function UserMenu() {
                         <Link to="/license">
                             <KeyRound aria-hidden="true" />
                             License
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link to="/certificates">
+                            <ShieldCheck aria-hidden="true" />
+                            Certificates
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => setIsContactOpen(true)}>
