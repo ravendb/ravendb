@@ -41,10 +41,24 @@ export function createStatsQueries(api: ServerApi["stats"]) {
                 queryKey: [baseKey, "collections", slug],
                 queryFn: () => api.collections(slug),
             }),
-        conversations: (slug: string, period: DatePeriod) =>
+        conversations: (slug: string, period: DatePeriod, page: { start: number; pageSize: number }) =>
             queryOptions({
-                queryKey: [baseKey, "conversations", slug, period.year, period.month, period.day],
-                queryFn: () => api.conversations(slug, datePeriodToSearchParams(period)),
+                queryKey: [
+                    baseKey,
+                    "conversations",
+                    slug,
+                    period.year,
+                    period.month,
+                    period.day,
+                    page.start,
+                    page.pageSize,
+                ],
+                queryFn: () =>
+                    api.conversations(slug, {
+                        ...datePeriodToSearchParams(period),
+                        start: String(page.start),
+                        pageSize: String(page.pageSize),
+                    }),
             }),
         conversation: (slug: string, conversationId: string) =>
             queryOptions({
