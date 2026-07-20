@@ -80,6 +80,10 @@ builder.Services.AddOptions<ApplianceOptions>()
         {
             if (int.TryParse(v, out var p)) options.RavenInternalPort = p;
         });
+        ReadEnv("RAVEN_QUILL_AI_ASSIST_TIMEOUT_SECONDS", v =>
+        {
+            if (int.TryParse(v, out var s) && s > 0) options.AiAssistTimeout = TimeSpan.FromSeconds(s);
+        });
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -106,6 +110,7 @@ builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (
         var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
         var store = sp.GetRequiredService<IDocumentStore>();
         http.BaseAddress = new Uri(string.IsNullOrEmpty(opts.AiApiUrl) ? store.Urls[0] : opts.AiApiUrl);
+        http.Timeout = opts.AiAssistTimeout;
     })
     .ConfigurePrimaryHttpMessageHandler(static sp =>
     {
