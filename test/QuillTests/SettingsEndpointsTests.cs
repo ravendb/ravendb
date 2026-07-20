@@ -20,7 +20,7 @@ namespace QuillTests;
 /// <c>GET /api/settings/usage</c>. Both are RavenDB-backed (see
 /// <c>LicenseStatsProvider</c>): license proxies the server's <c>/license/status</c> +
 /// <c>/license-server/connectivity</c> and appends the static plan catalog; usage
-/// proxies <c>/license/quill/usage</c>. Assertions target the response shape and
+/// proxies <c>/admin/license/quill/usage</c>. Assertions target the response shape and
 /// environment-stable fields, not license-specific values (which vary with whatever
 /// license the test server runs under).
 /// </summary>
@@ -58,7 +58,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        // ?year=&month=[&day=] — forwarded to RavenDB's /license/quill/usage as year+month.
+        // ?year=&month=[&day=] — forwarded to RavenDB's /admin/license/quill/usage as year+month.
         var resp = await client.GetAsync("/api/settings/usage?year=2026&month=5");
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
@@ -76,7 +76,7 @@ public class SettingsEndpointsTests(ITestOutputHelper output) : ApplianceMetrics
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        // year only → the whole-year view; like the month view it proxies straight to /license/quill/usage.
+        // year only → the whole-year view; like the month view it proxies straight to /admin/license/quill/usage.
         var resp = await client.GetAsync("/api/settings/usage?year=2026");
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
