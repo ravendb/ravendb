@@ -219,6 +219,28 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
         Assert.Equal(1, mockAi.GiveConsentCallCount);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Slow_generation_within_timeout_returns_success()
+    {
+        var store = GetDocumentStore();
+        await using var mockAi = await MockAiApi.StartAsync();
+        mockAi.AgentResponse = (200, AiHelperSamples.AgentEnvelope(AiHelperSamples.BuildAgentConfig()));
+        mockAi.AssistDelay = TimeSpan.FromSeconds(2);
+
+        using var appCleanup = await SeedProvisionedAppAsync(store, "shop", withCdc: false);
+
+        using var factory = NewApplianceFactory(store, mockAi.BaseAddress, aiAssistTimeout: TimeSpan.FromSeconds(30));
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync("/api/apps/shop/suggest/agent",
+            new { mode = "from-prompt", intentPrompt = "help shoppers find orders" });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("Success", (string?)node["status"]);
+        Assert.Single(node["configurations"]!.AsArray());
+    }
+
     private async Task<IDisposable> SeedProvisionedAppAsync(IDocumentStore store, string slug, bool withCdc)
     {
         var perAppDb = "app-" + Guid.NewGuid().ToString("N");
@@ -262,7 +284,7 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
         return cleanup;
     }
 
-    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl)
+    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl, TimeSpan? aiAssistTimeout = null)
     {
         var setupPath = NewDataPath(forceCreateDir: true);
 
@@ -274,6 +296,8 @@ public class AiHelperSuggestAgentEndpointTests(ITestOutputHelper output) : Raven
             {
                 opts.ConfigDatabase = store.Database;
                 opts.AiApiUrl = aiApiUrl;
+                if (aiAssistTimeout is not null)
+                    opts.AiAssistTimeout = aiAssistTimeout.Value;
             });
     }
 }

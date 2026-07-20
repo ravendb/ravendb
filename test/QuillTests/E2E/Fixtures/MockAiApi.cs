@@ -36,6 +36,9 @@ public sealed class MockAiApi : IAsyncDisposable
     /// Response served for the CdcBasedAgentConfigSetup operation (HTTP status code + JSON body).
     public (int Status, string Body) AgentResponse { get; set; } = (200, "{}");
 
+    /// Delay applied before serving any /assistant/assist response — simulates slow LLM generation.
+    public TimeSpan AssistDelay { get; set; }
+
     /// When true, assist returns 401 ConsentRequired until give-consent is called — mirrors the real
     /// service gating each assist on a per-(license, cert) consent document.
     public bool RequireConsentForAssist { get; set; }
@@ -92,6 +95,9 @@ public sealed class MockAiApi : IAsyncDisposable
                 // bad-input 400 the default branch already models instead of a 500.
                 return Results.BadRequest("Malformed JSON body.");
             }
+
+            if (instance.AssistDelay > TimeSpan.Zero)
+                await Task.Delay(instance.AssistDelay, ctx.RequestAborted);
 
             switch (operationType)
             {

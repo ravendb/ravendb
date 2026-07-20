@@ -34,4 +34,6 @@ public sealed class ApplianceOptions
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);
     public TimeSpan ReadinessOverallTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    public TimeSpan AiAssistTimeout { get; set; } = TimeSpan.FromMinutes(5);
 }

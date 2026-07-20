@@ -273,6 +273,45 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         Assert.Equal(1, mockAi.GiveConsentCallCount);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Slow_generation_within_timeout_returns_success()
+    {
+        var store = GetDocumentStore();
+        await using var mockAi = await MockAiApi.StartAsync();
+        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        mockAi.AssistDelay = TimeSpan.FromSeconds(2);
+
+        using var factory = NewApplianceFactory(store, mockAi.BaseAddress, aiAssistTimeout: TimeSpan.FromSeconds(30));
+        var client = factory.CreateClient();
+        await SeedDiscoveredSchemaAsync(client);
+
+        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "shopping cart assistant" });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("Success", (string?)node["status"]);
+        Assert.Equal("shop-cdc", (string?)node["configuration"]!["name"]);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Generation_exceeding_timeout_surfaces_internal_error()
+    {
+        var store = GetDocumentStore();
+        await using var mockAi = await MockAiApi.StartAsync();
+        mockAi.CdcResponse = (200, AiHelperSamples.CdcEnvelope(AiHelperSamples.BuildCdcConfig()));
+        mockAi.AssistDelay = TimeSpan.FromSeconds(10);
+
+        using var factory = NewApplianceFactory(store, mockAi.BaseAddress, aiAssistTimeout: TimeSpan.FromSeconds(1));
+        var client = factory.CreateClient();
+        await SeedDiscoveredSchemaAsync(client);
+
+        var resp = await client.PostAsJsonAsync("/api/setup/suggest/cdc", new { intentPrompt = "x" });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        var node = JsonNode.Parse(await resp.Content.ReadAsStringAsync())!;
+        Assert.Equal("InternalError", (string?)node["status"]);
+    }
+
     private static async Task SeedDiscoveredSchemaAsync(HttpClient client)
     {
         // Discovering with an invalid connection string persists a non-null error schema,
@@ -283,7 +322,7 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
     }
 
-    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl)
+    private ApplianceWebApplicationFactory NewApplianceFactory(IDocumentStore store, string aiApiUrl, TimeSpan? aiAssistTimeout = null)
     {
         var setupPath = NewDataPath(forceCreateDir: true);
 
@@ -295,6 +334,8 @@ public class AiHelperSuggestCdcEndpointTests(ITestOutputHelper output) : RavenTe
             {
                 opts.ConfigDatabase = store.Database;
                 opts.AiApiUrl = aiApiUrl;
+                if (aiAssistTimeout is not null)
+                    opts.AiAssistTimeout = aiAssistTimeout.Value;
             });
     }
 }
