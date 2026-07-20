@@ -94,8 +94,9 @@ export default function ImportDatabaseFromFile() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
     const { reportEvent } = useEventsCollector();
-    const { restrictedFeatures } = useImportLicenseRestrictions();
+    const { restrictedFeatures, restrictedOngoingTasks, allRestrictedItems } = useImportLicenseRestrictions();
     const restrictedKeys = restrictedFeatures.map((x) => x.settingKey);
+    const restrictedTaskKeys = restrictedOngoingTasks.map((x) => x.taskKey);
 
     const form = useImportFromFileForm();
     const { handleSubmit, watch, formState } = form;
@@ -121,13 +122,13 @@ export default function ImportDatabaseFromFile() {
     const importOptionsUrl = forCurrentDatabase.importDataOptionsUrl();
 
     const onSubmit = async (formData: ImportFromFileFormData) => {
-        if (!hasAnyInclude(formData, restrictedKeys)) {
+        if (!hasAnyInclude(formData, restrictedKeys, restrictedTaskKeys)) {
             return; // guarded by disabled submit; double check
         }
 
         reportEvent("database", "import");
 
-        const dto = toImportDto(formData, restrictedKeys);
+        const dto = toImportDto(formData, restrictedKeys, restrictedTaskKeys);
 
         try {
             await tasksService.validateSmugglerOptions(
@@ -214,7 +215,11 @@ export default function ImportDatabaseFromFile() {
     };
 
     const watchedFormData = watch();
-    const canImport = !!file && hasAnyInclude(watchedFormData, restrictedKeys) && !isUploading && formState.isValid;
+    const canImport =
+        !!file &&
+        hasAnyInclude(watchedFormData, restrictedKeys, restrictedTaskKeys) &&
+        !isUploading &&
+        formState.isValid;
 
     return (
         <FormProvider {...form}>
@@ -243,7 +248,7 @@ export default function ImportDatabaseFromFile() {
                         </div>
                     )}
                 </div>
-                {!hasAnyInclude(watchedFormData, restrictedKeys) && (
+                {!hasAnyInclude(watchedFormData, restrictedKeys, restrictedTaskKeys) && (
                     <Alert variant="warning">Note: At least one &apos;include&apos; option must be checked.</Alert>
                 )}
                 <div className="d-flex gap-4">
@@ -276,7 +281,7 @@ export default function ImportDatabaseFromFile() {
                         ))}
                     </nav>
                     <div className="flex-grow-1">
-                        <SelectFileSection restrictedFeatures={restrictedFeatures} />
+                        <SelectFileSection restrictedItems={allRestrictedItems} />
                         <fieldset disabled={!file} className={classNames({ "item-disabled": !file })}>
                             <DataToImportSection />
                             <ConfigurationToImportSection />

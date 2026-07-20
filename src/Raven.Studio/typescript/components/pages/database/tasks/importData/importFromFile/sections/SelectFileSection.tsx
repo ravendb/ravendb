@@ -6,7 +6,7 @@ import { Icon } from "components/common/Icon";
 import FileDropzone from "components/common/FileDropzone";
 import ImportSection from "./ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
-import { RestrictedImportFeature } from "../useImportLicenseRestrictions";
+import { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import genUtils from "common/generalUtils";
 
@@ -18,10 +18,10 @@ const backupExtensions = [
 ];
 
 interface SelectFileSectionProps {
-    restrictedFeatures: RestrictedImportFeature[];
+    restrictedItems: { key: string; label: string; licenseRequired: LicenseBadgeText }[];
 }
 
-export default function SelectFileSection({ restrictedFeatures }: SelectFileSectionProps) {
+export default function SelectFileSection({ restrictedItems }: SelectFileSectionProps) {
     const { control, setValue, formState } = useFormContext<ImportFromFileFormData>();
     const file = useWatch({ control, name: "file" });
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
@@ -60,7 +60,7 @@ export default function SelectFileSection({ restrictedFeatures }: SelectFileSect
                         RavenDB Backup file.
                     </Alert>
                 )}
-                {restrictedFeatures.length > 0 ? (
+                {restrictedItems.length > 0 ? (
                     <Alert variant="warning" className="mt-3 mb-0">
                         <div className="fw-bold text-warning">
                             <Icon icon="warning" color="warning" /> Some data may not be imported
@@ -70,9 +70,9 @@ export default function SelectFileSection({ restrictedFeatures }: SelectFileSect
                             be skipped automatically.
                         </div>
                         <div className="d-flex gap-2 flex-wrap mt-2">
-                            {restrictedFeatures.map((feature) => (
-                                <Badge key={feature.settingKey} bg="secondary">
-                                    <Icon icon="license" /> {feature.label}
+                            {restrictedItems.map((item) => (
+                                <Badge key={item.key} bg="secondary">
+                                    <Icon icon="license" /> {item.label}
                                 </Badge>
                             ))}
                         </div>
