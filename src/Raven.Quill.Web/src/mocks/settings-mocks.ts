@@ -19,9 +19,7 @@ export const settingsMocks = {
             () => new HttpResponse("mock certificate zip", { headers: { "Content-Type": "application/octet-stream" } }),
         ),
     certificatesGenerateError: (message = "A certificate with this name already exists.") =>
-        http.post("/api/settings/certificates/generate", () =>
-            HttpResponse.json({ error: message }, { status: 400 }),
-        ),
+        http.post("/api/settings/certificates/generate", () => HttpResponse.json({ error: message }, { status: 400 })),
     certificatesEdit: () => http.post("/api/settings/certificates/edit", () => new HttpResponse(null, { status: 200 })),
 };
 

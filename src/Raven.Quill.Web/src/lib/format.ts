@@ -25,7 +25,8 @@ const DURATION_UNITS = [
 
 // Duration rounded down to its largest whole unit, e.g. 5 -> "5 seconds", 7_200 -> "2 hours".
 export function formatDuration(totalSeconds: number): string {
-    const unit = DURATION_UNITS.find(({ seconds }) => totalSeconds >= seconds) ?? DURATION_UNITS[DURATION_UNITS.length - 1];
+    const unit =
+        DURATION_UNITS.find(({ seconds }) => totalSeconds >= seconds) ?? DURATION_UNITS[DURATION_UNITS.length - 1];
     const value = Math.floor(totalSeconds / unit.seconds);
     return `${value} ${unit.label}${value === 1 ? "" : "s"}`;
 }
