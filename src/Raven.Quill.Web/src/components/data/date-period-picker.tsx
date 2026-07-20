@@ -131,9 +131,7 @@ function DayPickerCalendar({ value, onSelect }: { value: DatePeriod; onSelect: (
             selected={selected}
             defaultMonth={selected}
             disabled={{ after: new Date() }}
-            onSelect={(date) =>
-                onSelect({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() })
-            }
+            onSelect={(date) => onSelect({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() })}
         />
     );
 }

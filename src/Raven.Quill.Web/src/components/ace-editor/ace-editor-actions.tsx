@@ -56,10 +56,7 @@ export function AceEditorFullScreenAction() {
     }
 
     return (
-        <AceEditorIconButton
-            onClick={handleToggleFullScreen}
-            title={isFullScreen ? "Exit full screen" : "Full screen"}
-        >
+        <AceEditorIconButton onClick={handleToggleFullScreen} title={isFullScreen ? "Exit full screen" : "Full screen"}>
             {isFullScreen ? <Minimize2 /> : <Maximize2 />}
         </AceEditorIconButton>
     );
