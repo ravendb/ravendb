@@ -177,7 +177,7 @@ public static class AgentsEndpoints
         var bound = await CountBoundReferencesAsync(store, app.Database, agent.Identifier, ct);
         if (bound > 0)
             return Results.Conflict(new ApiErrorResponse(
-                $"agent '{agentId}' still has {bound} channel(s)/embed-link(s) bound to it; remove them first"));
+                $"agent '{agentId}' still has {bound} channel(s) bound to it; remove them first"));
 
         await store.AI.ForDatabase(app.Database).DeleteAgentAsync(agent.Identifier, ct);
         if (logger.IsEnabled(LogLevel.Information))

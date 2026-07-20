@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Linq;
-using Raven.Quill.Channels;
 using Raven.Quill.Metrics;
 using Tests.Infrastructure;
 using Xunit;
@@ -73,30 +70,37 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Conversations_list_include_folds_the_channel_into_one_round_trip()
+    public async Task Conversations_list_folds_channels_into_the_query_with_no_extra_round_trips()
     {
         var store = GetDocumentStore();
         var (perAppDb, cleanup) = await CreatePerAppDatabaseAsync(store);
         using var _db = cleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
         await new ConversationPreviewIndex().ExecuteAsync(store, database: perAppDb);
-        await SeedChannelAsync(store, perAppDb, channelId: "wgt1", enabled: true, displayName: "Widget One");
-        await SeedConversationAsync(store, perAppDb, "chats/c", "demo", DateTime.UtcNow, channelWidgetId: "wgt1");
 
+        // three conversations, each served through a DISTINCT channel (real write path co-writes the preview)
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < 3; i++)
+        {
+            await SeedChannelAsync(store, perAppDb, channelId: $"wgt{i}", enabled: true, displayName: $"Widget {i}");
+            // strictly in the past: the current-year period clamps End to now, and the filter is `< End`
+            await SeedConversationAsync(store, perAppDb, $"chats/c{i}", "demo", now.AddMinutes(-(i + 1)), channelWidgetId: $"wgt{i}");
+        }
+        await Indexes.WaitForIndexingAsync(store, perAppDb);
+
+        // call the real production query on an observable session (the endpoint's own session isn't visible)
         using var session = store.OpenAsyncSession(perAppDb);
-        var previews = await session.Query<ConversationPreview, ConversationPreviewIndex>()
-            .Customize(x => x.WaitForNonStaleResults())
-            .Include(i => i.IncludeDocuments<Channel>(p => p.ChannelWidgetId!))
-            .ToListAsync();
-        Assert.Single(previews);
+        var result = await MetricsReadService.GetConversationsAsync(
+            session, "my-app", new UsagePeriod(now.Year, null, null, now), start: 0, pageSize: 50, now, CancellationToken.None);
 
-        // the channel must come from the Include (the query round trip), not a new request — proves the
-        // list resolves channel names without an extra round trip (and the Channels/ vs channels/ id case
-        // is bridged by RavenDB's case-insensitive identity map).
-        var before = session.Advanced.NumberOfRequests;
-        var channel = await session.LoadAsync<Channel>("channels/wgt1");
-        Assert.Equal("Widget One", channel!.DisplayName);
-        Assert.Equal(before, session.Advanced.NumberOfRequests);
+        // every row resolves its own channel name…
+        Assert.Equal(3, result.Conversations.Count);
+        Assert.Equal("Widget 0", result.Conversations.Single(c => c.Id == "chats/c0").ChannelName);
+        Assert.Equal("Widget 2", result.Conversations.Single(c => c.Id == "chats/c2").ChannelName);
+
+        // …in a SINGLE round trip: the Include folded all 3 channel docs into the query, so the per-row
+        // ChannelNameAsync loads are cache hits. Without the include this would be 1 + 3 requests (N+1).
+        Assert.Equal(1, session.Advanced.NumberOfRequests);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
