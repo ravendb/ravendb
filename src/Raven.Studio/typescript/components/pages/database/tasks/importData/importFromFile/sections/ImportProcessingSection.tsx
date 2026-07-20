@@ -15,6 +15,7 @@ import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import Code from "components/common/Code";
+import Card from "react-bootstrap/Card";
 import copyToClipboard = require("common/copyToClipboard");
 
 export default function ImportProcessingSection() {
@@ -63,7 +64,7 @@ export default function ImportProcessingSection() {
             </div>
 
             <div className="small-label mb-2">Import optimization &amp; security</div>
-            <div className="card p-4 mb-4">
+            <Card className="p-4 mb-4">
                 <FormGroup>
                     <FormSwitch control={control} name="processing.isSetMaxReadOpsPerSecond">
                         Set max read operations per second
@@ -97,7 +98,7 @@ export default function ImportProcessingSection() {
                         </div>
                     </Collapse>
                 </FormGroup>
-            </div>
+            </Card>
 
             <div className="small-label mb-2">Import command</div>
             <div className="card p-4">

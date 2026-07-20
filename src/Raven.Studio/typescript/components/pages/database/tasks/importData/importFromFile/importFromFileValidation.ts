@@ -81,16 +81,10 @@ const configurationSchema = yup.object({
     isIncludeIdentities: yup.boolean(),
     isIncludeConnectionStringsAndOngoingTasks: yup.boolean(),
     isCustomizeOngoingTasks: yup.boolean(),
-    ongoingTasks: yup.object(
-        Object.fromEntries(ongoingTaskKeys.map((key) => [key, yup.boolean()]))
-    ),
-    connectionStrings: yup.object(
-        Object.fromEntries(connectionStringKeys.map((key) => [key, yup.boolean()]))
-    ),
+    ongoingTasks: yup.object(Object.fromEntries(ongoingTaskKeys.map((key) => [key, yup.boolean()]))),
+    connectionStrings: yup.object(Object.fromEntries(connectionStringKeys.map((key) => [key, yup.boolean()]))),
     isImportAllSettings: yup.boolean(),
-    databaseSettings: yup.object(
-        Object.fromEntries(databaseSettingKeys.map((key) => [key, yup.boolean()]))
-    ),
+    databaseSettings: yup.object(Object.fromEntries(databaseSettingKeys.map((key) => [key, yup.boolean()]))),
 });
 
 const processingSchema = yup.object({
