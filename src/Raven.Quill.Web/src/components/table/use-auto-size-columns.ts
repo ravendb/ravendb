@@ -10,82 +10,75 @@ function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
 }
 
-// Measures a cell's intrinsic content width, ignoring the column's current width so that
-// truncated text still reports how wide it wants to be. The temporary style changes are
-// reverted before the browser paints (this only runs inside useLayoutEffect).
-function measureContentWidth(cell: HTMLElement): number {
-    const content = cell.firstElementChild;
-    if (!content) {
-        return 0;
+// Measures the intrinsic content width of each column. All cells are widened first and read
+// afterwards (interleaving writes with scrollWidth reads forces a layout pass per cell); the
+// temporary styles are reverted before paint since this runs inside useLayoutEffect.
+// Widths only ratchet up: only the virtualized rows currently in the DOM can be measured, and
+// letting a column shrink when a wide row scrolls out of view would make the layout oscillate.
+function measureColumnWidths(container: HTMLElement, columnIds: string[], widths: ColumnSizingState) {
+    const cellsByColumn = columnIds.map((columnId) => ({
+        columnId,
+        cells: [...container.querySelectorAll<HTMLElement>(`[data-column-id="${CSS.escape(columnId)}"]`)],
+    }));
+
+    const savedStyles = cellsByColumn.flatMap(({ cells }) =>
+        cells.map((cell) => ({ cell, width: cell.style.width, maxWidth: cell.style.maxWidth })),
+    );
+    for (const { cell } of savedStyles) {
+        cell.style.width = "max-content";
+        cell.style.maxWidth = "none";
     }
 
-    const { width, maxWidth } = cell.style;
-    cell.style.width = "max-content";
-    cell.style.maxWidth = "none";
-    const measured = content.scrollWidth;
-    cell.style.width = width;
-    cell.style.maxWidth = maxWidth;
+    for (const { columnId, cells } of cellsByColumn) {
+        let widest = 0;
+        for (const cell of cells) {
+            const content = cell.firstElementChild;
+            if (content) {
+                widest = Math.max(widest, content.scrollWidth + CELL_PADDING_X + RESIZER_WIDTH);
+            }
+        }
+        widths[columnId] = Math.max(clamp(widest, CELL_MIN_WIDTH, CELL_MAX_WIDTH), widths[columnId] ?? 0);
+    }
 
-    return measured;
+    for (const { cell, width, maxWidth } of savedStyles) {
+        cell.style.width = width;
+        cell.style.maxWidth = maxWidth;
+    }
 }
 
-// Widest content across the column's header and (virtualized) body cells.
-function measureColumnWidth(container: HTMLElement, columnId: string): number {
-    const cells = container.querySelectorAll<HTMLElement>(`[data-column-id="${CSS.escape(columnId)}"]`);
-
-    let widest = 0;
-    cells.forEach((cell) => {
-        widest = Math.max(widest, measureContentWidth(cell) + CELL_PADDING_X + RESIZER_WIDTH);
-    });
-    return widest;
-}
-
-function computeColumnSizing<TData>(
+// Distributes the container width across columns from the measured content widths.
+// Pure arithmetic (no DOM reads), so it is cheap enough to run on every resize event.
+function distributeColumnSizing<TData>(
     table: ReactTable<TData>,
-    container: HTMLElement,
     containerWidth: number,
-    ratchetedWidths: ColumnSizingState,
+    contentWidths: ColumnSizingState,
 ): ColumnSizingState {
     const sizing: ColumnSizingState = {};
     const resizableIds: string[] = [];
     let totalWidth = 0;
 
     for (const column of table.getVisibleLeafColumns()) {
-        // Columns that opt out of resizing (e.g. the checkbox column) keep their configured width.
         if (!column.getCanResize()) {
             totalWidth += column.getSize();
             continue;
         }
 
-        const measured = clamp(measureColumnWidth(container, column.id), CELL_MIN_WIDTH, CELL_MAX_WIDTH);
-        // Only the virtualized rows currently in the DOM can be measured, so a re-measure after a
-        // container resize samples a different row window. If widths could shrink when a wide row
-        // leaves that window, the layout can oscillate forever (narrower column -> scrollbar
-        // disappears -> container grows -> the wide row is back -> wider column -> ...), so within
-        // one measuring session widths only ever ratchet up.
-        const width = Math.max(measured, ratchetedWidths[column.id] ?? 0);
-        ratchetedWidths[column.id] = width;
+        const width = contentWidths[column.id] ?? CELL_MIN_WIDTH;
         sizing[column.id] = width;
         totalWidth += width;
         resizableIds.push(column.id);
     }
 
-    // Grow columns to fill any leftover space so the table always spans its container.
-    // Fill 1px short: clientWidth is rounded to whole pixels and can exceed the real fractional
-    // content width, and overshooting it even by a sub-pixel toggles a phantom horizontal
-    // scrollbar (which then cascades into a vertical one). The table's min-w-full covers the gap.
+    // Fill leftover space so the table spans its container, but stay 1px short: clientWidth is
+    // rounded to whole pixels, and overshooting the real fractional width by even a sub-pixel
+    // toggles a phantom horizontal scrollbar. The table's min-w-full covers the gap.
     const freeSpace = containerWidth - totalWidth - 1;
     if (freeSpace > 0 && resizableIds.length > 0) {
         const cappedIds = resizableIds.filter((id) => sizing[id] === CELL_MAX_WIDTH);
-        if (cappedIds.length > 0) {
-            cappedIds.forEach((id) => {
-                sizing[id] += Math.floor(freeSpace / cappedIds.length);
-            });
-        } else {
-            const share = Math.floor(freeSpace / resizableIds.length);
-            for (const id of resizableIds) {
-                sizing[id] += share;
-            }
+        const growIds = cappedIds.length > 0 ? cappedIds : resizableIds;
+        const share = Math.floor(freeSpace / growIds.length);
+        for (const id of growIds) {
+            sizing[id] += share;
         }
     }
 
@@ -112,25 +105,36 @@ export function useAutoSizeColumns<TData>(
             return;
         }
 
-        // Height-only container resizes (e.g. a scrollbar toggling, or a flex parent shrinking the
-        // table) fire the observer too; skipping unchanged results keeps those from re-rendering
-        // the table with an identical sizing state.
-        const ratchetedWidths: ColumnSizingState = {};
+        const contentWidths: ColumnSizingState = {};
+
+        // Skipping identical results keeps height-only resizes (e.g. a scrollbar toggling)
+        // from re-rendering the table with the same sizing state.
         const resize = () => {
-            const sizing = computeColumnSizing(table, container, container.clientWidth, ratchetedWidths);
+            const sizing = distributeColumnSizing(table, container.clientWidth, contentWidths);
             if (!isSameSizing(sizing, table.getState().columnSizing)) {
                 table.setColumnSizing(sizing);
             }
         };
 
-        resize();
+        // Container resizes cannot change cell content, so content is measured once up front
+        // and the observer only redistributes the measured widths.
+        const measureAndResize = () => {
+            const resizableIds = table
+                .getVisibleLeafColumns()
+                .filter((column) => column.getCanResize())
+                .map((column) => column.id);
+            measureColumnWidths(container, resizableIds, contentWidths);
+            resize();
+        };
 
-        // Web fonts (the mono cells) can finish loading after the first pass, which would leave
-        // columns sized to the narrower fallback metrics. Re-measure once fonts are ready.
+        measureAndResize();
+
+        // Web fonts can finish loading after the first pass, leaving columns sized to the
+        // narrower fallback font metrics.
         let cancelled = false;
         document.fonts?.ready.then(() => {
             if (!cancelled) {
-                resize();
+                measureAndResize();
             }
         });
 

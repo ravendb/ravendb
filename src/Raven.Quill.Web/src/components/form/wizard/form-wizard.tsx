@@ -184,7 +184,9 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
 
     return (
         <div className="flex h-full min-h-full text-foreground">
-            <div className="grid min-h-full w-full lg:grid-cols-[minmax(0,1fr)_13.75rem]">
+            {/* grid-cols-1 matters: an implicit auto column would size to its content's max-content
+                width, letting a wide table prop the layout open instead of shrinking with the window. */}
+            <div className="grid min-h-full w-full grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13.75rem]">
                 <div className="flex min-h-0 flex-col">
                     <div className="border-b px-5 py-3 lg:hidden">
                         <p className="mt-1 text-sm font-semibold">{currentStep.title}</p>
