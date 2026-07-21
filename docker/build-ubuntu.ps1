@@ -102,7 +102,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
         
 
         if (!$NoCache) {
-            $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
+            $matchingDebFile = Get-ChildItem (Join-Path $DockerfileDir $env:DISTRO_VERSION) -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
         }
 
         if(!$matchingDebFile) {
@@ -118,16 +118,16 @@ function BuildUbuntuDockerImage ($version, $arch) {
             Pop-Location
             CheckLastExitCode
 
-            $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
+            $matchingDebFile = Get-ChildItem (Join-Path $DockerfileDir $env:DISTRO_VERSION) -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
             if ($matchingDebFile) {
-                $pathToDeb = $matchingDebFile.Name
+                $pathToDeb = "$($env:DISTRO_VERSION)/$($matchingDebFile.Name)"
             } else {
-                Write-Host "FATAL: No ravendb .deb file for '$($arch)' architecture found after running script building .deb package." 
+                Write-Host "FATAL: No ravendb .deb file for '$($arch)' architecture found after running script building .deb package."
                 exit 1
             }
         }
         else {
-            $pathToDeb = $matchingDebFile.Name
+            $pathToDeb = "$($env:DISTRO_VERSION)/$($matchingDebFile.Name)"
         }
     }
     else {
