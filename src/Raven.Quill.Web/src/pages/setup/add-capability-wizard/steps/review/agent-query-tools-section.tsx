@@ -13,6 +13,7 @@ import { emptyAgentQueryTool } from "@/pages/setup/add-capability-wizard/agent-c
 import { ConfigItemCard, ConfigListEmpty } from "@/pages/setup/add-capability-wizard/steps/review/config-item-card";
 import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
 import AceEditor from "@/components/ace-editor/ace-editor";
+import { cn } from "@/lib/utils";
 
 const TRI_STATE_OPTIONS: FormSelectOption<AgentQueryToolFormData["allowModelQueries"]>[] = [
     { value: "Default", label: "Default" },
@@ -26,12 +27,12 @@ const DESCRIPTION_PLACEHOLDER =
     "Explain to the LLM when it should trigger this query. " +
     "E.g.: Use this query to retrieve Order documents filtered by destination country.";
 
-export function AgentQueryToolsSection() {
+export function AgentQueryToolsSection({ className }: { className?: string }) {
     const { control } = useFormContext<AgentFormData>();
     const fieldArray = useFieldArray({ control, name: "review.queries" });
 
     return (
-        <div className="grid gap-3 rounded-lg border bg-background p-4">
+        <div className={cn("grid gap-3 rounded-lg border bg-background p-4", className)}>
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <SearchCode className="size-4 text-muted-foreground" />

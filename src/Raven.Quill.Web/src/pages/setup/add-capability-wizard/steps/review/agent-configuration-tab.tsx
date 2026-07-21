@@ -7,7 +7,7 @@ import { AgentParametersSection } from "@/pages/setup/add-capability-wizard/step
 import { AgentQueryToolsSection } from "@/pages/setup/add-capability-wizard/steps/review/agent-query-tools-section";
 import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
 
-const SYSTEM_PROMPT_PLACEHOLDER =
+export const SYSTEM_PROMPT_PLACEHOLDER =
     "Describe the agent's purpose and capabilities. " +
     "E.g.: You are a customer support assistant for an e-commerce platform, " +
     "capable of answering questions about products and orders.";

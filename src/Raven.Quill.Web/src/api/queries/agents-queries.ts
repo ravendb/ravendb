@@ -10,6 +10,11 @@ export function createAgentsQueries(api: ServerApi["agents"]) {
                 queryKey: [baseKey, "list", slug],
                 queryFn: () => api.list(slug),
             }),
+        detail: (slug: string, agentId: string) =>
+            queryOptions({
+                queryKey: [baseKey, "detail", slug, agentId],
+                queryFn: () => api.get(slug, agentId),
+            }),
     };
 }
 

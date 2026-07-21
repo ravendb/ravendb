@@ -11,6 +11,7 @@ import type {
 } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { emptyAgentParameter } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { ConfigItemCard, ConfigListEmpty } from "@/pages/setup/add-capability-wizard/steps/review/config-item-card";
+import { cn } from "@/lib/utils";
 
 const PARAMETER_TYPE_OPTIONS: FormSelectOption<AgentParameterFormData["type"]>[] = [
     { value: "String", label: "String" },
@@ -28,12 +29,12 @@ const PARAMETER_POLICY_OPTIONS: FormSelectOption<AgentParameterFormData["policy"
     { value: "ForbidModelGeneration", label: "Forbid model generation" },
 ];
 
-export function AgentParametersSection() {
+export function AgentParametersSection({ className }: { className?: string }) {
     const { control } = useFormContext<AgentFormData>();
     const fieldArray = useFieldArray({ control, name: "review.parameters" });
 
     return (
-        <div className="grid gap-3 rounded-lg border bg-background p-4">
+        <div className={cn("grid gap-3 rounded-lg border bg-background p-4", className)}>
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <Settings2 className="size-4 text-muted-foreground" />

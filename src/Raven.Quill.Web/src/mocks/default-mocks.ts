@@ -24,7 +24,7 @@ import { statsMocks } from "./stats-mocks";
 //         },
 //     },
 export const defaultApiMocks = {
-    agents: [agentsMocks.list()],
+    agents: [agentsMocks.list(), agentsMocks.get(), agentsMocks.edit(), agentsMocks.delete()],
     aiConnectionStrings: [
         aiConnectionStringsMocks.list(),
         aiConnectionStringsMocks.detail(),
