@@ -884,8 +884,6 @@ namespace Raven.Server.ServerWide.Commands
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
 
-            // The required prefix is the database only, so the iterator stops at the database boundary
-            // and doesn't read (and deserialize) commands that belong to other databases.
             using (GetPrefix(context, database, out Slice databasePrefix))
             {
                 // 'startAfter' is exclusive, so we seek after (fromCount - 1) in order to include the command at
