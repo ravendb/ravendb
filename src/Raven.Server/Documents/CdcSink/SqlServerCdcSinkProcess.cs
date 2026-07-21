@@ -601,8 +601,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 }
             }
 
-            // If ANY processor is embedded we need op=3 (pre-image) to detect reparenting, so use
-            // 'all update old'. A table mapped only as a root collection uses 'all' and skips op=3.
+            // If ANY processor is embedded we need the pre-image to detect reparenting, so use
+            // 'all update old'. A table mapped only as a root collection uses 'all' and skips it.
             var rowFilterOption = hasEmbedded ? "all update old" : "all";
             var query = $@"
                 SELECT __$start_lsn, __$seqval, __$operation, {columnList}
