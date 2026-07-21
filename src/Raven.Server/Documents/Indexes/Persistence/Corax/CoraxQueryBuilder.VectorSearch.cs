@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -23,6 +24,39 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public static partial class CoraxQueryBuilder
 {
+    private static void CaptureVectorHighlighting(Parameters builderParameters, MethodExpression me, string fieldName, string embeddingsGenerationTaskIdentifier,
+        VectorValue? singleVector, VectorValue[] multiVector)
+    {
+        if (embeddingsGenerationTaskIdentifier is null)
+            return; // chunk text is only stored for embeddings-generation tasks
+
+        if (builderParameters.Metadata.HasHighlightings == false)
+            return;
+
+        if (builderParameters.IndexReadOperation is not CoraxIndexReadOperation readOperation)
+            return;
+
+
+        var queryVectors = new List<byte[]>();
+        if (singleVector is { IsNull: false } single)
+            queryVectors.Add(single.GetEmbedding().ToArray());
+
+        if (multiVector is not null)
+        {
+            foreach (var vector in multiVector)
+            {
+                if (vector.IsNull == false)
+                    queryVectors.Add(vector.GetEmbedding().ToArray());
+            }
+        }
+
+        if (queryVectors.Count == 0)
+            return;
+
+        var highlightFieldName = builderParameters.Metadata.GetVectorSourceFieldName(fieldName, me, builderParameters.QueryParameters);
+        readOperation.CaptureVectorChunkHighlighting(highlightFieldName, embeddingsGenerationTaskIdentifier, queryVectors);
+    }
+
     private static CoraxVectorItem HandleVector(Parameters builderParameters, MethodExpression me, bool exact)
     {
         var metadata = builderParameters.Metadata;
@@ -116,6 +150,8 @@ public static partial class CoraxQueryBuilder
             
             var vector = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueTokenType, methodParameter, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
 
+            CaptureVectorHighlighting(builderParameters, me, fieldName, embeddingsGenerationTaskIdentifier, vector.SingleVector, vector.MultiVector);
+
             if (vector.SingleVector != null)
             {
                 return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, vector.SingleVector.Value, numberOfCandidates, minimumMatch, exact);
@@ -134,6 +170,7 @@ public static partial class CoraxQueryBuilder
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
             transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
+            CaptureVectorHighlighting(builderParameters, me, fieldName, embeddingsGenerationTaskIdentifier, transformedEmbeddings.SingleVector, transformedEmbeddings.MultiVector);
         }
         else
         {

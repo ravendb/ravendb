@@ -93,6 +93,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         protected readonly IndexSearcher IndexSearcher;
 
         private readonly IndexFieldsMapping _fieldMappings;
+
+        private Dictionary<string, VectorChunkHighlightingCapture> _vectorChunkHighlightings;
+
+        internal void CaptureVectorChunkHighlighting(string fieldName, string taskId, List<byte[]> queryVectors)
+        {
+            _vectorChunkHighlightings ??= new Dictionary<string, VectorChunkHighlightingCapture>(StringComparer.OrdinalIgnoreCase);
+            _vectorChunkHighlightings[fieldName] = new VectorChunkHighlightingCapture(fieldName, taskId, queryVectors);
+        }
         private readonly ByteStringContext _allocator;
 
         private readonly int _maxNumberOfOutputsPerDocument;
@@ -630,6 +638,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
             highlightings.Initialize(query, queryTimings);
+            _vectorChunkHighlightings = null;
 
             long docsToLoad = pageSize;
             bool runQuery = true;
@@ -899,10 +908,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return default;
             }
 
+            var highlightingResult = highlightings.Execute(query, documentsContext, _fieldMappings, ref entryReader, highlightingFields, document, IndexSearcher);
+
+            if (_vectorChunkHighlightings is { Count: > 0 } && document != null)
+            {
+                highlightingResult ??= new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);
+                CoraxVectorChunkHighlighter.Apply(highlightingResult, _vectorChunkHighlightings, query, document, documentsContext, _index.DocumentDatabase);
+            }
+
             return new QueryResult
             {
                 Result = document,
-                Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, ref entryReader, highlightingFields, document, IndexSearcher),
+                Highlightings = highlightingResult,
             };
         }
 
