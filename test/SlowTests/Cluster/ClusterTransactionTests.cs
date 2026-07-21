@@ -2471,7 +2471,6 @@ select incl(c)"
         public void ReadCommandsBatch_ShouldSeekCorrectly_WithLargePreviousCount()
         {
             // Bootstrap the single-node cluster so the cluster-storage schema (the TransactionCommands table) exists.
-            using var store = GetDocumentStore();
             const string database = "read-commands-batch-large-count";
 
             // PreviousCount values chosen to exercise the big-endian key ordering, including values above
@@ -2487,7 +2486,8 @@ select incl(c)"
                 1_000_000_000_000L       // 10^12
             };
 
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using var server = GetNewServer();
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
