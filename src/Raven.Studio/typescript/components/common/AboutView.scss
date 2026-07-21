@@ -60,9 +60,43 @@
         color: bs5variables.$text-color-var;
         border-radius: bs5variables.$border-radius-lg;
     }
-    .popover-inner {
-        max-height: calc(100vh - 240px);
-        overflow: auto;
+    .popover-body {
+        max-height: calc(100vh - 120px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        > div {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+    }
+
+    .about-view-accordion {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+
+        .accordion-item {
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+
+            &:has(.accordion-collapse.show) {
+                flex-shrink: 1;
+                min-height: 0;
+            }
+        }
+
+        .accordion-header {
+            flex-shrink: 0;
+        }
+
+        .accordion-collapse.show {
+            min-height: 0;
+            overflow-y: auto;
+        }
     }
     .popover-arrow {
         &:before {
