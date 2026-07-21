@@ -34,7 +34,7 @@ using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
-public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
+public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler, IAsyncDisposable
 {
     internal const string Tag = "CDC Sink";
 
@@ -433,7 +433,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
     }
 
-    protected async Task<(string Checkpoint, int Rows)> SubmitBatch(List<CdcSinkDocumentOp> ops, string checkpoint = null,
+    protected virtual async Task<(string Checkpoint, int Rows)> SubmitBatch(List<CdcSinkDocumentOp> ops, string checkpoint = null,
         Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null,
         Commands.CdcSinkBatchCommand.DocumentGrouper grouper = null)
     {
@@ -599,7 +599,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// while we're waiting for the next event, we immediately flush any accumulated ops
     /// without waiting for another event to arrive.
     /// </summary>
-    protected async Task ProcessCdcStream(CancellationToken ct)
+    protected virtual async Task ProcessCdcStream(CancellationToken ct)
     {
         var batch = new List<CdcSinkDocumentOp>();
         var pending = new List<CdcSinkDocumentOp>();
@@ -928,7 +928,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// keys, and the context whose memory the ops' blittables reference (the caller disposes it once
     /// the batch has been written).
     /// </summary>
-    private readonly record struct InitialLoadBatch(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context);
+    protected readonly record struct InitialLoadBatch(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context);
 
     /// <summary>
     /// Returns a completed batch's values to their per-table pools and clears the reference, so a
@@ -943,7 +943,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         ops = null;
     }
 
-    private async Task<InitialLoadBatch> ReadOneBatch(
+    protected virtual async Task<InitialLoadBatch> ReadOneBatch(
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
         string[] lastKeys, int maxBatchSize, CancellationToken ct)
     {
@@ -1245,7 +1245,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
 
-    protected CdcSinkTaskState LoadState(DocumentsOperationContext context)
+    protected virtual CdcSinkTaskState LoadState(DocumentsOperationContext context)
     {
         var stateDocId = CdcSinkTaskState.GetDocumentId(Configuration.Name);
         var doc = Database.DocumentsStorage.Get(context, stateDocId);
@@ -1256,7 +1256,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         return JsonDeserializationServer.CdcSinkTaskState(doc.Data);
     }
 
-    public virtual void Dispose()
+    public virtual void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+    public virtual ValueTask DisposeAsync()
     {
         // Mark disposed up front so a concurrent GetConnectionStatus() bails out before touching _cts,
         // even on the never-started path where Stop() returns early but _cts is still disposed below.
@@ -1271,6 +1273,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         exceptionAggregator.Execute(() => CommandBuilder.Dispose());
 
         exceptionAggregator.ThrowIfNeeded();
+
+        return ValueTask.CompletedTask;
     }
 
     public void LowMemory(LowMemorySeverity lowMemorySeverity)

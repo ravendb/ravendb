@@ -54,9 +54,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private readonly string _connectionString;
     private readonly string _replicationConnectionString;
     private readonly TimeSpan _replicationTimeout;
-    private readonly NpgsqlDataSource _dataSource;
-    private string _publicationName;
-    private string _slotName;
+    protected readonly NpgsqlDataSource _dataSource;
+    protected string _publicationName;
+    protected string _slotName;
+
+    protected bool _createdPublication;
+    protected bool _createdSlot;
 
     private uint _vectorOid = uint.MaxValue; // pgvector extension OID, resolved at setup time. MaxValue = not installed.
 
@@ -96,25 +99,26 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         _dataSource = dataSourceBuilder.Build();
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
-        base.Dispose();
+        await base.DisposeAsync();
 
-        // Ensure the replication connection is closed even if the async iterator
-        // didn't dispose cleanly (e.g., due to sync-over-async in Stop()).
-        // Without this, the WAL sender may keep the slot active, preventing
-        // database drops in test scenarios.
         try
         {
-            _replicationConn?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
+            if (_replicationConn != null)
+            {
+                // _replicationConn has token attached which should unblock the connection
+                await _replicationConn.DisposeAsync();
+            }
         }
         catch
         {
             // best effort — the connection may already be disposed by the iterator
         }
 
-        _dataSource.Dispose();
+        await _dataSource.DisposeAsync();
     }
+
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
@@ -173,6 +177,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 await using var createCmd = new NpgsqlCommand(
                     $"CREATE PUBLICATION {quotedPubName} FOR TABLE {quotedTableList}", conn);
                 await createCmd.ExecuteNonQueryAsync(ct);
+                _createdPublication = true;
             }
             catch (PostgresException ex) when (ex.SqlState == InsufficientPrivilegeSqlState)
             {
@@ -218,6 +223,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         $"SELECT pg_create_logical_replication_slot(@slotName, 'pgoutput')", conn);
                     createCmd.Parameters.AddWithValue("slotName", _slotName);
                     await createCmd.ExecuteNonQueryAsync(ct);
+                    _createdSlot = true;
                 }
                 catch (PostgresException ex) when (ex.SqlState == "42710")
                 {
