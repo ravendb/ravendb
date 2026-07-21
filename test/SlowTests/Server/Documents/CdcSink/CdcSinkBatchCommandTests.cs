@@ -3073,6 +3073,137 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
+        public async Task SourceTableMappedBothEmbeddedAndStandalone_PopulatesBoth()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // "order_lines" is mapped two ways at once: embedded under Orders as "Lines", and as its own
+            // "OrderLines" collection.
+            var ordersConfig = CreateRootTableConfig("Orders");
+            ordersConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+            {
+                new CdcSinkEmbeddedTableConfig
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "order_lines",
+                    PropertyName = "Lines",
+                    PrimaryKeyColumns = new List<string> { "line_id" },
+                    JoinColumns = new List<string> { "order_id" },
+                    Type = CdcSinkRelationType.Array,
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new() { Column = "line_id", Name = "LineId" },
+                        new() { Column = "product", Name = "Product" },
+                        new() { Column = "qty", Name = "Qty" }
+                    }
+                }
+            };
+
+            var orderLinesConfig = new CdcSinkTableConfig
+            {
+                CollectionName = "OrderLines",
+                SourceTableSchema = "public",
+                SourceTableName = "order_lines",
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "line_id", Name = "LineId" },
+                    new() { Column = "order_id", Name = "OrderId" },
+                    new() { Column = "product", Name = "Product" },
+                    new() { Column = "qty", Name = "Qty" }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-dual",
+                Tables = new List<CdcSinkTableConfig> { ordersConfig, orderLinesConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            var lineProcessors = docProcessor.GetProcessors("public", "order_lines");
+            Assert.Equal(2, lineProcessors.Count);
+            Assert.Equal(1, lineProcessors.Count(p => p.IsRoot));
+            Assert.Equal(1, lineProcessors.Count(p => p.IsRoot == false));
+
+            var lineColumns = new[] { "line_id", "order_id", "product", "qty" };
+            docProcessor.SetSourceColumnNames("public", "order_lines", lineColumns);
+            SetSourceColumnNamesFromConfig(docProcessor.GetProcessor("public", "orders"), ordersConfig.Columns);
+
+            List<CdcSinkDocumentOp> FanOut(CdcSinkOperation operation, object[] data)
+            {
+                var ops = new List<CdcSinkDocumentOp>();
+                foreach (var proc in docProcessor.GetProcessors("public", "order_lines"))
+                    ops.Add(docProcessor.ProcessRow(proc, operation, (object[])data.Clone(), null));
+                return ops;
+            }
+
+            var orderOp = docProcessor.ProcessRow(new CdcSinkRow
+            {
+                TableSchema = "public", TableName = "orders",
+                Operation = CdcSinkOperation.Upsert,
+                Data = new object[] { 1, "Acme", 0 }
+            }, null);
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { orderOp }, "test-dual", null, null, null, null, null, null));
+
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                FanOut(CdcSinkOperation.Upsert, new object[] { 1, 1, "Widget", 5 }),
+                "test-dual", null, null, null, null, null, null));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var standalone = database.DocumentsStorage.Get(ctx, "OrderLines/1");
+                Assert.NotNull(standalone);
+                AssertDocumentMatches(ctx, standalone.Data, """
+                    { "LineId": 1, "OrderId": 1, "Product": "Widget", "Qty": 5 }
+                    """);
+
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(order);
+                Assert.True(order.Data.TryGet("Lines", out BlittableJsonReaderArray lines));
+                Assert.Equal(1, lines.Length);
+                AssertDocumentMatches(ctx, (BlittableJsonReaderObject)lines[0], """
+                    { "LineId": 1, "Product": "Widget", "Qty": 5 }
+                    """);
+            }
+
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                FanOut(CdcSinkOperation.Upsert, new object[] { 1, 1, "Widget", 10 }),
+                "test-dual", null, null, null, null, null, null));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var standalone = database.DocumentsStorage.Get(ctx, "OrderLines/1");
+                Assert.True(standalone.Data.TryGet("Qty", out long standaloneQty));
+                Assert.Equal(10, standaloneQty);
+
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                order.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.Equal(1, lines.Length);
+                ((BlittableJsonReaderObject)lines[0]).TryGet("Qty", out long embeddedQty);
+                Assert.Equal(10, embeddedQty);
+            }
+
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                FanOut(CdcSinkOperation.Delete, new object[] { 1, 1, "Widget", 10 }),
+                "test-dual", null, null, null, null, null, null));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                Assert.Null(database.DocumentsStorage.Get(ctx, "OrderLines/1"));
+
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                order.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.Equal(0, lines.Length);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedOnDelete_Value_OldHasPreviousValue()
         {
             using var store = GetDocumentStore();

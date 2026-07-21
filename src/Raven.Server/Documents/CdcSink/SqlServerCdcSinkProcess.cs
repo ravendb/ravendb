@@ -301,7 +301,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
                 await using var reader = await cmd.ExecuteReaderAsync(ct);
                 var columns = ci.Columns;
-                var processor = DocumentProcessor.GetProcessor(ci.TableInfo.Schema, ci.TableInfo.TableName);
+                var processors = ci.Processors;
                 // Query shape: __$start_lsn (0), __$seqval (1), __$operation (2), user columns (3+)
 
                 // For embedded tables, op 3 (pre-update image) is kept so we can detect
@@ -310,6 +310,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 // is found regardless of whether the UPDATE changed any PK column (a PK-derived
                 // key would miss when the embedded PK includes the join column).
                 Dictionary<LsnSeqKey, object[]> pendingPreUpdate = null;
+                
+                var events = new List<CdcEvent>(processors.Count + 1);
 
                 while (await reader.ReadAsync(ct))
                 {
@@ -317,7 +319,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                     var rowSeq = reader[1] as byte[];
                     var operation = reader.GetInt32(2);
 
-                    var values = processor.RentValues();
+                    var values = processors[0].RentValues();
                     for (int i = 0; i < columns.Length; i++)
                     {
                         int ordinal = i + 3;
@@ -331,26 +333,28 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                         continue;
                     }
 
-                    var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
-                    var op = DocumentProcessor.ProcessRow(processor, cdcOperation, values, StreamingJsonContext);
+                    events.Clear();
 
-                    if (operation == 4 && !processor.IsRoot && pendingPreUpdate != null)
+                    if (operation == 1) // delete
                     {
-                        // Post-update image — pair with stashed pre-update for reparent detection
-                        if (pendingPreUpdate.Remove(new LsnSeqKey(rowLsn, rowSeq), out var oldValues))
-                        {
-                            var (delete, upsert) = CreateEmbeddedUpdateEvents(op, oldValues);
-                            if (delete.HasValue)
-                                buffer.Add((rowLsn, rowSeq, buffer.Count, delete.Value));
-                            else
-                                processor.ReturnValues(oldValues); // no reparent — release the unused old-values array
-                            buffer.Add((rowLsn, rowSeq, buffer.Count, upsert));
-                            continue;
-                        }
+                        AddDeleteEvents(processors, values, StreamingJsonContext, events);
+                    }
+                    else if (operation == 4 && ci.HasEmbedded && pendingPreUpdate != null &&
+                             pendingPreUpdate.Remove(new LsnSeqKey(rowLsn, rowSeq), out var oldValues))
+                    {
+                        // Post-update image paired with its stashed pre-update: fan out with reparent
+                        // detection for embedded processors.
+                        AddUpdateEvents(processors, values, oldValues, events);
+                    }
+                    else
+                    {
+                        // Insert (op=2), or a post-update (op=4) on a root-only table / without a paired
+                        // pre-image: upsert into the current location for every processor.
+                        AddUpsertEvents(processors, values, StreamingJsonContext, events);
                     }
 
-                    var eventType = cdcOperation == CdcSinkOperation.Delete ? CdcEventType.Delete : CdcEventType.Upsert;
-                    buffer.Add((rowLsn, rowSeq, buffer.Count, new CdcEvent(eventType, op, null)));
+                    foreach (var evt in events)
+                        buffer.Add((rowLsn, rowSeq, buffer.Count, evt));
                 }
 
                 // Defense-in-depth: under correct CDC semantics every op=3 is paired with an
@@ -359,7 +363,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 if (pendingPreUpdate is { Count: > 0 })
                 {
                     foreach (var arr in pendingPreUpdate.Values)
-                        processor.ReturnValues(arr);
+                        processors[0].ReturnValues(arr);
                     pendingPreUpdate.Clear();
                 }
             }
@@ -517,6 +521,16 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         public string Query;
         /// <summary>Column names in the same order as the SELECT list (excludes CDC metadata columns).</summary>
         public string[] Columns;
+
+        /// <summary>
+        /// Every processor this source table feeds - a root collection and/or embedded arrays. All share
+        /// the same source columns; index 0 is the primary (used to rent the decode buffer). A change row
+        /// is decoded once and fanned out to all of them (RavenDB-27095).
+        /// </summary>
+        public IReadOnlyList<CdcSinkTableProcessor> Processors;
+
+        /// <summary>True when at least one processor is embedded - only then is the pre-image (op=3) needed.</summary>
+        public bool HasEmbedded;
     }
 
     private async Task<List<CaptureInstanceInfo>> ResolveCaptureInstances(CancellationToken ct)
@@ -558,9 +572,21 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             // the previous code path here never actually saw a pre-image.) For root tables we
             // don't need pre-images, so we still use 'all' and skip the extra row.
             var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
-            // GetProcessor throws if the table isn't registered; every configured table is, so proc is always non-null.
-            var proc = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
-            var rowFilterOption = proc.IsRoot ? "all" : "all update old";
+            // GetProcessors throws if the table isn't registered; every configured table is, so this is non-empty.
+            var processors = DocumentProcessor.GetProcessors(tableInfo.Schema, tableInfo.TableName);
+            var hasEmbedded = false;
+            for (int p = 0; p < processors.Count; p++)
+            {
+                if (processors[p].IsRoot == false)
+                {
+                    hasEmbedded = true;
+                    break;
+                }
+            }
+
+            // If ANY processor is embedded we need op=3 (pre-image) to detect reparenting, so use
+            // 'all update old'. A table mapped only as a root collection uses 'all' and skips op=3.
+            var rowFilterOption = hasEmbedded ? "all update old" : "all";
             var query = $@"
                 SELECT __$start_lsn, __$seqval, __$operation, {columnList}
                 FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'{rowFilterOption}')
@@ -574,6 +600,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 CaptureInstance = captureInstance,
                 Query = query,
                 Columns = columnsArray,
+                Processors = processors,
+                HasEmbedded = hasEmbedded,
             });
 
             DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnsArray);

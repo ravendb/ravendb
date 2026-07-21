@@ -1597,6 +1597,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 Operation = op.Operation,
                 ProcessorSchema = op.Processor?.Schema,
                 ProcessorTable = op.Processor?.Table,
+                ProcessorDiscriminator = op.Processor?.Discriminator,
                 MappedData = mappedBlittable,
                 RawData = rawBlittable,
                 BinaryData = binaryBlittable,
@@ -1621,6 +1622,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         public CdcSinkOperation Operation { get; set; }
         public string ProcessorSchema { get; set; }
         public string ProcessorTable { get; set; }
+        /// <summary>
+        /// Which mapping of the source table this op belonged to, so replay restores the exact processor
+        /// when a table feeds several destinations. Empty for the root mapping; the
+        /// slash-joined embedded property path otherwise.
+        /// </summary>
+        public string ProcessorDiscriminator { get; set; }
         public BlittableJsonReaderObject MappedData { get; set; }
         public BlittableJsonReaderObject RawData { get; set; }
         /// <summary>
@@ -1668,7 +1675,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             {
                 var serialized = Ops[i];
                 var mappedDjv = serialized.MappedData != null ? new DynamicJsonValue(serialized.MappedData) : null;
-                var processor = docProcessor.GetProcessor(serialized.ProcessorSchema, serialized.ProcessorTable);
+                var processor = docProcessor.GetProcessor(serialized.ProcessorSchema, serialized.ProcessorTable, serialized.ProcessorDiscriminator);
 
                 // Rebuild object[] from the serialized blittable using processor's column name order
                 object[] rawValues = null;
