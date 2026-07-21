@@ -46,9 +46,6 @@ export function DashboardCertificates() {
             <div className="flex items-center justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">Certificates</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Client certificates used to authenticate against the underlying RavenDB server.
-                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button

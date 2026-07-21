@@ -11,8 +11,8 @@ import {
 export type CertificateSort = "name-asc" | "name-desc" | "expiration-asc" | "expiration-desc";
 
 const SORT_OPTIONS: { value: CertificateSort; label: string }[] = [
-    { value: "name-asc", label: "Name (A–Z)" },
-    { value: "name-desc", label: "Name (Z–A)" },
+    { value: "name-asc", label: "Name (A-Z)" },
+    { value: "name-desc", label: "Name (Z-A)" },
     { value: "expiration-asc", label: "Expiration (soonest first)" },
     { value: "expiration-desc", label: "Expiration (latest first)" },
 ];
