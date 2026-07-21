@@ -913,6 +913,9 @@ namespace Raven.Server.ServerWide.Commands
                         if (result == null)
                             yield break;
 
+                        Debug.Assert(result.Database == lowerDb);
+                        Debug.Assert(result.PreviousCount >= fromCount);
+
                         if (result.Database != lowerDb)
                         {
                             // beware of reading commands of other databases.
