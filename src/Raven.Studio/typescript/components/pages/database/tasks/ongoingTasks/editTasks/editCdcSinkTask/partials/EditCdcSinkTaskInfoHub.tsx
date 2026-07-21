@@ -6,12 +6,16 @@ import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabi
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export default function EditCdcSinkTaskInfoHub() {
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const hasCdcSink = useAppSelector(licenseSelectors.statusValue("HasCdcSink"));
+
+    const cdcSinkOverviewDocsLink = useRavenLink({ hash: "36RFXH" });
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -132,6 +136,11 @@ export default function EditCdcSinkTaskInfoHub() {
                     Once the task is active, every committed change in the source tables is captured and applied to
                     RavenDB. Progress is tracked using the last processed checkpoint.
                 </p>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={cdcSinkOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - CDC Sink Overview
+                </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper isUnlimited={hasCdcSink} data={featureAvailability} />
         </AboutViewFloating>
