@@ -456,43 +456,61 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     /// <param name="defaultSchema">Default schema when SourceTableSchema is null (e.g., "public" for PostgreSQL, "dbo" for SQL Server).</param>
     public List<TableInfo> CollectAllTablesFlat(string defaultSchema)
     {
+        // A source table can be mapped several times at once (a root collection and/or embedded arrays -
+        // RavenDB-27095), but the physical table must be read/captured exactly ONCE and then fanned out to
+        // all its processors. Dedup by (schema, table), preferring the root mapping's PrimaryKeyColumns for
+        // keyset pagination: two passes so a standalone root that appears after the parent embedding it
+        // still wins over the embedded entry.
         var tables = new List<TableInfo>();
+        var seen = new HashSet<TableInfo>();
+
+        void AddUnique(string schema, string tableName, List<string> primaryKeyColumns)
+        {
+            var info = new TableInfo
+            {
+                Schema = string.IsNullOrEmpty(schema) ? defaultSchema : schema,
+                TableName = tableName,
+                PrimaryKeyColumns = primaryKeyColumns,
+            };
+            if (seen.Add(info))
+                tables.Add(info);
+        }
+
+        // Pass 1: root tables (their PrimaryKeyColumns take precedence).
         foreach (var table in Tables)
         {
             if (table.Disabled)
                 continue;
 
-            tables.Add(new TableInfo
-            {
-                Schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema,
-                TableName = table.SourceTableName,
-                PrimaryKeyColumns = table.PrimaryKeyColumns,
-            });
+            AddUnique(table.SourceTableSchema, table.SourceTableName, table.PrimaryKeyColumns);
+        }
+
+        // Pass 2: embedded tables, added only when not already covered by a root mapping.
+        foreach (var table in Tables)
+        {
+            if (table.Disabled)
+                continue;
 
             if (table.EmbeddedTables != null)
             {
                 foreach (var embedded in table.EmbeddedTables)
-                    CollectEmbeddedTablesFlat(embedded, defaultSchema, tables);
+                    CollectEmbeddedTablesFlat(embedded, defaultSchema, AddUnique);
             }
         }
+
         return tables;
     }
 
-    private static void CollectEmbeddedTablesFlat(CdcSinkEmbeddedTableConfig embedded, string defaultSchema, List<TableInfo> tables)
+    private static void CollectEmbeddedTablesFlat(CdcSinkEmbeddedTableConfig embedded, string defaultSchema, Action<string, string, List<string>> addUnique)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
-        tables.Add(new TableInfo
-        {
-            Schema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema,
-            TableName = embedded.SourceTableName,
-            PrimaryKeyColumns = embedded.PrimaryKeyColumns,
-        });
+        addUnique(embedded.SourceTableSchema, embedded.SourceTableName, embedded.PrimaryKeyColumns);
 
         if (embedded.EmbeddedTables != null)
         {
             foreach (var child in embedded.EmbeddedTables)
-                CollectEmbeddedTablesFlat(child, defaultSchema, tables);
+                CollectEmbeddedTablesFlat(child, defaultSchema, addUnique);
         }
     }
 

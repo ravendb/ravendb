@@ -890,6 +890,154 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task SourceTableMappedBothEmbeddedAndStandalone_PopulatesBoth()
+        {
+            // RavenDB-27095: order_lines is mapped two ways at once - embedded under Orders as "Lines" AND
+            // as its own OrderLines collection. Both must populate (initial load AND streaming). Before the
+            // fix only the standalone collection filled and Orders.Lines came out null.
+            using var store = GetDocumentStore();
+            var schema = CreateTestSchema();
+
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (
+                    id INT PRIMARY KEY,
+                    customer_name NVARCHAR(200) NOT NULL
+                );
+                CREATE TABLE [{schema}].order_lines (
+                    id INT PRIMARY KEY,
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
+                    product NVARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL
+                )");
+
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
+
+            // Two rows present at initial-load time.
+            ExecuteMsSql($@"
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (1, 1, 'Apples', 5);
+                INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (2, 1, 'Bananas', 3);");
+
+            var sqlCs = SetupSqlConnectionString(store);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-dual-mapping",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = schema,
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = schema,
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "id" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "id", Name = "LineId" },
+                                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                                    new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
+                                }
+                            }
+                        }
+                    },
+                    // Same source table, also mapped as its own standalone collection.
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "OrderLines",
+                        SourceTableSchema = schema,
+                        SourceTableName = "order_lines",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "LineId" },
+                            new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                            new CdcColumnMapping { Column = "product", Name = "Product" },
+                            new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Initial load: standalone collection fully populated...
+            var standaloneCount = await WaitForDocumentCountAsync(store, "OrderLines", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, standaloneCount);
+
+            // ...AND the embedded array on the parent populated (the bug: this used to stay null).
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<Order>("Orders/1");
+                Assert.Equal("Alice", order.CustomerName);
+                var products = order.Lines.Select(l => l.Product).OrderBy(p => p).ToList();
+                Assert.Equal(new[] { "Apples", "Bananas" }, products);
+
+                var standalone = await session.LoadAsync<StandaloneOrderLine>("OrderLines/1");
+                Assert.Equal("Apples", standalone.Product);
+                Assert.Equal(5, standalone.Quantity);
+                Assert.Equal(1, standalone.OrderId);
+            }
+
+            // Streaming INSERT: a 3rd line must appear in BOTH views.
+            ExecuteMsSql($"INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (3, 1, 'Cherries', 7);");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 3, timeout: 60_000);
+            Assert.Equal(3, await WaitForDocumentCountAsync(store, "OrderLines", expectedCount: 3, timeoutMs: 60_000));
+
+            // Streaming DELETE: the line must disappear from BOTH views.
+            ExecuteMsSql($"DELETE FROM [{schema}].order_lines WHERE id = 2;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+            Assert.True(await WaitForDocumentDeletionAsync(store, "OrderLines/2", timeoutMs: 60_000));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var products = order.Lines.Select(l => l.Product).OrderBy(p => p).ToList();
+                Assert.Equal(new[] { "Apples", "Cherries" }, products);
+            }
+        }
+
+        private class StandaloneOrderLine
+        {
+            public int OrderId { get; set; }
+            public string Product { get; set; }
+            public int Quantity { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task EmbeddedArray_CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();

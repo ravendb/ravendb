@@ -23,6 +23,15 @@ public class CdcSinkTableProcessor
     /// </summary>
     public string Key { get; init; }
 
+    /// <summary>
+    /// Stable identity for this processor WITHIN its source table, used to disambiguate when the
+    /// same source table feeds multiple destinations (a root collection plus one or more embedded
+    /// arrays). Empty for the root processor; for an embedded processor it is the slash-joined path
+    /// of embedded property names from the root (e.g. "OrderDetails" or "Departments/Employees").
+    /// Persisted with each op so tx-log replay can restore the exact processor.
+    /// </summary>
+    public string Discriminator { get; init; } = string.Empty;
+
     /// <summary>Source table schema (e.g. "public", "dbo"). Empty string when not specified.</summary>
     public string Schema { get; init; }
 

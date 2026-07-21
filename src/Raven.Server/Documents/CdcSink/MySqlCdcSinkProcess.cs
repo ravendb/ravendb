@@ -56,7 +56,19 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private sealed class TableInfo
     {
         public required ColumnInfo[] Columns { get; init; }
-        public required CdcSinkTableProcessor Processor { get; init; }
+
+        /// <summary>
+        /// Every processor this source table feeds - a root collection and/or embedded arrays. All share
+        /// the same source columns; index 0 is the primary (used to rent the decode buffer). A row is
+        /// decoded once and fanned out to all of them (RavenDB-27095).
+        /// </summary>
+        public required IReadOnlyList<CdcSinkTableProcessor> Processors { get; init; }
+
+        /// <summary>True when at least one processor is embedded - only then do UPDATEs need the pre-image.</summary>
+        public required bool HasEmbedded { get; init; }
+
+        /// <summary>The primary processor (index 0); owns the pool the decode buffer is rented from.</summary>
+        public CdcSinkTableProcessor Processor => Processors[0];
 
         /// <summary>
         /// Expected binlog type bytes for column positions 0..RequiredPrefixLength-1,
@@ -310,13 +322,25 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             for (int i = 0; i < columnsArray.Length; i++)
                 columnNames[i] = columnsArray[i].Name;
 
-            var processor = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
-            processor.SetSourceColumnNames(columnNames);
+            // Set column names on every processor for this source table (root + embedded), then fan a
+            // row out to all of them. SetSourceColumnNames on the document processor updates them all.
+            DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnNames);
+            var processors = DocumentProcessor.GetProcessors(tableInfo.Schema, tableInfo.TableName);
 
             // Build the expected type prefix covering all mapped column positions.
             // RequiredPrefixLength is computed by SetSourceColumnNames — it's the max
             // ordinal of any column we actually read (PK, mapped, join, attachment) + 1.
-            var requiredLen = processor.RequiredPrefixLength;
+            // With several processors we must cover the widest one so a schema change in any
+            // mapped position is detected.
+            var requiredLen = 0;
+            var hasEmbedded = false;
+            for (int p = 0; p < processors.Count; p++)
+            {
+                if (processors[p].RequiredPrefixLength > requiredLen)
+                    requiredLen = processors[p].RequiredPrefixLength;
+                if (processors[p].IsRoot == false)
+                    hasEmbedded = true;
+            }
             var expectedPrefix = new byte[requiredLen];
             for (int i = 0; i < requiredLen && i < columnsArray.Length; i++)
                 expectedPrefix[i] = MapDataTypeToBinlogType(columnsArray[i].DataType);
@@ -325,7 +349,8 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             _resolvedTables[tableKey] = new TableInfo
             {
                 Columns = columnsArray,
-                Processor = processor,
+                Processors = processors,
+                HasEmbedded = hasEmbedded,
                 ExpectedTypesPrefix = expectedPrefix,
             };
         }
@@ -678,7 +703,13 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         if (tableMapCache.TryGetValue(writeRows.TableId, out var wTable) == false)
                             break;
                         foreach (var row in writeRows.Rows)
-                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(wTable, row.Cells, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                        {
+                            var values = DecodeRowInternal(wTable, row.Cells);
+                            var events = new List<CdcEvent>(wTable.Processors.Count);
+                            AddUpsertEvents(wTable.Processors, values, StreamingJsonContext, events);
+                            foreach (var e in events)
+                                yield return e;
+                        }
                         break;
 
                     case UpdateRowsEvent updateRows:
@@ -686,21 +717,12 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                             break;
                         foreach (var row in updateRows.Rows)
                         {
-                            var newOp = DecodeRow(uTable, row.AfterUpdate.Cells, CdcSinkOperation.Upsert, StreamingJsonContext);
-                            if (newOp?.Processor is { IsRoot: false })
-                            {
-                                var oldValues = DecodeRowInternal(uTable, row.BeforeUpdate.Cells);
-                                var (delete, upsert) = CreateEmbeddedUpdateEvents(newOp, oldValues);
-                                if (delete.HasValue)
-                                    yield return delete.Value;
-                                else
-                                    uTable.Processor.ReturnValues(oldValues); // no reparent — release the unused old-values array
-                                yield return upsert;
-                            }
-                            else
-                            {
-                                yield return new CdcEvent(CdcEventType.Upsert, newOp, null);
-                            }
+                            var newValues = DecodeRowInternal(uTable, row.AfterUpdate.Cells);
+                            var oldValues = uTable.HasEmbedded ? DecodeRowInternal(uTable, row.BeforeUpdate.Cells) : null;
+                            var events = new List<CdcEvent>(uTable.Processors.Count + 1);
+                            AddUpdateEvents(uTable.Processors, newValues, oldValues, events);
+                            foreach (var e in events)
+                                yield return e;
                         }
                         break;
 
@@ -708,7 +730,13 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         if (tableMapCache.TryGetValue(deleteRows.TableId, out var dTable) == false)
                             break;
                         foreach (var row in deleteRows.Rows)
-                            yield return new CdcEvent(CdcEventType.Delete, DecodeRow(dTable, row.Cells, CdcSinkOperation.Delete, StreamingJsonContext), null);
+                        {
+                            var values = DecodeRowInternal(dTable, row.Cells);
+                            var events = new List<CdcEvent>(dTable.Processors.Count);
+                            AddDeleteEvents(dTable.Processors, values, StreamingJsonContext, events);
+                            foreach (var e in events)
+                                yield return e;
+                        }
                         break;
 
                     case XidEvent:
@@ -720,18 +748,10 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             }
     }
 
-    private CdcSinkDocumentOp DecodeRow(
-        TableInfo tableInfo, IReadOnlyList<object> cells,
-        CdcSinkOperation operation, DocumentsOperationContext jsonParsingContext)
-    {
-        var values = DecodeRowInternal(tableInfo, cells);
-        return DocumentProcessor.ProcessRow(tableInfo.Processor, operation, values, jsonParsingContext);
-    }
-
     /// <summary>
-    /// Decodes binlog cells into raw column values and returns the decoded values array.
-    /// Used by <see cref="DecodeRow"/> and by the reparent detection path
-    /// (which needs the raw values without calling ProcessRow); the processor is available via <paramref name="tableInfo"/>.
+    /// Decodes binlog cells into raw column values and returns the decoded values array, rented from the
+    /// primary processor's pool. The caller fans the array out to every processor of the table via the
+    /// AddUpsert/AddDelete/AddUpdate helpers.
     /// </summary>
     private object[] DecodeRowInternal(
         TableInfo tableInfo, IReadOnlyList<object> cells)

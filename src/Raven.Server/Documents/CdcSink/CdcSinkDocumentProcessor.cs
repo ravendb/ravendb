@@ -20,7 +20,7 @@ public class CdcSinkDocumentProcessor
     private readonly CdcSinkConfiguration _config;
     private readonly string _defaultSchema;
     private readonly bool _includeDisabledTables;
-    private readonly Dictionary<(string Schema, string Table), CdcSinkTableProcessor> _tableIndex;
+    private readonly Dictionary<(string Schema, string Table), List<CdcSinkTableProcessor>> _tableIndex;
 
     internal RavenLogger Logger { get; set; }
 
@@ -39,7 +39,7 @@ public class CdcSinkDocumentProcessor
         _config = config;
         _defaultSchema = defaultSchema;
         _includeDisabledTables = includeDisabledTables;
-        _tableIndex = new Dictionary<(string, string), CdcSinkTableProcessor>(TableKeyComparer.Instance);
+        _tableIndex = new Dictionary<(string, string), List<CdcSinkTableProcessor>>(TableKeyComparer.Instance);
 
         foreach (var table in config.Tables)
         {
@@ -64,6 +64,7 @@ public class CdcSinkDocumentProcessor
                 KeyOnDelete = rootKey + "__on_delete",
                 Schema = schema,
                 Table = table.SourceTableName,
+                Discriminator = string.Empty,
                 RootConfig = table,
                 CollectionName = table.CollectionName,
                 IsRoot = true,
@@ -74,7 +75,7 @@ public class CdcSinkDocumentProcessor
                 LinkedTables = table.LinkedTables,
             };
 
-            _tableIndex[(schema, table.SourceTableName)] = rootProcessor;
+            AddProcessor(schema, table.SourceTableName, rootProcessor);
 
             // Register all embedded tables recursively
             if (table.EmbeddedTables != null)
@@ -241,6 +242,7 @@ public class CdcSinkDocumentProcessor
                 KeyOnDelete = key + "__on_delete",
                 Schema = embeddedSchema,
                 Table = embedded.SourceTableName,
+                Discriminator = BuildEmbeddedDiscriminator(path),
                 RootConfig = rootConfig,
                 CollectionName = rootConfig.CollectionName,
                 IsRoot = false,
@@ -254,7 +256,7 @@ public class CdcSinkDocumentProcessor
                 LinkedTables = embedded.LinkedTables,
             };
 
-            _tableIndex[(embeddedSchema, embedded.SourceTableName)] = processor;
+            AddProcessor(embeddedSchema, embedded.SourceTableName, processor);
 
             // Recurse for deep nesting
             if (embedded.EmbeddedTables != null && embedded.EmbeddedTables.Count > 0)
@@ -264,29 +266,94 @@ public class CdcSinkDocumentProcessor
         }
     }
 
-    public CdcSinkTableProcessor GetProcessor(string schema, string table)
+    public IReadOnlyList<CdcSinkTableProcessor> GetProcessors(string schema, string table)
     {
-        if (_tableIndex.TryGetValue((schema ?? "", table), out var processor) == false)
+        if (_tableIndex.TryGetValue((schema ?? string.Empty, table), out var processors) == false)
             throw new InvalidOperationException($"No processor found for table '{schema}.{table}'.");
-        return processor;
+        return processors;
     }
 
     /// <summary>
-    /// Like <see cref="GetProcessor"/> but returns false instead of throwing when the table is not
-    /// configured in this CDC Sink task. Used by streaming providers (e.g. PostgreSQL) where the
-    /// source may publish rows for tables that are not part of the task configuration - those rows
-    /// must be skipped, not crash the process.
+    /// Like <see cref="GetProcessors"/> but returns false instead of throwing when the table is not
+    /// configured. Used by streaming providers (e.g. PostgreSQL) where the source may publish rows for
+    /// tables that are not part of the task configuration - those rows must be skipped, not crash.
     /// </summary>
+    private bool TryGetProcessors(string schema, string table, out IReadOnlyList<CdcSinkTableProcessor> processors)
+    {
+        if (_tableIndex.TryGetValue((schema ?? string.Empty, table), out var list))
+        {
+            processors = list;
+            return true;
+        }
+
+        processors = null;
+        return false;
+    }
+
+    /// <summary>
+    /// The primary processor for a source table: the root processor when the table is mapped as a
+    /// collection, otherwise the first embedded processor. Callers that need every mapping (streaming,
+    /// initial load, replay) use <see cref="GetProcessors"/>; this single-processor accessor is kept for
+    /// column-metadata setup, previews and tests where any one processor of the table is sufficient.
+    /// </summary>
+    public CdcSinkTableProcessor GetProcessor(string schema, string table)
+    {
+        return SelectPrimary(GetProcessors(schema, table));
+    }
+
     public bool TryGetProcessor(string schema, string table, out CdcSinkTableProcessor processor)
     {
-        return _tableIndex.TryGetValue((schema ?? "", table), out processor);
+        if (TryGetProcessors(schema, table, out var processors))
+        {
+            processor = SelectPrimary(processors);
+            return true;
+        }
+
+        processor = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Resolves the exact processor for a source table by its <see cref="CdcSinkTableProcessor.Discriminator"/>
+    /// (empty = root, otherwise the embedded property path). Used by tx-log replay to restore the specific
+    /// mapping an op belonged to. Falls back to the primary processor when the discriminator is empty or
+    /// matches no processor.
+    /// </summary>
+    public CdcSinkTableProcessor GetProcessor(string schema, string table, string discriminator)
+    {
+        var processors = GetProcessors(schema, table);
+        if (string.IsNullOrEmpty(discriminator))
+            return SelectPrimary(processors);
+
+        for (int i = 0; i < processors.Count; i++)
+        {
+            if (string.Equals(processors[i].Discriminator, discriminator, StringComparison.Ordinal))
+                return processors[i];
+        }
+
+        return SelectPrimary(processors);
+    }
+
+    private static CdcSinkTableProcessor SelectPrimary(IReadOnlyList<CdcSinkTableProcessor> processors)
+    {
+        for (int i = 0; i < processors.Count; i++)
+        {
+            if (processors[i].IsRoot)
+                return processors[i];
+        }
+
+        return processors[0];
     }
 
     public void SetSourceColumnNames(string schema, string table, string[] columnNames)
     {
-        if (_tableIndex.TryGetValue((schema ?? "", table), out var processor) == false)
+        if (_tableIndex.TryGetValue((schema ?? "", table), out var processors) == false)
             throw new InvalidOperationException($"Cannot set source column names for unknown table '{schema}.{table}'.");
-        processor.SetSourceColumnNames(columnNames);
+
+        // Every processor for this source table shares the same source columns - set them all so each
+        // one recomputes its own index arrays (a doubly-mapped table has a root and embedded processor).
+        for (int i = 0; i < processors.Count; i++)
+            processors[i].SetSourceColumnNames(columnNames);
     }
 
     /// <summary>
@@ -307,8 +374,9 @@ public class CdcSinkDocumentProcessor
     /// </summary>
     public void ClearValuePools()
     {
-        foreach (var (_, processor) in _tableIndex)
-            processor.ClearPool();
+        foreach (var (_, processors) in _tableIndex)
+            for (int i = 0; i < processors.Count; i++)
+                processors[i].ClearPool();
     }
 
     /// <summary>
@@ -317,20 +385,26 @@ public class CdcSinkDocumentProcessor
     /// </summary>
     public void ResetSourceColumnNames()
     {
-        foreach (var (_, processor) in _tableIndex)
-            processor.ResetSourceColumnNames();
+        foreach (var (_, processors) in _tableIndex)
+            for (int i = 0; i < processors.Count; i++)
+                processors[i].ResetSourceColumnNames();
     }
 
+    /// <summary>
+    /// Processes a single row against the primary processor for its source table and returns one op.
+    /// Kept for callers (tests, previews) that map each table once; streaming and initial load fan a row
+    /// out to every processor via <see cref="GetProcessors"/> so all mappings are produced.
+    /// </summary>
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
     {
-        if (_tableIndex.TryGetValue((row.TableSchema ?? "", row.TableName), out var processor) == false)
+        if (_tableIndex.TryGetValue((row.TableSchema ?? "", row.TableName), out var processors) == false)
         {
             if (Logger?.IsDebugEnabled == true)
                 Logger.Debug($"Discarding CDC row for table '{row.TableSchema}.{row.TableName}' — not configured in the CDC Sink task.");
             return null;
         }
 
-        return ProcessRow(processor, row.Operation, row.Data, context);
+        return ProcessRow(SelectPrimary(processors), row.Operation, row.Data, context);
     }
 
     public CdcSinkDocumentOp ProcessRow(CdcSinkTableProcessor processor, CdcSinkOperation operation, object[] data, JsonOperationContext context)
@@ -413,6 +487,29 @@ public class CdcSinkDocumentProcessor
         if (string.IsNullOrEmpty(schema))
             return tableName;
         return schema + "." + tableName;
+    }
+
+    private void AddProcessor(string schema, string table, CdcSinkTableProcessor processor)
+    {
+        var key = (schema ?? string.Empty, table);
+        if (_tableIndex.TryGetValue(key, out var list) == false)
+            _tableIndex[key] = list = new List<CdcSinkTableProcessor>(1);
+        list.Add(processor);
+    }
+
+    private static string BuildEmbeddedDiscriminator(List<EmbeddedPathSegment> path)
+    {
+        if (path.Count == 1)
+            return path[0].Config.PropertyName;
+
+        var sb = new StringBuilder();
+        for (int i = 0; i < path.Count; i++)
+        {
+            if (i > 0)
+                sb.Append('/');
+            sb.Append(path[i].Config.PropertyName);
+        }
+        return sb.ToString();
     }
 
     private static List<CdcColumnMapping> FilterAttachmentColumns(List<CdcColumnMapping> columns)
