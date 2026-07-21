@@ -61,7 +61,7 @@ export function VerifiedTablesTable({
                 table={table}
                 columnCount={VERIFIED_COLUMNS.length}
                 emptyMessage="No tables match the current filter."
-                heightInPx={300}
+                maxHeight="fill"
                 className={cn(selectedCount > 0 && "mb-4")}
                 getRowState={(rowId) => (rowSelection[rowId] ? "selected" : "")}
                 overlay={

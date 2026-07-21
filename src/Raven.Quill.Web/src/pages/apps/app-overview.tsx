@@ -1,5 +1,6 @@
 import { useParams } from "react-router";
 import { AgentsSection } from "@/pages/apps/agents-section";
+import { CdcErrorsAlert } from "@/pages/apps/cdc-errors-alert";
 import { ChannelsSection } from "@/pages/apps/channels-section";
 import { StatisticsSection } from "@/pages/apps/statistics-section";
 import { WelcomePanel } from "@/pages/apps/welcome-panel";
@@ -9,6 +10,7 @@ export function AppOverview() {
 
     return (
         <div className="space-y-8">
+            <CdcErrorsAlert slug={slug} />
             <WelcomePanel slug={slug} />
             <StatisticsSection slug={slug} />
             <AgentsSection slug={slug} />

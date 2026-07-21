@@ -35,7 +35,7 @@ export function NeedsConfigTablesTable({ tables, search }: NeedsConfigTablesTabl
                 table={table}
                 columnCount={NEEDS_CONFIG_COLUMNS.length}
                 emptyMessage="No tables match the current filter."
-                heightInPx={300}
+                maxHeight="fill"
             />
         </TooltipProvider>
     );

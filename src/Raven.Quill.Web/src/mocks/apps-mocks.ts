@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse, ws, type RequestHandler } from "msw";
-import type { AppResponse, ProvisionAgentResponse, SuggestAgentResponse } from "@/api/generated/server-api";
+import type { AppResponse, CdcError, ProvisionAgentResponse, SuggestAgentResponse } from "@/api/generated/server-api";
 import type { AgentStreamEvent } from "@/api/custom-services/agent-stream";
 import type { CdcLiveRawFrame } from "@/pages/apps/use-cdc-live-performance";
 import { apiHttp } from "./api-http";
@@ -17,6 +17,8 @@ export const appsMocks = {
         cdcProgressFeed.addEventListener("connection", ({ client }) => {
             client.send(JSON.stringify(frame));
         }) as unknown as RequestHandler,
+    cdcErrors: (errors: CdcError[] = sampleCdcErrors) =>
+        apiHttp.get("/api/apps/{slug}/cdc/errors", ({ response }) => response(200).json(errors)),
     detail: (apps: AppResponse[] = sampleApps) =>
         apiHttp.get("/api/apps/{slug}", ({ params, response }) => {
             const app = apps.find((candidate) => candidate.slug === params.slug);
@@ -62,6 +64,33 @@ export const sampleApps: AppResponse[] = [
         database: "support-desk",
         cdcTaskName: "cdc/support-desk",
         createdAt: "2026-05-12T08:30:00Z",
+    },
+];
+
+export const sampleCdcErrors: CdcError[] = [
+    {
+        taskName: "cdc/demo-shop",
+        createdAt: "2026-07-21T08:12:45Z",
+        step: "Script processing",
+        error: "TypeError: Cannot read properties of undefined (reading 'Price') at transform(orders) line 12",
+        documentId: "orders/1042-A",
+        affectedDocumentsCount: null,
+    },
+    {
+        taskName: "cdc/demo-shop",
+        createdAt: "2026-07-21T08:12:47Z",
+        step: "Script processing",
+        error: "Invalid date value '0000-00-00' in column ShippedAt; the value cannot be converted to a document property",
+        documentId: "orders/1055-A",
+        affectedDocumentsCount: null,
+    },
+    {
+        taskName: "cdc/demo-shop",
+        createdAt: "2026-07-21T08:14:02Z",
+        step: "Read",
+        error: "Connection to the source database was lost while reading the change stream; the batch will be retried",
+        documentId: null,
+        affectedDocumentsCount: 128,
     },
 ];
 

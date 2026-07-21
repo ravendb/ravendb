@@ -25,7 +25,7 @@ export function ConversationsTable({ slug, conversations }: { slug: string; conv
             table={table}
             columnCount={columns.length}
             emptyMessage="No conversations match the current filters."
-            heightInPx={520}
+            maxHeight={520}
             rowHeightInPx={60}
             className="bg-card"
         />

@@ -95,7 +95,7 @@ export function VerifySchemaStep() {
     const currentTab: VerifyTab = needsConfigTables.length > 0 ? activeTab : "verified";
 
     return (
-        <div className="grid gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
             <ImportedConfigAlert />
             <MessageList messages={discoverResult?.errors} tone="destructive" />
             <MessageList messages={discoverResult?.warnings} tone="warning" />
