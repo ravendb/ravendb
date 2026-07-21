@@ -1,0 +1,126 @@
+import type { ReactNode } from "react";
+import { Copy } from "lucide-react";
+import type { CertificateItem } from "@/api/custom-services/certificates-service";
+import type { AppResponse } from "@/api/generated/server-api";
+import { Badge } from "@/components/shadcn/ui/badge";
+import { Button } from "@/components/shadcn/ui/button";
+import { formatDate } from "@/lib/format";
+import { cn, copyToClipboard } from "@/lib/utils";
+import {
+    CERTIFICATE_STATE_LABELS,
+    DATABASE_ACCESS_LABELS,
+    SECURITY_CLEARANCE_LABELS,
+    getCertificateState,
+    isAboutToExpireCertificate,
+    isEditableCertificate,
+    type CertificateState,
+} from "@/pages/dashboard/certificates/certificate-labels";
+import { EditCertificateDialog } from "@/pages/dashboard/certificates/edit-certificate-dialog";
+
+const STATE_STRIP_CLASSES: Record<CertificateState, string> = {
+    valid: "bg-success",
+    expired: "bg-destructive",
+    disabled: "bg-warning",
+};
+
+const STATE_BADGE_VARIANTS: Record<CertificateState, "success" | "destructive" | "warning"> = {
+    valid: "success",
+    expired: "destructive",
+    disabled: "warning",
+};
+
+export function CertificateCard({ certificate, apps }: { certificate: CertificateItem; apps: AppResponse[] }) {
+    const state = getCertificateState(certificate);
+    const isAboutToExpire = state === "valid" && isAboutToExpireCertificate(certificate);
+
+    return (
+        <div className="flex overflow-hidden rounded-lg border bg-card text-card-foreground">
+            <div className={cn("w-1 shrink-0", STATE_STRIP_CLASSES[state])} aria-hidden="true" />
+            <div className="min-w-0 flex-1 space-y-4 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-sm font-semibold">{certificate.name || "—"}</h3>
+                            <Badge variant={STATE_BADGE_VARIANTS[state]}>{CERTIFICATE_STATE_LABELS[state]}</Badge>
+                            {isAboutToExpire && <Badge variant="warning">About to expire</Badge>}
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="truncate font-mono text-xs text-muted-foreground">
+                                {certificate.thumbprint}
+                            </span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label="Copy thumbprint"
+                                onClick={() => copyToClipboard(certificate.thumbprint)}
+                            >
+                                <Copy className="size-3.5" aria-hidden="true" />
+                            </Button>
+                        </div>
+                    </div>
+                    {isEditableCertificate(certificate) && (
+                        <EditCertificateDialog
+                            certificate={certificate}
+                            apps={apps}
+                            trigger={
+                                <Button variant="outline" size="sm">
+                                    Edit
+                                </Button>
+                            }
+                        />
+                    )}
+                </div>
+
+                <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <CertificateField label="Security clearance">
+                        {SECURITY_CLEARANCE_LABELS[certificate.securityClearance]}
+                    </CertificateField>
+                    <CertificateField label="Valid from">
+                        {certificate.notBefore ? formatDate(certificate.notBefore) : "—"}
+                    </CertificateField>
+                    <CertificateField label="Expiration">
+                        <span
+                            className={cn(state === "expired" && "text-destructive", isAboutToExpire && "text-warning")}
+                        >
+                            {certificate.notAfter ? formatDate(certificate.notAfter) : "—"}
+                        </span>
+                    </CertificateField>
+                    <CertificateField label="App access">
+                        <CertificateAccess certificate={certificate} />
+                    </CertificateField>
+                </dl>
+            </div>
+        </div>
+    );
+}
+
+function CertificateField({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div className="space-y-1">
+            <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
+            <dd className="text-sm">{children}</dd>
+        </div>
+    );
+}
+
+function CertificateAccess({ certificate }: { certificate: CertificateItem }) {
+    if (certificate.securityClearance !== "ValidUser") {
+        return <span className="text-muted-foreground">All apps</span>;
+    }
+
+    const permissions = Object.entries(certificate.permissions ?? {});
+    if (permissions.length === 0) {
+        return <span className="text-muted-foreground">None</span>;
+    }
+
+    return (
+        <div className="flex flex-wrap gap-1">
+            {permissions.map(([database, access]) => (
+                <Badge key={database} variant="secondary" className="font-normal">
+                    {database} · {DATABASE_ACCESS_LABELS[access]}
+                </Badge>
+            ))}
+        </div>
+    );
+}

@@ -1,28 +1,45 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { api } from "@/api/api";
-import type { CertificateItem } from "@/api/custom-services/certificates-service";
+import type { CertificateItem, SecurityClearance } from "@/api/custom-services/certificates-service";
 import type { AppResponse } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
-import { TableCell, TableRow } from "@/components/shadcn/ui/table";
-import { formatDate } from "@/lib/format";
-import { cn, copyToClipboard } from "@/lib/utils";
-import { SectionTable } from "@/pages/apps/section-card";
+import { CertificateCard } from "@/pages/dashboard/certificates/certificate-card";
 import {
-    DATABASE_ACCESS_LABELS,
-    SECURITY_CLEARANCE_LABELS,
+    getCertificateState,
     isEditableCertificate,
-    isExpiredCertificate,
+    type CertificateState,
 } from "@/pages/dashboard/certificates/certificate-labels";
-import { EditCertificateDialog } from "@/pages/dashboard/certificates/edit-certificate-dialog";
+import { CertificatesToolbar, type CertificateSort } from "@/pages/dashboard/certificates/certificates-toolbar";
 import { GenerateCertificateDialog } from "@/pages/dashboard/certificates/generate-certificate-dialog";
+
+interface CertificateFilters {
+    search: string;
+    clearance: SecurityClearance | "all";
+    state: CertificateState | "all";
+}
 
 export function DashboardCertificates() {
     const certificatesQuery = useQuery(api.queries.certificates.list());
     const appsQuery = useQuery(api.queries.apps.list());
     const apps = appsQuery.data ?? [];
+
+    const [search, setSearch] = useState("");
+    const [clearance, setClearance] = useState<SecurityClearance | "all">("all");
+    const [state, setState] = useState<CertificateState | "all">("all");
+    const [sort, setSort] = useState<CertificateSort>("name-asc");
+
+    const certificates = certificatesQuery.data ?? [];
+    const visibleCertificates = certificates
+        .filter((certificate) => matchesFilters(certificate, { search, clearance, state }))
+        .sort((a, b) => compareCertificates(a, b, sort));
+
+    // Cluster-level certificates are managed by the server; Quill manages the rest.
+    const serverCertificates = visibleCertificates.filter((certificate) => !isEditableCertificate(certificate));
+    const clientCertificates = visibleCertificates.filter(isEditableCertificate);
 
     return (
         <div className="space-y-6">
@@ -55,6 +72,17 @@ export function DashboardCertificates() {
                 </div>
             </div>
 
+            <CertificatesToolbar
+                search={search}
+                onSearchChange={setSearch}
+                clearance={clearance}
+                onClearanceChange={setClearance}
+                state={state}
+                onStateChange={setState}
+                sort={sort}
+                onSortChange={setSort}
+            />
+
             <ApiState
                 isLoading={certificatesQuery.isPending}
                 isError={certificatesQuery.isError}
@@ -62,100 +90,87 @@ export function DashboardCertificates() {
                 onRetry={() => certificatesQuery.refetch()}
                 loadingLabel="Loading certificates…"
             >
-                {certificatesQuery.data && (
-                    <SectionTable
-                        headers={["Name", "Status", "Clearance", "App access", "Expiration", "Thumbprint", ""]}
-                        isEmpty={certificatesQuery.data.length === 0}
-                        emptyMessage="No certificates yet."
-                    >
-                        {certificatesQuery.data.map((certificate) => (
-                            <CertificateRow key={certificate.thumbprint} certificate={certificate} apps={apps} />
-                        ))}
-                    </SectionTable>
+                {visibleCertificates.length === 0 ? (
+                    <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+                        {certificates.length === 0
+                            ? "No certificates yet."
+                            : "No certificates match the current filters."}
+                    </div>
+                ) : (
+                    <div className="space-y-8">
+                        {serverCertificates.length > 0 && (
+                            <CertificateSection title="Server" certificates={serverCertificates} apps={apps} />
+                        )}
+                        {clientCertificates.length > 0 && (
+                            <CertificateSection title="Client" certificates={clientCertificates} apps={apps} />
+                        )}
+                    </div>
                 )}
             </ApiState>
         </div>
     );
 }
 
-function CertificateRow({ certificate, apps }: { certificate: CertificateItem; apps: AppResponse[] }) {
-    const isExpired = isExpiredCertificate(certificate);
-
+function CertificateSection({
+    title,
+    certificates,
+    apps,
+}: {
+    title: string;
+    certificates: CertificateItem[];
+    apps: AppResponse[];
+}) {
     return (
-        <TableRow>
-            <TableCell className="font-medium">{certificate.name || "—"}</TableCell>
-            <TableCell>
-                <CertificateStatusBadge isDisabled={Boolean(certificate.disabled)} isExpired={isExpired} />
-            </TableCell>
-            <TableCell>
-                <Badge variant="outline">{SECURITY_CLEARANCE_LABELS[certificate.securityClearance]}</Badge>
-            </TableCell>
-            <TableCell>
-                <CertificateAccess certificate={certificate} />
-            </TableCell>
-            <TableCell className={cn("whitespace-nowrap", isExpired ? "text-destructive" : "text-muted-foreground")}>
-                {certificate.notAfter ? formatDate(certificate.notAfter) : "—"}
-            </TableCell>
-            <TableCell>
-                <div className="flex items-center gap-1">
-                    <span className="inline-block max-w-32 truncate font-mono text-xs text-muted-foreground">
-                        {certificate.thumbprint}
-                    </span>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="Copy thumbprint"
-                        onClick={() => copyToClipboard(certificate.thumbprint)}
-                    >
-                        <Copy className="size-3.5" aria-hidden="true" />
-                    </Button>
-                </div>
-            </TableCell>
-            <TableCell className="text-right">
-                {isEditableCertificate(certificate) && (
-                    <EditCertificateDialog
-                        certificate={certificate}
-                        apps={apps}
-                        trigger={
-                            <Button variant="outline" size="sm">
-                                Edit
-                            </Button>
-                        }
-                    />
-                )}
-            </TableCell>
-        </TableRow>
+        <section className="space-y-3">
+            <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold">{title}</h2>
+                <Badge variant="secondary">{certificates.length}</Badge>
+            </div>
+            <div className="space-y-3">
+                {certificates.map((certificate) => (
+                    <CertificateCard key={certificate.thumbprint} certificate={certificate} apps={apps} />
+                ))}
+            </div>
+        </section>
     );
 }
 
-function CertificateStatusBadge({ isDisabled, isExpired }: { isDisabled: boolean; isExpired: boolean }) {
-    if (isDisabled) {
-        return <Badge variant="secondary">Disabled</Badge>;
+function matchesFilters(certificate: CertificateItem, filters: CertificateFilters): boolean {
+    const query = filters.search.trim().toLowerCase();
+    if (
+        query &&
+        !certificate.name.toLowerCase().includes(query) &&
+        !certificate.thumbprint.toLowerCase().includes(query)
+    ) {
+        return false;
     }
-    if (isExpired) {
-        return <Badge variant="destructive">Expired</Badge>;
+    if (filters.clearance !== "all" && certificate.securityClearance !== filters.clearance) {
+        return false;
     }
-    return <Badge variant="success">Valid</Badge>;
+    if (filters.state !== "all" && getCertificateState(certificate) !== filters.state) {
+        return false;
+    }
+    return true;
 }
 
-function CertificateAccess({ certificate }: { certificate: CertificateItem }) {
-    if (certificate.securityClearance !== "ValidUser") {
-        return <span className="text-muted-foreground">All apps</span>;
+function compareCertificates(a: CertificateItem, b: CertificateItem, sort: CertificateSort): number {
+    switch (sort) {
+        case "name-asc":
+            return compareByName(a, b);
+        case "name-desc":
+            return compareByName(b, a);
+        case "expiration-asc":
+            return expirationTime(a) - expirationTime(b);
+        case "expiration-desc":
+            return expirationTime(b) - expirationTime(a);
     }
+}
 
-    const permissions = Object.entries(certificate.permissions ?? {});
-    if (permissions.length === 0) {
-        return <span className="text-muted-foreground">None</span>;
-    }
+function compareByName(a: CertificateItem, b: CertificateItem): number {
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.thumbprint.localeCompare(b.thumbprint);
+}
 
-    return (
-        <div className="flex flex-wrap gap-1">
-            {permissions.map(([database, access]) => (
-                <Badge key={database} variant="secondary" className="font-normal">
-                    {database} · {DATABASE_ACCESS_LABELS[access]}
-                </Badge>
-            ))}
-        </div>
-    );
+// Certificates without an expiration sort as if they never expire.
+function expirationTime(certificate: CertificateItem): number {
+    return certificate.notAfter ? new Date(certificate.notAfter).getTime() : Number.MAX_SAFE_INTEGER;
 }
