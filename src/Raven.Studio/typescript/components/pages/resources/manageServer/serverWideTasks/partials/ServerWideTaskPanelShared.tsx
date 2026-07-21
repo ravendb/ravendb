@@ -15,8 +15,8 @@ export interface BaseServerWideTaskPanelProps<T extends ServerWideTaskSharedInfo
     isSelected: (taskId: number) => boolean;
     toggleSelection: (checked: boolean, task: ServerWideTaskSharedInfo) => void;
     onTaskOperation: (type: OngoingTaskOperationConfirmType, tasks: ServerWideTaskSharedInfo[]) => void;
-    isDeleting: (taskName: string) => boolean;
-    isTogglingState: (taskName: string) => boolean;
+    isDeleting: (taskId: number) => boolean;
+    isTogglingState: (taskId: number) => boolean;
 }
 
 export function ServerWideTaskSelect(props: {

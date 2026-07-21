@@ -62,14 +62,25 @@ describe("ServerWideTasks", () => {
         await fireClick(deleteButtons[deleteButtons.length - 1]);
 
         await waitFor(() => {
-            expect(router.navigate).toHaveBeenCalledWith(appUrl.forAddServerWideTask());
+            expect(router.navigate).toHaveBeenCalledWith(appUrl.forAddServerWideTask(), {
+                replace: true,
+                trigger: true,
+            });
         });
     });
 
     it("can filter tasks by name", async () => {
         const { screen, fillInput } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
 
-        await fillInput(screen.getByPlaceholderText(selectors.nameFilterPlaceholder), "nothing-matches");
+        const nameFilterInput = screen.getByPlaceholderText(selectors.nameFilterPlaceholder);
+
+        await fillInput(nameFilterInput, "BackupTask");
+
+        expect(screen.queryByText(selectors.backupTaskName)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.replicationTaskName)).not.toBeInTheDocument();
+        expect(screen.queryByText(selectors.noMatchingTasks)).not.toBeInTheDocument();
+
+        await fillInput(nameFilterInput, "nothing-matches");
 
         expect(screen.queryByText(selectors.noMatchingTasks)).toBeInTheDocument();
         expect(screen.queryByText(selectors.backupTaskName)).not.toBeInTheDocument();

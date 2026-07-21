@@ -3,8 +3,10 @@ import { pick } from "lodash";
 import messagePublisher from "common/messagePublisher";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { useServices } from "components/hooks/useServices";
-import { OngoingTaskSharedInfo } from "components/models/tasks";
-import { OngoingTaskOperationConfirmType } from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
+import {
+    OngoingTaskOperationConfirmType,
+    OperationConfirmTaskInfo,
+} from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { ServerWideTaskSharedInfo } from "./serverWideTaskModels";
 
@@ -14,55 +16,56 @@ interface OperationConfirm {
     tasks: ServerWideTaskSharedInfo[];
 }
 
-// OngoingTaskOperationConfirm renders only taskId, taskName, taskState and taskType
-export function toOperationConfirmInfo(task: ServerWideTaskSharedInfo): OngoingTaskSharedInfo {
-    return pick(task, ["taskId", "taskName", "taskState", "taskType"]) as OngoingTaskSharedInfo;
+export function toOperationConfirmInfo(task: ServerWideTaskSharedInfo): OperationConfirmTaskInfo {
+    return pick(task, ["taskId", "taskName", "taskState", "taskType"]);
 }
 
 export function useServerWideTasksOperations(reload: () => void) {
     const { manageServerService } = useServices();
 
-    const [togglingTaskNames, setTogglingTaskNames] = useState<string[]>([]);
-    const [deletingTaskNames, setDeletingTaskNames] = useState<string[]>([]);
+    const [togglingTaskIds, setTogglingTaskIds] = useState<number[]>([]);
+    const [deletingTaskIds, setDeletingTaskIds] = useState<number[]>([]);
     const [operationConfirm, setOperationConfirm] = useState<OperationConfirm>(null);
 
     const toggleTasks = async (enable: boolean, tasks: ServerWideTaskSharedInfo[]) => {
-        const names = tasks.map((x) => x.taskName);
-        try {
-            setTogglingTaskNames((prev) => [...prev, ...names]);
-
-            const requests = tasks
-                .filter((task) => {
-                    if ((task.taskState === "Enabled" || task.taskState === "PartiallyEnabled") && enable) {
-                        return false;
-                    }
-                    if (task.taskState === "Disabled" && !enable) {
-                        return false;
-                    }
-                    return true;
-                })
-                .map((task) => manageServerService.toggleServerWideTask(task.taskType, task.taskName, !enable));
-
-            if (requests.length === 0) {
-                return;
+        const tasksToToggle = tasks.filter((task) => {
+            if ((task.taskState === "Enabled" || task.taskState === "PartiallyEnabled") && enable) {
+                return false;
             }
+            if (task.taskState === "Disabled" && !enable) {
+                return false;
+            }
+            return true;
+        });
 
-            await Promise.all(requests);
+        if (tasksToToggle.length === 0) {
+            return;
+        }
+
+        const ids = tasksToToggle.map((x) => x.taskId);
+        try {
+            setTogglingTaskIds((prev) => [...prev, ...ids]);
+
+            await Promise.all(
+                tasksToToggle.map((task) =>
+                    manageServerService.toggleServerWideTask(task.taskType, task.taskName, !enable)
+                )
+            );
             messagePublisher.reportSuccess(
-                `${pluralizeHelpers.pluralize(requests.length, "Task", "Tasks", true)} ${
+                `${pluralizeHelpers.pluralize(tasksToToggle.length, "Task", "Tasks", true)} ${
                     enable ? "enabled" : "disabled"
                 } successfully.`
             );
             reload();
         } finally {
-            setTogglingTaskNames((prev) => prev.filter((x) => !names.includes(x)));
+            setTogglingTaskIds((prev) => prev.filter((x) => !ids.includes(x)));
         }
     };
 
     const deleteTasks = async (tasks: ServerWideTaskSharedInfo[]) => {
-        const names = tasks.map((x) => x.taskName);
+        const ids = tasks.map((x) => x.taskId);
         try {
-            setDeletingTaskNames((prev) => [...prev, ...names]);
+            setDeletingTaskIds((prev) => [...prev, ...ids]);
 
             await Promise.all(
                 tasks.map((task) => manageServerService.deleteServerWideTask(task.taskType, task.taskName))
@@ -73,7 +76,7 @@ export function useServerWideTasksOperations(reload: () => void) {
             );
             reload();
         } finally {
-            setDeletingTaskNames((prev) => prev.filter((x) => !names.includes(x)));
+            setDeletingTaskIds((prev) => prev.filter((x) => !ids.includes(x)));
         }
     };
 
@@ -97,9 +100,9 @@ export function useServerWideTasksOperations(reload: () => void) {
         onTaskOperation,
         operationConfirm,
         cancelOperationConfirm: () => setOperationConfirm(null),
-        isDeleting: (name: string) => deletingTaskNames.includes(name),
-        isTogglingState: (name: string) => togglingTaskNames.includes(name),
-        isDeletingAny: deletingTaskNames.length > 0,
-        isTogglingStateAny: togglingTaskNames.length > 0,
+        isDeleting: (taskId: number) => deletingTaskIds.includes(taskId),
+        isTogglingState: (taskId: number) => togglingTaskIds.includes(taskId),
+        isDeletingAny: deletingTaskIds.length > 0,
+        isTogglingStateAny: togglingTaskIds.length > 0,
     };
 }
