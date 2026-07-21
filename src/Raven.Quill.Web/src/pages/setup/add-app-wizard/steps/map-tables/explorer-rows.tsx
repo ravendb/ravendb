@@ -2,7 +2,7 @@
 // react-hook-form's mutable errors object, which keeps a stable identity across updates.
 "use no memo";
 
-import { ChevronDown, ChevronRight, CircleAlert, EllipsisVertical, Layers, Link2 } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight, CircleAlert, EllipsisVertical, Layers, Link2 } from "lucide-react";
 import { useFormContext, useFormState, type FieldPath } from "react-hook-form";
 import { Button } from "@/components/shadcn/ui/button";
 import {
@@ -139,6 +139,7 @@ function TableRowFrame({ row, depth, isDimmed, typeIcon, actions }: TableRowFram
     const hasError = Boolean(getErrorAtPath(errors, row.path));
     const expandableRow = row.type !== "linked" && row.hasChildren ? row : null;
     const label = row.table.sourceTableName || "Unassigned table";
+    const collectionName = row.type === "root" ? row.table.collectionName : null;
 
     return (
         <div
@@ -165,7 +166,7 @@ function TableRowFrame({ row, depth, isDimmed, typeIcon, actions }: TableRowFram
             <button
                 type="button"
                 onClick={() => setMapActiveTable({ type: row.type, path: row.path } as MapActiveTable)}
-                title={label}
+                title={collectionName ? `${label} → ${collectionName}` : label}
                 className={cn(
                     "flex h-7 min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 text-left text-sm",
                     isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
@@ -173,6 +174,12 @@ function TableRowFrame({ row, depth, isDimmed, typeIcon, actions }: TableRowFram
                 )}
             >
                 <span className="truncate">{label}</span>
+                {collectionName && (
+                    <>
+                        <ArrowRight className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <span className="truncate text-muted-foreground">{collectionName}</span>
+                    </>
+                )}
                 {typeIcon}
                 {hasError && <CircleAlert className="size-3.5 shrink-0 text-destructive" aria-label="Has errors" />}
             </button>
