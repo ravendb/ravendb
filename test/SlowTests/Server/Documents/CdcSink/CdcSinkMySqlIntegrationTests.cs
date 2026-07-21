@@ -675,10 +675,6 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, MySqlCdcRequired = true)]
         public async Task SourceTableMappedBothEmbeddedAndStandalone_PopulatesBoth()
         {
-            // RavenDB-27095 (the exact reported scenario, MySQL/MariaDB): order_lines is mapped two ways at
-            // once - embedded under Orders as "Lines" AND as its own OrderLines collection. Both must
-            // populate through initial load AND streaming. Before the fix only the standalone collection
-            // filled and Orders.Lines came out null.
             using var store = GetDocumentStore();
             using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
@@ -757,10 +753,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            // Initial load: standalone collection fully populated...
             Assert.Equal(2, await WaitForDocumentCountAsync(store, "OrderLines", expectedCount: 2, timeoutMs: 60_000));
 
-            // ...AND the embedded array on the parent populated (the bug: this used to stay null).
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
@@ -781,7 +775,6 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal(1, standalone.OrderId);
             }
 
-            // Streaming INSERT: a 3rd line must appear in BOTH views.
             ExecuteMySql(connectionString, "INSERT INTO order_lines (id, order_id, product, quantity) VALUES (3, 1, 'Cherries', 7)");
 
             await AssertWaitForValueAsync(async () =>
@@ -792,7 +785,6 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 3, timeout: 60_000);
             Assert.Equal(3, await WaitForDocumentCountAsync(store, "OrderLines", expectedCount: 3, timeoutMs: 60_000));
 
-            // Streaming DELETE: the line must disappear from BOTH views.
             ExecuteMySql(connectionString, "DELETE FROM order_lines WHERE id = 2");
 
             await AssertWaitForValueAsync(async () =>

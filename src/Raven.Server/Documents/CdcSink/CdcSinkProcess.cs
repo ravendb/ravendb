@@ -574,9 +574,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     // processor registered for that table, not just one. These helpers decode-once/emit-many: the first
     // processor reuses the caller's decoded array, each additional processor gets a clone rented from its
     // own pool so ReturnBatchValues returns each array to the right pool with no cross-processor sharing.
-    //
-    // The single-processor case (the overwhelmingly common one) takes the exact same path as before -
-    // no clone, no extra allocation.
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>
@@ -657,8 +654,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             output.Add(upsert);
         }
 
-        // Defensive: if the old-row array was decoded but never consumed (no embedded processor),
-        // return it to the decode processor's pool. In practice callers pass null when there is none.
         if (oldValuesAvailable)
             processors[0].ReturnValues(oldValues);
     }

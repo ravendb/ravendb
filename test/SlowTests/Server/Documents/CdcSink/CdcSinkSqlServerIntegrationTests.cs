@@ -892,9 +892,6 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task SourceTableMappedBothEmbeddedAndStandalone_PopulatesBoth()
         {
-            // RavenDB-27095: order_lines is mapped two ways at once - embedded under Orders as "Lines" AND
-            // as its own OrderLines collection. Both must populate (initial load AND streaming). Before the
-            // fix only the standalone collection filled and Orders.Lines came out null.
             using var store = GetDocumentStore();
             var schema = CreateTestSchema();
 
@@ -912,7 +909,6 @@ namespace SlowTests.Server.Documents.CdcSink
 
             EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            // Two rows present at initial-load time.
             ExecuteMsSql($@"
                 INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
                 INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (1, 1, 'Apples', 5);
@@ -975,11 +971,9 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            // Initial load: standalone collection fully populated...
             var standaloneCount = await WaitForDocumentCountAsync(store, "OrderLines", expectedCount: 2, timeoutMs: 60_000);
             Assert.Equal(2, standaloneCount);
 
-            // ...AND the embedded array on the parent populated (the bug: this used to stay null).
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
@@ -1000,7 +994,6 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal(1, standalone.OrderId);
             }
 
-            // Streaming INSERT: a 3rd line must appear in BOTH views.
             ExecuteMsSql($"INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (3, 1, 'Cherries', 7);");
 
             await AssertWaitForValueAsync(async () =>
@@ -1011,7 +1004,6 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 3, timeout: 60_000);
             Assert.Equal(3, await WaitForDocumentCountAsync(store, "OrderLines", expectedCount: 3, timeoutMs: 60_000));
 
-            // Streaming DELETE: the line must disappear from BOTH views.
             ExecuteMsSql($"DELETE FROM [{schema}].order_lines WHERE id = 2;");
 
             await AssertWaitForValueAsync(async () =>
