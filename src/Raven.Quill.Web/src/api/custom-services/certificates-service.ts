@@ -4,8 +4,7 @@ import type { ApiClient } from "@/api/http-client";
 
 // The certificate GET response is typed as CertificateItem by the backend, so this service
 // reuses that generated type. It still adds the wire shapes the schema can't express:
-// certificatesGenerate responds with a zip download (typed as void), and certificatesEdit
-// takes a raw permissions-record body.
+// certificatesGenerate responds with a zip download (typed as void).
 
 export type { CertificateItem, SecurityClearance };
 
@@ -13,16 +12,12 @@ export function createCertificatesService(client: ApiClient) {
     return {
         list: (searchParams: { start: number; pageSize: number }) =>
             client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
-        generate: (searchParams: { appName: string; name: string }) =>
-            client.post<Blob, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, undefined, {
-                responseType: "blob",
-                searchParams,
-            }),
-        edit: (
+        generate: (
             permissions: Record<string, DatabaseAccess>,
-            searchParams: { thumbprint: string; name: string; disable: boolean },
+            searchParams: { name: string; clearance: SecurityClearance },
         ) =>
-            client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, permissions, {
+            client.post<Blob, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, permissions, {
+                responseType: "blob",
                 searchParams,
             }),
     };

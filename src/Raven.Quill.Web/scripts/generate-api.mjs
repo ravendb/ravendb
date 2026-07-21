@@ -215,6 +215,14 @@ function toTypeScriptType(schema) {
         return `${toTypeScriptType(schema.items)}[]`;
     }
 
+    if (schema.type === "object") {
+        if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+            return `Record<string, ${toTypeScriptType(schema.additionalProperties)}>`;
+        }
+
+        return "Record<string, unknown>";
+    }
+
     switch (schema.type) {
         case "integer":
         case "number":

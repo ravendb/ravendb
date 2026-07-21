@@ -4000,8 +4000,8 @@ export function createServerApi(client: ApiClient) {
         },
         settings: {
             certificates: (searchParams: { pageSize: string; start: string; }) => client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
-            certificatesEdit: (request: string, searchParams: { clearance: SecurityClearance; disable: boolean; name: string; thumbprint: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, request, { searchParams }),
-            certificatesGenerate: (request: string, searchParams: { clearance: SecurityClearance; name: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, request, { searchParams }),
+            certificatesEdit: (request: Record<string, DatabaseAccess>, searchParams: { clearance: SecurityClearance; disable: boolean; name: string; thumbprint: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesEdit, request, { searchParams }),
+            certificatesGenerate: (request: Record<string, DatabaseAccess>, searchParams: { clearance: SecurityClearance; name: string; }) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, request, { searchParams }),
             feedback: (request: SendFeedbackRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.settings.feedback, request),
             license: () => client.get<LicenseResponse>(API_ENDPOINTS.settings.license),
             usage: (searchParams: { day?: string; month?: string; year: string; }) => client.get<QuillUsageResponse, ApiErrorResponse>(API_ENDPOINTS.settings.usage, { searchParams }),

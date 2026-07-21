@@ -25,15 +25,15 @@ export const SECURITY_CLEARANCE_LABELS: Record<SecurityClearance, string> = {
 // Permissions are keyed by RavenDB database name; show the app it belongs to when known.
 export function toDatabaseOption(database: string, apps: AppResponse[]): FormSelectOption<string> {
     const app = apps.find((candidate) => candidate.database === database);
-    return { value: database, label: app ? `${app.name} (${database})` : database };
+    return { value: database, label: app ? app.name : database };
 }
 
 export function isExpiredCertificate(certificate: CertificateItem, now: number = Date.now()): boolean {
     return certificate.notAfter != null && new Date(certificate.notAfter).getTime() < now;
 }
 
-// Only ValidUser certificates carry per-database permissions the edit endpoint can
-// manage (it always applies ValidUser clearance); higher clearances would be demoted.
+// Only ValidUser certificates carry per-database permissions; higher clearances have
+// implicit access to everything, so there is nothing for the edit dialog to manage.
 export function isEditableCertificate(certificate: CertificateItem): boolean {
     return certificate.securityClearance === "ValidUser";
 }

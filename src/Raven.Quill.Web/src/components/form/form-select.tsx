@@ -50,7 +50,7 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
 
     return (
         <Field className={className} data-invalid={invalid}>
-            <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>
+            {label != null && <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>}
             <div className="flex items-center gap-2">
                 <Select
                     value={typeof value === "string" ? value : ""}
