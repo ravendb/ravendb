@@ -44,6 +44,7 @@ function computeColumnSizing<TData>(
     table: ReactTable<TData>,
     container: HTMLElement,
     containerWidth: number,
+    ratchetedWidths: ColumnSizingState,
 ): ColumnSizingState {
     const sizing: ColumnSizingState = {};
     const resizableIds: string[] = [];
@@ -56,14 +57,24 @@ function computeColumnSizing<TData>(
             continue;
         }
 
-        const width = clamp(measureColumnWidth(container, column.id), CELL_MIN_WIDTH, CELL_MAX_WIDTH);
+        const measured = clamp(measureColumnWidth(container, column.id), CELL_MIN_WIDTH, CELL_MAX_WIDTH);
+        // Only the virtualized rows currently in the DOM can be measured, so a re-measure after a
+        // container resize samples a different row window. If widths could shrink when a wide row
+        // leaves that window, the layout can oscillate forever (narrower column -> scrollbar
+        // disappears -> container grows -> the wide row is back -> wider column -> ...), so within
+        // one measuring session widths only ever ratchet up.
+        const width = Math.max(measured, ratchetedWidths[column.id] ?? 0);
+        ratchetedWidths[column.id] = width;
         sizing[column.id] = width;
         totalWidth += width;
         resizableIds.push(column.id);
     }
 
     // Grow columns to fill any leftover space so the table always spans its container.
-    const freeSpace = containerWidth - totalWidth;
+    // Fill 1px short: clientWidth is rounded to whole pixels and can exceed the real fractional
+    // content width, and overshooting it even by a sub-pixel toggles a phantom horizontal
+    // scrollbar (which then cascades into a vertical one). The table's min-w-full covers the gap.
+    const freeSpace = containerWidth - totalWidth - 1;
     if (freeSpace > 0 && resizableIds.length > 0) {
         const cappedIds = resizableIds.filter((id) => sizing[id] === CELL_MAX_WIDTH);
         if (cappedIds.length > 0) {
@@ -81,6 +92,11 @@ function computeColumnSizing<TData>(
     return sizing;
 }
 
+function isSameSizing(next: ColumnSizingState, current: ColumnSizingState): boolean {
+    const nextIds = Object.keys(next);
+    return nextIds.length === Object.keys(current).length && nextIds.every((id) => next[id] === current[id]);
+}
+
 /**
  * Sizes each column to fit its content after layout, then keeps it in sync when the container
  * resizes or web fonts finish loading. Columns that opt out of resizing keep their configured width.
@@ -96,7 +112,16 @@ export function useAutoSizeColumns<TData>(
             return;
         }
 
-        const resize = () => table.setColumnSizing(computeColumnSizing(table, container, container.clientWidth));
+        // Height-only container resizes (e.g. a scrollbar toggling, or a flex parent shrinking the
+        // table) fire the observer too; skipping unchanged results keeps those from re-rendering
+        // the table with an identical sizing state.
+        const ratchetedWidths: ColumnSizingState = {};
+        const resize = () => {
+            const sizing = computeColumnSizing(table, container, container.clientWidth, ratchetedWidths);
+            if (!isSameSizing(sizing, table.getState().columnSizing)) {
+                table.setColumnSizing(sizing);
+            }
+        };
 
         resize();
 

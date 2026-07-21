@@ -15,6 +15,14 @@ export function createAppsQueries(api: ServerApi["apps"]) {
                 queryKey: [baseKey, "list"],
                 queryFn: () => api.list(),
             }),
+        cdcErrors: (slug: string) =>
+            queryOptions({
+                queryKey: [baseKey, "cdcErrors", slug],
+                queryFn: () => api.cdcErrors(slug),
+                // Errors must always reflect the current server state, so never serve them from cache.
+                staleTime: 0,
+                gcTime: 0,
+            }),
         suggestAgentFromData: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "suggestAgentFromData", slug],

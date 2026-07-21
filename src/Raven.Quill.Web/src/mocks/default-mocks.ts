@@ -36,6 +36,7 @@ export const defaultApiMocks = {
         appsMocks.list(),
         appsMocks.detail(),
         appsMocks.cdcProgress(),
+        appsMocks.cdcErrors(),
         appsMocks.provisionAgent(),
         appsMocks.setupTry(),
         appsMocks.suggestAgent(),

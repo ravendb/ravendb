@@ -51,6 +51,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             title: "Verify your schema",
             description: "Fetch existing tables from the linked source.",
             bodyComponent: VerifySchemaStep,
+            isFullHeight: true,
             validate: "verifySchema",
         },
         map: {

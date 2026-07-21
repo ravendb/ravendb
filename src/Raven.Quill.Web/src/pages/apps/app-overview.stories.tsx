@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { agentsMocks } from "@/mocks/agents-mocks";
+import { appsMocks } from "@/mocks/apps-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
 import { AppOverview } from "./app-overview";
+
+const appsWithoutCdcErrors = [appsMocks.detail(), appsMocks.cdcErrors([])];
 
 const meta = {
     title: "Apps/Overview",
@@ -18,6 +21,16 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+export const WithoutCdcErrors: Story = {
+    parameters: {
+        msw: {
+            handlers: {
+                apps: appsWithoutCdcErrors,
+            },
+        },
+    },
+};
+
 // Fresh app: no agents or channels yet, so the welcome panel shows the remaining
 // steps as numbered (incomplete) call-to-actions.
 export const Onboarding: Story = {
@@ -25,6 +38,7 @@ export const Onboarding: Story = {
         msw: {
             handlers: {
                 agents: [agentsMocks.list([])],
+                apps: appsWithoutCdcErrors,
                 channels: [channelsMocks.list([])],
             },
         },

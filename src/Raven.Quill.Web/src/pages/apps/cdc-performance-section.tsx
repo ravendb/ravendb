@@ -3,11 +3,13 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ApiState } from "@/components/data/api-state";
 import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
 import { Badge } from "@/components/shadcn/ui/badge";
+import { Button } from "@/components/shadcn/ui/button";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/shadcn/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { formatCompact } from "@/lib/format";
 import { formatDateTime } from "@/lib/utils";
 import { DashboardStatCards, type DashboardStatCard } from "@/pages/dashboard/dashboard-stat-cards";
+import { CdcErrorsSheet } from "@/pages/apps/cdc-errors-sheet";
 import { SectionCard } from "@/pages/apps/section-card";
 import {
     MAX_TRACKED_BATCHES,
@@ -31,7 +33,24 @@ export function CdcPerformanceSection({
     const live = useCdcLivePerformance(slug);
 
     return (
-        <SectionCard title={title} action={live.performance && <CdcStatusBadge status={live.performance.status} />}>
+        <SectionCard
+            title={title}
+            action={
+                live.performance &&
+                (live.performance.errorCount > 0 ? (
+                    <CdcErrorsSheet
+                        slug={slug}
+                        trigger={
+                            <Button variant="destructive-outline" size="sm">
+                                View errors
+                            </Button>
+                        }
+                    />
+                ) : (
+                    <CdcStatusBadge status={live.performance.status} />
+                ))
+            }
+        >
             <ApiState
                 isLoading={live.connection === "connecting"}
                 isError={live.connection === "error"}

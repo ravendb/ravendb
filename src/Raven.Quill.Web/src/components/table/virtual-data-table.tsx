@@ -9,16 +9,19 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/compon
 import { useAutoSizeColumns } from "@/components/table/use-auto-size-columns";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_TABLE_HEIGHT_IN_PX = 360;
+const DEFAULT_TABLE_MAX_HEIGHT_IN_PX = 360;
 const DEFAULT_ROW_HEIGHT_IN_PX = 42;
 const DEFAULT_OVERSCAN = 8;
+const FILL_MIN_VISIBLE_ROWS = 4;
+// Sticky header row (h-10) plus the container borders, on top of the virtualized body height.
+const TABLE_CHROME_IN_PX = 42;
 
 interface VirtualDataTableProps<TData> {
     table: ReactTable<TData>;
     columnCount: number;
     emptyMessage: string;
     className?: string;
-    heightInPx?: number;
+    maxHeight?: number | "fill";
     overscan?: number;
     rowHeightInPx?: number;
     getCellClassName?: (cellId: string) => string;
@@ -36,7 +39,7 @@ export function VirtualDataTable<TData>({
     columnCount,
     emptyMessage,
     className,
-    heightInPx = DEFAULT_TABLE_HEIGHT_IN_PX,
+    maxHeight = DEFAULT_TABLE_MAX_HEIGHT_IN_PX,
     overscan = DEFAULT_OVERSCAN,
     rowHeightInPx = DEFAULT_ROW_HEIGHT_IN_PX,
     getCellClassName,
@@ -80,12 +83,29 @@ export function VirtualDataTable<TData>({
         );
     }
 
+    const isFillHeight = maxHeight === "fill";
+    // The min-height keeps a short viewport from collapsing the table to a sliver: the parent flex
+    // column can shrink the table down to ~4 rows and past that point the page scrolls instead.
+    // Tables shorter than the floor stay fully visible; fit-content is pixel-exact there, while the
+    // approximate chrome constant only matters for tall tables where a few px are irrelevant.
+    const fillFloorInPx = FILL_MIN_VISIBLE_ROWS * rowHeightInPx + TABLE_CHROME_IN_PX;
+    const fillMinHeight =
+        rowVirtualizer.getTotalSize() <= FILL_MIN_VISIBLE_ROWS * rowHeightInPx ? "fit-content" : fillFloorInPx;
+
     return (
         // min-w-0 lets the table shrink inside flex/grid parents instead of forcing them to overflow.
-        <div className={cn("relative min-w-0", className)}>
-            {/* heightInPx is a cap, not a fixed height: the body is sized to rowHeightInPx * row count,
-                so the container shrinks to fit a short list and only scrolls once it would exceed heightInPx. */}
-            <div ref={tableContainerRef} className="overflow-auto rounded-lg border" style={{ maxHeight: heightInPx }}>
+        <div
+            className={cn("relative min-w-0", isFillHeight && "flex flex-col", className)}
+            style={isFillHeight ? { minHeight: fillMinHeight } : undefined}
+        >
+            {/* maxHeight is a cap, not a fixed height: the body is sized to rowHeightInPx * row count,
+                so the container shrinks to fit a short list and only scrolls once it would exceed the cap
+                (the pixel value, or in fill mode the space granted by the parent flex column). */}
+            <div
+                ref={tableContainerRef}
+                className={cn("overflow-auto rounded-lg border", isFillHeight && "min-h-0")}
+                style={isFillHeight ? undefined : { maxHeight }}
+            >
                 <table className="grid min-w-full caption-bottom text-sm" style={{ width: table.getTotalSize() }}>
                     <VirtualTableHeader table={table} />
                     <TableBody
@@ -108,9 +128,12 @@ export function VirtualDataTable<TData>({
                                     data-state={getRowState?.(row.id)}
                                     ref={(node) => rowVirtualizer.measureElement(node)}
                                     className="absolute flex w-full"
+                                    // Positioned via top instead of translateY: Chromium never shrinks
+                                    // scrollable overflow contributed by transformed children, so rows
+                                    // that transiently render lower leave a permanent phantom scrollbar.
                                     style={{
                                         height: `${virtualRow.size}px`,
-                                        transform: `translateY(${virtualRow.start}px)`,
+                                        top: virtualRow.start,
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
@@ -118,7 +141,7 @@ export function VirtualDataTable<TData>({
                                             key={cell.id}
                                             data-column-id={cell.column.id}
                                             className={cn(
-                                                "flex items-center overflow-hidden",
+                                                "relative flex items-center overflow-hidden",
                                                 getCellClassName?.(cell.id),
                                             )}
                                             style={getColumnStyle(cell.column.getSize())}
