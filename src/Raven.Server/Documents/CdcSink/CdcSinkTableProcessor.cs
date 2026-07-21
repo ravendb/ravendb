@@ -28,6 +28,8 @@ public class CdcSinkTableProcessor
 
     /// <summary>Source table name.</summary>
     public string Table { get; init; }
+    
+    public string FullName => $"{Schema}.{Table}";
 
     /// <summary>Pre-computed Key + "__on_delete" for the OnDelete dispatch path.</summary>
     public string KeyOnDelete { get; init; }

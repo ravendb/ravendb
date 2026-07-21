@@ -263,6 +263,10 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, TestCdcSinkMappingRequest> TestCdcSinkMappingRequest = GenerateJsonDeserializationRoutine<TestCdcSinkMappingRequest>();
 
+        internal static readonly Func<BlittableJsonReaderObject, CdcTestRequest> CdcTestRequest = GenerateJsonDeserializationRoutine<CdcTestRequest>();
+
+        internal static readonly Func<BlittableJsonReaderObject, CdcTestResult> CdcTestResult = GenerateJsonDeserializationRoutine<CdcTestResult>();
+
         internal static readonly Func<BlittableJsonReaderObject, CdcSinkSourceSchema> CdcSinkSourceSchema = GenerateJsonDeserializationRoutine<CdcSinkSourceSchema>();
 
         internal static readonly Func<BlittableJsonReaderObject, CdcSinkSchemaRequest> CdcSinkSchemaRequest = GenerateJsonDeserializationRoutine<CdcSinkSchemaRequest>();
