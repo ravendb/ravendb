@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import { createBrowserRouter, type RouteObject } from "react-router";
 import App from "@/app";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
+import { AppAgentEdit } from "@/pages/apps/app-agent-edit";
 import { AppAgents } from "@/pages/apps/app-agents";
 import { AppChannelDetail } from "@/pages/apps/app-channel-detail";
 import { AppChannels } from "@/pages/apps/app-channels";
@@ -168,6 +169,13 @@ const appPages: AppRouteDefinition[] = [
             section: "database",
         },
         element: <AppAgents />,
+    },
+    {
+        // Agent edit — the full agent configuration form. No navigation entry:
+        // reached by editing an agent from the Agents list.
+        path: "agents/:agentId/edit",
+        title: "Edit agent",
+        element: <AppAgentEdit />,
     },
     {
         path: "conversations",

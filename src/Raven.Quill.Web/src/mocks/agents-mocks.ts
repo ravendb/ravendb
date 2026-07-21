@@ -1,9 +1,14 @@
-import type { AgentSummaryResponse } from "@/api/generated/server-api";
+import type { AgentSummaryResponse, AiAgentConfiguration, ProvisionAgentResponse } from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
 
 export const agentsMocks = {
     list: (agents: AgentSummaryResponse[] = sampleAgents) =>
         apiHttp.get("/api/apps/{slug}/agents", ({ response }) => response(200).json(agents)),
+    get: (config: AiAgentConfiguration = sampleAgentConfiguration) =>
+        apiHttp.get("/api/apps/{slug}/agent/{agentId}", ({ response }) => response(200).json(config)),
+    edit: (result: ProvisionAgentResponse = { agentId: "agents/sales" }) =>
+        apiHttp.post("/api/apps/{slug}/agent", ({ response }) => response(200).json(result)),
+    delete: () => apiHttp.delete("/api/apps/{slug}/agent/{agentId}", ({ response }) => response(204).empty()),
 };
 
 export const sampleAgents: AgentSummaryResponse[] = [
@@ -30,3 +35,39 @@ export const sampleAgents: AgentSummaryResponse[] = [
         tokens: 0,
     },
 ];
+
+export const sampleAgentConfiguration: AiAgentConfiguration = {
+    identifier: "agents/sales",
+    name: "Sales assistant",
+    connectionStringName: "openai-chat",
+    systemPrompt: "You help customers of the Demo Shop find products and check their orders.",
+    sampleObject: JSON.stringify(
+        {
+            reply: "A helpful answer to the customer's question.",
+            relatedProducts: "Up to three product names worth suggesting.",
+        },
+        null,
+        4,
+    ),
+    outputSchema: null,
+    queries: [
+        {
+            name: "search-products",
+            description: "Search products by name.",
+            query: "from Products where search(Name, $searchTerm)",
+            parametersSampleObject: "{}",
+        },
+    ],
+    parameters: [
+        {
+            name: "customerId",
+            description: "Id of the signed-in customer.",
+            type: "String",
+            policy: "Default",
+            sendToModel: true,
+        },
+    ],
+    actions: [],
+    subAgents: [],
+    disabled: false,
+};

@@ -119,7 +119,9 @@ export function applySuggestionToForm(
 
 // Builds the editable part of the provision payload from form values. Actions and
 // sub-agents stay empty: the provision endpoint rejects them in this preview.
-export function buildAgentConfigurationPayload(values: AgentFormData): AiAgentConfiguration {
+export function buildAgentConfigurationPayload(
+    values: Pick<AgentFormData, "connection" | "review">,
+): AiAgentConfiguration {
     const config = values.review;
 
     return {
