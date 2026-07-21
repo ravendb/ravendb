@@ -918,7 +918,7 @@ namespace Raven.Server.ServerWide.Commands
                         yield break;
 
                     Debug.Assert(result.Database == lowerDb);
-                    Debug.Assert(result.PreviousCount >= fromCount);
+                    Debug.Assert(fromCount == null || result.PreviousCount >= fromCount);
 
                     if (result.Database != lowerDb)
                     {
