@@ -43,10 +43,6 @@ export const CommunityLicense: StoryObj<ImportFromFileStoryArgs> = {
 
         const { license } = mockStore;
 
-        // getStatusLimited() doesn't zero these flags on its own - override explicitly so the
-        // restricted-features alert (SelectFileSection) and disabled toggles (ConfigurationToImportSection)
-        // actually render as restricted in the story. Keep this list in sync with the flags used
-        // in useImportLicenseRestrictions.
         license.with_LicenseLimited({
             Type: props.licenseType,
             HasDocumentsCompression: false,
