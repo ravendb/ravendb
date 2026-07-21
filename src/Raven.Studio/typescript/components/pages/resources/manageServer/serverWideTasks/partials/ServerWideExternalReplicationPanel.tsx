@@ -58,13 +58,13 @@ export function ServerWideExternalReplicationPanel(props: ServerWideExternalRepl
                     <ServerWideTaskStatus
                         task={task}
                         onTaskOperation={onTaskOperation}
-                        isTogglingState={isTogglingState(task.taskName)}
+                        isTogglingState={isTogglingState(task.taskId)}
                     />
                     <ServerWideTaskActions
                         task={task}
                         editUrl={editUrl}
                         onTaskOperation={onTaskOperation}
-                        isDeleting={isDeleting(task.taskName)}
+                        isDeleting={isDeleting(task.taskId)}
                         detailsVisible={detailsVisible}
                         toggleDetails={toggleDetails}
                     />

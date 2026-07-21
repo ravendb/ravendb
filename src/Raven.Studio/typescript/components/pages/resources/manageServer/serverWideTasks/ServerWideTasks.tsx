@@ -59,10 +59,10 @@ export default function ServerWideTasks() {
         }
     }, [filteredTaskIds, selectedTaskIds]);
 
-    // No tasks yet — send the user straight to the add view instead of showing an empty state
+    // No tasks yet — send the user straight to the add view instead of showing an empty state.
     useEffect(() => {
         if (fetchStatus === "success" && tasks.length === 0) {
-            router.navigate(appUrl.forAddServerWideTask());
+            router.navigate(appUrl.forAddServerWideTask(), { replace: true, trigger: true });
         }
     }, [fetchStatus, tasks.length]);
 

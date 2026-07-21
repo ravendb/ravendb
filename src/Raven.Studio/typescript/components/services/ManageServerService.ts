@@ -270,15 +270,11 @@ export default class ManageServerService {
         return new getAllServerWideTasksCommand().execute();
     }
 
-    async deleteServerWideTask(type: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, name: string) {
-        return new deleteServerWideTaskCommand(type, name).execute();
+    async deleteServerWideTask(...args: ConstructorParameters<typeof deleteServerWideTaskCommand>) {
+        return new deleteServerWideTaskCommand(...args).execute();
     }
 
-    async toggleServerWideTask(
-        type: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
-        name: string,
-        disable: boolean
-    ) {
-        return new toggleServerWideTaskCommand(type, name, disable).execute();
+    async toggleServerWideTask(...args: ConstructorParameters<typeof toggleServerWideTaskCommand>) {
+        return new toggleServerWideTaskCommand(...args).execute();
     }
 }

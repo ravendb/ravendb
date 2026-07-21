@@ -182,11 +182,11 @@ $variants: (
 .add-task-card-grid {
     grid-template-columns: 1fr;
 
-    @container (min-width: 480px) {
+    @container (min-width: #{sizes.$screen-xs}) {
         grid-template-columns: 1fr 1fr;
     }
 
-    @container (min-width: 720px) {
+    @container (min-width: #{sizes.$screen-sm}) {
         grid-template-columns: 1fr 1fr 1fr;
     }
 }
