@@ -85,7 +85,10 @@ internal static class AgentConfigValidator
 
     public static string EnforceLimit(string rql)
     {
-        var m = AgentQueryLimit.Match(rql);
+        // match against a literal-masked copy (length-preserving) so a 'limit' inside a string literal is invisible
+        var masked = MaskStringLiterals(rql);
+
+        var m = AgentQueryLimit.Match(masked);
         if (m.Success == false)
             return rql.TrimEnd() + " limit " + MaxLimit;
 
@@ -94,5 +97,45 @@ internal static class AgentConfigValidator
             return rql;
 
         return rql[..n.Index] + MaxLimit + rql[(n.Index + n.Length)..];
+    }
+
+    private static string MaskStringLiterals(string rql)
+    {
+        var chars = rql.ToCharArray();
+        var i = 0;
+        while (i < chars.Length)
+        {
+            var quote = chars[i];
+            if (quote != '\'' && quote != '"')
+            {
+                i++;
+                continue;
+            }
+
+            var j = i + 1;
+            while (j < chars.Length)
+            {
+                if (chars[j] == quote)
+                {
+                    // doubled quote = RQL escape, still inside the literal
+                    if (j + 1 < chars.Length && chars[j + 1] == quote)
+                    {
+                        chars[j] = ' ';
+                        chars[j + 1] = ' ';
+                        j += 2;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                chars[j] = ' ';
+                j++;
+            }
+
+            i = j + 1;
+        }
+
+        return new string(chars);
     }
 }
