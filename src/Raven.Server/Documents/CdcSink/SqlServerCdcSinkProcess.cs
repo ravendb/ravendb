@@ -544,7 +544,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         /// <summary>
         /// Every processor this source table feeds - a root collection and/or embedded arrays. All share
         /// the same source columns; index 0 is the primary (used to rent the decode buffer). A change row
-        /// is decoded once and fanned out to all of them (RavenDB-27095).
+        /// is decoded once and fanned out to all of them.
         /// </summary>
         public IReadOnlyList<CdcSinkTableProcessor> Processors;
 

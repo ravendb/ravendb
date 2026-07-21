@@ -570,7 +570,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     // ---------------------------------------------------------------------------------------------
     // Fan-out. A single source table can feed several destinations at once - a root collection and/or
-    // one or more embedded arrays (RavenDB-27095). A decoded row must therefore produce an op for EVERY
+    // one or more embedded arrays. A decoded row must therefore produce an op for EVERY
     // processor registered for that table, not just one. These helpers decode-once/emit-many: the first
     // processor reuses the caller's decoded array, each additional processor gets a clone rented from its
     // own pool so ReturnBatchValues returns each array to the right pool with no cross-processor sharing.
@@ -1071,7 +1071,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             try
             {
                 // Every processor this source table feeds - a root collection and/or embedded arrays.
-                // A row is read once and fanned out to all of them (RavenDB-27095).
+                // A row is read once and fanned out to all of them.
                 processors = DocumentProcessor.GetProcessors(tableInfo.Schema, tableInfo.TableName);
             }
             catch (InvalidOperationException e)

@@ -348,7 +348,7 @@ public class CdcSinkDocumentProcessor
 
     public void SetSourceColumnNames(string schema, string table, string[] columnNames)
     {
-        if (_tableIndex.TryGetValue((schema ?? "", table), out var processors) == false)
+        if (_tableIndex.TryGetValue((schema ?? string.Empty, table), out var processors) == false)
             throw new InvalidOperationException($"Cannot set source column names for unknown table '{schema}.{table}'.");
 
         // Every processor for this source table shares the same source columns - set them all so each
@@ -398,7 +398,7 @@ public class CdcSinkDocumentProcessor
     /// </summary>
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
     {
-        if (_tableIndex.TryGetValue((row.TableSchema ?? "", row.TableName), out var processors) == false)
+        if (_tableIndex.TryGetValue((row.TableSchema ?? string.Empty, row.TableName), out var processors) == false)
         {
             if (Logger?.IsDebugEnabled == true)
                 Logger.Debug($"Discarding CDC row for table '{row.TableSchema}.{row.TableName}' — not configured in the CDC Sink task.");

@@ -60,7 +60,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         /// <summary>
         /// Every processor this source table feeds - a root collection and/or embedded arrays. All share
         /// the same source columns; index 0 is the primary (used to rent the decode buffer). A row is
-        /// decoded once and fanned out to all of them (RavenDB-27095).
+        /// decoded once and fanned out to all of them.
         /// </summary>
         public required IReadOnlyList<CdcSinkTableProcessor> Processors { get; init; }
 
