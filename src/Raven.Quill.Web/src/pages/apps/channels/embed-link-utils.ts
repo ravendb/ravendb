@@ -1,3 +1,5 @@
+import { originForSubdomain } from "@/lib/subdomain-origin";
+
 /** Builds the absolute, paste-ready embed URL from the app slug and a token. The embed surface is
  *  served on the public.* subdomain only, so swap the operator host's leading label (dashboard.* /
  *  api.*) for public.* — falling back to the current origin when there is no subdomain to swap
@@ -12,19 +14,6 @@ export function buildEmbedUrl(slug: string, token: string) {
  *  back to the current origin when there is no subdomain to swap (dev/localhost), where /api is local. */
 export function buildMintEmbedLinkUrl(slug: string) {
     return `${originForSubdomain("api")}/api/apps/${encodeURIComponent(slug)}/embed-links`;
-}
-
-// Swaps the operator host's leading label (dashboard.* / api.*) for the given subdomain, falling back
-// to the current origin when there is no subdomain to swap (dev/localhost / bare IP).
-function originForSubdomain(label: string) {
-    const { protocol, hostname, port } = window.location;
-    const isIpV4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
-    const dot = hostname.indexOf(".");
-    if (dot <= 0 || isIpV4) {
-        return window.location.origin;
-    }
-    const host = `${label}.${hostname.slice(dot + 1)}`;
-    return `${protocol}//${host}${port ? `:${port}` : ""}`;
 }
 
 // Server-enforced bounds for minting embed links (see the embed-links mint contract). Shared by the
