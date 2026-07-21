@@ -468,6 +468,7 @@ export class TasksStubs {
                 ],
                 EmbeddingsTransformation: null,
                 Quantization: "Single",
+                StoreChunkText: false,
                 EmbeddingsCacheExpiration: "90.00:00:00",
                 ChunkingOptionsForQuerying: {
                     OverlapTokens: 0,
