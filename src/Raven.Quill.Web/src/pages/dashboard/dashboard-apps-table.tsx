@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Database, Plus } from "lucide-react";
+import { Database, Plus, Trash2 } from "lucide-react";
 import type { ApplianceAppResponse } from "@/api/generated/server-api";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { appRoutes } from "@/lib/app-routes";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
 
 type StatusStyle = { dotClassName: string; label: string };
 
@@ -63,6 +64,9 @@ export function DashboardAppsTable({ apps }: { apps: ApplianceAppResponse[] }) {
                             <TableHead className="text-xs font-medium text-muted-foreground">Channels</TableHead>
                             <TableHead className="text-xs font-medium text-muted-foreground">Writes / month</TableHead>
                             <TableHead className="w-[20%] text-xs font-medium text-muted-foreground">Status</TableHead>
+                            <TableHead className="w-0 text-right text-xs font-medium text-muted-foreground">
+                                <span className="sr-only">Actions</span>
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -93,6 +97,17 @@ function AppRow({ app }: { app: ApplianceAppResponse }) {
             </TableCell>
             <TableCell className="py-3">
                 <AppStatusCell app={app} />
+            </TableCell>
+            <TableCell className="text-right">
+                <DeleteAppDialog
+                    slug={app.slug}
+                    appName={app.name}
+                    trigger={
+                        <Button variant="ghost" size="icon-sm" aria-label={`Delete ${app.name}`}>
+                            <Trash2 className="size-3.5" aria-hidden="true" />
+                        </Button>
+                    }
+                />
             </TableCell>
         </TableRow>
     );

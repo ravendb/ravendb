@@ -15,6 +15,7 @@ import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-
 import { EditAiConnectionString } from "@/components/ai-connection-string/edit-ai-connection-string";
 import { CONNECTOR_TYPE_LABELS, MODEL_TYPE_LABELS } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { DeleteAiConnectionStringDialog } from "@/pages/apps/settings/delete-ai-connection-string-dialog";
+import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
 
 export function AppSettings() {
     const { slug = "" } = useParams();
@@ -40,7 +41,43 @@ export function AppSettings() {
                     )}
                 </ApiState>
             </section>
+            <DangerZoneSection slug={slug} />
         </div>
+    );
+}
+
+function DangerZoneSection({ slug }: { slug: string }) {
+    const appQuery = useQuery(api.queries.apps.detail(slug));
+    const app = appQuery.data;
+
+    if (!app) {
+        return null;
+    }
+
+    return (
+        <section className="space-y-4">
+            <h2 className="text-sm font-semibold">Danger zone</h2>
+            <Card className="border-destructive/50">
+                <CardHeader>
+                    <CardTitle>Delete this app</CardTitle>
+                    <CardDescription>
+                        Permanently removes "{app.name}" along with its agents, channels, and conversations.
+                    </CardDescription>
+                    <CardAction>
+                        <DeleteAppDialog
+                            slug={slug}
+                            appName={app.name}
+                            trigger={
+                                <Button variant="destructive" size="sm">
+                                    <Trash2 className="size-3.5" aria-hidden="true" />
+                                    Delete app
+                                </Button>
+                            }
+                        />
+                    </CardAction>
+                </CardHeader>
+            </Card>
+        </section>
     );
 }
 
