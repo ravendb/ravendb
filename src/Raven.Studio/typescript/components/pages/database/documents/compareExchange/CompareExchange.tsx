@@ -6,7 +6,6 @@ import CompareExchangeInfoHub from "./CompareExchangeInfoHub";
 import SizeGetter from "components/common/SizeGetter";
 import { useServices } from "components/hooks/useServices";
 import { useVirtualTableWithoutTotalCount } from "components/common/virtualTable/hooks/useVirtualTableWithoutTotalCount";
-import { useSelector } from "react-redux";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import {
@@ -36,8 +35,8 @@ type CompareExchangeListItem =
 const requiredAccess: databaseAccessLevel = "DatabaseReadWrite";
 
 export default function CompareExchange() {
-    const databaseName = useSelector(databaseSelectors.activeDatabaseName);
-    const canHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation)(requiredAccess);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
 
     const { appUrl } = useAppUrls();
 
@@ -123,7 +122,7 @@ export default function CompareExchange() {
             </div>
             <div className="hstack gap-2">
                 <AccessPopover accessRequired={requiredAccess}>
-                    <Button variant="primary" onClick={handleAddNewItem} disabled={!canHandleOperation}>
+                    <Button variant="primary" onClick={handleAddNewItem} disabled={!hasDatabaseWriteAccess}>
                         <Icon icon="plus" />
                         Add new item
                     </Button>
@@ -134,7 +133,7 @@ export default function CompareExchange() {
                         icon="trash"
                         onClick={asyncHandleDelete.execute}
                         isSpinning={asyncDeleteSelected.loading}
-                        disabled={!canHandleOperation || selectedRows.length === 0 || asyncHandleDelete.loading}
+                        disabled={!hasDatabaseWriteAccess || selectedRows.length === 0 || asyncHandleDelete.loading}
                     >
                         Delete{selectedRows.length > 0 && ` (${isAllSelected ? "all" : selectedRows.length})`}
                     </ButtonWithSpinner>
@@ -172,7 +171,7 @@ interface CompareExchangeTableProps {
 
 function CompareExchangeTable(props: CompareExchangeTableProps) {
     const { databasesService } = useServices();
-    const databaseName = useSelector(databaseSelectors.activeDatabaseName);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const keyFilter = String(columnFilters.find((x) => x.id === "Key")?.value ?? "");
@@ -237,8 +236,8 @@ function useCompareExchangeColumns({
     isAllSelected,
     setIsAllSelected,
 }: UseCompareExchangeColumnsProps): ColumnDef<CompareExchangeListItem>[] {
-    const databaseName = useSelector(databaseSelectors.activeDatabaseName);
-    const hasDatabaseWriteAccess = useSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
 
     const checkboxWidth = hasDatabaseWriteAccess ? 38 : 0;
 
@@ -300,6 +299,7 @@ function useCompareExchangeColumns({
             size: getSize(40),
             enableSorting: true,
             enableColumnFilter: true,
+            meta: { filterPlaceholder: "Key starts with..." },
         },
         {
             id: "Value",

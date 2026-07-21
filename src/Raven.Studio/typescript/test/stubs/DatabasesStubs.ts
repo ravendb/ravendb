@@ -1196,22 +1196,6 @@ return docs[0];`,
         ];
     }
 
-    static compareExchangeItems(
-        count: number
-    ): pagedResult<Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem> {
-        return {
-            totalResultCount: -1,
-            items: Array.from({ length: count }, (_, i) => ({
-                Key: `products/${i + 1}-a`,
-                Value: {
-                    Object: i + 1,
-                    "@metadata": undefined as any,
-                },
-                Index: 20,
-            })),
-        };
-    }
-
     static getIdentities(length = 2): Record<string, number> {
         const object: Record<string, number> = {};
         for (let i = 1; i <= length; i++) {
