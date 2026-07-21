@@ -1,3 +1,4 @@
+using FastTests;
 using Raven.Quill.Cdc;
 using Raven.Quill.Contracts;
 using Raven.Quill.Metrics;
@@ -12,7 +13,7 @@ namespace QuillTests;
 /// without a live CDC source (mirrors <see cref="CdcPerformanceEndpointTests"/>'s Shape tests);
 /// the populated end-to-end path needs a real source (the gated Postgres E2E lane).
 /// </summary>
-public class AppUsageCdcWritesTests
+public class AppUsageCdcWritesTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     // A fixed "now" well after June 2026 so UsagePeriod isn't clamped — these tests assert full
     // (unclamped) bucket layouts for a historical period.

@@ -33,8 +33,8 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
     {
         // ---------- T1. Mock license API serving the real setup-package zip ----------
         // The zip carries a real license + admin cert and is never committed. Caller supplies its
-        // location via APPLIANCE_E2E_SETUP_PACKAGE_PATH. CI will substitute a synthetic mock zip
-        // through the same env var.
+        // location via APPLIANCE_E2E_SETUP_PACKAGE_PATH. Nothing in CI sets it today; this test
+        // runs only on a hand-provisioned dev box (CI lane with a synthetic zip: RavenDB-27092).
         var zipPath = Environment.GetEnvironmentVariable("APPLIANCE_E2E_SETUP_PACKAGE_PATH");
         if (string.IsNullOrWhiteSpace(zipPath))
         {

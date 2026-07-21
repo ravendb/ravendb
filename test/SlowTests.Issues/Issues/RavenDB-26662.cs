@@ -12,6 +12,8 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -63,6 +65,9 @@ namespace SlowTests.Issues
 
         private static WriteUsageApplicationSnapshot SnapshotEntry(RavenServer leader, string topologyId)
             => leader.ServerStore.Observer.LatestWriteUsageSnapshot?.Applications.SingleOrDefault(d => d.TopologyId == topologyId);
+
+        private static WriteUsageApplicationSnapshot SnapshotEntryByDatabase(RavenServer leader, string database)
+            => leader.ServerStore.Observer.LatestWriteUsageSnapshot?.Applications.SingleOrDefault(d => d.ApplicationName == database);
 
         private static string Normalize(string changeVector)
             => string.IsNullOrEmpty(changeVector) ? string.Empty : ChangeVectorUtils.MergeVectors(changeVector);
@@ -308,6 +313,55 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster, LicenseRequired = true)]
+        public async Task WriteUsageReporter_assembles_the_report_from_the_observer_snapshot()
+        {
+            var (nodes, leader) = await CreateRaftCluster(1, watcherCluster: true);
+
+            DynamicJsonValue captured = null;
+            var testingStuff = leader.ServerStore.ForTestingPurposesOnly();
+            testingStuff.ForceWriteUsageReportingEnabled = true;
+            testingStuff.SkipWriteUsageActualSend = true;
+            testingStuff.OnWriteUsageReportReady = body => captured = body;
+
+            var database = GetDatabaseName();
+            using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } })
+            {
+                store.Initialize();
+                await CreateDatabaseInCluster(database, replicationFactor: 1, leader.WebUrl);
+
+                await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, database) != null, true, timeout: 30_000, interval: 100);
+
+                using (var reporter = new WriteUsageReporter(leader.ServerStore, leader.ServerStore.Observer, leader.ServerStore.Engine.CurrentTerm, leader.ServerStore.ServerShutdown))
+                {
+                    await reporter.ReportOnceAsync();
+                }
+            }
+
+            Assert.NotNull(captured);
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var report = context.ReadObject(captured, "write-usage-report"))
+            {
+                Assert.True(report.TryGet(nameof(WriteUsageReport.License), out BlittableJsonReaderObject license));
+                Assert.NotNull(license);
+
+                Assert.True(report.TryGet(nameof(WriteUsageReport.Applications), out BlittableJsonReaderArray applications));
+                var found = false;
+                foreach (var item in applications)
+                {
+                    if (item is BlittableJsonReaderObject app &&
+                        app.TryGet(nameof(WriteUsageApplicationSnapshot.ApplicationName), out string name) &&
+                        name == database)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                Assert.True(found, $"Expected the report to contain an entry for '{database}'.");
+            }
+        }
+
         [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
         public async Task TopologyDatabaseId_IsStableAcrossTicks_AndChangesOnRecreate()
         {
@@ -321,20 +375,19 @@ namespace SlowTests.Issues
 
                 var firstId = GetDatabaseRecord(store).Topology.DatabaseTopologyIdBase64;
 
-                // Stable across two distinct observer ticks: read the id the snapshot reports, let the
-                // iteration advance, read it again.
-                await WaitForValueAsync(() => SnapshotEntry(leader, firstId) != null, true, timeout: 30_000, interval: 100);
-                var idTickA = SnapshotEntry(leader, firstId).TopologyId;
+                // Stable across two distinct observer ticks: select the entry by DATABASE (not by the
+                // asserted id, which would be tautological), read the id it reports, let the iteration
+                // advance, read it again.
+                await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, database) != null, true, timeout: 30_000, interval: 100);
+                var idTickA = SnapshotEntryByDatabase(leader, database).TopologyId;
+                Assert.Equal(firstId, idTickA);
 
                 var iterationA = leader.ServerStore.Observer._iteration;
                 await WaitForValueAsync(() => leader.ServerStore.Observer._iteration >= iterationA + 2, true, timeout: 30_000, interval: 100);
 
-                var entryTickB = SnapshotEntry(leader, firstId);
+                var entryTickB = SnapshotEntryByDatabase(leader, database);
                 Assert.NotNull(entryTickB);
-                var idTickB = entryTickB.TopologyId;
-
-                Assert.Equal(firstId, idTickA);
-                Assert.Equal(idTickA, idTickB);
+                Assert.Equal(idTickA, entryTickB.TopologyId);
 
                 // Delete and recreate the SAME name => a fresh topology id.
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true));
@@ -345,7 +398,7 @@ namespace SlowTests.Issues
 
                 Assert.NotEqual(firstId, secondId);
 
-                await WaitForValueAsync(() => SnapshotEntry(leader, secondId) != null, true, timeout: 30_000, interval: 100);
+                await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, database)?.TopologyId, secondId, timeout: 30_000, interval: 100);
                 Assert.Null(SnapshotEntry(leader, firstId));
             }
         }

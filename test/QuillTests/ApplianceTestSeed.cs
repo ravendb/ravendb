@@ -12,7 +12,7 @@ namespace QuillTests;
 /// </summary>
 internal static class ApplianceTestSeed
 {
-    public static async Task SeedMockAgentAsync(HttpClient client, string slug = "my-app", string agentId = "demo-agent")
+    public static async Task SeedMockAgentAsync(HttpClient client, string slug = "my-app", string agentId = "demo-agent", string ollamaUri = "http://localhost:11434/")
     {
         var csResp = await client.PostAsJsonAsync(
             $"/api/apps/{slug}/ai/connection-strings",
@@ -21,7 +21,7 @@ internal static class ApplianceTestSeed
                 name = "demo-llm",
                 identifier = "demo-llm",
                 modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+                ollamaSettings = new { uri = ollamaUri, model = "llama3.1" }
             });
         Assert.True(csResp.IsSuccessStatusCode,
             $"seed connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");

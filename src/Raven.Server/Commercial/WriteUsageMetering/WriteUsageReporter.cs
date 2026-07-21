@@ -40,7 +40,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
         protected override async Task DoWork()
         {
             // Wait first: gives the observer time to produce at least one snapshot, and spaces out reports.
-            await WaitOrThrowOperationCanceled(Interval).ConfigureAwait(false);
+            await WaitOrThrowOperationCanceled(Interval + TimeSpan.FromSeconds(Random.Shared.Next(-60, 61))).ConfigureAwait(false);
 
             if (_term != _serverStore.Engine.CurrentTerm)
                 return; // no longer the term this reporter was created for; the reporter will be disposed shortly.
@@ -68,7 +68,7 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                     : "License is no longer Quill; stopping write-usage reporting to api.ravendb.net.");
         }
 
-        private async Task ReportOnceAsync()
+        internal async Task ReportOnceAsync()
         {
             try
             {
@@ -109,6 +109,11 @@ namespace Raven.Server.Commercial.WriteUsageMetering
                             Logger.Debug($"Reported write-usage for {report.Applications.Count} application(s) to api.ravendb.net, response: {(int)response.StatusCode} {response.StatusCode}.");
                     }
                 }
+            }
+            catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+            {
+                // shutdown or leadership change, not a reporting failure; let the work loop stop cleanly
+                throw;
             }
             catch (Exception e)
             {

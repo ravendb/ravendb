@@ -29,13 +29,6 @@ public static class AiConnectionStringsEndpoints
             .WithName("aiConnectionStrings.list")
             .Produces<AiConnectionStringListResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
-        // POST, not GET: the handler binds an AiConnectionString from the request body
-        // (GET can't infer a body param — it fails endpoint registration at host start).
-        group.MapPost("/models", ListModels)
-            .WithName("aiConnectionStrings.models")
-            .Accepts<AiConnectionString>("application/json");
-            // the return type here is flexible and depends on the provider
-
         group.MapGet("/{name}", GetByNameAsync)
             .WithName("aiConnectionStrings.detail")
             .Produces<AiConnectionString>()
@@ -45,64 +38,6 @@ public static class AiConnectionStringsEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<AiConnectionStringDeleteConflictResponse>(StatusCodes.Status409Conflict);
-    }
-
-    private static async Task<IResult> ListModels(
-        string slug,
-        IAiHelperClient client,
-        AiConnectionString body,
-        CancellationToken ct
-        )
-    {
-        var request = AiModelsRequest.From(body);
-        var r = await client.SendAsync("/studio-tasks/ai/models", "POST", request, ct);
-        return Results.Content(r.Content, "application/json");
-    }
-
-    public sealed class AiModelsRequest
-    {
-        public static AiModelsRequest From(AiConnectionString connection)
-        {
-            switch (connection.GetActiveProvider())
-            {
-                case AiConnectorType.OpenAi:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.OpenAi,
-                        OpenAiSettings = connection.OpenAiSettings
-                    };
-                case AiConnectorType.AzureOpenAi:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.AzureOpenAi,
-                        AzureOpenAiSettings = connection.AzureOpenAiSettings
-                    };
-                case AiConnectorType.Ollama:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.Ollama,
-                        OllamaSettings = connection.OllamaSettings
-                    };
-                case AiConnectorType.Google:
-                    return new AiModelsRequest
-                    {
-                        ConnectorType = AiConnectorType.Google,
-                        GoogleSettings = connection.GoogleSettings
-                    };
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        public AiConnectorType ConnectorType { get; set; }
-
-        public OllamaSettings? OllamaSettings { get; set; }
-
-        public OpenAiSettings? OpenAiSettings { get; set; }
-
-        public AzureOpenAiSettings? AzureOpenAiSettings { get; set; }
-
-        public GoogleSettings? GoogleSettings { get; set; }
     }
 
     private static async Task<IResult> DeleteAsync(

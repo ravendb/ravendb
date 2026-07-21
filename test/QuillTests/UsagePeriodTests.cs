@@ -1,3 +1,4 @@
+using FastTests;
 using Raven.Quill.Metrics;
 using Tests.Infrastructure;
 using Xunit;
@@ -9,7 +10,7 @@ namespace QuillTests;
 /// reference "now": the current period stops at the present — no future entries, no empty trailing
 /// buckets — while a fully past period stays unclamped.
 /// </summary>
-public class UsagePeriodTests
+public class UsagePeriodTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public void Current_month_clamps_end_and_buckets_to_now()

@@ -148,6 +148,26 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output) : RavenTestB
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_removes_the_probe_connection_string()
+    {
+        var store = GetDocumentStore();
+        await SeedWizardMapAsync(store);
+        await RegisterProbeAsync(store);
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var slug = "probe-clean-" + Guid.NewGuid().ToString("N");
+        var resp = await client.PostAsJsonAsync("/api/setup/provision", new { appName = "Probe Clean", slug });
+        using var _db = Databases.EnsureDatabaseDeletion(slug, store);
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        // the probe CS must not outlive provisioning on the config DB
+        var result = await store.Maintenance.ForDatabase(store.Database)
+            .SendAsync(new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql));
+        Assert.True(result.SqlConnectionStrings is null || result.SqlConnectionStrings.ContainsKey(WizardSourceProbeName) == false);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_derives_slug_from_app_name_when_no_override()
     {
         var store = GetDocumentStore();
