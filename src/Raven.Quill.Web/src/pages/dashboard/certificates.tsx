@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, RefreshCw } from "lucide-react";
+import { ExternalLink, Plus, RefreshCw } from "lucide-react";
 import { api } from "@/api/api";
 import type { CertificateItem, SecurityClearance } from "@/api/custom-services/certificates-service";
 import type { AppResponse } from "@/api/generated/server-api";
@@ -15,6 +15,7 @@ import {
 } from "@/pages/dashboard/certificates/certificate-labels";
 import { CertificatesToolbar, type CertificateSort } from "@/pages/dashboard/certificates/certificates-toolbar";
 import { GenerateCertificateDialog } from "@/pages/dashboard/certificates/generate-certificate-dialog";
+import { originForSubdomain } from "@/lib/subdomain-origin";
 
 interface CertificateFilters {
     search: string;
@@ -48,6 +49,12 @@ export function DashboardCertificates() {
                     <h1 className="text-2xl font-semibold tracking-tight">Certificates</h1>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                        <a href={originForSubdomain("db")} target="_blank" rel="noreferrer">
+                            <ExternalLink aria-hidden="true" />
+                            Open database
+                        </a>
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"
