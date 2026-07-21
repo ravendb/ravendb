@@ -350,6 +350,10 @@ public static class WizardEndpoints
             await session.SaveChangesAsync(ct);
         }
 
+        // the wizard is done with the source credentials; the probe CS must not outlive it
+        await store.Maintenance.ForDatabase(store.Database).SendAsync(
+            new RemoveConnectionStringOperation<SqlConnectionString>(new SqlConnectionString { Name = WizardSourceProbeName }), ct);
+
         logger.LogInformation("Provisioned app slug={Slug} id={Id} cdcTask={CdcTaskName}",
             app.Slug, app.Id, app.CdcTaskName);
 

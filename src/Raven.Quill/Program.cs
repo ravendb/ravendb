@@ -24,7 +24,8 @@ using Raven.Client.Documents;
 var builder = WebApplication.CreateBuilder(args);
 var isOpenApiDocumentGeneration = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 
-var listenUrl = Environment.GetEnvironmentVariable("RAVEN_QUILL_WEB_LISTEN_URL") ?? "http://0.0.0.0:5000";
+// loopback by default; the container sets the bind via RAVEN_QUILL_WEB_LISTEN_URL
+var listenUrl = Environment.GetEnvironmentVariable("RAVEN_QUILL_WEB_LISTEN_URL") ?? "http://127.0.0.1:5000";
 builder.WebHost.UseUrls(listenUrl);
 
 // enums as string names so operators can paste Studio JSON
@@ -81,18 +82,13 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_QUILL_AI_ASSIST_TIMEOUT_SECONDS", v =>
         {
             if (int.TryParse(v, out var s) && s > 0) options.AiAssistTimeout = TimeSpan.FromSeconds(s);
-        });        ReadEnv("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v =>
-        {
-            if (int.TryParse(v, out var s)) options.ReadinessInitialDelay = TimeSpan.FromSeconds(s);
         });
+        ReadEnv("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v =>
+            options.ReadinessInitialDelay = ParsePositiveSeconds("RAVEN_QUILL_READINESS_INITIAL_DELAY_SECONDS", v));
         ReadEnv("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v =>
-        {
-            if (int.TryParse(v, out var s)) options.ReadinessAttemptTimeout = TimeSpan.FromSeconds(s);
-        });
+            options.ReadinessAttemptTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_ATTEMPT_TIMEOUT_SECONDS", v));
         ReadEnv("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v =>
-        {
-            if (int.TryParse(v, out var s)) options.ReadinessOverallTimeout = TimeSpan.FromSeconds(s);
-        });
+            options.ReadinessOverallTimeout = ParsePositiveSeconds("RAVEN_QUILL_READINESS_OVERALL_TIMEOUT_SECONDS", v));
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -273,6 +269,13 @@ static void ReadEnv(string name, Action<string> apply)
 {
     var v = Environment.GetEnvironmentVariable(name);
     if (!string.IsNullOrEmpty(v)) apply(v);
+}
+
+static TimeSpan ParsePositiveSeconds(string name, string value)
+{
+    if (int.TryParse(value, out var seconds) == false || seconds <= 0)
+        throw new InvalidOperationException($"{name} must be a positive number of seconds, got '{value}'");
+    return TimeSpan.FromSeconds(seconds);
 }
 
 static string GetJsonPropertyName(System.Reflection.PropertyInfo property)

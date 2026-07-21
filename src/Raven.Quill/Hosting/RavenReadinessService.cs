@@ -19,8 +19,7 @@ public sealed class RavenReadinessService(
 {
     public const string PipelineName = "raven-startup";
 
-    // Polly executes strategies in add-order (first added = outermost): overall timeout
-    // wraps the retry loop; the attempt timeout cuts each individual probe.
+    // Polly runs strategies in add-order (first = outermost): overall timeout wraps the retry, attempt timeout cuts each probe
     public static void ConfigureProbePipeline(ResiliencePipelineBuilder builder, ApplianceOptions opts)
     {
         builder
@@ -93,9 +92,9 @@ public sealed class RavenReadinessService(
                     ready.MarkFailed(ex.Message);
 
                     if (File.Exists(GetSetupSettingsPath(opts)))
-                        bootstrap.MarkRestarting(ex.Message);
+                        bootstrap.MarkRestarting("ravendb is not reachable: " + ex.Message);
                     else
-                        bootstrap.MarkFailed(ex.Message);
+                        bootstrap.MarkFailed("ravendb is not reachable: " + ex.Message);
 
                     await Task.Delay(opts.ReadinessInitialDelay, stoppingToken);
                 }

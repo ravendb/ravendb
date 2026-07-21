@@ -446,22 +446,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/ai/connection-strings/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["aiConnectionStrings.models"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/apps/{slug}/ai/connection-strings/{name}": {
         parameters: {
             query?: never;
@@ -2790,30 +2774,6 @@ export interface operations {
             };
         };
     };
-    "aiConnectionStrings.models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AiConnectionString"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     "aiConnectionStrings.detail": {
         parameters: {
             query?: never;
@@ -3478,6 +3438,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
         };
     };
     "setup.connect": {
@@ -3862,7 +3831,6 @@ export const API_ENDPOINTS = {
         delete: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
         detail: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings`,
-        models: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/models`,
     },
     aiModels: {
         list: "/ai/models",
@@ -3953,7 +3921,6 @@ export function createServerApi(client: ApiClient) {
             delete: (slug: string, name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(slug, name)),
             detail: (slug: string, name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(slug, name)),
             list: (slug: string) => client.get<AiConnectionStringListResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list(slug)),
-            models: (slug: string, request: AiConnectionString) => client.post<void>(API_ENDPOINTS.aiConnectionStrings.models(slug), request),
         },
         aiModels: {
             list: (request: AiModelsRequest) => client.post<AiModelsResponse, ApiErrorResponse>(API_ENDPOINTS.aiModels.list, request),

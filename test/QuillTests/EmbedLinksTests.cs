@@ -333,12 +333,14 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Pre_stream_agent_failure_refunds_the_invocation()
     {
-        using var h = await HarnessAsync();
+        // Unroutable LLM endpoint (closed port): this test REQUIRES the turn to fail, and
+        // the default localhost:11434 would succeed on a dev box that runs Ollama.
+        using var h = await HarnessAsync(ollamaUri: "http://127.0.0.1:1/");
         var token = await MintAsync(h.Client, h.Slug, h.WidgetId, maxInvocations: 1);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
-        // No LLM in a unit run -> the agent run fails before any chunk streams -> the
+        // The agent run fails before any chunk streams -> the
         // reserved invocation is refunded. Draining the response ensures the refund
         // (awaited in the catch before the error frame) has completed.
         var first = await SendChatAsync(h.Client, h.Slug, token, new { prompt = "one" }, cts.Token);
@@ -483,7 +485,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
 
     // ---- helpers ----
 
-    private async Task<Harness> HarnessAsync(bool provisionChannel = true, string[]? origins = null)
+    private async Task<Harness> HarnessAsync(bool provisionChannel = true, string[]? origins = null, string ollamaUri = "http://localhost:11434/")
     {
         var store = GetDocumentStore();
         var database = "per-app-" + Guid.NewGuid().ToString("N");
@@ -514,7 +516,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
         var widgetId = "";
         if (provisionChannel)
         {
-            await ApplianceTestSeed.SeedMockAgentAsync(client, slug, "demo-agent");
+            await ApplianceTestSeed.SeedMockAgentAsync(client, slug, "demo-agent", ollamaUri);
             var resp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/channel",
                 new { type = "iframe", agentId = "demo-agent", allowedOrigins = origins ?? Array.Empty<string>() });
             Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
