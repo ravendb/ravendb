@@ -51,6 +51,8 @@ public static class EmbeddingsHelper
         return Convert.ToBase64String(hashBuffer);
     }
     
+    public const string ChunkTextPropertyName = "Text";
+
     public static string GetEmbeddingDocumentId(string documentId)
     {
         return $"embeddings/{documentId}";
