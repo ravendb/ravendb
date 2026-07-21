@@ -22,7 +22,8 @@ class getCompareExchangeItemsCommand extends commandBase {
             };
         };
         const url = endpoints.databases.compareExchange.cmpxchg + this.urlEncodeArgs(args);
-        return this.query(url, null, this.database, resultsSelector);
+        return this.query(url, null, this.database, resultsSelector)
+            .fail((response: JQueryXHR) => this.reportError("Failed to get Compare Exchange items", response.responseText, response.statusText));
     }
 }
 

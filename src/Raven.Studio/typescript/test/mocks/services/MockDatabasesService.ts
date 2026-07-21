@@ -189,10 +189,6 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getIdentities, dto, DatabasesStubs.getIdentities(5));
     }
 
-    withGetCompareExchangeItems(dto?: MockedValue<pagedResult<CompareExchangeListItem>>) {
-        return this.mockResolvedValue(this.mocks.getCompareExchangeItems, dto, DatabasesStubs.compareExchangeItems(30));
-    }
-
     /**
      * Pages compare exchange items lazily, so huge counts (e.g. millions) don't get materialized
      * up-front like a static resolved value would. Filtering by prefix is applied before skip/take

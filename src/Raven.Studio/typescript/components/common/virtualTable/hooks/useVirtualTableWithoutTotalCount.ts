@@ -8,16 +8,18 @@ import { virtualTableConstants } from "../utils/virtualTableConstants";
 // but for 223 695 rows (firefox limit) it would require scrolling to the bottom over 2 000 times,
 // so we can ignore this limitation
 
-type FetchData<T extends pagedResult<unknown>> = (skip: number, take: number) => Promise<T>;
+type PagedResultWithoutCount = Omit<pagedResult<unknown>, "totalResultCount">;
 
-interface useVirtualTableWithoutTotalCountProps<T extends pagedResultWithToken<unknown>> {
+type FetchData<T extends PagedResultWithoutCount> = (skip: number, take: number) => Promise<T>;
+
+interface useVirtualTableWithoutTotalCountProps<T extends PagedResultWithoutCount> {
     fetchData: FetchData<T>;
     initialOverscan?: number;
     // when any of these change, the table resets and refetches page 0 (also covers the initial load)
     reloadDependencies?: unknown[];
 }
 
-export function useVirtualTableWithoutTotalCount<T extends pagedResultWithToken<unknown>>({
+export function useVirtualTableWithoutTotalCount<T extends PagedResultWithoutCount>({
     fetchData,
     initialOverscan = 50,
     reloadDependencies = [],
