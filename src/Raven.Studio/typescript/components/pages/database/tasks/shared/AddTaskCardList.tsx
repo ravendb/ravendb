@@ -95,7 +95,7 @@ export function TaskCard({
             >
                 <Card.Body className="d-flex flex-column gap-1">
                     <div className="d-flex align-items-center gap-2">
-                        <Icon icon={iconName} className="task-icon" margin="me-2" />
+                        <Icon icon={iconName} className="task-icon" margin="m-0" />
                         <h4 className="mb-0">{title}</h4>
                         {counterBadge}
                     </div>
