@@ -292,16 +292,17 @@ public class CdcSinkDocumentProcessor
 
     /// <summary>
     /// The primary processor for a source table: the root processor when the table is mapped as a
-    /// collection, otherwise the first embedded processor. Callers that need every mapping (streaming,
-    /// initial load, replay) use <see cref="GetProcessors"/>; this single-processor accessor is kept for
-    /// column-metadata setup, previews and tests where any one processor of the table is sufficient.
+    /// collection, otherwise the first embedded processor. NOT for row routing - anything that turns a
+    /// source row into document ops must use <see cref="GetProcessors"/> and fan out, or it silently drops
+    /// the table's other mappings. This single-representative accessor is only for operations about the
+    /// table itself where any one processor suffices: existence checks, the dry-run preview, and tests.
     /// </summary>
-    public CdcSinkTableProcessor GetProcessor(string schema, string table)
+    public CdcSinkTableProcessor GetPrimaryProcessor(string schema, string table)
     {
         return SelectPrimary(GetProcessors(schema, table));
     }
 
-    public bool TryGetProcessor(string schema, string table, out CdcSinkTableProcessor processor)
+    public bool TryGetPrimaryProcessor(string schema, string table, out CdcSinkTableProcessor processor)
     {
         if (TryGetProcessors(schema, table, out var processors))
         {

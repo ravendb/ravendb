@@ -582,7 +582,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// </summary>
     private bool IsConfiguredRelation(RelationMessage relation)
     {
-        if (DocumentProcessor.TryGetProcessor(relation.Namespace, relation.RelationName, out _))
+        if (DocumentProcessor.TryGetPrimaryProcessor(relation.Namespace, relation.RelationName, out _))
             return true;
 
         if (_unconfiguredRelations.Add(relation.RelationId) && Logger.IsInfoEnabled)

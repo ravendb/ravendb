@@ -456,9 +456,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     /// <param name="defaultSchema">Default schema when SourceTableSchema is null (e.g., "public" for PostgreSQL, "dbo" for SQL Server).</param>
     public List<TableInfo> CollectAllTablesFlat(string defaultSchema)
     {
-        // A source table can be mapped several times at once (a root collection and/or embedded arrays -
-        // RavenDB-27095), but the physical table must be read/captured exactly ONCE and then fanned out to
-        // all its processors. Dedup by (schema, table), preferring the root mapping's PrimaryKeyColumns for
+        // A source table can be mapped several times at once (a root collection and/or embedded arrays),
+        // but the physical table must be read/captured exactly ONCE and then fanned out to all its
+        // processors. Dedup by (schema, table), preferring the root mapping's PrimaryKeyColumns for
         // keyset pagination: two passes so a standalone root that appears after the parent embedding it
         // still wins over the embedded entry.
         var tables = new List<TableInfo>();

@@ -110,12 +110,12 @@ namespace SlowTests.Server.Documents.CdcSink
         {
             var processor = new CdcSinkDocumentProcessor(BuildConfig(productsDisabled: true), "public");
 
-            Assert.True(processor.TryGetProcessor("public", "orders", out _));
-            Assert.True(processor.TryGetProcessor("public", "order_lines", out _));
+            Assert.True(processor.TryGetPrimaryProcessor("public", "orders", out _));
+            Assert.True(processor.TryGetPrimaryProcessor("public", "order_lines", out _));
 
-            Assert.False(processor.TryGetProcessor("public", "products", out _));
-            Assert.False(processor.TryGetProcessor("public", "product_tags", out _));
-            Assert.Throws<InvalidOperationException>(() => processor.GetProcessor("public", "products"));
+            Assert.False(processor.TryGetPrimaryProcessor("public", "products", out _));
+            Assert.False(processor.TryGetPrimaryProcessor("public", "product_tags", out _));
+            Assert.Throws<InvalidOperationException>(() => processor.GetPrimaryProcessor("public", "products"));
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
@@ -125,9 +125,9 @@ namespace SlowTests.Server.Documents.CdcSink
             // table regardless of state, so they opt back in via includeDisabledTables.
             var processor = new CdcSinkDocumentProcessor(BuildConfig(productsDisabled: true), "public", includeDisabledTables: true);
 
-            Assert.True(processor.TryGetProcessor("public", "products", out _));
-            Assert.True(processor.TryGetProcessor("public", "product_tags", out _));
-            Assert.NotNull(processor.GetProcessor("public", "products"));
+            Assert.True(processor.TryGetPrimaryProcessor("public", "products", out _));
+            Assert.True(processor.TryGetPrimaryProcessor("public", "product_tags", out _));
+            Assert.NotNull(processor.GetPrimaryProcessor("public", "products"));
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
