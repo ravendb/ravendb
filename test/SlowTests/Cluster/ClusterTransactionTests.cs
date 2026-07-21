@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
@@ -2394,6 +2395,73 @@ select incl(c)"
             }
         }
         
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task RestoredDatabase_ShouldCleanUpClusterTransactionCommands_EvenWhenTruncatedCountFromBackupIsHigh()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var source = GetDocumentStore())
+            {
+                const int originalCount = 64;
+                for (int i = 0; i < originalCount; i++)
+                {
+                    using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        session.Delete($"TestObjs/{i}");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                await AssertWaitForTrueAsync(async () =>
+                {
+                    var r = (await source.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(source.Database)));
+                    return r.TruncatedClusterTransactionCommandsCount >= originalCount;
+                }, timeout: 60_000);
+
+                var config = Backup.CreateBackupConfiguration(backupPath, BackupType.Snapshot);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, source);
+            }
+
+            using var newServer = GetNewServer();
+            var restoredDatabase = GetDatabaseName();
+            using var store = new DocumentStore { Urls = new[] { newServer.WebUrl }, Database = restoredDatabase }.Initialize();
+
+            var restore = new RestoreBackupOperation(new RestoreBackupConfiguration
+            {
+                BackupLocation = Directory.GetDirectories(backupPath).First(),
+                DatabaseName = restoredDatabase
+            });
+            var operation = await store.Maintenance.Server.SendAsync(restore);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+
+            var restoredRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabase));
+            Assert.True(restoredRecord.TruncatedClusterTransactionCommandsCount == 0);
+
+            const int newCount = 5;
+            for (int i = 0; i < newCount; i++)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"NewObjs/{i}");
+                await session.SaveChangesAsync();
+            }
+
+            await AssertWaitForTrueAsync(() =>
+                Task.FromResult(CountClusterTransactionCommands(newServer, restoredDatabase) <= 1), timeout: 30_000);
+        }
+
+        private static long CountClusterTransactionCommands(RavenServer server, string database)
+        {
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+                return ClusterTransactionCommand.ReadCommandsBatch(ctx, database, fromCount: 0, take: long.MaxValue).Count();
+        }
+
         [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestCase()
         {
