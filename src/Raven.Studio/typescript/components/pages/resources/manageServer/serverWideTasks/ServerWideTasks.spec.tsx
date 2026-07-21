@@ -1,7 +1,10 @@
-import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { rtlRender_WithWaitForLoad, waitFor } from "test/rtlTestUtils";
 import * as Stories from "./ServerWideTasks.stories";
 import { composeStories } from "@storybook/react-webpack5";
 import React from "react";
+import router from "plugins/router";
+import appUrl from "common/appUrl";
+import { mockServices } from "test/mocks/services/MockServices";
 
 const { ServerWideTasksStory } = composeStories(Stories);
 
@@ -41,6 +44,26 @@ describe("ServerWideTasks", () => {
         await fireClick(screen.getByText("Delete"));
 
         expect(await screen.findByText(/You're about to/)).toBeInTheDocument();
+    });
+
+    it("redirects to the add view after deleting the last tasks", async () => {
+        const { screen, fireClick } = await rtlRender_WithWaitForLoad(<ServerWideTasksStory />);
+
+        const backupPanel = screen.getByText(selectors.backupTaskName).closest(".rich-panel-item");
+        await fireClick(backupPanel.querySelector<HTMLInputElement>("input[type=checkbox]"));
+
+        await fireClick(screen.getByText("Delete"));
+        expect(await screen.findByText(/You're about to/)).toBeInTheDocument();
+
+        // After the deletion the server returns an empty task list
+        mockServices.manageServerService.withServerWideTasks({ Tasks: [] });
+
+        const deleteButtons = screen.getAllByText("Delete");
+        await fireClick(deleteButtons[deleteButtons.length - 1]);
+
+        await waitFor(() => {
+            expect(router.navigate).toHaveBeenCalledWith(appUrl.forAddServerWideTask());
+        });
     });
 
     it("can filter tasks by name", async () => {
