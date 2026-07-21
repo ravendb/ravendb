@@ -12,6 +12,13 @@ const stringValueItemSchema = yup.object({
     value: yup.string().required(),
 });
 
+// Studio always saves explicit schemas; a configuration created through the API may leave the
+// schema empty (the CDC runtime substitutes the provider default).
+const sourceTableSchemaSchema = yup
+    .string()
+    .nullable()
+    .required('Source schema is required. Enter the schema the source table belongs to (e.g. "public" or "dbo").');
+
 const cdcColumnMappingSchema = yup.object({
     column: yup.string().required(),
     name: yup.string().required(),
@@ -58,7 +65,7 @@ const cdcSinkLinkedTableSchema = yup.object({
     linkedCollectionName: yup.string().required(),
     propertyName: yup.string().required(),
     sourceTableName: yup.string().required(),
-    sourceTableSchema: yup.string().nullable().required(),
+    sourceTableSchema: sourceTableSchemaSchema,
 });
 
 const cdcSinkEmbeddedTableBaseSchema = yup.object({
@@ -77,7 +84,7 @@ const cdcSinkEmbeddedTableBaseSchema = yup.object({
     }),
     propertyName: yup.string().required(),
     sourceTableName: yup.string().required(),
-    sourceTableSchema: yup.string().nullable().required(),
+    sourceTableSchema: sourceTableSchemaSchema,
     type: yup.string<CdcSinkRelationType>().required(),
 });
 
@@ -103,7 +110,7 @@ const cdcSinkTableSchema = yup.object({
         uniqueMessage: "Primary key columns must be unique",
     }),
     sourceTableName: yup.string().required(),
-    sourceTableSchema: yup.string().nullable().required(),
+    sourceTableSchema: sourceTableSchemaSchema,
 });
 
 export const editCdcSinkTaskSchema = yup.object({
