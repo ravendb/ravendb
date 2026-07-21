@@ -12,8 +12,6 @@ import { ImportFromFileFormData } from "../importFromFileValidation";
 import { getItemsToWarnAbout } from "../importFromFileUtils";
 import { useImportLicenseRestrictions } from "../useImportLicenseRestrictions";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
-import { useAppSelector } from "components/store";
-import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import Card from "react-bootstrap/Card";
 import SelectCreatable from "components/common/select/SelectCreatable";
 
@@ -27,38 +25,27 @@ export default function DataToImportSection() {
     const documents = useWatch({ control, name: "documents" });
     const { isDocumentToggleRestricted, getDocumentToggleRestrictionTooltip, getDocumentToggleLicenseRequired } =
         useImportLicenseRestrictions();
-    const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
     const [collectionFilter, setCollectionFilter] = useState("");
 
     const isImportAll = useWatch({ control, name: "collections.isImportAllCollections" });
     const includedCollections = useWatch({ control, name: "collections.includedCollections" }) ?? [];
 
-    // The Collections filter applies to collections in the imported FILE, which the server cannot
-    // list before the upload. The current database's collections are offered as suggestions, and
-    // any other collection name from the file can be typed in and added manually. Manually added
-    // rows live in local state so deselecting them only turns the toggle off - the trash icon removes them.
+    // The list holds collections from the imported FILE, which the server cannot list before
+    // the upload - so it starts empty and every entry is typed in by the user. Rows live in
+    // local state so deselecting only turns the toggle off - the trash icon removes the row.
     const [manualCollections, setManualCollections] = useState<string[]>([]);
-    const allCollectionNames = [
-        ...collectionNames,
-        ...manualCollections.filter((name) => !collectionNames.includes(name)),
-    ];
 
-    const filteredCollections = allCollectionNames.filter((name) =>
+    const filteredCollections = manualCollections.filter((name) =>
         name.toLowerCase().includes(collectionFilter.toLowerCase())
     );
 
     const areAllFilteredCollectionsSelected =
         filteredCollections.length > 0 && filteredCollections.every((name) => includedCollections.includes(name));
 
-    // the select's menu offers collections that aren't included yet; anything else typed in
-    // becomes an "Add ..." create option
-    const collectionOptions: CollectionOption[] = allCollectionNames
-        .filter((name) => !includedCollections.includes(name))
-        .map((name) => ({ label: name, value: name }));
-
+    // typing filters the rows below; anything not on the list yet becomes an "Add ..." create option
     const isNewCollection = (input: string) => {
         const trimmed = input.trim();
-        return trimmed.length > 0 && !allCollectionNames.some((name) => name.toLowerCase() === trimmed.toLowerCase());
+        return trimmed.length > 0 && !manualCollections.some((name) => name.toLowerCase() === trimmed.toLowerCase());
     };
 
     const onCollectionPicked = (option: CollectionOption | null) => {
@@ -69,13 +56,6 @@ export default function DataToImportSection() {
         if (isNewCollection(trimmed)) {
             setManualCollections((prev) => [...prev, trimmed]);
             setValue("collections.includedCollections", [...includedCollections, trimmed], { shouldDirty: true });
-        } else {
-            const existing = allCollectionNames.find((name) => name.toLowerCase() === trimmed.toLowerCase());
-            if (existing && !includedCollections.includes(existing)) {
-                setValue("collections.includedCollections", [...includedCollections, existing], {
-                    shouldDirty: true,
-                });
-            }
         }
         setCollectionFilter("");
     };
@@ -160,11 +140,10 @@ export default function DataToImportSection() {
                 {!isImportAll && (
                     <div className="mt-4">
                         <div className="mb-2">
-                            {/* typing filters the table below AND offers an "Add ..." create option
-                                for collections that exist only in the imported file */}
+                            {/* typing filters the list below AND offers an "Add ..." create option */}
                             <SelectCreatable<CollectionOption>
-                                placeholder="Search or add a collection from the imported file"
-                                options={collectionOptions}
+                                placeholder="Type a collection name from the imported file to add it"
+                                options={[]}
                                 inputValue={collectionFilter}
                                 onInputChange={(value, meta) => {
                                     if (meta.action === "input-change") {
@@ -173,63 +152,64 @@ export default function DataToImportSection() {
                                 }}
                                 onChange={onCollectionPicked}
                                 isValidNewOption={isNewCollection}
+                                noOptionsMessage={() => "Type a collection name to add it"}
                                 formatCreateLabel={(input) => `Add "${input.trim()}"`}
                                 isClearedAfterSelect
                                 maxMenuHeight={300}
                             />
                         </div>
-                        <Table className="mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Collection name</th>
-                                    <th className="text-end">
-                                        <Button
-                                            variant="link"
-                                            size="sm"
-                                            className="p-0"
-                                            disabled={filteredCollections.length === 0}
-                                            onClick={() =>
-                                                setValue(
-                                                    "collections.includedCollections",
-                                                    areAllFilteredCollectionsSelected
-                                                        ? includedCollections.filter(
-                                                              (name) => !filteredCollections.includes(name)
-                                                          )
-                                                        : [
-                                                              ...includedCollections,
-                                                              ...filteredCollections.filter(
-                                                                  (name) => !includedCollections.includes(name)
-                                                              ),
-                                                          ],
-                                                    { shouldDirty: true }
-                                                )
-                                            }
-                                        >
-                                            {areAllFilteredCollectionsSelected ? "Deselect all" : "Select all"}
-                                        </Button>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredCollections.length === 0 && (
+                        <div className="import-collections-list">
+                            <Table className="mb-0">
+                                <thead>
                                     <tr>
-                                        <td colSpan={2} className="text-muted">
-                                            No collections found. Type a collection name from the imported file above
-                                            and pick &quot;Add&quot;.
-                                        </td>
+                                        <th>Collection name</th>
+                                        <th className="text-end">
+                                            <Button
+                                                variant="link"
+                                                size="sm"
+                                                className="p-0"
+                                                disabled={filteredCollections.length === 0}
+                                                onClick={() =>
+                                                    setValue(
+                                                        "collections.includedCollections",
+                                                        areAllFilteredCollectionsSelected
+                                                            ? includedCollections.filter(
+                                                                  (name) => !filteredCollections.includes(name)
+                                                              )
+                                                            : [
+                                                                  ...includedCollections,
+                                                                  ...filteredCollections.filter(
+                                                                      (name) => !includedCollections.includes(name)
+                                                                  ),
+                                                              ],
+                                                        { shouldDirty: true }
+                                                    )
+                                                }
+                                            >
+                                                {areAllFilteredCollectionsSelected ? "Deselect all" : "Select all"}
+                                            </Button>
+                                        </th>
                                     </tr>
-                                )}
-                                {filteredCollections.map((name) => (
-                                    <tr key={name}>
-                                        <td colSpan={2}>
-                                            <div className="d-flex align-items-center justify-content-between">
-                                                <Form.Check
-                                                    type="switch"
-                                                    label={name}
-                                                    checked={includedCollections.includes(name)}
-                                                    onChange={(e) => toggleCollection(name, e.target.checked)}
-                                                />
-                                                {manualCollections.includes(name) && (
+                                </thead>
+                                <tbody>
+                                    {filteredCollections.length === 0 && (
+                                        <tr>
+                                            <td colSpan={2} className="text-muted">
+                                                No collections added. Type a collection name from the imported file
+                                                above and pick &quot;Add&quot;.
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {filteredCollections.map((name) => (
+                                        <tr key={name}>
+                                            <td colSpan={2}>
+                                                <div className="d-flex align-items-center justify-content-between">
+                                                    <Form.Check
+                                                        type="switch"
+                                                        label={name}
+                                                        checked={includedCollections.includes(name)}
+                                                        onChange={(e) => toggleCollection(name, e.target.checked)}
+                                                    />
                                                     <Button
                                                         variant="link"
                                                         size="sm"
@@ -239,13 +219,13 @@ export default function DataToImportSection() {
                                                     >
                                                         <Icon icon="trash" margin="m-0" />
                                                     </Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </Table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        </div>
                     </div>
                 )}
             </Card>

@@ -20,6 +20,20 @@
     overflow-y: auto;
 }
 
+.import-collections-list {
+    max-height: 450px;
+    overflow-y: auto;
+
+    // .table prefix needed to out-rank bootstrap's `.bs5 .table > :not(caption) > * > *`
+    // which paints cells with transparent --bs-table-bg
+    .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: colors.$panel-bg-1-var;
+    }
+}
+
 .import-side-nav {
     width: 225px;
 
