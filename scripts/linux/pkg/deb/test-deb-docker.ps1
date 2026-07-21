@@ -1,7 +1,7 @@
 Write-Host "Test DEB of RavenDB $env:RAVENDB_VERSION on $env:DISTRO_VERSION $env:DEB_ARCHITECTURE"
 
 $DOCKER_FILE = "./ubuntu_test.Dockerfile"
-$DEB_TEST_ENV_IMAGE = "ravendb-deb_test_ubuntu-$($env:DISTRO_VERSION_NAME)_$($env:DOCKER_BUILDPLATFORM)"
+$DEB_TEST_ENV_IMAGE = "ravendb-deb_test_ubuntu-$($env:DISTRO_VERSION_NAME)_$($env:DEB_ARCHITECTURE)"
 
 docker build `
     --platform $env:DOCKER_BUILDPLATFORM `
@@ -15,7 +15,12 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$pkgPath = (Get-ChildItem "dist/$env:DISTRO_VERSION/ravendb_$($env:RAVENDB_VERSION)-0_$($env:DEB_ARCHITECTURE).deb").Name
+$pkgPath = (Get-ChildItem "dist/$env:DISTRO_VERSION/ravendb_$($env:RAVENDB_VERSION)-*_ubuntu.$($env:DISTRO_VERSION)_$($env:DEB_ARCHITECTURE).deb").Name
+
+if (-not $pkgPath) {
+    Write-Host "No .deb found in dist/$env:DISTRO_VERSION for architecture $env:DEB_ARCHITECTURE. Build the package first."
+    exit 1
+}
 
 docker run --rm -it `
     --platform $env:DOCKER_BUILDPLATFORM `
