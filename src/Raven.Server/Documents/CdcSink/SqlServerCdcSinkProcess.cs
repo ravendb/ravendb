@@ -317,7 +317,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 {
                     var rowLsn = reader[0] as byte[];
                     var rowSeq = reader[1] as byte[];
-                    var operation = reader.GetInt32(2);
+                    var operation = (SqlServerCdcOperation)reader.GetInt32(2);
 
                     var values = processors[0].RentValues();
                     for (int i = 0; i < columns.Length; i++)
@@ -326,7 +326,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                         values[i] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
                     }
 
-                    if (operation == 3) // pre-update image for embedded table
+                    if (operation == SqlServerCdcOperation.UpdateBefore) // pre-update image for embedded table
                     {
                         pendingPreUpdate ??= new Dictionary<LsnSeqKey, object[]>();
                         pendingPreUpdate[new LsnSeqKey(rowLsn, rowSeq)] = values;
@@ -335,22 +335,29 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
                     events.Clear();
 
-                    if (operation == 1) // delete
+                    if (operation == SqlServerCdcOperation.Delete)
                     {
                         AddDeleteEvents(processors, values, StreamingJsonContext, events);
                     }
-                    else if (operation == 4 && ci.HasEmbedded && pendingPreUpdate != null &&
+                    else if (operation == SqlServerCdcOperation.UpdateAfter && ci.HasEmbedded && pendingPreUpdate != null &&
                              pendingPreUpdate.Remove(new LsnSeqKey(rowLsn, rowSeq), out var oldValues))
                     {
                         // Post-update image paired with its stashed pre-update: fan out with reparent
                         // detection for embedded processors.
                         AddUpdateEvents(processors, values, oldValues, events);
                     }
+                    else if (operation is SqlServerCdcOperation.Insert or SqlServerCdcOperation.UpdateAfter)
+                    {
+                        // Insert, or a post-update on a root-only table / without a paired pre-image:
+                        // upsert into the current location for every processor.
+                        AddUpsertEvents(processors, values, StreamingJsonContext, events);
+                    }
                     else
                     {
-                        // Insert (op=2), or a post-update (op=4) on a root-only table / without a paired
-                        // pre-image: upsert into the current location for every processor.
-                        AddUpsertEvents(processors, values, StreamingJsonContext, events);
+                        throw new InvalidOperationException(
+                            $"Unexpected SQL Server CDC __$operation value {(int)operation} for capture instance " +
+                            $"'{ci.CaptureInstance}' (table {ci.TableInfo.FullName}). Expected 1 (delete), 2 (insert), " +
+                            "3 (pre-update image), or 4 (post-update image).");
                     }
 
                     foreach (var evt in events)
@@ -513,6 +520,18 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     }
 
 
+    /// <summary>
+    /// Values of the <c>__$operation</c> column returned by <c>fn_cdc_get_all_changes_*</c>.
+    /// UpdateBefore (the pre-image) is only delivered under the 'all update old' row-filter option.
+    /// </summary>
+    private enum SqlServerCdcOperation
+    {
+        Delete = 1,
+        Insert = 2,
+        UpdateBefore = 3,
+        UpdateAfter = 4
+    }
+
     private sealed class CaptureInstanceInfo
     {
         public CdcSinkConfiguration.TableInfo TableInfo;
@@ -565,12 +584,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 quotedColumns[i] = CommandBuilder.QuoteIdentifier(columns[i]);
             var columnList = string.Join(", ", quotedColumns);
 
-            // __$operation values: 1=delete, 2=insert, 3=pre-update image, 4=post-update image.
-            // Embedded tables need pre-update images to detect join-column changes (reparenting),
-            // so we use the 'all update old' row-filter option which delivers op=3 alongside op=4.
-            // (The default 'all' option drops op=3 and only returns the post-image — which means
-            // the previous code path here never actually saw a pre-image.) For root tables we
-            // don't need pre-images, so we still use 'all' and skip the extra row.
+            // Embedded tables need the pre-image (see SqlServerCdcOperation.UpdateBefore) to detect
+            // join-column changes (reparenting), so we use the 'all update old' row-filter option which
+            // delivers it alongside the post-image. The default 'all' option drops the pre-image and
+            // returns only the post-image, so for root-only tables we use 'all' and skip the extra row.
             var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
             // GetProcessors throws if the table isn't registered; every configured table is, so this is non-empty.
             var processors = DocumentProcessor.GetProcessors(tableInfo.Schema, tableInfo.TableName);
