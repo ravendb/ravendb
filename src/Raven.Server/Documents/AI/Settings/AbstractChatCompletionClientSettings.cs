@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -96,7 +95,7 @@ internal abstract class AbstractChatCompletionClientSettings
     public abstract AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response);
 
     // OpenAI's default: an explicit `refusal` field on the message (non-streaming) or on the delta
-    // (streaming - GetRefusalOnStreaming passes the delta here as the "message"). Providers whose refusal
+    // (streaming - GetRefusal gets the delta here as the "message"). Providers whose refusal
     // shape differs (Azure, Google) override this.
     public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
     {

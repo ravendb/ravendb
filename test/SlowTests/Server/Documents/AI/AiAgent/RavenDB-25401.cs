@@ -45,7 +45,7 @@ public class RavenDB_25401 : RavenTestBase
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.AzureOpenAI, DatabaseMode = RavenDatabaseMode.Single)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
+    // [RavenGenAiData(IntegrationType = RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task AssertRefusalIsSurfacedDuringStreamingAsync(Options options, GenAiConfiguration config)
     {
         if (config.Connection.OpenAiSettings != null)

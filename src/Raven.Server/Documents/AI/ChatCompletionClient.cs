@@ -193,6 +193,7 @@ public class ChatCompletionClient : IDisposable
         object message = null;
         StringBuilder stringContent = structuredOutput ? null : new StringBuilder();
         var refusalSb = new StringBuilder();
+        string finishReason = null;
 
         // need two contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
@@ -238,6 +239,10 @@ public class ChatCompletionClient : IDisposable
             var refusalDelta = _settings.GetRefusal(choice, delta);
             if (string.IsNullOrEmpty(refusalDelta) == false)
                 refusalSb.Append(refusalDelta);
+
+            if (choice.TryGet(Constants.ResponseFields.FinishReason, out string fr) && string.IsNullOrEmpty(fr) == false)
+                finishReason ??= fr;
+
 
             if (hasDelta)
             {
@@ -299,7 +304,7 @@ public class ChatCompletionClient : IDisposable
 
         var refusal = refusalSb.ToString();
         if (string.IsNullOrEmpty(refusal) == false)
-            RefusedToAnswerException.Throw(refusal, message?.ToString(), "refusal", GetRequestId(response.Headers));
+            RefusedToAnswerException.Throw(refusal, message?.ToString(), finishReason, GetRequestId(response.Headers));
         
         if (structuredOutput == false)
         {
