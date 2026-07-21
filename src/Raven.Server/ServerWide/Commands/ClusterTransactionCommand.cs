@@ -823,6 +823,18 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
+        // 'startAfter' is exclusive, so we seek after (fromCount - 1) to include the command at exactly 'fromCount' (counts are discrete).
+        // For fromCount null/0 there is nothing to skip: return an empty slice (seek from the database start) and a no-op scope.
+        private static ByteStringContext.InternalScope GetStartAfterPrefix<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long? fromCount, out Slice startAfter)
+            where TTransaction : RavenTransaction
+        {
+            if (fromCount is > 0)
+                return GetPrefix(context, database, out startAfter, fromCount.Value - 1);
+
+            startAfter = Slices.Empty;
+            return default;
+        }
+
         public sealed class SingleClusterDatabaseCommand : IDynamicJson, IDisposable
         {
             public ClusterTransactionOptions Options;
@@ -891,57 +903,48 @@ namespace Raven.Server.ServerWide.Commands
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
 
             using (GetPrefix(context, database, out Slice databasePrefix))
+            using (GetStartAfterPrefix(context, database, fromCount, out var startAfter))
             {
-                // 'startAfter' is exclusive, so we seek after (fromCount - 1) in order to include the command at
-                // exactly 'fromCount'. Counts are discrete, so excluding (fromCount - 1) starts inclusively at 'fromCount'.
-                var startAfter = Slices.Empty;
-                IDisposable startAfterScope = null;
-                if (fromCount is > 0)
-                    startAfterScope = GetPrefix(context, database, out startAfter, fromCount.Value - 1);
-
-                using (startAfterScope)
+                var readSize = 0;
+                var commandsBulk = items.SeekByPrimaryKeyPrefix(databasePrefix, startAfter, 0);
+                foreach (var command in commandsBulk)
                 {
-                    var readSize = 0;
-                    var commandsBulk = items.SeekByPrimaryKeyPrefix(databasePrefix, startAfter, 0);
-                    foreach (var command in commandsBulk)
+                    if (take <= 0)
+                        yield break;
+
+                    var reader = command.Value.Reader;
+                    var result = ReadCommand(context, reader);
+                    if (result == null)
+                        yield break;
+
+                    Debug.Assert(result.Database == lowerDb);
+                    Debug.Assert(result.PreviousCount >= fromCount);
+
+                    if (result.Database != lowerDb)
                     {
-                        if (take <= 0)
-                            yield break;
-
-                        var reader = command.Value.Reader;
-                        var result = ReadCommand(context, reader);
-                        if (result == null)
-                            yield break;
-
-                        Debug.Assert(result.Database == lowerDb);
-                        Debug.Assert(result.PreviousCount >= fromCount);
-
-                        if (result.Database != lowerDb)
-                        {
-                            // beware of reading commands of other databases.
-                            result.Dispose();
-                            continue;
-                        }
-
-                        if (result.PreviousCount < fromCount)
-                        {
-                            result.Dispose();
-                            continue;
-                        }
-
-                        if (lastCompletedClusterTransactionIndex.HasValue && result.Index <= lastCompletedClusterTransactionIndex)
-                        {
-                            result.Dispose();
-                            continue;
-                        }
-
-                        take--;
-                        yield return result;
-
-                        readSize += reader.Size;
-                        if (readSize > maxBytesToRead)
-                            yield break;
+                        // beware of reading commands of other databases.
+                        result.Dispose();
+                        continue;
                     }
+
+                    if (result.PreviousCount < fromCount)
+                    {
+                        result.Dispose();
+                        continue;
+                    }
+
+                    if (lastCompletedClusterTransactionIndex.HasValue && result.Index <= lastCompletedClusterTransactionIndex)
+                    {
+                        result.Dispose();
+                        continue;
+                    }
+
+                    take--;
+                    yield return result;
+
+                    readSize += reader.Size;
+                    if (readSize > maxBytesToRead)
+                        yield break;
                 }
             }
         }
