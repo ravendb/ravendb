@@ -82,8 +82,10 @@ public class RankingFunctionTests : StorageTest
         query.Score(ids.Slice(0, read), scores, 0);
     }
 
-    [RavenFact(RavenTestCategory.Corax)]
-    public void TwoBoostingMatchesWithOr()
+    [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData(BitmapAndFillMode.Off)]
+    [InlineData(BitmapAndFillMode.Force)]
+    public void TwoBoostingMatchesWithOr(BitmapAndFillMode bitmapAndFillMode)
     {
         var list = new List<EntryData>();
         {
@@ -95,7 +97,7 @@ public class RankingFunctionTests : StorageTest
         }
         
         IndexEntries(list);
-        using var indexSearcher = new IndexSearcher(Env, _mapping);
+        using var indexSearcher = new IndexSearcher(Env, _mapping) { BitmapAndFillMode = bitmapAndFillMode };
         var q1 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "maciej");
         var q2 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "kaszebe");
 
@@ -114,8 +116,10 @@ public class RankingFunctionTests : StorageTest
         Assert.Equal("3", indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
     }
     
-    [RavenFact(RavenTestCategory.Corax)]
-    public void TwoBoostingMatchesWithAnd()
+    [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData(BitmapAndFillMode.Off)]
+    [InlineData(BitmapAndFillMode.Force)]
+    public void TwoBoostingMatchesWithAnd(BitmapAndFillMode bitmapAndFillMode)
     {
         var list = new List<EntryData>();
         {
@@ -127,7 +131,7 @@ public class RankingFunctionTests : StorageTest
         }
         
         IndexEntries(list);
-        using var indexSearcher = new IndexSearcher(Env, _mapping);
+        using var indexSearcher = new IndexSearcher(Env, _mapping) { BitmapAndFillMode = bitmapAndFillMode };
         var q1 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "maciej");
         var q2 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "kaszebe");
 
