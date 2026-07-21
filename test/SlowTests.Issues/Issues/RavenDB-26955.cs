@@ -46,7 +46,7 @@ public class RavenDB_26955 : RavenTestBase
             Tables = new List<CdcSinkTableConfig> { config }
         };
         var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-        var processor = docProcessor.GetProcessor("public", "events");
+        var processor = docProcessor.GetPrimaryProcessor("public", "events");
 
         // Npgsql returns Postgres 'time without time zone' as a TimeOnly.
         var columnNames = new[] { "id", "start_time", "end_time", "precise_time" };
