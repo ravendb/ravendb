@@ -39,6 +39,31 @@ export function isExpiredCertificate(certificate: CertificateItem, now: number =
     return certificate.notAfter != null && new Date(certificate.notAfter).getTime() < now;
 }
 
+const ABOUT_TO_EXPIRE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+export function isAboutToExpireCertificate(certificate: CertificateItem, now: number = Date.now()): boolean {
+    return (
+        certificate.notAfter != null &&
+        !isExpiredCertificate(certificate, now) &&
+        new Date(certificate.notAfter).getTime() < now + ABOUT_TO_EXPIRE_WINDOW_MS
+    );
+}
+
+export type CertificateState = "valid" | "expired" | "disabled";
+
+export const CERTIFICATE_STATE_LABELS: Record<CertificateState, string> = {
+    valid: "Valid",
+    expired: "Expired",
+    disabled: "Disabled",
+};
+
+export function getCertificateState(certificate: CertificateItem, now: number = Date.now()): CertificateState {
+    if (certificate.disabled) {
+        return "disabled";
+    }
+    return isExpiredCertificate(certificate, now) ? "expired" : "valid";
+}
+
 // Quill manages Operator and ValidUser certificates; cluster-level clearances
 // (ClusterAdmin, ClusterNode) stay read-only here.
 export function isEditableCertificate(certificate: CertificateItem): boolean {

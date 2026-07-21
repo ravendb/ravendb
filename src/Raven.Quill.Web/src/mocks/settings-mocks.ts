@@ -84,6 +84,16 @@ export const sampleCertificates: CertificateItem[] = [
         disabled: false,
     },
     {
+        name: "mobile-gateway",
+        thumbprint: "3F8A9B0C1D2E4F5061728394A5B6C7D8E9F00112",
+        securityClearance: "ValidUser",
+        notBefore: "2025-08-01T00:00:00Z",
+        // Expires one week from now so the "About to expire" badge always renders.
+        notAfter: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        permissions: { "demo-shop": "ReadWrite" },
+        disabled: false,
+    },
+    {
         name: "legacy-sync",
         thumbprint: "5B6C7D8E9F0A1B2C3D4E5F60718293A4B5C6D7E8",
         securityClearance: "ValidUser",
