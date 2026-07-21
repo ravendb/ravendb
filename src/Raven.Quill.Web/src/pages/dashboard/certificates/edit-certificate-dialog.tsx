@@ -25,26 +25,16 @@ import {
 } from "@/components/shadcn/ui/dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { DATABASE_ACCESS_OPTIONS, toDatabaseOption } from "@/pages/dashboard/certificates/certificate-labels";
+import {
+    permissionRowSchema,
+    reportDuplicateDatabases,
+    toPermissionsRecord,
+} from "@/pages/dashboard/certificates/certificate-permissions";
 
 const editCertificateSchema = z.object({
     name: z.string().trim().min(1, "Required"),
     isEnabled: z.boolean(),
-    permissions: z
-        .array(
-            z.object({
-                database: z.string().min(1, "Required"),
-                access: z.enum(["Admin", "ReadWrite", "Read"]),
-            }),
-        )
-        .superRefine((rows, ctx) => {
-            rows.forEach((row, index) => {
-                const isDuplicate =
-                    row.database !== "" && rows.findIndex((other) => other.database === row.database) !== index;
-                if (isDuplicate) {
-                    ctx.addIssue({ code: "custom", path: [index, "database"], message: "Already listed" });
-                }
-            });
-        }),
+    permissions: z.array(permissionRowSchema).superRefine(reportDuplicateDatabases),
 });
 
 type EditCertificateFormData = z.infer<typeof editCertificateSchema>;
@@ -69,10 +59,12 @@ export function EditCertificateDialog({
 
     const editMutation = useMutation({
         mutationFn: (values: EditCertificateFormData) =>
-            api.services.certificates.edit(
-                Object.fromEntries(values.permissions.map((row) => [row.database, row.access])),
-                { thumbprint: certificate.thumbprint, name: values.name, disable: !values.isEnabled },
-            ),
+            api.services.settings.certificatesEdit(toPermissionsRecord(values.permissions), {
+                thumbprint: certificate.thumbprint,
+                name: values.name,
+                clearance: certificate.securityClearance,
+                disable: !values.isEnabled,
+            }),
         onSuccess: async (_, values) => {
             toast.success(`Certificate “${values.name}” updated.`);
             await queryClient.invalidateQueries({ queryKey: api.queries.certificates.list().queryKey });

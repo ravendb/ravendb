@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { api } from "@/api/api";
@@ -21,11 +22,19 @@ import {
     DialogTrigger,
 } from "@/components/shadcn/ui/dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
-import { toDatabaseOption } from "@/pages/dashboard/certificates/certificate-labels";
+import { DATABASE_ACCESS_OPTIONS, toDatabaseOption } from "@/pages/dashboard/certificates/certificate-labels";
+import {
+    permissionRowSchema,
+    reportDuplicateDatabases,
+    toPermissionsRecord,
+} from "@/pages/dashboard/certificates/certificate-permissions";
 
 const generateCertificateSchema = z.object({
     name: z.string().trim().min(1, "Required"),
-    appName: z.string().min(1, "Select an app"),
+    permissions: z
+        .array(permissionRowSchema)
+        .min(1, "Grant access to at least one app")
+        .superRefine(reportDuplicateDatabases),
 });
 
 type GenerateCertificateFormData = z.infer<typeof generateCertificateSchema>;
@@ -45,15 +54,21 @@ export function GenerateCertificateDialog({ apps, trigger }: { apps: AppResponse
 
     const form = useForm<GenerateCertificateFormData>({
         resolver: zodResolver(generateCertificateSchema),
-        defaultValues: { name: "", appName: "" },
+        defaultValues: { name: "", permissions: [{ database: "", access: "Read" }] },
     });
+    const permissionRows = useFieldArray({ control: form.control, name: "permissions" });
 
     const generateMutation = useMutation({
         mutationFn: (values: GenerateCertificateFormData) =>
-            api.services.certificates.generate({ appName: values.appName, name: values.name }),
+            // Per-database permissions only apply to ValidUser certificates, and this
+            // dialog manages nothing above that clearance.
+            api.services.certificates.generate(toPermissionsRecord(values.permissions), {
+                name: values.name,
+                clearance: "ValidUser",
+            }),
         onSuccess: async (zip, values) => {
             // Same filename the server sets in its Content-Disposition header.
-            downloadBlob(zip, `${values.appName}_${values.name}_certificates.zip`);
+            downloadBlob(zip, `${values.name}_certificates.zip`);
             toast.success(`Certificate “${values.name}” downloaded.`);
             await queryClient.invalidateQueries({ queryKey: api.queries.certificates.list().queryKey });
             handleOpenChange(false);
@@ -70,28 +85,67 @@ export function GenerateCertificateDialog({ apps, trigger }: { apps: AppResponse
         }
     };
 
+    const databaseOptions = apps.map((app) => toDatabaseOption(app.database, apps));
+    const permissionsError = form.formState.errors.permissions;
+    const permissionsErrorMessage = permissionsError?.root?.message ?? permissionsError?.message;
+
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>{trigger}</DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Generate client certificate</DialogTitle>
                     <DialogDescription>
-                        Create a client certificate with admin access to one app. The certificate downloads as a zip
+                        Create a client certificate with access to the selected apps. The certificate downloads as a zip
                         archive — the private key inside is not stored on the server, so keep it safe.
                     </DialogDescription>
                 </DialogHeader>
 
                 <form className="grid gap-4" onSubmit={submit}>
                     <FormInput control={form.control} name="name" label="Certificate name" placeholder="e.g. backups" />
-                    <FormSelect
-                        control={form.control}
-                        name="appName"
-                        label="App"
-                        placeholder="Select an app"
-                        options={apps.map((app) => toDatabaseOption(app.database, apps))}
-                        description="The certificate is granted admin access to this app's database."
-                    />
+
+                    <div className="grid gap-3">
+                        <div className="text-sm font-medium">App access</div>
+                        {permissionRows.fields.map((row, index) => (
+                            <div key={row.id} className="flex items-start gap-2">
+                                <FormSelect
+                                    control={form.control}
+                                    name={`permissions.${index}.database`}
+                                    placeholder="Select an app"
+                                    options={databaseOptions}
+                                    className="flex-1"
+                                />
+                                <FormSelect
+                                    control={form.control}
+                                    name={`permissions.${index}.access`}
+                                    options={DATABASE_ACCESS_OPTIONS}
+                                    className="w-32 shrink-0"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Remove access"
+                                    onClick={() => permissionRows.remove(index)}
+                                >
+                                    <Trash2 className="size-4" aria-hidden="true" />
+                                </Button>
+                            </div>
+                        ))}
+                        {permissionsErrorMessage && (
+                            <p className="text-sm text-destructive">{permissionsErrorMessage}</p>
+                        )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-fit"
+                            onClick={() => permissionRows.append({ database: "", access: "Read" })}
+                        >
+                            <Plus className="size-3.5" aria-hidden="true" />
+                            Add access
+                        </Button>
+                    </div>
 
                     {generateMutation.isError && (
                         <Alert variant="destructive">
