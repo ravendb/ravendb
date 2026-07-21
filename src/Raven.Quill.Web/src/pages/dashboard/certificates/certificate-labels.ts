@@ -22,6 +22,13 @@ export const SECURITY_CLEARANCE_LABELS: Record<SecurityClearance, string> = {
     ValidUser: "User",
 };
 
+// Clearances Quill can assign to client certificates; cluster-level clearances
+// are managed by the server itself.
+export const CLEARANCE_OPTIONS: readonly FormSelectOption<"Operator" | "ValidUser">[] = [
+    { value: "Operator", label: SECURITY_CLEARANCE_LABELS.Operator },
+    { value: "ValidUser", label: SECURITY_CLEARANCE_LABELS.ValidUser },
+];
+
 // Permissions are keyed by RavenDB database name; show the app it belongs to when known.
 export function toDatabaseOption(database: string, apps: AppResponse[]): FormSelectOption<string> {
     const app = apps.find((candidate) => candidate.database === database);
@@ -32,8 +39,8 @@ export function isExpiredCertificate(certificate: CertificateItem, now: number =
     return certificate.notAfter != null && new Date(certificate.notAfter).getTime() < now;
 }
 
-// Only ValidUser certificates carry per-database permissions; higher clearances have
-// implicit access to everything, so there is nothing for the edit dialog to manage.
+// Quill manages Operator and ValidUser certificates; cluster-level clearances
+// (ClusterAdmin, ClusterNode) stay read-only here.
 export function isEditableCertificate(certificate: CertificateItem): boolean {
-    return certificate.securityClearance === "ValidUser";
+    return certificate.securityClearance === "Operator" || certificate.securityClearance === "ValidUser";
 }
