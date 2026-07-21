@@ -14,7 +14,7 @@ export function createCertificatesService(client: ApiClient) {
             client.get<CertificateItem[], ApiErrorResponse>(API_ENDPOINTS.settings.certificates, { searchParams }),
         generate: (
             permissions: Record<string, DatabaseAccess>,
-            searchParams: { name: string; clearance: SecurityClearance },
+            searchParams: { name: string; clearance: SecurityClearance; password?: string },
         ) =>
             client.post<Blob, ApiErrorResponse>(API_ENDPOINTS.settings.certificatesGenerate, permissions, {
                 responseType: "blob",

@@ -47,9 +47,9 @@ public static class SettingsEndpoints
             .WithName("settings.certificates")
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
 
-        group.MapPost("/certificates/generate", async (IDocumentStore store, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, CancellationToken token) =>
+        group.MapPost("/certificates/generate", async (IDocumentStore store, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string? password, CancellationToken token) =>
             {
-                var op = new CreateClientCertificateOperation(name, permissions, clearance);
+                var op = new CreateClientCertificateOperation(name, permissions, clearance, password);
                 var fileBytes = await store.Maintenance.Server.SendAsync(op, token);
                 return Results.File(fileBytes.RawData, "application/octet-stream", $"{name}_certificates.zip");
             })
