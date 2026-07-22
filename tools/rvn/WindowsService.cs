@@ -7,7 +7,6 @@ using System.Linq;
 using System.ServiceProcess;
 using System.Text.RegularExpressions;
 using System.Threading;
-using DasMulli.Win32.ServiceUtils;
 
 namespace rvn
 {
@@ -43,6 +42,8 @@ namespace rvn
 
             private const uint ErrorAccessIsDenied = 0x00000005;
 
+            private const string LocalServiceAccountName = @"NT AUTHORITY\LocalService";
+
             private readonly string _serviceName;
             private readonly string _username;
             private readonly string _password;
@@ -68,57 +69,113 @@ namespace rvn
                 ServiceController serviceController, string ravenServerDir, List<string> serviceArgs, int counter = 0)
             {
                 var serviceName = _serviceName;
+                var normalizedServiceName = NormalizeServiceName(serviceName);
                 var serviceCommand = GetServiceCommand(ravenServerDir, serviceArgs);
                 var serviceDesc = WindowServiceDescription;
 
-                try
+                var createArgs = new List<string>
                 {
-                    var credentials = Win32ServiceCredentials.LocalService;
-                    if (string.IsNullOrWhiteSpace(_username) == false)
-                        credentials = new Win32ServiceCredentials(_username, _password);
+                    "create", normalizedServiceName,
+                    "type=", "own",
+                    "start=", "auto",
+                    "error=", "normal",
+                    "binPath=", serviceCommand,
+                    "DisplayName=", serviceName
+                };
 
-                    new Win32ServiceManager().CreateService(new ServiceDefinition(NormalizeServiceName(serviceName), serviceCommand)
-                    {
-                        DisplayName = serviceName,
-                        Description = serviceDesc,
-                        Credentials = credentials,
-                        AutoStart = true,
-                        DelayedAutoStart = false,
-                        ErrorSeverity = ErrorSeverity.Normal
-                    });
+                if (string.IsNullOrWhiteSpace(_username))
+                {
+                    createArgs.Add("obj=");
+                    createArgs.Add(LocalServiceAccountName);
+                }
+                else
+                {
+                    createArgs.Add("obj=");
+                    createArgs.Add(_username);
+                    createArgs.Add("password=");
+                    createArgs.Add(_password ?? string.Empty);
+                }
 
-                    Console.WriteLine($"Service {ServiceFullName} has been registered.");
-                }
-                catch (Win32Exception e) when (e.NativeErrorCode == ErrorServiceExists)
-                {
-                    Console.WriteLine($"Service {ServiceFullName} already exists. Reinstalling...");
-                    Reinstall(serviceController, ravenServerDir, serviceArgs);
-                }
-                catch (Win32Exception e) when (e.NativeErrorCode == ErrorServiceMarkedForDeletion)
-                {
-                    if (counter < 10)
-                    {
-                        Console.WriteLine($"Service {ServiceFullName} has been marked for deletion. Performing {counter + 1} installation attempt.");
+                var result = RunServiceControlTool(createArgs.ToArray());
 
-                        Thread.Sleep(1000);
-                        counter++;
+                switch ((uint)result.ExitCode)
+                {
+                    case 0:
+                        var descriptionResult = RunServiceControlTool("description", normalizedServiceName, serviceDesc);
+                        if (descriptionResult.ExitCode != 0)
+                            Console.WriteLine($"Service {ServiceFullName} was registered, but its description could not be set: { FormatServiceControlToolError(descriptionResult) }");
 
-                        InstallInternal(serviceController, ravenServerDir, serviceArgs, counter);
-                    }
-                }
-                catch (Win32Exception e) when (e.NativeErrorCode == ErrorAccessIsDenied)
-                {
-                    Console.WriteLine($"Cannot register service {ServiceFullName} due to insufficient privileges. Please use Administrator account to install the service.");
-                }
-                catch (Win32Exception e)
-                {
-                    Console.WriteLine($"Cannot register service {ServiceFullName}: { FormatWin32ErrorMessage(e) }");
+                        Console.WriteLine($"Service {ServiceFullName} has been registered.");
+                        break;
+
+                    case ErrorServiceExists:
+                        Console.WriteLine($"Service {ServiceFullName} already exists. Reinstalling...");
+                        Reinstall(serviceController, ravenServerDir, serviceArgs);
+                        break;
+
+                    case ErrorServiceMarkedForDeletion:
+                        if (counter < 10)
+                        {
+                            Console.WriteLine($"Service {ServiceFullName} has been marked for deletion. Performing {counter + 1} installation attempt.");
+
+                            Thread.Sleep(1000);
+                            counter++;
+
+                            InstallInternal(serviceController, ravenServerDir, serviceArgs, counter);
+                        }
+                        break;
+
+                    case ErrorAccessIsDenied:
+                        Console.WriteLine($"Cannot register service {ServiceFullName} due to insufficient privileges. Please use Administrator account to install the service.");
+                        break;
+
+                    default:
+                        Console.WriteLine($"Cannot register service {ServiceFullName}: { FormatServiceControlToolError(result) }");
+                        break;
                 }
             }
 
             private static string FormatWin32ErrorMessage(Win32Exception exception)
             {
                 return $"{exception.Message} (ERROR CODE 0x{exception.NativeErrorCode:x8}).";
+            }
+
+            private static string FormatServiceControlToolError((int ExitCode, string Output) result)
+            {
+                var message = string.IsNullOrWhiteSpace(result.Output) ? "sc.exe reported a failure." : result.Output;
+                return $"{message} (ERROR CODE 0x{result.ExitCode:x8}).";
+            }
+
+            // The .NET BCL exposes no managed API to create/delete a Windows service, so register
+            // and unregister shell out to sc.exe (the tool ships in %SystemRoot%\System32). sc.exe
+            // returns the underlying Win32 error code as its process exit code, which lets the
+            // callers branch on the same ERROR_* codes used elsewhere in this file.
+            private static (int ExitCode, string Output) RunServiceControlTool(params string[] arguments)
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                foreach (var argument in arguments)
+                    startInfo.ArgumentList.Add(argument);
+
+                using (var process = Process.Start(startInfo))
+                {
+                    var output = process.StandardOutput.ReadToEnd();
+                    var error = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    var combined = string.Join(
+                        Environment.NewLine,
+                        new[] { output, error }.Where(part => string.IsNullOrWhiteSpace(part) == false));
+
+                    return (process.ExitCode, combined.Trim());
+                }
             }
 
             private static string NormalizeServiceName(string serviceName)
@@ -161,18 +218,21 @@ namespace rvn
                     }
                 }
 
-                try
+                var result = RunServiceControlTool("delete", NormalizeServiceName(_serviceName));
+
+                switch ((uint)result.ExitCode)
                 {
-                    new Win32ServiceManager().DeleteService(NormalizeServiceName(_serviceName));
-                    Console.WriteLine($"Service {ServiceFullName} has been unregistered.");
-                }
-                catch (Win32Exception exception) when (exception.NativeErrorCode == ErrorAccessIsDenied)
-                {
-                    Console.WriteLine($"Cannot unregister service {ServiceFullName} due to insufficient privileges. Please use Administrator account to uninstall the service.");
-                }
-                catch (Win32Exception exception)
-                {
-                    Console.WriteLine($"Cannot unregister service {ServiceFullName}: { FormatWin32ErrorMessage(exception) }");
+                    case 0:
+                        Console.WriteLine($"Service {ServiceFullName} has been unregistered.");
+                        break;
+
+                    case ErrorAccessIsDenied:
+                        Console.WriteLine($"Cannot unregister service {ServiceFullName} due to insufficient privileges. Please use Administrator account to uninstall the service.");
+                        break;
+
+                    default:
+                        Console.WriteLine($"Cannot unregister service {ServiceFullName}: { FormatServiceControlToolError(result) }");
+                        break;
                 }
             }
 
@@ -251,8 +311,8 @@ namespace rvn
                     else
                         serverDir = serverDirInfo.FullName;
 
-                    var serviceCommandResult = Path.Combine(serverDirInfo.FullName, "Raven.Server.exe");
-                    if (File.Exists(serviceCommandResult) == false)
+                    var serverExecutable = Path.Combine(serverDirInfo.FullName, "Raven.Server.exe");
+                    if (File.Exists(serverExecutable) == false)
                     {
                         throw new ArgumentException($"Could not find RavenDB Server executable under {serverDirInfo.FullName}.");
                     }
@@ -263,9 +323,9 @@ namespace rvn
                         argsForService.Add($"\"{_serviceName}\"");
                     }
 
-                    serviceCommandResult = $"{serviceCommandResult} {string.Join(" ", argsForService)}";
-
-                    return serviceCommandResult;
+                    // Quote the executable path so the SCM ImagePath parses the exe correctly even
+                    // when the installation directory contains spaces.
+                    return $"\"{serverExecutable}\" {string.Join(" ", argsForService)}";
                 }
             }
 

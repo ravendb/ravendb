@@ -21,7 +21,6 @@
     <PackageVersion Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.9.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.16.0" />
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
-    <PackageVersion Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="9.5.3" />
     <PackageVersion Include="FluentFTP" Version="55.0.0" />
     <PackageVersion Include="FubarDev.FtpServer" Version="3.1.2" />
