@@ -2,6 +2,7 @@ import { api } from "@/api/api";
 import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { parseRawTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/raw-tables";
+import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { useFormContext } from "react-hook-form";
@@ -12,6 +13,7 @@ function computeMapTablesKey(tables: AppFormData["mapTables"]["tables"]): string
 
 export function useMapTablesStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
+    const applyMapTables = useApplyMapTables();
 
     return async () => {
         const store = useSetupWizardStore.getState();
@@ -20,10 +22,7 @@ export function useMapTablesStep() {
         // error throws here so the wizard blocks "Next" and surfaces the message instead of advancing
         // with stale form data.
         if (store.isMapTablesRawView) {
-            setValue("mapTables.tables", parseRawTablesToForm(store.mapTablesRawContent), {
-                shouldDirty: true,
-                shouldValidate: true,
-            });
+            applyMapTables(parseRawTablesToForm(store.mapTablesRawContent));
             store.closeMapTablesRawView();
         }
 

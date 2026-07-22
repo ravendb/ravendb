@@ -15,10 +15,12 @@ import {
 import { TableEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/table-editor";
 import { TablesExplorer } from "@/pages/setup/add-app-wizard/steps/map-tables/tables-explorer";
 import { UnmappedTablesAlert } from "@/pages/setup/add-app-wizard/steps/map-tables/unmapped-tables-alert";
+import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 
 export function MapTablesStep() {
     const { control, getValues, setValue } = useFormContext<AppFormData>();
     const { errors } = useFormState({ control, name: "mapTables.tables" });
+    const applyMapTables = useApplyMapTables();
 
     const isRawView = useSetupWizardStore((state) => state.isMapTablesRawView);
     const rawContent = useSetupWizardStore((state) => state.mapTablesRawContent);
@@ -36,8 +38,7 @@ export function MapTablesStep() {
         }
 
         try {
-            const tables = parseRawTablesToForm(rawContent);
-            setValue("mapTables.tables", tables, { shouldDirty: true, shouldValidate: true });
+            applyMapTables(parseRawTablesToForm(rawContent));
             closeRawView();
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "The raw configuration could not be applied.");
@@ -52,7 +53,7 @@ export function MapTablesStep() {
         const tables = tryParseRawTablesToForm(value);
 
         if (tables) {
-            setValue("mapTables.tables", tables, { shouldDirty: true });
+            setValue("mapTables.tables", tables);
         }
     };
 
