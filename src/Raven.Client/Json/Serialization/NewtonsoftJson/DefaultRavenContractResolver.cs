@@ -154,6 +154,16 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             return true;
         }
 
+        protected override IValueProvider CreateMemberValueProvider(MemberInfo member)
+        {
+            // Newtonsoft.Json 13.0.4 switched .NET 6+ to the IL-emitting DynamicValueProvider ("Avoid LINQ expression
+            // trees in .NET 6+ reflection"), which throws NullReferenceException when a null JSON value is assigned to
+            // a non-nullable value-type member. The expression-tree provider assigns default(T) instead - the pre-13.0.4
+            // behavior that we rely on (e.g. TimeSeriesRangeAggregation.From/To) and the behavior Newtonsoft restores
+            // in 13.0.5 (https://github.com/JamesNK/Newtonsoft.Json/pull/3091).
+            return new ExpressionValueProvider(member);
+        }
+
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
             var property = base.CreateProperty(member, memberSerialization);
