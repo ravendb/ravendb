@@ -155,7 +155,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (results.Count is 0)
             return 0;
 
-        List<Exception> exceptions = null;
+        List<Exception> exceptions;
 
         // Prevent database unloading during long-running AI operations
         using (Database.PreventFromUnloadingByIdleOperations())
@@ -164,7 +164,21 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             exceptions = SendToModel(results, context, scope, CancellationToken);
         }
 
-            failedStep = TaskErrorStep.Persistence;
+        var batch = AnalyzeAttemptedBatch(results);
+
+        if (batch.AllAttemptedFailedNonDeterministically)
+        {
+            LoadErrorStep = TaskErrorStep.ModelInference;
+            _maxConcurrency = 1;
+
+            if (exceptions?.Count > 0)
+                throw new AggregateException(exceptions).ExtractSingleInnerException();
+
+            throw new InvalidOperationException("The whole attempted GenAI batch failed without a captured exception.");
+        }
+
+        try
+        {
             using (EnterLoadStep(TaskErrorStep.Persistence))
             {
                 ApplyUpdateScript(results, scope);
@@ -172,7 +186,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
         catch
         {
-            LoadErrorStep = failedStep;
+            // EnterLoadStep restores LoadErrorStep to the previous step on dispose during the exception unwind,
+            // so re-assert the failing step here (after the scope has unwound) to attribute persistence failures
+            // correctly instead of losing them to the restored step.
+            LoadErrorStep = TaskErrorStep.Persistence;
             throw;
         }
 
