@@ -94,6 +94,8 @@ namespace Raven.Server.ServerWide.Maintenance
             }, null, ThreadNames.ForClusterObserver($"Cluster observer for term {_term}", _term));
         }
 
+        private static readonly int ClusterTransactionsCleanupBatchSize = PlatformDetails.Is32Bits ? 1 * 1024 : 10 * 1024;
+
         public bool Suspended = false; // don't really care about concurrency here
         internal long _iteration;
         private readonly long _term;
@@ -841,8 +843,7 @@ namespace Raven.Server.ServerWide.Maintenance
             // backlog (e.g. millions of entries) in a single transaction. Capping the target also advances the
             // cleanup command id each round (it is derived from this value), so the observer keeps re-issuing the
             // cleanup until 'commandCount' is reached.
-            var batchSize = PlatformDetails.Is32Bits ? 1 * 1024 : 10 * 1024;
-            return Math.Min(commandCount, truncatedCount + batchSize);
+            return Math.Min(commandCount, truncatedCount + ClusterTransactionsCleanupBatchSize);
         }
 
         private static bool AllDatabaseNodesHasReport(DatabaseObservationState state)
