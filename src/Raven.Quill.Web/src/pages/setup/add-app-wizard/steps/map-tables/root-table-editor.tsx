@@ -2,6 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { AddNestedTableButtons } from "@/pages/setup/add-app-wizard/steps/map-tables/add-nested-table-buttons";
 import { AdvancedSettings } from "@/pages/setup/add-app-wizard/steps/map-tables/advanced-settings";
 import { FieldMappingEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/field-mapping-editor";
 import type { RootTablePath } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
@@ -46,6 +47,7 @@ export function RootTableEditor({ path }: { path: RootTablePath }) {
                 addButtonLabel="Add primary key column"
                 description="Columns that uniquely identify each source row. Their values derive the document ID."
             />
+            <AddNestedTableButtons path={path} />
             <FieldMappingEditor path={path} />
             <AdvancedSettings path={path} />
         </div>
