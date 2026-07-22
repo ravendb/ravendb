@@ -64,9 +64,9 @@ export function Login() {
                     <FormInput
                         control={control}
                         name="apiKey"
-                        label="API key"
+                        label="Dashboard API key"
                         type="password"
-                        placeholder="Operator API key"
+                        placeholder="QUILLDASH-..."
                         autoComplete="off"
                         autoFocus
                         spellCheck={false}
