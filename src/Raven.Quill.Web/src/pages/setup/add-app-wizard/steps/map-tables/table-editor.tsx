@@ -9,7 +9,8 @@ import {
     BreadcrumbSeparator,
 } from "@/components/shadcn/ui/breadcrumb";
 import { Alert } from "@/components/shadcn/ui/alert";
-import { Button } from "@/components/shadcn/ui/button";
+import { Label } from "@/components/shadcn/ui/label";
+import { Switch } from "@/components/shadcn/ui/switch";
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -50,7 +51,7 @@ function ActiveTableEditor({ activeTable }: { activeTable: MapActiveTable }) {
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="border-b px-3 py-2">
+            <div className="flex items-center justify-between gap-3 border-b px-3 py-2">
                 <Breadcrumb>
                     <BreadcrumbList>
                         {breadcrumbItems.map((item, idx) => (
@@ -71,18 +72,23 @@ function ActiveTableEditor({ activeTable }: { activeTable: MapActiveTable }) {
                         ))}
                     </BreadcrumbList>
                 </Breadcrumb>
+                {activeTable.type === "root" && (
+                    <div className="flex shrink-0 items-center gap-2">
+                        <Label htmlFor="root-table-enabled-switch" className="text-muted-foreground">
+                            Enabled
+                        </Label>
+                        <Switch
+                            id="root-table-enabled-switch"
+                            checked={!isRootTableDisabled}
+                            onCheckedChange={() => tableActions.toggleRootTableDisabled(rootTablePath)}
+                        />
+                    </div>
+                )}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
                 {isRootTableDisabled && (
                     <Alert className="mb-4 flex flex-row items-center justify-between gap-3">
-                        <span>This table is disabled and will be skipped during ingest.</span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => tableActions.toggleRootTableDisabled(rootTablePath)}
-                        >
-                            Enable
-                        </Button>
+                        This table is disabled and will be skipped.
                     </Alert>
                 )}
                 <fieldset disabled={isRootTableDisabled} className={cn(isRootTableDisabled && "opacity-60")}>
