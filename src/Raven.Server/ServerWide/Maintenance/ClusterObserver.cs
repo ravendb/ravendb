@@ -839,10 +839,6 @@ namespace Raven.Server.ServerWide.Maintenance
             if (commandCount <= truncatedCount)
                 return null;
 
-            // Delete the cluster transaction commands in bounded batches instead of removing a potentially huge
-            // backlog (e.g. millions of entries) in a single transaction. Capping the target also advances the
-            // cleanup command id each round (it is derived from this value), so the observer keeps re-issuing the
-            // cleanup until 'commandCount' is reached.
             return Math.Min(commandCount, truncatedCount + ClusterTransactionsCleanupBatchSize);
         }
 
