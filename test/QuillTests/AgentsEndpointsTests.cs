@@ -6,9 +6,9 @@ using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
@@ -80,12 +80,15 @@ public class AgentsEndpointsTests(ITestOutputHelper output) : RavenTestBase(outp
     private static async Task SeedAgentAsync(
         IDocumentStore store, string database, string name, string connectionStringName, string model)
     {
-        await store.Maintenance.ForDatabase(database).SendAsync(
-            new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+        await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(
+            new ServerWideConnectionString
             {
-                Name = connectionStringName,
-                ModelType = AiModelType.Chat,
-                OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Model = model },
+                ConnectionString = new AiConnectionString
+                {
+                    Name = connectionStringName,
+                    ModelType = AiModelType.Chat,
+                    OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Model = model },
+                }
             }));
 
         await store.AI.ForDatabase(database).CreateAgentAsync(new AiAgentConfiguration

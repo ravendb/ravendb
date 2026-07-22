@@ -31,6 +31,9 @@ builder.WebHost.UseUrls(listenUrl);
 // enums as string names so operators can paste Studio JSON
 builder.Services.ConfigureHttpJsonOptions(static options =>
 {
+    // message role lowercased ("assistant"/"user") for the FE + embed-widget contract; other enums stay PascalCase
+    options.SerializerOptions.Converters.Add(
+        new JsonStringEnumConverter<Raven.Client.Documents.Operations.AI.Agents.AiMessageRole>(JsonNamingPolicy.CamelCase));
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 

@@ -3,6 +3,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
@@ -11,14 +12,9 @@ namespace Raven.Quill.Endpoints;
 
 public static class AiConnectionStringsEndpoints
 {
-    private static readonly JsonSerializerOptions DetailResponseJsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        IgnoreReadOnlyProperties = true,
-    };
-
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/apps/{slug}/ai/connection-strings").RequireAuthorization();
+        var group = app.MapGroup("/api/ai/connection-strings").RequireAuthorization();
         group.MapPost("/", PostAsync)
             .WithName("aiConnectionStrings.create")
             .Accepts<AiConnectionString>("application/json")
@@ -27,7 +23,7 @@ public static class AiConnectionStringsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapGet("/", ListAsync)
             .WithName("aiConnectionStrings.list")
-            .Produces<AiConnectionStringListResponse>()
+            .Produces<List<AiConnectionString>>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
         group.MapGet("/{name}", GetByNameAsync)
             .WithName("aiConnectionStrings.detail")
@@ -40,104 +36,120 @@ public static class AiConnectionStringsEndpoints
             .Produces<AiConnectionStringDeleteConflictResponse>(StatusCodes.Status409Conflict);
     }
 
+    public sealed class AiModelsRequest
+    {
+        public static AiModelsRequest From(AiConnectionString connection)
+        {
+            switch (connection.GetActiveProvider())
+            {
+                case AiConnectorType.OpenAi:
+                    return new AiModelsRequest
+                    {
+                        ConnectorType = AiConnectorType.OpenAi,
+                        OpenAiSettings = connection.OpenAiSettings
+                    };
+                case AiConnectorType.AzureOpenAi:
+                    return new AiModelsRequest
+                    {
+                        ConnectorType = AiConnectorType.AzureOpenAi,
+                        AzureOpenAiSettings = connection.AzureOpenAiSettings
+                    };
+                case AiConnectorType.Ollama:
+                    return new AiModelsRequest
+                    {
+                        ConnectorType = AiConnectorType.Ollama,
+                        OllamaSettings = connection.OllamaSettings
+                    };
+                case AiConnectorType.Google:
+                    return new AiModelsRequest
+                    {
+                        ConnectorType = AiConnectorType.Google,
+                        GoogleSettings = connection.GoogleSettings
+                    };
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        public AiConnectorType ConnectorType { get; set; }
+
+        public OllamaSettings? OllamaSettings { get; set; }
+
+        public OpenAiSettings? OpenAiSettings { get; set; }
+
+        public AzureOpenAiSettings? AzureOpenAiSettings { get; set; }
+
+        public GoogleSettings? GoogleSettings { get; set; }
+    }
+
     private static async Task<IResult> DeleteAsync(
-        string slug,
         string name,
         IDocumentStore store,
         ILogger<AiConnectionStringsLogger> logger,
         CancellationToken ct)
     {
-        var app = await AppLookup.LoadAppAsync(store, slug, ct);
 
-        if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+        var existing = await store.Maintenance.Server
+            .SendAsync(new GetServerWideConnectionStringsOperation(name, ConnectionStringType.Ai), ct);
 
-        var existing = await store.Maintenance.ForDatabase(app.Database)
-            .SendAsync(new GetConnectionStringsOperation(name, ConnectionStringType.Ai), ct);
-
-        if (existing.AiConnectionStrings is null || existing.AiConnectionStrings.ContainsKey(name) == false)
+        if (existing is null || existing.Results.Count == 0)
             return Results.NotFound(new ApiErrorResponse($"connection string '{name}' not found"));
 
-        var agents = await store.Maintenance.ForDatabase(app.Database)
-            .SendAsync(new GetAiAgentsOperation(), ct);
-
-        var referencing = (agents.AiAgents ?? [])
-            .Where(a => string.Equals(a.ConnectionStringName, name, StringComparison.Ordinal))
-            .Select(a => a.Identifier)
-            .ToArray();
+        var usedBy = existing.Results.Single().UsedBy;
 
         // block delete: an agent still references this CS (would orphan it)
-        if (referencing.Length > 0)
+        if (usedBy.Count > 0)
         {
             return Results.Conflict(new AiConnectionStringDeleteConflictResponse(
                 $"connection string '{name}' is referenced by agent(s); remove them first",
-                referencing));
+                usedBy.Select(used => $"App:{used.DatabaseName}, ID: {used.Identifier}, Kind: {used.Kind}").ToArray()));
         }
 
-        await store.Maintenance.ForDatabase(app.Database)
-            .SendAsync(new RemoveConnectionStringOperation<AiConnectionString>(new AiConnectionString { Name = name }), ct);
+        await store.Maintenance.Server
+            .SendAsync(new RemoveServerWideConnectionStringOperation<AiConnectionString>(new AiConnectionString { Name = name }), ct);
 
-        logger.LogInformation("Deleted AI connection string slug={Slug} name={Name}", app.Slug, name);
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Deleted AI connection string name={Name}", name);
+
         return Results.NoContent();
     }
 
     private static async Task<IResult> GetByNameAsync(
-        string slug,
         string name,
         IDocumentStore store,
         CancellationToken ct)
     {
-        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        var result = await store.Maintenance.Server
+            .SendAsync(new GetServerWideConnectionStringsOperation(name, ConnectionStringType.Ai), ct);
 
-        if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
-
-        var result = await store.Maintenance.ForDatabase(app.Database)
-            .SendAsync(new GetConnectionStringsOperation(name, ConnectionStringType.Ai), ct);
-
-        if (result.AiConnectionStrings is null || result.AiConnectionStrings.TryGetValue(name, out var cs) == false)
+        if (result is null || result.Results.Count == 0)
             return Results.NotFound(new ApiErrorResponse($"connection string '{name}' not found"));
 
-        return Results.Json(cs, DetailResponseJsonOptions);
+        var connectionString = result.Results.SingleOrDefault()?.ConnectionString as AiConnectionString;
+        if (connectionString is null)
+            return Results.NotFound(new ApiErrorResponse($"connection string '{name}' not found"));
+
+
+        return Results.Ok(connectionString);
     }
 
     private static async Task<IResult> ListAsync(
-        string slug,
         IDocumentStore store,
         CancellationToken ct)
     {
-        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        var r = await store.Maintenance.Server
+            .SendAsync(new GetServerWideConnectionStringsOperation(), ct);
 
-        if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
-
-        var result = await store.Maintenance.ForDatabase(app.Database)
-            .SendAsync(new GetConnectionStringsOperation(), ct);
-
-        var items = (result.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
-            .Values
-            .Select(cs => new AiConnectionStringListItemResponse(
-                cs.Name,
-                cs.Identifier,
-                cs.ModelType,
-                cs.GetActiveProvider()))
-            .ToArray();
-
-        return Results.Ok(new AiConnectionStringListResponse(items));
+        var results = r.Results.Select(c => c.ConnectionString).OfType<AiConnectionString>().ToList();
+        return Results.Ok(results);
     }
 
     private static async Task<IResult> PostAsync(
-        string slug,
         AiConnectionString body,
         IDocumentStore store,
         ILogger<AiConnectionStringsLogger> logger,
         CancellationToken ct)
     {
-        var app = await AppLookup.LoadAppAsync(store, slug, ct);
-
-        if (app is null)
-            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
-
         if (body is null || string.IsNullOrWhiteSpace(body.Name))
             return Results.BadRequest(new ApiErrorResponse("name is required"));
 
@@ -155,12 +167,17 @@ public static class AiConnectionStringsEndpoints
         if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
             return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));
 
-        await store.Maintenance.ForDatabase(app.Database)
-            .SendAsync(new PutConnectionStringOperation<AiConnectionString>(connectionString), ct);
+        var serverWideConnection = new ServerWideConnectionString
+        {
+            ConnectionString = connectionString,
+        };
 
-        logger.LogInformation(
-            "Created AI connection string slug={Slug} name={Name} provider={Provider}",
-            app.Slug, connectionString.Name, connectionString.GetActiveProvider());
+        await store.Maintenance.Server
+            .SendAsync(new PutServerWideConnectionStringOperation(serverWideConnection), ct);
+
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation(
+                "Created AI connection string name={Name} provider={Provider}", connectionString.Name, connectionString.GetActiveProvider());
 
         return Results.Ok(new AiConnectionStringCreatedResponse(connectionString.Name));
     }

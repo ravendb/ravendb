@@ -553,7 +553,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : RavenTestBase(output)
 
     private static async Task<string> ProvisionParamAgentChannelAsync(HttpClient client, string slug)
     {
-        var csResp = await client.PostAsJsonAsync($"/api/apps/{slug}/ai/connection-strings",
+        var csResp = await client.PostAsJsonAsync($"/api/ai/connection-strings",
             new { name = "param-llm", identifier = "param-llm", modelType = "Chat", ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" } });
         Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
 

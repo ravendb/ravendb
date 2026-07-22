@@ -176,7 +176,7 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, app.Database, body, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, body, ct);
         if (validationError is not null)
             return validationError;
 

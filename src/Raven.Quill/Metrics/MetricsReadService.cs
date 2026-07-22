@@ -7,6 +7,8 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Quill.Agents;
 using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -158,8 +160,9 @@ internal static class MetricsReadService
                 cdcWrites.Select(p => (double)p.Writes).ToArray()));
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
-        var modelByConnectionString = (record.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
-            .ToDictionary(p => p.Key, p => AiConnectionStringModel.Resolve(p.Value), StringComparer.OrdinalIgnoreCase);
+        
+        var modelByConnectionString = await ModelByConnectionStringAsync(store, ct);
+
         var modelByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var nameByAgent = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var agent in record.AiAgents ?? [])
@@ -204,6 +207,14 @@ internal static class MetricsReadService
             CdcWrites: cdcWrites,
             TopTables: topTables,
             TopCapabilities: topCapabilities);
+    }
+
+    public static async Task<Dictionary<string, string>> ModelByConnectionStringAsync(IDocumentStore store, CancellationToken ct)
+    {
+        var connectionStrings = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation(), ct);
+        return connectionStrings.Results
+            .Select(c => c.ConnectionString).OfType<AiConnectionString>()
+            .ToDictionary(cs => cs.Name, AiConnectionStringModel.Resolve, StringComparer.OrdinalIgnoreCase)!;
     }
 
     private const string TimeAxisKey = "t";
@@ -563,7 +574,10 @@ internal static class MetricsReadService
             ?? new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
         var channelName = await ChannelNameAsync(session, preview.ChannelId, ct);
 
-        return BuildDto(result, slug, preview, channelName, nowUtc);
+        var config = await AgentLookup.FindAsync(store, database, result.Agent, ct);
+        var replyField = AgentOutputShape.ResolveReplyField(config) ?? AgentOutputShape.DefaultReplyField;
+
+        return BuildDto(result, slug, preview, channelName, replyField, nowUtc);
     }
 
     private static async Task<string> ChannelNameAsync(IAsyncDocumentSession session, string channelId, CancellationToken ct)
@@ -583,26 +597,36 @@ internal static class MetricsReadService
     {
         var prms = p.Parameters.Select(kv => new ConversationParam(kv.Key, kv.Value)).ToArray();
         var at = Utc(p.LastMessageAt);
-        ConversationTurn[] lastExchange =
+        AiConversationMessage[] lastExchange =
         [
-            new("agent", p.LastAgentReply, at),
-            new("user", p.LastUserPrompt, at),
+            new()
+            {
+                Role = AiMessageRole.Assistant,
+                Content = p.LastAgentReply,
+                Timestamp = at
+            },
+            new()
+            {
+                Role = AiMessageRole.User,
+                Content = p.LastUserPrompt,
+                Timestamp = at
+            }
         ];
         return MakeDto(p.ConversationId, slug, channelName, p.Agent, prms, lastExchange, transcript: null,
             p.LastMessageAt, p.CreatedAt, nowUtc);
     }
 
-    private static ConversationDto BuildDto(AiConversationMessagesResult result, string slug, ConversationPreview preview, string channelName, DateTime nowUtc)
+    private static ConversationDto BuildDto(AiConversationMessagesResult result, string slug, ConversationPreview preview, string channelName, string replyField, DateTime nowUtc)
     {
         var previewDto = BuildPreviewDto(preview, slug, channelName, nowUtc);
-        var transcript = MapTranscript(result.Messages);
+        var transcript = MapTranscript(result.Messages, replyField);
         return MakeDto(result.ConversationId, slug, channelName, result.Agent, previewDto.Params, previewDto.LastExchange, transcript,
             result.LastMessageAt, result.CreatedAt, nowUtc);
     }
 
     private static ConversationDto MakeDto(
         string id, string slug, string channelName, string agent,
-        ConversationParam[] parameters, ConversationTurn[] lastExchange, ConversationTurn[]? transcript,
+        ConversationParam[] parameters, AiConversationMessage[] lastExchange, AiConversationMessage[] transcript,
         DateTime lastMessageAt, DateTime createdAt, DateTime nowUtc)
     {
         var age = nowUtc - lastMessageAt;
@@ -624,52 +648,43 @@ internal static class MetricsReadService
         return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
     }
 
-    // FE wire-contract values, not the enum names (nameof would break the contract)
-    private static string RoleLabel(AiMessageRole role) => role == AiMessageRole.Assistant ? "agent" : "user";
-
-    internal static ConversationTurn[] MapTranscript(IEnumerable<AiConversationMessage> messages) =>
-        messages
-            .Where(m => (m.Role is AiMessageRole.Assistant or AiMessageRole.User) && string.IsNullOrWhiteSpace(m.Content) == false)
-            .Select(m => new ConversationTurn(RoleLabel(m.Role), ReplyText(m.Content), Utc(m.Timestamp)))
-            .ToArray();
-
-    private static string ReplyText(string content)
+    internal static AiConversationMessage[] MapTranscript(IEnumerable<AiConversationMessage> messages, string replyField)
     {
-        try
+        var turns = new List<AiConversationMessage>();
+        foreach (var m in messages)
         {
-            using var json = JsonDocument.Parse(content);
-            if (json.RootElement.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+            switch (m.Role)
             {
-                var text = ExtractText(json.RootElement);
-                return string.IsNullOrEmpty(text) ? content : text;
+                case AiMessageRole.System:
+                case AiMessageRole.Summary:
+                case AiMessageRole.Internal:
+                    continue;
+                case AiMessageRole.User:
+                    break;
+                case AiMessageRole.Assistant:
+                    if (string.IsNullOrEmpty(m.Content))
+                        break;
+
+                    if (string.IsNullOrEmpty(replyField) == false)
+                    {
+                        try
+                        {
+                            var answer = JsonSerializer.Deserialize<Dictionary<string, object>>(m.Content);
+                            m.Content = AgentOutputShape.ExtractReplyText(answer, replyField);
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
+
+                    break;
+                default:
+                    continue;
             }
+            turns.Add(m);
         }
-        catch (JsonException)
-        {
-            /* not JSON — plain text */
-        }
-
-        return content;
-    }
-
-    private static string ExtractText(JsonElement el) => el.ValueKind switch
-    {
-        JsonValueKind.String => el.GetString() ?? "",
-        JsonValueKind.Array => string.Concat(el.EnumerateArray().Select(ExtractText)),
-        JsonValueKind.Object => ObjectText(el),
-        _ => "",
-    };
-
-    private static string ObjectText(JsonElement o)
-    {
-        if (o.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
-            return t.GetString() ?? "";
-        if (o.TryGetProperty("reply", out var r) && r.ValueKind == JsonValueKind.String)
-            return r.GetString() ?? "";
-        foreach (var p in o.EnumerateObject())
-            if (p.Value.ValueKind == JsonValueKind.String && p.Value.GetString() is { Length: > 0 } s)
-                return s;
-        return "";
+        return turns.ToArray();
     }
 
     internal static async Task<List<App>> LoadAllAppsAsync(IDocumentStore store, CancellationToken ct)

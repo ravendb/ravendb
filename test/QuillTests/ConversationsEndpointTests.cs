@@ -47,10 +47,10 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         Assert.Equal("active", first.GetProperty("state").GetString());          // 10 min ago
         var firstExchange = first.GetProperty("lastExchange");                   // last-exchange preview, newest first
         Assert.Equal(2, firstExchange.GetArrayLength());
-        Assert.Equal("agent", firstExchange[0].GetProperty("role").GetString());
-        Assert.Equal("hi there", firstExchange[0].GetProperty("text").GetString());
+        Assert.Equal("assistant", firstExchange[0].GetProperty("role").GetString());
+        Assert.Equal("hi there", firstExchange[0].GetProperty("content").GetString());
         Assert.Equal("user", firstExchange[1].GetProperty("role").GetString());
-        Assert.Equal("hello", firstExchange[1].GetProperty("text").GetString());
+        Assert.Equal("hello", firstExchange[1].GetProperty("content").GetString());
         Assert.Equal(JsonValueKind.Null, first.GetProperty("transcript").ValueKind);
         Assert.Equal("wgt1", first.GetProperty("channelName").GetString());      // attributed via the preview's ChannelId (no display name → bare widget-id label)
 
@@ -62,7 +62,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         var transcript = detail.GetProperty("transcript");
         Assert.Equal(2, transcript.GetArrayLength());
         Assert.Equal("user", transcript[0].GetProperty("role").GetString());
-        Assert.Equal("hello", transcript[0].GetProperty("text").GetString());
+        Assert.Equal("hello", transcript[0].GetProperty("content").GetString());
 
         // I1: outbound timestamps are UTC, ISO-8601 with a trailing Z (so the browser parses as UTC).
         Assert.EndsWith("Z\"", detail.GetProperty("lastActivityAt").GetRawText());
@@ -126,10 +126,10 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
 
         var exchange = list[0].GetProperty("lastExchange");
         Assert.Equal(2, exchange.GetArrayLength());
-        Assert.Equal("agent", exchange[0].GetProperty("role").GetString());
-        Assert.Equal("m14", exchange[0].GetProperty("text").GetString());
+        Assert.Equal("assistant", exchange[0].GetProperty("role").GetString());
+        Assert.Equal("m14", exchange[0].GetProperty("content").GetString());
         Assert.Equal("user", exchange[1].GetProperty("role").GetString());
-        Assert.Equal("m13", exchange[1].GetProperty("text").GetString());
+        Assert.Equal("m13", exchange[1].GetProperty("content").GetString());
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -150,7 +150,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats%2Frecent");
         var transcript = detail.GetProperty("transcript");
         Assert.Equal(2, transcript.GetArrayLength());
-        Assert.Equal("hello", transcript[0].GetProperty("text").GetString());
+        Assert.Equal("hello", transcript[0].GetProperty("content").GetString());
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -220,11 +220,13 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : ApplianceMet
         var detail = await client.GetFromJsonAsync<JsonElement>("/api/apps/my-app/conversations/chats/real");
         var transcript = detail.GetProperty("transcript");
 
-        // system + tool scaffolding dropped → only user + agent remain.
-        Assert.Equal(2, transcript.GetArrayLength());
+        // system prompt + tool-result scaffolding dropped; user + assistant turns kept,
+        // including the contentless tool-call step (tool calls are now surfaced to the user).
+        Assert.Equal(3, transcript.GetArrayLength());
         Assert.Equal("user", transcript[0].GetProperty("role").GetString());
-        Assert.Equal("hello", transcript[0].GetProperty("text").GetString());
-        Assert.Equal("agent", transcript[1].GetProperty("role").GetString());      // assistant → agent
-        Assert.Equal("hi there", transcript[1].GetProperty("text").GetString());   // array-of-parts extracted, not raw JSON
+        Assert.Equal("hello", transcript[0].GetProperty("content").GetString());
+        Assert.Equal("assistant", transcript[1].GetProperty("role").GetString());      // assistant → agent
+        Assert.Equal("hi there", transcript[1].GetProperty("content").GetString());   // array-of-parts extracted, not raw JSON
+        Assert.Equal("assistant", transcript[2].GetProperty("role").GetString());      // contentless tool-call step, kept
     }
 }

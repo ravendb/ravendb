@@ -430,7 +430,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/ai/connection-strings": {
+    "/api/ai/connection-strings": {
         parameters: {
             query?: never;
             header?: never;
@@ -446,7 +446,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/ai/connection-strings/{name}": {
+    "/api/ai/connection-strings/{name}": {
         parameters: {
             query?: never;
             header?: never;
@@ -956,17 +956,20 @@ export interface components {
             error: string;
             referencingAgentIds: string[];
         };
-        AiConnectionStringListItemResponse: {
-            name: string;
-            identifier: string;
-            modelType: components["schemas"]["AiModelType"];
-            provider: components["schemas"]["AiConnectorType"];
-        };
-        AiConnectionStringListResponse: {
-            items: components["schemas"]["AiConnectionStringListItemResponse"][];
-        };
         /** @enum {unknown} */
         AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
+        AiConversationMessage: {
+            role?: components["schemas"]["AiMessageRole"];
+            content?: null | string;
+            attachments?: null | string[];
+            /** Format: date-time */
+            timestamp?: string;
+            toolCalls?: null | components["schemas"]["AiToolCallResult"][];
+            usage?: components["schemas"]["AiUsage"];
+            subConversationId?: null | string;
+        };
+        /** @enum {unknown} */
+        AiMessageRole: "system" | "user" | "assistant" | "summary" | "internal";
         AiModelsRequest: {
             connectorType?: components["schemas"]["AiConnectorType"];
             openAiSettings?: null | components["schemas"]["OpenAiSettings"];
@@ -979,6 +982,25 @@ export interface components {
         };
         /** @enum {unknown} */
         AiModelType: "TextEmbeddings" | "Chat";
+        AiToolCallResult: {
+            id?: null | string;
+            name?: null | string;
+            arguments?: null | string;
+            result?: null | string;
+            subConversationId?: null | string;
+        };
+        AiUsage: {
+            /** Format: int64 */
+            promptTokens?: number;
+            /** Format: int64 */
+            completionTokens?: number;
+            /** Format: int64 */
+            totalTokens?: number;
+            /** Format: int64 */
+            cachedTokens?: number;
+            /** Format: int64 */
+            reasoningTokens?: number;
+        };
         ApiErrorResponse: {
             error?: null | string;
             errors?: null | string[];
@@ -1240,8 +1262,8 @@ export interface components {
             agentName: string;
             agentInitials: string;
             params: components["schemas"]["ConversationParam"][];
-            lastExchange: components["schemas"]["ConversationTurn"][];
-            transcript: null | components["schemas"]["ConversationTurn"][];
+            lastExchange: components["schemas"]["AiConversationMessage"][];
+            transcript: components["schemas"]["AiConversationMessage"][];
             state: string;
             /** Format: date-time */
             lastActivityAt: string;
@@ -1265,12 +1287,6 @@ export interface components {
             messages: number;
             /** Format: int64 */
             tokens: number;
-        };
-        ConversationTurn: {
-            role: string;
-            text: string;
-            /** Format: date-time */
-            at: null | string;
         };
         /** @enum {unknown} */
         DatabaseAccess: "ReadWrite" | "Admin" | "Read";
@@ -2707,9 +2723,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -2720,7 +2734,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AiConnectionStringListResponse"];
+                    "application/json": components["schemas"]["AiConnectionString"][];
                 };
             };
             /** @description Not Found */
@@ -2738,9 +2752,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
@@ -2783,7 +2795,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: string;
                 name: string;
             };
             cookie?: never;
@@ -2815,7 +2826,6 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: string;
                 name: string;
             };
             cookie?: never;
@@ -3718,12 +3728,14 @@ export type AiAgentToolSubAgent = components["schemas"]["AiAgentToolSubAgent"];
 export type AiConnectionString = components["schemas"]["AiConnectionString"];
 export type AiConnectionStringCreatedResponse = components["schemas"]["AiConnectionStringCreatedResponse"];
 export type AiConnectionStringDeleteConflictResponse = components["schemas"]["AiConnectionStringDeleteConflictResponse"];
-export type AiConnectionStringListItemResponse = components["schemas"]["AiConnectionStringListItemResponse"];
-export type AiConnectionStringListResponse = components["schemas"]["AiConnectionStringListResponse"];
 export type AiConnectorType = components["schemas"]["AiConnectorType"];
+export type AiConversationMessage = components["schemas"]["AiConversationMessage"];
+export type AiMessageRole = components["schemas"]["AiMessageRole"];
 export type AiModelsRequest = components["schemas"]["AiModelsRequest"];
 export type AiModelsResponse = components["schemas"]["AiModelsResponse"];
 export type AiModelType = components["schemas"]["AiModelType"];
+export type AiToolCallResult = components["schemas"]["AiToolCallResult"];
+export type AiUsage = components["schemas"]["AiUsage"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
 export type ApplianceAppResponse = components["schemas"]["ApplianceAppResponse"];
 export type AppOverviewResponse = components["schemas"]["AppOverviewResponse"];
@@ -3761,7 +3773,6 @@ export type ConversationDto = components["schemas"]["ConversationDto"];
 export type ConversationListResult = components["schemas"]["ConversationListResult"];
 export type ConversationParam = components["schemas"]["ConversationParam"];
 export type ConversationStatsResponse = components["schemas"]["ConversationStatsResponse"];
-export type ConversationTurn = components["schemas"]["ConversationTurn"];
 export type DatabaseAccess = components["schemas"]["DatabaseAccess"];
 export type DataCollectionDto = components["schemas"]["DataCollectionDto"];
 export type DiscoverColumnResponse = components["schemas"]["DiscoverColumnResponse"];
@@ -3832,10 +3843,10 @@ export const API_ENDPOINTS = {
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/agents`,
     },
     aiConnectionStrings: {
-        create: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings`,
-        delete: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
-        detail: (slug: string, name: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings/${encodeURIComponent(name)}`,
-        list: (slug: string) => `/apps/${encodeURIComponent(slug)}/ai/connection-strings`,
+        create: "/ai/connection-strings",
+        delete: (name: string) => `/ai/connection-strings/${encodeURIComponent(name)}`,
+        detail: (name: string) => `/ai/connection-strings/${encodeURIComponent(name)}`,
+        list: "/ai/connection-strings",
     },
     aiModels: {
         list: "/ai/models",
@@ -3922,10 +3933,10 @@ export function createServerApi(client: ApiClient) {
             list: (slug: string) => client.get<AgentSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.agents.list(slug)),
         },
         aiConnectionStrings: {
-            create: (slug: string, request: AiConnectionString) => client.post<AiConnectionStringCreatedResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.create(slug), request),
-            delete: (slug: string, name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(slug, name)),
-            detail: (slug: string, name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(slug, name)),
-            list: (slug: string) => client.get<AiConnectionStringListResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list(slug)),
+            create: (request: AiConnectionString) => client.post<AiConnectionStringCreatedResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.create, request),
+            delete: (name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(name)),
+            detail: (name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(name)),
+            list: () => client.get<AiConnectionString[], ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list),
         },
         aiModels: {
             list: (request: AiModelsRequest) => client.post<AiModelsResponse, ApiErrorResponse>(API_ENDPOINTS.aiModels.list, request),

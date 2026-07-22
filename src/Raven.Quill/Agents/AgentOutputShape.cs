@@ -9,6 +9,9 @@ public static class AgentOutputShape
 
     public static string ResolveReplyField(AiAgentConfiguration config)
     {
+        if (config is null)
+            return null;
+
         if (TryFirstObjectProperty(config.SampleObject, out var fromSample))
             return fromSample;
 

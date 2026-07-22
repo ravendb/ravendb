@@ -58,7 +58,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         // references that CS by name — same wire pattern the dashboard will
         // use.
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -89,7 +89,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var agents = await store.Maintenance.ForDatabase(perAppDb)
             .SendAsync(new GetAiAgentsOperation());
         var agent = Assert.Single(agents.AiAgents);
-        Assert.Equal("demo-llm", agent.ConnectionStringName);
+        Assert.Equal("Server Wide Connection String, demo-llm", agent.ConnectionStringName);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -104,7 +104,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var client = factory.CreateClient();
 
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -185,7 +185,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var client = factory.CreateClient();
 
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -228,7 +228,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var client = factory.CreateClient();
 
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -288,7 +288,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         // Create the CS so the only reason to 400 is the missing name (not an
         // unresolved connection string).
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -318,7 +318,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         // Create the CS so the only reason to 400 is the missing systemPrompt.
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -350,7 +350,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var client = factory.CreateClient();
 
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -393,7 +393,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var client = factory.CreateClient();
 
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -430,7 +430,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var client = factory.CreateClient();
 
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -857,7 +857,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var client = factory.CreateClient();
 
         var csResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",

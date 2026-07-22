@@ -3,8 +3,11 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
@@ -65,7 +68,14 @@ public static class EmbedEndpoints
         // keep the bearer token out of cross-origin referer logs
         ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
 
-        var historyJson = await BuildHistoryJsonAsync(store, app.Database, link.ConversationId, ct);
+        var agent = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
+        var replyField = AgentOutputShape.ResolveReplyField(agent) ?? AgentOutputShape.DefaultReplyField;
+
+        var serializerOptions = ctx.RequestServices
+            .GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
+
+        var historyJson = await BuildHistoryJsonAsync(store, app.Database, link.ConversationId, replyField,
+            serializerOptions, ct);
 
         ctx.Response.ContentType = "text/html; charset=utf-8";
         await ctx.Response.WriteAsync(BuildEmbedHtml(app.Slug, token, channel.DisplayName, style, historyJson), ct);
@@ -343,18 +353,22 @@ public static class EmbedEndpoints
     }
 
     private static async Task<string> BuildHistoryJsonAsync(
-        IDocumentStore store, string database, string? conversationId, CancellationToken ct)
+        IDocumentStore store, string database, string conversationId, string replyField,
+        JsonSerializerOptions serializerOptions, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(conversationId))
             return "[]";
         try
         {
-            var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(conversationId, ct);
+            var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(new GetConversationMessagesOptions
+            {
+                ConversationId = conversationId,
+                DetailLevel = AiConversationDetailLevel.Simple,
+            }, ct);
             if (result is null)
                 return "[]";
-            var turns = MetricsReadService.MapTranscript(result.Messages)
-                .Select(t => new { role = t.Role, text = t.Text });
-            return JsonSerializer.Serialize(turns);
+            var turns = MetricsReadService.MapTranscript(result.Messages, replyField);
+            return JsonSerializer.Serialize(turns, serializerOptions);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -385,7 +399,7 @@ public static class EmbedEndpoints
                                                 #ai-chat-feed { flex: 1; overflow-y: auto; padding: 12px 16px; }
                                                 .row { margin: 6px 0; padding: 8px 12px; border-radius: var(--ai-radius-bubble); max-width: 80%; white-space: pre-wrap; }
                                                 .row.user { background: var(--ai-user-bg); color: var(--ai-user-fg); margin-left: auto; }
-                                                .row.agent { background: var(--ai-bubble-agent-bg); }
+                                                .row.assistant { background: var(--ai-bubble-agent-bg); }
                                                 #ai-chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--ai-border-color); }
                                                 #ai-chat-input { flex: 1; padding: 10px 12px; border: 1px solid var(--ai-input-border-color); border-radius: var(--ai-radius-control); background: var(--ai-input-bg); color: var(--ai-fg); font-size: 14px; }
                                                 #ai-chat-form button { padding: 10px 16px; border: 0; border-radius: var(--ai-radius-control); background: var(--ai-user-bg); color: var(--ai-user-fg); cursor: pointer; }
@@ -418,7 +432,9 @@ public static class EmbedEndpoints
                                              const feed = document.getElementById("ai-chat-feed");
                                              const form = document.getElementById("ai-chat-form");
                                              const input = document.getElementById("ai-chat-input");
-
+                                             const button = form.querySelector('button[type="submit"]');
+                                             let submitting = false;
+                                             
                                              function addRow(cls, text) {
                                                const div = document.createElement("div");
                                                div.className = "row " + cls;
@@ -428,15 +444,20 @@ public static class EmbedEndpoints
                                                return div;
                                              }
 
-                                             for (const turn of __HISTORY__) addRow(turn.role, turn.text);
+                                             for (const turn of __HISTORY__) addRow(turn.role, turn.content);
 
                                              form.addEventListener("submit", async (e) => {
                                                e.preventDefault();
+                                               if (submitting) return;
+                                             
                                                const prompt = input.value.trim();
                                                if (!prompt) return;
+
+                                               submitting = true;
+                                               button.disabled = true;
                                                input.value = "";
                                                addRow("user", prompt);
-                                               const agentRow = addRow("agent", "");
+                                               const agentRow = addRow("assistant", "");
                                                try {
                                                  const resp = await fetch(chatUrl, {
                                                    method: "POST",
@@ -468,6 +489,9 @@ public static class EmbedEndpoints
                                                  }
                                                } catch (err) {
                                                  agentRow.textContent = "[error] " + err;
+                                               } finally {
+                                                 submitting = false;
+                                                 button.disabled = false;
                                                }
                                              });
                                              </script>
@@ -491,9 +515,9 @@ public static class EmbedEndpoints
                                                <div id="ai-chat">
                                                  <div id="ai-chat-header">__TITLE__</div>
                                                  <div id="ai-chat-feed">
-                                                   <div class="row agent">Hi! I'm your AI assistant. How can I help you today?</div>
+                                                   <div class="row assistant">Hi! I'm your AI assistant. How can I help you today?</div>
                                                    <div class="row user">What can you do?</div>
-                                                   <div class="row agent">I can answer questions about your data and help you get things done — just ask.</div>
+                                                   <div class="row assistant">I can answer questions about your data and help you get things done — just ask.</div>
                                                  </div>
                                                  <form id="ai-chat-form" onsubmit="return false">
                                                    <input id="ai-chat-input" autocomplete="off" placeholder="Ask a question..." aria-label="Ask a question">

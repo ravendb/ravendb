@@ -208,7 +208,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         // Wizard step: operator picks "add new" on the LLM step and submits
         // their LLM details (provider, endpoint, model, api key). OpenAI here
         // so T14 can stream a real agent reply against the CDC-mirrored data.
-        var csResp = await client.PostAsJsonAsync($"/api/apps/{slug}/ai/connection-strings",
+        var csResp = await client.PostAsJsonAsync($"/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",

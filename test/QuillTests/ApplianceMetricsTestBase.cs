@@ -5,9 +5,9 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Wizard;
@@ -66,12 +66,15 @@ public abstract class ApplianceMetricsTestBase(ITestOutputHelper output) : Raven
     protected static async Task SeedAgentAsync(
         IDocumentStore store, string database, string name, string connectionStringName = "demo-llm")
     {
-        await store.Maintenance.ForDatabase(database).SendAsync(
-            new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+        await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(
+            new ServerWideConnectionString
             {
-                Name = connectionStringName,
-                ModelType = AiModelType.Chat,
-                OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Model = "gpt-4o-mini" },
+                ConnectionString = new AiConnectionString
+                {
+                    Name = connectionStringName,
+                    ModelType = AiModelType.Chat,
+                    OpenAiSettings = new OpenAiSettings { ApiKey = "sk-test", Model = "gpt-4o-mini" },
+                }
             }));
 
         await store.AI.ForDatabase(database).CreateAgentAsync(new AiAgentConfiguration
