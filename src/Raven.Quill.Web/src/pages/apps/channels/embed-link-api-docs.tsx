@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, InfoIcon } from "lucide-react";
 import { CopyableCode } from "@/components/data/copyable-code";
+import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import {
@@ -122,6 +123,15 @@ export function EmbedLinkApiDocs({ slug, widgetId, parameterNames }: EmbedLinkAp
                     ))}
                 </Tabs>
 
+                <Alert>
+                    <InfoIcon />
+                    <AlertTitle>Using the response</AlertTitle>
+                    <AlertDescription>
+                        The response returns a <InlineCode>url</InlineCode> — use it as-is in an{" "}
+                        <InlineCode>&lt;iframe src&gt;</InlineCode>. It is served only on the public embed host.
+                    </AlertDescription>
+                </Alert>
+
                 <dl className="grid gap-2 text-sm">
                     {fields.map((field) => (
                         <div key={field.name} className="grid gap-x-3 sm:grid-cols-[8rem_1fr]">
@@ -130,11 +140,6 @@ export function EmbedLinkApiDocs({ slug, widgetId, parameterNames }: EmbedLinkAp
                         </div>
                     ))}
                 </dl>
-
-                <p className="text-xs text-muted-foreground">
-                    The response returns a <InlineCode>url</InlineCode> — use it as-is in an{" "}
-                    <InlineCode>&lt;iframe src&gt;</InlineCode>. It is served only on the public embed host.
-                </p>
             </CollapsibleContent>
         </Collapsible>
     );
