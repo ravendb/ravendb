@@ -125,6 +125,97 @@ namespace FastTests.Issues
                 "The synchronous DirectUploadStream.Dispose must NOT run on the backup path - it is the blocking path that hangs.");
         }
 
+        // On failure the upload must be aborted (not completed), the progress state must become Aborted, and the
+        // completion stats (LastFullBackup/duration) must NOT be stamped - those reflect a successful backup only.
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Aborted_upload_aborts_the_multipart_upload_marks_Aborted_and_does_not_stamp_completion()
+        {
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+            var parameters = CreateParameters(uploader, status);
+
+            var stream = new TestDirectUploadStream(parameters);
+
+            // Signal a backup failure -> DirectUploadStream sets _abortUpload = true.
+            parameters.OnBackupException.Invoke();
+
+            await stream.DisposeAsync();
+
+            Assert.True(uploader.AbortAsyncCalled, "the in-progress multipart upload must be aborted on failure");
+            Assert.False(uploader.CompleteUploadAsyncCalled, "an aborted upload must not be completed");
+            Assert.Equal(UploadState.Aborted, status.UploadProgress.UploadState);
+            Assert.Null(status.LastFullBackup);
+        }
+
+        // On success the upload must be completed, the progress state must become Done, and the completion stats must
+        // be stamped.
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Successful_upload_completes_marks_Done_and_stamps_completion()
+        {
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+            var parameters = CreateParameters(uploader, status);
+
+            var stream = new TestDirectUploadStream(parameters);
+
+            await stream.DisposeAsync();
+
+            Assert.True(uploader.CompleteUploadAsyncCalled, "a successful upload must be completed");
+            Assert.False(uploader.AbortAsyncCalled, "a successful upload must not be aborted");
+            Assert.Equal(UploadState.Done, status.UploadProgress.UploadState);
+            Assert.NotNull(status.LastFullBackup);
+        }
+
+        // Same guarantees on the synchronous Dispose path.
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public void Aborted_upload_sync_dispose_aborts_marks_Aborted_and_does_not_stamp_completion()
+        {
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+            var parameters = CreateParameters(uploader, status);
+
+            var stream = new TestDirectUploadStream(parameters);
+
+            parameters.OnBackupException.Invoke();
+
+            stream.Dispose();
+
+            Assert.True(uploader.AbortCalled, "the in-progress multipart upload must be aborted on failure");
+            Assert.False(uploader.CompleteUploadCalled, "an aborted upload must not be completed");
+            Assert.Equal(UploadState.Aborted, status.UploadProgress.UploadState);
+            Assert.Null(status.LastFullBackup);
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public void Successful_upload_sync_dispose_completes_marks_Done_and_stamps_completion()
+        {
+            var uploader = new TrackingMultiPartUploader();
+            var status = new UploadToS3();
+            var parameters = CreateParameters(uploader, status);
+
+            var stream = new TestDirectUploadStream(parameters);
+
+            stream.Dispose();
+
+            Assert.True(uploader.CompleteUploadCalled, "a successful upload must be completed");
+            Assert.False(uploader.AbortCalled, "a successful upload must not be aborted");
+            Assert.Equal(UploadState.Done, status.UploadProgress.UploadState);
+            Assert.NotNull(status.LastFullBackup);
+        }
+
+        private static DirectUploadStream<FakeDirectUploader>.Parameters CreateParameters(IMultiPartUploader uploader, CloudUploadStatus status) =>
+            new()
+            {
+                ClientFactory = _ => new FakeDirectUploader(uploader),
+                Key = "key",
+                Metadata = new Dictionary<string, string>(),
+                IsFullBackup = true,
+                RetentionPolicyParameters = null,
+                CloudUploadStatus = status,
+                OnBackupException = null,
+                OnProgress = _ => { }
+            };
+
         private sealed class DisposeTrackingDirectUploadStream : DirectUploadStream<FakeDirectUploader>
         {
             public bool DisposeAsyncCalled;
@@ -220,6 +311,43 @@ namespace FastTests.Issues
             }
 
             public Task AbortAsync() => Task.CompletedTask;
+        }
+
+        // Records which terminal operation the stream drove (complete vs abort), for both the sync and async paths.
+        private sealed class TrackingMultiPartUploader : IMultiPartUploader
+        {
+            public bool CompleteUploadCalled;
+            public bool CompleteUploadAsyncCalled;
+            public bool AbortCalled;
+            public bool AbortAsyncCalled;
+
+            public void Initialize()
+            {
+            }
+
+            public Task InitializeAsync() => Task.CompletedTask;
+
+            public void UploadPart(Stream stream)
+            {
+            }
+
+            public Task UploadPartAsync(Stream stream) => Task.CompletedTask;
+
+            public void CompleteUpload() => CompleteUploadCalled = true;
+
+            public Task CompleteUploadAsync()
+            {
+                CompleteUploadAsyncCalled = true;
+                return Task.CompletedTask;
+            }
+
+            public void Abort() => AbortCalled = true;
+
+            public Task AbortAsync()
+            {
+                AbortAsyncCalled = true;
+                return Task.CompletedTask;
+            }
         }
 
         // A faithful, minimal reproduction of AsyncHelpers.ExclusiveSynchronizationContext's message loop
