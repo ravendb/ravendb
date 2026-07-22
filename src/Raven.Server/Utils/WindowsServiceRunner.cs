@@ -1,6 +1,7 @@
 using System;
+using System.ServiceProcess;
+using System.Text.RegularExpressions;
 using System.Threading;
-using DasMulli.Win32.ServiceUtils;
 using Raven.Server.Config;
 using Raven.Server.Logging;
 using Raven.Server.Utils.Cli;
@@ -16,8 +17,9 @@ namespace Raven.Server.Utils
         {
             var service = new RavenWin32Service(serviceName, configuration, args);
             Program.RestartServer = service.Restart;
-            var serviceHost = new Win32ServiceHost(service);
-            serviceHost.Run();
+#pragma warning disable CA1416 // Validate platform compatibility
+            ServiceBase.Run(service);
+#pragma warning restore CA1416 // Validate platform compatibility
         }
 
         public static bool ShouldRunAsWindowsService()
@@ -35,7 +37,8 @@ namespace Raven.Server.Utils
         }
     }
 
-    internal sealed class RavenWin32Service : IWin32Service
+#pragma warning disable CA1416 // Validate platform compatibility
+    internal sealed class RavenWin32Service : ServiceBase
     {
         private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RavenWin32Service>();
 
@@ -43,23 +46,24 @@ namespace Raven.Server.Utils
 
         private readonly string[] _args;
 
-        public string ServiceName { get; }
-
-        private ServiceStoppedCallback _serviceStoppedCallback;
-
         public RavenWin32Service(string serviceName, RavenConfiguration configuration, string[] args)
         {
-            ServiceName = serviceName;
+            // ServiceName must match the name the service was registered under (see rvn's
+            // WindowsService.NormalizeServiceName) and satisfies ServiceBase's own validation.
+            ServiceName = NormalizeServiceName(serviceName);
             _args = args;
             _ravenServer = new RavenServer(configuration);
         }
 
-        public void Start(string[] startupArguments, ServiceStoppedCallback serviceStoppedCallback)
+        private static string NormalizeServiceName(string serviceName)
+        {
+            return Regex.Replace(serviceName, @"[\/\s]", "_");
+        }
+
+        protected override void OnStart(string[] args)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Starting RavenDB Windows Service: {ServiceName}.");
-
-            _serviceStoppedCallback = serviceStoppedCallback;
 
             try
             {
@@ -99,12 +103,12 @@ namespace Raven.Server.Utils
 
             configuration.Initialize();
             _ravenServer = new RavenServer(configuration);
-            Start(_args, _serviceStoppedCallback);
+            OnStart(_args);
 
             configuration.Initialize();
         }
 
-        public void Stop()
+        protected override void OnStop()
         {
             if (Logger.IsInfoEnabled)
             {
@@ -114,7 +118,7 @@ namespace Raven.Server.Utils
             }
 
             _ravenServer.Dispose();
-            _serviceStoppedCallback();
         }
     }
+#pragma warning restore CA1416 // Validate platform compatibility
 }
