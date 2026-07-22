@@ -31,7 +31,7 @@ export const InvalidKey: Story = {
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await userEvent.type(canvas.getByLabelText("API key"), "wrong-key");
+        await userEvent.type(canvas.getByLabelText("Dashboard API key"), "wrong-key");
         await userEvent.click(canvas.getByRole("button", { name: /continue/i }));
         await waitFor(() => expect(canvas.getByRole("alert")).toBeInTheDocument());
     },
