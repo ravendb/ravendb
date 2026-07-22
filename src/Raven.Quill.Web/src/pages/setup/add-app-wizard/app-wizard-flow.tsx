@@ -13,12 +13,14 @@ import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-
 import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-step";
 import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
+import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const connectSourceBeforeNext = useConnectSourceStep();
     const mapSchemaBeforeNext = useMapSchemaStep();
     const mapTablesBeforeNext = useMapTablesStep();
+    const focusMapTablesError = useFocusMapTablesError();
 
     return {
         dataSource: {
@@ -74,6 +76,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             bodyComponent: MapTablesStep,
             isFullHeight: true,
             validate: "mapTables",
+            onValidationFailed: focusMapTablesError,
             beforeNext: mapTablesBeforeNext,
         },
         preview: {

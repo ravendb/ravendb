@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { DiscoverResponse } from "@/api/generated/server-api";
-import type { MapActiveTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
+import { getAncestorTablePaths, type MapActiveTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 
 export type ImportState = "none" | "locked" | "unlocked";
 
@@ -21,6 +21,11 @@ export type SetupWizardState = {
     invalidateMapping: () => void;
     mapActiveTable: MapActiveTable | null;
     setMapActiveTable: (table: MapActiveTable | null) => void;
+    /** Bumped by focusMapTable so the explorer scrolls the focused table into view. */
+    mapFocusRequestId: number;
+    focusMapTable: (table: MapActiveTable) => void;
+    mapTablesFilter: string;
+    setMapTablesFilter: (filter: string) => void;
     mapExpandedPaths: Record<string, boolean>;
     toggleMapTableExpanded: (path: string) => void;
     expandMapTable: (path: string) => void;
@@ -43,6 +48,8 @@ const initialState: Pick<
     | "appliedMapKey"
     | "mapTablesKey"
     | "mapActiveTable"
+    | "mapFocusRequestId"
+    | "mapTablesFilter"
     | "mapExpandedPaths"
     | "isMapTablesRawView"
     | "mapTablesRawContent"
@@ -54,6 +61,8 @@ const initialState: Pick<
     appliedMapKey: null,
     mapTablesKey: null,
     mapActiveTable: null,
+    mapFocusRequestId: 0,
+    mapTablesFilter: "",
     mapExpandedPaths: {},
     isMapTablesRawView: false,
     mapTablesRawContent: "",
@@ -74,6 +83,16 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
     setMapTablesKey: (key) => set({ mapTablesKey: key }),
     invalidateMapping: () => set({ appliedMapKey: null }),
     setMapActiveTable: (table) => set({ mapActiveTable: table }),
+    focusMapTable: (table) =>
+        set((state) => ({
+            mapActiveTable: table,
+            mapExpandedPaths: {
+                ...state.mapExpandedPaths,
+                ...Object.fromEntries(getAncestorTablePaths(table.path).map((path) => [path, true])),
+            },
+            mapFocusRequestId: state.mapFocusRequestId + 1,
+        })),
+    setMapTablesFilter: (filter) => set({ mapTablesFilter: filter }),
     toggleMapTableExpanded: (path) =>
         set((state) => ({
             mapExpandedPaths: { ...state.mapExpandedPaths, [path]: !state.mapExpandedPaths[path] },
@@ -93,7 +112,13 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
             ),
         })),
     resetMapTablesUiState: () =>
-        set({ mapActiveTable: null, mapExpandedPaths: {}, isMapTablesRawView: false, mapTablesRawContent: "" }),
+        set({
+            mapActiveTable: null,
+            mapTablesFilter: "",
+            mapExpandedPaths: {},
+            isMapTablesRawView: false,
+            mapTablesRawContent: "",
+        }),
     openMapTablesRawView: (content) => set({ isMapTablesRawView: true, mapTablesRawContent: content }),
     closeMapTablesRawView: () => set({ isMapTablesRawView: false, mapTablesRawContent: "" }),
     setMapTablesRawContent: (content) => set({ mapTablesRawContent: content }),
