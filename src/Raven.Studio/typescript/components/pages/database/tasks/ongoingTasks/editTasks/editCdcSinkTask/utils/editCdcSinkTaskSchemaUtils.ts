@@ -305,6 +305,57 @@ export function mapRelatedSqlTablesToFormData(
     return formTables;
 }
 
+// Keep already configured links in sync when a newly added root table cannot use the collection
+// name they originally requested (for example because that collection name is already taken).
+export function alignLinkedTableCollectionNames(
+    rootTables: FormRootTable[],
+    targetRootTables: FormRootTable[]
+): FormRootTable[] {
+    const collectionNameBySourceKey = new Map<string, string>();
+
+    (targetRootTables ?? []).forEach((rootTable) => {
+        const key = getSourceTableKey(rootTable.sourceTableSchema, rootTable.sourceTableName);
+        const collectionName = rootTable.collectionName?.trim();
+
+        if (key && collectionName) {
+            collectionNameBySourceKey.set(key, collectionName);
+        }
+    });
+
+    if (collectionNameBySourceKey.size === 0) {
+        return rootTables;
+    }
+
+    const alignTable = <TTable extends FormRootTable | FormEmbeddedTable>(table: TTable): TTable => {
+        let isChanged = false;
+
+        const linkedTables = (table.linkedTables ?? []).map((linkedTable) => {
+            const key = getSourceTableKey(linkedTable.sourceTableSchema, linkedTable.sourceTableName);
+            const collectionName = key ? collectionNameBySourceKey.get(key) : null;
+
+            if (
+                !collectionName ||
+                normalizeValue(linkedTable.linkedCollectionName) === normalizeValue(collectionName)
+            ) {
+                return linkedTable;
+            }
+
+            isChanged = true;
+            return { ...linkedTable, linkedCollectionName: collectionName };
+        });
+
+        const embeddedTables = (table.embeddedTables ?? []).map((embeddedTable) => {
+            const alignedTable = alignTable(embeddedTable);
+            isChanged ||= alignedTable !== embeddedTable;
+            return alignedTable;
+        });
+
+        return isChanged ? ({ ...table, linkedTables, embeddedTables } as TTable) : table;
+    };
+
+    return (rootTables ?? []).map(alignTable);
+}
+
 // Normalized collection name -> collection name as the user typed it, per referenced source table
 // key. Disabled roots are skipped, matching getRelatedSourceTablesToAdd.
 function collectReferencedCollectionNames(rootTables: FormRootTable[]): Map<string, Map<string, string>> {
