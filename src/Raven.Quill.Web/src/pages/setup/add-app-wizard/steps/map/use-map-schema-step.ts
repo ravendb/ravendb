@@ -1,15 +1,9 @@
 import { api } from "@/api/api";
-import type { DiscoverResponse } from "@/api/generated/server-api";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableKey } from "@/pages/setup/add-app-wizard/discover-utils";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
-import {
-    createEmptyRootTable,
-    findDiscoveredTable,
-    pascalCase,
-    scaffoldRootTable,
-} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { scaffoldTables } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { useFormContext } from "react-hook-form";
 
 export function computeMapKey(map: {
@@ -60,24 +54,4 @@ async function suggestTables(aiPrompt: string): Promise<AppFormData["mapTables"]
     }
 
     return tablesSchema.parse(wrapDtoTablesToFormShape(result.configuration.tables ?? []));
-}
-
-function scaffoldTables(
-    selectedTables: AppFormData["verifySchema"]["tables"],
-    discoverResult: DiscoverResponse | null,
-): AppFormData["mapTables"]["tables"] {
-    return selectedTables.map((selected) => {
-        const discovered = findDiscoveredTable(discoverResult, selected.sourceTableSchema, selected.sourceTableName);
-
-        if (discovered) {
-            return scaffoldRootTable(discoverResult, discovered);
-        }
-
-        return {
-            ...createEmptyRootTable(),
-            collectionName: pascalCase(selected.sourceTableName),
-            sourceTableSchema: selected.sourceTableSchema ?? null,
-            sourceTableName: selected.sourceTableName,
-        };
-    });
 }
