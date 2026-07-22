@@ -1,6 +1,6 @@
 using System;
+using System.Runtime.Versioning;
 using System.ServiceProcess;
-using System.Text.RegularExpressions;
 using System.Threading;
 using Raven.Server.Config;
 using Raven.Server.Logging;
@@ -15,9 +15,9 @@ namespace Raven.Server.Utils
     {
         public static void Run(string serviceName, RavenConfiguration configuration, string[] args)
         {
+#pragma warning disable CA1416 // Validate platform compatibility
             var service = new RavenWin32Service(serviceName, configuration, args);
             Program.RestartServer = service.Restart;
-#pragma warning disable CA1416 // Validate platform compatibility
             ServiceBase.Run(service);
 #pragma warning restore CA1416 // Validate platform compatibility
         }
@@ -37,7 +37,7 @@ namespace Raven.Server.Utils
         }
     }
 
-#pragma warning disable CA1416 // Validate platform compatibility
+    [SupportedOSPlatform("windows")]
     internal sealed class RavenWin32Service : ServiceBase
     {
         private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RavenWin32Service>();
@@ -48,16 +48,11 @@ namespace Raven.Server.Utils
 
         public RavenWin32Service(string serviceName, RavenConfiguration configuration, string[] args)
         {
-            // ServiceName must match the name the service was registered under (see rvn's
-            // WindowsService.NormalizeServiceName) and satisfies ServiceBase's own validation.
-            ServiceName = NormalizeServiceName(serviceName);
+            // Normalize identically to how rvn registers the service (see WindowsServiceUtils),
+            // so the name reported to the SCM matches the registered name.
+            ServiceName = WindowsServiceUtils.NormalizeServiceName(serviceName);
             _args = args;
             _ravenServer = new RavenServer(configuration);
-        }
-
-        private static string NormalizeServiceName(string serviceName)
-        {
-            return Regex.Replace(serviceName, @"[\/\s]", "_");
         }
 
         protected override void OnStart(string[] args)
@@ -104,8 +99,6 @@ namespace Raven.Server.Utils
             configuration.Initialize();
             _ravenServer = new RavenServer(configuration);
             OnStart(_args);
-
-            configuration.Initialize();
         }
 
         protected override void OnStop()
@@ -120,5 +113,4 @@ namespace Raven.Server.Utils
             _ravenServer.Dispose();
         }
     }
-#pragma warning restore CA1416 // Validate platform compatibility
 }
