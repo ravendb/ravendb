@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 
@@ -832,10 +833,16 @@ namespace Raven.Server.ServerWide.Maintenance
                 commandCount = Math.Min(commandCount, report.LastCompletedClusterTransaction);
             }
 
-            if (commandCount <= state.ReadTruncatedClusterTransactionCommandsCount())
+            var truncatedCount = state.ReadTruncatedClusterTransactionCommandsCount();
+            if (commandCount <= truncatedCount)
                 return null;
 
-            return commandCount;
+            // Delete the cluster transaction commands in bounded batches instead of removing a potentially huge
+            // backlog (e.g. millions of entries) in a single transaction. Capping the target also advances the
+            // cleanup command id each round (it is derived from this value), so the observer keeps re-issuing the
+            // cleanup until 'commandCount' is reached.
+            var batchSize = PlatformDetails.Is32Bits ? 1 * 1024 : 10 * 1024;
+            return Math.Min(commandCount, truncatedCount + batchSize);
         }
 
         private static bool AllDatabaseNodesHasReport(DatabaseObservationState state)
