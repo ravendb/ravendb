@@ -8,13 +8,14 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.Wizard;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-/// AI connection-string CRUD endpoints under /api/apps/{slug}/ai/connection-strings.
+/// AI connection-string CRUD endpoints under /api/ai/connection-strings.
 /// W7 (provision-agent) now references a connection string by name; these endpoints
 /// own the create/list/get/delete lifecycle. Both POST and W7 gate ModelType=Chat
 /// and provider in {OpenAi, Ollama} — defence in depth, since a CS created via
@@ -33,7 +34,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         var client = factory.CreateClient();
 
         var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",
@@ -48,12 +49,11 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("demo-llm", json.GetProperty("name").GetString());
 
-        // Confirm the CS landed in the per-app DB.
-        var cs = await store.Maintenance.ForDatabase(perAppDb).SendAsync(
-            new GetConnectionStringsOperation("demo-llm", ConnectionStringType.Ai));
-        Assert.NotNull(cs.AiConnectionStrings);
-        Assert.True(cs.AiConnectionStrings.ContainsKey("demo-llm"));
-        var aiCs = cs.AiConnectionStrings["demo-llm"];
+        // Confirm the CS landed server-wide.
+        var cs = await store.Maintenance.Server.SendAsync(
+            new GetServerWideConnectionStringsOperation("demo-llm", ConnectionStringType.Ai));
+        var aiCs = cs.Results.Single().ConnectionString as AiConnectionString;
+        Assert.NotNull(aiCs);
         Assert.Equal(AiModelType.Chat, aiCs.ModelType);
         Assert.NotNull(aiCs.OllamaSettings);
         Assert.Equal("llama3.1", aiCs.OllamaSettings.Model);
@@ -77,7 +77,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         // binding for a non-nullable complex param 400s before the handler
         // — verifies the framework default is wired up correctly.
         var emptyResp = await client.PostAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new StringContent("", System.Text.Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.BadRequest, emptyResp.StatusCode);
 
@@ -86,7 +86,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         // handler dereferences body.Name → NRE → 500. This is the hole
         // Copilot's C1 flagged.
         var nullResp = await client.PostAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new StringContent("null", System.Text.Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.BadRequest, nullResp.StatusCode);
     }
@@ -103,7 +103,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         var client = factory.CreateClient();
 
         var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "",
@@ -127,7 +127,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         var client = factory.CreateClient();
 
         var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "embed-llm",
@@ -154,7 +154,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         // hasn't smoke-tested it end-to-end. Gate at intake so an operator
         // doesn't wire an agent to a provider we can't yet support.
         var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "mistral-llm",
@@ -180,7 +180,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         // Both openAi and ollama settings set — AiConnectionString.ValidateImpl
         // enforces "exactly one provider". Surface the error as 400, not 500.
         var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "mixed-llm",
@@ -207,7 +207,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         // OpenAiBaseSettings.ValidateFields rejects empty ApiKey. Caught by the
         // base ConnectionString.Validate() call; we just need to surface it.
         var resp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "openai-llm",
@@ -217,27 +217,6 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
             });
 
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Post_returns_404_for_unknown_slug()
-    {
-        var store = GetDocumentStore();
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.PostAsJsonAsync(
-            "/api/apps/nonexistent/ai/connection-strings",
-            new
-            {
-                name = "demo-llm",
-                identifier = "demo-llm",
-                modelType = "Chat",
-                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
-            });
-
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
     // ---- GET list ----
@@ -256,28 +235,17 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         await PostOllamaCsAsync(client, "my-app", "demo-llm");
         await PostOllamaCsAsync(client, "my-app", "ops-llm");
 
-        var listResp = await client.GetAsync("/api/apps/my-app/ai/connection-strings");
+        var listResp = await client.GetAsync("/api/ai/connection-strings");
         Assert.True(listResp.IsSuccessStatusCode, await listResp.Content.ReadAsStringAsync());
 
         var json = await listResp.Content.ReadFromJsonAsync<JsonElement>();
-        var items = json.GetProperty("items").EnumerateArray()
-            .Select(e => e.GetProperty("name").GetString())
-            .OrderBy(n => n)
+        var names = json.GetProperty("results").EnumerateArray()
+            .Select(e => e.GetProperty("connectionString").GetProperty("name").GetString())
             .ToArray();
 
-        Assert.Equal(new[] { "demo-llm", "ops-llm" }, items);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task List_returns_404_for_unknown_slug()
-    {
-        var store = GetDocumentStore();
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/api/apps/nonexistent/ai/connection-strings");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        // server-wide strings are global, so other tests' entries may also be present
+        Assert.Contains("demo-llm", names);
+        Assert.Contains("ops-llm", names);
     }
 
     // ---- GET by name ----
@@ -295,7 +263,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
 
         await PostOllamaCsAsync(client, "my-app", "demo-llm");
 
-        var resp = await client.GetAsync("/api/apps/my-app/ai/connection-strings/demo-llm");
+        var resp = await client.GetAsync("/api/ai/connection-strings/demo-llm");
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
         var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
@@ -315,7 +283,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         var client = factory.CreateClient();
 
         var postResp = await client.PostAsJsonAsync(
-            "/api/apps/my-app/ai/connection-strings",
+            "/api/ai/connection-strings",
             new
             {
                 name = "openai-llm",
@@ -325,7 +293,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
             });
         Assert.True(postResp.IsSuccessStatusCode, await postResp.Content.ReadAsStringAsync());
 
-        var resp = await client.GetAsync("/api/apps/my-app/ai/connection-strings/openai-llm");
+        var resp = await client.GetAsync("/api/ai/connection-strings/openai-llm");
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
         // The detail endpoint is admin-only and returns the full provider key by design: the edit
@@ -349,19 +317,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.GetAsync("/api/apps/my-app/ai/connection-strings/ghost-llm");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task GetByName_returns_404_for_unknown_slug()
-    {
-        var store = GetDocumentStore();
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.GetAsync("/api/apps/nonexistent/ai/connection-strings/demo-llm");
+        var resp = await client.GetAsync("/api/ai/connection-strings/ghost-llm");
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
@@ -380,10 +336,10 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
 
         await PostOllamaCsAsync(client, "my-app", "demo-llm");
 
-        var deleteResp = await client.DeleteAsync("/api/apps/my-app/ai/connection-strings/demo-llm");
+        var deleteResp = await client.DeleteAsync("/api/ai/connection-strings/demo-llm");
         Assert.Equal(HttpStatusCode.NoContent, deleteResp.StatusCode);
 
-        var getResp = await client.GetAsync("/api/apps/my-app/ai/connection-strings/demo-llm");
+        var getResp = await client.GetAsync("/api/ai/connection-strings/demo-llm");
         Assert.Equal(HttpStatusCode.NotFound, getResp.StatusCode);
     }
 
@@ -398,19 +354,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         using var factory = NewApplianceFactory(store);
         var client = factory.CreateClient();
 
-        var resp = await client.DeleteAsync("/api/apps/my-app/ai/connection-strings/ghost-llm");
-        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Delete_returns_404_for_unknown_slug()
-    {
-        var store = GetDocumentStore();
-
-        using var factory = NewApplianceFactory(store);
-        var client = factory.CreateClient();
-
-        var resp = await client.DeleteAsync("/api/apps/nonexistent/ai/connection-strings/demo-llm");
+        var resp = await client.DeleteAsync("/api/ai/connection-strings/ghost-llm");
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
@@ -443,7 +387,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
         var agentId = (await agentResp.Content.ReadFromJsonAsync<JsonElement>())
             .GetProperty("agentId").GetString();
 
-        var deleteResp = await client.DeleteAsync("/api/apps/my-app/ai/connection-strings/demo-llm");
+        var deleteResp = await client.DeleteAsync("/api/ai/connection-strings/demo-llm");
         Assert.Equal(HttpStatusCode.Conflict, deleteResp.StatusCode);
 
         var body = await deleteResp.Content.ReadAsStringAsync();
@@ -455,7 +399,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
     private static async Task PostOllamaCsAsync(HttpClient client, string slug, string name)
     {
         var resp = await client.PostAsJsonAsync(
-            $"/api/apps/{slug}/ai/connection-strings",
+            $"/api/ai/connection-strings",
             new
             {
                 name,

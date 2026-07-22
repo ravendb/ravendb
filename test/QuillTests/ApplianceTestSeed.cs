@@ -15,7 +15,7 @@ internal static class ApplianceTestSeed
     public static async Task SeedMockAgentAsync(HttpClient client, string slug = "my-app", string agentId = "demo-agent", string ollamaUri = "http://localhost:11434/")
     {
         var csResp = await client.PostAsJsonAsync(
-            $"/api/apps/{slug}/ai/connection-strings",
+            $"/api/ai/connection-strings",
             new
             {
                 name = "demo-llm",

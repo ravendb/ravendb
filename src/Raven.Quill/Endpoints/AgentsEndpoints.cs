@@ -1,7 +1,5 @@
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
@@ -55,10 +53,7 @@ public static class AgentsEndpoints
 
         var agents = await maintenance.SendAsync(new GetAiAgentsOperation(), ct);
 
-        var connectionStrings = await maintenance.SendAsync(new GetConnectionStringsOperation(), ct);
-        var modelByConnectionString = (connectionStrings.AiConnectionStrings ?? new Dictionary<string, AiConnectionString>())
-            .ToDictionary(pair => pair.Key, pair => AiConnectionStringModel.Resolve(pair.Value), StringComparer.OrdinalIgnoreCase);
-
+        var modelByConnectionString = await MetricsReadService.ModelByConnectionStringAsync(store, ct);
         var activity = await MetricsReadService.GetAgentActivityAsync(store, app.Database, ct);
 
         var items = (agents.AiAgents ?? [])
@@ -125,7 +120,7 @@ public static class AgentsEndpoints
         if (existing is null)
             return Results.NotFound(new ApiErrorResponse($"no agent '{body.Identifier}' in app '{slug}'"));
 
-        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, app.Database, body, ct);
+        var validationError = await AgentConfigValidator.ValidateAndPrepareAsync(store, body, ct);
         if (validationError is not null)
             return validationError;
 
