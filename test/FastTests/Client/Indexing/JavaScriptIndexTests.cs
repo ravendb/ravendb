@@ -1046,7 +1046,7 @@ map('Products', prod => {
                     result.Duration = 6;
                 }
 
-                if (prod.Mode == Refurbished)
+                if (prod.Mode == 'Refurbished')
                     result.Duration /= 2;
 
                 return result;

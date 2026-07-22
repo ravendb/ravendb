@@ -798,17 +798,11 @@ output(result);
                         }, database, database.ServerStore, context);
                     
                     var result = (RelationalDatabaseEtlTestScriptResult)testResult;
-                    Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(1, result.TransformationErrors.Count);
+                    Assert.Contains("varchar is not defined", result.TransformationErrors[0].Error);
                     Assert.Equal(0, result.ItemLoadErrors.Count);
                     Assert.Equal(0, result.SlowSqlWarnings.Count);
-
-                    Assert.Equal(1, result.Summary.Count);
-
-                    var users = result.Summary.First(x => x.TableName == "Users");
-
-                    Assert.Equal(2, users.Commands.Length);  // insert & delete
-
-                    Assert.Equal("{\"varcharExists\":false,\"nvarcharExists\":false}", result.DebugOutput[0]);
+                    Assert.Equal(0, result.Summary.Count);
                 }
             }
         }

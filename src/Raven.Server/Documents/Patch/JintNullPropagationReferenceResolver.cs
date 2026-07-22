@@ -29,10 +29,17 @@ namespace Raven.Server.Documents.Patch
             if (_args == null || name.StartsWith('$') == false)
             {
                 if (name == "length")
+                {
                     value = _numberPositiveZero;
-                else
-                    value = reference.IsPropertyReference ? JsValue.Undefined : JsValue.Null;
-                return true;
+                    return true;
+                }
+
+                value = JsValue.Undefined;
+
+                if (reference.IsPropertyReference)
+                    return true;
+
+                return false; // bare undefined name: let Jint throw a clean ReferenceError, not InvalidCastException (RavenDB-27076)
             }
 
             value = _args.Get(name.Substring(1));
