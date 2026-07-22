@@ -121,18 +121,19 @@ internal unsafe struct GrowableBitArray : IDisposable
 
         return added;
     }
-
+    
+    // Requirement: ids sorted
     public void AddRange(Span<long> ids)
     {
+        AssertIsSorted(ids);
+        
         if (ids.Length == 0)
             return;
 
-        // Fill batches are sorted within themselves, so the window is first/last of the batch.
-        Debug.Assert(ids[0] <= ids[ids.Length - 1], "AddRange expects a batch sorted in ascending order");
         if (ids[0] < MinSetBit)
             MinSetBit = ids[0];
-        if (ids[ids.Length - 1] > MaxSetBit)
-            MaxSetBit = ids[ids.Length - 1];
+        if (ids[^1] > MaxSetBit)
+            MaxSetBit = ids[^1];
 
         if (_bitArrays.Length == 1)
         {
@@ -143,6 +144,26 @@ internal unsafe struct GrowableBitArray : IDisposable
         foreach (var id in ids)
             Add(id);
     }
+    
+    [Conditional("DEBUG")]
+    private static void AssertIsSorted(Span<long> entries)
+    {
+        var count = entries.Length;
+        if (count <= 1)
+        {
+            // If there are 0 or 1 elements, it is considered sorted
+            return;
+        }
+
+        for (int i = 0; i < count - 1; i++)
+        {
+            Debug.Assert(entries[i] >= 0);
+            if (entries[i] > entries[i + 1])
+            {
+                throw new InvalidOperationException("The entries are not sorted.");
+            }
+        }
+    }    
 
     public int Subtract(Span<long> ids)
     {
