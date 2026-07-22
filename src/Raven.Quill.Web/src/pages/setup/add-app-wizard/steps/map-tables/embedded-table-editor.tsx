@@ -5,6 +5,7 @@ import { FormSelect, type FormSelectOption } from "@/components/form/form-select
 import { FormSwitch } from "@/components/form/form-switch";
 import type { CdcSinkRelationType } from "@/api/generated/server-api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { AddNestedTableButtons } from "@/pages/setup/add-app-wizard/steps/map-tables/add-nested-table-buttons";
 import { AdvancedSettings } from "@/pages/setup/add-app-wizard/steps/map-tables/advanced-settings";
 import { FieldMappingEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/field-mapping-editor";
 import type { EmbeddedTablePath } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
@@ -70,6 +71,7 @@ export function EmbeddedTableEditor({ path }: { path: EmbeddedTablePath }) {
                 addButtonLabel="Add join column"
                 description="Columns used to match rows in this related table with rows from the parent table."
             />
+            <AddNestedTableButtons path={path} />
             <FieldMappingEditor path={path} />
             <AdvancedSettings path={path}>
                 <FormSwitch control={control} name={`${path}.caseSensitiveKeys`} label="Case sensitive keys" />
