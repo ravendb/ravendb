@@ -201,7 +201,8 @@ namespace Raven.Client.Documents.Operations.Backups
         PendingUpload,
         Uploading,
         PendingResponse,
-        Done
+        Done,
+        Aborted
     }
 
     public enum UploadType

@@ -123,7 +123,11 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             using (_writeStream)
             {
                 if (_abortUpload)
+                {
+                    _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Aborted);
+                    _multiPartUploader.Abort();
                     return;
+                }
 
                 if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
                 {
@@ -167,7 +171,11 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             using (_writeStream)
             {
                 if (_abortUpload)
+                {
+                    _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Aborted);
+                    await _multiPartUploader.AbortAsync().ConfigureAwait(false);
                     return;
+                }
 
                 if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
                 {

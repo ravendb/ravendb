@@ -75,4 +75,15 @@ public class AzureMultiPartUploader : IMultiPartUploader
             Metadata = _metadata
         }, _cancellationToken).ConfigureAwait(false);
     }
+
+    public void Abort()
+    {
+    }
+
+    public Task AbortAsync()
+    {
+        // nothing to abort explicitly: a block blob only materializes on CommitBlockList, and blocks that were
+        // staged but never committed are automatically discarded by Azure (after ~7 days)
+        return Task.CompletedTask;
+    }
 }
