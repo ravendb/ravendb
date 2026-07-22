@@ -116,21 +116,15 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
         _disposed = true;
 
-        if (_abortUpload)
-        {
-            using (Client)
-            using (_backupStatusIDisposable)
-            using (_uploadStream)
-            using (_writeStream)
-                return;
-        }
-
         using (Client)
         using (_backupStatusIDisposable)
         {
             using (_uploadStream)
             using (_writeStream)
             {
+                if (_abortUpload)
+                    return;
+
                 if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
                 {
                     _onProgress.Invoke("Waiting for previous upload task to finish");
@@ -166,21 +160,15 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
         GC.SuppressFinalize(this);
 
-        if (_abortUpload)
-        {
-            using (Client)
-            using (_backupStatusIDisposable)
-            using (_uploadStream)
-            using (_writeStream)
-                return;
-        }
-
         using (Client)
         using (_backupStatusIDisposable)
         {
             using (_uploadStream)
             using (_writeStream)
             {
+                if (_abortUpload)
+                    return;
+
                 if (_uploadTask != null && (_uploadTask.IsCompleted == false || _uploadTask.IsCompletedSuccessfully == false))
                 {
                     _onProgress.Invoke("Waiting for previous upload task to finish");
