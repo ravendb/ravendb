@@ -147,13 +147,11 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             _cloudUploadStatus.UploadProgress.SetUploaded(_position);
             _cloudUploadStatus.UploadProgress.SetTotal(_position);
             _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Done);
+            _backupStatusIDisposable.Dispose();
 
             _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
 
             OnCompleteUpload();
-
-            // stamp completion stats (LastFullBackup/duration) only on the success path
-            _backupStatusIDisposable.Dispose();
         }
     }
 
@@ -197,13 +195,11 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             _cloudUploadStatus.UploadProgress.SetUploaded(_position);
             _cloudUploadStatus.UploadProgress.SetTotal(_position);
             _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Done);
+            _backupStatusIDisposable.Dispose();
 
             _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
 
             OnCompleteUpload();
-
-            // stamp completion stats (LastFullBackup/duration) only on the success path
-            _backupStatusIDisposable.Dispose();
         }
     }
 

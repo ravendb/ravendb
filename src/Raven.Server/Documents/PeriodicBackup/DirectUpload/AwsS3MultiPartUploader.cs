@@ -123,8 +123,6 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
         if (_uploadId == null)
             return;
 
-        // abort is a cleanup path (often triggered by cancellation), so we don't pass _cancellationToken -
-        // otherwise an already-cancelled token would skip the cleanup and leave the uploaded parts orphaned (and billed)
         await _client.AbortMultipartUploadAsync(new AbortMultipartUploadRequest
         {
             BucketName = _bucketName,
