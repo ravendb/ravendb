@@ -30,7 +30,7 @@ export function useTableActions() {
     const getTableList = <TTable>(listPath: string) => (getValues(listPath as FormPath) as TTable[]) ?? [];
 
     const setFieldValue = (path: string, value: unknown) => {
-        setValue(path as FormPath, value as PathValue<AppFormData, FormPath>, { shouldDirty: true });
+        setValue(path as FormPath, value as PathValue<AppFormData, FormPath>);
     };
 
     const addRootTable = () => {
