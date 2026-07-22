@@ -152,6 +152,55 @@ export const sampleAgentSuggestion: SuggestAgentResponse = {
             ],
             parameters: [{ name: "customerId", description: "Id of the signed-in customer." }],
         },
+        {
+            identifier: "order-tracker",
+            name: "Order tracker",
+            connectionStringName: "openai-chat",
+            systemPrompt: "You answer questions about the status, contents, and shipping of a customer's orders.",
+            sampleObject: JSON.stringify(
+                {
+                    reply: "A summary of the order status.",
+                    estimatedDelivery: "Expected delivery date, if known.",
+                },
+                null,
+                4,
+            ),
+            queries: [
+                {
+                    name: "recent-orders",
+                    description: "List the customer's most recent orders.",
+                    query: "from Orders where CustomerId == $customerId order by OrderedAt desc limit 5",
+                },
+                {
+                    name: "order-details",
+                    description: "Load a single order with its lines.",
+                    query: "from Orders where id() == $orderId",
+                },
+            ],
+            parameters: [{ name: "customerId", description: "Id of the signed-in customer." }],
+        },
+        {
+            identifier: "inventory-analyst",
+            name: "Inventory analyst",
+            connectionStringName: "openai-chat",
+            systemPrompt: "You help the shop staff spot low stock and summarize how products are selling.",
+            sampleObject: JSON.stringify(
+                {
+                    reply: "An analysis of the requested products or stock levels.",
+                    lowStockProducts: "Product names that need restocking soon.",
+                },
+                null,
+                4,
+            ),
+            queries: [
+                {
+                    name: "low-stock",
+                    description: "Find products running low on stock.",
+                    query: "from Products where UnitsInStock < $threshold order by UnitsInStock",
+                },
+            ],
+            parameters: [],
+        },
     ],
     rationale: ["The database contains products and orders, so a shopping assistant fits well."],
     status: "Success",
