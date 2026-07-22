@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -80,6 +81,79 @@ namespace FastTests.Issues
                 "Finalization must run asynchronously inside the pump via DirectUploadStream.DisposeAsync.");
         }
 
+        // Verifies the disposal DISPATCH on the encrypted document-backup path, with no cloud/network required.
+        //
+        // BackupTask.CreateBackup builds:  outputStream = GetOutputStream(directUploadStream)  (an encrypting wrapper
+        // when the backup is encrypted) and finalizes via 'await outputStream.DisposeAsync()'. That must reach
+        // DirectUploadStream.DisposeAsync (async), NOT the synchronous Stream.Dispose - otherwise a layer that falls
+        // back to sync disposal would run the blocking Dispose inside the pump and could deadlock again.
+        //
+        // (The compression stream from BackupUtils.GetCompressionStream uses leaveOpen:true, so it never disposes
+        // outputStream; the only disposer is CreateBackup's finally, exercised here through the encrypting layer.)
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Encrypted_backup_path_disposes_DirectUploadStream_asynchronously_not_synchronously()
+        {
+            var uploader = new ContextCapturingMultiPartUploader();
+
+            var parameters = new DirectUploadStream<FakeDirectUploader>.Parameters
+            {
+                ClientFactory = _ => new FakeDirectUploader(uploader),
+                Key = "key",
+                Metadata = new Dictionary<string, string>(),
+                IsFullBackup = true,
+                RetentionPolicyParameters = null,
+                CloudUploadStatus = new UploadToS3(),
+                OnBackupException = null,
+                OnProgress = _ => { }
+            };
+
+            var inner = new DisposeTrackingDirectUploadStream(parameters);
+
+            // GetOutputStream(stream) wraps the DirectUploadStream in the encrypting stream when the backup is encrypted.
+            var key = new byte[(int)Sodium.crypto_secretstream_xchacha20poly1305_keybytes()];
+            var outputStream = new EncryptingXChaCha20Poly1305Stream(inner, key);
+            outputStream.Initialize();
+
+            await outputStream.WriteAsync(new byte[128], 0, 128);
+
+            // Mirrors BackupTask.CreateBackup's finally.
+            await outputStream.DisposeAsync();
+
+            Assert.True(inner.DisposeAsyncCalled,
+                "DirectUploadStream.DisposeAsync must be invoked through the encrypting stream on the backup path.");
+            Assert.False(inner.SyncDisposeCalled,
+                "The synchronous DirectUploadStream.Dispose must NOT run on the backup path - it is the blocking path that hangs.");
+        }
+
+        private sealed class DisposeTrackingDirectUploadStream : DirectUploadStream<FakeDirectUploader>
+        {
+            public bool DisposeAsyncCalled;
+            public bool SyncDisposeCalled;
+
+            public DisposeTrackingDirectUploadStream(Parameters parameters) : base(parameters)
+            {
+            }
+
+            // large enough that writes never trigger a mid-stream upload part - keeps the test focused on dispatch
+            protected override long MinOnePartUploadSizeInBytes => long.MaxValue;
+
+            protected override void OnCompleteUpload()
+            {
+            }
+
+            public override ValueTask DisposeAsync()
+            {
+                DisposeAsyncCalled = true;
+                return base.DisposeAsync();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                SyncDisposeCalled = true;
+                base.Dispose(disposing);
+            }
+        }
+
         private sealed class TestDirectUploadStream : DirectUploadStream<FakeDirectUploader>
         {
             public TestDirectUploadStream(Parameters parameters) : base(parameters)
@@ -140,6 +214,12 @@ namespace FastTests.Issues
             {
                 await Task.Yield();
             }
+
+            public void Abort()
+            {
+            }
+
+            public Task AbortAsync() => Task.CompletedTask;
         }
 
         // A faithful, minimal reproduction of AsyncHelpers.ExclusiveSynchronizationContext's message loop
