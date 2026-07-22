@@ -1,5 +1,6 @@
-import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
+import type { DiscoverForeignKeyResponse, DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 import { toStringValueItems } from "@/lib/form-utils";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { isColumnSupported, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import type {
     FormColumnMapping,
@@ -8,6 +9,8 @@ import type {
     FormRootTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 import type { FieldErrors } from "react-hook-form";
+
+type SourceTableRef = { sourceTableSchema?: string | null; sourceTableName?: string | null };
 
 export function pascalCase(value: string): string {
     return value
@@ -21,8 +24,41 @@ export function propertyNameFromJoinColumn(column: string): string {
     return pascalCase(column.toLowerCase().endsWith("_id") ? column.slice(0, -3) : column);
 }
 
-export function getSourceTableLabel(table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) {
+export function getSourceTableLabel(table: SourceTableRef) {
     return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
+}
+
+/** Normalized identity of a source table, matching the case-insensitive comparison the
+ * validation schema uses for duplicate root tables. Null when the table has no name yet. */
+export function getSourceTableKey(table: SourceTableRef): string | null {
+    const name = table.sourceTableName?.trim().toLowerCase();
+
+    if (!name) {
+        return null;
+    }
+
+    return `${table.sourceTableSchema?.trim().toLowerCase() ?? ""}::${name}`;
+}
+
+/** Collects the keys of every source table whose data is captured by the mapping: root
+ * tables plus nested embedded tables. Linked tables don't count - a link only references
+ * documents by id, so the linked table still needs its own root mapping. */
+export function collectMappedSourceTableKeys(tables: FormRootTable[]): Set<string> {
+    const keys = new Set<string>();
+
+    const visit = (table: SourceTableRef & { embeddedTables?: FormEmbeddedTable[] }) => {
+        const key = getSourceTableKey(table);
+
+        if (key) {
+            keys.add(key);
+        }
+
+        table.embeddedTables?.forEach(visit);
+    };
+
+    tables.forEach(visit);
+
+    return keys;
 }
 
 export function createEmptyRootTable(): FormRootTable {
@@ -80,8 +116,20 @@ export function mapDiscoveredColumns(
         }));
 }
 
-/** Scaffolds a root table from the discovered schema: columns and primary keys are
- * pre-filled, while embedding/linking decisions are left to the user. */
+/** Scaffolds a linked table from a foreign key of the parent table, pointing at the
+ * referenced table's default collection name. */
+export function scaffoldLinkedTable(foreignKey: DiscoverForeignKeyResponse): FormLinkedTable {
+    return {
+        sourceTableSchema: foreignKey.referencedSchema ?? null,
+        sourceTableName: foreignKey.referencedTable,
+        propertyName: foreignKey.columns.map(propertyNameFromJoinColumn).join("And"),
+        joinColumns: toStringValueItems(foreignKey.columns),
+        linkedCollectionName: pascalCase(foreignKey.referencedTable),
+    };
+}
+
+/** Scaffolds a root table from the discovered schema: columns, primary keys, and linked
+ * tables (one per foreign key) are pre-filled, while embedding decisions are left to the user. */
 export function scaffoldRootTable(
     discoverResult: DiscoverResponse | null,
     table: DiscoverTableResponse,
@@ -93,7 +141,30 @@ export function scaffoldRootTable(
         sourceTableName: table.sourceTableName,
         columns: mapDiscoveredColumns(discoverResult, table),
         primaryKeyColumns: toStringValueItems(table.primaryKeyColumns),
+        linkedTables: table.foreignKeys.map(scaffoldLinkedTable),
     };
+}
+
+/** Scaffolds root tables for the selected source tables; tables missing from the discovered
+ * schema still get a bare root table so the user can fill the mapping in manually. */
+export function scaffoldTables(
+    selectedTables: AppFormData["verifySchema"]["tables"],
+    discoverResult: DiscoverResponse | null,
+): FormRootTable[] {
+    return selectedTables.map((selected) => {
+        const discovered = findDiscoveredTable(discoverResult, selected.sourceTableSchema, selected.sourceTableName);
+
+        if (discovered) {
+            return scaffoldRootTable(discoverResult, discovered);
+        }
+
+        return {
+            ...createEmptyRootTable(),
+            collectionName: pascalCase(selected.sourceTableName),
+            sourceTableSchema: selected.sourceTableSchema ?? null,
+            sourceTableName: selected.sourceTableName,
+        };
+    });
 }
 
 export function findDiscoveredTable(
