@@ -37,6 +37,18 @@
     min-width: 0;
 }
 
+.ace-editor--fill {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.ace-editor--fill .ace-editor__body {
+    min-height: 0;
+    flex: 1;
+}
+
 .ace-editor__actions {
     display: flex;
     width: 2.25rem;

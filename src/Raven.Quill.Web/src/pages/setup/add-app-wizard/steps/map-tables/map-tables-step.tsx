@@ -16,9 +16,6 @@ import { TableEditor } from "@/pages/setup/add-app-wizard/steps/map-tables/table
 import { TablesExplorer } from "@/pages/setup/add-app-wizard/steps/map-tables/tables-explorer";
 import { UnmappedTablesAlert } from "@/pages/setup/add-app-wizard/steps/map-tables/unmapped-tables-alert";
 
-// Ace manages its own pixel-based resizable height, so the raw editor cannot flex-fill the step.
-const RAW_EDITOR_HEIGHT_PX = 544;
-
 export function MapTablesStep() {
     const { control, getValues, setValue } = useFormContext<AppFormData>();
     const { errors } = useFormState({ control, name: "mapTables.tables" });
@@ -71,8 +68,8 @@ export function MapTablesStep() {
                     mode="json"
                     value={rawContent}
                     onChange={handleRawChange}
-                    height={`${RAW_EDITOR_HEIGHT_PX}px`}
-                    maxHeight={Infinity}
+                    isFillHeight
+                    className="min-h-80"
                     actions={[{ component: <AceEditor.FormatAction /> }, { component: <AceEditor.FullScreenAction /> }]}
                 />
             ) : (

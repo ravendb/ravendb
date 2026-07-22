@@ -56,6 +56,7 @@ export type AceEditorProps = Omit<ReactAceEditorProps, "mode"> & {
     aceRef?: RefObject<ReactAce | null>;
     actions?: ActionItem[];
     execute?: (...args: unknown[]) => unknown;
+    isFillHeight?: boolean;
     languageService?: LanguageService;
     maxHeight?: number | string;
     minHeight?: number | string;
@@ -97,6 +98,7 @@ function AceEditor({
     actions = [],
     className,
     height = "200px",
+    isFillHeight = false,
     languageService,
     maxHeight = ACE_EDITOR_MAX_HEIGHT_IN_PX,
     minHeight = ACE_EDITOR_MIN_HEIGHT_IN_PX,
@@ -158,6 +160,21 @@ function AceEditor({
         editorRef.current?.editor.resize();
     }, [editorRef, resizableHeight.height]);
 
+    // In fill mode the body is sized by flex layout, so Ace must re-measure on container resizes.
+    useEffect(() => {
+        const root = rootRef.current;
+
+        if (!isFillHeight || !root) {
+            return;
+        }
+
+        const observer = new ResizeObserver(() => editorRef.current?.editor.resize());
+
+        observer.observe(root);
+
+        return () => observer.disconnect();
+    }, [isFillHeight, editorRef]);
+
     function handleValidate(annotations: Parameters<NonNullable<ReactAceEditorProps["onValidate"]>>[0]) {
         const firstError = annotations.find((annotation) => annotation.type === "error");
 
@@ -178,12 +195,15 @@ function AceEditor({
     return (
         <AceEditorContext.Provider value={{ aceRef: editorRef, rootRef, setHeight: resizableHeight.setHeight }}>
             <div
-                className={cn("ace-editor", className)}
+                className={cn("ace-editor", isFillHeight && "ace-editor--fill", className)}
                 data-dragging={resizableHeight.isDragging}
                 data-invalid={Boolean(errorMessage)}
                 ref={rootRef}
             >
-                <div className="ace-editor__body" style={{ height: `${resizableHeight.height}px` }}>
+                <div
+                    className="ace-editor__body"
+                    style={isFillHeight ? undefined : { height: `${resizableHeight.height}px` }}
+                >
                     <ReactAceComponent
                         editorProps={{ $blockScrolling: Infinity }}
                         fontSize={14}
@@ -217,11 +237,13 @@ function AceEditor({
                     )}
                 </div>
                 {errorMessage && <div className="ace-editor__error">{errorMessage}</div>}
-                <div
-                    className="ace-editor__resize-handle"
-                    onDoubleClick={() => handleAutoResizeHeight(editorRef, resizableHeight.setHeight)}
-                    onMouseDown={resizableHeight.handleMouseDown}
-                />
+                {!isFillHeight && (
+                    <div
+                        className="ace-editor__resize-handle"
+                        onDoubleClick={() => handleAutoResizeHeight(editorRef, resizableHeight.setHeight)}
+                        onMouseDown={resizableHeight.handleMouseDown}
+                    />
+                )}
             </div>
         </AceEditorContext.Provider>
     );
