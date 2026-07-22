@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
+@import "streamdown/styles.css";
+
+/* Streamdown builds its markdown styling from Tailwind utility classes, so Tailwind must scan
+   its dist output to emit them. */
+@source "../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
 
