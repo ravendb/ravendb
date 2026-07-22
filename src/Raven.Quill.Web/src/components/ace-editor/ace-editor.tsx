@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { Ace } from "ace-builds";
 import "ace-builds/src-noconflict/ace";
+import "@/components/ace-editor/ace-editor-workers";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
 import ReactAce, { type IAceEditorProps as ReactAceEditorProps, type IAceOptions } from "react-ace";
 import "ace-builds/src-noconflict/mode-csharp";
