@@ -11,7 +11,7 @@ namespace Sparrow.Utils
     /// <summary>
     /// A utility for escaping arguments for new processes.
     /// </summary>
-    internal static class CommandLineArgumentEscaper
+    public static class CommandLineArgumentEscaper
     {
         /// <summary>
         /// Undo the processing which took place to create string[] args in Main, so that the next process will

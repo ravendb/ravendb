@@ -5,8 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.ServiceProcess;
-using System.Text.RegularExpressions;
 using System.Threading;
+using Sparrow.Utils;
+using static Raven.Server.Utils.WindowsServiceUtils;
 
 namespace rvn
 {
@@ -44,6 +45,8 @@ namespace rvn
 
             private const string LocalServiceAccountName = @"NT AUTHORITY\LocalService";
 
+            private static readonly string ServiceControlToolPath = Path.Combine(Environment.SystemDirectory, "sc.exe");
+
             private readonly string _serviceName;
             private readonly string _username;
             private readonly string _password;
@@ -68,40 +71,34 @@ namespace rvn
             private void InstallInternal(
                 ServiceController serviceController, string ravenServerDir, List<string> serviceArgs, int counter = 0)
             {
-                var serviceName = _serviceName;
-                var normalizedServiceName = NormalizeServiceName(serviceName);
+                var normalizedServiceName = NormalizeServiceName(_serviceName);
                 var serviceCommand = GetServiceCommand(ravenServerDir, serviceArgs);
-                var serviceDesc = WindowServiceDescription;
 
-                var createArgs = new List<string>
-                {
-                    "create", normalizedServiceName,
-                    "type=", "own",
-                    "start=", "auto",
-                    "error=", "normal",
-                    "binPath=", serviceCommand,
-                    "DisplayName=", serviceName
-                };
+                var createArgs = new List<string> { "create", normalizedServiceName };
 
-                if (string.IsNullOrWhiteSpace(_username))
+                // sc.exe expects each option as two tokens: a name ending in '=' followed by the
+                // value (e.g. "type=" then "own"), never "type=own".
+                void AddOption(string name, string value)
                 {
-                    createArgs.Add("obj=");
-                    createArgs.Add(LocalServiceAccountName);
-                }
-                else
-                {
-                    createArgs.Add("obj=");
-                    createArgs.Add(_username);
-                    createArgs.Add("password=");
-                    createArgs.Add(_password ?? string.Empty);
+                    createArgs.Add(name + "=");
+                    createArgs.Add(value);
                 }
 
-                var result = RunServiceControlTool(createArgs.ToArray());
+                AddOption("type", "own");
+                AddOption("start", "auto");
+                AddOption("error", "normal");
+                AddOption("binPath", serviceCommand);
+                AddOption("DisplayName", _serviceName);
+                AddOption("obj", string.IsNullOrWhiteSpace(_username) ? LocalServiceAccountName : _username);
+                if (string.IsNullOrWhiteSpace(_username) == false)
+                    AddOption("password", _password ?? string.Empty);
+
+                var result = RunServiceControlTool(createArgs);
 
                 switch ((uint)result.ExitCode)
                 {
                     case 0:
-                        var descriptionResult = RunServiceControlTool("description", normalizedServiceName, serviceDesc);
+                        var descriptionResult = RunServiceControlTool(["description", normalizedServiceName, WindowServiceDescription]);
                         if (descriptionResult.ExitCode != 0)
                             Console.WriteLine($"Service {ServiceFullName} was registered, but its description could not be set: { FormatServiceControlToolError(descriptionResult) }");
 
@@ -150,11 +147,11 @@ namespace rvn
             // and unregister shell out to sc.exe (the tool ships in %SystemRoot%\System32). sc.exe
             // returns the underlying Win32 error code as its process exit code, which lets the
             // callers branch on the same ERROR_* codes used elsewhere in this file.
-            private static (int ExitCode, string Output) RunServiceControlTool(params string[] arguments)
+            private static (int ExitCode, string Output) RunServiceControlTool(IReadOnlyList<string> arguments)
             {
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = Path.Combine(Environment.SystemDirectory, "sc.exe"),
+                    FileName = ServiceControlToolPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -176,11 +173,6 @@ namespace rvn
 
                     return (process.ExitCode, combined.Trim());
                 }
-            }
-
-            private static string NormalizeServiceName(string serviceName)
-            {
-                return Regex.Replace(serviceName, @"[\/\s]", "_");
             }
 
             public void Uninstall()
@@ -218,7 +210,7 @@ namespace rvn
                     }
                 }
 
-                var result = RunServiceControlTool("delete", NormalizeServiceName(_serviceName));
+                var result = RunServiceControlTool(["delete", NormalizeServiceName(_serviceName)]);
 
                 switch ((uint)result.ExitCode)
                 {
@@ -320,12 +312,13 @@ namespace rvn
                     if (argsForService.Any(x => x.StartsWith("--service-name")) == false)
                     {
                         argsForService.Add("--service-name");
-                        argsForService.Add($"\"{_serviceName}\"");
+                        argsForService.Add(_serviceName);
                     }
 
-                    // Quote the executable path so the SCM ImagePath parses the exe correctly even
-                    // when the installation directory contains spaces.
-                    return $"\"{serverExecutable}\" {string.Join(" ", argsForService)}";
+                    // Build the SCM ImagePath (executable + arguments) with the shared escaper so
+                    // the executable path and each argument are quoted correctly, e.g. when the
+                    // installation directory or an argument value contains spaces.
+                    return CommandLineArgumentEscaper.EscapeAndConcatenate(argsForService.Prepend(serverExecutable));
                 }
             }
 
