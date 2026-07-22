@@ -10,12 +10,14 @@ import {
     getSourceTableLabel,
     scaffoldTables,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 
 /** Warns when tables selected in the verify step have no mapping that captures their data
  * (root or embedded) - e.g. when AI-suggested mappings skipped some of them. Being the
  * target of a linked table is not enough: links only reference documents by id. */
 export function UnmappedTablesAlert() {
-    const { control, getValues, setValue } = useFormContext<AppFormData>();
+    const { control, getValues } = useFormContext<AppFormData>();
+    const applyMapTables = useApplyMapTables();
     const mappedTables = useWatch({ control, name: "mapTables.tables" }) ?? [];
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
 
@@ -31,11 +33,7 @@ export function UnmappedTablesAlert() {
     }
 
     const handleMapTables = () => {
-        setValue(
-            "mapTables.tables",
-            [...getValues("mapTables.tables"), ...scaffoldTables(unmappedTables, discoverResult)],
-            { shouldDirty: true, shouldValidate: true },
-        );
+        applyMapTables([...getValues("mapTables.tables"), ...scaffoldTables(unmappedTables, discoverResult)]);
     };
 
     return (
