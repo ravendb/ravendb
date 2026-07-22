@@ -4,6 +4,7 @@ import { useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Bot, ChevronDown, ChevronUp, FlaskConical, MessageSquare, Send, Settings2, Trash2 } from "lucide-react";
+import { Streamdown } from "streamdown";
 import { api } from "@/api/api";
 import type { AgentToolCall } from "@/api/custom-services/agent-stream";
 import {
@@ -22,6 +23,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/shadcn/ui/sheet";
+import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormSwitch } from "@/components/form/form-switch";
@@ -76,17 +78,22 @@ function nextMessageId(): string {
     return `agent-test-message-${messageIdCounter}`;
 }
 
-// Agent answers always render as JSON: `json` holds the live answer (the sample response
-// shape with the streamed field filling in) and is swapped for the full structured answer
-// once the turn finishes. `toolCalls` are the query tools the agent ran (filled on `done`).
-// `text` carries plain user prompts and error messages.
+// For agent answers, `text` is the primary markdown string (the streamed field live, then the
+// final answer's string field) and `json` the structured answer (the sample response shape with
+// the streamed field filling in, swapped for the full answer on `done`). `defaultView` picks
+// which of the two a message opens on — markdown for the common single-string answer, JSON for
+// anything more structured. `toolCalls` are the query tools the agent ran (filled on `done`).
+// For user and error messages, `text` is the prompt / error alone.
 type ChatMessage = {
     id: string;
     role: "user" | "agent" | "error";
     text: string;
     json?: string;
+    defaultView?: AnswerView;
     toolCalls?: AgentToolCall[];
 };
+
+type AnswerView = "markdown" | "json";
 
 const testParameterSchema = z
     .object({
@@ -225,14 +232,20 @@ function TestAgentPanel() {
                     );
                 } else if (event.type === "done") {
                     // Swap the live answer for the full structured output, keeping the streamed
-                    // JSON if the server returned no structured answer. Attach the query tools the
-                    // agent ran so the transcript can show them above the answer.
-                    const json =
-                        toAnswerJson(event.fullAnswer ?? event.answer) ??
-                        buildStreamingJson(answerShape, streamField, streamedText);
+                    // text/JSON where the server returned no structured answer. Attach the query
+                    // tools the agent ran so the transcript can show them above the answer.
+                    const answer = event.fullAnswer ?? event.answer;
+                    const json = toAnswerJson(answer) ?? buildStreamingJson(answerShape, streamField, streamedText);
+                    const text = getPrimaryAnswerText(answer, streamField) ?? streamedText;
                     const toolCalls = event.toolCalls ?? [];
                     setMessages((previous) =>
-                        replaceMessage(previous, agentMessageId, (message) => ({ ...message, json, toolCalls })),
+                        replaceMessage(previous, agentMessageId, (message) => ({
+                            ...message,
+                            text,
+                            json,
+                            defaultView: getDefaultAnswerView(answer, text),
+                            toolCalls,
+                        })),
                     );
                 } else if (event.type === "error") {
                     setMessages((previous) =>
@@ -468,8 +481,19 @@ function TestMessage({ message, isLoading }: { message: ChatMessage; isLoading: 
         );
     }
 
-    // Agent answers are always JSON, rendered in the read-only editor: live while the field
-    // streams in, then the full structured answer once the turn finishes.
+    return <AgentAnswer message={message} isLoading={isLoading} />;
+}
+
+// An agent answer opens on formatted markdown of its primary string (the common answer shape is
+// a single string field) with a per-message toggle to the raw JSON; answers with more structure
+// open on JSON instead (see getDefaultAnswerView). While waiting for the first streamed token
+// only the "Generating" indicator shows — no empty answer box.
+function AgentAnswer({ message, isLoading }: { message: ChatMessage; isLoading: boolean }) {
+    const [selectedView, setSelectedView] = useState<AnswerView | null>(null);
+    const hasMarkdown = message.text.trim() !== "";
+    const view = hasMarkdown ? (selectedView ?? message.defaultView ?? "markdown") : "json";
+    const isAwaitingFirstChunk = isLoading && !hasMarkdown;
+
     return (
         <div className="mr-auto flex w-full gap-2">
             <Bot className="mt-2 size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -487,16 +511,48 @@ function TestMessage({ message, isLoading }: { message: ChatMessage; isLoading: 
                         ))}
                     </div>
                 )}
-                <div className="overflow-hidden rounded-lg border">
-                    <AceEditor
-                        mode="json"
-                        value={message.json ?? ""}
-                        readOnly
-                        height="160px"
-                        maxHeight={400}
-                        actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                    />
-                </div>
+                {!isAwaitingFirstChunk && (
+                    <div className="grid gap-1.5">
+                        {hasMarkdown && (
+                            <ToggleGroup
+                                type="single"
+                                variant="outline"
+                                size="sm"
+                                spacing={0}
+                                className="justify-self-end"
+                                value={view}
+                                onValueChange={(value) => {
+                                    if (value === "markdown" || value === "json") {
+                                        setSelectedView(value);
+                                    }
+                                }}
+                            >
+                                <ToggleGroupItem value="markdown" aria-label="Show formatted answer">
+                                    Markdown
+                                </ToggleGroupItem>
+                                <ToggleGroupItem value="json" aria-label="Show raw JSON answer">
+                                    JSON
+                                </ToggleGroupItem>
+                            </ToggleGroup>
+                        )}
+                        {view === "markdown" ? (
+                            <div className="rounded-lg border bg-background px-3 py-2 text-sm">
+                                <Streamdown>{message.text}</Streamdown>
+                            </div>
+                        ) : (
+                            <div className="overflow-hidden rounded-lg border">
+                                <AceEditor
+                                    mode="json"
+                                    value={message.json ?? ""}
+                                    readOnly
+                                    height="160px"
+                                    maxHeight={400}
+                                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -633,6 +689,60 @@ function buildStreamingJson(
 
 function firstStringKey(answer: Record<string, unknown>): string | undefined {
     return Object.keys(answer).find((key) => typeof answer[key] === "string");
+}
+
+// The string the markdown view renders: the answer itself when it is a bare string, else the
+// streamed field when it holds text, else the first non-empty string field. Null when the
+// answer has no string content at all.
+function getPrimaryAnswerText(answer: unknown, streamField: string): string | null {
+    if (typeof answer === "string") {
+        return answer.trim() ? answer : null;
+    }
+
+    if (!answer || typeof answer !== "object" || Array.isArray(answer)) {
+        return null;
+    }
+
+    const record = answer as Record<string, unknown>;
+    const preferred = record[streamField];
+    if (typeof preferred === "string" && preferred.trim()) {
+        return preferred;
+    }
+
+    const firstString = Object.values(record).find((value) => typeof value === "string" && value.trim());
+    return typeof firstString === "string" ? firstString : null;
+}
+
+// Markdown is the default view only for the common simple shape — an answer that is effectively
+// a single string. Anything with more populated fields would lose information in the markdown
+// view (it shows only the primary string), so it opens on JSON instead.
+function getDefaultAnswerView(answer: unknown, markdownText: string): AnswerView {
+    if (!markdownText.trim()) {
+        return "json";
+    }
+
+    if (!answer || typeof answer !== "object" || Array.isArray(answer)) {
+        return "markdown";
+    }
+
+    const populatedValues = Object.values(answer).filter(hasAnswerContent);
+    return populatedValues.length === 1 && typeof populatedValues[0] === "string" ? "markdown" : "json";
+}
+
+function hasAnswerContent(value: unknown): boolean {
+    if (value == null) {
+        return false;
+    }
+    if (typeof value === "string") {
+        return value.trim() !== "";
+    }
+    if (Array.isArray(value)) {
+        return value.length > 0;
+    }
+    if (typeof value === "object") {
+        return Object.keys(value).length > 0;
+    }
+    return true;
 }
 
 // Pretty-prints the structured answer for the JSON editor; null when there is nothing to show.
