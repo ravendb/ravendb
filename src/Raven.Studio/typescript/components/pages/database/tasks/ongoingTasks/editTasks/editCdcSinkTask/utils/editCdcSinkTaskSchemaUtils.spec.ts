@@ -1,4 +1,5 @@
 import {
+    alignLinkedTableCollectionNames,
     getRelatedSourceTablesToAdd,
     isTableSupported,
     mapRelatedSqlTablesToFormData,
@@ -213,6 +214,21 @@ describe("mapRelatedSqlTablesToFormData", () => {
         const [mapped] = mapRelatedSqlTablesToFormData(schema, rootTables, [dboCustomers]);
 
         expect(mapped.collectionName).toBe("DboCustomers");
+    });
+
+    it("aligns existing linked tables when a new root collection name is de-duplicated", () => {
+        const orders = createTable({ SourceTableName: "orders", ForeignKeys: [createForeignKey()] });
+        const salesCustomers = createTable({ SourceTableSchema: "sales", SourceTableName: "customers" });
+        const dboCustomers = createTable({ SourceTableName: "customers" });
+        const schema = createSchema({ Tables: [orders, salesCustomers, dboCustomers] });
+        const rootTables = [mapSqlTableToFormData(schema, orders), mapSqlTableToFormData(schema, salesCustomers)];
+        const newTables = mapRelatedSqlTablesToFormData(schema, rootTables, [dboCustomers]);
+
+        const alignedRootTables = alignLinkedTableCollectionNames(rootTables, newTables);
+
+        expect(newTables[0].collectionName).toBe("DboCustomers");
+        expect(alignedRootTables[0].linkedTables[0].linkedCollectionName).toBe("DboCustomers");
+        expect(alignedRootTables[1]).toBe(rootTables[1]);
     });
 });
 

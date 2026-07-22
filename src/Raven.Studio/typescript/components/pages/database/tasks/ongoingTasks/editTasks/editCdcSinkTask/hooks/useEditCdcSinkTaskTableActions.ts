@@ -12,6 +12,7 @@ import {
     castToLinkedTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
+import { alignLinkedTableCollectionNames } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskSchemaUtils";
 import { useAppDispatch } from "components/store";
 import { FieldPath, useFormContext, UseFormSetValue } from "react-hook-form";
 
@@ -69,9 +70,12 @@ export function useEditCdcSinkTaskTableActions() {
             return;
         }
 
+        const currentTables = getTableList<FormRootTable>("tables");
+        const alignedCurrentTables = alignLinkedTableCollectionNames(currentTables, newTables);
+
         // The added tables are complete (unlike manually added empty rows) — validate immediately
         // so any problem surfaces at the click, not at save time.
-        setValue("tables", [...getTableList<FormRootTable>("tables"), ...newTables], {
+        setValue("tables", [...alignedCurrentTables, ...newTables], {
             shouldDirty: true,
             shouldValidate: true,
         });
