@@ -499,7 +499,7 @@ function AgentAnswer({ message, isLoading }: { message: ChatMessage; isLoading: 
             <Bot className="mt-2 size-4 shrink-0 text-muted-foreground" aria-hidden />
             <div className="min-w-0 flex-1">
                 {isLoading && (
-                    <div className="mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="mt-2 mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
                         <Spinner className="size-3" />
                         <span>Generating response…</span>
                     </div>
