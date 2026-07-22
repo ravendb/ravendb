@@ -117,6 +117,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _disposed = true;
 
         using (Client)
+        using (_backupStatusIDisposable)
         {
             using (_uploadStream)
             using (_writeStream)
@@ -147,7 +148,6 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             _cloudUploadStatus.UploadProgress.SetUploaded(_position);
             _cloudUploadStatus.UploadProgress.SetTotal(_position);
             _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Done);
-            _backupStatusIDisposable.Dispose();
 
             _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
 
@@ -165,6 +165,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         GC.SuppressFinalize(this);
 
         using (Client)
+        using (_backupStatusIDisposable)
         {
             using (_uploadStream)
             using (_writeStream)
@@ -195,7 +196,6 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
             _cloudUploadStatus.UploadProgress.SetUploaded(_position);
             _cloudUploadStatus.UploadProgress.SetTotal(_position);
             _cloudUploadStatus.UploadProgress.ChangeState(UploadState.Done);
-            _backupStatusIDisposable.Dispose();
 
             _onProgress.Invoke($"Total uploaded: {new Size(_position, SizeUnit.Bytes)}");
 
