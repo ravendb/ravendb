@@ -2601,6 +2601,58 @@ select incl(c)"
                 return ClusterTransactionCommand.ReadCommandsBatch(ctx, database, fromCount: 0, take: long.MaxValue).Count();
         }
 
+        public async Task ClusterTransactionCommandsCleanup_ShouldDrainLargeBacklog_WhenObserverResumes()
+        {
+            const int count = 50_000;
+
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            // make sure the (single-node) cluster observer exists, then suspend it so a backlog can build up
+            await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
+            var observer = server.ServerStore.Observer;
+            observer.Suspended = true;
+
+            // Write 'count' cluster-wide transactions. The database executor processes them, but with the observer
+            // suspended none of the transaction commands are cleaned up, so they accumulate in the cluster storage.
+            const int concurrency = 128;
+            for (var start = 0; start < count; start += concurrency)
+            {
+                var end = Math.Min(start + concurrency, count);
+                await Task.WhenAll(Enumerable.Range(start, end - start).Select(async i =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                    await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                    await session.SaveChangesAsync();
+                }));
+            }
+
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                // wait until every transaction command was persisted to the cluster storage
+                await AssertWaitForTrueAsync(() =>
+                {
+                    using (context.OpenReadTransaction())
+                        return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() == count);
+                }, timeout: 60_000);
+
+                // verify the full backlog is present before enabling the observer
+                using (context.OpenReadTransaction())
+                    Assert.Equal(count, ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count());
+
+                // Resume cleanup. The observer must drain the whole backlog - in bounded batches, over several
+                // cleanup commands - leaving at most the single retained marker. If batching were broken (e.g. the
+                // cleanup command id didn't advance) rows would be orphaned and this would time out.
+                observer.Suspended = false;
+
+                await AssertWaitForTrueAsync(() =>
+                {
+                    using (context.OpenReadTransaction())
+                        return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() <= 1);
+                }, timeout: 120_000);
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestCase()
         {
