@@ -1027,11 +1027,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
             
             writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.GetDefaultRavenFormat());
+            writer.WriteString(result.IndexTimestamp.GetDefaultRavenFormat(isUtc: true));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.GetDefaultRavenFormat());
+            writer.WriteString(result.LastQueryTime.GetDefaultRavenFormat(isUtc: true));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.IsStale));
