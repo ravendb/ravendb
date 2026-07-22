@@ -45,9 +45,9 @@ export function UnmappedTablesAlert() {
                     : `${unmappedTables.length} selected tables are not mapped`}
             </AlertTitle>
             <AlertDescription>
-                Changes to {unmappedTables.map(getSourceTableLabel).join(", ")} will not be synced. Map{" "}
-                {unmappedTables.length === 1 ? "it" : "them"} as root tables, or go back and deselect{" "}
-                {unmappedTables.length === 1 ? "it" : "them"}.
+                Changes to {unmappedTables.map(getSourceTableLabel).join(", ")} will not be synced. Review your
+                configuration to verify, map {unmappedTables.length === 1 ? "it" : "them"} back, or go back and
+                deselect {unmappedTables.length === 1 ? "it" : "them"}.
             </AlertDescription>
             <AlertAction>
                 <Button type="button" variant="outline" size="sm" onClick={handleMapTables}>
