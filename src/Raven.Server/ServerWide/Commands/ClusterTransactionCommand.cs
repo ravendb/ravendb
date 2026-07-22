@@ -757,6 +757,19 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
+        public static unsafe long? ReadFirstClusterTransactionPreviousCount(ClusterOperationContext context, string database)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
+            using (GetPrefix(context, database, out var prefixSlice))
+            {
+                if (items.SeekOnePrimaryKeyPrefix(prefixSlice, out var reader) == false)
+                    return null;
+
+                var keyPtr = reader.Read((int)TransactionCommandsColumn.Key, out var size);
+                return Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long)));
+            }
+        }
+
         public const byte Separator = 30;
 
         public static unsafe bool DeleteCommands<TTransaction>(TransactionOperationContext<TTransaction> context, string database, long upToCommandCount)
