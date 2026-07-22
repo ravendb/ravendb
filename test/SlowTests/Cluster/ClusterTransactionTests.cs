@@ -33,6 +33,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -2643,6 +2644,77 @@ select incl(c)"
                 // Resume cleanup. The observer must drain the whole backlog - in bounded batches, over several
                 // cleanup commands - leaving at most the single retained marker. If batching were broken (e.g. the
                 // cleanup command id didn't advance) rows would be orphaned and this would time out.
+                observer.Suspended = false;
+
+                await AssertWaitForTrueAsync(() =>
+                {
+                    using (context.OpenReadTransaction())
+                        return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() <= 1);
+                }, timeout: 120_000);
+            }
+        }
+
+        [RavenMultiplatformFact(RavenTestCategory.ClusterTransactions, RavenArchitecture.AllX64)]
+        public async Task ClusterTransactionCommandsCleanup_ShouldDrainBacklog_WhenSingleTransactionExceedsTwoCleanupBatches()
+        {
+            // A single cluster-wide transaction is stored as one row in the cluster's TransactionCommands table, and
+            // cleanup deletes whole rows. When such a row spans more than 2x ClusterTransactionsCleanupBatchSize
+            // commands, the first cleanup round deletes it but advances TruncatedClusterTransactionCommandsCount only
+            // to truncatedCount + batchSize, which lands more than a batch below the next row. Every following round
+            // then computes the same capped target (truncatedCount never moves because nothing gets deleted), so the
+            // cleanup command id never changes, ContainsCommandId blocks the re-issue and the remaining rows are
+            // orphaned forever.
+            var hugeCount = 2 * ClusterObserver.ClusterTransactionsCleanupBatchSize + 100;
+            const int tailCount = 512;
+
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            // make sure the (single-node) cluster observer exists, then suspend it so a backlog can build up
+            await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
+            var observer = server.ServerStore.Observer;
+            observer.Suspended = true;
+
+            // one oversized cluster-wide transaction -> a single commands row spanning 'hugeCount' commands
+            // (atomic guards are disabled only to keep the raft command lean, they don't affect the commands count)
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                DisableAtomicDocumentWritesInClusterWideTransaction = true
+            }))
+            {
+                for (var i = 0; i < hugeCount; i++)
+                    await session.StoreAsync(new TestObj(), $"TestObjs/huge/{i}");
+
+                await session.SaveChangesAsync();
+            }
+
+            // followed by regular single-command transactions - the rows a stalled cleanup would orphan
+            const int concurrency = 128;
+            for (var start = 0; start < tailCount; start += concurrency)
+            {
+                var end = Math.Min(start + concurrency, tailCount);
+                await Task.WhenAll(Enumerable.Range(start, end - start).Select(async i =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                    await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                    await session.SaveChangesAsync();
+                }));
+            }
+
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                // sanity: the backlog is one oversized row followed by 'tailCount' single-command rows
+                using (context.OpenReadTransaction())
+                {
+                    var rows = ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).ToList();
+                    Assert.Equal(1 + tailCount, rows.Count);
+                    Assert.Equal(0L, rows[0].PreviousCount);
+                    Assert.Equal((long)hugeCount, rows[1].PreviousCount);
+                }
+
+                // Resume cleanup. The observer must keep advancing the truncated commands count past the oversized
+                // row until the tail drains, leaving at most the single retained marker.
                 observer.Suspended = false;
 
                 await AssertWaitForTrueAsync(() =>
