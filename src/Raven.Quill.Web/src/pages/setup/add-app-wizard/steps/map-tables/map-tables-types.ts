@@ -20,6 +20,19 @@ export function getRootTablePath(index: number): RootTablePath {
     return `mapTables.tables.${index}`;
 }
 
+/** Ancestor table paths of a nested table, outermost first, excluding the table itself.
+ * Table paths alternate a list segment and an index, so each ancestor ends two segments earlier. */
+export function getAncestorTablePaths(path: MapTablePath): MapTablePath[] {
+    const segments = path.split(".");
+    const ancestors: MapTablePath[] = [];
+
+    for (let length = 3; length < segments.length; length += 2) {
+        ancestors.push(segments.slice(0, length).join(".") as MapTablePath);
+    }
+
+    return ancestors;
+}
+
 // Embedded tables nest arbitrarily deep, while the template literal types above
 // describe only the first level. Deeper paths are cast through these helpers.
 export function castToRootTablePath(path: string) {

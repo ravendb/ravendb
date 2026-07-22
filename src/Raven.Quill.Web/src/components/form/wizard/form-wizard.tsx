@@ -53,6 +53,7 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     /** Makes the step body fill the visible area so it can manage its own scrolling. */
     isFullHeight?: boolean;
     validate: WizardValidationTarget<Values>;
+    onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
     nextLabel?: ReactNode;
     canCancel?: boolean;
@@ -124,6 +125,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
             );
 
             if (!isValid) {
+                await currentStep.onValidationFailed?.();
                 return false;
             }
         }

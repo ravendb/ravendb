@@ -3,7 +3,7 @@
 // whose scroll-driven state must be re-read on every render.
 "use no memo";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronsDownUp, ChevronsUpDown, Plus } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -21,9 +21,12 @@ const SCHEMA_ROW_HEIGHT_PX = 24;
 const TABLE_ROW_HEIGHT_PX = 32;
 
 export function TablesExplorer() {
-    const [filter, setFilter] = useState("");
     const { control } = useFormContext<AppFormData>();
     const tables = useWatch({ control, name: "mapTables.tables" }) ?? [];
+    // Filter lives in the store so focusMapTable callers can clear it when the
+    // focused table would otherwise stay filtered out.
+    const filter = useSetupWizardStore((state) => state.mapTablesFilter);
+    const setFilter = useSetupWizardStore((state) => state.setMapTablesFilter);
     const expandedPaths = useSetupWizardStore((state) => state.mapExpandedPaths);
     const setAllMapTablesExpanded = useSetupWizardStore((state) => state.setAllMapTablesExpanded);
     const tableActions = useTableActions();
@@ -107,6 +110,26 @@ function VirtualizedExplorerRows({ rows }: { rows: ExplorerRow[] }) {
 
             return [...indexes].sort((a, b) => a - b);
         },
+    });
+
+    // Scroll the active table into view when focusMapTable is called (e.g. "Next" blocked
+    // by a validation error in an off-screen table). Initializing the ref to the current id
+    // ignores requests raised while the explorer was unmounted.
+    const focusRequestId = useSetupWizardStore((state) => state.mapFocusRequestId);
+    const handledFocusRequestIdRef = useRef(useSetupWizardStore.getState().mapFocusRequestId);
+
+    useEffect(() => {
+        if (focusRequestId === handledFocusRequestIdRef.current) {
+            return;
+        }
+
+        handledFocusRequestIdRef.current = focusRequestId;
+        const activePath = useSetupWizardStore.getState().mapActiveTable?.path;
+        const index = rows.findIndex((row) => row.type !== "schema" && row.path === activePath);
+
+        if (index >= 0) {
+            virtualizer.scrollToIndex(index, { align: "center" });
+        }
     });
 
     return (
