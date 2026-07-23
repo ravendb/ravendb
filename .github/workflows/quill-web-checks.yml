@@ -1,0 +1,72 @@
+name: quill/web-checks
+
+on:
+  push:
+    paths:
+      - 'src/Raven.Quill.Web/**'
+      - '.github/workflows/quill-web-checks.yml'
+  pull_request:
+    paths:
+      - 'src/Raven.Quill.Web/**'
+      - '.github/workflows/quill-web-checks.yml'
+
+defaults:
+  run:
+    working-directory: ./src/Raven.Quill.Web
+
+jobs:
+  conventions:
+    name: Typecheck, lint & format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/Raven.Quill.Web/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        if: always()
+        run: pnpm lint
+
+      - name: Prettier
+        if: always()
+        run: pnpm format:check
+
+  storybook-tests:
+    name: Storybook smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/Raven.Quill.Web/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # No `playwright install` needed: vitest.config.ts targets the system
+      # Chrome (channel "chrome"), which GitHub runners preinstall.
+      - name: Run Storybook tests
+        run: pnpm test:storybook
