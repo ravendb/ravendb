@@ -1,6 +1,7 @@
 import { api } from "@/api/api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { useFormContext } from "react-hook-form";
 
@@ -11,7 +12,7 @@ export function computeConnectKey(
 }
 
 export function useConnectSourceStep() {
-    const { getValues } = useFormContext<AppFormData>();
+    const { getValues, setValue } = useFormContext<AppFormData>();
     const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
 
     return async () => {
@@ -36,6 +37,19 @@ export function useConnectSourceStep() {
         const discoverResult = await discoverTables(formValues, schemas);
 
         setDiscoverResult(discoverResult, schemas);
+
+        // Tables selected under the previous connection may not exist in the new schema; keep
+        // only those still verified so the verify step never seeds a stale selection.
+        const verifiedKeys = new Set(
+            discoverResult.tables
+                .filter((table) => isTableSupported(discoverResult, table))
+                .map((table) => getTableKey(table)),
+        );
+        setValue(
+            "verifySchema.tables",
+            getValues("verifySchema.tables").filter((table) => verifiedKeys.has(getTableKey(table))),
+        );
+
         store.setConnectKey(connectKey);
         store.invalidateMapping();
     };

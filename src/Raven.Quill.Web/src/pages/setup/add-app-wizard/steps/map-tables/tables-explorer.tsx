@@ -4,16 +4,15 @@
 "use no memo";
 
 import { useEffect, useRef } from "react";
-import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronsDownUp, ChevronsUpDown, Plus } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@/components/shadcn/ui/button";
 import { Input } from "@/components/shadcn/ui/input";
-import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { buildExplorerRows } from "@/pages/setup/add-app-wizard/steps/map-tables/build-explorer-rows";
-import { ExplorerRowItem } from "@/pages/setup/add-app-wizard/steps/map-tables/explorer-rows";
+import { ExplorerRowItem, SchemaRow } from "@/pages/setup/add-app-wizard/steps/map-tables/explorer-rows";
 import { getRootTablePath, type ExplorerRow } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 import { useTableActions } from "@/pages/setup/add-app-wizard/steps/map-tables/use-table-actions";
 
@@ -89,10 +88,6 @@ export function TablesExplorer() {
 
 function VirtualizedExplorerRows({ rows }: { rows: ExplorerRow[] }) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    // Index of the schema header whose group is currently scrolled into view. It is kept
-    // rendered and positioned sticky, replacing the CSS-only stickiness that plain document
-    // flow gave before virtualization.
-    const activeSchemaIndexRef = useRef(-1);
 
     const virtualizer = useVirtualizer({
         count: rows.length,
@@ -100,17 +95,13 @@ function VirtualizedExplorerRows({ rows }: { rows: ExplorerRow[] }) {
         estimateSize: (index) => (rows[index].type === "schema" ? SCHEMA_ROW_HEIGHT_PX : TABLE_ROW_HEIGHT_PX),
         getItemKey: (index) => rows[index].rowKey,
         overscan: 10,
-        rangeExtractor: (range) => {
-            activeSchemaIndexRef.current = findPrecedingSchemaIndex(rows, range.startIndex);
-            const indexes = new Set(defaultRangeExtractor(range));
-
-            if (activeSchemaIndexRef.current >= 0) {
-                indexes.add(activeSchemaIndexRef.current);
-            }
-
-            return [...indexes].sort((a, b) => a - b);
-        },
     });
+
+    // The schema header of the group scrolled into view, rendered as a sticky overlay pinned
+    // over the list. This replaces the CSS-only stickiness that plain document flow gave before
+    // virtualization; when the group's own header row is at the top, the overlay covers it
+    // pixel-for-pixel.
+    const activeSchemaLabel = getActiveSchemaLabel(rows, virtualizer.range?.startIndex ?? 0);
 
     // Scroll the active table into view when focusMapTable is called (e.g. "Next" blocked
     // by a validation error in an off-screen table). Initializing the ref to the current id
@@ -134,33 +125,42 @@ function VirtualizedExplorerRows({ rows }: { rows: ExplorerRow[] }) {
 
     return (
         <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto">
+            {activeSchemaLabel !== null && (
+                // The negative margin keeps the overlay out of the flow so the list below
+                // starts at the container top. bg-background fills the corner pixels the
+                // schema row's rounded corners leave uncovered.
+                <div
+                    className="sticky top-0 z-10 bg-background"
+                    style={{ height: SCHEMA_ROW_HEIGHT_PX, marginBottom: -SCHEMA_ROW_HEIGHT_PX }}
+                >
+                    <SchemaRow label={activeSchemaLabel} />
+                </div>
+            )}
             <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
-                {virtualizer.getVirtualItems().map((virtualRow) => {
-                    const isActiveSchemaHeader = virtualRow.index === activeSchemaIndexRef.current;
-
-                    return (
-                        <div
-                            key={virtualRow.key}
-                            className={cn("w-full", isActiveSchemaHeader ? "sticky z-10" : "absolute")}
-                            style={{ height: virtualRow.size, top: isActiveSchemaHeader ? 0 : virtualRow.start }}
-                        >
-                            <ExplorerRowItem row={rows[virtualRow.index]} />
-                        </div>
-                    );
-                })}
+                {virtualizer.getVirtualItems().map((virtualRow) => (
+                    <div
+                        key={virtualRow.key}
+                        className="absolute w-full"
+                        style={{ height: virtualRow.size, top: virtualRow.start }}
+                    >
+                        <ExplorerRowItem row={rows[virtualRow.index]} />
+                    </div>
+                ))}
             </div>
         </div>
     );
 }
 
-function findPrecedingSchemaIndex(rows: ExplorerRow[], fromIndex: number) {
-    for (let index = Math.min(fromIndex, rows.length - 1); index >= 0; index--) {
-        if (rows[index].type === "schema") {
-            return index;
+function getActiveSchemaLabel(rows: ExplorerRow[], firstVisibleIndex: number): string | null {
+    for (let index = Math.min(firstVisibleIndex, rows.length - 1); index >= 0; index--) {
+        const row = rows[index];
+
+        if (row.type === "schema") {
+            return row.label;
         }
     }
 
-    return -1;
+    return null;
 }
 
 function EmptyExplorerMessage({ children }: { children: React.ReactNode }) {

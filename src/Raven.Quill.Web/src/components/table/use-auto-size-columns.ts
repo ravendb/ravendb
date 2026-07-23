@@ -5,6 +5,7 @@ const CELL_PADDING_X = 16;
 const RESIZER_WIDTH = 4;
 const CELL_MIN_WIDTH = 30;
 const CELL_MAX_WIDTH = 300;
+const SCROLL_IDLE_MEASURE_DELAY_MS = 150;
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
@@ -12,10 +13,15 @@ function clamp(value: number, min: number, max: number): number {
 
 // Measures the intrinsic content width of each column. All cells are widened first and read
 // afterwards (interleaving writes with scrollWidth reads forces a layout pass per cell); the
-// temporary styles are reverted before paint since this runs inside useLayoutEffect.
-// Widths only ratchet up: only the virtualized rows currently in the DOM can be measured, and
-// letting a column shrink when a wide row scrolls out of view would make the layout oscillate.
-function measureColumnWidths(container: HTMLElement, columnIds: string[], widths: ColumnSizingState) {
+// temporary styles are reverted synchronously, so the browser never paints them.
+// The result only ratchets up from previousWidths: only the virtualized rows currently in the
+// DOM can be measured, and letting a column shrink when a wide row scrolls out of view would
+// make the layout oscillate.
+function measureColumnWidths(
+    container: HTMLElement,
+    columnIds: string[],
+    previousWidths: ColumnSizingState,
+): ColumnSizingState {
     const cellsByColumn = columnIds.map((columnId) => ({
         columnId,
         cells: [...container.querySelectorAll<HTMLElement>(`[data-column-id="${CSS.escape(columnId)}"]`)],
@@ -29,6 +35,7 @@ function measureColumnWidths(container: HTMLElement, columnIds: string[], widths
         cell.style.maxWidth = "none";
     }
 
+    const widths: ColumnSizingState = {};
     for (const { columnId, cells } of cellsByColumn) {
         let widest = 0;
         for (const cell of cells) {
@@ -37,13 +44,15 @@ function measureColumnWidths(container: HTMLElement, columnIds: string[], widths
                 widest = Math.max(widest, content.scrollWidth + CELL_PADDING_X + RESIZER_WIDTH);
             }
         }
-        widths[columnId] = Math.max(clamp(widest, CELL_MIN_WIDTH, CELL_MAX_WIDTH), widths[columnId] ?? 0);
+        widths[columnId] = Math.max(clamp(widest, CELL_MIN_WIDTH, CELL_MAX_WIDTH), previousWidths[columnId] ?? 0);
     }
 
     for (const { cell, width, maxWidth } of savedStyles) {
         cell.style.width = width;
         cell.style.maxWidth = maxWidth;
     }
+
+    return widths;
 }
 
 // Distributes the container width across columns from the measured content widths.
@@ -92,7 +101,8 @@ function isSameSizing(next: ColumnSizingState, current: ColumnSizingState): bool
 
 /**
  * Sizes each column to fit its content after layout, then keeps it in sync when the container
- * resizes or web fonts finish loading. Columns that opt out of resizing keep their configured width.
+ * resizes, new virtualized rows scroll into view, or web fonts finish loading. Columns that opt
+ * out of resizing keep their configured width.
  */
 export function useAutoSizeColumns<TData>(
     table: ReactTable<TData>,
@@ -105,7 +115,7 @@ export function useAutoSizeColumns<TData>(
             return;
         }
 
-        const contentWidths: ColumnSizingState = {};
+        let contentWidths: ColumnSizingState = {};
 
         // Skipping identical results keeps height-only resizes (e.g. a scrollbar toggling)
         // from re-rendering the table with the same sizing state.
@@ -116,14 +126,14 @@ export function useAutoSizeColumns<TData>(
             }
         };
 
-        // Container resizes cannot change cell content, so content is measured once up front
-        // and the observer only redistributes the measured widths.
+        // Container resizes cannot change cell content, so the observer only redistributes
+        // already measured widths.
         const measureAndResize = () => {
             const resizableIds = table
                 .getVisibleLeafColumns()
                 .filter((column) => column.getCanResize())
                 .map((column) => column.id);
-            measureColumnWidths(container, resizableIds, contentWidths);
+            contentWidths = measureColumnWidths(container, resizableIds, contentWidths);
             resize();
         };
 
@@ -138,11 +148,23 @@ export function useAutoSizeColumns<TData>(
             }
         });
 
+        // Virtualized rows mount as the user scrolls, so wider content deeper in the list is
+        // not in the DOM for the initial pass. Re-measure once scrolling pauses; ratcheting
+        // makes the extra passes oscillation-free.
+        let scrollIdleTimer: number | undefined;
+        const handleScroll = () => {
+            window.clearTimeout(scrollIdleTimer);
+            scrollIdleTimer = window.setTimeout(measureAndResize, SCROLL_IDLE_MEASURE_DELAY_MS);
+        };
+        container.addEventListener("scroll", handleScroll, { passive: true });
+
         const observer = new ResizeObserver(resize);
         observer.observe(container, { box: "content-box" });
 
         return () => {
             cancelled = true;
+            window.clearTimeout(scrollIdleTimer);
+            container.removeEventListener("scroll", handleScroll);
             observer.disconnect();
         };
     }, [table, containerRef, rowCount]);

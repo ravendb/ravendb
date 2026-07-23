@@ -52,6 +52,8 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     bodyComponent: (props: WizardBodyComponentProps<StepId>) => ReactNode;
     /** Makes the step body fill the visible area so it can manage its own scrolling. */
     isFullHeight?: boolean;
+    /** Lets the step body span the whole main column instead of the default centered max width. */
+    isFullWidth?: boolean;
     validate: WizardValidationTarget<Values>;
     onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
@@ -198,7 +200,8 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         <section
                             key={currentStepIdInFlow}
                             className={cn(
-                                "mx-auto w-full max-w-5xl",
+                                "mx-auto w-full",
+                                !currentStep.isFullWidth && "max-w-5xl",
                                 currentStep.isFullHeight ? "flex h-full flex-col gap-5" : "grid gap-5",
                             )}
                         >

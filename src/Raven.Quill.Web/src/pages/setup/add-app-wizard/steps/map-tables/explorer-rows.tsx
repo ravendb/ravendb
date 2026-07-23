@@ -39,7 +39,7 @@ export function ExplorerRowItem({ row }: { row: ExplorerRow }) {
     }
 }
 
-function SchemaRow({ label }: { label: string }) {
+export function SchemaRow({ label }: { label: string }) {
     return (
         <div className="rounded-sm bg-muted px-1.5 py-1 text-center font-mono text-xs text-muted-foreground">
             {label}
