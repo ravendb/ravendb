@@ -1231,7 +1231,7 @@ export interface components {
         };
         ConnectResult: {
             success: boolean;
-            errors: string[];
+            errors: components["schemas"]["WizardError"][];
         };
         ConversationDto: {
             id: string;
@@ -1303,7 +1303,7 @@ export interface components {
         DiscoverResponse: {
             catalogName?: null | string;
             tables: components["schemas"]["DiscoverTableResponse"][];
-            errors: string[];
+            errors: components["schemas"]["WizardError"][];
             success: boolean;
             hasPermissionToSetup: boolean;
             warnings: string[];
@@ -1586,7 +1586,7 @@ export interface components {
         };
         TestMappingResponse: {
             results: components["schemas"]["TestMappingRowResponse"][];
-            errors: string[];
+            errors: components["schemas"]["WizardError"][];
             warnings: string[];
         };
         TestMappingRowResponse: {
@@ -1650,6 +1650,10 @@ export interface components {
             location?: null | string;
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
+        };
+        WizardError: {
+            message: string;
+            details?: null | string;
         };
     };
     responses: never;
@@ -3818,6 +3822,7 @@ export type UpdateIFrameCustomizationRequest = components["schemas"]["UpdateIFra
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type VertexAIVersion = components["schemas"]["VertexAIVersion"];
 export type VertexSettings = components["schemas"]["VertexSettings"];
+export type WizardError = components["schemas"]["WizardError"];
 
 export const API_ENDPOINTS = {
     agents: {

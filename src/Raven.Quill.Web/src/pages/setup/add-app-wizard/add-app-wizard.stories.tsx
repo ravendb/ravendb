@@ -123,6 +123,33 @@ export const ConnectSource: Story = {
     render: () => <AppWizardAtStep initialStep="externalConnection" />,
 };
 
+const connectFailureHandlers = {
+    setup: [
+        setupMocks.connect({
+            success: false,
+            errors: [
+                {
+                    message:
+                        'Could not connect to the source database. Check that the host and port are reachable, ' +
+                        'the database name is correct, and the credentials are valid. ' +
+                        '28P01: password authentication failed for user "admin"',
+                    details:
+                        'Npgsql.NpgsqlException (0x80004005): 28P01: password authentication failed for user "admin"\n' +
+                        "   at Npgsql.Internal.NpgsqlConnector.<Authenticate>d__0.MoveNext()\n" +
+                        "   at Npgsql.Internal.NpgsqlConnector.<Open>d__1.MoveNext()\n" +
+                        "   at Npgsql.NpgsqlConnection.<OpenAsync>d__2.MoveNext()",
+                },
+            ],
+        }),
+        ...defaultApiMocks.setup,
+    ],
+};
+
+export const ConnectSourceError: Story = {
+    parameters: { msw: { handlers: connectFailureHandlers } },
+    render: () => <AppWizardAtStep initialStep="externalConnection" />,
+};
+
 // Verified tables (one with table-level warnings), tables that need configuration (CDC
 // disabled and an unsupported reason), and a response-level warning banner.
 export const VerifySchema: Story = {

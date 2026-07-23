@@ -14,5 +14,5 @@ public sealed class ConnectResult
     public required bool Success { get; set; }
 
     [JsonRequired]
-    public required List<string> Errors { get; set; } = new();
+    public required List<WizardError> Errors { get; set; } = new();
 }

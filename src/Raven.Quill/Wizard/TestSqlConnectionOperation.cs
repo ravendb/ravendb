@@ -51,7 +51,7 @@ internal sealed class TestSqlConnectionOperation : IMaintenanceOperation<Connect
                 result.Success = success;
 
             if (response.TryGet("Error", out string? error) && string.IsNullOrEmpty(error) == false)
-                result.Errors.Add(error);
+                result.Errors.Add(new WizardError(error));
 
             Result = result;
         }

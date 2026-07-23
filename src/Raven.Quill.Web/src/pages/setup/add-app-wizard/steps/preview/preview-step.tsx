@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Alert } from "@/components/shadcn/ui/alert";
+import { WizardErrorList } from "@/components/form/wizard/wizard-error-list";
 import AceEditor from "@/components/ace-editor/ace-editor";
 import { DownloadIcon, MessageSquareWarningIcon } from "lucide-react";
 import { buildConfigExport, downloadConfig } from "@/pages/setup/add-app-wizard/config-io";
@@ -107,10 +108,8 @@ function PreviewResult() {
 
     if (testMappingQuery.data.errors?.length) {
         return (
-            <Alert variant="destructive" className="mb-4 grid gap-2">
-                {testMappingQuery.data.errors.map((error, index) => (
-                    <div key={index}>{error}</div>
-                ))}
+            <Alert variant="destructive" className="mb-4">
+                <WizardErrorList errors={testMappingQuery.data.errors} />
             </Alert>
         );
     }

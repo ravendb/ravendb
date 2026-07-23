@@ -66,6 +66,17 @@ public class WizardSourceConnectionFlowTests(ITestOutputHelper output) : RavenTe
         var connect = await resp.Content.ReadFromJsonAsync<JsonElement>();
         Assert.False(connect.GetProperty("success").GetBoolean());
 
+        // The failure is surfaced as an actionable, stack-trace-free summary; the raw exception
+        // text (with its stack trace) is kept in `details` for the UI's "show details" disclosure.
+        var error = Assert.Single(connect.GetProperty("errors").EnumerateArray());
+        var message = error.GetProperty("message").GetString();
+        Assert.Contains("Could not connect to the source database", message);
+        Assert.DoesNotContain("Exception", message);
+        Assert.DoesNotContain("   at ", message);
+
+        var details = error.GetProperty("details").GetString();
+        Assert.False(string.IsNullOrEmpty(details));
+
         // The probe connection string is still persisted on the config DB —
         // Provision later transplants its credentials into the per-app database.
         var result = await store.Maintenance.ForDatabase(store.Database)

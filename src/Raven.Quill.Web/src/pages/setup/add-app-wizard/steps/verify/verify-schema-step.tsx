@@ -16,6 +16,7 @@ import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/de
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
 import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { VerifiedTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/verified-tables-table";
+import { WizardErrorList } from "@/components/form/wizard/wizard-error-list";
 import {
     DiscoverLoadingSkeleton,
     MessageList,
@@ -97,7 +98,7 @@ export function VerifySchemaStep() {
     return (
         <div className="grid gap-4">
             <ImportedConfigAlert />
-            <MessageList messages={discoverResult?.errors} tone="destructive" />
+            <WizardErrorList errors={discoverResult?.errors} />
             <MessageList messages={discoverResult?.warnings} tone="warning" />
 
             {discoverMutation.isPending ? (
