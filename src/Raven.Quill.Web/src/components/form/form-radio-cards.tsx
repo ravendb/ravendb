@@ -16,6 +16,8 @@ export type RadioCardOption<TValue extends string = string> = {
     label: ReactNode;
     description?: ReactNode;
     icon?: ReactNode;
+    /** Rendered next to the label, e.g. a "Coming soon" badge. */
+    badge?: ReactNode;
     disabled?: boolean;
     /**
      * Extra content rendered inside the card, below the header (e.g. an input).
@@ -80,7 +82,10 @@ export function FormRadioCards<
                                 )}
                             >
                                 {option.icon && <span className="mb-3 block">{option.icon}</span>}
-                                <span className="block text-sm font-semibold">{option.label}</span>
+                                <span className="flex items-center gap-2 text-sm font-semibold">
+                                    {option.label}
+                                    {option.badge}
+                                </span>
                                 {option.description && (
                                     <span className="mt-2 block text-xs leading-5 text-muted-foreground">
                                         {option.description}

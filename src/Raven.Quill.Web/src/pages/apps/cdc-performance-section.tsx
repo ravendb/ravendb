@@ -36,19 +36,21 @@ export function CdcPerformanceSection({
         <SectionCard
             title={title}
             action={
-                live.performance &&
-                (live.performance.errorCount > 0 ? (
-                    <CdcErrorsSheet
-                        slug={slug}
-                        trigger={
-                            <Button variant="destructive-outline" size="sm">
-                                View errors
-                            </Button>
-                        }
-                    />
-                ) : (
-                    <CdcStatusBadge status={live.performance.status} />
-                ))
+                live.performance && (
+                    <div className="flex items-center gap-2">
+                        {live.performance.errorCount > 0 && (
+                            <CdcErrorsSheet
+                                slug={slug}
+                                trigger={
+                                    <Button variant="destructive-outline" size="sm">
+                                        View errors
+                                    </Button>
+                                }
+                            />
+                        )}
+                        <CdcStatusBadge status={live.performance.status} />
+                    </div>
+                )
             }
         >
             <ApiState

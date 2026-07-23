@@ -75,6 +75,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             description: "Configure how source tables are mapped to target collections.",
             bodyComponent: MapTablesStep,
             isFullHeight: true,
+            isFullWidth: true,
             validate: "mapTables",
             onValidationFailed: focusMapTablesError,
             beforeNext: mapTablesBeforeNext,
