@@ -53,10 +53,7 @@ export function useFocusMapTablesError() {
     };
 }
 
-function findFirstInvalidTable(
-    tables: FormRootTable[],
-    getError: (path: string) => unknown,
-): MapActiveTable | null {
+function findFirstInvalidTable(tables: FormRootTable[], getError: (path: string) => unknown): MapActiveTable | null {
     for (let index = 0; index < tables.length; index++) {
         const found = visitTable(tables[index], { type: "root", path: getRootTablePath(index) }, getError);
 

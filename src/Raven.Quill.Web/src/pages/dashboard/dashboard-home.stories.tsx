@@ -22,11 +22,7 @@ export const Empty: Story = {
             // Overriding a service replaces its whole handler array, so keep the stat-card
             // endpoints and only swap the apps list for an empty one.
             handlers: {
-                stats: [
-                    statsMocks.dashboardApps([]),
-                    statsMocks.usage(),
-                    statsMocks.tokensByApp(),
-                ],
+                stats: [statsMocks.dashboardApps([]), statsMocks.usage(), statsMocks.tokensByApp()],
             },
         },
     },

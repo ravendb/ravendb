@@ -15,7 +15,7 @@ export function SuggestionPicker() {
     const selectedIndex = useWatch({ control, name: "create.selectedIndex" });
 
     return (
-        <div className="grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-3">
+        <div className="grid auto-cols-[minmax(0,1fr)] grid-flow-col gap-3">
             {suggestions.map((config, index) => {
                 const isSelected = mode === "ai" && index === selectedIndex;
 

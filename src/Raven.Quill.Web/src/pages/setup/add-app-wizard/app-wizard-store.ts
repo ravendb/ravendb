@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { DiscoverResponse } from "@/api/generated/server-api";
-import { getAncestorTablePaths, type MapActiveTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
+import {
+    getAncestorTablePaths,
+    type MapActiveTable,
+} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 
 export type ImportState = "none" | "locked" | "unlocked";
 
