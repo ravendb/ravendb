@@ -46,8 +46,8 @@ export function UnmappedTablesAlert() {
             </AlertTitle>
             <AlertDescription>
                 Changes to {unmappedTables.map(getSourceTableLabel).join(", ")} will not be synced. Review your
-                configuration to verify, map {unmappedTables.length === 1 ? "it" : "them"} back, or go back and
-                deselect {unmappedTables.length === 1 ? "it" : "them"}.
+                configuration to verify, map {unmappedTables.length === 1 ? "it" : "them"} back, or go back and deselect{" "}
+                {unmappedTables.length === 1 ? "it" : "them"}.
             </AlertDescription>
             <AlertAction>
                 <Button type="button" variant="outline" size="sm" onClick={handleMapTables}>

@@ -15,11 +15,11 @@ export function TablePagination({ pageIndex, pageSize, totalCount, onPageIndexCh
 
     return (
         <div className="flex items-center justify-between gap-3">
-            <span className="text-muted-foreground text-sm tabular-nums">
+            <span className="text-sm text-muted-foreground tabular-nums">
                 {rangeStart}&ndash;{rangeEnd} of {totalCount}
             </span>
             <div className="flex items-center gap-3">
-                <span className="text-muted-foreground text-sm tabular-nums">
+                <span className="text-sm text-muted-foreground tabular-nums">
                     Page {pageIndex + 1} of {pageCount}
                 </span>
                 <div className="flex items-center gap-1">
