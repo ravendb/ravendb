@@ -839,7 +839,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (commandCount <= truncatedCount)
                 return null;
 
-            var firstCommandsCount = ClusterTransactionCommand.ReadFirstClusterTransactionPreviousCount(context, state.Name);
+            var firstCommandsCount = ClusterTransactionCommand.ReadFirstClusterTransactionPreviousCount(context, state.RawDatabase.DatabaseName);
             if (firstCommandsCount == null || firstCommandsCount >= commandCount)
                 return null;
 
