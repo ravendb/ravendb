@@ -91,11 +91,13 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
 };
 
 export const getAppFlow = ({ dataSource }: { dataSource: string }): AppStepId[] => {
+    // The "Choose data source" step is temporarily dropped from the UI; uncomment the
+    // "dataSource" entries below to bring it back.
     if (dataSource === "ravendb") {
-        return ["dataSource", "preview"];
+        return [/* "dataSource", */ "preview"];
     }
 
-    return ["dataSource", "externalConnection", "verifySchema", "map", "mapTables", "preview"];
+    return [/* "dataSource", */ "externalConnection", "verifySchema", "map", "mapTables", "preview"];
 };
 
 export const buildAppSchemaForFlow = (flow: AppStepId[]) => {
