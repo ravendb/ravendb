@@ -3,6 +3,7 @@ import type { AiModelType } from "@/api/generated/server-api";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import {
     DimensionsField,
     EmbeddingsMaxConcurrentBatchesField,
@@ -12,8 +13,13 @@ import {
 import { useAiModelOptions } from "@/components/ai-connection-string/use-ai-model-options";
 
 export function AzureOpenAiFields({ modelType }: { modelType: AiModelType }) {
-    const { control } = useFormContext<ConnectionStringFormData>();
+    const { control, getValues } = useFormContext<ConnectionStringFormData>();
     const isChat = modelType === "Chat";
+
+    const settings = getValues("azureOpenAiSettings");
+    const hasAdvancedValues = Boolean(
+        settings.isSetTemperature || settings.dimensions != null || settings.embeddingsMaxConcurrentBatches != null,
+    );
 
     const [apiKey, endpoint] = useWatch({
         control,
@@ -67,17 +73,19 @@ export function AzureOpenAiFields({ modelType }: { modelType: AiModelType }) {
                 placeholder="my-deployment"
                 description="The name of the deployed Azure OpenAI model."
             />
-            {isChat ? (
-                <>
-                    <PromptCacheField baseName="azureOpenAiSettings" />
-                    <TemperatureField baseName="azureOpenAiSettings" />
-                </>
-            ) : (
-                <>
-                    <DimensionsField baseName="azureOpenAiSettings" />
-                    <EmbeddingsMaxConcurrentBatchesField baseName="azureOpenAiSettings" />
-                </>
-            )}
+            <AdvancedFields defaultOpen={hasAdvancedValues}>
+                {isChat ? (
+                    <>
+                        <PromptCacheField baseName="azureOpenAiSettings" />
+                        <TemperatureField baseName="azureOpenAiSettings" />
+                    </>
+                ) : (
+                    <>
+                        <DimensionsField baseName="azureOpenAiSettings" />
+                        <EmbeddingsMaxConcurrentBatchesField baseName="azureOpenAiSettings" />
+                    </>
+                )}
+            </AdvancedFields>
         </>
     );
 }
