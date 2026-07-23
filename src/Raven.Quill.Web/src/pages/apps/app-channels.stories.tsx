@@ -34,7 +34,9 @@ export const LinkMintError: Story = {
     parameters: {
         msw: {
             handlers: {
-                embedLinks: [embedLinksMocks.mintError()],
+                // Overriding a service replaces its whole handler array, so keep the list
+                // endpoint and only swap the mint one for the failing variant.
+                embedLinks: [embedLinksMocks.list(), embedLinksMocks.mintError()],
             },
         },
     },
