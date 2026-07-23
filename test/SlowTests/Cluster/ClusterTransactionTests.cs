@@ -2602,11 +2602,9 @@ select incl(c)"
                 return ClusterTransactionCommand.ReadCommandsBatch(ctx, database, fromCount: 0, take: long.MaxValue).Count();
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.ClusterTransactions, RavenArchitecture.AllX64)]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterTransactionCommandsCleanup_ShouldDrainLargeBacklog_WhenObserverResumes()
         {
-            const int count = 50_000;
-
             using var server = GetNewServer();
             using var store = GetDocumentStore(new Options { Server = server });
 
@@ -2615,29 +2613,23 @@ select incl(c)"
             var observer = server.ServerStore.Observer;
             observer.Suspended = true;
 
-            // Write 'count' cluster-wide transactions. The database executor processes them, but with the observer
-            // suspended none of the transaction commands are cleaned up, so they accumulate in the cluster storage.
-            const int concurrency = 128;
-            for (var start = 0; start < count; start += concurrency)
+            // shrink this observer's cleanup batch size so a backlog spanning several cleanup batches
+            // can be built with a small number of transactions
+            observer._clusterTransactionsCleanupBatchSize = 64;
+            var count = 2 * observer._clusterTransactionsCleanupBatchSize + 5;
+
+            // Write 'count' cluster-wide transactions. The database executor processes them, but with the
+            // observer suspended none of the transaction commands are cleaned up, so they accumulate in the
+            // cluster storage.
+            for (var i = 0; i < count; i++)
             {
-                var end = Math.Min(start + concurrency, count);
-                await Task.WhenAll(Enumerable.Range(start, end - start).Select(async i =>
-                {
-                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
-                    await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
-                    await session.SaveChangesAsync();
-                }));
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
             }
 
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                // wait until every transaction command was persisted to the cluster storage
-                await AssertWaitForTrueAsync(() =>
-                {
-                    using (context.OpenReadTransaction())
-                        return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() == count);
-                }, timeout: 60_000);
-
                 // verify the full backlog is present before enabling the observer
                 using (context.OpenReadTransaction())
                     Assert.Equal(count, ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count());
@@ -2655,7 +2647,7 @@ select incl(c)"
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.ClusterTransactions, RavenArchitecture.AllX64)]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterTransactionCommandsCleanup_ShouldDrainBacklog_WhenSingleTransactionExceedsTwoCleanupBatches()
         {
             // A single cluster-wide transaction is stored as one row in the cluster's TransactionCommands table, and
@@ -2665,9 +2657,6 @@ select incl(c)"
             // then computes the same capped target (truncatedCount never moves because nothing gets deleted), so the
             // cleanup command id never changes, ContainsCommandId blocks the re-issue and the remaining rows are
             // orphaned forever.
-            var hugeCount = 2 * ClusterObserver.ClusterTransactionsCleanupBatchSize + 100;
-            const int tailCount = 512;
-
             using var server = GetNewServer();
             using var store = GetDocumentStore(new Options { Server = server });
 
@@ -2675,6 +2664,11 @@ select incl(c)"
             await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
             var observer = server.ServerStore.Observer;
             observer.Suspended = true;
+
+            // shrink this observer's cleanup batch size so the oversized transaction stays small
+            observer._clusterTransactionsCleanupBatchSize = 64;
+            var hugeCount = 2 * observer._clusterTransactionsCleanupBatchSize + 100;
+            const int tailCount = 128;
 
             // one oversized cluster-wide transaction -> a single commands row spanning 'hugeCount' commands
             // (atomic guards are disabled only to keep the raft command lean, they don't affect the commands count)
@@ -2691,16 +2685,11 @@ select incl(c)"
             }
 
             // followed by regular single-command transactions - the rows a stalled cleanup would orphan
-            const int concurrency = 128;
-            for (var start = 0; start < tailCount; start += concurrency)
+            for (var i = 0; i < tailCount; i++)
             {
-                var end = Math.Min(start + concurrency, tailCount);
-                await Task.WhenAll(Enumerable.Range(start, end - start).Select(async i =>
-                {
-                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
-                    await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
-                    await session.SaveChangesAsync();
-                }));
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
             }
 
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
