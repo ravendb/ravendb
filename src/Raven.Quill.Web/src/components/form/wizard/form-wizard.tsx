@@ -9,8 +9,8 @@ import {
 } from "react-hook-form";
 import { ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
-import { Alert } from "@/components/shadcn/ui/alert";
 import { Spinner } from "@/components/shadcn/ui/spinner";
+import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { cn } from "@/lib/utils";
 
 export type WizardAction = () => void | Promise<void>;
@@ -213,7 +213,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                             </div>
 
                             <currentStep.bodyComponent currentStepId={currentStepIdInFlow} isBusy={isBusy} />
-                            {advanceError && <Alert variant="destructive">{advanceError.message}</Alert>}
+                            {advanceError && <WizardErrorAlert error={advanceError} />}
                         </section>
                     </main>
 

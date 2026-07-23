@@ -10,7 +10,7 @@ public sealed class DiscoverResponse
 
     public required DiscoverTableResponse[] Tables { get; set; } = [];
 
-    public required string[] Errors { get; set; } = [];
+    public required WizardError[] Errors { get; set; } = [];
 
     public required bool Success { get; set; }
 
@@ -22,7 +22,7 @@ public sealed class DiscoverResponse
     {
         CatalogName = schema.CatalogName,
         Tables = schema.Tables.Select(DiscoverTableResponse.From).ToArray(),
-        Errors = schema.Errors.ToArray(),
+        Errors = schema.Errors.Select(WizardErrorFormatter.Format).ToArray(),
         Success = schema.Success,
         HasPermissionToSetup = schema.HasPermissionToSetup,
         Warnings = schema.Warnings.ToArray(),

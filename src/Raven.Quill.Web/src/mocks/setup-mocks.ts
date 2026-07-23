@@ -261,8 +261,17 @@ export const failedDiscovery: DiscoverResponse = {
     success: false,
     hasPermissionToSetup: false,
     errors: [
-        'Could not connect to the source database: password authentication failed for user "admin".',
-        "Check the connection string and that the database is reachable from the appliance.",
+        {
+            message: 'Could not connect to source database: password authentication failed for user "admin"',
+            details:
+                'Npgsql.NpgsqlException (0x80004005): 28P01: password authentication failed for user "admin"\n' +
+                "   at Npgsql.Internal.NpgsqlConnector.<Authenticate>d__0.MoveNext()\n" +
+                "   at Npgsql.Internal.NpgsqlConnector.<Open>d__1.MoveNext()",
+        },
+        {
+            message: "Check the connection string and that the database is reachable from the appliance.",
+            details: null,
+        },
     ],
     warnings: [],
     tables: [],

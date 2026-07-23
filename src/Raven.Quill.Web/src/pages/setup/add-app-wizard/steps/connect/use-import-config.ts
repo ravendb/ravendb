@@ -19,6 +19,7 @@ import {
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
+import { toConnectionError } from "@/pages/setup/add-app-wizard/steps/connect/connect-error";
 import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 
 type ImportResult = {
@@ -41,7 +42,7 @@ export function useImportConfig() {
             });
 
             if (!connectResult.success) {
-                throw new Error(connectResult.errors?.join("\n") || "Connection failed.");
+                throw toConnectionError(connectResult.errors);
             }
 
             // Discover every schema the configuration touches, not just the default one, so tables

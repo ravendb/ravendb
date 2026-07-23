@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { UploadIcon } from "lucide-react";
-import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import {
     Dialog,
@@ -12,6 +11,7 @@ import {
 } from "@/components/shadcn/ui/dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { FileDropzone } from "@/components/form/file-dropzone";
+import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { useImportConfig } from "@/pages/setup/add-app-wizard/steps/connect/use-import-config";
 
 type ImportConfigDialogProps = {
@@ -69,11 +69,7 @@ export function ImportConfigDialog({ disabled }: ImportConfigDialogProps) {
                     />
                 )}
 
-                {importMutation.isError && (
-                    <Alert variant="destructive" className="whitespace-pre-wrap">
-                        {importMutation.error.message}
-                    </Alert>
-                )}
+                {importMutation.isError && <WizardErrorAlert error={importMutation.error} />}
             </DialogContent>
         </Dialog>
     );

@@ -7,14 +7,14 @@ public sealed class TestMappingResponse
 {
     public required TestMappingRowResponse[] Results { get; set; } = [];
 
-    public required string[] Errors { get; set; } = [];
+    public required WizardError[] Errors { get; set; } = [];
 
     public required string[] Warnings { get; set; } = [];
 
     internal static TestMappingResponse From(TestCdcSinkMappingResult result) => new()
     {
         Results = result.Results.Select(TestMappingRowResponse.From).ToArray(),
-        Errors = result.Errors.ToArray(),
+        Errors = result.Errors.Select(WizardErrorFormatter.Format).ToArray(),
         Warnings = result.Warnings.ToArray(),
     };
 }

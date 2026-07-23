@@ -95,8 +95,11 @@ public static class WizardEndpoints
         {
             logger.LogError(ex, "Connect: test-connection threw");
             result = new ConnectResult();
-            result.Errors.Add($"Connection test threw: {ex.Message}");
+            result.Errors.Add(new WizardError(ex.ToString()));
         }
+        
+        for (var i = 0; i < result.Errors.Count; i++)
+            result.Errors[i] = WizardErrorFormatter.FormatConnectionError(result.Errors[i].Message);
 
         await PersistAsync(store, state =>
         {
@@ -140,7 +143,7 @@ public static class WizardEndpoints
         {
             logger.LogError(ex, "Discover: schema enumeration threw");
             schema = new CdcSinkSourceSchema();
-            schema.Errors.Add($"Discovery threw: {ex.Message}");
+            schema.Errors.Add(ex.ToString());
         }
 
         await PersistAsync(store, state =>
@@ -256,7 +259,7 @@ public static class WizardEndpoints
         {
             logger.LogError(ex, "TestMapping: SendAsync threw");
             result = new TestCdcSinkMappingResult();
-            result.Errors.Add($"Test mapping threw: {ex.Message}");
+            result.Errors.Add(ex.ToString());
         }
 
         return Results.Ok(TestMappingResponse.From(result));
