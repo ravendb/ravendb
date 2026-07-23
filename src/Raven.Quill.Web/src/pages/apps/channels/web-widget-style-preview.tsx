@@ -29,6 +29,9 @@ export function WebWidgetStylePreview({ previewHtml, css, className }: WebWidget
         <iframe
             ref={iframeRef}
             title="Web widget preview"
+            // Defense in depth: blocks scripts if markup ever slips into previewHtml, while
+            // allow-same-origin keeps contentDocument reachable for CSS injection.
+            sandbox="allow-same-origin"
             srcDoc={previewHtml}
             onLoad={(event) => injectCss(event.currentTarget.contentDocument, css)}
             className={cn("h-full w-full border-0 bg-white", className)}
