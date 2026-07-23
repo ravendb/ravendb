@@ -129,9 +129,6 @@ function AddAppWizardBody() {
         <FormWizard
             steps={steps}
             flow={flow}
-            // The external database is currently the only selectable data source, so the wizard
-            // opens on the connect step; the choose step stays reachable through "Back".
-            initialStep="externalConnection"
             cancel={() => {
                 navigate(appRoutes.dashboard());
             }}
