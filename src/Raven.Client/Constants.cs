@@ -820,6 +820,18 @@ namespace Raven.Client
             public const long InvalidOperationId = -1;
         }
 
+        internal sealed class ChangeVector
+        {
+            private ChangeVector()
+            {
+            }
+
+            internal const string RaftTag = "RAFT";
+            internal const string TrxnTag = "TRXN";
+            internal const string SinkTag = "SINK";
+            internal const string MoveTag = "MOVE";
+        }
+
         internal sealed class CompareExchange
         {
             private CompareExchange()

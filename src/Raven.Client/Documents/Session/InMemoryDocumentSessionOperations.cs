@@ -794,19 +794,26 @@ more responsive application.
             // to detect if they generate duplicates.
             AssertNoNonUniqueInstance(entity, id);
 
-            var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
-            var metadata = new DynamicJsonValue();
-            if (collectionName != null)
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;
-
-            var clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
-            if (clrType != null)
-                metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+            var metadata = CreateDocumentMetadata(entity, _requestExecutor.Conventions);
 
             if (id != null)
                 _knownMissingIds.Remove(id);
 
             StoreEntityInUnitOfWork(id, entity, changeVector, metadata, forceConcurrencyCheck);
+        }
+
+        internal static DynamicJsonValue CreateDocumentMetadata(object entity, DocumentConventions conventions)
+        {
+            var metadata = new DynamicJsonValue();
+            var collectionName = conventions.GetCollectionName(entity);
+            if (collectionName != null)
+                metadata[Constants.Documents.Metadata.Collection] = collectionName;
+
+            var clrType = conventions.GetClrTypeName(entity);
+            if (clrType != null)
+                metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+
+            return metadata;
         }
 
         public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
@@ -861,7 +868,7 @@ more responsive application.
 
         protected abstract Task<string> GenerateIdAsync(object entity);
 
-        protected virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata,
+        protected internal virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata,
             ConcurrencyCheckMode forceConcurrencyCheck)
         {
             if (id != null)
