@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Wrench } from "lucide-react";
 import type { AiToolCallResult } from "@/api/generated/server-api";
+import { Parameters } from "@/components/data/parameters";
 
 // A collapsed transcript entry for one tool the agent ran during a turn. Kept operator-friendly:
 // only the parameters the model filled in and the tool's response — no raw query internals.
@@ -8,15 +9,17 @@ export function ConversationToolCall({ toolCall }: { toolCall: AiToolCallResult 
     const [isExpanded, setIsExpanded] = useState(false);
 
     return (
-        <div className="w-full rounded-lg border bg-background text-sm">
+        <div className="w-full overflow-hidden rounded-lg border bg-muted/40 text-sm">
             <button
                 type="button"
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/70"
                 aria-expanded={isExpanded}
                 onClick={() => setIsExpanded((expanded) => !expanded)}
             >
                 <span className="flex min-w-0 items-center gap-2">
-                    <Wrench className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Wrench className="size-3.5" aria-hidden />
+                    </span>
                     <span className="truncate font-medium">{toolCall.name || "Tool call"}</span>
                 </span>
                 {isExpanded ? (
@@ -27,7 +30,7 @@ export function ConversationToolCall({ toolCall }: { toolCall: AiToolCallResult 
             </button>
 
             {isExpanded && (
-                <div className="grid gap-3 border-t px-3 py-2">
+                <div className="grid gap-3 border-t px-3 py-3">
                     <ToolCallParameters rawArguments={toolCall.arguments} />
                     <ToolCallResponse result={toolCall.result} />
                 </div>
@@ -48,20 +51,16 @@ function ToolCallParameters({ rawArguments }: { rawArguments: string | null | un
         ) : null;
     }
 
+    if (parameters.length === 0) {
+        return null;
+    }
+
     return (
         <ToolCallSection label="Parameters">
-            {parameters.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No parameters</p>
-            ) : (
-                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                    {parameters.map(([name, value]) => (
-                        <div key={name} className="col-span-2 grid grid-cols-subgrid">
-                            <dt className="font-mono text-muted-foreground">{name}</dt>
-                            <dd className="min-w-0 font-medium break-words">{formatParameterValue(value)}</dd>
-                        </div>
-                    ))}
-                </dl>
-            )}
+            <Parameters
+                className="flex-wrap"
+                params={parameters.map(([name, value]) => ({ name, value: formatParameterValue(value) }))}
+            />
         </ToolCallSection>
     );
 }
@@ -80,7 +79,7 @@ function ToolCallResponse({ result }: { result: string | null | undefined }) {
 
 function ToolCallSection({ label, children }: { label: string; children: React.ReactNode }) {
     return (
-        <div className="grid gap-1">
+        <div className="grid gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">{label}</span>
             {children}
         </div>
@@ -89,7 +88,7 @@ function ToolCallSection({ label, children }: { label: string; children: React.R
 
 function CodeBlock({ value }: { value: string }) {
     return (
-        <pre className="max-h-60 overflow-auto rounded-md border bg-muted/40 p-2 font-mono text-xs whitespace-pre-wrap">
+        <pre className="max-h-60 overflow-auto rounded-md border bg-background p-2 font-mono text-xs whitespace-pre-wrap">
             {value}
         </pre>
     );
