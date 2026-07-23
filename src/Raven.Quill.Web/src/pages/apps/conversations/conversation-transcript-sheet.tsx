@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import type { AiConversationMessage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
 import {
     Sheet,
@@ -11,6 +12,7 @@ import {
     SheetTrigger,
 } from "@/components/shadcn/ui/sheet";
 import { cn, formatDateTime } from "@/lib/utils";
+import { ConversationToolCall } from "@/pages/apps/conversations/conversation-tool-call";
 
 type ConversationTranscriptSheetProps = {
     slug: string;
@@ -34,7 +36,9 @@ export function ConversationTranscriptSheet({
         enabled: isOpen,
     });
 
-    const turns = conversationQuery.data?.transcript ?? conversationQuery.data?.lastExchange ?? [];
+    const transcript = conversationQuery.data?.transcript ?? [];
+    const allTurns = transcript.length > 0 ? transcript : (conversationQuery.data?.lastExchange ?? []);
+    const turns = allTurns.filter(isDisplayableTurn);
 
     return (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -56,35 +60,44 @@ export function ConversationTranscriptSheet({
                             (turns.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">No messages in this conversation.</p>
                             ) : (
-                                turns.map((turn, index) => (
-                                    <div
-                                        key={index}
-                                        className={cn(
-                                            "flex flex-col gap-1",
-                                            turn.role === "user" ? "items-end" : "items-start",
-                                        )}
-                                    >
-                                        <div
-                                            className={cn(
-                                                "max-w-[85%] rounded-lg px-3 py-2 text-sm",
-                                                turn.role === "user"
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "bg-muted",
-                                            )}
-                                        >
-                                            {turn.text}
-                                        </div>
-                                        {turn.at && (
-                                            <span className="text-xs text-muted-foreground">
-                                                {formatDateTime(turn.at)}
-                                            </span>
-                                        )}
-                                    </div>
-                                ))
+                                turns.map((turn, index) => <TranscriptTurn key={index} turn={turn} />)
                             ))}
                     </ApiState>
                 </div>
             </SheetContent>
         </Sheet>
+    );
+}
+
+// The transcript also carries bookkeeping entries (system prompt, summaries, internal turns);
+// operators only need the visible exchange plus any tools the agent ran along the way.
+function isDisplayableTurn(turn: AiConversationMessage): boolean {
+    const hasToolCalls = (turn.toolCalls?.length ?? 0) > 0;
+    const hasVisibleContent = (turn.role === "user" || turn.role === "assistant") && Boolean(turn.content?.trim());
+    return hasVisibleContent || hasToolCalls;
+}
+
+function TranscriptTurn({ turn }: { turn: AiConversationMessage }) {
+    const isUser = turn.role === "user";
+    const content = turn.content?.trim();
+    const showContent = Boolean(content) && (isUser || turn.role === "assistant");
+
+    return (
+        <div className={cn("flex flex-col gap-1", isUser ? "items-end" : "items-start")}>
+            {turn.toolCalls?.map((toolCall, index) => (
+                <ConversationToolCall key={toolCall.id || index} toolCall={toolCall} />
+            ))}
+            {showContent && (
+                <div
+                    className={cn(
+                        "max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
+                        isUser ? "bg-primary text-primary-foreground" : "bg-muted",
+                    )}
+                >
+                    {content}
+                </div>
+            )}
+            {turn.timestamp && <span className="text-xs text-muted-foreground">{formatDateTime(turn.timestamp)}</span>}
+        </div>
     );
 }
