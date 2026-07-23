@@ -920,7 +920,7 @@ namespace Raven.Server.Documents.ETL
                                 RecordLoadError(e.ToString(), TaskErrorStep.Persistence, count: 0);
 
                                 const int cancellationIndex = 0;
-                                var signaledIndex = WaitHandle.WaitAny(cancellationAndForceRetryHandles, FallbackTime.Value);
+                                var signaledIndex = WaitHandle.WaitAny(cancellationAndForceRetryHandles, FallbackTime ?? TimeSpan.Zero);
                                 if (signaledIndex == cancellationIndex)
                                     return;
 
@@ -938,13 +938,12 @@ namespace Raven.Server.Documents.ETL
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
-                        if (FallbackTime == null)
+                        if (FallbackTime is not {} fallbackTime)
                         {
                             _waitForChanges.Wait(CancellationToken);
                         }
                         else
                         {
-                            var fallbackTime = FallbackTime.Value;
                             var sp = Stopwatch.StartNew();
 
                             const int cancellationHandleIndex = 0;

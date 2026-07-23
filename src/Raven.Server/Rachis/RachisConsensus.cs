@@ -313,7 +313,7 @@ namespace Raven.Server.Rachis
                 using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    _tag = ReadNodeTag(context);
+                    SetTag(ReadNodeTag(context));
 
                     RequestSnapshot = GetSnapshotRequest(context);
 
@@ -2133,6 +2133,12 @@ namespace Raven.Server.Rachis
             return TxMerger.Enqueue(command);
         }
 
+        private void SetTag(string tag)
+        {
+            _tag = tag;
+            RvnLayoutRenderer.NodeTag = tag;
+        }
+
         public static void ValidateNodeTag(string nodeTag)
         {
             if (nodeTag == InitialTag)
@@ -2312,7 +2318,7 @@ namespace Raven.Server.Rachis
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    _tag = newTag;
+                    SetTag(newTag);
                 }
             };
         }

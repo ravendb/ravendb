@@ -274,6 +274,8 @@ namespace Raven.Server.Web.System
                                                             $"To use Prefixed Sharding, all cluster nodes must be running version 6.2 or later.");
                 }
 
+                var dataAlreadyExists = false;
+
                 using (var raw = new RawDatabaseRecord(context, json))
                 {
                     foreach (var rawDatabaseRecord in raw.AsShardsOrNormal())
@@ -282,12 +284,15 @@ namespace Raven.Server.Web.System
                             && Server.ServerStore.Cluster.DatabaseExists(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if database state needs to be updated (including recreating indexes)"))
-                                RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord, rawDatabaseRecord.Settings);
+                            {
+                                RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord, rawDatabaseRecord.Settings, out var exists);
+                                dataAlreadyExists |= exists;
+                            }
                         }
                     }
                 }
 
-                if (index == null && (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0))
+                if (index == null && dataAlreadyExists == false && (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0))
                 {
                     databaseRecord.SupportedFeatures = new List<string>
                     {
@@ -349,8 +354,10 @@ namespace Raven.Server.Web.System
             return false;
         }
 
-        private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord, Dictionary<string, string> settings)
+        private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord, Dictionary<string, string> settings, out bool dataAlreadyExists)
         {
+            dataAlreadyExists = false;
+
             if (Server.ServerStore.Cluster.DatabaseExists(databaseName))
                 return;
 
@@ -391,6 +398,23 @@ namespace Raven.Server.Web.System
                 documentDatabase.Initialize(options);
 
                 documentDatabase.DocumentsStorage.ResetLastCompletedClusterTransactionIndex();
+
+                if (documentDatabase.DocumentsStorage.Environment.IsNew == false)
+                {
+                    dataAlreadyExists = true;
+
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var persisted = DocumentsStorage.ReadSupportedFeatures(ctx.Transaction.InnerTransaction);
+
+                        if (databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0) 
+                            databaseRecord.SupportedFeatures = persisted;
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Database '{databaseName}' is being created over existing data. Restored SupportedFeatures from storage: [{string.Join(", ", databaseRecord.SupportedFeatures)}]");
+                    }
+                }
 
                 // recrate the indexes on the new database
                 if (databaseConfiguration.Indexing.RunInMemory || Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false)

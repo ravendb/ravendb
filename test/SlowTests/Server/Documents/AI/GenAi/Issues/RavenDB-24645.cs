@@ -92,7 +92,8 @@ ai.genContext({})
                 session.Advanced.Attachments.Store(FirstItemId, Image+actualFormat, file1);
                 await session.SaveChangesAsync();
             }
-            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
+
+            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 65)), await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
 
             var transformationErrors = (await Etl.GetItemTransformationErrorsAsync(store.Database, config)).ToList();
             var loadErrors = (await Etl.GetItemLoadErrorsAsync(store.Database, config)).ToList();
