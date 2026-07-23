@@ -94,18 +94,9 @@ function AgentCell({ conversation }: { conversation: ConversationDto }) {
 }
 
 function LastExchangeCell({ conversation }: { conversation: ConversationDto }) {
-    const turns = [...conversation.lastExchange].sort((left, right) => {
-        if (left.at === right.at) {
-            return 0;
-        }
-        if (left.at === null) {
-            return -1;
-        }
-        if (right.at === null) {
-            return 1;
-        }
-        return left.at.localeCompare(right.at);
-    });
+    const turns = [...conversation.lastExchange].sort((left, right) =>
+        (left.timestamp ?? "").localeCompare(right.timestamp ?? ""),
+    );
 
     if (turns.length === 0) {
         return <span className="text-muted-foreground">—</span>;
@@ -114,18 +105,18 @@ function LastExchangeCell({ conversation }: { conversation: ConversationDto }) {
     return (
         <span className="flex max-w-full min-w-0 flex-col gap-1">
             {turns.map((turn, index) => {
-                const isAgent = turn.role.toLowerCase() === "agent";
+                const isAgent = turn.role === "assistant";
 
                 return (
-                    <span key={`${turn.at ?? "undated"}-${index}`} className="flex min-w-0 items-center gap-2">
+                    <span key={`${turn.timestamp ?? "undated"}-${index}`} className="flex min-w-0 items-center gap-2">
                         <span
                             className="h-3 w-0.5 shrink-0 rounded-full bg-muted-foreground"
                             style={isAgent ? { backgroundColor: agentAvatarColor(conversation.agentName) } : undefined}
                             aria-hidden="true"
                         />
-                        <span className="min-w-0 truncate font-medium" title={turn.text}>
-                            <span className="sr-only">{turn.role}: </span>
-                            {turn.text}
+                        <span className="min-w-0 truncate font-medium" title={turn.content ?? undefined}>
+                            <span className="sr-only">{isAgent ? "agent" : (turn.role ?? "message")}: </span>
+                            {turn.content}
                         </span>
                     </span>
                 );
