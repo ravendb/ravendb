@@ -36,7 +36,8 @@ export function SampleObjectAndSchemaTabs({
     }, [isSchemaFieldInvalid, isEitherProvided, trigger, schema.name]);
 
     // Match Studio: when a schema is already provided it takes precedence, so open on it.
-    const defaultTab = getValues(schema.name) ? "schema" : "sample-object";
+    const schemaValue = getValues(schema.name);
+    const defaultTab = typeof schemaValue === "string" && schemaValue.trim() ? "schema" : "sample-object";
 
     return (
         <Tabs defaultValue={defaultTab}>
