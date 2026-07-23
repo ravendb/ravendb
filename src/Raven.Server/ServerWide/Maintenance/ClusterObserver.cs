@@ -94,7 +94,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }, null, ThreadNames.ForClusterObserver($"Cluster observer for term {_term}", _term));
         }
 
-        internal static readonly int ClusterTransactionsCleanupBatchSize = PlatformDetails.Is32Bits ? 1 * 1024 : 10 * 1024;
+        internal int _clusterTransactionsCleanupBatchSize = PlatformDetails.Is32Bits ? 1 * 1024 : 10 * 1024;
 
         public bool Suspended = false; // don't really care about concurrency here
         internal long _iteration;
@@ -843,7 +843,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (firstCommandsCount == null || firstCommandsCount >= commandCount)
                 return null;
 
-            return Math.Min(commandCount, Math.Max(truncatedCount + ClusterTransactionsCleanupBatchSize, firstCommandsCount.Value + 1));
+            return Math.Min(commandCount, Math.Max(truncatedCount + _clusterTransactionsCleanupBatchSize, firstCommandsCount.Value + 1));
         }
 
         private static bool AllDatabaseNodesHasReport(DatabaseObservationState state)
