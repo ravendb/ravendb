@@ -9,10 +9,10 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Operations.CdcSink.Test;
 
 /// <summary>
-/// Runs the real CDC pull flow once against the configured source and samples one row per table to verify
-/// CDC is set up correctly — without persisting anything (no task, documents, checkpoint or state) and
-/// undoing any CDC setup it provisions on the source. Calls <c>POST /admin/cdc-sink/cdc-test</c>.
-/// Requires <c>DatabaseAdmin</c>.
+/// Runs the real CDC pull flow once against the configured source to verify CDC is set up correctly —
+/// reading one row from each configured table and reporting which tables were reached, without persisting
+/// anything (no task, documents, checkpoint or state) and undoing any CDC setup it provisions on the source.
+/// Calls <c>POST /admin/cdc-sink/dry-run</c>. Requires <c>DatabaseAdmin</c>.
 /// </summary>
 internal class VerifyCdcSinkOperation : IMaintenanceOperation<CdcTestResult>
 {
@@ -45,7 +45,7 @@ internal class VerifyCdcSinkOperation : IMaintenanceOperation<CdcTestResult>
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/cdc-sink/cdc-test";
+            url = $"{node.Url}/databases/{node.Database}/admin/cdc-sink/dry-run";
 
             return new HttpRequestMessage
             {

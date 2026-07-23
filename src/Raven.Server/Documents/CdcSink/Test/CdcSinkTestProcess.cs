@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Server.Documents.CdcSink.Commands;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
 
@@ -14,7 +16,7 @@ namespace Raven.Server.Documents.CdcSink.Test;
 
 internal static class CdcSinkTestProcess
 {
-    public static async Task<CdcTestResult> VerifyAsync(DocumentDatabase database, CdcSinkConfiguration configuration, CancellationToken ct)
+    public static async Task<CdcTestResult> VerifyAsync(DocumentDatabase database, CdcSinkConfiguration configuration, OperationCancelToken token)
     {
         configuration.SkipInitialLoad = false;
         configuration.TestMode = true;
@@ -32,21 +34,28 @@ internal static class CdcSinkTestProcess
             return capture.Result;
         }
 
-        await using (var process = Create(database, configuration, capture))
+        try
         {
-            await process.RunCdcTestAsync(ct);
+            await using (var process = Create(database, configuration, capture, token))
+            {
+                await process.RunCdcTestAsync();
+            }
+        }
+        catch (Exception e)
+        {
+            capture.SetError(e);
         }
 
         return capture.Result;
     }
 
-    private static ICdcSinkTestProcess Create(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture)
+    private static ICdcSinkTestProcess Create(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture, OperationCancelToken token)
     {
         return configuration.Connection?.FactoryName switch
         {
-            "Npgsql" => new TestPostgresCdcSinkProcess(database, configuration, capture),
-            "Microsoft.Data.SqlClient" => new TestSqlServerCdcSinkProcess(database, configuration, capture),
-            "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory" => new TestMySqlCdcSinkProcess(database, configuration, capture),
+            "Npgsql" => new TestPostgresCdcSinkProcess(database, configuration, capture, token),
+            "Microsoft.Data.SqlClient" => new TestSqlServerCdcSinkProcess(database, configuration, capture, token),
+            "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory" => new TestMySqlCdcSinkProcess(database, configuration, capture, token),
             _ => throw new NotSupportedException($"CDC is not supported for provider '{configuration.Connection?.FactoryName}'")
         };
     }
@@ -54,15 +63,23 @@ internal static class CdcSinkTestProcess
     private sealed class TestSqlServerCdcSinkProcess : SqlServerCdcSinkProcess, ICdcSinkTestProcess
     {
         private readonly CdcSinkTestCapture _capture;
+        private readonly OperationCancelToken _token;
 
-        public TestSqlServerCdcSinkProcess(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture)
-            : base(configuration, database) => _capture = capture;
+        public TestSqlServerCdcSinkProcess(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture, OperationCancelToken token)
+            : base(configuration, database)
+        {
+            _capture = capture;
+            _token = token;
+        }
 
         protected override Task<(string Checkpoint, int Rows)> SubmitBatch(
             List<CdcSinkDocumentOp> ops, string checkpoint,
             Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates,
             CdcSinkBatchCommand.DocumentGrouper grouper)
-            => _capture.Handle(ops, checkpoint);
+        {
+            _capture.Handle(tableLoadUpdates, checkpoint);
+            return Task.FromResult((checkpoint, ops.Count));
+        }
 
         protected override CdcSinkTaskState LoadState(DocumentsOperationContext context)
             => new() { ConfigurationName = Configuration.Name };
@@ -73,6 +90,8 @@ internal static class CdcSinkTestProcess
             DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
             string[] lastKeys, int maxBatchSize, CancellationToken ct)
         {
+            _token.Delay();
+
             if (_capture.TrySample(tableInfo.FullName) == false)
             {
                 return new InitialLoadBatch(new List<CdcSinkDocumentOp>(), lastKeys, null);
@@ -81,12 +100,20 @@ internal static class CdcSinkTestProcess
             return await base.ReadOneBatch(conn, tableInfo, keyColumns, lastKeys, 1, ct);
         }
 
-        public Task RunCdcTestAsync(CancellationToken ct) => _capture.RunCdcAsync(RunInternalAsync, ct);
+        public Task RunCdcTestAsync() => _capture.RunCdcAsync(RunInternalAsync, _token.Token);
 
         public override async ValueTask DisposeAsync()
         {
-            try { await UndoSourceSetupAsync(CancellationToken.None); }
-            catch { /* best effort */ }
+            using (var undoCts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            {
+                try { await UndoSourceSetupAsync(undoCts.Token); }
+                catch (Exception e)
+                {
+                    _capture.AddWarning($"source cleanup failed: {e.Message}");
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"[{Name}] CDC dry-run source cleanup failed", e);
+                }
+            }
             await base.DisposeAsync();
         }
 
@@ -122,15 +149,34 @@ internal static class CdcSinkTestProcess
     private sealed class TestPostgresCdcSinkProcess : PostgresCdcSinkProcess, ICdcSinkTestProcess
     {
         private readonly CdcSinkTestCapture _capture;
+        private readonly OperationCancelToken _token;
+        public TestPostgresCdcSinkProcess(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture, OperationCancelToken token)
+            : base(configuration, database)
+        {
+            _capture = capture;
+            _token = token;
+        }
 
-        public TestPostgresCdcSinkProcess(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture)
-            : base(configuration, database) => _capture = capture;
+        protected override async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
+        {
+            try
+            {
+                await base.EnsureReplicaIdentityForEmbeddedTables(ct);
+            }
+            catch (Exception e)
+            {
+                _capture.AddWarning(e.Message);
+            }
+        }
 
         protected override Task<(string Checkpoint, int Rows)> SubmitBatch(
             List<CdcSinkDocumentOp> ops, string checkpoint,
             Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates,
             CdcSinkBatchCommand.DocumentGrouper grouper)
-            => _capture.Handle(ops, checkpoint);
+        {
+            _capture.Handle(tableLoadUpdates, checkpoint);
+            return Task.FromResult((checkpoint, ops.Count));
+        }
 
         protected override CdcSinkTaskState LoadState(DocumentsOperationContext context)
             => new() { ConfigurationName = Configuration.Name };
@@ -141,6 +187,8 @@ internal static class CdcSinkTestProcess
             DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
             string[] lastKeys, int maxBatchSize, CancellationToken ct)
         {
+            _token.Delay();
+
             if (_capture.TrySample(tableInfo.FullName) == false)
             {
                 return new InitialLoadBatch(new List<CdcSinkDocumentOp>(), lastKeys, null);
@@ -149,12 +197,20 @@ internal static class CdcSinkTestProcess
             return await base.ReadOneBatch(conn, tableInfo, keyColumns, lastKeys, 1, ct);
         }
 
-        public Task RunCdcTestAsync(CancellationToken ct) => _capture.RunCdcAsync(RunInternalAsync, ct);
+        public Task RunCdcTestAsync() => _capture.RunCdcAsync(RunInternalAsync, _token.Token);
 
         public override async ValueTask DisposeAsync()
         {
-            try { await UndoSourceSetupAsync(CancellationToken.None); }
-            catch { /* best effort */ }
+            using (var undoCts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            {
+                try { await UndoSourceSetupAsync(undoCts.Token); }
+                catch (Exception e)
+                {
+                    _capture.AddWarning($"source cleanup failed: {e.Message}");
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"[{Name}] CDC dry-run source cleanup failed", e);
+                }
+            }
             await base.DisposeAsync();
         }
 
@@ -193,15 +249,23 @@ internal static class CdcSinkTestProcess
     private sealed class TestMySqlCdcSinkProcess : MySqlCdcSinkProcess, ICdcSinkTestProcess
     {
         private readonly CdcSinkTestCapture _capture;
+        private readonly OperationCancelToken _token;
 
-        public TestMySqlCdcSinkProcess(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture)
-            : base(configuration, database) => _capture = capture;
+        public TestMySqlCdcSinkProcess(DocumentDatabase database, CdcSinkConfiguration configuration, CdcSinkTestCapture capture, OperationCancelToken token)
+            : base(configuration, database)
+        {
+            _capture = capture;
+            _token = token;
+        }
 
         protected override Task<(string Checkpoint, int Rows)> SubmitBatch(
             List<CdcSinkDocumentOp> ops, string checkpoint,
             Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates,
             CdcSinkBatchCommand.DocumentGrouper grouper)
-            => _capture.Handle(ops, checkpoint);
+        {
+            _capture.Handle(tableLoadUpdates, checkpoint);
+            return Task.FromResult((checkpoint, ops.Count));
+        }
 
         protected override CdcSinkTaskState LoadState(DocumentsOperationContext context)
             => new() { ConfigurationName = Configuration.Name };
@@ -212,6 +276,8 @@ internal static class CdcSinkTestProcess
             DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
             string[] lastKeys, int maxBatchSize, CancellationToken ct)
         {
+            _token.Delay();
+
             if (_capture.TrySample(tableInfo.FullName) == false)
             {
                 return new InitialLoadBatch(new List<CdcSinkDocumentOp>(), lastKeys, null);
@@ -220,31 +286,31 @@ internal static class CdcSinkTestProcess
             return await base.ReadOneBatch(conn, tableInfo, keyColumns, lastKeys, 1, ct);
         }
 
-        public Task RunCdcTestAsync(CancellationToken ct) => _capture.RunCdcAsync(RunInternalAsync, ct);
+        public Task RunCdcTestAsync() => _capture.RunCdcAsync(RunInternalAsync, _token.Token);
     }
 }
 
 internal interface ICdcSinkTestProcess : IAsyncDisposable
 {
-    Task RunCdcTestAsync(CancellationToken ct);
+    Task RunCdcTestAsync();
 }
 
 internal sealed class CdcSinkTestCapture
 {
     private Exception _error;
-    private readonly Dictionary<string, string> _sampled = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _sampled = new(StringComparer.Ordinal);
+    private readonly List<string> _warnings = new();
 
-    public bool TrySample(string table) => _sampled.ContainsKey(table) == false;
+    public bool TrySample(string table) => _sampled.Contains(table) == false;
 
-    public Task<(string Checkpoint, int Rows)> Handle(List<CdcSinkDocumentOp> ops, string checkpoint)
+    public void AddWarning(string warning) => _warnings.Add(warning);
+
+    public void Handle(Dictionary<string, CdcSinkTableLoadState> tables, string checkpoint)
     {
-        foreach (var op in ops)
+        foreach (var table in tables ?? [])
         {
-            if (op != null)
-                _sampled.Add(op.Processor.FullName, op.DocumentId);
+            _sampled.Add(table.Key);
         }
-
-        return Task.FromResult((checkpoint, ops.Count));
     }
 
     public async Task RunCdcAsync(Func<CancellationToken, Task> runInternal, CancellationToken ct)
@@ -253,18 +319,23 @@ internal sealed class CdcSinkTestCapture
         {
             await runInternal(ct);
         }
+        catch (OperationCanceledException)
+        {
+            _error = new TimeoutException("CDC verification timed out.");
+        }
         catch (Exception e)
         {
             _error = e;
         }
     }
 
-    public void SetError(Exception e) => _error = e;
+    public void SetError(Exception e) => _error ??= e;
 
     public CdcTestResult Result => new()
     {
-        Success = _sampled.Count > 0 && _error is null,
-        Error = _error?.ToString() ?? (_sampled.Count > 0 ? null : "CDC is configured, but no rows were available to sample."),
-        Sampled = _sampled
+        Success = _error is null,
+        Error = _error?.ToString(),
+        CompletedTables = _sampled.ToList(),
+        Warnings = _warnings
     };
 }

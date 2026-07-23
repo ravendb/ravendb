@@ -59,12 +59,12 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
             if (connectionString.FactoryName != "Npgsql")
                 return;
 
-            // Same etag for both so they're clearly paired.
             AutoFillPostgresSettings(Configuration, etag.ToString());
         }
 
         public static void AutoFillPostgresSettings(CdcSinkConfiguration configuration, string guid)
         {
+            // Same guid for both so they're clearly paired.
             configuration.Postgres ??= new CdcSinkPostgresSettings();
             configuration.Postgres.PublicationName ??= $"rvn_cdc_p_{guid}";
             configuration.Postgres.SlotName ??= $"rvn_cdc_s_{guid}";
