@@ -1,5 +1,8 @@
 name: quill/web-checks
 
+permissions:
+  contents: read
+
 on:
   # Same long-lived branches as studioConventions.yml: limiting push to them keeps every
   # PR commit from running the checks twice (PR branches are covered by pull_request).
