@@ -68,6 +68,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler, IAsyncDis
         Name = Configuration.Name;
         Statistics = new CdcSinkProcessStatistics(Name, database.Configuration.CdcSink);
         DocumentProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema) { Logger = Logger };
+        ExceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
     }
 
     protected CancellationToken CancellationToken => _cts.Token;
@@ -1256,24 +1257,26 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler, IAsyncDis
         return JsonDeserializationServer.CdcSinkTaskState(doc.Data);
     }
 
-    public virtual void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
+    protected readonly ExceptionAggregator ExceptionAggregator;
 
-    public virtual ValueTask DisposeAsync()
+    private void DisposeCore()
     {
         // Mark disposed up front so a concurrent GetConnectionStatus() bails out before touching _cts,
         // even on the never-started path where Stop() returns early but _cts is still disposed below.
         _disposed.Raise();
 
-        var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
+        ExceptionAggregator.Execute(() => Stop("Dispose"));
+        ExceptionAggregator.Execute(() => _cts.Dispose());
+        ExceptionAggregator.Execute(() => CommandBuilder.Dispose());
 
-        exceptionAggregator.Execute(() => Stop("Dispose"));
+        ExceptionAggregator.ThrowIfNeeded();
+    }
 
-        exceptionAggregator.Execute(() => _cts.Dispose());
+    public virtual void Dispose() => DisposeCore();
 
-        exceptionAggregator.Execute(() => CommandBuilder.Dispose());
-
-        exceptionAggregator.ThrowIfNeeded();
-
+    public virtual ValueTask DisposeAsync()
+    {
+        DisposeCore();
         return ValueTask.CompletedTask;
     }
 

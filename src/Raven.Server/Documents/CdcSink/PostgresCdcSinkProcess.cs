@@ -1,9 +1,9 @@
 using System;
-using System.Runtime.CompilerServices;
-using System.Data.Common;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -12,11 +12,11 @@ using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Schema;
+using Raven.Server.Documents.TasksErrors;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration.NpgSQL;
 using Sparrow.Json;
-using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -99,26 +99,30 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         _dataSource = dataSourceBuilder.Build();
     }
 
-    public override async ValueTask DisposeAsync()
+    private async ValueTask DisposeCoreAsync()
     {
-        await base.DisposeAsync();
-
         try
         {
-            if (_replicationConn != null)
-            {
-                // _replicationConn has token attached which should unblock the connection
-                await _replicationConn.DisposeAsync();
-            }
+            await base.DisposeAsync();
         }
         catch
         {
-            // best effort — the connection may already be disposed by the iterator
+            // don't throw yet
         }
 
-        await _dataSource.DisposeAsync();
+        if (_replicationConn != null)
+        {
+            await ExceptionAggregator.ExecuteAsync(_replicationConn.DisposeAsync());
+        }
+
+        await ExceptionAggregator.ExecuteAsync(_dataSource.DisposeAsync());
+
+        ExceptionAggregator.ThrowIfNeeded();
     }
 
+    public override ValueTask DisposeAsync() => DisposeCoreAsync();
+
+    public override void Dispose() => DisposeCoreAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
@@ -356,7 +360,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     ///   JoinColumns = ["order_id"]  — order_id IS in the PK
     ///   → Default REPLICA IDENTITY is sufficient, no action needed
     /// </summary>
-    private async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
+    protected virtual async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
     {
         var embeddedTables = CollectEmbeddedTablesNeedingReplicaIdentity(Configuration.Tables);
 
@@ -381,6 +385,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
             // Replica identity is insufficient — set to FULL so DELETE events include join columns
             var quotedTable = $"{CommandBuilder.QuoteIdentifier(schema)}.{CommandBuilder.QuoteIdentifier(table)}";
+
+            if (Configuration.TestMode)
+                throw new InvalidOperationException(CreateReplicaIdentityFullRequiredMessage(schema, table, embedded, quotedTable));
+
             try
             {
                 await using var alterCmd = new NpgsqlCommand(
@@ -394,20 +402,23 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             catch (PostgresException ex) when (ex.SqlState == InsufficientPrivilegeSqlState)
             {
                 throw new InvalidOperationException(
-                    $"""
-                    Insufficient permissions to set REPLICA IDENTITY FULL on '{schema}.{table}'. 
-                    The embedded table's join column(s) ({string.Join(", ", embedded.JoinColumns)}) are not part of the primary key.
-                    DELETE events need REPLICA IDENTITY FULL to include the join columns for routing to the parent document. 
-                    An administrator can run:
-
-                      ALTER TABLE {quotedTable} REPLICA IDENTITY FULL;
-
-                    Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.
-
-                    PostgreSQL error: {ex.MessageText}
-                    """, ex);
+                    CreateReplicaIdentityFullRequiredMessage(schema, table, embedded, quotedTable), ex);
             }
         }
+    }
+
+    private static string CreateReplicaIdentityFullRequiredMessage(string schema, string table, CdcSinkEmbeddedTableConfig embedded, string quotedTable)
+    {
+        return $"""
+                Insufficient permissions to set REPLICA IDENTITY FULL on '{schema}.{table}'. 
+                The embedded table's join column(s) ({string.Join(", ", embedded.JoinColumns)}) are not part of the primary key.
+                DELETE events need REPLICA IDENTITY FULL to include the join columns for routing to the parent document. 
+                An administrator can run:
+
+                  ALTER TABLE {quotedTable} REPLICA IDENTITY FULL;
+
+                Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.
+                """;
     }
 
     private static List<CdcSinkEmbeddedTableConfig> CollectEmbeddedTablesNeedingReplicaIdentity(

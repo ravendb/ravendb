@@ -84,6 +84,7 @@ namespace FastTests.Client
                 "AddCdcSinkCommand", "UpdateCdcSinkCommand",
                 "GetCdcSinkSchemaCommand", "TestCdcSinkMappingCommand",
                 "GetServerWideConnectionStringsCommand", "PutServerWideConnectionStringCommand", "RemoveServerWideConnectionStringCommand",
+                "VerifyCdcSinkCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
