@@ -164,8 +164,16 @@ public static class AiConnectionStringsEndpoints
             return Results.BadRequest(new ApiErrorResponse($"AI agent connection strings require ModelType=Chat; got '{connectionString.ModelType}'"));
 
         var provider = connectionString.GetActiveProvider();
-        if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
-            return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}' in demo; supported: OpenAi, Ollama"));
+        switch (provider)
+        {
+            case AiConnectorType.OpenAi:
+            case AiConnectorType.AzureOpenAi:
+            case AiConnectorType.Ollama:
+                // supported providers
+                break;
+            default:
+                return Results.BadRequest(new ApiErrorResponse($"unsupported provider '{provider}'"));
+        }
 
         var serverWideConnection = new ServerWideConnectionString
         {
