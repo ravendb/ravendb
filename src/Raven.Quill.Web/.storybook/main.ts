@@ -4,9 +4,9 @@ const config: StorybookConfig = {
     stories: ["../src/**/*.stories.@(ts|tsx)"],
     addons: ["@storybook/addon-vitest"],
     framework: "@storybook/react-vite",
-    // Serve the app's public dir so the MSW worker script (mockServiceWorker.js)
-    // is available to stories from the same place other tools would use it.
-    staticDirs: ["../public"],
+    // The MSW worker script lives in .storybook/public (not the app's public dir)
+    // so it is served to stories but never copied into the production build.
+    staticDirs: ["../public", "./public"],
 };
 
 export default config;

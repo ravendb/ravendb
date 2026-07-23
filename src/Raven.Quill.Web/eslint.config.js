@@ -7,7 +7,7 @@ import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-    globalIgnores(["dist", "public/mockServiceWorker.js"]),
+    globalIgnores(["dist", ".storybook/public/mockServiceWorker.js"]),
     {
         files: ["**/*.{ts,tsx}"],
         extends: [
