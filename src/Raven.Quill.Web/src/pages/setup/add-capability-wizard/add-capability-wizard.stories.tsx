@@ -112,7 +112,7 @@ export const ConnectProvider: Story = {
 // No connection strings yet: the step hides the selector and shows only the "Add" button.
 export const ConnectProviderEmpty: Story = {
     render: () => <CapabilityWizardAtStep initialStep="connection" />,
-    parameters: { msw: { handlers: { aiConnectionStrings: [aiConnectionStringsMocks.list({ items: [] })] } } },
+    parameters: { msw: { handlers: { aiConnectionStrings: [aiConnectionStringsMocks.list([])] } } },
 };
 
 export const CreateAgent: Story = {

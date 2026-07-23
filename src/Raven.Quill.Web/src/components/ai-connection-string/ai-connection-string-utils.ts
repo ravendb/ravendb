@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AiConnectionString, AiConnectorType, AiModelType } from "@/api/generated/server-api";
+import type { AiConnectionString, AiModelType } from "@/api/generated/server-api";
 import type { FormSelectOption } from "@/components/form/form-select";
 
 // The form keeps one settings object per provider and switches the active one with `provider`,
@@ -402,17 +402,11 @@ export function mapFormDataToDto(values: ConnectionStringFormData, modelType: Ai
     }
 }
 
-export const CONNECTOR_TYPE_LABELS: Record<AiConnectorType, string> = {
-    None: "—",
-    OpenAi: "OpenAI",
-    AzureOpenAi: "Azure OpenAI",
-    Ollama: "Ollama",
-    Embedded: "Embedded (bge-micro-v2)",
-    Google: "Google AI",
-    HuggingFace: "Hugging Face",
-    MistralAi: "Mistral AI",
-    Vertex: "Vertex AI",
-};
+// The DTO carries no provider discriminator; the provider is whichever settings object is set.
+export function getProviderLabel(connectionString: AiConnectionString): string {
+    const providerKey = PROVIDER_KEYS.find((key) => connectionString[key] != null);
+    return providerKey ? PROVIDER_LABELS[providerKey] : "—";
+}
 
 export const MODEL_TYPE_LABELS: Record<AiModelType, string> = {
     Chat: "Chat",

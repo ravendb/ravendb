@@ -26,7 +26,6 @@ import { OpenAiFields } from "@/components/ai-connection-string/provider-fields/
 import { VertexFields } from "@/components/ai-connection-string/provider-fields/vertex-fields";
 
 type AiConnectionStringFormProps = {
-    slug: string;
     modelType: AiModelType;
     defaultValues: ConnectionStringFormData;
     isEditing: boolean;
@@ -63,7 +62,6 @@ function ProviderFields({
 }
 
 export function AiConnectionStringForm({
-    slug,
     modelType,
     defaultValues,
     isEditing,
@@ -84,17 +82,16 @@ export function AiConnectionStringForm({
         mutationFn: async (values: ConnectionStringFormData) => {
             const dto = mapFormDataToDto(values, modelType);
             const result = await api.services.aiConnectionStrings.create(
-                slug,
                 existingIdentifier ? { ...dto, identifier: existingIdentifier } : dto,
             );
             return result.name;
         },
         onSuccess: async (name) => {
             await Promise.all([
-                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list(slug).queryKey }),
+                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list().queryKey }),
                 // Refresh the cached detail so reopening the edit sheet shows the saved values.
                 queryClient.invalidateQueries({
-                    queryKey: api.queries.aiConnectionStrings.detail(slug, name).queryKey,
+                    queryKey: api.queries.aiConnectionStrings.detail(name).queryKey,
                 }),
             ]);
             await onSaved(name);

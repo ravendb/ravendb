@@ -15,18 +15,17 @@ import { AiConnectionStringForm } from "@/components/ai-connection-string/ai-con
 import { mapDtoToFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
 
 type EditAiConnectionStringProps = {
-    slug: string;
     name: string;
     modelType: AiModelType;
     trigger: ReactNode;
     onSaved: (name: string) => void | Promise<void>;
 };
 
-export function EditAiConnectionString({ slug, name, modelType, trigger, onSaved }: EditAiConnectionStringProps) {
+export function EditAiConnectionString({ name, modelType, trigger, onSaved }: EditAiConnectionStringProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     // Only fetch the full connection string once the sheet opens.
-    const detailQuery = useQuery({ ...api.queries.aiConnectionStrings.detail(slug, name), enabled: isOpen });
+    const detailQuery = useQuery({ ...api.queries.aiConnectionStrings.detail(name), enabled: isOpen });
 
     return (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -48,7 +47,6 @@ export function EditAiConnectionString({ slug, name, modelType, trigger, onSaved
                     </div>
                 ) : (
                     <AiConnectionStringForm
-                        slug={slug}
                         modelType={modelType}
                         defaultValues={mapDtoToFormData(detailQuery.data)}
                         isEditing

@@ -7,8 +7,9 @@ import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/api/api";
-import type { AiAgentConfiguration, AiConnectionStringListItemResponse } from "@/api/generated/server-api";
+import type { AiAgentConfiguration, AiConnectionString } from "@/api/generated/server-api";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
+import { getProviderLabel } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
@@ -50,7 +51,7 @@ type EditAgentFormProps = {
     slug: string;
     agentId: string;
     config: AiAgentConfiguration;
-    connectionStrings: AiConnectionStringListItemResponse[];
+    connectionStrings: AiConnectionString[];
 };
 
 export function EditAgentForm({ slug, agentId, config, connectionStrings }: EditAgentFormProps) {
@@ -130,12 +131,11 @@ export function EditAgentForm({ slug, agentId, config, connectionStrings }: Edit
                                 label="Connection string"
                                 placeholder="Select..."
                                 options={connectionStrings.map((item) => ({
-                                    value: item.name,
-                                    label: `${item.name} · ${item.provider}`,
+                                    value: item.name ?? "",
+                                    label: `${item.name} · ${getProviderLabel(item)}`,
                                 }))}
                                 addons={
                                     <AddAiConnectionString
-                                        slug={slug}
                                         modelType="Chat"
                                         onCreated={(name) =>
                                             form.setValue("connection.connectionStringName", name, {
