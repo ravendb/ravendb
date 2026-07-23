@@ -19,7 +19,6 @@ import {
 } from "@/components/shadcn/ui/dialog";
 
 type DeleteAiConnectionStringDialogProps = {
-    slug: string;
     name: string;
     trigger: ReactNode;
 };
@@ -38,18 +37,18 @@ function getDeleteConflict(error: unknown): AiConnectionStringDeleteConflictResp
     return null;
 }
 
-export function DeleteAiConnectionStringDialog({ slug, name, trigger }: DeleteAiConnectionStringDialogProps) {
+export function DeleteAiConnectionStringDialog({ name, trigger }: DeleteAiConnectionStringDialogProps) {
     const [isOpen, setIsOpen] = useState(false);
     const queryClient = useQueryClient();
 
     const deleteMutation = useMutation({
-        mutationFn: () => api.services.aiConnectionStrings.delete(slug, name),
+        mutationFn: () => api.services.aiConnectionStrings.delete(name),
         onSuccess: async () => {
             await Promise.all([
-                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list(slug).queryKey }),
+                queryClient.invalidateQueries({ queryKey: api.queries.aiConnectionStrings.list().queryKey }),
                 // Drop the deleted string's cached detail so a stale edit sheet can't resurrect it.
                 queryClient.invalidateQueries({
-                    queryKey: api.queries.aiConnectionStrings.detail(slug, name).queryKey,
+                    queryKey: api.queries.aiConnectionStrings.detail(name).queryKey,
                 }),
             ]);
             toast.success(`Connection string “${name}” deleted`);

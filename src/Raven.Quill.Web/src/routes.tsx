@@ -8,6 +8,7 @@ import {
     LineChart,
     MessagesSquare,
     Network,
+    Plug,
     Settings,
     ShieldCheck,
     Sparkles,
@@ -30,6 +31,7 @@ import { AppSettings } from "@/pages/apps/app-settings";
 import { AppUsage } from "@/pages/apps/app-usage";
 import { Login } from "@/pages/auth/login";
 import { DashboardCertificates } from "@/pages/dashboard/certificates";
+import { DashboardConnectionStrings } from "@/pages/dashboard/connection-strings";
 import { DashboardHome } from "@/pages/dashboard/dashboard-home";
 import { DashboardLicense } from "@/pages/dashboard/license";
 import { DashboardUsage } from "@/pages/dashboard/usage";
@@ -125,6 +127,17 @@ const dashboardPages: AppRouteDefinition[] = [
         },
         isPageTitleHidden: true,
         element: <DashboardLicense />,
+    },
+    {
+        path: "connection-strings",
+        title: "AI connection strings",
+        navigation: {
+            label: "AI connection strings",
+            icon: Plug,
+            section: "settings",
+        },
+        isPageTitleHidden: true,
+        element: <DashboardConnectionStrings />,
     },
     {
         path: "certificates",

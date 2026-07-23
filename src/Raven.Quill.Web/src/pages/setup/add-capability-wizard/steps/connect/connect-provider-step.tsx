@@ -6,6 +6,7 @@ import { ApiState } from "@/components/data/api-state";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { AddAiConnectionString } from "@/components/ai-connection-string/add-ai-connection-string";
+import { getProviderLabel } from "@/components/ai-connection-string/ai-connection-string-utils";
 import { FormCombobox } from "@/components/form/form-combobox";
 import { Field, FieldLabel } from "@/components/shadcn/ui/field";
 
@@ -17,8 +18,8 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
     // the operator picks a connection string; the step's beforeNext awaits the same query.
     usePrefetchQuery(api.queries.apps.suggestAgentFromData(slug));
 
-    const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list(slug));
-    const items = connectionStringsQuery.data?.items ?? [];
+    const connectionStringsQuery = useQuery(api.queries.aiConnectionStrings.list());
+    const items = connectionStringsQuery.data ?? [];
 
     return (
         <ApiState
@@ -32,7 +33,7 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
                 <Field>
                     <FieldLabel>Connection string</FieldLabel>
                     <div>
-                        <AddButton slug={slug} />
+                        <AddButton />
                     </div>
                 </Field>
             ) : (
@@ -45,10 +46,10 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
                         placeholder="Select..."
                         disabled={isBusy}
                         options={items.map((item) => ({
-                            value: item.name,
-                            label: `${item.name} · ${item.provider}`,
+                            value: item.name ?? "",
+                            label: `${item.name} · ${getProviderLabel(item)}`,
                         }))}
-                        addons={<AddButton slug={slug} />}
+                        addons={<AddButton />}
                     />
                 </div>
             )}
@@ -56,12 +57,11 @@ export function ConnectProviderStep({ isBusy }: WizardBodyComponentProps) {
     );
 }
 
-function AddButton({ slug }: { slug: string }) {
+function AddButton() {
     const { setValue } = useFormContext<AgentFormData>();
 
     return (
         <AddAiConnectionString
-            slug={slug}
             modelType="Chat"
             onCreated={(name) =>
                 setValue("connection.connectionStringName", name, {

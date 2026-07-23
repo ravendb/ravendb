@@ -14,13 +14,12 @@ import { AiConnectionStringForm } from "@/components/ai-connection-string/ai-con
 import { getDefaultValues } from "@/components/ai-connection-string/ai-connection-string-utils";
 
 type AddAiConnectionStringProps = {
-    slug: string;
     modelType: AiModelType;
     onCreated: (name: string) => void | Promise<void>;
     trigger?: ReactNode;
 };
 
-export function AddAiConnectionString({ slug, modelType, onCreated, trigger }: AddAiConnectionStringProps) {
+export function AddAiConnectionString({ modelType, onCreated, trigger }: AddAiConnectionStringProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -40,7 +39,6 @@ export function AddAiConnectionString({ slug, modelType, onCreated, trigger }: A
                 </SheetHeader>
 
                 <AiConnectionStringForm
-                    slug={slug}
                     modelType={modelType}
                     defaultValues={getDefaultValues()}
                     isEditing={false}

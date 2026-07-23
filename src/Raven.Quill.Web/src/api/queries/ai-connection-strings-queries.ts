@@ -5,15 +5,15 @@ const baseKey = "aiConnectionStrings";
 
 export function createAiConnectionStringsQueries(api: ServerApi["aiConnectionStrings"]) {
     return {
-        list: (slug: string) =>
+        list: () =>
             queryOptions({
-                queryKey: [baseKey, "list", slug],
-                queryFn: () => api.list(slug),
+                queryKey: [baseKey, "list"],
+                queryFn: () => api.list(),
             }),
-        detail: (slug: string, name: string) =>
+        detail: (name: string) =>
             queryOptions({
-                queryKey: [baseKey, "detail", slug, name],
-                queryFn: () => api.detail(slug, name),
+                queryKey: [baseKey, "detail", name],
+                queryFn: () => api.detail(name),
             }),
     };
 }
