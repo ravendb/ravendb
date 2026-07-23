@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Streamdown } from "streamdown";
 import { api } from "@/api/api";
 import type { AiConversationMessage } from "@/api/generated/server-api";
 import { ApiState } from "@/components/data/api-state";
@@ -87,16 +88,16 @@ function TranscriptTurn({ turn }: { turn: AiConversationMessage }) {
             {turn.toolCalls?.map((toolCall, index) => (
                 <ConversationToolCall key={toolCall.id || index} toolCall={toolCall} />
             ))}
-            {showContent && (
-                <div
-                    className={cn(
-                        "max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
-                        isUser ? "bg-primary text-primary-foreground" : "bg-muted",
-                    )}
-                >
-                    {content}
-                </div>
-            )}
+            {showContent &&
+                (isUser ? (
+                    <div className="max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm whitespace-pre-wrap text-primary-foreground">
+                        {content}
+                    </div>
+                ) : (
+                    <div className="max-w-[85%] rounded-lg bg-muted px-3 py-2 text-sm">
+                        <Streamdown>{content}</Streamdown>
+                    </div>
+                ))}
             {turn.timestamp && <span className="text-xs text-muted-foreground">{formatDateTime(turn.timestamp)}</span>}
         </div>
     );
