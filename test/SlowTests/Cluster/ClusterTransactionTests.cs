@@ -2602,6 +2602,7 @@ select incl(c)"
                 return ClusterTransactionCommand.ReadCommandsBatch(ctx, database, fromCount: 0, take: long.MaxValue).Count();
         }
 
+        [RavenMultiplatformFact(RavenTestCategory.ClusterTransactions, RavenArchitecture.AllX64)]
         public async Task ClusterTransactionCommandsCleanup_ShouldDrainLargeBacklog_WhenObserverResumes()
         {
             const int count = 50_000;
@@ -2723,6 +2724,57 @@ select incl(c)"
                         return Task.FromResult(ClusterTransactionCommand.ReadCommandsBatch(context, store.Database, fromCount: 0, take: long.MaxValue).Count() <= 1);
                 }, timeout: 120_000);
             }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.Sharding)]
+        public async Task ClusterTransactionCommandsCleanup_ShouldCleanupCommands_ForShardedDatabase()
+        {
+            const int count = 100;
+
+            using var server = GetNewServer();
+            using var store = Sharding.GetDocumentStore(new Options { Server = server });
+
+            // make sure the (single-node) cluster observer exists, then suspend it so a backlog can build up
+            await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
+            var observer = server.ServerStore.Observer;
+            observer.Suspended = true;
+
+            for (var i = 0; i < count; i++)
+            {
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), $"TestObjs/{i}");
+                await session.SaveChangesAsync();
+            }
+
+            // The cleanup point is the minimum over the shards of the last *executed own-command* position, so a
+            // shard whose last own command sits early in the stream would hold the whole tail back. Append one
+            // command per shard so every shard's completed position reaches the end of the backlog, which makes
+            // the drained state deterministic: at most one retained marker row per shard.
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var shardCount = record.Sharding.Shards.Count;
+            var remainingShards = new HashSet<int>(record.Sharding.Shards.Keys);
+            for (var i = 0; remainingShards.Count > 0; i++)
+            {
+                var id = $"TestObjs/tail/{i}";
+                var shardNumber = await Sharding.GetShardNumberForAsync(store, id);
+                if (remainingShards.Remove(shardNumber) == false)
+                    continue;
+
+                using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
+                await session.StoreAsync(new TestObj(), id);
+                await session.SaveChangesAsync();
+            }
+
+            // the commands are stored under the sharded (parent) database name, one row per shard batch
+            Assert.Equal(count + shardCount, CountClusterTransactionCommands(server, store.Database));
+
+            // Resume cleanup. The observer computes the cleanup point from the shard states, but must read the
+            // first command row under the sharded database name - if it used the shard name ('db$0') the lookup
+            // would find nothing and no cleanup would ever be issued for a sharded database.
+            observer.Suspended = false;
+
+            await AssertWaitForTrueAsync(() =>
+                Task.FromResult(CountClusterTransactionCommands(server, store.Database) <= shardCount), timeout: 60_000);
         }
 
         [RavenFact(RavenTestCategory.ClusterTransactions)]
