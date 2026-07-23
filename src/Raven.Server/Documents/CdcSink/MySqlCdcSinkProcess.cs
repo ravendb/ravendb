@@ -2,6 +2,8 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlCdc;
@@ -385,6 +387,36 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         for (int i = 0; i < lastKeys.Length; i++)
             AddParameter(cmd, $"@k{i}", lastKeys[i]);
         return Task.CompletedTask;
+    }
+    
+    protected override string BuildBatchQuery(
+        CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns,
+        string[] lastKeys, int maxBatchSize)
+    {
+        var table = $"{CommandBuilder.QuoteIdentifier(tableInfo.Schema)}.{CommandBuilder.QuoteIdentifier(tableInfo.TableName)}";
+        var quotedCols = keyColumns.Select(c => CommandBuilder.QuoteIdentifier(c)).ToArray();
+        var keyColsList = string.Join(", ", quotedCols);
+
+        var where = string.Empty;
+        if (lastKeys != null)
+        {
+            // (c1,c2,c3) > (@k0,@k1,@k2)  is equivalent to
+            //   c1 > @k0
+            //   OR (c1 = @k0 AND c2 > @k1)
+            //   OR (c1 = @k0 AND c2 = @k1 AND c3 > @k2)
+            var disjuncts = new List<string>(quotedCols.Length);
+            for (int i = 0; i < quotedCols.Length; i++)
+            {
+                var sb = new StringBuilder();
+                for (int j = 0; j < i; j++)
+                    sb.Append(quotedCols[j]).Append(" = @k").Append(j).Append(" AND ");
+                sb.Append(quotedCols[i]).Append(" > @k").Append(i);
+                disjuncts.Add(quotedCols.Length == 1 ? sb.ToString() : "(" + sb + ")");
+            }
+            where = " WHERE " + string.Join(" OR ", disjuncts);
+        }
+
+        return $"SELECT * FROM {table}{where} ORDER BY {keyColsList} LIMIT {maxBatchSize}";
     }
     
     // Unique (non-PRIMARY) indexes with each column's nullability, joined to COLUMNS for IS_NULLABLE.

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class getCompareExchangeItemsCommand extends commandBase {
 
-    constructor(private database: database, private prefix: string, private start: number, private take: number) {
+    constructor(private database: database | string, private prefix: string, private start: number, private take: number) {
         super();
     }
 
@@ -22,7 +22,8 @@ class getCompareExchangeItemsCommand extends commandBase {
             };
         };
         const url = endpoints.databases.compareExchange.cmpxchg + this.urlEncodeArgs(args);
-        return this.query(url, null, this.database, resultsSelector);
+        return this.query(url, null, this.database, resultsSelector)
+            .fail((response: JQueryXHR) => this.reportError("Failed to get Compare Exchange items", response.responseText, response.statusText));
     }
 }
 

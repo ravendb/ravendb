@@ -1,12 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.AI;
-using Sparrow.Json.Parsing;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
-internal class ConversionRequestBody : IDynamicJson
+internal class ConversionRequestBody
 {
     public List<AiAgentActionResponse> ActionResponses { get; set; }
     public List<AiAgentArtificialActionResponse> ArtificialActions { get; set; }
@@ -14,8 +16,9 @@ internal class ConversionRequestBody : IDynamicJson
     public IEnumerable<ContentPart> UserPrompt { get; set; }
     public AiConversationCreationOptions CreationOptions { get; set; }
     public List<ICommandData> AttachmentCommands { get; set; }
+    public AiOutputOptions OutputOptions { get; set; }
 
-    public DynamicJsonValue ToJson()
+    public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
     {
         var json = new DynamicJsonValue
         {
@@ -24,6 +27,9 @@ internal class ConversionRequestBody : IDynamicJson
             [nameof(CreationOptions)] = (CreationOptions ?? new AiConversationCreationOptions()).ToJson(),
             [nameof(UserPrompt)] = UserPrompt == null ? null : new DynamicJsonArray(UserPrompt.Select(part => part.ToJson()))
         };
+
+        if (OutputOptions != null)
+            json[nameof(OutputOptions)] = OutputOptions.ToJson(conventions, context);
 
         return json;
     }

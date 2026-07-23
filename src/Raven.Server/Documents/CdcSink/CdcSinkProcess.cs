@@ -634,9 +634,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             if (completedCheckpoint is not null)
                 await OnBatchFlushed(completedCheckpoint, rows);
 
-            // Return values from the completed batch back to per-table pools.
-            // Done here (after await) rather than inside SubmitBatch so that pool
-            // access stays on the caller's flow and never races with RentValues.
+            // Return values from the completed batch back to per-table pools. Must happen
+            // after `await lastBatch`: the ops reference these arrays until the TxMerger
+            // is done with them.
             ReturnBatchValuesAndClear(ref lastBatchOps);
 
             // previousCtx (if any) backed batches that are all guaranteed complete now - we just
@@ -701,11 +701,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                         if (moveTask.IsCompleted == false)
                         {
-                            // Source is idle - clear array contents immediately to release
-                            // references for GC, but keep the arrays in the pool for reuse.
-                            DocumentProcessor.ClearValuePoolArrays();
-
-                            // If still idle after 1 minute, release the pooled arrays entirely.
+                            // Source is idle. Pooled arrays are cleared on return so they hold no
+                            // row references; if still idle after 1 minute, release them entirely.
                             var completed = await moveTask.WaitFor(TimeSpan.FromMinutes(1), ct);
                             if (completed != moveTask)
                                 DocumentProcessor.ClearValuePools();

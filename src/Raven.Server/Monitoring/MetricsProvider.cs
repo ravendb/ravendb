@@ -324,11 +324,13 @@ public sealed class MetricsProvider
         
         foreach (var dbResult in _serverStore.DatabasesLandlord.GetLoadedDatabases())
         {
-            etlsCount += dbResult.EtlLoader.Processes.Length;
+            var etls = dbResult.EtlLoader.GetEtlProcesses();
+
+            etlsCount += etls.Length;
             errorsCount += dbResult.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Etl);
-            healthyEtlsCount += dbResult.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Healthy);
-            impairedEtlsCount += dbResult.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Impaired);
-            failedEtlsCount += dbResult.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Failed);
+            healthyEtlsCount += etls.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Healthy);
+            impairedEtlsCount += etls.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Impaired);
+            failedEtlsCount += etls.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Failed);
         }
 
         result.Count = etlsCount;

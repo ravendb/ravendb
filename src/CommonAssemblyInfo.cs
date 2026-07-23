@@ -5,9 +5,9 @@ using System.Resources;
 
 [assembly: AssemblyCopyright("© RavenDB 2009 - 2026 All rights reserved.")]
 
-[assembly: AssemblyVersion("7.2.5")]
-[assembly: AssemblyFileVersion("7.2.5.72")]
-[assembly: AssemblyInformationalVersion("7.2.5")]
+[assembly: AssemblyVersion("7.2.6")]
+[assembly: AssemblyFileVersion("7.2.6.72")]
+[assembly: AssemblyInformationalVersion("7.2.6")]
 
 #if DEBUG
 [assembly: AssemblyConfiguration("Debug")]

@@ -63,11 +63,12 @@ namespace Corax.Querying.Matches.TermProviders
         {
             ReadOnlySpan<byte> decodedStartsWith = _startWith.Decoded();
 
-            CompactKey compactKey;
+            using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
+            CompactKey compactKey = scope.Key;
             ReadOnlySpan<byte> key;
             while (true)
             {
-                if (_iterator.MoveNext(out compactKey, out _, out _) == false)
+                if (_iterator.MoveNext(compactKey, out _, out _) == false)
                 {
                     term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                     return false;

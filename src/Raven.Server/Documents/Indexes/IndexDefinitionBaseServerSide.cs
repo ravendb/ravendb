@@ -201,10 +201,17 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxPagingBasedOnEntriesId_62 = 62_006; // RavenDB-23100
             public const long CoraxUnicodeLengthAnalyzers_62 = 62_007; // RavenDB-24423
 
+            // RavenDB-26831: compound-field numeric (long) members were encoded as raw two's-complement big-endian,
+            // which is not order-preserving for negative values (negatives sort above positives). Indexes at this
+            // version or higher encode them order-preserving (sign-bit flipped), so compound sorts/ranges over a
+            // numeric field with negative values are correct. Older indexes keep the legacy encoding (and behavior);
+            // resetting/rebuilding an index upgrades it to the fixed encoding.
+            public const long CoraxOrderPreservingCompoundNumericEncoding = 72_001; // RavenDB-26831
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxUnicodeLengthAnalyzers_62;
+            public const long CurrentVersion = CoraxOrderPreservingCompoundNumericEncoding;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {

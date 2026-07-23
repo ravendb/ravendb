@@ -36,6 +36,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly List<ICommandData> _attachmentsCommands;
     private readonly bool? _debug;
     private readonly bool _cancelPendingActionTools;
+    private readonly AiOutputOptions _outputOptions;
 
     /// <summary>
     /// Initializes a new conversation step for the specified agent and conversation.
@@ -148,10 +149,12 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string changeVector,
         List<ICommandData> attachmentsCommands,
         string streamPropertyPath,
-        Func<string, Task> streamedChunksCallback)
+        Func<string, Task> streamedChunksCallback,
+        AiOutputOptions outputOptions = null)
         : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, streamPropertyPath, streamedChunksCallback)
     {
         _attachmentsCommands = attachmentsCommands;
+        _outputOptions = outputOptions;
     }
 
     internal RunConversationOperation(string agentId,
@@ -164,9 +167,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         List<ICommandData> attachmentsCommands,
         string streamPropertyPath,
         Func<string, Task> streamedChunksCallback,
+        AiOutputOptions outputOptions,
         bool? debug,
         bool cancelPendingActionTools)
-        : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, attachmentsCommands, streamPropertyPath, streamedChunksCallback)
+        : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, attachmentsCommands, streamPropertyPath, streamedChunksCallback, outputOptions)
     {
         _debug = debug;
         _cancelPendingActionTools = cancelPendingActionTools;
@@ -265,7 +269,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 ArtificialActions = _parent._artificialActions,
                 UserPrompt = _parent._promptParts,
                 CreationOptions = _parent._options,
-                AttachmentCommands = _parent._attachmentsCommands
+                AttachmentCommands = _parent._attachmentsCommands,
+                OutputOptions = _parent._outputOptions
             };
 
             var request = new HttpRequestMessage
@@ -273,7 +278,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(async stream =>
                 {
-                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(), "conversation-params")).ConfigureAwait(false);
+                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(_conventions, ctx), "conversation-params")).ConfigureAwait(false);
                 }, _conventions)
             };
 

@@ -177,9 +177,20 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             throw new InvalidOperationException("The whole attempted GenAI batch failed without a captured exception.");
         }
 
-        using (EnterLoadStep(TaskErrorStep.Persistence))
+        try
         {
-            ApplyUpdateScript(results, scope);
+            using (EnterLoadStep(TaskErrorStep.Persistence))
+            {
+                ApplyUpdateScript(results, scope);
+            }
+        }
+        catch
+        {
+            // EnterLoadStep restores LoadErrorStep to the previous step on dispose during the exception unwind,
+            // so re-assert the failing step here (after the scope has unwound) to attribute persistence failures
+            // correctly instead of losing them to the restored step.
+            LoadErrorStep = TaskErrorStep.Persistence;
+            throw;
         }
 
         if (exceptions?.OfType<RateLimitException>().Any() == true)
@@ -272,7 +283,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
-                    Parameters = item.ContextOutput.Context.CloneOnTheSameContext(), // we need that to be a root blittable, so we can use the concurrent read method
+                    Parameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context),
                     CreationOptions = new AiConversationCreationOptions
                     {
                         ExpirationInSec = Configuration.ExpirationInSec
@@ -318,7 +329,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
         foreach (var name in contextObjPropNames)
         {
-            agentParameters.Add(new AiAgentParameter(name));
+            agentParameters.Add(new AiAgentParameter(name) { SendToModel = false });
         }
 
         var agentConfiguration = new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
@@ -332,6 +343,23 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agentConfiguration);
         return agentConfiguration;
+    }
+
+    private static BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext)
+    {
+        var parameters = new DynamicJsonValue();
+        BlittableJsonReaderObject.PropertyDetails property = default;
+        for (var i = 0; i < rawContext.Count; i++)
+        {
+            rawContext.GetPropertyByIndex(i, ref property);
+
+            if (ConversationHandler.TryGetValueType(property.Value, out _, out _) == false)
+                continue;
+
+            parameters[property.Name] = property.Value; // raw value, no AiConversationParameter wrapper
+        }
+
+        return context.ReadObject(parameters, "genai/query-parameters");
     }
 
     private List<Exception> ProcessModelResults(List<GenAiResultItem> items, JsonOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
@@ -412,7 +440,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
                 $"{singleEx}";
 
-            Statistics.RecordItemLoadError(msg, item.DocumentId);
+            Statistics.RecordItemLoadError(msg, item.DocumentId, step: LoadErrorStep);
             if (Logger.IsWarnEnabled)
                 Logger.Warn(msg);
 
