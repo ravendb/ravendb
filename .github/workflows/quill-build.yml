@@ -15,6 +15,46 @@ on:
       - '.github/workflows/quill-build.yml'
 
 jobs:
+  # The web app, Storybook, and MSW mocks code against the committed generated client,
+  # while the Docker build regenerates it from a fresh OpenAPI spec — so a stale commit
+  # never fails a build on its own. This job catches that drift, including backend-only
+  # changes that quill/web-checks does not trigger on.
+  api-client-freshness:
+    name: Generated API client is up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/Raven.Quill.Web/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ./src/Raven.Quill.Web
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate API client
+        working-directory: ./src/Raven.Quill.Web
+        run: pnpm generate:api
+
+      - name: Verify committed client matches
+        run: |
+          if ! git diff --exit-code -- src/Raven.Quill.Web/src/api/generated/server-api.ts; then
+            echo "::error::src/api/generated/server-api.ts is stale. Run 'pnpm generate:api' in src/Raven.Quill.Web and commit the result."
+            exit 1
+          fi
+
   build:
     name: Build & smoke (${{ matrix.arch }})
     strategy:
