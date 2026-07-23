@@ -1,5 +1,7 @@
 import { useState, type ComponentProps } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { ZERO_SAFE_Y_DOMAIN } from "@/lib/chart-domain";
 import { Badge } from "@/components/shadcn/ui/badge";
@@ -31,14 +33,18 @@ export function CdcPerformanceSection({
     errorTitle?: string;
 }) {
     const live = useCdcLivePerformance(slug);
+    // The button opens the stored error list, so it is gated on that list rather than on the
+    // live errorCount, which only covers the recently tracked batches and could disagree.
+    const errorsQuery = useQuery(api.queries.apps.cdcErrors(slug));
+    const hasStoredErrors = (errorsQuery.data?.length ?? 0) > 0;
 
     return (
         <SectionCard
             title={title}
             action={
-                live.performance && (
+                (hasStoredErrors || live.performance) && (
                     <div className="flex items-center gap-2">
-                        {live.performance.errorCount > 0 && (
+                        {hasStoredErrors && (
                             <CdcErrorsSheet
                                 slug={slug}
                                 trigger={
@@ -48,7 +54,7 @@ export function CdcPerformanceSection({
                                 }
                             />
                         )}
-                        <CdcStatusBadge status={live.performance.status} />
+                        {live.performance && <CdcStatusBadge status={live.performance.status} />}
                     </div>
                 )
             }

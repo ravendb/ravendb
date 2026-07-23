@@ -41,7 +41,7 @@ export function UnmappedTablesAlert() {
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
 
     const mappedKeys = collectMappedSourceTableKeys(mappedTables);
-    const unmappedTables: UnmappedTable[] = (getValues("verifySchema.tables") ?? []).flatMap((table) => {
+    const unmappedTables: UnmappedTable[] = getValues("verifySchema.tables").flatMap((table) => {
         const key = getSourceTableKey(table);
 
         return key !== null && !mappedKeys.has(key) ? [{ key, table }] : [];
