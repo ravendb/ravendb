@@ -43,5 +43,23 @@ export function RequireApp() {
         );
     }
 
+    if (appQuery.isError) {
+        return (
+            <PageErrorState
+                title="Could not load app"
+                description={
+                    <p>Something went wrong while loading this app. Refresh the page or try again in a moment.</p>
+                }
+            >
+                <Button variant="outline" onClick={() => void appQuery.refetch()}>
+                    Retry
+                </Button>
+                <Button asChild>
+                    <Link to={appRoutes.dashboard()}>Go to dashboard</Link>
+                </Button>
+            </PageErrorState>
+        );
+    }
+
     return <Outlet />;
 }
