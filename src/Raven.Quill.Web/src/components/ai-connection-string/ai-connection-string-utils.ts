@@ -19,7 +19,7 @@ export const PROVIDER_KEYS = [
 export type ProviderKey = (typeof PROVIDER_KEYS)[number];
 
 // Connectors RavenDB accepts for chat models. The rest are embeddings-only.
-const CHAT_PROVIDER_KEYS: ProviderKey[] = ["openAiSettings", "azureOpenAiSettings", "ollamaSettings", "googleSettings"];
+const CHAT_PROVIDER_KEYS: ProviderKey[] = ["openAiSettings", "azureOpenAiSettings"];
 
 const PROVIDER_LABELS: Record<ProviderKey, string> = {
     azureOpenAiSettings: "Azure OpenAI",
@@ -406,6 +406,10 @@ export function mapFormDataToDto(values: ConnectionStringFormData, modelType: Ai
 export function getProviderLabel(connectionString: AiConnectionString): string {
     const providerKey = PROVIDER_KEYS.find((key) => connectionString[key] != null);
     return providerKey ? PROVIDER_LABELS[providerKey] : "—";
+}
+
+export function getConnectionStringOptionLabel(connectionString: AiConnectionString): string {
+    return `${connectionString.name ?? ""} · ${getProviderLabel(connectionString)}`;
 }
 
 export const MODEL_TYPE_LABELS: Record<AiModelType, string> = {
